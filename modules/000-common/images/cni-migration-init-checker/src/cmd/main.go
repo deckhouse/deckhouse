@@ -150,7 +150,7 @@ func checkStatus(ctx context.Context, client dynamic.Interface, nodeName, localC
 	obj, err := client.Resource(cniNodeMigrationGVR).Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			slog.Info("CNINodeMigration not found yet. Waiting...", "node", nodeName)
+			slog.Info("CNINodeMigration not found yet. Waiting", "node", nodeName)
 			return false, nil
 		}
 		return false, fmt.Errorf("error getting CNINodeMigration: %w", err)
@@ -180,6 +180,6 @@ func checkStatus(ctx context.Context, client dynamic.Interface, nodeName, localC
 		}
 	}
 
-	slog.Info("Waiting for CleanupDone condition on CNINodeMigration...")
+	slog.Info("Waiting for CleanupDone condition on CNINodeMigration")
 	return false, nil
 }

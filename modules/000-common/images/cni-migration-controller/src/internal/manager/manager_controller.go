@@ -470,7 +470,7 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(
 		return false, "", err
 	}
 	if !done {
-		return false, fmt.Sprintf("Enabling module %s...", moduleName), nil
+		return false, fmt.Sprintf("Enabling module %s", moduleName), nil
 	}
 
 	// 2. Wait for DaemonSet to appear and schedule pods
@@ -483,13 +483,13 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(
 	ds := &appsv1.DaemonSet{}
 	if err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: dsNamespace}, ds); err != nil {
 		if errors.IsNotFound(err) {
-			return false, fmt.Sprintf("Waiting for %s DaemonSet creation (module %s)...", dsName, moduleName), nil
+			return false, fmt.Sprintf("Waiting for %s DaemonSet creation (module %s)", dsName, moduleName), nil
 		}
 		return false, "", err
 	}
 
 	if ds.Status.DesiredNumberScheduled == 0 {
-		return false, fmt.Sprintf("Waiting for %s pods to be scheduled (module %s)...", dsName, moduleName), nil
+		return false, fmt.Sprintf("Waiting for %s pods to be scheduled (module %s)", dsName, moduleName), nil
 	}
 
 	// 3. Verify that pods are actually created and scheduled
@@ -521,7 +521,7 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(
 		// Check InitContainerStatuses to ensure images are pulling and no early crashes occur.
 		if len(pod.Status.InitContainerStatuses) == 0 {
 			if pod.Status.Phase == corev1.PodPending {
-				return false, fmt.Sprintf("Waiting for pod %s init containers to start...", pod.Name), nil
+				return false, fmt.Sprintf("Waiting for pod %s init containers to start", pod.Name), nil
 			}
 		}
 
@@ -569,7 +569,7 @@ func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(
 		return false, "", err
 	}
 	if !done {
-		return false, fmt.Sprintf("Disabling module %s...", moduleName), nil
+		return false, fmt.Sprintf("Disabling module %s", moduleName), nil
 	}
 
 	// 2. Wait for DaemonSet to be deleted
@@ -588,7 +588,7 @@ func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(
 	}
 
 	// DaemonSet still exists
-	return false, fmt.Sprintf("Waiting for %s DaemonSet deletion (module %s)...", dsName, moduleName), nil
+	return false, fmt.Sprintf("Waiting for %s DaemonSet deletion (module %s)", dsName, moduleName), nil
 }
 
 func (r *CNIMigrationReconciler) toggleModule(ctx context.Context, moduleName string, enabled bool) (bool, error) {
@@ -695,13 +695,13 @@ func (r *CNIMigrationReconciler) ensureTargetCNIReady(
 	err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: "d8-" + moduleName}, ds)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return false, fmt.Sprintf("Waiting for target CNI DaemonSet to be created (module %s)...", moduleName), nil
+			return false, fmt.Sprintf("Waiting for target CNI DaemonSet to be created (module %s)", moduleName), nil
 		}
 		return false, "", err
 	}
 
 	if ds.Status.DesiredNumberScheduled == 0 {
-		return false, fmt.Sprintf("Waiting for target CNI DaemonSet to schedule pods (module %s)...", moduleName), nil
+		return false, fmt.Sprintf("Waiting for target CNI DaemonSet to schedule pods (module %s)", moduleName), nil
 	}
 
 	if ds.Status.NumberReady < ds.Status.DesiredNumberScheduled {
@@ -823,7 +823,7 @@ func (r *CNIMigrationReconciler) checkWebhooksDisabled(ctx context.Context) (boo
 				if failurePolicy != "Ignore" {
 					// Found a blocking webhook
 					return false, fmt.Sprintf(
-						"Waiting for %s %s (policy: %s) to be disabled or removed by Helm...",
+						"Waiting for %s %s (policy: %s) to be disabled or removed by Helm",
 						kind,
 						name,
 						failurePolicy,
@@ -901,7 +901,7 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 				svc := &corev1.Service{}
 				if err := r.Get(ctx, types.NamespacedName{Name: svcName, Namespace: ns}, svc); err != nil {
 					if errors.IsNotFound(err) {
-						return false, fmt.Sprintf("Waiting for service %s/%s for webhook %s...", ns, svcName, name), nil
+						return false, fmt.Sprintf("Waiting for service %s/%s for webhook %s", ns, svcName, name), nil
 					}
 					return false, "", err
 				}
@@ -924,7 +924,7 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 
 				if len(pods.Items) == 0 {
 					return false, fmt.Sprintf(
-						"Waiting for pods for webhook %s (service %s/%s)...",
+						"Waiting for pods for webhook %s (service %s/%s)",
 						name,
 						ns,
 						svcName,
@@ -941,7 +941,7 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 
 				if !anyReady {
 					return false, fmt.Sprintf(
-						"Waiting for ready pods for webhook %s (service %s/%s)...",
+						"Waiting for ready pods for webhook %s (service %s/%s)",
 						name,
 						ns,
 						svcName,
