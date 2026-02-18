@@ -357,3 +357,4 @@ bash "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh"
 
 {{- end }}
 {{- end }}
+
