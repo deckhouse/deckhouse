@@ -154,5 +154,18 @@ func (b *ManifestBuilder) BashibleContext(pkiProvider PKIProvider) (BashibleCont
 		Init: pki,
 	}
 
+	if b.modeModel.Mode == constant.ModeProxy {
+		host, path := b.modeModel.RemoteData.AddressAndPath()
+		ctx.Bootstrap.Proxy = &bashible.ContextBootstrapProxy{
+			Host:     host,
+			Path:     path,
+			Scheme:   strings.ToLower(string(b.modeModel.RemoteData.Scheme)),
+			CA:       b.modeModel.RemoteData.CA,
+			Username: b.modeModel.RemoteData.Username,
+			Password: b.modeModel.RemoteData.Password,
+			TTL:      b.modeModel.TTL,
+		}
+	}
+
 	return ctx, nil
 }

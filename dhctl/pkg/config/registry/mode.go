@@ -26,6 +26,7 @@ import (
 type ModeSettings struct {
 	Mode       constant.ModeType
 	RemoteData Data
+	TTL        string
 }
 
 func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, error) {
@@ -46,6 +47,7 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 		return ModeSettings{
 			Mode:       constant.ModeProxy,
 			RemoteData: remote,
+			TTL:        settings.Proxy.TTL,
 		}, nil
 
 	case settings.Unmanaged != nil:
@@ -93,6 +95,7 @@ func (s ModeSettings) toProxyModel() ModeModel {
 		InClusterImagesRepo: constant.HostWithPath,
 		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
 		RemoteData:          s.RemoteData,
+		TTL:                 s.TTL,
 	}
 }
 
@@ -124,6 +127,7 @@ type ModeModel struct {
 	InClusterImagesRepo string
 	RemoteImagesRepo    string
 	RemoteData          Data
+	TTL                 string
 }
 
 func (m ModeModel) InClusterData(pki PKI) (Data, error) {
