@@ -5,7 +5,7 @@ permalink: en/architecture/registry-modes.html
 
 Deckhouse Kubernetes Platform supports several modes of operation with container image storage.
 
-## Direct mode Architecture
+## Direct mode architecture
 
 In Direct mode, registry requests are processed directly, without intermediate caching.
 
@@ -18,7 +18,7 @@ For components such as [operator-trivy](/modules/operator-trivy/), `image-availa
 
 For more information about the `Direct` mode, see the section [Using the internal container image registry](../admin/configuration/registry/internal.html).
 
-## Proxy mode Architecture
+## Proxy mode architecture
 
 {% alert level="warning" %}
 It is recommended to use separate disks for storing registry (`/opt/deckhouse/registry`) and etcd data. Using a single disk may lead to etcd performance degradation during registry operations.
@@ -37,7 +37,7 @@ For components such as `operator-trivy`, `image-availability-exporter`, `deckhou
 
 For more information about the `Proxy` mode, see the section [Using the internal container image registry](../admin/configuration/registry/internal.html).
 
-## Local mode Architecture
+## Local mode architecture
 
 {% alert level="warning" %}
 It is recommended to use separate disks for storing registry (`/opt/deckhouse/registry`) and etcd data. Using a single disk may lead to etcd performance degradation during registry operations.
