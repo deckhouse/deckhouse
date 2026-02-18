@@ -3,6 +3,7 @@ title: "Installation"
 permalink: en/installing/
 description: |
   Installing Deckhouse Kubernetes Platform (DKP), preparing the installation infrastructure, and running the installer.
+search: requirements, system requirements, platform setup, infrastructure preparation, installer configuration, deckhouse setup, platform configuration, infrastructure preparation, installer configuration, installer setup, dhctl, dhctl bootstrap
 extractedLinksMax: 2
 relatedLinks:
   - title: "Getting started"

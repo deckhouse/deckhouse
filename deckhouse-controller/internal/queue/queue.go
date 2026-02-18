@@ -55,8 +55,9 @@ type Task interface {
 
 // taskWrapper encapsulates a task with parent context, id and retry.
 type taskWrapper struct {
-	ctx context.Context // Task-specific context
-	wg  *sync.WaitGroup
+	ctx    context.Context    // Task-specific context
+	cancel context.CancelFunc // Task-specific context
+	wg     *sync.WaitGroup
 
 	id         string    // Unique task identifier
 	task       Task      // The task to execute
@@ -107,6 +108,7 @@ func WithUnique() EnqueueOption {
 	}
 }
 
+// WithOnDone registers a callback invoked after the task completes successfully.
 func WithOnDone(onDone func()) EnqueueOption {
 	return func(o *EnqueueOptions) {
 		o.onDone = onDone
@@ -130,11 +132,13 @@ func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 		opt.onDone = func() {}
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
 	wrapper := &taskWrapper{
-		ctx:  ctx,
-		wg:   opt.wg,
-		id:   uuid.New().String(),
-		task: task,
+		ctx:    ctx,
+		cancel: cancel,
+		wg:     opt.wg,
+		id:     uuid.New().String(),
+		task:   task,
 		backoff: backoff.NewExponentialBackOff(
 			backoff.WithMaxElapsedTime(0),
 			backoff.WithMaxInterval(time.Minute),
@@ -147,11 +151,24 @@ func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 	q.logger.Debug("enqueue task", slog.String("id", wrapper.id), slog.String("name", wrapper.task.String()))
 
 	if opt.unique && q.hasSeveral(task.String()) {
+		cancel()
 		if opt.wg != nil {
 			opt.wg.Done()
 		}
 
 		return
+	}
+
+	// ensure no task enqueued in stop queue
+	select {
+	case <-q.ctx.Done():
+		cancel()
+		if opt.wg != nil {
+			opt.wg.Done()
+		}
+
+		return
+	default:
 	}
 
 	// Enqueue task under deque lock
@@ -184,6 +201,7 @@ func (q *queue) Start(ctx context.Context) *queue {
 			for {
 				select {
 				case <-q.ctx.Done():
+					q.processAvailable()
 					return
 				case <-q.signal:
 					// Process all ready tasks
@@ -233,6 +251,7 @@ func (q *queue) processOne() bool {
 	select {
 	case <-t.ctx.Done():
 		q.logger.Debug("task context canceled", slog.String("id", t.id), slog.String("name", t.task.String()))
+		t.cancel()
 		if t.wg != nil {
 			t.wg.Done()
 		}
@@ -260,6 +279,7 @@ func (q *queue) processOne() bool {
 		select {
 		case <-t.ctx.Done():
 			q.logger.Debug("context canceled", slog.String("id", t.id), slog.String("name", t.task.String()))
+			t.cancel()
 			if t.wg != nil {
 				t.wg.Done()
 			}
@@ -281,11 +301,13 @@ func (q *queue) processOne() bool {
 
 			// Schedule retry signal after delay with context-aware waiting
 			go func(tw *taskWrapper, d time.Duration) {
+				timer := time.NewTimer(d)
 				select {
-				case <-time.After(d):
+				case <-timer.C:
 					// Backoff completed normally
 				case <-tw.ctx.Done():
 					// Context canceled during backoff - signal immediately for cleanup
+					timer.Stop()
 				}
 				// Signal queue to process (either retry or cleanup canceled task)
 				select {
@@ -298,6 +320,7 @@ func (q *queue) processOne() bool {
 		}
 	}
 
+	t.cancel()
 	if t.wg != nil {
 		t.wg.Done()
 	}
@@ -311,14 +334,33 @@ func (q *queue) processOne() bool {
 	return true // Task was processed successfully
 }
 
-// Stop cancels the queue's context and waits for the processing loop to finish.
-// It ensures all tasks stop gracefully.
+// Stop cancels all task contexts and the queue's context, then waits for the processing
+// loop to finish. Remaining tasks are drained and their WaitGroups released.
 func (q *queue) Stop() {
 	q.logger.Debug("stop queue")
 
-	if q.cancel != nil {
-		q.cancel()
+	q.mu.Lock()
+	for task := range q.deque.Iter() {
+		task.cancel()
+	}
+	q.mu.Unlock()
+
+	if q.cancel == nil {
+		return
+	}
+
+	q.cancel()
+	done := make(chan struct{})
+	go func() {
 		q.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		q.logger.Debug("queue stopped gracefully")
+	case <-time.After(10 * time.Second):
+		q.logger.Warn("queue stop timed out after 10s, forcing shutdown")
 	}
 }
 
