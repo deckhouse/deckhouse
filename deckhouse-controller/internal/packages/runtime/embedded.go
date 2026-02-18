@@ -18,13 +18,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"gopkg.in/yaml.v3"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
@@ -33,6 +37,7 @@ import (
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 )
 
@@ -64,7 +69,7 @@ func (r *Runtime) UpdateEmbedded(module *Module) {
 			r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
 			tasks = []queue.Task{
-				taskload.NewEmbeddedTask(name, module.Settings, r.loadModule, r.status, r.logger),
+				taskload.NewEmbeddedTask(name, module.Settings, r.loadEmbeddedModule, r.status, r.logger),
 			}
 
 			// If there's an existing module, disable it first to ensure a clean transition.
@@ -87,6 +92,63 @@ func (r *Runtime) UpdateEmbedded(module *Module) {
 	})
 }
 
+// loadEmbeddedModule builds a Module from its package files, validates settings, and registers it
+// with the lifecycle store and scheduler. Called by the Load task after filesystem mount.
+func (r *Runtime) loadEmbeddedModule(ctx context.Context, repo registry.Remote, settings addonutils.Values, packagePath string) (string, error) {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadModule")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("path", packagePath))
+	span.SetAttributes(attribute.String("repository", repo.Name))
+
+	// Embedded module directories have a weight prefix (e.g., "modules/002-deckhouse")
+	// but the task only knows the clean name (e.g., "modules/deckhouse").
+	// Resolve the real path by matching the weight-prefixed directory on disk.
+	realPath, err := resolveEmbeddedPath(packagePath)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", newLoadFailedErr(err)
+	}
+
+	moduleName := filepath.Base(packagePath)
+
+	conf, err := loader.LoadModuleConf(ctx, realPath, r.logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", newLoadFailedErr(err)
+	}
+
+	conf.Repository = repo
+	conf.Patcher = r.objectPatcher
+	conf.ScheduleManager = r.scheduleManager
+	conf.KubeEventsManager = r.kubeEventsManager
+
+	module, err := modules.NewModuleByConfig(moduleName, conf, r.logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", newLoadFailedErr(err)
+	}
+
+	res, err := module.ValidateSettings(ctx, settings)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", newApplyInitialSettingsErr(err)
+	}
+
+	if !res.Valid {
+		span.SetStatus(codes.Error, res.Message)
+		return "", newApplyInitialSettingsErr(errors.New(res.Message))
+	}
+
+	r.mu.Lock()
+	r.modules.SetPackage(module.GetName(), module)
+	r.mu.Unlock()
+
+	// r.scheduler.Register(module)
+
+	return module.GetVersion(), nil
+}
+
 // initEmbedded discovers embedded modules shipped with the deckhouse image and
 // registers each one via UpdateEmbedded. Modules live as top-level directories
 // under "modules/"; 000-common is a shared library used by other modules, not
@@ -96,8 +158,6 @@ func (r *Runtime) initEmbedded() error {
 		if err != nil {
 			return err
 		}
-
-		r.logger.Debug("checking embedded module", path)
 
 		// Skip files — only directories represent modules.
 		if !info.IsDir() {
@@ -123,8 +183,6 @@ func (r *Runtime) initEmbedded() error {
 			return fmt.Errorf("read definition for %s: %w", info.Name(), err)
 		}
 
-		r.logger.Debug("load embedded module", slog.String("name", info.Name()))
-
 		r.UpdateEmbedded(&Module{
 			Name: def.Name,
 			Definition: modules.Definition{
@@ -137,6 +195,30 @@ func (r *Runtime) initEmbedded() error {
 		// Don't recurse into module subdirectories — we only need top-level entries.
 		return filepath.SkipDir
 	})
+}
+
+// resolveEmbeddedPath finds the actual directory for an embedded module whose
+// path on disk includes a weight prefix (e.g., "modules/002-deckhouse" for "modules/deckhouse").
+// It globs for directories matching "<parent>/*-<name>" and returns the first match.
+func resolveEmbeddedPath(packagePath string) (string, error) {
+	// If the path exists as-is (no weight prefix), use it directly.
+	if _, err := os.Stat(packagePath); err == nil {
+		return packagePath, nil
+	}
+
+	parent := filepath.Dir(packagePath)
+	name := filepath.Base(packagePath)
+
+	matches, err := filepath.Glob(filepath.Join(parent, "*-"+name))
+	if err != nil {
+		return "", fmt.Errorf("glob for embedded module %q: %w", name, err)
+	}
+
+	if len(matches) == 0 {
+		return "", fmt.Errorf("embedded module directory not found for %q in %q", name, parent)
+	}
+
+	return matches[0], nil
 }
 
 // loadModuleDefinition reads and parses the module.yaml file from the package directory.
