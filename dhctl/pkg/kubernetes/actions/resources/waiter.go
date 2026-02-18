@@ -16,6 +16,8 @@ package resources
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
@@ -123,4 +125,20 @@ func (w *Waiter) ReadyAll(ctx context.Context) (bool, error) {
 	w.checkers = checkersToStay
 
 	return len(w.checkers) == 0, nil
+}
+
+func (w *Waiter) PrintCheckers() string {
+	checkers := ""
+	for _, c := range w.checkers {
+		checker, ok := c.(*resourceReadinessChecker)
+		if !ok {
+			continue
+		}
+		checkers += fmt.Sprintf("%s: %s\n", checker.resource.DetailedGVKString(), checker.resourceName)
+	}
+	if len(checkers) > 0 {
+		checkers = strings.TrimRight(", ", checkers)
+	}
+
+	return checkers
 }

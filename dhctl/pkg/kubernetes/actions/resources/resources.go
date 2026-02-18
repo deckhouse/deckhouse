@@ -340,6 +340,14 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 			return nil
 		}
 
+		checkersToWait := waiter.PrintCheckers()
+		if len(checkersToWait) > 0 {
+			_ = log.Process("Create Resources", "Resources to create", func() error {
+				log.InfoF("%s\n", checkersToWait)
+				return nil
+			})
+		}
+
 		select {
 		case <-endChannel:
 			if len(resources) > 0 {
