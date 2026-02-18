@@ -11,33 +11,36 @@ index e207a79712..77465b5892 100644
        --enable-local-redirect-policy                              Enable Local Redirect Policy
        --enable-masquerade-to-route-source                         Masquerade packets to the source IP provided from the routing layer rather than interface address
 diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
-index 15dacfa4df..495cc2c4ba 100644
+index 15dacfa4df..ce4fb1099a 100644
 --- a/bpf/lib/lb.h
 +++ b/bpf/lib/lb.h
-@@ -1300,7 +1300,12 @@ lb4_extract_tuple(struct __ctx_buff *ctx, struct iphdr *ip4, int l3_off, int *l4
+@@ -1300,7 +1300,16 @@ lb4_extract_tuple(struct __ctx_buff *ctx, struct iphdr *ip4, int l3_off, int *l4
  			return ret;
  		return 0;
  	case IPPROTO_ICMP:
 +
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
++		/* if loadbalancer-icmp-reply is enabled, we need to return 0 
++		 * to allow the packet to be processed by the next part of the code */
 +		return 0;
 +#else
++		/* if loadbalancer-icmp-reply is not enabled, return DROP_UNSUPP_SERVICE_PROTO 
++		 * to support old-style packet processing (drop the packet) */
  		return DROP_UNSUPP_SERVICE_PROTO;
 +#endif
  	default:
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..9df37f8a9f 100644
+index 0142716855..0f22a9eb39 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
-@@ -2679,6 +2679,64 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+@@ -2679,6 +2679,63 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
  				  ext_err);
  }
  
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
-+/* ICMP reply handling code for LoadBalancer services
-+ * This code will be compiled when the feature is enabled
++/* ICMP reply packets construction code for LoadBalancer services
 + */
 +static __always_inline
 +int make_icmp_responce_lb4(struct __ctx_buff *ctx,
@@ -89,26 +92,29 @@ index 0142716855..9df37f8a9f 100644
 +	ccsum += (0x08) << 8;
 +	icmphdr->checksum = bpf_htons(ccsum);
 +
-+	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
++	return redirect_self(ctx);
 +}
 +#endif /* ENABLE_LOADBALANCER_ICMP_REPLY */
 +
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2716,6 +2774,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2716,6 +2773,22 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	lb4_fill_key(&key, &tuple);
  
  	svc = lb4_lookup_service(&key, false);
 +
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
++	/* If the packet is an ICMP echo request, we need to check if special 
++	port=0 service exists and if so, create a reply packet and send it back 
++	to the original source.	This is only supported for LoadBalancer services. */
 +	if (ip4->protocol == IPPROTO_ICMP) {
 +		if (!svc) {
 +			key.dport = 0;
 +			key.proto = 6;
 +			svc = lb4_lookup_service(&key, true);
 +		}
-+		if (svc && lb4_svc_is_loadbalancer(svc)) {
++		if (svc) {
 +			return make_icmp_responce_lb4(ctx, ip4);
 +		}
 +	}
@@ -157,19 +163,143 @@ index 1a25f14957..b57f3d2523 100644
  	// EnableHealthCheckLoadBalancerIP is the default value for
  	// EnableHealthCheckLoadBalancerIP
  	EnableHealthCheckLoadBalancerIP = false
+diff --git a/pkg/maps/lbmap/lbmap.go b/pkg/maps/lbmap/lbmap.go
+index 12686cec41..2f9a859d1a 100644
+--- a/pkg/maps/lbmap/lbmap.go
++++ b/pkg/maps/lbmap/lbmap.go
+@@ -15,6 +15,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/cidr"
+ 	cmtypes "github.com/cilium/cilium/pkg/clustermesh/types"
+ 	datapathTypes "github.com/cilium/cilium/pkg/datapath/types"
++	"github.com/cilium/cilium/pkg/ebpf"
+ 	"github.com/cilium/cilium/pkg/ip"
+ 	"github.com/cilium/cilium/pkg/loadbalancer"
+ 	"github.com/cilium/cilium/pkg/logging"
+@@ -230,7 +231,54 @@ func deleteServiceProto(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev
+ 	if err := deleteRevNatLocked(revNATKey); err != nil {
+ 		return fmt.Errorf("Unable to delete revNAT entry %+v: %w", revNATKey, err)
+ 	}
++	if option.Config.EnableLoadBalancerICMPReply {
++		if svc.Port != 0 {
++			// Create a special instance of loadbalancer with port=0 key with same IP, protocol, and scope
++			var portZeroKey ServiceKey
++			if ipv6 {
++				portZeroKey = NewService6Key(svc.AddrCluster.AsNetIP(), 0, u8p, svc.Scope, 0)
++			} else {
++				portZeroKey = NewService4Key(svc.AddrCluster.AsNetIP(), 0, u8p, svc.Scope, 0)
++			}
+ 
++			// Lookup for the existing port=0 key in the map
++			existingValue, err := portZeroKey.Map().Lookup(portZeroKey.ToNetwork())
++			if err != nil {
++				if errors.Is(err, ebpf.ErrKeyNotExist) {
++					// If Port=0 key doesn't exist, nothing to decrement
++					log.WithFields(logrus.Fields{
++						logfields.ServiceKey: portZeroKey,
++					}).Debug("LoadBalancerICMPReply special Port=0 instance does not exist, Nothing to handle")
++				} else {
++					log.WithFields(logrus.Fields{
++						logfields.ServiceKey: portZeroKey,
++					}).WithError(err).Warn("LoadBalancerICMPReply Unable to lookup special Port=0 instance")
++				}
++			} else {
++				// Port=0 key exists, decrement its value in Count
++				existingValueHost := existingValue.(ServiceValue).ToHost()
++				currentCount := existingValueHost.GetCount()
++				newCount := currentCount - 1
++
++				if newCount <= 0 {
++					// Links of all backends for this port reached 0, so delete this port=0 key
++					if err := deleteServiceLocked(portZeroKey); err != nil {
++						log.WithFields(logrus.Fields{
++							logfields.ServiceKey: portZeroKey,
++						}).WithError(err).Warn("LoadBalancerICMPReply Unable to delete port=0 key after decrement")
++					}
++				} else {
++					// Still remains links of all backends for this port, so pdate with decremented count
++					existingValueHost.SetCount(newCount)
++					if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), existingValueHost.ToNetwork()); err != nil {
++						log.WithFields(logrus.Fields{
++							logfields.ServiceKey: portZeroKey,
++						}).WithError(err).Warn("LoadBalancerICMPReply Unable to update port=0 key count after decrement")
++					}
++				}
++			}
++		}
++	}
+ 	return nil
+ }
+ 
+@@ -638,7 +686,64 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
+ 	if l7lbProxyPort != 0 {
+ 		v.SetL7LBProxyPort(l7lbProxyPort)
+ 	}
+-
++	if option.Config.EnableLoadBalancerICMPReply {
++		/*
++			EnableLoadBalancerICMPReply feature is used to generate ICMP reply packets for LoadBalancer services.
++			It adds special instance of loadbalancer with port=0 key. It is used in bpf code to generate ICMP reply packets.
++			When a LoadBalancer is created, a special instance of loadbalancer with port=0 key is created.
++			For every backend we need to increment value of Count in the special instance of loadbalancer with port=0 key.
++			When a backend is deleted, we need to decrement value of Count in the special instance of loadbalancer with port=0 key.
++			When a LoadBalancer service with port=0 is deleted with all backends, the special instance of loadbalancer is deleted.
++		*/
++		if svcType == loadbalancer.SVCTypeLoadBalancer && fe.GetPort() != 0 {
++			// Check if the key already exists in the BPF map
++			_, lookupErr := fe.Map().Lookup(fe.ToNetwork())
++			keyExists := lookupErr == nil
++
++			// Create a special instance of loadbalancer with port=0 key with same IP, protocol, and scope
++			var portZeroKey ServiceKey
++			var portZeroValue ServiceValue
++			if fe.IsIPv6() {
++				portZeroKey = NewService6Key(fe.GetAddress(), 0, u8proto.U8proto(fe.GetProtocol()), fe.GetScope(), 0)
++				portZeroValue = &Service6Value{}
++			} else {
++				portZeroKey = NewService4Key(fe.GetAddress(), 0, u8proto.U8proto(fe.GetProtocol()), fe.GetScope(), 0)
++				portZeroValue = &Service4Value{}
++			}
++			// Set the initial value for the special instance
++			portZeroValue.SetCount(1)
++			portZeroValue.SetRevNat(0)
++			portZeroValue.SetFlags(0)
++			portZeroValue.SetQCount(0)
++			if !keyExists {
++				// Original key doesn't exist: add port=0 key with Count=1
++				if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), portZeroValue.ToNetwork()); err != nil {
++					return fmt.Errorf("EnableLoadBalancerICMPReply unable to add special instance port=0 key: %w", err)
++				}
++			} else {
++				// Original key exists: increment Count of port=0 key
++				existingValue, err := portZeroKey.Map().Lookup(portZeroKey.ToNetwork())
++				if err != nil {
++					if errors.Is(err, ebpf.ErrKeyNotExist) {
++						// Port=0 key doesn't exist yet, create it with Count=1
++						if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), portZeroValue.ToNetwork()); err != nil {
++							return fmt.Errorf("EnableLoadBalancerICMPReply unable to create special port=0 key: %w", err)
++						}
++					} else {
++						return fmt.Errorf("EnableLoadBalancerICMPReply unable to lookup special port=0 key: %w", err)
++					}
++				} else {
++					// Port=0 key exists, increment its Count
++					existingValueHost := existingValue.(ServiceValue).ToHost()
++					currentCount := existingValueHost.GetCount()
++					existingValueHost.SetCount(currentCount + 1)
++					if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), existingValueHost.ToNetwork()); err != nil {
++						return fmt.Errorf("EnableLoadBalancerICMPReply unable to increment special port=0 key count: %w", err)
++					}
++				}
++			}
++		}
++	}
+ 	return updateServiceEndpoint(fe, v)
+ }
+ 
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index e4390c0622..bc96d0abf3 100644
+index e4390c0622..e77a0677eb 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
-@@ -233,7 +233,7 @@ const (
- 	// EnableHostFirewall enables network policies for the host
- 	EnableHostFirewall = "enable-host-firewall"
- 
--	// EnableHostPort enables HostPort forwarding implemented by Cilium in BPF
-+	// EnableHostPort enables HostPort forwarding implement`wed by Cilium in BPF
- 	EnableHostPort = "enable-host-port"
- 
- 	// EnableHostLegacyRouting enables the old routing path via stack.
 @@ -245,6 +245,9 @@ const (
  	// EnableSVCSourceRangeCheck enables check of service source range checks
  	EnableSVCSourceRangeCheck = "enable-svc-source-range-check"
@@ -198,261 +328,3 @@ index e4390c0622..bc96d0abf3 100644
  	c.EnableHostPort = vp.GetBool(EnableHostPort)
  	c.EnableHostLegacyRouting = vp.GetBool(EnableHostLegacyRouting)
  	c.NodePortBindProtection = vp.GetBool(NodePortBindProtection)
-diff --git a/pkg/service/service.go b/pkg/service/service.go
-index 52b2d9aa2b..c7ecad7854 100644
---- a/pkg/service/service.go
-+++ b/pkg/service/service.go
-@@ -21,6 +21,7 @@ import (
- 	"github.com/cilium/cilium/pkg/datapath/sockets"
- 	datapathTypes "github.com/cilium/cilium/pkg/datapath/types"
- 	"github.com/cilium/cilium/pkg/k8s"
-+	"github.com/cilium/cilium/pkg/loadbalancer"
- 	lb "github.com/cilium/cilium/pkg/loadbalancer"
- 	"github.com/cilium/cilium/pkg/lock"
- 	"github.com/cilium/cilium/pkg/logging"
-@@ -36,6 +37,7 @@ import (
- 	"github.com/cilium/cilium/pkg/service/healthserver"
- 	"github.com/cilium/cilium/pkg/time"
- 	"github.com/cilium/cilium/pkg/u8proto"
-+	"github.com/cilium/ebpf"
- )
- 
- // ErrLocalRedirectServiceExists represents an error when a Local redirect
-@@ -285,6 +287,11 @@ type Service struct {
- 	// not for loadbalancing decisions.
- 	backendByHash map[string]*lb.Backend
- 
-+	// portZeroRefCount tracks reference count for port 0 entries shared by multiple
-+	// LoadBalancer services with the same IP. Key format: "IP:Protocol:Scope"
-+	// Value: set of service IDs using this port 0 entry
-+	portZeroRefCount map[string]sets.Set[lb.ID]
-+
- 	healthServer healthServer
- 	monitorAgent monitorAgent.Agent
- 
-@@ -315,6 +322,7 @@ func newService(monitorAgent monitorAgent.Agent, lbmap datapathTypes.LBMap, back
- 		svcByID:                  map[lb.ID]*svcInfo{},
- 		backendRefCount:          counter.Counter[string]{},
- 		backendByHash:            map[string]*lb.Backend{},
-+		portZeroRefCount:         map[string]sets.Set[lb.ID]{},
- 		monitorAgent:             monitorAgent,
- 		healthServer:             localHealthServer,
- 		healthCheckChan:          make(chan any),
-@@ -716,7 +724,6 @@ func (s *Service) reUpsertServicesByName(name, namespace string) error {
- 
- func (s *Service) upsertService(params *lb.SVC) (bool, lb.ID, error) {
- 	empty := L7LBResourceName{}
--
- 	// Set L7 LB for this service if registered.
- 	l7lbInfo, exists := s.l7lbSvcs[params.Name]
- 	if exists && l7lbInfo.ownerRef != empty && l7lbInfo.isProtoAndPortMatch(&params.Frontend.L4Addr) {
-@@ -1590,6 +1597,107 @@ func (s *Service) addBackendsToAffinityMatchMap(svcID lb.ID, backendIDs []lb.Bac
- 	}
- }
- 
-+// portZeroKey generates a unique key for port 0 entry reference counting.
-+// Format: "IP:Protocol:Scope"
-+func portZeroKey(ip net.IP, protocol uint8, scope uint8) string {
-+	return fmt.Sprintf("%s:%d:%d", ip.String(), protocol, scope)
-+}
-+
-+// addPortZeroRef increments the reference count for a port 0 entry.
-+// Returns true if this is the first reference (entry should be created).
-+func (s *Service) addPortZeroRef(ip net.IP, protocol uint8, scope uint8, svcID lb.ID) bool {
-+	key := portZeroKey(ip, protocol, scope)
-+	if s.portZeroRefCount[key] == nil {
-+		s.portZeroRefCount[key] = sets.New[lb.ID]()
-+	}
-+	wasEmpty := s.portZeroRefCount[key].Len() == 0
-+	s.portZeroRefCount[key].Insert(svcID)
-+	return wasEmpty
-+}
-+
-+// removePortZeroRef decrements the reference count for a port 0 entry.
-+// Returns true if this was the last reference (entry should be deleted).
-+func (s *Service) removePortZeroRef(ip net.IP, protocol uint8, scope uint8, svcID lb.ID) bool {
-+	key := portZeroKey(ip, protocol, scope)
-+	refSet, exists := s.portZeroRefCount[key]
-+	if !exists || !refSet.Has(svcID) {
-+		// Service ID not in ref count - might be from old code or race condition
-+		return false
-+	}
-+	refSet.Delete(svcID)
-+	if refSet.Len() == 0 {
-+		delete(s.portZeroRefCount, key)
-+		return true
-+	}
-+	return false
-+}
-+
-+// deletePortZeroServiceEntries deletes port 0 service entries from BPF map without
-+// deleting the revNAT entry (which is shared with the main service and already deleted).
-+// This function handles deletion of service map entries only, avoiding double-deletion
-+// of revNAT which would cause errors.
-+func (s *Service) deletePortZeroServiceEntries(frontend lb.L3n4AddrID, natPolicy lb.SVCNatPolicy) error {
-+	var svcKey lbmap.ServiceKey
-+	ipv6 := frontend.IsIPv6() || natPolicy == lb.SVCNatPolicyNat46
-+
-+	protocol, err := u8proto.ParseProtocol(frontend.L3n4Addr.L4Addr.Protocol)
-+	if err != nil {
-+		return fmt.Errorf("unable to parse protocol: %w", err)
-+	}
-+
-+	if ipv6 {
-+		svcKey = lbmap.NewService6Key(frontend.AddrCluster.AsNetIP(), frontend.Port, protocol, frontend.Scope, 0)
-+	} else {
-+		svcKey = lbmap.NewService4Key(frontend.AddrCluster.AsNetIP(), frontend.Port, protocol, frontend.Scope, 0)
-+	}
-+
-+	// Delete master entry (slot 0) - this is always present for a service
-+	svcKey.SetBackendSlot(0)
-+	if _, err := svcKey.Map().SilentDelete(svcKey.ToNetwork()); err != nil {
-+		// If master entry deletion fails, it might not exist - that's okay
-+		log.WithFields(logrus.Fields{
-+			logfields.ServiceKey: svcKey,
-+		}).WithError(err).Debug("Unable to delete port 0 master entry (may not exist)")
-+	}
-+
-+	// Also try to delete backend slots in case old entries exist with backends
-+	// (from previous buggy versions that created port 0 entries with backends)
-+	maxBackendSlots := 16 // Reasonable upper limit for cleanup
-+	for slot := 1; slot <= maxBackendSlots; slot++ {
-+		svcKey.SetBackendSlot(slot)
-+		// SilentDelete handles missing entries gracefully, so we can try all slots
-+		_, _ = svcKey.Map().SilentDelete(svcKey.ToNetwork())
-+	}
-+
-+	return nil
-+}
-+
-+// checkServiceExists checks if a service entry with the given IP, port, protocol, and scope
-+// already exists in the BPF service map
-+func checkServiceExists(ip net.IP, port uint16, protocol uint8, scope uint8) (bool, error) {
-+	var svcKey lbmap.ServiceKey
-+
-+	proto := u8proto.U8proto(protocol)
-+	isIPv6 := ip.To4() == nil
-+
-+	if isIPv6 {
-+		svcKey = lbmap.NewService6Key(ip, port, proto, scope, 0)
-+	} else {
-+		svcKey = lbmap.NewService4Key(ip, port, proto, scope, 0)
-+	}
-+
-+	// Lookup the master entry (backend slot 0)
-+	_, err := svcKey.Map().Lookup(svcKey.ToNetwork())
-+	if err != nil {
-+		if errors.Is(err, ebpf.ErrKeyNotExist) {
-+			return false, nil // Service doesn't exist
-+		}
-+		return false, err // Some other error occurred
-+	}
-+
-+	return true, nil // Service exists
-+}
-+
- func (s *Service) upsertServiceIntoLBMaps(svc *svcInfo, isExtLocal, isIntLocal bool,
- 	prevBackendCount int, newBackends []*lb.Backend, obsoleteBackends []*lb.Backend,
- 	prevSessionAffinity bool, prevLoadBalancerSourceRanges []*cidr.CIDR,
-@@ -1722,6 +1830,53 @@ func (s *Service) upsertServiceIntoLBMaps(svc *svcInfo, isExtLocal, isIntLocal b
- 	if err := s.lbmap.UpsertService(p); err != nil {
- 		return err
- 	}
-+	if option.Config.EnableLoadBalancerICMPReply {
-+		if p.Type == loadbalancer.SVCTypeLoadBalancer && p.Port != 0 {
-+			// Create port 0 entry with NO backends - it's just a wildcard entry
-+			p2 := &datapathTypes.UpsertServiceParams{
-+				ID:                        p.ID,
-+				IP:                        p.IP,
-+				Port:                      0, // port 0
-+				Protocol:                  p.Protocol,
-+				PreferredBackends:         make(map[string]*lb.Backend), // Empty - no backends
-+				ActiveBackends:            make(map[string]*lb.Backend), // Empty - no backends
-+				NonActiveBackends:         []lb.BackendID{},             // Empty - no backends
-+				PrevBackendsCount:         0,                            // No previous backends
-+				IPv6:                      p.IPv6,
-+				NatPolicy:                 p.NatPolicy,
-+				Type:                      p.Type,
-+				ForwardingMode:            p.ForwardingMode,
-+				ExtLocal:                  p.ExtLocal,
-+				IntLocal:                  p.IntLocal,
-+				Scope:                     p.Scope,
-+				SessionAffinity:           false, // Port 0 entry doesn't need session affinity
-+				SessionAffinityTimeoutSec: 0,
-+				SourceRangesPolicy:        p.SourceRangesPolicy,
-+				CheckSourceRange:          false, // Port 0 entry doesn't check source ranges
-+				UseMaglev:                 false, // Port 0 entry doesn't use Maglev
-+				L7LBProxyPort:             0,     // Port 0 entry doesn't use L7 LB
-+				Name:                      p.Name,
-+				LoopbackHostport:          p.LoopbackHostport,
-+				LoadBalancingAlgorithm:    p.LoadBalancingAlgorithm,
-+			}
-+			// Use reference counting to track multiple services sharing the same port 0 entry
-+			shouldCreate := s.addPortZeroRef(p.IP, p.Protocol, p.Scope, lb.ID(p.ID))
-+
-+			if shouldCreate {
-+				// First service using this port 0 entry - create it
-+				if err := s.lbmap.UpsertService(p2); err != nil {
-+					// If creation fails, remove the reference we just added
-+					s.removePortZeroRef(p.IP, p.Protocol, p.Scope, lb.ID(p.ID))
-+					// Log error but don't fail the main service creation
-+					getScopedLog().WithFields(logrus.Fields{
-+						logfields.ServiceIP: p2.IP.String(),
-+						logfields.Port:      p2.Port,
-+						logfields.ServiceID: p.ID,
-+					}).WithError(err).Warn("Failed to add port 0 service entry, main service created successfully")
-+				}
-+			}
-+		}
-+	}
- 
- 	// If L7 LB is configured for this service then BPF level session affinity is not used.
- 	if option.Config.EnableSessionAffinity && !svc.isL7LBService() {
-@@ -1976,6 +2131,47 @@ func (s *Service) deleteServiceLocked(svc *svcInfo) error {
- 		return err
- 	}
- 
-+	// For LoadBalancer services with non-zero port, also delete the corresponding
-+	// port 0 entry that was created during upsert
-+	if option.Config.EnableLoadBalancerICMPReply {
-+		if svc.svcType == lb.SVCTypeLoadBalancer && svc.frontend.L3n4Addr.L4Addr.Port != 0 {
-+			portZeroFrontend := *lb.NewL3n4AddrID(
-+				svc.frontend.L3n4Addr.L4Addr.Protocol,
-+				svc.frontend.L3n4Addr.AddrCluster,
-+				0, // port 0
-+				svc.frontend.L3n4Addr.Scope,
-+				svc.frontend.ID,
-+			)
-+
-+			// Use reference counting to determine if we should delete port 0 entry
-+			protocol, err := u8proto.ParseProtocol(svc.frontend.L3n4Addr.L4Addr.Protocol)
-+			if err != nil {
-+				scopedLog.WithError(err).Warn("Unable to parse protocol for port 0 service check")
-+			} else {
-+				shouldDelete := s.removePortZeroRef(
-+					portZeroFrontend.L3n4Addr.AddrCluster.AsNetIP(),
-+					uint8(protocol),
-+					portZeroFrontend.L3n4Addr.Scope,
-+					svc.frontend.ID,
-+				)
-+
-+				if shouldDelete {
-+					// Last service using this port 0 entry - delete it
-+					scopedLog.WithFields(logrus.Fields{
-+						logfields.ServiceID: svc.frontend.ID,
-+						logfields.ServiceIP: portZeroFrontend.L3n4Addr.AddrCluster.AsNetIP(),
-+					}).Debug("Last reference to port 0 entry, deleting")
-+
-+					// Delete port 0 service entries manually to avoid double-deleting revNAT
-+					// (revNAT is already deleted when main service was deleted)
-+					if err := s.deletePortZeroServiceEntries(portZeroFrontend, svc.svcNatPolicy); err != nil {
-+						scopedLog.WithError(err).Warning("Unable to delete port 0 service entry for LoadBalancer service")
-+					}
-+				}
-+			}
-+		}
-+	}
-+
- 	// Delete affinity matches
- 	if option.Config.EnableSessionAffinity && svc.sessionAffinity {
- 		backendIDs := make([]lb.BackendID, 0, len(svc.backends))
