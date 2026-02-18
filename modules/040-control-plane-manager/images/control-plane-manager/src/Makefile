@@ -19,11 +19,11 @@ generate: controller-gen
 
 .PHONY: test
 test:
-	go test -v ./controllers/...
+	go test -v ./internal/controllers/...
 
 .PHONY: test-golden
-test-golden:
-	go test ./controllers/... -golden
+test-golden-update:
+	UPDATE_GOLDEN=true && go test ./internal/controllers/...
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN)

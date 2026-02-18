@@ -18,8 +18,6 @@ package controlplaneconfiguration
 
 import (
 	"context"
-	"crypto/sha256"
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -29,6 +27,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -66,138 +66,7 @@ type ControllerTestSuite struct {
 	testDataFileName string
 }
 
-type mockManifestGenerator struct{}
-
-// mockManifestGenerator returns manifests for testing (like kubeadm-generated manifests)
-func (m *mockManifestGenerator) GenerateManifest(componentName string, tmpDir string) ([]byte, error) {
-	// for kube-apiserver, return manifest with audit-policy.yaml referenced
-	if componentName == "kube-apiserver" {
-		return []byte(`apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-apiserver
-  namespace: kube-system
-spec:
-  containers:
-  - name: kube-apiserver
-    image: test:latest
-    command:
-    - kube-apiserver
-    - --audit-policy-file=/etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
-    - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
-    volumeMounts:
-    - mountPath: /etc/kubernetes/deckhouse/extra-files
-      name: extra-files
-  volumes:
-  - hostPath:
-      path: /etc/kubernetes/deckhouse/extra-files
-    name: extra-files
-`), nil
-	}
-	// for other components, return simple manifest
-	return []byte(fmt.Sprintf(`apiVersion: v1
-kind: Pod
-metadata:
-  name: %s
-  namespace: kube-system
-spec:
-  containers:
-  - name: %s
-    image: test:latest
-    command:
-    - %s
-    volumeMounts:
-    - mountPath: /etc/kubernetes/pki
-      name: certs
-  volumes:
-  - hostPath:
-      path: /etc/kubernetes/pki
-    name: certs
-`, componentName, componentName, componentName)), nil
-}
-
-func (m *mockManifestGenerator) GenerateKubeconfigs(tmpDir string) error {
-	kubernetesDir := filepath.Join(tmpDir, constants.RelativeKubernetesDir)
-	if err := os.MkdirAll(kubernetesDir, 0o700); err != nil {
-		return err
-	}
-
-	// Generate mock kubeconfig files for controller-manager and scheduler
-	for _, component := range []string{"controller-manager", "scheduler"} {
-		kubeconfigPath := filepath.Join(kubernetesDir, component+".conf")
-		mockKubeconfig := []byte(fmt.Sprintf("# Mock kubeconfig for %s\napiVersion: v1\nkind: Config\n", component))
-		if err := os.WriteFile(kubeconfigPath, mockKubeconfig, 0o600); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *mockManifestGenerator) GenerateCertificates(componentName string, tmpDir string) error {
-	pkiDir := filepath.Join(tmpDir, constants.RelativePkiDir)
-	etcdPkiDir := filepath.Join(pkiDir, "etcd")
-	if err := os.MkdirAll(etcdPkiDir, 0o700); err != nil {
-		return err
-	}
-
-	// Generate mock certificates based on component (not depends on CA)
-	switch componentName {
-	case "etcd":
-		for _, certName := range []string{"peer", "server", "healthcheck-client"} {
-			certPath := filepath.Join(etcdPkiDir, certName+".crt")
-			keyPath := filepath.Join(etcdPkiDir, certName+".key")
-
-			if err := os.WriteFile(certPath, []byte("mock-cert-"+certName), 0o600); err != nil {
-				return err
-			}
-			if err := os.WriteFile(keyPath, []byte("mock-key-"+certName), 0o600); err != nil {
-				return err
-			}
-		}
-	case "kube-apiserver":
-		for _, certName := range []string{"apiserver", "apiserver-kubelet-client", "apiserver-etcd-client"} {
-			certPath := filepath.Join(pkiDir, certName+".crt")
-			keyPath := filepath.Join(pkiDir, certName+".key")
-
-			if err := os.WriteFile(certPath, []byte("mock-cert-"+certName), 0o600); err != nil {
-				return err
-			}
-			if err := os.WriteFile(keyPath, []byte("mock-key-"+certName), 0o600); err != nil {
-				return err
-			}
-		}
-		// Generate front-proxy-client (depends on CA) cert based on front-proxy-ca from PKI dir for TestApiserverChecksumChangesOnFrontProxyCAUpdate
-		// Read front-proxy-ca to simulate generating client cert from CA
-		frontProxyCACert := filepath.Join(pkiDir, "front-proxy-ca.crt")
-		frontProxyCAKey := filepath.Join(pkiDir, "front-proxy-ca.key")
-
-		caContent, err := os.ReadFile(frontProxyCACert)
-		if err != nil {
-			return fmt.Errorf("failed to read front-proxy-ca.crt: %w", err)
-		}
-		caKeyContent, err := os.ReadFile(frontProxyCAKey)
-		if err != nil {
-			return fmt.Errorf("failed to read front-proxy-ca.key: %w", err)
-		}
-
-		// Generate client cert with content that depends on CA
-		// This simulates regeneration with new content when CA changes
-		frontProxyCert := filepath.Join(pkiDir, "front-proxy-client.crt")
-		frontProxyKey := filepath.Join(pkiDir, "front-proxy-client.key")
-		clientCertContent := fmt.Sprintf("mock-cert-front-proxy-client-ca:%x-cakey:%x",
-			sha256.Sum256(caContent), sha256.Sum256(caKeyContent))
-
-		if err := os.WriteFile(frontProxyCert, []byte(clientCertContent), 0o600); err != nil {
-			return err
-		}
-		if err := os.WriteFile(frontProxyKey, []byte("mock-key-front-proxy-client"), 0o600); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
+const testNodeName = "master-1"
 
 func (suite *ControllerTestSuite) SetupSuite() {
 	suite.ctx = context.Background()
@@ -214,407 +83,222 @@ func (suite *ControllerTestSuite) setupController(objs []client.Object) {
 	}
 }
 
-func (suite *ControllerTestSuite) TestReconcileCreatesConfiguration() {
-	suite.Run("ControlPlaneConfiguration should be created with all checksums", func() {
-		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
+func (suite *ControllerTestSuite) reconcile() {
+	_, err := suite.controller.Reconcile(suite.ctx, reconcile.Request{
+		NamespacedName: client.ObjectKey{Name: testNodeName},
+	})
+	require.NoError(suite.T(), err)
+}
 
-		_, err := suite.controller.Reconcile(
-			suite.ctx,
-			reconcile.Request{
-				NamespacedName: client.ObjectKey{
-					Name: constants.ControlPlaneConfigurationName,
+func (suite *ControllerTestSuite) getControlPlaneNode() *controlplanev1alpha1.ControlPlaneNode {
+	cpn := &controlplanev1alpha1.ControlPlaneNode{}
+	err := suite.client.Get(suite.ctx, client.ObjectKey{Name: testNodeName}, cpn)
+	require.NoError(suite.T(), err, "ControlPlaneNode should exist")
+	return cpn
+}
+
+func (suite *ControllerTestSuite) getPKISecret() *corev1.Secret {
+	s := &corev1.Secret{}
+	err := suite.client.Get(suite.ctx, client.ObjectKey{
+		Name:      constants.PkiSecretName,
+		Namespace: constants.KubeSystemNamespace,
+	}, s)
+	require.NoError(suite.T(), err)
+	return s
+}
+
+func (suite *ControllerTestSuite) getConfigSecret() *corev1.Secret {
+	s := &corev1.Secret{}
+	err := suite.client.Get(suite.ctx, client.ObjectKey{
+		Name:      constants.ControlPlaneManagerConfigSecretName,
+		Namespace: constants.KubeSystemNamespace,
+	}, s)
+	require.NoError(suite.T(), err)
+	return s
+}
+
+// TestReconcileCreatesControlPlaneNode verifies that reconciling a master Node creates a ControlPlaneNode with all checksum fields populated
+func (suite *ControllerTestSuite) TestReconcileCreatesControlPlaneNode() {
+	suite.Run("ControlPlaneNode should be created with all checksums non-empty", func() {
+		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
+		suite.reconcile()
+
+		cpn := suite.getControlPlaneNode()
+
+		require.NotEmpty(suite.T(), cpn.Spec.PKIChecksum, "PKIChecksum should not be empty")
+		require.NotZero(suite.T(), cpn.Spec.ConfigurationGeneration, "ConfigurationGeneration should not be zero")
+		require.NotEmpty(suite.T(), cpn.Spec.HotReloadChecksum, "HotReloadChecksum should not be empty")
+
+		require.NotNil(suite.T(), cpn.Spec.Components.Etcd, "Etcd should not be nil")
+		require.NotEmpty(suite.T(), cpn.Spec.Components.Etcd.Checksum, "Etcd checksum should not be empty")
+
+		require.NotNil(suite.T(), cpn.Spec.Components.KubeAPIServer, "KubeAPIServer should not be nil")
+		require.NotEmpty(suite.T(), cpn.Spec.Components.KubeAPIServer.Checksum, "KubeAPIServer checksum should not be empty")
+
+		require.NotNil(suite.T(), cpn.Spec.Components.KubeControllerManager, "KubeControllerManager should not be nil")
+		require.NotEmpty(suite.T(), cpn.Spec.Components.KubeControllerManager.Checksum, "KubeControllerManager checksum should not be empty")
+
+		require.NotNil(suite.T(), cpn.Spec.Components.KubeScheduler, "KubeScheduler should not be nil")
+		require.NotEmpty(suite.T(), cpn.Spec.Components.KubeScheduler.Checksum, "KubeScheduler checksum should not be empty")
+	})
+}
+
+// TestGoldenControlPlaneNode compares the reconciled ControlPlaneNode spec with a pre-computed golden file stored in testdata/golden/
+// This catches regressions in checksum logic: if CalculateComponentChecksum changes, the hardcoded golden values will no longer match
+// To regenerate the golden file after intentional changes, run: UPDATE_GOLDEN=true go test ./... or make test-golden-update
+func (suite *ControllerTestSuite) TestGoldenControlPlaneNode() {
+	suite.Run("ControlPlaneNode spec should match golden file", func() {
+		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
+		suite.reconcile()
+
+		cpn := suite.getControlPlaneNode()
+
+		goldenPath := filepath.Join("testdata", "golden", "basic-config.yaml")
+
+		if os.Getenv("UPDATE_GOLDEN") == "true" {
+			golden := &controlplanev1alpha1.ControlPlaneNode{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: controlplanev1alpha1.GroupVersion.String(),
+					Kind:       "ControlPlaneNode",
 				},
-			},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: cpn.Name,
+				},
+				Spec: cpn.Spec,
+			}
+			data, err := yaml.Marshal(golden)
+			require.NoError(suite.T(), err)
+			require.NoError(suite.T(), os.MkdirAll(filepath.Dir(goldenPath), 0o755))
+			require.NoError(suite.T(), os.WriteFile(goldenPath, data, 0o644))
+			suite.T().Logf("Updated golden file: %s", goldenPath)
+			return
+		}
+
+		goldenData, err := os.ReadFile(goldenPath)
+		require.NoError(suite.T(), err,
+			"golden file not found at %s; run with UPDATE_GOLDEN=true to generate it", goldenPath)
+
+		var golden controlplanev1alpha1.ControlPlaneNode
+		require.NoError(suite.T(), yaml.Unmarshal(goldenData, &golden))
+
+		require.Equal(suite.T(), golden.Name, cpn.Name,
+			"ControlPlaneNode name must match golden file")
+		require.Equal(suite.T(), golden.Spec, cpn.Spec,
+			"ControlPlaneNode spec must match golden file; if this is purposely, run with UPDATE_GOLDEN=true")
+	})
+}
+
+// TestPKIChecksumChangesOnSecretUpdate verifies that the PKI checksum in the
+// ControlPlaneNode changes when the d8-pki secret is updated, while component checksums (which depend only on the config secret) remain stable
+func (suite *ControllerTestSuite) TestPKIChecksumChangesOnSecretUpdate() {
+	suite.Run("PKIChecksum should change when PKI secret is updated; component checksums should not", func() {
+		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
+		suite.reconcile()
+
+		cpn := suite.getControlPlaneNode()
+		oldPKIChecksum := cpn.Spec.PKIChecksum
+		oldEtcdChecksum := cpn.Spec.Components.Etcd.Checksum
+
+		pkiSecret := suite.getPKISecret()
+		pkiSecret.Data["ca.crt"] = []byte("NEW-CA-CERT-CONTENT")
+		require.NoError(suite.T(), suite.client.Update(suite.ctx, pkiSecret))
+
+		suite.reconcile()
+
+		cpn = suite.getControlPlaneNode()
+		require.NotEqual(suite.T(), oldPKIChecksum, cpn.Spec.PKIChecksum,
+			"PKI checksum should change after PKI secret update")
+		require.Equal(suite.T(), oldEtcdChecksum, cpn.Spec.Components.Etcd.Checksum,
+			"Etcd checksum should not change when only PKI secret is updated")
+	})
+}
+
+// TestEtcdChecksumChangesOnManifestUpdate verifies that updating the etcd
+// manifest in the config secret changes only the etcd checksum, leaving all other component checksums intact
+func (suite *ControllerTestSuite) TestEtcdChecksumChangesOnManifestUpdate() {
+	suite.Run("Etcd checksum should change when its manifest is updated; other checksums should not", func() {
+		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
+		suite.reconcile()
+
+		cpn := suite.getControlPlaneNode()
+		oldEtcdChecksum := cpn.Spec.Components.Etcd.Checksum
+		oldAPIServerChecksum := cpn.Spec.Components.KubeAPIServer.Checksum
+		oldKCMChecksum := cpn.Spec.Components.KubeControllerManager.Checksum
+		oldSchedulerChecksum := cpn.Spec.Components.KubeScheduler.Checksum
+
+		configSecret := suite.getConfigSecret()
+		configSecret.Data["etcd-full.yaml.tpl"] = append(configSecret.Data["etcd-full.yaml.tpl"], []byte("\n# updated")...)
+		require.NoError(suite.T(), suite.client.Update(suite.ctx, configSecret))
+
+		suite.reconcile()
+
+		cpn = suite.getControlPlaneNode()
+		require.NotEqual(suite.T(), oldEtcdChecksum, cpn.Spec.Components.Etcd.Checksum,
+			"Etcd checksum should change after manifest update")
+		require.Equal(suite.T(), oldAPIServerChecksum, cpn.Spec.Components.KubeAPIServer.Checksum,
+			"KubeAPIServer checksum should not change when etcd manifest is updated")
+		require.Equal(suite.T(), oldKCMChecksum, cpn.Spec.Components.KubeControllerManager.Checksum,
+			"KubeControllerManager checksum should not change when etcd manifest is updated")
+		require.Equal(suite.T(), oldSchedulerChecksum, cpn.Spec.Components.KubeScheduler.Checksum,
+			"KubeScheduler checksum should not change when etcd manifest is updated")
+	})
+}
+
+// TestAPIServerChecksumChangesOnExtraFileUpdate verifies that updating an extra
+// file referenced only by kube-apiserver (audit-policy.yaml) changes the apiserver checksum while leaving the etcd checksum unchanged
+func (suite *ControllerTestSuite) TestAPIServerChecksumChangesOnExtraFileUpdate() {
+	suite.Run("KubeAPIServer checksum should change when its extra-file is updated; etcd should not", func() {
+		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
+		suite.reconcile()
+
+		cpn := suite.getControlPlaneNode()
+		oldAPIServerChecksum := cpn.Spec.Components.KubeAPIServer.Checksum
+		oldEtcdChecksum := cpn.Spec.Components.Etcd.Checksum
+
+		configSecret := suite.getConfigSecret()
+		configSecret.Data["extra-file-audit-policy.yaml"] = []byte(
+			"apiVersion: audit.k8s.io/v1\nkind: Policy\nrules:\n- level: RequestResponse\n",
 		)
+		require.NoError(suite.T(), suite.client.Update(suite.ctx, configSecret))
 
-		require.NoError(suite.T(), err)
+		suite.reconcile()
 
-		cpc := &controlplanev1alpha1.ControlPlaneConfiguration{}
-		err = suite.client.Get(suite.ctx, client.ObjectKey{Name: constants.ControlPlaneConfigurationName}, cpc)
-		require.NoError(suite.T(), err, "ControlPlaneConfiguration should exist")
-
-		// Verify all checksums are present and non-empty
-		require.NotEmpty(suite.T(), cpc.Spec.PKIChecksum, "PKIChecksum should not be empty")
-		require.NotNil(suite.T(), cpc.Spec.Components, "Components should not be nil")
-
-		require.NotNil(suite.T(), cpc.Spec.Components.Etcd, "Etcd should not be nil")
-		require.NotEmpty(suite.T(), cpc.Spec.Components.Etcd.Checksum, "Etcd checksum should not be empty")
-
-		require.NotNil(suite.T(), cpc.Spec.Components.KubeAPIServer, "KubeAPIServer should not be nil")
-		require.NotEmpty(suite.T(), cpc.Spec.Components.KubeAPIServer.Checksum, "KubeAPIServer checksum should not be empty")
-
-		require.NotNil(suite.T(), cpc.Spec.Components.KubeControllerManager, "KubeControllerManager should not be nil")
-		require.NotEmpty(suite.T(), cpc.Spec.Components.KubeControllerManager.Checksum, "KubeControllerManager checksum should not be empty")
-
-		require.NotNil(suite.T(), cpc.Spec.Components.KubeScheduler, "KubeScheduler should not be nil")
-		require.NotEmpty(suite.T(), cpc.Spec.Components.KubeScheduler.Checksum, "KubeScheduler checksum should not be empty")
-
-		suite.T().Logf("PKI Checksum: %s", cpc.Spec.PKIChecksum)
-		suite.T().Logf("Etcd Checksum: %s", cpc.Spec.Components.Etcd.Checksum)
-		suite.T().Logf("KubeAPIServer Checksum: %s", cpc.Spec.Components.KubeAPIServer.Checksum)
-		suite.T().Logf("KubeControllerManager Checksum: %s", cpc.Spec.Components.KubeControllerManager.Checksum)
-		suite.T().Logf("KubeScheduler Checksum: %s", cpc.Spec.Components.KubeScheduler.Checksum)
+		cpn = suite.getControlPlaneNode()
+		require.NotEqual(suite.T(), oldAPIServerChecksum, cpn.Spec.Components.KubeAPIServer.Checksum,
+			"KubeAPIServer checksum should change when extra-file-audit-policy.yaml is updated")
+		require.Equal(suite.T(), oldEtcdChecksum, cpn.Spec.Components.Etcd.Checksum,
+			"Etcd checksum should not change when an apiserver extra-file is updated")
 	})
 }
 
-func (suite *ControllerTestSuite) TestPKIChecksumChanges() {
-	suite.Run("PKIChecksum should change when PKI secret is updated", func() {
+// TestNodeDeletionCleansUpControlPlaneNode verifies that when a master Node is deleted from the cluster
+// ControlPlaneNode is also deleted on the next reconciliation
+func (suite *ControllerTestSuite) TestNodeDeletionCleansUpControlPlaneNode() {
+	suite.Run("ControlPlaneNode should be deleted when its Node is deleted", func() {
 		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
+		suite.reconcile()
 
-		// Trigger first reconcile (initial state)
-		_, err := suite.controller.Reconcile(suite.ctx, reconcile.Request{
-			NamespacedName: client.ObjectKey{Name: constants.ControlPlaneConfigurationName},
-		})
+		// Verify CPN was created
+		cpn := suite.getControlPlaneNode()
+		require.NotEmpty(suite.T(), cpn.Name)
+
+		// Delete the master Node
+		node := &corev1.Node{}
+		err := suite.client.Get(suite.ctx, client.ObjectKey{Name: testNodeName}, node)
 		require.NoError(suite.T(), err)
+		require.NoError(suite.T(), suite.client.Delete(suite.ctx, node))
 
-		// Get initial checksum
-		cpc := &controlplanev1alpha1.ControlPlaneConfiguration{}
-		err = suite.client.Get(suite.ctx, client.ObjectKey{Name: constants.ControlPlaneConfigurationName}, cpc)
-		require.NoError(suite.T(), err)
-		oldPKIChecksum := cpc.Spec.PKIChecksum
-
-		// Update PKI secret
-		pkiSecret := &corev1.Secret{}
-		err = suite.client.Get(suite.ctx, client.ObjectKey{
-			Name:      constants.PkiSecretName,
-			Namespace: constants.KubeSystemNamespace,
-		}, pkiSecret)
-		require.NoError(suite.T(), err)
-
-		// Modify CA certificate
-		pkiSecret.Data["ca.crt"] = []byte("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5FVyBDQSBDRVJUCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=")
-		err = suite.client.Update(suite.ctx, pkiSecret)
-		require.NoError(suite.T(), err)
-
-		// Trigger second reconcile
+		// Reconcile — controller should detect Node is gone and delete the CPN
 		_, err = suite.controller.Reconcile(suite.ctx, reconcile.Request{
-			NamespacedName: client.ObjectKey{Name: constants.ControlPlaneConfigurationName},
+			NamespacedName: client.ObjectKey{Name: testNodeName},
 		})
 		require.NoError(suite.T(), err)
 
-		// Get updated checksum
-		err = suite.client.Get(suite.ctx, client.ObjectKey{Name: constants.ControlPlaneConfigurationName}, cpc)
-		require.NoError(suite.T(), err)
-
-		// PKI checksum should have changed
-		require.NotEqual(suite.T(), oldPKIChecksum, cpc.Spec.PKIChecksum,
-			"PKI checksum should change after secret update")
-
-		suite.T().Logf("Old PKI Checksum: %s", oldPKIChecksum)
-		suite.T().Logf("New PKI Checksum: %s", cpc.Spec.PKIChecksum)
-	})
-}
-
-func (suite *ControllerTestSuite) TestApiserverChecksumChangesOnFrontProxyCAUpdate() {
-	suite.Run("KubeAPIServer checksum should change when front-proxy-ca is updated", func() {
-		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
-
-		// Trigger first reconcile (initial state)
-		_, err := suite.controller.Reconcile(suite.ctx, reconcile.Request{
-			NamespacedName: client.ObjectKey{Name: constants.ControlPlaneConfigurationName},
-		})
-		require.NoError(suite.T(), err)
-
-		cpc := &controlplanev1alpha1.ControlPlaneConfiguration{}
-		err = suite.client.Get(suite.ctx, client.ObjectKey{Name: constants.ControlPlaneConfigurationName}, cpc)
-		require.NoError(suite.T(), err)
-		oldApiserverChecksum := cpc.Spec.Components.KubeAPIServer.Checksum
-
-		pkiSecret := &corev1.Secret{}
-		err = suite.client.Get(suite.ctx, client.ObjectKey{
-			Name:      constants.PkiSecretName,
-			Namespace: constants.KubeSystemNamespace,
-		}, pkiSecret)
-		require.NoError(suite.T(), err)
-
-		// Update PKI secret - modify front-proxy-ca certificate
-		// This simulates when front-proxy CA certificate is rotated
-		// GenerateCertificates("kube-apiserver") uses these to generate front-proxy-client.crt
-		pkiSecret.Data["front-proxy-ca.crt"] = []byte("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5FVyBGUk9OVCBQUk9YWSBDQSBDRVJUCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=")
-		pkiSecret.Data["front-proxy-ca.key"] = []byte("LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk5FVyBGUk9OVCBQUk9YWSBDQSBLRVkKLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQ==")
-		err = suite.client.Update(suite.ctx, pkiSecret)
-		require.NoError(suite.T(), err)
-
-		// Trigger second reconcile
-		// During reconcile, GenerateCertificates("kube-apiserver", tmpDir) will be called
-		// which will regenerate front-proxy-client.crt based on the updated front-proxy-ca
-		_, err = suite.controller.Reconcile(suite.ctx, reconcile.Request{
-			NamespacedName: client.ObjectKey{Name: constants.ControlPlaneConfigurationName},
-		})
-		require.NoError(suite.T(), err)
-
-		// Get updated checksum
-		err = suite.client.Get(suite.ctx, client.ObjectKey{Name: constants.ControlPlaneConfigurationName}, cpc)
-		require.NoError(suite.T(), err)
-
-		// KubeAPIServer checksum should have changed because:
-		// 1. front-proxy-ca.crt/key was updated in PKI secret
-		// 2. GenerateCertificates("kube-apiserver") regenerated front-proxy-client.crt based on new CA
-		// 3. --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt references the regenerated cert
-		require.NotEqual(suite.T(), oldApiserverChecksum, cpc.Spec.Components.KubeAPIServer.Checksum,
-			"KubeAPIServer checksum should change when front-proxy-ca is updated and client cert is regenerated")
-
-		suite.T().Logf("Old KubeAPIServer Checksum: %s", oldApiserverChecksum)
-		suite.T().Logf("New KubeAPIServer Checksum: %s", cpc.Spec.Components.KubeAPIServer.Checksum)
-	})
-}
-
-func (suite *ControllerTestSuite) TestSyncSecretToTmp() {
-	suite.Run("syncSecretToTmp should create correct directory structure", func() {
-		objs := suite.fetchTestFileData("basic-config.yaml")
-		suite.setupController(objs)
-
-		cmpSecret := &corev1.Secret{}
-		err := suite.client.Get(suite.ctx, client.ObjectKey{
-			Name:      constants.ControlPlaneManagerConfigSecretName,
-			Namespace: constants.KubeSystemNamespace,
-		}, cmpSecret)
-		require.NoError(suite.T(), err)
-
-		pkiSecret := &corev1.Secret{}
-		err = suite.client.Get(suite.ctx, client.ObjectKey{
-			Name:      constants.PkiSecretName,
-			Namespace: constants.KubeSystemNamespace,
-		}, pkiSecret)
-		require.NoError(suite.T(), err)
-
-		tmpDir, err := os.MkdirTemp("", "control-plane-test-")
-		require.NoError(suite.T(), err)
-		defer os.RemoveAll(tmpDir)
-
-		err = syncSecretToTmp(cmpSecret, tmpDir)
-		require.NoError(suite.T(), err)
-
-		err = syncSecretToTmp(pkiSecret, tmpDir)
-		require.NoError(suite.T(), err)
-
-		patchesDir := filepath.Join(tmpDir, constants.RelativePatchesDir)
-		extraFilesDir := filepath.Join(tmpDir, constants.RelativeExtraFilesDir)
-		pkiDir := filepath.Join(tmpDir, constants.RelativePkiDir)
-
-		require.DirExists(suite.T(), patchesDir, "Patches directory should exist")
-		require.DirExists(suite.T(), extraFilesDir, "Extra files directory should exist")
-		require.DirExists(suite.T(), pkiDir, "PKI directory should exist")
-
-		require.NoError(suite.T(), err)
-		auditPolicyPath := filepath.Join(extraFilesDir, "audit-policy.yaml")
-		require.FileExists(suite.T(), auditPolicyPath, "Audit policy should exist")
-
-		pkiFiles := []string{"ca.crt", "ca.key", "front-proxy-ca.key", "front-proxy-ca.crt", "etcd/ca.crt", "etcd/ca.key"}
-		for _, file := range pkiFiles {
-			pkiFilePath := filepath.Join(pkiDir, file)
-			require.FileExists(suite.T(), pkiFilePath, fmt.Sprintf("PKI file %s should exist", file))
-
-			content, err := os.ReadFile(pkiFilePath)
-			require.NoError(suite.T(), err)
-			require.NotEmpty(suite.T(), content, fmt.Sprintf("PKI file %s should not be empty", file))
-
-			suite.T().Logf("PKI file %s validated successfully (size: %d bytes)", file, len(content))
-		}
-
-		suite.T().Log("Directory structure validated successfully")
-	})
-}
-
-func (suite *ControllerTestSuite) TestReferencedFilesAffectChecksum() {
-	suite.Run("Component checksum should change when referenced files change", func() {
-		objs := suite.fetchTestFileData("basic-config.yaml")
-		suite.setupController(objs)
-
-		_, err := suite.controller.Reconcile(suite.ctx, reconcile.Request{
-			NamespacedName: client.ObjectKey{Name: constants.ControlPlaneConfigurationName},
-		})
-		require.NoError(suite.T(), err)
-
-		cpc := &controlplanev1alpha1.ControlPlaneConfiguration{}
-		err = suite.client.Get(suite.ctx, client.ObjectKey{Name: constants.ControlPlaneConfigurationName}, cpc)
-		require.NoError(suite.T(), err)
-
-		oldApiServerChecksum := cpc.Spec.Components.KubeAPIServer.Checksum
-		oldEtcdChecksum := cpc.Spec.Components.Etcd.Checksum
-
-		configSecret := &corev1.Secret{}
-		err = suite.client.Get(suite.ctx, client.ObjectKey{
-			Name:      constants.ControlPlaneManagerConfigSecretName,
-			Namespace: constants.KubeSystemNamespace,
-		}, configSecret)
-		require.NoError(suite.T(), err)
-
-		configSecret.Data["extra-file-audit-policy.yaml"] = []byte("YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogUmVxdWVzdFJlc3BvbnNlCg==")
-		err = suite.client.Update(suite.ctx, configSecret)
-		require.NoError(suite.T(), err)
-
-		_, err = suite.controller.Reconcile(suite.ctx, reconcile.Request{
-			NamespacedName: client.ObjectKey{Name: constants.ControlPlaneConfigurationName},
-		})
-		require.NoError(suite.T(), err)
-
-		err = suite.client.Get(suite.ctx, client.ObjectKey{Name: constants.ControlPlaneConfigurationName}, cpc)
-		require.NoError(suite.T(), err)
-
-		require.NotEqual(suite.T(), oldApiServerChecksum, cpc.Spec.Components.KubeAPIServer.Checksum,
-			"KubeAPIServer checksum should change when referenced file (audit-policy.yaml) changes")
-
-		require.Equal(suite.T(), oldEtcdChecksum, cpc.Spec.Components.Etcd.Checksum,
-			"Etcd checksum should not change when unrelated file changes")
-
-		suite.T().Logf("Old KubeAPIServer checksum: %s", oldApiServerChecksum)
-		suite.T().Logf("New KubeAPIServer checksum: %s", cpc.Spec.Components.KubeAPIServer.Checksum)
-		suite.T().Logf("Etcd checksum (unchanged): %s", cpc.Spec.Components.Etcd.Checksum)
-	})
-}
-
-func (suite *ControllerTestSuite) TestChecksumCalculation() {
-	suite.Run("Checksums should be stable and change only when data changes", func() {
-		objs := suite.fetchTestFileData("basic-config.yaml")
-		suite.setupController(objs)
-
-		pkiSecret := &corev1.Secret{}
-		err := suite.client.Get(suite.ctx, client.ObjectKey{
-			Name:      constants.PkiSecretName,
-			Namespace: constants.KubeSystemNamespace,
-		}, pkiSecret)
-		require.NoError(suite.T(), err)
-
-		checksum1, err := internal.CalculatePKIChecksum(pkiSecret)
-		require.NoError(suite.T(), err)
-
-		checksum2, err := calculatePKIChecksum(pkiSecret)
-		require.NoError(suite.T(), err)
-
-		require.Equal(suite.T(), checksum1, checksum2,
-			"Checksums should be stable for same data")
-
-		pkiSecret.Data["ca.crt"] = []byte("MODIFIED_DATA")
-
-		checksum3, err := calculatePKIChecksum(pkiSecret)
-		require.NoError(suite.T(), err)
-
-		require.NotEqual(suite.T(), checksum1, checksum3,
-			"Checksum should change when data changes")
-
-		suite.T().Logf("Original checksum: %s", checksum1)
-		suite.T().Logf("Modified checksum: %s", checksum3)
-	})
-}
-
-func (suite *ControllerTestSuite) TestCertificateGeneration() {
-	suite.Run("Certificates should be generated before manifest generation", func() {
-		objs := suite.fetchTestFileData("basic-config.yaml")
-		suite.setupController(objs)
-
-		cmpSecret := &corev1.Secret{}
-		err := suite.client.Get(suite.ctx, client.ObjectKey{
-			Name:      constants.ControlPlaneManagerConfigSecretName,
-			Namespace: constants.KubeSystemNamespace,
-		}, cmpSecret)
-		require.NoError(suite.T(), err)
-
-		pkiSecret := &corev1.Secret{}
-		err = suite.client.Get(suite.ctx, client.ObjectKey{
-			Name:      constants.PkiSecretName,
-			Namespace: constants.KubeSystemNamespace,
-		}, pkiSecret)
-		require.NoError(suite.T(), err)
-
-		tmpDir, err := os.MkdirTemp("", "control-plane-cert-test-")
-		require.NoError(suite.T(), err)
-		defer os.RemoveAll(tmpDir)
-
-		// Sync secrets to tmpDir
-		err = syncSecretToTmp(cmpSecret, tmpDir)
-		require.NoError(suite.T(), err)
-
-		err = syncSecretToTmp(pkiSecret, tmpDir)
-		require.NoError(suite.T(), err)
-
-		generator := &mockManifestGenerator{}
-
-		// Test etcd certificate generation
-		err = generator.GenerateCertificates("etcd", tmpDir)
-		require.NoError(suite.T(), err)
-
-		etcdPkiDir := filepath.Join(tmpDir, constants.RelativePkiDir, "etcd")
-
-		// Verify etcd certificates were created
-		etcdCerts := []string{"peer.crt", "peer.key", "server.crt", "server.key", "healthcheck-client.crt", "healthcheck-client.key"}
-		for _, certFile := range etcdCerts {
-			certPath := filepath.Join(etcdPkiDir, certFile)
-			require.FileExists(suite.T(), certPath, fmt.Sprintf("etcd certificate %s should exist", certFile))
-
-			content, err := os.ReadFile(certPath)
-			require.NoError(suite.T(), err)
-			require.NotEmpty(suite.T(), content, fmt.Sprintf("etcd certificate %s should not be empty", certFile))
-
-			suite.T().Logf("etcd certificate %s created successfully (size: %d bytes)", certFile, len(content))
-		}
-
-		// Test kube-apiserver certificate generation
-		err = generator.GenerateCertificates("kube-apiserver", tmpDir)
-		require.NoError(suite.T(), err)
-
-		pkiDir := filepath.Join(tmpDir, constants.RelativePkiDir)
-
-		// Verify apiserver certificates were created
-		apiserverCerts := []string{
-			"apiserver-kubelet-client.crt", "apiserver-kubelet-client.key",
-			"apiserver-etcd-client.crt", "apiserver-etcd-client.key",
-			"front-proxy-client.crt", "front-proxy-client.key",
-		}
-		for _, certFile := range apiserverCerts {
-			certPath := filepath.Join(pkiDir, certFile)
-			require.FileExists(suite.T(), certPath, fmt.Sprintf("apiserver certificate %s should exist", certFile))
-
-			content, err := os.ReadFile(certPath)
-			require.NoError(suite.T(), err)
-			require.NotEmpty(suite.T(), content, fmt.Sprintf("apiserver certificate %s should not be empty", certFile))
-
-			suite.T().Logf("apiserver certificate %s created successfully (size: %d bytes)", certFile, len(content))
-		}
-
-		// Test that kube-controller-manager and kube-scheduler don't generate certs
-		err = generator.GenerateCertificates("kube-controller-manager", tmpDir)
-		require.NoError(suite.T(), err, "kube-controller-manager should not fail even without certs")
-
-		err = generator.GenerateCertificates("kube-scheduler", tmpDir)
-		require.NoError(suite.T(), err, "kube-scheduler should not fail even without certs")
-
-		suite.T().Log("All certificate generation tests passed")
-	})
-}
-
-func (suite *ControllerTestSuite) TestGenerateKubeconfigs() {
-	suite.Run("TestGenerateKubeconfigs", func() {
-		generator := &mockManifestGenerator{}
-
-		tmpDir, err := os.MkdirTemp("", "kubeconfig-test-")
-		require.NoError(suite.T(), err)
-		defer os.RemoveAll(tmpDir)
-
-		err = generator.GenerateKubeconfigs(tmpDir)
-		require.NoError(suite.T(), err)
-
-		kubernetesDir := filepath.Join(tmpDir, constants.RelativeKubernetesDir)
-
-		// Verify controller-manager.conf was created
-		controllerManagerConf := filepath.Join(kubernetesDir, "controller-manager.conf")
-		_, err = os.Stat(controllerManagerConf)
-		require.NoError(suite.T(), err, "controller-manager.conf should exist")
-
-		content, err := os.ReadFile(controllerManagerConf)
-		require.NoError(suite.T(), err)
-		require.Contains(suite.T(), string(content), "controller-manager", "controller-manager.conf should contain reference")
-
-		// Verify scheduler.conf was created
-		schedulerConf := filepath.Join(kubernetesDir, "scheduler.conf")
-		_, err = os.Stat(schedulerConf)
-		require.NoError(suite.T(), err, "scheduler.conf should exist")
-
-		content, err = os.ReadFile(schedulerConf)
-		require.NoError(suite.T(), err)
-		require.Contains(suite.T(), string(content), "scheduler", "scheduler.conf should contain reference")
-
-		suite.T().Log("Kubeconfig generation test passed")
+		// CPN should no longer exist
+		deletedCPN := &controlplanev1alpha1.ControlPlaneNode{}
+		err = suite.client.Get(suite.ctx, client.ObjectKey{Name: testNodeName}, deletedCPN)
+		require.True(suite.T(), apierrors.IsNotFound(err),
+			"ControlPlaneNode should be NotFound after node deletion, got: %v", err)
 	})
 }
 
@@ -626,7 +310,8 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	suite.T().Log("Test failed, dumping resources:")
 	for _, obj := range []client.ObjectList{
 		&corev1.SecretList{},
-		&controlplanev1alpha1.ControlPlaneConfigurationList{},
+		&corev1.NodeList{},
+		&controlplanev1alpha1.ControlPlaneNodeList{},
 	} {
 		err := suite.client.List(suite.ctx, obj)
 		if err != nil {
@@ -677,11 +362,16 @@ func (suite *ControllerTestSuite) parseManifests(data string) []client.Object {
 			err = yaml.Unmarshal([]byte(manifest), secret)
 			require.NoError(suite.T(), err, "failed to unmarshal Secret")
 			objs = append(objs, secret)
-		case "ControlPlaneConfiguration":
-			cpc := &controlplanev1alpha1.ControlPlaneConfiguration{}
-			err = yaml.Unmarshal([]byte(manifest), cpc)
-			require.NoError(suite.T(), err, "failed to unmarshal ControlPlaneConfiguration")
-			objs = append(objs, cpc)
+		case "Node":
+			node := &corev1.Node{}
+			err = yaml.Unmarshal([]byte(manifest), node)
+			require.NoError(suite.T(), err, "failed to unmarshal Node")
+			objs = append(objs, node)
+		case "ControlPlaneNode":
+			cpn := &controlplanev1alpha1.ControlPlaneNode{}
+			err = yaml.Unmarshal([]byte(manifest), cpn)
+			require.NoError(suite.T(), err, "failed to unmarshal ControlPlaneNode")
+			objs = append(objs, cpn)
 		default:
 			suite.T().Logf("unknown kind: %s", metaType.Kind)
 		}
