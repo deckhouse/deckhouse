@@ -6,7 +6,7 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.20.0
   labels:
     cluster.x-k8s.io/provider: infrastructure-static
-    cluster.x-k8s.io/v1beta1: v1alpha1
+    cluster.x-k8s.io/v1beta2: v1alpha1
     heritage: deckhouse
     module: node-manager
   name: staticmachines.infrastructure.cluster.x-k8s.io
@@ -120,12 +120,12 @@ spec:
                       address.
                     properties:
                       address:
-                        description: The machine address.
+                        description: address is the machine address.
                         maxLength: 256
                         minLength: 1
                         type: string
                       type:
-                        description: Machine address type, one of Hostname,
+                        description: type is the machine address type, one of Hostname,
                           ExternalIP, InternalIP, ExternalDNS or InternalDNS.
                         enum:
                         - Hostname
@@ -210,6 +210,18 @@ spec:
                     reconciling the StaticMachine and will contain a succinct value suitable
                     for machine interpretation.
                   type: string
+                initialization:
+                  description: |-
+                    Initialization provides observations of the StaticMachine initialization process.
+                    NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Machine provisioning.
+                  minProperties: 1
+                  properties:
+                    provisioned:
+                      description: |-
+                        Provisioned is true when the infrastructure provider reports that the Machine's infrastructure is fully provisioned.
+                        NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Machine provisioning.
+                      type: boolean
+                  type: object
                 ready:
                   type: boolean
               type: object

@@ -6,7 +6,7 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.20.0
   labels:
     cluster.x-k8s.io/provider: infrastructure-static
-    cluster.x-k8s.io/v1beta1: v1alpha1
+    cluster.x-k8s.io/v1beta2: v1alpha1
     heritage: deckhouse
     module: node-manager
   name: staticmachinetemplates.infrastructure.cluster.x-k8s.io
@@ -22,8 +22,8 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: StaticMachineTemplate is the Schema for the staticmachinetemplates
-            API.
+          description: StaticMachineTemplate is the Schema for the Cluster API Provider
+            Static.
           properties:
             apiVersion:
               description: |-

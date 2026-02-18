@@ -6,7 +6,7 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.20.0
   labels:
     cluster.x-k8s.io/provider: infrastructure-static
-    cluster.x-k8s.io/v1beta1: v1alpha1
+    cluster.x-k8s.io/v1beta2: v1alpha1
     heritage: deckhouse
     module: node-manager
   name: staticclusters.infrastructure.cluster.x-k8s.io
@@ -22,7 +22,7 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: StaticCluster is the Schema for the staticclusters API.
+          description: StaticCluster is the Schema for the Cluster API Provider Static.
           properties:
             apiVersion:
               description: |-
@@ -76,6 +76,18 @@ spec:
                     reconciling the StaticCluster and will contain a succinct value suitable
                     for machine interpretation.
                   type: string
+                initialization:
+                  description: |-
+                    Initialization provides observations of the StaticCluster initialization process.
+                    NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+                  minProperties: 1
+                  properties:
+                    provisioned:
+                      description: |-
+                        Provisioned is true when the infrastructure provider reports that the Cluster's infrastructure is fully provisioned.
+                        NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Cluster provisioning.
+                      type: boolean
+                  type: object
                 ready:
                   description: Ready denotes that the static cluster (infrastructure)
                     is ready.

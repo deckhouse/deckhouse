@@ -138,9 +138,11 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 
 		conditions.Set(staticMachine, metav1.Condition{
-			Type:   infrav1.StaticMachineStaticInstanceReadyCondition,
-			Reason: infrav1.ClusterOrResourcePausedReason,
-			Status: metav1.ConditionFalse,
+			Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
+			Reason:             infrav1.ClusterOrResourcePausedReason,
+			Status:             metav1.ConditionFalse,
+			Message:            "StaticMachine is paused",
+			LastTransitionTime: metav1.Now(),
 		})
 
 		return ctrl.Result{}, nil
@@ -192,10 +194,11 @@ func (r *StaticMachineReconciler) reconcileNormal(
 		machineScope.Logger.V(1).Info("Cluster infrastructure is not ready yet")
 
 		conditions.Set(machineScope.StaticMachine, metav1.Condition{
-			Type:    infrav1.StaticMachineStaticInstanceReadyCondition,
-			Reason:  infrav1.StaticMachineWaitingForClusterInfrastructureReason,
-			Status:  metav1.ConditionFalse,
-			Message: "Cluster infrastructure is not ready yet",
+			Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
+			Reason:             infrav1.StaticMachineWaitingForClusterInfrastructureReason,
+			Status:             metav1.ConditionFalse,
+			Message:            "Cluster infrastructure is not ready yet",
+			LastTransitionTime: metav1.Now(),
 		})
 
 		return ctrl.Result{}, nil
@@ -205,10 +208,11 @@ func (r *StaticMachineReconciler) reconcileNormal(
 		machineScope.Logger.V(1).Info("Bootstrap Data Secret not available yet")
 
 		conditions.Set(machineScope.StaticMachine, metav1.Condition{
-			Type:    infrav1.StaticMachineStaticInstanceReadyCondition,
-			Reason:  infrav1.StaticMachineWaitingForBootstrapDataSecretReason,
-			Status:  metav1.ConditionFalse,
-			Message: "Bootstrap Data Secret not available yet",
+			Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
+			Reason:             infrav1.StaticMachineWaitingForBootstrapDataSecretReason,
+			Status:             metav1.ConditionFalse,
+			Message:            "Bootstrap Data Secret not available yet",
+			LastTransitionTime: metav1.Now(),
 		})
 
 		return ctrl.Result{}, nil
@@ -227,10 +231,11 @@ func (r *StaticMachineReconciler) reconcileNormal(
 			r.Recorder.SendWarningEvent(machineScope.StaticMachine, machineScope.StaticMachine.Labels["node-group"], "StaticInstanceSelectionFailed", "No available StaticInstance")
 
 			conditions.Set(machineScope.StaticMachine, metav1.Condition{
-				Type:    infrav1.StaticMachineStaticInstanceReadyCondition,
-				Reason:  infrav1.StaticMachineStaticInstancesUnavailableReason,
-				Status:  metav1.ConditionFalse,
-				Message: "No available StaticInstance",
+				Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
+				Reason:             infrav1.StaticMachineStaticInstancesUnavailableReason,
+				Status:             metav1.ConditionFalse,
+				Message:            "No available StaticInstance",
+				LastTransitionTime: metav1.Now(),
 			})
 
 			return ctrl.Result{RequeueAfter: RequeueForStaticInstancePending}, nil
