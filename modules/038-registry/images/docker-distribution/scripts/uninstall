@@ -15,4 +15,4 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /opt/deckhouse/bin/module-registry-distribution
+rm -f /opt/deckhouse/bin/registry

@@ -236,8 +236,8 @@ echo "Awaiting the startup of the registry storage and Docker registry..."
 max_attempts=30
 docker_registry_started=false
 
-check_and_run "auth_server" "/opt/deckhouse/bin/module-registry-auth -logtostderr ${REGISTRY_MODULE_IGNITER_DIR}/auth_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/auth.log"
-check_and_run "registry" "/opt/deckhouse/bin/module-registry-distribution serve ${REGISTRY_MODULE_IGNITER_DIR}/distribution_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/distribution.log"
+check_and_run "auth_server" "/opt/deckhouse/bin/auth_server -logtostderr ${REGISTRY_MODULE_IGNITER_DIR}/auth_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/auth.log"
+check_and_run "registry" "/opt/deckhouse/bin/registry serve ${REGISTRY_MODULE_IGNITER_DIR}/distribution_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/distribution.log"
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
     response=\$(d8-curl --cacert "${registry_pki_path}/ca.crt" -s -o /dev/null -w "%{http_code}" https://127.0.0.1:5001)
