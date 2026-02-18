@@ -48,7 +48,7 @@ import (
 const (
 	maxConcurrentReconciles = 1
 	cacheSyncTimeout        = 3 * time.Minute
-	requeueInterval         = 1 * time.Minute
+	requeueInterval         = 5 * time.Minute
 )
 
 type Reconciler struct {
