@@ -184,7 +184,7 @@ func ValidateJWTToken(tokenString string) TokenValidationResult {
 			Error:       fmt.Sprintf("failed to unmarshal claims: %v", err),
 		}
 	}
-
+	// TODO: fix in newer version deckhouse
 	expTime := int64(claims["exp"].(float64))
 	expiresAt := time.Unix(expTime, 0)
 
@@ -407,7 +407,7 @@ multiclustersLoop:
 		} else {
 			reason := validationResult.Error
 			if reason == "" {
-				reason = "expires in less than 30 days (proactive refresh)"
+				reason = "existing token is invalid, expired or expires in less than 30 days, generating new token"
 			}
 			input.Logger.Info("regenerating token for multicluster",
 				slog.String("name", multiclusterInfo.Name),
