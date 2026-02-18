@@ -54,6 +54,11 @@ type StaticClusterStatus struct {
 	// reconciling the StaticCluster and will contain a more verbose string suitable
 	// for logging and human consumption.
 	FailureMessage string `json:"failureMessage,omitempty"`
+
+	// Initialization provides observations of the StaticCluster initialization process.
+	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+	// +optional
+	Initialization StaticClusterInitializationStatus `json:"initialization,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,7 +66,7 @@ type StaticClusterStatus struct {
 //+kubebuilder:metadata:labels="heritage=deckhouse"
 //+kubebuilder:metadata:labels="module=node-manager"
 //+kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
-//+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta1=v1alpha1"
+//+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta2=v1alpha1"
 
 // StaticCluster is the Schema for the Cluster API Provider Static.
 type StaticCluster struct {
@@ -79,6 +84,16 @@ type StaticClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []StaticCluster `json:"items"`
+}
+
+// StaticClusterInitializationStatus provides observations of the Cluster initialization process.
+// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+// +kubebuilder:validation:MinProperties=1
+type StaticClusterInitializationStatus struct {
+	// Provisioned is true when the infrastructure provider reports that the Cluster's infrastructure is fully provisioned.
+	// NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Cluster provisioning.
+	// +optional
+	Provisioned *bool `json:"provisioned,omitempty"`
 }
 
 func init() {

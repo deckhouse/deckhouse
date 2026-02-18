@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"caps-controller-manager/internal/scope"
 	"context"
 	"net/url"
 	"strconv"
@@ -31,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
-	"caps-controller-manager/internal/scope"
 )
 
 // StaticClusterReconciler reconciles a StaticCluster object
@@ -126,7 +126,8 @@ func (r *StaticClusterReconciler) reconcile(
 		Port: int32(port),
 	}
 
-	clusterScope.StaticCluster.Status.Ready = true
+	clusterReady := true
+	clusterScope.StaticCluster.Status.Initialization.Provisioned = &clusterReady
 
 	err = clusterScope.Patch(ctx)
 	if err != nil {

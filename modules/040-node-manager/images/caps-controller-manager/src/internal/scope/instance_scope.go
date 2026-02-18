@@ -154,9 +154,11 @@ func (i *InstanceScope) ToPending(ctx context.Context) error {
 	i.setLoggerContext()
 
 	conditions.Set(i.Instance, metav1.Condition{
-		Type:   infrav1.StaticInstanceBootstrapSucceededCondition,
-		Status: metav1.ConditionFalse,
-		Reason: infrav1.StaticInstanceWaitingForNodeRefReason,
+		Type:               infrav1.StaticInstanceBootstrapSucceededCondition,
+		Status:             metav1.ConditionFalse,
+		Reason:             infrav1.StaticInstanceWaitingForNodeRefReason,
+		Message:            "StaticInstance is pending",
+		LastTransitionTime: metav1.Now(),
 	})
 
 	i.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)

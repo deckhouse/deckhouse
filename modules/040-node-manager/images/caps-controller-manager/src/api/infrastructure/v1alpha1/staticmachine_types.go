@@ -71,6 +71,11 @@ type StaticMachineStatus struct {
 	// Conditions defines current service state of the StaticMachine.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// Initialization provides observations of the StaticMachine initialization process.
+	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Machine provisioning.
+	// +optional
+	Initialization StaticMachineInitializationStatus `json:"initialization,omitempty,omitzero"`
 }
 
 //+kubebuilder:object:root=true
@@ -78,7 +83,7 @@ type StaticMachineStatus struct {
 //+kubebuilder:metadata:labels="heritage=deckhouse"
 //+kubebuilder:metadata:labels="module=node-manager"
 //+kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
-//+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta1=v1alpha1"
+//+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta2=v1alpha1"
 //+kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Machine ready status"
 //+kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID",description="Static instance ID"
 //+kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".metadata.ownerReferences[?(@.kind==\"Machine\")].name",description="Machine object which owns with this StaticMachine"
@@ -99,6 +104,15 @@ type StaticMachineList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []StaticMachine `json:"items"`
+}
+
+// StaticMachineInitializationStatus provides observations of the FooMachine initialization process.
+// +kubebuilder:validation:MinProperties=1
+type StaticMachineInitializationStatus struct {
+	// Provisioned is true when the infrastructure provider reports that the Machine's infrastructure is fully provisioned.
+	// NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Machine provisioning.
+	// +optional
+	Provisioned *bool `json:"provisioned,omitempty"`
 }
 
 func init() {

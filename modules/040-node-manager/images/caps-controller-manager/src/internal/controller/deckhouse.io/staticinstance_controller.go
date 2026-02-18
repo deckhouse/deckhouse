@@ -100,9 +100,12 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		logger.Error(err, "failed to load SSHCredentials")
 		if status == nil || status.Status != metav1.ConditionFalse || status.Reason != err.Error() {
 			conditions.Set(instanceScope.Instance, metav1.Condition{
-				Type:   infrav1.StaticInstanceWaitingForCredentialsRefReason,
-				Status: metav1.ConditionFalse,
-				Message: err.Error(),
+				// TODO: StaticInstanceBootstrapSucceededCondition type?
+				Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
+				Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
+				Status:             metav1.ConditionFalse,
+				Message:            err.Error(),
+				LastTransitionTime: metav1.Now(),
 			})
 		}
 
@@ -118,8 +121,12 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	} else {
 		if status == nil || status.Status != metav1.ConditionTrue {
 			conditions.Set(instanceScope.Instance, metav1.Condition{
-				Type:   infrav1.StaticInstanceWaitingForCredentialsRefReason,
-				Status: metav1.ConditionTrue,
+				// TODO: StaticInstanceBootstrapSucceededCondition type?
+				Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
+				Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
+				Status:             metav1.ConditionTrue,
+				Message:            "SSHCredentials are available",
+				LastTransitionTime: metav1.Now(),
 			})
 		}
 		err = instanceScope.Patch(ctx)
@@ -174,8 +181,12 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == metav1.ConditionTrue {
 
 		conditions.Set(instanceScope.Instance, metav1.Condition{
-			Type:    infrav1.StaticInstanceWaitingForCredentialsRefReason,
-			Status:  metav1.ConditionTrue,
+			// TODO: StaticInstanceBootstrapSucceededCondition type?
+			Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
+			Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
+			Status:             metav1.ConditionTrue,
+			Message:            "Waiting for SSHCredentials reference to be assigned",
+			LastTransitionTime: metav1.Now(),
 		})
 
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
