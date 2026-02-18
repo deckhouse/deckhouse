@@ -6,6 +6,23 @@ properties:
     type: object
     default: {}
     properties:
+      capdvpControllerManagerWebhookCert:
+        type: object
+        default: { }
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
       cniSecretData:
         type: string
       providerClusterConfiguration:
@@ -428,7 +445,7 @@ properties:
                 type: string
                 description: |
                   Control rules for network traffic to and from workloads running in the Project resource.
-                
+
                   * `Isolated`: Applies a restrictive NetworkPolicy that allows only network traffic required for platform system components to function. All other traffic is denied.
                   * `NotRestricted`: Neither network policies nor any additional network restrictions are applied.
 
