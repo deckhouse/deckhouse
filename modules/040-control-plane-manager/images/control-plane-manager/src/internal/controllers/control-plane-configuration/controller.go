@@ -322,7 +322,7 @@ func buildDesiredControlPlaneNode(nodeName string, cmpSecret *corev1.Secret, pki
 		},
 		Spec: controlplanev1alpha1.ControlPlaneNodeSpec{
 			PKIChecksum:             pkiChecksum,
-			ConfigurationGeneration: 1, // TODO: implement generation
+			ConfigurationGeneration: checksum.CalculateConfigurationGeneration(pkiChecksum, checksums, hotReloadChecksum),
 			HotReloadChecksum:       hotReloadChecksum,
 			Components: controlplanev1alpha1.ComponentChecksums{
 				Etcd:                  &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["etcd"]},
