@@ -58,7 +58,7 @@ spec:
     - --authentication-kubeconfig=/etc/kubernetes/scheduler.conf
     - --authorization-kubeconfig=/etc/kubernetes/scheduler.conf
     - --profiling=false
-    - --feature-gates={{ $schedulerFeatureGatesStr | quote }}
+    - --feature-gates={{ $schedulerFeatureGatesStr }}
 {{- if ne .runType "ClusterBootstrap" }}
     - --config=/etc/kubernetes/deckhouse/extra-files/scheduler-config.yaml
 {{- end }}
