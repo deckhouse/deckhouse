@@ -441,11 +441,13 @@ spec:
    - **Формат NameID**: `persistent` или `emailAddress`
    - **SLO URL** (опционально): `https://dex.<modules.publicDomainTemplate>/saml/slo/<имя-провайдера>`
 
-2. Настройте маппинг атрибутов в IdP для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
+1. Настройте маппинг атрибутов в IdP для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
 
-3. Экспортируйте сертификат подписи IdP и укажите его в поле `ca` или `caData` ресурса DexProvider.
+1. Экспортируйте сертификат подписи IdP и укажите его в поле `ca` или `caData` ресурса DexProvider.
 
-> **Примечание:** SAML не поддерживает refresh tokens нативно. Dex кеширует identity пользователя из первичного SAML assertion и возвращает её при последующих запросах refresh. Время жизни сессии контролируется настройками `expiry.refreshTokens` в конфигурации модуля `user-authn`.
+{% alert level="info" %}
+SAML не поддерживает refresh tokens нативно. Dex кеширует identity пользователя из первичного SAML assertion и возвращает её при последующих запросах refresh. Время жизни сессии контролируется настройками `expiry.refreshTokens` в конфигурации модуля `user-authn`.
+{% endalert %}
 
 ## Настройка OAuth2-клиента в Dex для подключения приложения
 

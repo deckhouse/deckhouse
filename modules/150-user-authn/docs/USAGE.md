@@ -438,11 +438,13 @@ To configure the SAML Identity Provider:
    - **NameID format**: `persistent` or `emailAddress`
    - **SLO URL** (optional): `https://dex.<modules.publicDomainTemplate>/saml/slo/<provider-name>`
 
-2. Configure attribute mappings in the IdP to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
+1. Configure attribute mappings in the IdP to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
 
-3. Export the IdP signing certificate and specify it in the `ca` or `caData` field of the DexProvider resource.
+1. Export the IdP signing certificate and specify it in the `ca` or `caData` field of the DexProvider resource.
 
-> **Note:** SAML does not natively support refresh tokens. Dex caches the user identity from the initial SAML assertion and returns it on subsequent refresh requests. The session lifetime is controlled by the `expiry.refreshTokens` settings in the `user-authn` module configuration.
+{% alert level="info" %}
+SAML does not natively support refresh tokens. Dex caches the user identity from the initial SAML assertion and returns it on subsequent refresh requests. The session lifetime is controlled by the `expiry.refreshTokens` settings in the `user-authn` module configuration.
+{% endalert %}
 
 ## Configuring the OAuth2 client in Dex for connecting an application
 
