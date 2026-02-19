@@ -155,6 +155,10 @@ spec:
         path: /healthz
         port: 10257
         scheme: HTTPS
+    ports:
+    - containerPort: 10257
+      name: probe-port
+      protocol: TCP
     livenessProbe:
       failureThreshold: 8
       httpGet:
