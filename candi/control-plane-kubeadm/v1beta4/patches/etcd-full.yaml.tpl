@@ -7,7 +7,7 @@
 {{- $initialCluster := printf "%s=%s" $etcdName $initialAdvertisePeer -}}
 {{- $millicpu := .resourcesRequestsMilliCpuControlPlane | default 512 -}}
 {{- $memory := .resourcesRequestsMemoryControlPlane | default 536870912 }}
----
+{{- /* etcd */ -}}
 apiVersion: v1
 kind: Pod
 metadata:

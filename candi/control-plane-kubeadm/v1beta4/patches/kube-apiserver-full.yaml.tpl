@@ -59,7 +59,7 @@
 {{- end -}}
 {{- $millicpu := .resourcesRequestsMilliCpuControlPlane | default 512 -}}
 {{- $memory := .resourcesRequestsMemoryControlPlane | default 536870912 }}
----
+{{- /* kube-apiserver */ -}}
 apiVersion: v1
 kind: Pod
 metadata:
