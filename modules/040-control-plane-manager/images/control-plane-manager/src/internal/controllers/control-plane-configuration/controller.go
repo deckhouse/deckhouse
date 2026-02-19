@@ -89,6 +89,7 @@ func Register(mgr manager.Manager) error {
 		Complete(r)
 }
 
+// getSecretPredicate checks if the secret is d8-control-plane-manager-config or d8-pki.
 func getSecretPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -109,6 +110,7 @@ func getSecretPredicate() predicate.Predicate {
 	}
 }
 
+// isControlPlaneManagerConfigSecret checks if the secret is d8-control-plane-manager-config or d8-pki.
 func isControlPlaneManagerConfigSecret(o client.Object) bool {
 	secret, ok := o.(*corev1.Secret)
 	if !ok {
@@ -176,6 +178,7 @@ func (r *Reconciler) mapNodeToControlPlaneNode(ctx context.Context, object clien
 	return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: node.Name}}}
 }
 
+// getSecret helper function to get secret from kube-system namespace by name.
 func (r *Reconciler) getSecret(ctx context.Context, name string) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	err := r.client.Get(ctx, client.ObjectKey{
@@ -190,6 +193,7 @@ func (r *Reconciler) getSecret(ctx context.Context, name string) (*corev1.Secret
 	return secret, nil
 }
 
+// getControlPlaneNodes helper function to get all nodes with control plane label.
 func (r *Reconciler) getControlPlaneNodes(ctx context.Context) ([]corev1.Node, error) {
 	nodeList := &corev1.NodeList{}
 	err := r.client.List(ctx, nodeList, client.MatchingLabels{
@@ -258,6 +262,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
 }
 
+// deleteControlPlaneNodeIfExists deletes ControlPlaneNode if it exists immediately.
 func (r *Reconciler) deleteControlPlaneNodeIfExists(ctx context.Context, name string) error {
 	cpn := &controlplanev1alpha1.ControlPlaneNode{}
 	err := r.client.Get(ctx, client.ObjectKey{Name: name}, cpn)
@@ -271,6 +276,7 @@ func (r *Reconciler) deleteControlPlaneNodeIfExists(ctx context.Context, name st
 	return client.IgnoreNotFound(r.client.Delete(ctx, cpn))
 }
 
+// applyControlPlaneNode applies desired ControlPlaneNode spec to the current ControlPlaneNode using patch.
 func (r *Reconciler) applyControlPlaneNode(ctx context.Context, desired *controlplanev1alpha1.ControlPlaneNode) error {
 	current := &controlplanev1alpha1.ControlPlaneNode{}
 	key := client.ObjectKey{Name: desired.Name}
@@ -291,6 +297,7 @@ func (r *Reconciler) applyControlPlaneNode(ctx context.Context, desired *control
 	return nil
 }
 
+// buildDesiredControlPlaneNode builds desired ControlPlaneNode spec from d8-control-plane-manager-config and d8-pki secrets.
 func buildDesiredControlPlaneNode(nodeName string, cmpSecret *corev1.Secret, pkiSecret *corev1.Secret) (*controlplanev1alpha1.ControlPlaneNode, error) {
 	pkiChecksum, err := checksum.CalculatePKIChecksum(pkiSecret)
 	if err != nil {
@@ -321,9 +328,9 @@ func buildDesiredControlPlaneNode(nodeName string, cmpSecret *corev1.Secret, pki
 			Name: nodeName,
 		},
 		Spec: controlplanev1alpha1.ControlPlaneNodeSpec{
-			PKIChecksum:             pkiChecksum,
-			ConfigurationGeneration: checksum.CalculateConfigurationGeneration(pkiChecksum, checksums, hotReloadChecksum),
-			HotReloadChecksum:       hotReloadChecksum,
+			PKIChecksum:       pkiChecksum,
+			ConfigVersion:     fmt.Sprintf("%s.%s", cmpSecret.ResourceVersion, pkiSecret.ResourceVersion),
+			HotReloadChecksum: hotReloadChecksum,
 			Components: controlplanev1alpha1.ComponentChecksums{
 				Etcd:                  &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["etcd"]},
 				KubeAPIServer:         &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-apiserver"]},

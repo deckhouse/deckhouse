@@ -148,7 +148,6 @@ spec:
 {{- end }}
     command:
     - kube-apiserver
-    - --anonymous-auth=false
     - --api-audiences={{ $audiences | join "," }}
     - --service-account-issuer={{ $serviceAccountIssuer }}
     - --service-account-jwks-uri={{ $serviceAccountJWKSURI }}

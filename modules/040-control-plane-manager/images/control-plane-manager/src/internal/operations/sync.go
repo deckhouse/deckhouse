@@ -26,11 +26,12 @@ import (
 )
 
 // syncSecretToTmp syncs secret data to tmp directory in control-plane-manager pod in specify folders for manifests, patches, extra files and pki.
+// Not check on tests
 func SyncSecretToTmp(secret *corev1.Secret, tmpDir string) error {
-	pkiDir := filepath.Join(tmpDir, constants.RelativePkiDir)
+	pkiDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.KubernetesPkiPath))
 	etcdPkiDir := filepath.Join(pkiDir, "etcd")
-	patchesDir := filepath.Join(tmpDir, constants.RelativePatchesDir)
-	extraFilesDir := filepath.Join(tmpDir, constants.RelativeExtraFilesDir)
+	patchesDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.PatchesPath))
+	extraFilesDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.ExtraFilesPath))
 
 	if err := os.MkdirAll(etcdPkiDir, 0o700); err != nil {
 		return err

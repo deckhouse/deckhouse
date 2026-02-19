@@ -23,7 +23,7 @@ test:
 
 .PHONY: test-golden
 test-golden-update:
-	UPDATE_GOLDEN=true && go test ./internal/controllers/...
+	UPDATE_GOLDEN=true go test ./internal/controllers/...
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN)
