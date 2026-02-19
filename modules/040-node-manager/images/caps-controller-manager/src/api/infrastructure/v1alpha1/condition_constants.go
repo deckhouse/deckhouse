@@ -32,6 +32,10 @@ const (
 	// Checking ssh connection
 	StaticInstanceCheckSSHCondition = "CheckSshCondition"
 
+	StaticInstanceCheckPassedReason = "CheckPassed"
+
+	StaticInstanceReadyReason = "InstanceReady"
+
 	StaticInstanceBootstrapSucceededCondition = "BootstrapSucceeded"
 
 	// StaticInstanceWaitingForMachineRefReason indicates when a StaticInstance is registered into a capacity pool and

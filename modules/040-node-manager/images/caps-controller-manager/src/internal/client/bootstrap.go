@@ -232,6 +232,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 				conditions.Set(instanceScope.Instance, metav1.Condition{
 					Type:               infrav1.StaticInstanceCheckTCPConnection,
 					Status:             metav1.ConditionTrue,
+					Reason:             infrav1.StaticInstanceCheckPassedReason,
 					Message:            "TCP connection check passed",
 					LastTransitionTime: metav1.Now(),
 				})
@@ -318,6 +319,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 				conditions.Set(instanceScope.Instance, metav1.Condition{
 					Type:               infrav1.StaticInstanceCheckSSHCondition,
 					Status:             metav1.ConditionTrue,
+					Reason:             infrav1.StaticInstanceCheckPassedReason,
 					Message:            "SSH connectivity check passed",
 					LastTransitionTime: metav1.Now(),
 				})
@@ -421,6 +423,7 @@ func (c *Client) setStaticInstancePhaseToRunning(ctx context.Context, instanceSc
 	conditions.Set(instanceScope.Instance, metav1.Condition{
 		Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
 		Status:             metav1.ConditionTrue,
+		Reason:             infrav1.StaticInstanceCheckPassedReason,
 		Message:            "StaticInstance is ready",
 		LastTransitionTime: metav1.Now(),
 	})
@@ -435,6 +438,7 @@ func (c *Client) setStaticInstancePhaseToRunning(ctx context.Context, instanceSc
 	conditions.Set(instanceScope.Instance, metav1.Condition{
 		Type:               infrav1.StaticInstanceBootstrapSucceededCondition,
 		Message:            "StaticInstance is bootstrapped",
+		Reason:             infrav1.StaticInstanceBootstrapSucceededCondition,
 		Status:             metav1.ConditionTrue,
 		LastTransitionTime: metav1.Now(),
 	})

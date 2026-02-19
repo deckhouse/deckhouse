@@ -182,7 +182,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		conditions.Set(instanceScope.Instance, metav1.Condition{
 			// TODO: StaticInstanceBootstrapSucceededCondition type?
 			Type:               infrav1.StaticInstanceAddedToNodeGroupCondition,
-			Reason:             "AddedToNodeGroup",
+			Reason:             infrav1.StaticInstanceAddedToNodeGroupCondition,
 			Status:             metav1.ConditionTrue,
 			Message:            "StaticInstance is added to NodeGroup",
 			LastTransitionTime: metav1.Now(),
