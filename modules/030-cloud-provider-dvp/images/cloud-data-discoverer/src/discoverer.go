@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package main
 
 import (
@@ -24,6 +25,7 @@ import (
 
 	"dvp-common/api"
 	"dvp-common/config"
+
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 

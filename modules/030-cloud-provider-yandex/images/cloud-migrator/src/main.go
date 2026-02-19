@@ -39,16 +39,9 @@ func main() {
 
 	flag.Parse()
 
-	var formatter log.Formatter = &log.TextFormatter{
-		DisableColors:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-		FullTimestamp:   true,
-	}
-	formatter = &log.JSONFormatter{}
-
 	logger := log.New()
 	logger.SetLevel(log.InfoLevel)
-	logger.SetFormatter(formatter)
+	logger.SetFormatter(&log.JSONFormatter{})
 
 	if folderID == "" {
 		logger.Fatal("Cannot get YC_FOLDER_ID")

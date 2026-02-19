@@ -41,11 +41,11 @@ const defaultWaitCheckInterval = time.Second
 
 type WaitFn func(obj client.Object) (bool, error)
 
-func (c *Service) Wait(ctx context.Context, name string, obj client.Object, waitFn WaitFn) error {
+func (s *Service) Wait(ctx context.Context, name string, obj client.Object, waitFn WaitFn) error {
 	var done bool
 	for {
-		err := c.client.Get(ctx, types.NamespacedName{
-			Namespace: c.namespace,
+		err := s.client.Get(ctx, types.NamespacedName{
+			Namespace: s.namespace,
 			Name:      name,
 		}, obj)
 		if err != nil {
