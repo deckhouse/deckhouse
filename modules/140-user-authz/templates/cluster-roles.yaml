@@ -42,7 +42,8 @@
 {{- define "user_authz_common_rules" }}
   {{- $context := index . 0 -}}
   {{- $role := index . 1 -}}
-  {{- $useAccessibleNamespaces := and (ne $context.Values.global.deckhouseEdition "CE") ($context.Values.userAuthz.enableMultiTenancy | default false) -}}
+  {{- $consoleLegacyCompat := $context.Values.userAuthz.internal.consoleLegacyCompat | default false -}}
+  {{- $useAccessibleNamespaces := and (ne $context.Values.global.deckhouseEdition "CE") ($context.Values.userAuthz.enableMultiTenancy | default false) (not $consoleLegacyCompat) -}}
   {{- $mode := "" }}
   {{- if or (eq $role "User") (eq $role "PrivilegedUser") }}
     {{- $mode = "r" }}
