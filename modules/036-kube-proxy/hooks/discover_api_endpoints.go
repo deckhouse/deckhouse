@@ -20,13 +20,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"golang.org/x/exp/slog"
-	v1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -37,10 +39,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:              "kube_api_ep",
-			ApiVersion:        "v1",
-			Kind:              "Endpoints",
+			ApiVersion:        "discovery.k8s.io/v1",
+			Kind:              "EndpointSlice",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"default"}}},
-			NameSelector:      &types.NameSelector{MatchNames: []string{"kubernetes"}},
+			LabelSelector:     &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/service-name": "kubernetes"}},
 			FilterFunc:        applyKubernetesAPIEndpointsFilter,
 		},
 	},
@@ -52,19 +54,18 @@ type KubernetesAPIEndpoints struct {
 }
 
 func applyKubernetesAPIEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	endpoint := &v1.Endpoints{}
-	err := sdk.FromUnstructured(obj, endpoint)
+	slice := &discoveryv1.EndpointSlice{}
+	err := sdk.FromUnstructured(obj, slice)
 	if err != nil {
 		return nil, err
 	}
 
 	mh := &KubernetesAPIEndpoints{}
 
-	for _, subset := range endpoint.Subsets {
-		for _, address := range subset.Addresses {
-			ip := address.IP
-			for _, port := range subset.Ports {
-				mh.HostPort = append(mh.HostPort, fmt.Sprintf("%s:%d", ip, port.Port))
+	for _, p := range slice.Ports {
+		for _, ep := range slice.Endpoints {
+			for _, addr := range ep.Addresses {
+				mh.HostPort = append(mh.HostPort, fmt.Sprintf("%s:%d", addr, *p.Port))
 			}
 		}
 	}
@@ -73,25 +74,38 @@ func applyKubernetesAPIEndpointsFilter(obj *unstructured.Unstructured) (go_hook.
 }
 
 func discoverAPIEndpointsHandler(_ context.Context, input *go_hook.HookInput) error {
-	endpoints, err := sdkobjectpatch.UnmarshalToStruct[KubernetesAPIEndpoints](input.Snapshots, "kube_api_ep")
+	snapshots, err := sdkobjectpatch.UnmarshalToStruct[KubernetesAPIEndpoints](input.Snapshots, "kube_api_ep")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal kube_api_ep snapshot: %w", err)
 	}
 
-	if len(endpoints) == 0 {
+	seen := make(map[string]struct{})
+	var allHostPort []string
+	for _, snap := range snapshots {
+		for _, hp := range snap.HostPort {
+			if hp != "" {
+				if _, exists := seen[hp]; !exists {
+					seen[hp] = struct{}{}
+					allHostPort = append(allHostPort, hp)
+				}
+			}
+		}
+	}
+
+	if len(allHostPort) == 0 {
 		input.Logger.Error("kubernetes endpoints not found")
 		return nil
 	}
 
-	fpp := endpoints[0]
+	sort.Strings(allHostPort)
 
-	if len(fpp.HostPort) == 0 {
+	if len(allHostPort) == 0 {
 		return errors.New("no kubernetes apiserver endpoints host:port specified")
 	}
 
-	input.Logger.Info("cluster master addresses", slog.String("adresses", strings.Join(fpp.HostPort, ",")))
+	input.Logger.Info("cluster master addresses", slog.String("addresses", strings.Join(allHostPort, ",")))
 
-	input.Values.Set("kubeProxy.internal.clusterMasterAddresses", fpp.HostPort)
+	input.Values.Set("kubeProxy.internal.clusterMasterAddresses", allHostPort)
 
 	return nil
 }
