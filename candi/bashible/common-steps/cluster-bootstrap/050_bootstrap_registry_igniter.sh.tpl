@@ -272,7 +272,7 @@ stop_service() {
         ((wait_time++))
         if [ \$wait_time -gt 20 ]; then
             echo "Process \$service_name has not completed in 20 seconds, SIGKILL is being sent..."
-            pkill -9 -x \$service_name || true
+            pkill -9 -x \$service_name
             break
         fi
     done
