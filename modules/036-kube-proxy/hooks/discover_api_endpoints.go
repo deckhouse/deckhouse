@@ -43,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:              "EndpointSlice",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"default"}}},
 			LabelSelector:     &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/service-name": "kubernetes"}},
-			FilterFunc:        applyKubernetesAPIEndpointSlicesFilter,
+			FilterFunc:        applyKubernetesAPIEndpointSliceFilter,
 		},
 	},
 }, discoverAPIEndpointsHandler)
@@ -53,7 +53,7 @@ type KubernetesAPIEndpoints struct {
 	HostPort []string
 }
 
-func applyKubernetesAPIEndpointSlicesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyKubernetesAPIEndpointSliceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	slice := &discoveryv1.EndpointSlice{}
 	err := sdk.FromUnstructured(obj, slice)
 	if err != nil {
