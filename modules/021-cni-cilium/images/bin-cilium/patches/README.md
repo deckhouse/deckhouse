@@ -84,6 +84,3 @@ Add import/export conntrack http endpoints. See usage example here modules/021-c
 ## 017-bpf-lb-generate-icmp-reply.patch
 
 A feature has been added to cni-cilium for reply with icmp response in load balancer module
-
-#
-
