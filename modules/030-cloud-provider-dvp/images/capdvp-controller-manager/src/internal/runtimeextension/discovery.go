@@ -59,7 +59,7 @@ func (e *Extension) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 					APIVersion: runtimeHookAPIVersion,
 					Hook:       "UpdateMachine",
 				},
-				TimeoutSeconds: 300,
+				TimeoutSeconds: 30,
 				FailurePolicy:  "Fail",
 			},
 		},
