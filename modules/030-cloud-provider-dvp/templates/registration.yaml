@@ -25,7 +25,9 @@ data:
   capiClusterName: {{ b64enc "dvp" | quote }}
   capiMachineTemplateKind: {{ b64enc "DeckhouseMachineTemplate" | quote }}
   capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
-  sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
+  {{- with $providerClusterConfiguration.sshPublicKey }}
+  sshPublicKey: {{ . | b64enc | quote }}
+  {{- end }}
 
   {{- $dvpValues := dict }}
   dvp: {{ $dvpValues | toJson | b64enc | quote }}
