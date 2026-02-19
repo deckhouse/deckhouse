@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 )
 
 func validContext() *Context {
@@ -314,17 +314,17 @@ func TestContextToMap(t *testing.T) {
 			input: func() Context {
 				ret := Context{
 					Bootstrap: &ContextBootstrap{
-						Init: init_secret.Config{
-							CA: init_secret.CertKey{
+						Init: initsecret.Config{
+							CA: initsecret.CertKey{
 								Cert: "---cert---",
 								Key:  "---key---",
 							},
-							ROUser: init_secret.User{
+							ROUser: initsecret.User{
 								Name:         "ro_name",
 								Password:     "ro_password",
 								PasswordHash: "ro_password_hash",
 							},
-							RWUser: init_secret.User{
+							RWUser: initsecret.User{
 								Name:         "rw_name",
 								Password:     "rw_password",
 								PasswordHash: "rw_password_hash",

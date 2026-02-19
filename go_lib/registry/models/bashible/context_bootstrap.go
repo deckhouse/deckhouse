@@ -19,7 +19,7 @@ package bashible
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
-	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 )
 
 var (
@@ -71,7 +71,7 @@ func (c ContextBootstrapProxy) ToMap() map[string]any {
 }
 
 type ContextBootstrap struct {
-	Init  init_secret.Config     `json:"init" yaml:"init"`
+	Init  initsecret.Config      `json:"init" yaml:"init"`
 	Proxy *ContextBootstrapProxy `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 }
 
