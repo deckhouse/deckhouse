@@ -38,6 +38,14 @@ import (
 
 const (
 	cniMigrationPhasePause = "cni-migration.network.deckhouse.io/pause-before-phase"
+
+	// KubeProxy component details
+	kubeProxyDaemonSetName = "d8-kube-proxy"
+	kubeProxyNamespace     = "kube-system"
+
+	// Deckhouse CNI naming conventions
+	cniNamespacePrefix = "d8-cni-"
+	cniModulePrefix    = "cni-"
 )
 
 // CNIDaemonSetMap maps short CNI names to their DaemonSet names.
@@ -338,7 +346,7 @@ func (r *CNIMigrationReconciler) setCondition(
 func (r *CNIMigrationReconciler) detectCurrentCNI(ctx context.Context) (string, error) {
 	var enabledCNIs []string
 	for cni := range CNIDaemonSetMap {
-		moduleName := "cni-" + cni
+		moduleName := cniModulePrefix + cni
 		enabled, err := r.isModuleEnabled(ctx, moduleName)
 		if err != nil {
 			continue // Skip errors, maybe module doesn't exist
@@ -462,7 +470,7 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(
 	m *cnimigrationv1alpha1.CNIMigration,
 ) (bool, string, error) {
 	targetCNI := strings.ToLower(m.Spec.TargetCNI)
-	moduleName := "cni-" + targetCNI
+	moduleName := cniModulePrefix + targetCNI
 
 	// 1. Enable module
 	done, err := r.toggleModule(ctx, moduleName, true)
@@ -473,31 +481,52 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(
 		return false, fmt.Sprintf("Enabling module %s", moduleName), nil
 	}
 
-	// 2. Wait for DaemonSet to appear and schedule pods
+	// 2. Wait for target CNI pods to be initialized
 	dsName, ok := CNIDaemonSetMap[targetCNI]
 	if !ok {
 		return false, "", fmt.Errorf("unknown CNI: %s", targetCNI)
 	}
-	dsNamespace := "d8-" + moduleName
+	dsNamespace := cniNamespacePrefix + targetCNI
 
+	if ok, msg, err := r.checkDaemonSetInitialized(ctx, dsName, dsNamespace); err != nil {
+		return false, "", err
+	} else if !ok {
+		return false, msg, nil
+	}
+
+	// 3. If target is NOT Cilium, wait for kube-proxy pods to be initialized
+	if targetCNI != cnimigrationv1alpha1.CNINameCilium {
+		if ok, msg, err := r.checkDaemonSetInitialized(ctx, kubeProxyDaemonSetName, kubeProxyNamespace); err != nil {
+			return false, "", err
+		} else if !ok {
+			return false, "kube-proxy: " + msg, nil
+		}
+	}
+
+	return true, "", nil
+}
+
+func (r *CNIMigrationReconciler) checkDaemonSetInitialized(
+	ctx context.Context,
+	name, namespace string,
+) (bool, string, error) {
 	ds := &appsv1.DaemonSet{}
-	if err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: dsNamespace}, ds); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, ds); err != nil {
 		if errors.IsNotFound(err) {
-			return false, fmt.Sprintf("Waiting for %s DaemonSet creation (module %s)", dsName, moduleName), nil
+			return false, fmt.Sprintf("Waiting for %s DaemonSet creation", name), nil
 		}
 		return false, "", err
 	}
 
 	if ds.Status.DesiredNumberScheduled == 0 {
-		return false, fmt.Sprintf("Waiting for %s pods to be scheduled (module %s)", dsName, moduleName), nil
+		return false, fmt.Sprintf("Waiting for %s pods to be scheduled", name), nil
 	}
 
-	// 3. Verify that pods are actually created and scheduled
 	pods := &corev1.PodList{}
 	if err := r.List(
 		ctx,
 		pods,
-		client.InNamespace(dsNamespace),
+		client.InNamespace(namespace),
 		client.MatchingLabels(ds.Spec.Selector.MatchLabels),
 	); err != nil {
 		return false, "", err
@@ -505,9 +534,8 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(
 
 	if len(pods.Items) < int(ds.Status.DesiredNumberScheduled) {
 		return false, fmt.Sprintf(
-			"Waiting for %s pods creation (module %s): %d/%d",
-			dsName,
-			moduleName,
+			"Waiting for %s pods creation: %d/%d",
+			name,
 			len(pods.Items),
 			ds.Status.DesiredNumberScheduled,
 		), nil
@@ -515,28 +543,26 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(
 
 	for _, pod := range pods.Items {
 		if pod.Spec.NodeName == "" {
-			return false, fmt.Sprintf("Waiting for pod %s to be scheduled on a node", pod.Name), nil
-		}
-
-		// Check InitContainerStatuses to ensure images are pulling and no early crashes occur.
-		if len(pod.Status.InitContainerStatuses) == 0 {
-			if pod.Status.Phase == corev1.PodPending {
-				return false, fmt.Sprintf("Waiting for pod %s init containers to start", pod.Name), nil
-			}
+			return false, fmt.Sprintf("Waiting for %s pod %s to be scheduled on a node", name, pod.Name), nil
 		}
 
 		for _, status := range pod.Status.InitContainerStatuses {
-			// Check for waiting errors
 			if status.State.Waiting != nil {
 				reason := status.State.Waiting.Reason
 				if isCriticalWaitingReason(reason) {
-					return false, "", fmt.Errorf("pod %s init container %s failed: %s", pod.Name, status.Name, reason)
+					return false, "", fmt.Errorf(
+						"%s pod %s init container %s failed: %s",
+						name,
+						pod.Name,
+						status.Name,
+						reason,
+					)
 				}
 			}
-			// Check for terminated errors
 			if status.State.Terminated != nil && status.State.Terminated.ExitCode != 0 {
 				return false, "", fmt.Errorf(
-					"pod %s init container %s terminated with error (exit code %d)",
+					"%s pod %s init container %s terminated with error (exit code %d)",
+					name,
 					pod.Name,
 					status.Name,
 					status.State.Terminated.ExitCode,
@@ -561,7 +587,7 @@ func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(
 	m *cnimigrationv1alpha1.CNIMigration,
 ) (bool, string, error) {
 	currentCNI := strings.ToLower(m.Status.CurrentCNI)
-	moduleName := "cni-" + currentCNI
+	moduleName := cniModulePrefix + currentCNI
 
 	// 1. Disable module
 	done, err := r.toggleModule(ctx, moduleName, false)
@@ -573,10 +599,9 @@ func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(
 	}
 
 	// 2. Wait for all pods in the CNI namespace to be deleted.
-	dsNamespace := "d8-" + moduleName
+	dsNamespace := cniNamespacePrefix + currentCNI
 	podList := &corev1.PodList{}
 	if err := r.List(ctx, podList, client.InNamespace(dsNamespace)); err != nil {
-		// If namespace is not found, it means it's already gone along with all pods.
 		if errors.IsNotFound(err) {
 			return true, "", nil
 		}
@@ -688,14 +713,15 @@ func (r *CNIMigrationReconciler) ensureTargetCNIReady(
 	m *cnimigrationv1alpha1.CNIMigration,
 ) (bool, string, error) {
 	targetCNI := strings.ToLower(m.Spec.TargetCNI)
-	moduleName := "cni-" + targetCNI
+	moduleName := cniModulePrefix + targetCNI
 	dsName, ok := CNIDaemonSetMap[targetCNI]
 	if !ok {
 		return false, "", fmt.Errorf("unknown module name: %s", moduleName)
 	}
 
+	// 1. Wait for target CNI DaemonSet to be ready
 	ds := &appsv1.DaemonSet{}
-	err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: "d8-" + moduleName}, ds)
+	err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: cniNamespacePrefix + targetCNI}, ds)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, fmt.Sprintf("Waiting for target CNI DaemonSet to be created (module %s)", moduleName), nil
@@ -714,6 +740,29 @@ func (r *CNIMigrationReconciler) ensureTargetCNIReady(
 			ds.Status.NumberReady,
 			ds.Status.DesiredNumberScheduled,
 		), nil
+	}
+
+	// 2. If target is NOT Cilium, ensure kube-proxy is Ready
+	if targetCNI != cnimigrationv1alpha1.CNINameCilium {
+		kpDS := &appsv1.DaemonSet{}
+		if err := r.Get(
+			ctx,
+			types.NamespacedName{Name: kubeProxyDaemonSetName, Namespace: kubeProxyNamespace},
+			kpDS,
+		); err != nil {
+			if !errors.IsNotFound(err) {
+				return false, "", err
+			}
+			return false, fmt.Sprintf("Waiting for %s DaemonSet to be created", kubeProxyDaemonSetName), nil
+		}
+		if kpDS.Status.NumberReady < kpDS.Status.DesiredNumberScheduled || kpDS.Status.DesiredNumberScheduled == 0 {
+			return false, fmt.Sprintf(
+				"Waiting for %s pods ready: %d/%d",
+				kubeProxyDaemonSetName,
+				kpDS.Status.NumberReady,
+				kpDS.Status.DesiredNumberScheduled,
+			), nil
+		}
 	}
 
 	return true, "", nil
