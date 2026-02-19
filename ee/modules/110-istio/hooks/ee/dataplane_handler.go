@@ -530,8 +530,6 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.Logger.Info("istio pod revision", slog.String("pod", istioPod.Name), slog.String("namespace", istioPod.Namespace), slog.String("istioPod.Revision", istioPod.Revision))
-
 		desiredRevision := istioRevsionAbsent
 
 		// if label sidecar.istio.io/inject=true -> use global revision
@@ -552,6 +550,7 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
+		// istioPod.Revision normalized for pod in getIstioCurrentRevision
 		if desiredRevision == istioRevsionAbsent && istioPod.Revision == "global" {
 			desiredRevision = globalRevision
 		}
