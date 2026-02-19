@@ -17,21 +17,22 @@ limitations under the License.
 package runtimeextension
 
 import (
+	"encoding/json"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// CAPI Runtime SDK wire types.
-// See https://cluster-api.sigs.k8s.io/tasks/experimental-features/runtime-sdk/
+// CAPI Runtime SDK wire types (v1.12-compatible).
+// See https://cluster-api.sigs.k8s.io/tasks/experimental-features/runtime-sdk/implement-in-place-update-hooks
 
-// DiscoveryResponse is returned by the Discovery endpoint.
+// --- Discovery ---
+
 type DiscoveryResponse struct {
 	metav1.TypeMeta `json:",inline"`
 	Status          string    `json:"status"`
 	Handlers        []Handler `json:"handlers"`
 }
 
-// Handler describes a single hook the extension serves.
 type Handler struct {
 	Name           string      `json:"name"`
 	RequestHook    RequestHook `json:"requestHook"`
@@ -39,93 +40,106 @@ type Handler struct {
 	FailurePolicy  string      `json:"failurePolicy,omitempty"`
 }
 
-// RequestHook identifies the hook by apiVersion + hook name.
 type RequestHook struct {
 	APIVersion string `json:"apiVersion"`
 	Hook       string `json:"hook"`
 }
 
-// CanUpdateMachineSetRequest is sent by CAPI MachineDeployment controller
-// as a fast pre-check before iterating individual Machines.
+// --- Common ---
+
+type CommonRequest struct {
+	Settings map[string]string `json:"settings,omitempty"`
+}
+
+type CommonResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+}
+
+type CommonRetryResponse struct {
+	CommonResponse      `json:",inline"`
+	RetryAfterSeconds int32 `json:"retryAfterSeconds"`
+}
+
+// --- Patch ---
+
+type PatchType string
+
+const (
+	JSONPatchType      PatchType = "JSONPatch"
+	JSONMergePatchType PatchType = "JSONMergePatch"
+)
+
+type Patch struct {
+	PatchType PatchType       `json:"patchType,omitempty"`
+	Patch     json.RawMessage `json:"patch,omitempty"`
+}
+
+func (p *Patch) IsDefined() bool {
+	return p.PatchType != "" || len(p.Patch) > 0
+}
+
+// --- CanUpdateMachineSet ---
+
 type CanUpdateMachineSetRequest struct {
 	metav1.TypeMeta `json:",inline"`
 	CommonRequest   `json:",inline"`
-	MachineSet      MachineSetRef `json:"machineSet"`
-	OldMachineSet   MachineSetRef `json:"oldMachineSet"`
+	Current         CanUpdateMachineSetRequestObjects `json:"current"`
+	Desired         CanUpdateMachineSetRequestObjects `json:"desired"`
 }
 
-// CanUpdateMachineSetResponse tells CAPI whether the whole MachineSet can
-// potentially be updated in-place.
+type CanUpdateMachineSetRequestObjects struct {
+	MachineSet                      json.RawMessage `json:"machineSet"`
+	InfrastructureMachineTemplate   json.RawMessage `json:"infrastructureMachineTemplate"`
+	BootstrapConfigTemplate         json.RawMessage `json:"bootstrapConfigTemplate,omitempty"`
+}
+
 type CanUpdateMachineSetResponse struct {
-	metav1.TypeMeta `json:",inline"`
-	Status          string `json:"status"`
-	CanUpdate       bool   `json:"canUpdate"`
-	Message         string `json:"message,omitempty"`
+	metav1.TypeMeta                   `json:",inline"`
+	CommonResponse                    `json:",inline"`
+	MachineSetPatch                   *Patch `json:"machineSetPatch,omitempty"`
+	InfrastructureMachineTemplatePatch *Patch `json:"infrastructureMachineTemplatePatch,omitempty"`
+	BootstrapConfigTemplatePatch      *Patch `json:"bootstrapConfigTemplatePatch,omitempty"`
 }
 
-// MachineSetRef references a CAPI MachineSet and its infrastructure template.
-type MachineSetRef struct {
-	Name      string         `json:"name"`
-	Namespace string         `json:"namespace"`
-	Spec      MachineSetSpec `json:"spec"`
-}
+// --- CanUpdateMachine ---
 
-// MachineSetSpec carries the infrastructure template reference.
-type MachineSetSpec struct {
-	InfrastructureRef ObjectRef `json:"infrastructureRef"`
-}
-
-// CanUpdateMachineRequest is sent by CAPI to check whether in-place update is possible.
 type CanUpdateMachineRequest struct {
 	metav1.TypeMeta `json:",inline"`
 	CommonRequest   `json:",inline"`
-	Machine         MachineRef `json:"machine"`
-	OldMachine      MachineRef `json:"oldMachine"`
+	Current         CanUpdateMachineRequestObjects `json:"current"`
+	Desired         CanUpdateMachineRequestObjects `json:"desired"`
 }
 
-// CanUpdateMachineResponse tells CAPI whether in-place update is possible.
+type CanUpdateMachineRequestObjects struct {
+	Machine               json.RawMessage `json:"machine"`
+	InfrastructureMachine json.RawMessage `json:"infrastructureMachine"`
+	BootstrapConfig       json.RawMessage `json:"bootstrapConfig,omitempty"`
+}
+
 type CanUpdateMachineResponse struct {
-	metav1.TypeMeta `json:",inline"`
-	Status          string `json:"status"`
-	CanUpdate       bool   `json:"canUpdate"`
-	Message         string `json:"message,omitempty"`
+	metav1.TypeMeta              `json:",inline"`
+	CommonResponse               `json:",inline"`
+	MachinePatch                 *Patch `json:"machinePatch,omitempty"`
+	InfrastructureMachinePatch   *Patch `json:"infrastructureMachinePatch,omitempty"`
+	BootstrapConfigPatch         *Patch `json:"bootstrapConfigPatch,omitempty"`
 }
 
-// UpdateMachineRequest is sent by CAPI to perform the actual in-place update.
+// --- UpdateMachine ---
+
 type UpdateMachineRequest struct {
 	metav1.TypeMeta `json:",inline"`
 	CommonRequest   `json:",inline"`
-	Machine         MachineRef `json:"machine"`
+	Desired         UpdateMachineRequestObjects `json:"desired"`
 }
 
-// UpdateMachineResponse reports the result of in-place update.
+type UpdateMachineRequestObjects struct {
+	Machine               json.RawMessage `json:"machine"`
+	InfrastructureMachine json.RawMessage `json:"infrastructureMachine"`
+	BootstrapConfig       json.RawMessage `json:"bootstrapConfig,omitempty"`
+}
+
 type UpdateMachineResponse struct {
-	metav1.TypeMeta `json:",inline"`
-	Status          string `json:"status"`
-	Message         string `json:"message,omitempty"`
-}
-
-// CommonRequest contains fields shared by all hook requests.
-type CommonRequest struct {
-	Settings runtime.RawExtension `json:"settings,omitempty"`
-}
-
-// MachineRef references a CAPI Machine and its infrastructure object.
-type MachineRef struct {
-	Name      string      `json:"name"`
-	Namespace string      `json:"namespace"`
-	Spec      MachineSpec `json:"spec"`
-}
-
-// MachineSpec carries the infrastructure reference.
-type MachineSpec struct {
-	InfrastructureRef ObjectRef `json:"infrastructureRef"`
-}
-
-// ObjectRef is a typed reference to a Kubernetes object.
-type ObjectRef struct {
-	APIVersion string `json:"apiVersion"`
-	Kind       string `json:"kind"`
-	Name       string `json:"name"`
-	Namespace  string `json:"namespace"`
+	metav1.TypeMeta     `json:",inline"`
+	CommonRetryResponse `json:",inline"`
 }

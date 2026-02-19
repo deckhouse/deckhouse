@@ -36,7 +36,7 @@ func (e *Extension) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 		Status: "Success",
 		Handlers: []Handler{
 			{
-				Name: "dvp-can-update-machineset",
+				Name: HandlerNameCanUpdateMachineSet,
 				RequestHook: RequestHook{
 					APIVersion: runtimeHookAPIVersion,
 					Hook:       "CanUpdateMachineSet",
@@ -45,7 +45,7 @@ func (e *Extension) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 				FailurePolicy:  "Fail",
 			},
 			{
-				Name: "dvp-can-update-machine",
+				Name: HandlerNameCanUpdateMachine,
 				RequestHook: RequestHook{
 					APIVersion: runtimeHookAPIVersion,
 					Hook:       "CanUpdateMachine",
@@ -54,7 +54,7 @@ func (e *Extension) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 				FailurePolicy:  "Fail",
 			},
 			{
-				Name: "dvp-update-machine",
+				Name: HandlerNameUpdateMachine,
 				RequestHook: RequestHook{
 					APIVersion: runtimeHookAPIVersion,
 					Hook:       "UpdateMachine",

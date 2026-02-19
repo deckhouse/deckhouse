@@ -50,54 +50,64 @@ func (e *Extension) HandleUpdateMachine(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	var desiredMachine infrastructurev1a1.DeckhouseMachine
+	if err := json.Unmarshal(req.Desired.InfrastructureMachine, &desiredMachine); err != nil {
+		e.log.Error(err, "failed to unmarshal desired InfrastructureMachine")
+		writeError(w, http.StatusBadRequest, "failed to unmarshal desired machine: "+err.Error())
+		return
+	}
+
 	ctx := context.Background()
 
-	dvpMachine := &infrastructurev1a1.DeckhouseMachine{}
+	currentMachine := &infrastructurev1a1.DeckhouseMachine{}
 	if err := e.client.Get(ctx, types.NamespacedName{
-		Name:      req.Machine.Name,
-		Namespace: req.Machine.Namespace,
-	}, dvpMachine); err != nil {
-		e.log.Error(err, "failed to get DeckhouseMachine")
-		writeError(w, http.StatusInternalServerError, "failed to get DeckhouseMachine: "+err.Error())
+		Name:      desiredMachine.Name,
+		Namespace: desiredMachine.Namespace,
+	}, currentMachine); err != nil {
+		e.log.Error(err, "failed to get current DeckhouseMachine")
+		writeError(w, http.StatusInternalServerError, "failed to get current machine: "+err.Error())
 		return
 	}
 
-	newTemplate, err := e.getMachineTemplate(ctx, req.Machine.Spec.InfrastructureRef)
-	if err != nil {
-		e.log.Error(err, "failed to get new DeckhouseMachineTemplate")
-		writeError(w, http.StatusInternalServerError, "failed to get new template: "+err.Error())
-		return
-	}
+	desiredSpec := specFromMachine(&desiredMachine.Spec)
 
-	if err := e.performInPlaceUpdate(ctx, dvpMachine, newTemplate); err != nil {
-		e.log.Error(err, "in-place update failed", "machine", req.Machine.Name)
-		writeError(w, http.StatusInternalServerError, "update failed: "+err.Error())
+	if err := e.performInPlaceUpdate(ctx, currentMachine, desiredSpec); err != nil {
+		e.log.Error(err, "in-place update failed", "machine", desiredMachine.Name)
+		resp := UpdateMachineResponse{
+			CommonRetryResponse: CommonRetryResponse{
+				CommonResponse: CommonResponse{
+					Status:  "Failure",
+					Message: "update failed: " + err.Error(),
+				},
+				RetryAfterSeconds: 0,
+			},
+		}
+		writeJSON(w, http.StatusOK, resp)
 		return
 	}
 
 	resp := UpdateMachineResponse{
-		Status:  "Success",
-		Message: "in-place update completed successfully",
+		CommonRetryResponse: CommonRetryResponse{
+			CommonResponse: CommonResponse{
+				Status:  "Success",
+				Message: "in-place update completed successfully",
+			},
+			RetryAfterSeconds: 0,
+		},
 	}
-	e.log.Info("UpdateMachine completed", "machine", req.Machine.Name)
+	e.log.Info("UpdateMachine completed", "machine", desiredMachine.Name)
 	writeJSON(w, http.StatusOK, resp)
 }
 
 // performInPlaceUpdate applies in-place changes to a running DVP VM.
-// It builds a "current spec" from the DeckhouseMachine, classifies the diff,
-// and executes the appropriate strategy.
 func (e *Extension) performInPlaceUpdate(
 	ctx context.Context,
-	dvpMachine *infrastructurev1a1.DeckhouseMachine,
-	newTemplate *infrastructurev1a1.DeckhouseMachineTemplate,
+	currentMachine *infrastructurev1a1.DeckhouseMachine,
+	desiredSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
 ) error {
-	newSpec := &newTemplate.Spec.Template.Spec
-
-	// Build the "old" spec from current DeckhouseMachine state.
-	oldSpec := templateSpecFromMachine(dvpMachine)
-
-	cs := classifyChanges(oldSpec, newSpec)
-	vmName := dvpMachine.Name
+	oldSpec := specFromMachine(&currentMachine.Spec)
+	cs := classifyChanges(oldSpec, desiredSpec)
+	vmName := currentMachine.Name
 
 	e.log.Info("In-place update plan",
 		"vm", vmName,
@@ -116,23 +126,20 @@ func (e *Extension) performInPlaceUpdate(
 		return nil
 	}
 
-	// ---- Warm update: stop → patch → start ----
-	if cs.strategy == updateWarm {
-		if err := e.warmUpdate(ctx, vmName, dvpMachine, newSpec, &cs); err != nil {
+	if cs.strategy >= updateWarm {
+		if err := e.warmUpdate(ctx, vmName, currentMachine, desiredSpec, &cs); err != nil {
 			return err
 		}
 	}
 
-	// ---- Hot-plug new disks ----
 	if cs.newDisksAdded {
-		if err := e.hotPlugNewDisks(ctx, dvpMachine, newSpec); err != nil {
+		if err := e.hotPlugNewDisks(ctx, currentMachine, desiredSpec); err != nil {
 			return err
 		}
 	}
 
-	// ---- Live-patch policies (no restart needed) ----
 	if cs.runPolicyChanged || cs.liveMigrationChanged {
-		if err := e.patchVMPolicies(ctx, vmName, newSpec); err != nil {
+		if err := e.patchVMPolicies(ctx, vmName, desiredSpec); err != nil {
 			return err
 		}
 	}
@@ -149,8 +156,8 @@ func (e *Extension) performInPlaceUpdate(
 func (e *Extension) warmUpdate(
 	ctx context.Context,
 	vmName string,
-	dvpMachine *infrastructurev1a1.DeckhouseMachine,
-	newSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
+	currentMachine *infrastructurev1a1.DeckhouseMachine,
+	desiredSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
 	cs *changeSet,
 ) error {
 	e.log.Info("Warm update: stopping VM", "vm", vmName)
@@ -158,25 +165,22 @@ func (e *Extension) warmUpdate(
 		return fmt.Errorf("stop VM %s: %w", vmName, err)
 	}
 
-	// Patch VM spec (CPU, Memory, VMClass).
 	if cs.cpuChanged || cs.memoryChanged || cs.vmClassChanged {
 		e.log.Info("Warm update: patching VM spec", "vm", vmName)
-		if err := e.patchVMSpec(ctx, vmName, newSpec, cs); err != nil {
-			// Try to restart VM even if patch failed, to avoid leaving it stopped.
+		if err := e.patchVMSpec(ctx, vmName, desiredSpec, cs); err != nil {
 			_ = e.dvp.ComputeService.StartVM(ctx, vmName)
 			return fmt.Errorf("patch VM spec: %w", err)
 		}
 	}
 
-	// Resize root disk if needed.
 	if cs.rootDiskResized {
-		bootDiskName := dvpMachine.Name + "-boot"
+		bootDiskName := currentMachine.Name + "-boot"
 		e.log.Info("Warm update: resizing root disk",
 			"vm", vmName,
 			"disk", bootDiskName,
-			"newSize", newSpec.RootDiskSize.String(),
+			"newSize", desiredSpec.RootDiskSize.String(),
 		)
-		if err := e.dvp.DiskService.ResizeDisk(ctx, bootDiskName, newSpec.RootDiskSize.String()); err != nil {
+		if err := e.dvp.DiskService.ResizeDisk(ctx, bootDiskName, desiredSpec.RootDiskSize.String()); err != nil {
 			_ = e.dvp.ComputeService.StartVM(ctx, vmName)
 			return fmt.Errorf("resize root disk %s: %w", bootDiskName, err)
 		}
@@ -194,7 +198,7 @@ func (e *Extension) warmUpdate(
 func (e *Extension) patchVMSpec(
 	ctx context.Context,
 	vmName string,
-	newSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
+	desiredSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
 	cs *changeSet,
 ) error {
 	vm, err := e.dvp.ComputeService.GetVMByName(ctx, vmName)
@@ -205,14 +209,14 @@ func (e *Extension) patchVMSpec(
 	before := vm.DeepCopy()
 
 	if cs.cpuChanged {
-		vm.Spec.CPU.Cores = newSpec.CPU.Cores
-		vm.Spec.CPU.CoreFraction = newSpec.CPU.Fraction
+		vm.Spec.CPU.Cores = desiredSpec.CPU.Cores
+		vm.Spec.CPU.CoreFraction = desiredSpec.CPU.Fraction
 	}
 	if cs.memoryChanged {
-		vm.Spec.Memory.Size = newSpec.Memory
+		vm.Spec.Memory.Size = desiredSpec.Memory
 	}
 	if cs.vmClassChanged {
-		vm.Spec.VirtualMachineClassName = newSpec.VMClassName
+		vm.Spec.VirtualMachineClassName = desiredSpec.VMClassName
 	}
 
 	dvpClient := e.dvp.Service.GetClient()
@@ -227,7 +231,7 @@ func (e *Extension) patchVMSpec(
 func (e *Extension) patchVMPolicies(
 	ctx context.Context,
 	vmName string,
-	newSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
+	desiredSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
 ) error {
 	vm, err := e.dvp.ComputeService.GetVMByName(ctx, vmName)
 	if err != nil {
@@ -236,11 +240,11 @@ func (e *Extension) patchVMPolicies(
 
 	before := vm.DeepCopy()
 
-	if newSpec.RunPolicy != "" {
-		vm.Spec.RunPolicy = v1alpha2.RunPolicy(newSpec.RunPolicy)
+	if desiredSpec.RunPolicy != "" {
+		vm.Spec.RunPolicy = v1alpha2.RunPolicy(desiredSpec.RunPolicy)
 	}
-	if newSpec.LiveMigrationPolicy != "" {
-		vm.Spec.LiveMigrationPolicy = v1alpha2.LiveMigrationPolicy(newSpec.LiveMigrationPolicy)
+	if desiredSpec.LiveMigrationPolicy != "" {
+		vm.Spec.LiveMigrationPolicy = v1alpha2.LiveMigrationPolicy(desiredSpec.LiveMigrationPolicy)
 	}
 
 	dvpClient := e.dvp.Service.GetClient()
@@ -255,12 +259,12 @@ func (e *Extension) patchVMPolicies(
 // hotPlugNewDisks creates and attaches new additional disks via VMBDA.
 func (e *Extension) hotPlugNewDisks(
 	ctx context.Context,
-	dvpMachine *infrastructurev1a1.DeckhouseMachine,
-	newSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
+	currentMachine *infrastructurev1a1.DeckhouseMachine,
+	desiredSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
 ) error {
-	currentDiskCount := len(dvpMachine.Spec.AdditionalDisks)
-	newDiskCount := len(newSpec.AdditionalDisks)
-	vmHostname := dvpMachine.Name
+	currentDiskCount := len(currentMachine.Spec.AdditionalDisks)
+	newDiskCount := len(desiredSpec.AdditionalDisks)
+	vmHostname := currentMachine.Name
 
 	e.log.Info("Hot-plugging new disks",
 		"vm", vmHostname,
@@ -269,8 +273,8 @@ func (e *Extension) hotPlugNewDisks(
 	)
 
 	for i := currentDiskCount; i < newDiskCount; i++ {
-		diskSpec := newSpec.AdditionalDisks[i]
-		diskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
+		diskSpec := desiredSpec.AdditionalDisks[i]
+		diskName := fmt.Sprintf("%s-additional-disk-%d", currentMachine.Name, i)
 
 		if _, err := e.dvp.DiskService.CreateDisk(
 			ctx,
@@ -291,23 +295,6 @@ func (e *Extension) hotPlugNewDisks(
 	}
 
 	return nil
-}
-
-// templateSpecFromMachine builds a DeckhouseMachineSpecTemplate from the
-// current DeckhouseMachine spec so we can compare it with the new template.
-func templateSpecFromMachine(m *infrastructurev1a1.DeckhouseMachine) *infrastructurev1a1.DeckhouseMachineSpecTemplate {
-	return &infrastructurev1a1.DeckhouseMachineSpecTemplate{
-		VMClassName:          m.Spec.VMClassName,
-		CPU:                  m.Spec.CPU,
-		Memory:               m.Spec.Memory,
-		AdditionalDisks:      m.Spec.AdditionalDisks,
-		RootDiskSize:         m.Spec.RootDiskSize,
-		RootDiskStorageClass: m.Spec.RootDiskStorageClass,
-		BootDiskImageRef:     m.Spec.BootDiskImageRef,
-		Bootloader:           m.Spec.Bootloader,
-		RunPolicy:            m.Spec.RunPolicy,
-		LiveMigrationPolicy:  m.Spec.LiveMigrationPolicy,
-	}
 }
 
 func (e *Extension) waitForVMReady(ctx context.Context, vmName string, timeout time.Duration) error {
