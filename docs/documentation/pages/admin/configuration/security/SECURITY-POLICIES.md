@@ -618,10 +618,9 @@ Therefore, the image signing process consists of calculating and publishing an a
 After signing the image, there is no need to push it to the image store again. You only need to log in to the container registry with write access.
 
 {% alert level="warning" %}
-**Warning!** Cosign version 2 or later is currently supported.
-
-Cosign version 3 or later is not supported.
+Cosign versions up to v2 are supported. Version v3 are not supported.
 {% endalert %}
+
 To sign an image with Cosign, do the following:
 
 1. Make sure the cosign version is among the supported ones:
@@ -630,13 +629,13 @@ To sign an image with Cosign, do the following:
    cosign version
    ```
 
-2. Generate a key pair (public and private):
+1. Generate a key pair (public and private):
 
    ```shell
    cosign generate-key-pair
    ```
 
-3. Sign the image in the container registry using the generated private key:
+1. Sign the image in the container registry using the generated private key:
 
    ```shell
    cosign sign --key <KEY> <REGISTRY_IMAGE_PATH>
@@ -645,7 +644,7 @@ To sign an image with Cosign, do the following:
     Here:
     - <REGISTRY_IMAGE_PATH> is the path to the image that needs to be specified at startup, for example: registry.private.ru/labs/application/image:latest.
 
-4. To enable container image signature verification in a DKP cluster,
+1. To enable container image signature verification in a DKP cluster,
 use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter
 of the SecurityPolicy resource, specifying the public key generated in step 1.
 
@@ -680,7 +679,7 @@ of the SecurityPolicy resource, specifying the public key generated in step 1.
             reference: registry.private.ru/labs/application/*
      ```
 
-5. Create an OperationPolicy resource that restricts pod launches from third-party registries:
+1. Create an OperationPolicy resource that restricts pod launches from third-party registries:
 
     ```yaml
     apiVersion: deckhouse.io/v1alpha1
@@ -699,13 +698,13 @@ of the SecurityPolicy resource, specifying the public key generated in step 1.
       - registry.private.ru
     ```
 
-6. Add a label to the namespace where you want to enable signature verification with the command (specify the desired namespace):
+1. Add a label to the namespace where you want to enable signature verification with the command (specify the desired namespace):
 
     ```shell
     kubectl label ns <NAMESPACE> security.deckhouse.io/verify-image-test=
     ```
 
-7. To test the image signing mechanism, deploy pods in a namespace with signed and unsigned images (specify the desired namespace):
+1. To test the image signing mechanism, deploy pods in a namespace with signed and unsigned images (specify the desired namespace):
 
     ```shell
     kubectl  -n <NAMESPACE> run signed-pod --image=<SIGNED_IMAGE>
