@@ -17,7 +17,6 @@ limitations under the License.
 package controller
 
 import (
-	"caps-controller-manager/internal/scope"
 	"context"
 	"net/url"
 	"strconv"
@@ -32,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
+	"caps-controller-manager/internal/scope"
 )
 
 // StaticClusterReconciler reconciles a StaticCluster object

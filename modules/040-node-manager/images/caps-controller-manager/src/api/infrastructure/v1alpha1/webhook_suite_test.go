@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"caps-controller-manager/api/deckhouse.io/v1alpha1"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -28,7 +27,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	admissionv1 "k8s.io/api/admission/v1"
 	//+kubebuilder:scaffold:imports
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +38,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"caps-controller-manager/api/deckhouse.io/v1alpha1"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to

@@ -43,7 +43,7 @@ func (r *StaticMachineTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 type StaticMachineTemplateCustomDefaulter struct{}
 
-//+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachinetemplates,verbs=create;update,versions=v1alpha1,name=mstaticmachinetemplate.deckhouse.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachinetemplates,verbs=create;update,versions=v1alpha1,name=mstaticmachinetemplate.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomDefaulter = &StaticMachineTemplateCustomDefaulter{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
@@ -61,7 +61,7 @@ func (r *StaticMachineTemplateCustomDefaulter) Default(ctx context.Context, obj 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 type StaticMachineTemplateCustomValidator struct{}
 
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachinetemplates,verbs=update,versions=v1alpha1,name=vstaticmachinetemplate.deckhouse.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachinetemplates,verbs=update,versions=v1alpha1,name=vstaticmachinetemplate.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomValidator = &StaticMachineTemplateCustomValidator{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
@@ -86,7 +86,6 @@ func (*StaticMachineTemplateCustomValidator) ValidateUpdate(ctx context.Context,
 	if !ok {
 		return nil, fmt.Errorf("expected a StaticMachineTemplate object but got %T", old)
 	}
-
 
 	// Check if old labelSelector is nil or empty
 	oldLabelSelector := oldStaticMachineTemplate.Spec.Template.Spec.LabelSelector
