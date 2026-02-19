@@ -572,23 +572,26 @@ func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(
 		return false, fmt.Sprintf("Disabling module %s", moduleName), nil
 	}
 
-	// 2. Wait for DaemonSet to be deleted
-	dsName, ok := CNIDaemonSetMap[currentCNI]
-	if !ok {
-		return true, "", nil
-	}
+	// 2. Wait for all pods in the CNI namespace to be deleted.
 	dsNamespace := "d8-" + moduleName
-
-	ds := &appsv1.DaemonSet{}
-	if err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: dsNamespace}, ds); err != nil {
+	podList := &corev1.PodList{}
+	if err := r.List(ctx, podList, client.InNamespace(dsNamespace)); err != nil {
+		// If namespace is not found, it means it's already gone along with all pods.
 		if errors.IsNotFound(err) {
 			return true, "", nil
 		}
 		return false, "", err
 	}
 
-	// DaemonSet still exists
-	return false, fmt.Sprintf("Waiting for %s DaemonSet deletion (module %s)", dsName, moduleName), nil
+	if len(podList.Items) > 0 {
+		return false, fmt.Sprintf(
+			"Waiting for %d old CNI pods to be physically removed in %s",
+			len(podList.Items),
+			dsNamespace,
+		), nil
+	}
+
+	return true, "", nil
 }
 
 func (r *CNIMigrationReconciler) toggleModule(ctx context.Context, moduleName string, enabled bool) (bool, error) {
