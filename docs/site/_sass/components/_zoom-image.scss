@@ -1,3 +1,7 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
 .glightbox-container {
   background: rgba(0, 0, 0, 0.9) !important;
 }
@@ -57,9 +61,22 @@
   svg {
     display: block;
   }
+
+  img {
+    display: block;
+    width: 22px;
+    height: 22px;
+  }
 }
 
 .glightbox-container .gnext,
 .glightbox-container .gprev {
   display: none !important;
+}
+
+.gslide-image img.zoomable {
+    transform-origin: center center;
+    will-change: transform;
+    user-select: none;
+    touch-action: none;
 }
