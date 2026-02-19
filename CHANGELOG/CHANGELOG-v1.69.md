@@ -3,11 +3,18 @@
 ## [MALFORMED]
 
 
+ - #11929 unknown section "operator-trivy"
+ - #12185 unknown section "runtime-audit-engine"
  - #12318 unknown section "static-routing-manager"
+ - #12387 unknown section "operator-trivy"
+ - #12486 unknown section "runtime-audit-engine"
  - #12510 unknown section "static-routing-manager"
  - #12723 unknown section "ceph-csi"
+ - #12991 unknown section "runtime-audit-engine"
+ - #13036 unknown section "operator-trivy"
  - #13174 unknown section "ceph-csi"
  - #13409 unknown section "ceph-csi"
+ - #14162 unknown section "operator-trivy"
 
 ## Know before update
 
@@ -57,6 +64,7 @@
  - **[docs]** Enhanced registry watcher and docs-builder integration, including improved caching, error handling, and added retries. [#12337](https://github.com/deckhouse/deckhouse/pull/12337)
  - **[documentation]** Added the `auth.allowedUserEmails` option to restrict access to the application based on user email. [#12055](https://github.com/deckhouse/deckhouse/pull/12055)
  - **[ingress-nginx]** Added `controllerPodsAdditionalAnnotations` parameter to IngressNginxController for customizing pod annotations. [#11522](https://github.com/deckhouse/deckhouse/pull/11522)
+ - **[istio]** Validating jwt token exp time less than 30 days [#18008](https://github.com/deckhouse/deckhouse/pull/18008)
  - **[istio]** Added a validation and an alert when creating a ServiceEntry resource without service ports. [#12133](https://github.com/deckhouse/deckhouse/pull/12133)
  - **[istio]** Added the `auth.allowedUserEmails` option to restrict access to the application based on user email. [#12055](https://github.com/deckhouse/deckhouse/pull/12055)
  - **[istio]** Reworked multi-cluster and federation resource tracking to enable native watch via Kubernetes API and removed ConfigMap or Secret mounting from pods. [#11845](https://github.com/deckhouse/deckhouse/pull/11845)
@@ -69,6 +77,8 @@
  - **[monitoring-kubernetes-control-plane]** Added support for selecting multiple Kubernetes versions. [#12284](https://github.com/deckhouse/deckhouse/pull/12284)
  - **[multitenancy-manager]** Added namespace adoption mechanism; namespaces with the `projects.deckhouse.io/adopt` annotation are now automatically linked to empty projects. [#12423](https://github.com/deckhouse/deckhouse/pull/12423)
  - **[namespace-configurator]** Added exclusion of `deckhouse` and `multitenancy-manager` namespaces. [#12784](https://github.com/deckhouse/deckhouse/pull/12784)
+ - **[node-manager]** Added support for configuring private HTTP container registries in containerd. [#14155](https://github.com/deckhouse/deckhouse/pull/14155)
+    Users can now configure containerd to pull images from private registries, easing deployments in private environments.
  - **[node-manager]** enable UnmetCloudConditions check [#12845](https://github.com/deckhouse/deckhouse/pull/12845)
  - **[node-manager]** UnmetCloudConditions requirement and alert [#12530](https://github.com/deckhouse/deckhouse/pull/12530)
  - **[node-manager]** Removed bundle from bashible-api contexts; nodegroupconfiguration scripts now use an auto-generated header to detect the bundle. [#11479](https://github.com/deckhouse/deckhouse/pull/11479)
@@ -136,6 +146,7 @@
     Ingress-nginx controller pods of v1.9 will be restated.
  - **[ingress-nginx]** Fixed patch names in `ingress-nginx`. [#12633](https://github.com/deckhouse/deckhouse/pull/12633)
  - **[ingress-nginx]** Fixed security vulnerabilities. [#12449](https://github.com/deckhouse/deckhouse/pull/12449)
+ - **[istio]** Reduce RAM for regenerate multicluster JWT token [#15511](https://github.com/deckhouse/deckhouse/pull/15511)
  - **[istio]** The `alliance.ingressGateway.advertise` option was fixed up. [#13924](https://github.com/deckhouse/deckhouse/pull/13924)
  - **[istio]** proxy-buffer-size increased in kiali Ingress. [#13721](https://github.com/deckhouse/deckhouse/pull/13721)
  - **[istio]** Added Kubernetes version check in a Helm chart. [#12503](https://github.com/deckhouse/deckhouse/pull/12503)
@@ -161,13 +172,10 @@
  - **[node-manager]** Fixed kubeconfig generation for `CAPI`. [#12554](https://github.com/deckhouse/deckhouse/pull/12554)
  - **[node-manager]** Improved `handleDraining` hook to ignore timeout errors during node draining. [#12542](https://github.com/deckhouse/deckhouse/pull/12542)
  - **[node-manager]** Added validation of `instanceClass` deletion for being used by a NodeGroup. [#11830](https://github.com/deckhouse/deckhouse/pull/11830)
- - **[operator-trivy]** Add proxy env variables support to the trivy server. [#13036](https://github.com/deckhouse/deckhouse/pull/13036)
  - **[prometheus]** enable WAL for the grafana SQLite database to prevent locking errors, thus fixing in-dashboard alerting. [#13063](https://github.com/deckhouse/deckhouse/pull/13063)
     the grafana deployment will be rollout restarted
  - **[prometheus]** Fixed security vulnerabilities in Grafana. [#12062](https://github.com/deckhouse/deckhouse/pull/12062)
  - **[prometheus]** Fixed security vulnerabilities in `mimir` and `promxy`. [#11978](https://github.com/deckhouse/deckhouse/pull/11978)
- - **[runtime-audit-engine]** Fixed built-in rules for `runtime-audit-engine`. [#12486](https://github.com/deckhouse/deckhouse/pull/12486)
- - **[runtime-audit-engine]** Added support for customization of a built-in rule list of the `runtime-audit-engine` module. [#12185](https://github.com/deckhouse/deckhouse/pull/12185)
  - **[service-with-healthchecks]** Removed unnecessary text data from the executable binary file. [#12492](https://github.com/deckhouse/deckhouse/pull/12492)
  - **[upmeter]** upmeter sa token rotation [#13201](https://github.com/deckhouse/deckhouse/pull/13201)
  - **[user-authn]** Add separate ServiceAccount to basic-auth-proxy. [#13214](https://github.com/deckhouse/deckhouse/pull/13214)
