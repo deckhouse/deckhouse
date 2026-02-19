@@ -125,4 +125,4 @@ spec:
       volumes:
         - name: cert
           secret:
-            secretName: node-controller-webhook-tls
+            secretName: capdvp-webhook-tls

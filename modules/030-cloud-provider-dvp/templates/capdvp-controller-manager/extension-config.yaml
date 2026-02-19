@@ -7,7 +7,7 @@ metadata:
 spec:
   clientConfig:
     service:
-      name: capdvp-webhook-service
+      name: capdvp-webhook
       namespace: d8-cloud-provider-dvp
       port: 9443
-    caBundle: {{ .Values.nodeManager.internal.nodeControllerWebhookCert.ca | b64enc }}
+    caBundle: {{ .Values.cloudProviderDvp.internal.capdvpControllerManagerWebhookCert.ca | b64enc }}
