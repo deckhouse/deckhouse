@@ -10,6 +10,8 @@ istio:
     - summary: Validating jwt token exp time less than 30 days
       pull_request: https://github.com/deckhouse/deckhouse/pull/18008
   fixes:
+    - summary: Fix istiod CPU leak when the order of the ingressGateways array is changed
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17643
     - summary: Reduce RAM for regenerate multicluster JWT token
       pull_request: https://github.com/deckhouse/deckhouse/pull/15511
 node-manager:

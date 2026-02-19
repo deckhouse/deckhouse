@@ -130,6 +130,7 @@
     Ingress-nginx controller pods of v1.9 will be restated.
  - **[ingress-nginx]** Fixed patch names in `ingress-nginx`. [#12633](https://github.com/deckhouse/deckhouse/pull/12633)
  - **[ingress-nginx]** Fixed security vulnerabilities. [#12449](https://github.com/deckhouse/deckhouse/pull/12449)
+ - **[istio]** Fix istiod CPU leak when the order of the ingressGateways array is changed [#17643](https://github.com/deckhouse/deckhouse/pull/17643)
  - **[istio]** Reduce RAM for regenerate multicluster JWT token [#15511](https://github.com/deckhouse/deckhouse/pull/15511)
  - **[istio]** The `alliance.ingressGateway.advertise` option was fixed up. [#13924](https://github.com/deckhouse/deckhouse/pull/13924)
  - **[istio]** proxy-buffer-size increased in kiali Ingress. [#13721](https://github.com/deckhouse/deckhouse/pull/13721)
