@@ -18,6 +18,7 @@ package operations
 
 import corev1 "k8s.io/api/core/v1"
 
+// If operations need special logic for generating manifests on the node, it can be implemented here.
 func GenerateManifests(cmpSecret, pkiSecret *corev1.Secret) (string, error) {
 	// TODO: Generate using new lib in place of kubeadm
 	return "", nil

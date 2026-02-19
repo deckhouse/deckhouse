@@ -16,25 +16,27 @@ limitations under the License.
 
 package constants
 
+import "strings"
+
 const (
+	KubeSystemNamespace                 = "kube-system"
 	CpcControllerName                   = "control-plane-configuration-controller"
 	CpnControllerName                   = "control-plane-node-controller"
-	CpoControllerName                   = "control-plane-operator-controller"
+	CpoControllerName                   = "control-plane-operation-controller"
 	ControlPlaneManagerConfigSecretName = "d8-control-plane-manager-config"
 	PkiSecretName                       = "d8-pki"
-	ControlPlaneConfigurationName       = "control-plane"
 	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"
 	KubernetesConfigPath                = "/etc/kubernetes"
 	ManifestsPath                       = KubernetesConfigPath + "/manifests"
 	DeckhousePath                       = KubernetesConfigPath + "/deckhouse"
-	ConfigPath                          = "/config"
-	PkiPath                             = "/pki"
 	KubernetesPkiPath                   = KubernetesConfigPath + "/pki"
-	KubeSystemNamespace                 = "kube-system"
-
-	RelativeKubernetesDir = "etc/kubernetes"
-	RelativePkiDir        = RelativeKubernetesDir + "/pki"
-	RelativeDeckhouseDir  = RelativeKubernetesDir + "/deckhouse"
-	RelativePatchesDir    = RelativeDeckhouseDir + "/patches"
-	RelativeExtraFilesDir = RelativeDeckhouseDir + "/extra-files"
+	PatchesPath                         = DeckhousePath + "/patches"
+	ExtraFilesPath                      = DeckhousePath + "/extra-files"
+	ConfigPath                          = "/config" // Mounted secret for d8-control-plane-manager-config
+	PkiPath                             = "/pki"    // Mounted secret for d8-pki
 )
+
+// ToRelativePath returns path without leading slash for using in tmp directory sync
+func ToRelativePath(absolutePath string) string {
+	return strings.TrimPrefix(absolutePath, "/")
+}

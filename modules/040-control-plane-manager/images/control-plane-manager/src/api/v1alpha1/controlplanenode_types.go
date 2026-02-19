@@ -22,47 +22,47 @@ import (
 
 // ComponentChecksum holds checksum for a single control plane component
 type ComponentChecksum struct {
-	// +optional
+	// +kubebuilder:validation:Required
 	Checksum string `json:"checksum,omitempty"`
 }
 
 // ComponentChecksums holds checksums for control plane components
 type ComponentChecksums struct {
-	// +optional
+	// +kubebuilder:validation:Required
 	Etcd *ComponentChecksum `json:"etcd,omitempty"`
 
-	// +optional
+	// +kubebuilder:validation:Required
 	KubeAPIServer *ComponentChecksum `json:"kube-apiserver,omitempty"`
 
-	// +optional
+	// +kubebuilder:validation:Required
 	KubeControllerManager *ComponentChecksum `json:"kube-controller-manager,omitempty"`
 
-	// +optional
+	// +kubebuilder:validation:Required
 	KubeScheduler *ComponentChecksum `json:"kube-scheduler,omitempty"`
 }
 
 type ControlPlaneNodeSpec struct {
-	// Generation of the configuration (desired state)
-	// +optional
-	ConfigurationGeneration int64 `json:"configurationGeneration,omitempty"`
+	// ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion of pki secret]"
+	// +kubebuilder:validation:Required
+	ConfigVersion string `json:"configVersion,omitempty"`
 
-	// Checksum of PKI materials
-	// +optional
+	// Checksum of PKI secret
+	// +kubebuilder:validation:Required
 	PKIChecksum string `json:"pkiChecksum,omitempty"`
 
 	// Checksums per component
-	// +optional
+	// +kubebuilder:validation:Required
 	Components ComponentChecksums `json:"components,omitempty"`
 
 	// For reload mechanisms (e.g. in-place reload)
-	// +optional
+	// +kubebuilder:validation:Required
 	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
 }
 
 type ControlPlaneNodeStatus struct {
-	// Checksums that are actually applied / running on the node
+	// ConfigVersion that is actually applied / running on the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"
 	// +optional
-	ConfigurationGeneration int64 `json:"configurationGeneration,omitempty"`
+	ConfigVersion string `json:"configVersion,omitempty"`
 
 	// +optional
 	PKIChecksum string `json:"pkiChecksum,omitempty"`
