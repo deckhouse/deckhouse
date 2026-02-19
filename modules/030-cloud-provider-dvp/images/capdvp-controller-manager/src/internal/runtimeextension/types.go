@@ -71,8 +71,8 @@ const (
 )
 
 type Patch struct {
-	PatchType PatchType       `json:"patchType,omitempty"`
-	Patch     json.RawMessage `json:"patch,omitempty"`
+	PatchType PatchType `json:"patchType,omitempty"`
+	Patch     []byte    `json:"patch,omitempty"`
 }
 
 func (p *Patch) IsDefined() bool {
