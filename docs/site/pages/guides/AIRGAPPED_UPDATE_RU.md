@@ -99,7 +99,7 @@ version.json
       "ingressNginx": "1.9",
       "nodesMinimalOSVersionUbuntu": "18.04",
       "nodesMinimalOSVersionDebian": "10",
-      "istioMinimalVersion": "1.19",
+      "istioMinimalVersion": "1.21",
       "metallbHasStandardConfiguration": "true",
       "unmetCloudConditions": "true",
       "nodesMinimalLinuxKernelVersion": "5.8.0"
