@@ -17,12 +17,11 @@ limitations under the License.
 package runtimeextension
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"reflect"
 
-	"k8s.io/apimachinery/pkg/types"
+	jsonpatch "github.com/evanphx/json-patch/v5"
 
 	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
 )
@@ -161,6 +160,23 @@ func canUpdateInPlace(oldSpec, newSpec *infrastructurev1a1.DeckhouseMachineSpecT
 	return true, cs.reason
 }
 
+// specFromMachine extracts DeckhouseMachineSpecTemplate from DeckhouseMachineSpec
+// so we can reuse classifyChanges for both MachineTemplate and Machine comparisons.
+func specFromMachine(m *infrastructurev1a1.DeckhouseMachineSpec) *infrastructurev1a1.DeckhouseMachineSpecTemplate {
+	return &infrastructurev1a1.DeckhouseMachineSpecTemplate{
+		VMClassName:          m.VMClassName,
+		CPU:                  m.CPU,
+		Memory:               m.Memory,
+		AdditionalDisks:      m.AdditionalDisks,
+		RootDiskSize:         m.RootDiskSize,
+		RootDiskStorageClass: m.RootDiskStorageClass,
+		BootDiskImageRef:     m.BootDiskImageRef,
+		Bootloader:           m.Bootloader,
+		RunPolicy:            m.RunPolicy,
+		LiveMigrationPolicy:  m.LiveMigrationPolicy,
+	}
+}
+
 // HandleCanUpdateMachine decides whether the requested Machine spec change
 // can be applied in-place (without VM replacement).
 func (e *Extension) HandleCanUpdateMachine(w http.ResponseWriter, r *http.Request) {
@@ -177,46 +193,47 @@ func (e *Extension) HandleCanUpdateMachine(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ctx := context.Background()
-
-	oldTemplate, err := e.getMachineTemplate(ctx, req.OldMachine.Spec.InfrastructureRef)
-	if err != nil {
-		e.log.Error(err, "failed to get old DeckhouseMachineTemplate")
-		writeError(w, http.StatusInternalServerError, "failed to get old template: "+err.Error())
+	var currentMachine, desiredMachine infrastructurev1a1.DeckhouseMachine
+	if err := json.Unmarshal(req.Current.InfrastructureMachine, &currentMachine); err != nil {
+		e.log.Error(err, "failed to unmarshal current InfrastructureMachine")
+		writeError(w, http.StatusBadRequest, "failed to unmarshal current machine: "+err.Error())
+		return
+	}
+	if err := json.Unmarshal(req.Desired.InfrastructureMachine, &desiredMachine); err != nil {
+		e.log.Error(err, "failed to unmarshal desired InfrastructureMachine")
+		writeError(w, http.StatusBadRequest, "failed to unmarshal desired machine: "+err.Error())
 		return
 	}
 
-	newTemplate, err := e.getMachineTemplate(ctx, req.Machine.Spec.InfrastructureRef)
-	if err != nil {
-		e.log.Error(err, "failed to get new DeckhouseMachineTemplate")
-		writeError(w, http.StatusInternalServerError, "failed to get new template: "+err.Error())
-		return
-	}
+	oldSpec := specFromMachine(&currentMachine.Spec)
+	newSpec := specFromMachine(&desiredMachine.Spec)
 
-	canUpdate, message := canUpdateInPlace(
-		&oldTemplate.Spec.Template.Spec,
-		&newTemplate.Spec.Template.Spec,
-	)
+	canUpdate, message := canUpdateInPlace(oldSpec, newSpec)
 
 	resp := CanUpdateMachineResponse{
-		Status:    "Success",
-		CanUpdate: canUpdate,
-		Message:   message,
+		CommonResponse: CommonResponse{Status: "Success", Message: message},
+	}
+
+	if canUpdate {
+		patchBytes, err := jsonpatch.CreateMergePatch(
+			req.Current.InfrastructureMachine,
+			req.Desired.InfrastructureMachine,
+		)
+		if err != nil {
+			e.log.Error(err, "failed to compute merge patch for InfrastructureMachine")
+			writeError(w, http.StatusInternalServerError, "failed to compute patch: "+err.Error())
+			return
+		}
+		resp.InfrastructureMachinePatch = &Patch{
+			PatchType: JSONMergePatchType,
+			Patch:     patchBytes,
+		}
 	}
 
 	e.log.Info("CanUpdateMachine response",
-		"machine", req.Machine.Name,
+		"machine", currentMachine.Name,
 		"canUpdate", canUpdate,
 		"message", message,
 	)
 	writeJSON(w, http.StatusOK, resp)
-}
-
-func (e *Extension) getMachineTemplate(ctx context.Context, ref ObjectRef) (*infrastructurev1a1.DeckhouseMachineTemplate, error) {
-	tmpl := &infrastructurev1a1.DeckhouseMachineTemplate{}
-	err := e.client.Get(ctx, types.NamespacedName{
-		Name:      ref.Name,
-		Namespace: ref.Namespace,
-	}, tmpl)
-	return tmpl, err
 }

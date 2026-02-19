@@ -29,10 +29,16 @@ import (
 )
 
 const (
-	DiscoveryPath           = "/hooks.runtime.cluster.x-k8s.io/v1alpha1/discovery"
-	CanUpdateMachineSetPath = "/hooks.runtime.cluster.x-k8s.io/v1alpha1/canupdatemachineset"
-	CanUpdateMachinePath    = "/hooks.runtime.cluster.x-k8s.io/v1alpha1/canupdatemachine"
-	UpdateMachinePath       = "/hooks.runtime.cluster.x-k8s.io/v1alpha1/updatemachine"
+	runtimeHookBasePath = "/hooks.runtime.cluster.x-k8s.io/v1alpha1"
+
+	HandlerNameCanUpdateMachineSet = "dvp-can-update-machineset"
+	HandlerNameCanUpdateMachine    = "dvp-can-update-machine"
+	HandlerNameUpdateMachine       = "dvp-update-machine"
+
+	DiscoveryPath           = runtimeHookBasePath + "/discovery"
+	CanUpdateMachineSetPath = runtimeHookBasePath + "/canupdatemachineset/" + HandlerNameCanUpdateMachineSet
+	CanUpdateMachinePath    = runtimeHookBasePath + "/canupdatemachine/" + HandlerNameCanUpdateMachine
+	UpdateMachinePath       = runtimeHookBasePath + "/updatemachine/" + HandlerNameUpdateMachine
 )
 
 // Extension implements CAPI Runtime SDK hooks for DVP in-place updates.
