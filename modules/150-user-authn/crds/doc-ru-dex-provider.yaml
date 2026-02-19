@@ -343,7 +343,7 @@ spec:
                             Необязательное имя секрета с ключом `krb5.conf` для монтирования в `/etc/krb5.conf` (обычно не требуется для офлайн‑проверки билетов).
                 saml: &saml
                   description: |
-                    Параметры провайдера SAML.
+                    Параметры провайдера SAML (можно указывать, только если `type: SAML`).
                   properties:
                     ssoURL:
                       description: |
@@ -383,7 +383,7 @@ spec:
                         Если задано, вход будет разрешён только членам хотя бы одной из перечисленных групп.
                     filterGroups:
                       description: |
-                        Если true, коннектор будет фильтровать claim groups, оставляя только группы из списка `allowedGroups`.
+                        Если `true`, коннектор будет фильтровать claim groups, оставляя только группы из списка `allowedGroups`.
                     nameIDPolicyFormat:
                       description: |
                         Формат NameIDPolicy для запроса к IdP.

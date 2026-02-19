@@ -532,7 +532,7 @@ spec:
                 saml: &saml
                   type: object
                   description: |
-                    Parameters of a SAML provider.
+                    Parameters of a SAML provider  (intended for the `type: SAML`).
                   properties:
                     ssoURL:
                       type: string
@@ -589,7 +589,7 @@ spec:
                     filterGroups:
                       type: boolean
                       description: |
-                        If true, the connector will filter the groups claim to only include groups from the `allowedGroups` list.
+                        If `true`, the connector will filter the groups claim to only include groups from the `allowedGroups` list.
                       default: false
                     nameIDPolicyFormat:
                       type: string
