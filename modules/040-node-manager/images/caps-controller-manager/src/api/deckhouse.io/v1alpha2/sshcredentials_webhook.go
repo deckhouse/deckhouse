@@ -36,6 +36,8 @@ var sshcredentialslog = logf.Log.WithName("sshcredentials-resource")
 func (r *SSHCredentials) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithDefaulter(&SSHCredentialsCustomDefaulter{}).
+		WithValidator(&SSHCredentialsCustomValidator{}).
 		Complete()
 }
 
