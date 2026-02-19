@@ -56,6 +56,8 @@ spec:
                     properties:
                       checksum:
                         type: string
+                    required:
+                    - checksum
                     type: object
                   kube-apiserver:
                     description: ComponentChecksum holds checksum for a single control
@@ -63,6 +65,8 @@ spec:
                     properties:
                       checksum:
                         type: string
+                    required:
+                    - checksum
                     type: object
                   kube-controller-manager:
                     description: ComponentChecksum holds checksum for a single control
@@ -70,6 +74,8 @@ spec:
                     properties:
                       checksum:
                         type: string
+                    required:
+                    - checksum
                     type: object
                   kube-scheduler:
                     description: ComponentChecksum holds checksum for a single control
@@ -77,18 +83,30 @@ spec:
                     properties:
                       checksum:
                         type: string
+                    required:
+                    - checksum
                     type: object
+                required:
+                - etcd
+                - kube-apiserver
+                - kube-controller-manager
+                - kube-scheduler
                 type: object
-              configurationGeneration:
-                description: Generation of the configuration (desired state)
-                format: int64
-                type: integer
+              configVersion:
+                description: ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion
+                  of pki secret]"
+                type: string
               hotReloadChecksum:
                 description: For reload mechanisms (e.g. in-place reload)
                 type: string
               pkiChecksum:
-                description: Checksum of PKI materials
+                description: Checksum of PKI secret
                 type: string
+            required:
+            - components
+            - configVersion
+            - hotReloadChecksum
+            - pkiChecksum
             type: object
           status:
             properties:
@@ -102,6 +120,8 @@ spec:
                     properties:
                       checksum:
                         type: string
+                    required:
+                    - checksum
                     type: object
                   kube-apiserver:
                     description: ComponentChecksum holds checksum for a single control
@@ -109,6 +129,8 @@ spec:
                     properties:
                       checksum:
                         type: string
+                    required:
+                    - checksum
                     type: object
                   kube-controller-manager:
                     description: ComponentChecksum holds checksum for a single control
@@ -116,6 +138,8 @@ spec:
                     properties:
                       checksum:
                         type: string
+                    required:
+                    - checksum
                     type: object
                   kube-scheduler:
                     description: ComponentChecksum holds checksum for a single control
@@ -123,7 +147,14 @@ spec:
                     properties:
                       checksum:
                         type: string
+                    required:
+                    - checksum
                     type: object
+                required:
+                - etcd
+                - kube-apiserver
+                - kube-controller-manager
+                - kube-scheduler
                 type: object
               conditions:
                 items:
@@ -184,11 +215,10 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              configurationGeneration:
-                description: Checksums that are actually applied / running on the
-                  node
-                format: int64
-                type: integer
+              configVersion:
+                description: 'ConfigVersion that is actually applied / running on
+                  the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"'
+                type: string
               hotReloadChecksum:
                 type: string
               pkiChecksum:
