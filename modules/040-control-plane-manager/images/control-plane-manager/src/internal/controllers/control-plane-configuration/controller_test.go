@@ -126,7 +126,7 @@ func (suite *ControllerTestSuite) TestReconcileCreatesControlPlaneNode() {
 		cpn := suite.getControlPlaneNode()
 
 		require.NotEmpty(suite.T(), cpn.Spec.PKIChecksum, "PKIChecksum should not be empty")
-		require.NotZero(suite.T(), cpn.Spec.ConfigurationGeneration, "ConfigurationGeneration should not be zero")
+		require.NotEmpty(suite.T(), cpn.Spec.ConfigVersion, "ConfigVersion should not be empty")
 		require.NotEmpty(suite.T(), cpn.Spec.HotReloadChecksum, "HotReloadChecksum should not be empty")
 
 		require.NotNil(suite.T(), cpn.Spec.Components.Etcd, "Etcd should not be nil")
