@@ -93,15 +93,10 @@ func discoverAPIEndpointsHandler(_ context.Context, input *go_hook.HookInput) er
 	}
 
 	if len(allHostPort) == 0 {
-		input.Logger.Error("kubernetes endpoints not found")
-		return nil
+		return errors.New("no kubernetes apiserver endpoints host:port specified")
 	}
 
 	sort.Strings(allHostPort)
-
-	if len(allHostPort) == 0 {
-		return errors.New("no kubernetes apiserver endpoints host:port specified")
-	}
 
 	input.Logger.Info("cluster master addresses", slog.String("addresses", strings.Join(allHostPort, ",")))
 
