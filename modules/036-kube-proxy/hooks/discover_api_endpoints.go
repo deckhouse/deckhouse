@@ -38,12 +38,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/kube-proxy",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              "kube_api_ep",
+			Name:              "kube_api_eps",
 			ApiVersion:        "discovery.k8s.io/v1",
 			Kind:              "EndpointSlice",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"default"}}},
 			LabelSelector:     &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/service-name": "kubernetes"}},
-			FilterFunc:        applyKubernetesAPIEndpointsFilter,
+			FilterFunc:        applyKubernetesAPIEndpointSlicesFilter,
 		},
 	},
 }, discoverAPIEndpointsHandler)
@@ -53,7 +53,7 @@ type KubernetesAPIEndpoints struct {
 	HostPort []string
 }
 
-func applyKubernetesAPIEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyKubernetesAPIEndpointSlicesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	slice := &discoveryv1.EndpointSlice{}
 	err := sdk.FromUnstructured(obj, slice)
 	if err != nil {
@@ -74,11 +74,15 @@ func applyKubernetesAPIEndpointsFilter(obj *unstructured.Unstructured) (go_hook.
 }
 
 func discoverAPIEndpointsHandler(_ context.Context, input *go_hook.HookInput) error {
-	snapshots, err := sdkobjectpatch.UnmarshalToStruct[KubernetesAPIEndpoints](input.Snapshots, "kube_api_ep")
+	snapshots, err := sdkobjectpatch.UnmarshalToStruct[KubernetesAPIEndpoints](input.Snapshots, "kube_api_eps")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal kube_api_ep snapshot: %w", err)
 	}
 
+	if len(snapshots) == 0 {
+		input.Logger.Error("EndpointSlices for kubernetes Service not found")
+		return nil
+	}
 	seen := make(map[string]struct{})
 	var allHostPort []string
 	for _, snap := range snapshots {
