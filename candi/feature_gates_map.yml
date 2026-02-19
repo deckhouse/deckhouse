@@ -241,7 +241,6 @@
     - ConcurrentWatchObjectDecode
     - ConstrainedImpersonation
     - ContainerStopSignals
-    - CRDObservedGenerationTracking
     - CrossNamespaceVolumeDataSource
     - HPAScaleToZero
     - MutablePodResourcesForSuspendedJobs
@@ -260,6 +259,7 @@
     - ComponentFlagz
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
+    - CRDObservedGenerationTracking
     - CrossNamespaceVolumeDataSource
     - SELinuxMount
   kubeScheduler:
