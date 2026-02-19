@@ -48,8 +48,8 @@ spec:
                           Человеко-читаемое сообщение, указывающее детали перехода.
                       observedGeneration:
                         description: |
-                          Generation из .metadata.generation, на основе которого было установлено условие.
-                      reason:
+                          Поколение (.metadata.generation), на основе которого было установлено условие.
+                    reason:
                         description: |
                           Программный идентификатор, указывающий причину последнего перехода условия.
                       status:
