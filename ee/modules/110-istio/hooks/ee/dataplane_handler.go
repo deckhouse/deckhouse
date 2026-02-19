@@ -169,7 +169,11 @@ func (p *IstioDrivenPod) getIstioCurrentRevision() string {
 		_ = json.Unmarshal([]byte(istioStatusJSON), &istioPodStatus)
 
 		if istioPodStatus.Revision != "" {
-			revision = istioPodStatus.Revision
+			if istioPodStatus.Revision == "default" {
+				revision = "global"
+			} else {
+				revision = istioPodStatus.Revision
+			}
 		} else {
 			revision = istioRevsionAbsent
 		}
@@ -546,6 +550,10 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 		// we don't need metrics for pod without desired revision and without istio sidecar
 		if desiredRevision == istioRevsionAbsent && istioPod.Revision == istioRevsionAbsent {
 			continue
+		}
+
+		if desiredRevision == istioRevsionAbsent && istioPod.Revision == "global" {
+			desiredRevision = globalRevision
 		}
 
 		desiredFullVersion := versionMap.GetFullVersionByRevision(desiredRevision)
