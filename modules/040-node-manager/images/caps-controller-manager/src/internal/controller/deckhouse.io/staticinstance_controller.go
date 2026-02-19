@@ -181,10 +181,10 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == metav1.ConditionTrue {
 		conditions.Set(instanceScope.Instance, metav1.Condition{
 			// TODO: StaticInstanceBootstrapSucceededCondition type?
-			Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
-			Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
+			Type:               infrav1.StaticInstanceAddedToNodeGroupCondition,
+			Reason:             "AddedToNodeGroup",
 			Status:             metav1.ConditionTrue,
-			Message:            "Waiting for SSHCredentials reference to be assigned",
+			Message:            "StaticInstance is added to NodeGroup",
 			LastTransitionTime: metav1.Now(),
 		})
 
