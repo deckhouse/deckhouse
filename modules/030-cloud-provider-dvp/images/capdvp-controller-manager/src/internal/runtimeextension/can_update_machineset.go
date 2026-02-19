@@ -17,18 +17,16 @@ limitations under the License.
 package runtimeextension
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
+
+	jsonpatch "github.com/evanphx/json-patch/v5"
+
+	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
 )
 
 // HandleCanUpdateMachineSet is called by the CAPI MachineDeployment controller
-// as a fast pre-check before it evaluates individual Machines.
-// If this returns false, CAPI immediately falls back to rolling update without
-// calling CanUpdateMachine for each Machine.
-//
-// The logic mirrors canUpdateInPlace: we compare old and new templates at the
-// MachineSet level, which carry the same infrastructure template references.
+// as a fast pre-check. If this returns empty patches, CAPI falls back to rolling update.
 func (e *Extension) HandleCanUpdateMachineSet(w http.ResponseWriter, r *http.Request) {
 	e.log.Info("CanUpdateMachineSet request received")
 
@@ -43,35 +41,44 @@ func (e *Extension) HandleCanUpdateMachineSet(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	ctx := context.Background()
-
-	oldTemplate, err := e.getMachineTemplate(ctx, req.OldMachineSet.Spec.InfrastructureRef)
-	if err != nil {
-		e.log.Error(err, "failed to get old DeckhouseMachineTemplate")
-		writeError(w, http.StatusInternalServerError, "failed to get old template: "+err.Error())
+	var currentTmpl, desiredTmpl infrastructurev1a1.DeckhouseMachineTemplate
+	if err := json.Unmarshal(req.Current.InfrastructureMachineTemplate, &currentTmpl); err != nil {
+		e.log.Error(err, "failed to unmarshal current InfrastructureMachineTemplate")
+		writeError(w, http.StatusBadRequest, "failed to unmarshal current template: "+err.Error())
 		return
 	}
-
-	newTemplate, err := e.getMachineTemplate(ctx, req.MachineSet.Spec.InfrastructureRef)
-	if err != nil {
-		e.log.Error(err, "failed to get new DeckhouseMachineTemplate")
-		writeError(w, http.StatusInternalServerError, "failed to get new template: "+err.Error())
+	if err := json.Unmarshal(req.Desired.InfrastructureMachineTemplate, &desiredTmpl); err != nil {
+		e.log.Error(err, "failed to unmarshal desired InfrastructureMachineTemplate")
+		writeError(w, http.StatusBadRequest, "failed to unmarshal desired template: "+err.Error())
 		return
 	}
 
 	canUpdate, message := canUpdateInPlace(
-		&oldTemplate.Spec.Template.Spec,
-		&newTemplate.Spec.Template.Spec,
+		&currentTmpl.Spec.Template.Spec,
+		&desiredTmpl.Spec.Template.Spec,
 	)
 
 	resp := CanUpdateMachineSetResponse{
-		Status:    "Success",
-		CanUpdate: canUpdate,
-		Message:   message,
+		CommonResponse: CommonResponse{Status: "Success", Message: message},
+	}
+
+	if canUpdate {
+		patchBytes, err := jsonpatch.CreateMergePatch(
+			req.Current.InfrastructureMachineTemplate,
+			req.Desired.InfrastructureMachineTemplate,
+		)
+		if err != nil {
+			e.log.Error(err, "failed to compute merge patch for InfrastructureMachineTemplate")
+			writeError(w, http.StatusInternalServerError, "failed to compute patch: "+err.Error())
+			return
+		}
+		resp.InfrastructureMachineTemplatePatch = &Patch{
+			PatchType: JSONMergePatchType,
+			Patch:     patchBytes,
+		}
 	}
 
 	e.log.Info("CanUpdateMachineSet response",
-		"machineSet", req.MachineSet.Name,
 		"canUpdate", canUpdate,
 		"message", message,
 	)
