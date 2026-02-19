@@ -42,7 +42,7 @@ type staticInstance struct {
 
 func (pc *Checker) CheckStaticInstancesSSH(ctx context.Context) error {
 	if app.PreflightSkipStaticInstancesWithSSHCredentials {
-		log.InfoLn("Skipping StaticInstances SSH credentials check (skip flag is set)")
+		log.InfoLn("StaticInstances SSH credentials preflight check was skipped (via skip flag)")
 		return nil
 	}
 
