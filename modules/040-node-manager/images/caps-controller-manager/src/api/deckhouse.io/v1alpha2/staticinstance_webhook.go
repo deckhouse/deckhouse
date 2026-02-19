@@ -39,6 +39,8 @@ var staticinstancelog = logf.Log.WithName("staticinstance-resource")
 func (r *StaticInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithDefaulter(&StaticInstanceCustomDefaulter{}).
+		WithValidator(&StaticInstanceCustomValidator{}).
 		Complete()
 }
 
