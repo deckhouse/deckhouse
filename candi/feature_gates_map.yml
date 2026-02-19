@@ -226,6 +226,7 @@
     - ConcurrentWatchObjectDecode
     - ContainerStopSignals
     - MemoryQoS
+    - MutablePVNodeAffinity
     - MutatingAdmissionPolicy
     - NodeDeclaredFeatures
     - PodLogsQuerySplitStreams
@@ -250,6 +251,7 @@
     - NodeDeclaredFeatures
     - PodLogsQuerySplitStreams
     - ResourceHealthStatus
+    - RestartAllContainersOnContainerExits
     - SELinuxMount
     - StrictIPCIDRValidation
     - TaintTolerationComparisonOperators
@@ -259,12 +261,11 @@
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
     - CrossNamespaceVolumeDataSource
-    - MutablePodResourcesForSuspendedJobs
-    - MutablePVNodeAffinity
-    - MutableSchedulingDirectivesForSuspendedJobs
     - SELinuxMount
   kubeScheduler:
     - ComponentFlagz
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
+    - NodeDeclaredFeatures
     - TaintTolerationComparisonOperators
+    - UserNamespacesHostNetworkSupport
