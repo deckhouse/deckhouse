@@ -297,16 +297,16 @@ func (e *Extension) hotPlugNewDisks(
 // current DeckhouseMachine spec so we can compare it with the new template.
 func templateSpecFromMachine(m *infrastructurev1a1.DeckhouseMachine) *infrastructurev1a1.DeckhouseMachineSpecTemplate {
 	return &infrastructurev1a1.DeckhouseMachineSpecTemplate{
-		VMClassName:         m.Spec.VMClassName,
-		CPU:                 m.Spec.CPU,
-		Memory:              m.Spec.Memory,
-		AdditionalDisks:     m.Spec.AdditionalDisks,
-		RootDiskSize:        m.Spec.RootDiskSize,
+		VMClassName:          m.Spec.VMClassName,
+		CPU:                  m.Spec.CPU,
+		Memory:               m.Spec.Memory,
+		AdditionalDisks:      m.Spec.AdditionalDisks,
+		RootDiskSize:         m.Spec.RootDiskSize,
 		RootDiskStorageClass: m.Spec.RootDiskStorageClass,
-		BootDiskImageRef:    m.Spec.BootDiskImageRef,
-		Bootloader:          m.Spec.Bootloader,
-		RunPolicy:           m.Spec.RunPolicy,
-		LiveMigrationPolicy: m.Spec.LiveMigrationPolicy,
+		BootDiskImageRef:     m.Spec.BootDiskImageRef,
+		Bootloader:           m.Spec.Bootloader,
+		RunPolicy:            m.Spec.RunPolicy,
+		LiveMigrationPolicy:  m.Spec.LiveMigrationPolicy,
 	}
 }
 

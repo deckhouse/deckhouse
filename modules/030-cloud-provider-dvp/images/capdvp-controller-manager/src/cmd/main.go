@@ -148,6 +148,7 @@ func main() {
 	}
 
 	webhookServer := webhook.NewServer(webhook.Options{
+		Port:    9443,
 		TLSOpts: webhookTLSOpts,
 	})
 
@@ -240,7 +241,7 @@ func main() {
 	}
 	// Setup CAPI Runtime Extension for in-place updates (disk hot-plug)
 	runtimeExt := runtimeextension.NewExtension(cloudAPI, mgr.GetClient(), cloudConfig.ClusterUUID)
-	runtimeExt.SetupWithWebhookServer(webhookServer)
+	runtimeExt.SetupWithWebhookServer(mgr.GetWebhookServer())
 
 	// +kubebuilder:scaffold:builder
 
