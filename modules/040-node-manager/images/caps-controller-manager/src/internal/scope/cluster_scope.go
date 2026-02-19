@@ -21,7 +21,6 @@ import (
 
 	"github.com/pkg/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/patch"
 
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
@@ -66,8 +65,8 @@ func NewClusterScope(
 }
 
 // Fail marks the StaticCluster as failed.
-func (c *ClusterScope) Fail(reason capierrors.ClusterStatusError, err error) {
-	c.StaticCluster.Status.FailureReason = string(reason)
+func (c *ClusterScope) Fail(reason string, err error) {
+	c.StaticCluster.Status.FailureReason = reason
 	c.StaticCluster.Status.FailureMessage = err.Error()
 }
 
