@@ -134,7 +134,8 @@ func overrideValues(p *v1.DvpProviderClusterConfiguration, m *v1.DvpModuleConfig
 			return errors.New("kind cannot be empty")
 		}
 		if p.Zones == nil || len(*p.Zones) == 0 {
-			return errors.New("zones cannot be empty")
+			def := []string{"default"}
+			p.Zones = &def
 		}
 	}
 
