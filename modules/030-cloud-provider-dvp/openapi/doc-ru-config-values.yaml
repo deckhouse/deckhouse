@@ -1,1 +1,23 @@
+type: object
 properties:
+  provider:
+    type: object
+    required:
+      - kubeconfigDataBase64
+      - namespace
+    properties:
+      kubeconfigDataBase64:
+        type: string
+        x-examples:
+          - ZXhhbXBsZQo=
+      namespace:
+        type: string
+        x-examples:
+          - default
+
+  zones:
+    type: array
+    items:
+      type: string
+    x-examples:
+      - [zone-a, zone-b]
