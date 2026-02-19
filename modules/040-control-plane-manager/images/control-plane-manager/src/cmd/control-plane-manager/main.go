@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"control-plane-manager/internal"
 	"control-plane-manager/internal/constants"
 	"os"
 	"os/signal"
@@ -29,7 +30,7 @@ import (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	manager, err := NewManager(ctx, false) // TODO pprof flag
+	manager, err := internal.NewManager(ctx, false) // TODO pprof flag
 	if err != nil {
 		klog.Fatalf("Failed to create a manager: %v", err)
 	}
