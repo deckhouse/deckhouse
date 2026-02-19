@@ -60,7 +60,7 @@ rules:
     verbs: ["get", "list", "watch"]
   - apiGroups: ["control-plane.deckhouse.io"]
     resources: ["controlplanenodes"]
-    verbs: ["get", "list", "watch", "update", "patch", "create"]
+    verbs: ["get", "list", "watch", "update", "patch", "create", "delete"]
   - apiGroups: ["control-plane.deckhouse.io"]
     resources: ["controlplanenodes/status"]
     verbs: ["get", "update", "patch"]
