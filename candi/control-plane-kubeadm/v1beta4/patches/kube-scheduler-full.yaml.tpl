@@ -14,7 +14,7 @@
 {{- $schedulerFeatureGatesStr := $schedulerFeatureGates | uniq | join "," -}}
 {{- $millicpu := .resourcesRequestsMilliCpuControlPlane | default 512 -}}
 {{- $memory := .resourcesRequestsMemoryControlPlane | default 536870912 }}
----
+{{- /* kube-scheduler */ -}}
 apiVersion: v1
 kind: Pod
 metadata:
