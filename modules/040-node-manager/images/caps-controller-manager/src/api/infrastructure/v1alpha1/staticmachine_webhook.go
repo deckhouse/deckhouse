@@ -37,19 +37,21 @@ var staticmachinelog = logf.Log.WithName("staticmachine-resource")
 func (r *StaticMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithDefaulter(&StaticMachineCustomDefaulter{}).
+		WithValidator(&StaticMachineCustomValidator{}).
 		Complete()
 }
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-///+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=create;update,versions=v1alpha1,name=mstaticmachine.deckhouse.io,admissionReviewVersions=v1
 
 type StaticMachineCustomDefaulter struct{}
 
+///+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=create;update,versions=v1alpha1,name=mstaticmachine.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomDefaulter = &StaticMachineCustomDefaulter{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *StaticMachineCustomDefaulter) Default(_ context.Context, obj runtime.Object) error {
+func (*StaticMachineCustomDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	staticMachine, ok := obj.(*StaticMachine)
 	if !ok {
 		return fmt.Errorf("expected a StaticMachine object but got %T", obj)
@@ -61,14 +63,13 @@ func (r *StaticMachineCustomDefaulter) Default(_ context.Context, obj runtime.Ob
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=update,versions=v1alpha1,name=vstaticmachine.deckhouse.io,admissionReviewVersions=v1
-
 type StaticMachineCustomValidator struct{}
 
+//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=update,versions=v1alpha1,name=vstaticmachine.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomValidator = &StaticMachineCustomValidator{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticMachineCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (*StaticMachineCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	staticMachine, ok := obj.(*StaticMachine)
 	if !ok {
 		return nil, fmt.Errorf("expected a StaticMachine object but got %T", obj)
@@ -79,7 +80,7 @@ func (r *StaticMachineCustomValidator) ValidateCreate(ctx context.Context, obj r
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticMachineCustomValidator) ValidateUpdate(ctx context.Context, new, old runtime.Object) (admission.Warnings, error) {
+func (*StaticMachineCustomValidator) ValidateUpdate(ctx context.Context, new, old runtime.Object) (admission.Warnings, error) {
 	staticMachine, ok := new.(*StaticMachine)
 	if !ok {
 		return nil, fmt.Errorf("expected a StaticMachine object but got %T", new)
@@ -121,7 +122,7 @@ func (r *StaticMachineCustomValidator) ValidateUpdate(ctx context.Context, new, 
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticMachineCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (*StaticMachineCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	staticMachine, ok := obj.(*StaticMachine)
 	if !ok {
 		return nil, fmt.Errorf("expected a StaticMachine object but got %T", obj)

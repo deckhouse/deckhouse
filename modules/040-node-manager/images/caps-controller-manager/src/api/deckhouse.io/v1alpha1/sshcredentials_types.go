@@ -29,11 +29,11 @@ type SSHCredentialsSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// A username to connect to the host via SSH.
-	User          string `json:"user"`
+	User string `json:"user"`
 	// Private SSH key in PEM format encoded as base64 string.
 	PrivateSSHKey string `json:"privateSSHKey"`
 	// A sudo password for the user.
-	SudoPassword  string `json:"sudoPassword,omitempty"`
+	SudoPassword string `json:"sudoPassword,omitempty"`
 
 	//+kubebuilder:default:=22
 	//+kubebuilder:validation:Minimum=1

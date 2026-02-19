@@ -36,19 +36,19 @@ var sshcredentialslog = logf.Log.WithName("sshcredentials-resource")
 func (r *SSHCredentials) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithDefaulter(&SSHCredentialsCustomDefaulter{}).
+		WithValidator(&SSHCredentialsCustomValidator{}).
 		Complete()
 }
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+type SSHCredentialsCustomDefaulter struct{}
 
-///+kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha1-sshcredentials,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha1,name=msshcredentials.deckhouse.io,admissionReviewVersions=v1
-
-type SSHCredentialsCustomDefaulter struct {}
-
+// +kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha1-sshcredentials,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha1,name=msshcredentials.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomDefaulter = &SSHCredentialsCustomDefaulter{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *SSHCredentialsCustomDefaulter) Default(_ context.Context, obj runtime.Object) error {
+func (*SSHCredentialsCustomDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	sshCredentials, ok := obj.(*SSHCredentials)
 	if !ok {
 		return fmt.Errorf("expected an SSHCredentials object but got %T", obj)
@@ -59,14 +59,13 @@ func (r *SSHCredentialsCustomDefaulter) Default(_ context.Context, obj runtime.O
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha1-sshcredentials,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha1,name=vsshcredentials.deckhouse.io,admissionReviewVersions=v1
+type SSHCredentialsCustomValidator struct{}
 
-type SSHCredentialsCustomValidator struct {}
-
+// +kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha1-sshcredentials,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha1,name=vsshcredentials.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomValidator = &SSHCredentialsCustomValidator{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *SSHCredentialsCustomValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (*SSHCredentialsCustomValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	sshCredentials, ok := obj.(*SSHCredentials)
 	if !ok {
 		return nil, fmt.Errorf("expected an SSHCredentials object but got %T", obj)
@@ -90,7 +89,7 @@ func (r *SSHCredentialsCustomValidator) ValidateCreate(_ context.Context, obj ru
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *SSHCredentialsCustomValidator) ValidateUpdate(_ context.Context, _, new runtime.Object) (admission.Warnings, error) {
+func (*SSHCredentialsCustomValidator) ValidateUpdate(_ context.Context, _, new runtime.Object) (admission.Warnings, error) {
 	sshCredentials, ok := new.(*SSHCredentials)
 	if !ok {
 		return nil, fmt.Errorf("expected an SSHCredentials object but got %T", new)
@@ -114,7 +113,7 @@ func (r *SSHCredentialsCustomValidator) ValidateUpdate(_ context.Context, _, new
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *SSHCredentialsCustomValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (*SSHCredentialsCustomValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	sshCredentials, ok := obj.(*SSHCredentials)
 	if !ok {
 		return nil, fmt.Errorf("expected an SSHCredentials object but got %T", obj)
