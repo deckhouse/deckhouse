@@ -18,11 +18,6 @@ package client
 
 import (
 	"bufio"
-	"caps-controller-manager/internal/providerid"
-	"caps-controller-manager/internal/scope"
-	"caps-controller-manager/internal/ssh"
-	"caps-controller-manager/internal/ssh/clissh"
-	"caps-controller-manager/internal/ssh/gossh"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -44,6 +39,11 @@ import (
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
+	"caps-controller-manager/internal/providerid"
+	"caps-controller-manager/internal/scope"
+	"caps-controller-manager/internal/ssh"
+	"caps-controller-manager/internal/ssh/clissh"
+	"caps-controller-manager/internal/ssh/gossh"
 )
 
 const RequeueForStaticInstanceBootstrapping = 60 * time.Second

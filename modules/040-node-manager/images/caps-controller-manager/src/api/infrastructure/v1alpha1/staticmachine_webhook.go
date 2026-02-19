@@ -18,8 +18,8 @@ package v1alpha1
 
 import (
 	"context"
-	"reflect"
 	"fmt"
+	"reflect"
 
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,10 +44,9 @@ func (r *StaticMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-
 type StaticMachineCustomDefaulter struct{}
 
-///+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=create;update,versions=v1alpha1,name=mstaticmachine.deckhouse.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=create;update,versions=v1alpha1,name=mstaticmachine.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomDefaulter = &StaticMachineCustomDefaulter{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
@@ -65,7 +64,7 @@ func (*StaticMachineCustomDefaulter) Default(_ context.Context, obj runtime.Obje
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 type StaticMachineCustomValidator struct{}
 
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=update,versions=v1alpha1,name=vstaticmachine.deckhouse.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=update,versions=v1alpha1,name=vstaticmachine.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomValidator = &StaticMachineCustomValidator{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type

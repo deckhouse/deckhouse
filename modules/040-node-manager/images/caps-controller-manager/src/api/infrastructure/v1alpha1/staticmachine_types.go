@@ -17,11 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"caps-controller-manager/internal/providerid"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/errors"
+
+	"caps-controller-manager/internal/providerid"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -58,14 +58,14 @@ type StaticMachineStatus struct {
 
 	// +optional
 	// FailureReason will be set in the event that there is a terminal problem
-  // reconciling the StaticMachine and will contain a succinct value suitable
-  // for machine interpretation.
+	// reconciling the StaticMachine and will contain a succinct value suitable
+	// for machine interpretation.
 	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
 
 	// +optional
 	// FailureMessage will be set in the event that there is a terminal problem
 	// reconciling the StaticMachine and will contain a more verbose string suitable
-  // for logging and human consumption.
+	// for logging and human consumption.
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
 	// Conditions defines current service state of the StaticMachine.

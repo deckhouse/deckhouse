@@ -17,7 +17,6 @@ limitations under the License.
 package scope
 
 import (
-	"caps-controller-manager/internal/event"
 	"context"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
+	"caps-controller-manager/internal/event"
 )
 
 // InstanceScope defines a scope defined around an instance and its machine.

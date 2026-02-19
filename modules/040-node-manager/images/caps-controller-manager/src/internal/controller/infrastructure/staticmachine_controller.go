@@ -17,11 +17,6 @@ limitations under the License.
 package controller
 
 import (
-	"caps-controller-manager/internal/client"
-	"caps-controller-manager/internal/controller"
-	"caps-controller-manager/internal/event"
-	"caps-controller-manager/internal/pool"
-	"caps-controller-manager/internal/scope"
 	"context"
 	"fmt"
 	"time"
@@ -47,6 +42,11 @@ import (
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
+	"caps-controller-manager/internal/client"
+	"caps-controller-manager/internal/controller"
+	"caps-controller-manager/internal/event"
+	"caps-controller-manager/internal/pool"
+	"caps-controller-manager/internal/scope"
 )
 
 const (

@@ -18,8 +18,6 @@ package main
 
 //nolint:gci
 import (
-	"caps-controller-manager/internal/client"
-	"caps-controller-manager/internal/event"
 	"flag"
 	"os"
 	"time"
@@ -27,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -45,9 +42,10 @@ import (
 	deckhousev1alpha1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
-
+	"caps-controller-manager/internal/client"
 	deckhouseiocontroller "caps-controller-manager/internal/controller/deckhouse.io"
 	infrastructurecontroller "caps-controller-manager/internal/controller/infrastructure"
+	"caps-controller-manager/internal/event"
 )
 
 var (
