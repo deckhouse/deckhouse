@@ -18,8 +18,34 @@ package transform
 
 import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
+
+// SyslogLabelsTransform builds one remap that sets .sd_labels [name="value" ...] for syslog RFC 5424.
+// Uses loglabels.GetSyslogLabels (mergeLabels + sorted keys, like other destinations).
+func SyslogLabelsTransform(sourceType string, extraLabels map[string]string) *DynamicTransform {
+	labels := loglabels.GetSyslogLabels(sourceType, extraLabels)
+
+	rule, err := vrl.SyslogLabelsRule.Render(vrl.Args{
+		"labels": labels,
+	})
+	if err != nil {
+		return nil
+	}
+
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "syslog_labels",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        rule,
+			"drop_on_abort": false,
+		},
+	}
+}
 
 func SyslogEncoding() *DynamicTransform {
 	return &DynamicTransform{
