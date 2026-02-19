@@ -125,7 +125,7 @@ func generateMetrics() error {
 
 	evictionHardNodeFsBytesAvailable, err := extractPercent(nodeFsBytes, nodeFsBytesAvailableEvictionSignal, hardEvictionMap)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if len(evictionHardNodeFsBytesAvailable) != 0 {
 		_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_bytes{mountpoint=\"%s\", type=\"hard\"} %s\n", nodefsMountpoint, evictionHardNodeFsBytesAvailable)
@@ -135,7 +135,7 @@ func generateMetrics() error {
 	}
 	evictionHardNodeFsInodesAvailable, err := extractPercent(nodeFsInodes, nodeFsInodesFreeEvictionSignal, hardEvictionMap)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if len(evictionHardNodeFsInodesAvailable) != 0 {
 		_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_inodes{mountpoint=\"%s\", type=\"hard\"} %s\n", nodefsMountpoint, evictionHardNodeFsInodesAvailable)
@@ -145,7 +145,7 @@ func generateMetrics() error {
 	}
 	evictionHardImageFsBytesAvailable, err := extractPercent(imageFsBytes, imageFsBytesAvailableEvictionSignal, hardEvictionMap)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if len(evictionHardImageFsBytesAvailable) != 0 {
 		_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_bytes{mountpoint=\"%s\", type=\"hard\"} %s\n", imagefsMountpoint, evictionHardImageFsBytesAvailable)
@@ -155,7 +155,7 @@ func generateMetrics() error {
 	}
 	evictionHardImagesFsInodesAvailable, err := extractPercent(imageFsInodes, imageFsInodesFreeEvictionSignal, hardEvictionMap)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if len(evictionHardImagesFsInodesAvailable) != 0 {
 		_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_inodes{mountpoint=\"%s\", type=\"hard\"} %s\n", imagefsMountpoint, evictionHardImagesFsInodesAvailable)
@@ -165,7 +165,7 @@ func generateMetrics() error {
 	}
 	evictionSoftNodeFsBytesAvailable, err := extractPercent(nodeFsBytes, nodeFsBytesAvailableEvictionSignal, softEvictionMap)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if len(evictionSoftNodeFsBytesAvailable) != 0 {
 		_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_bytes{mountpoint=\"%s\", type=\"soft\"} %s\n", nodefsMountpoint, evictionSoftNodeFsBytesAvailable)
@@ -175,7 +175,7 @@ func generateMetrics() error {
 	}
 	evictionSoftNodeFsInodesAvailable, err := extractPercent(nodeFsInodes, nodeFsInodesFreeEvictionSignal, softEvictionMap)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if len(evictionSoftNodeFsInodesAvailable) != 0 {
 		_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_inodes{mountpoint=\"%s\", type=\"soft\"} %s\n", nodefsMountpoint, evictionSoftNodeFsInodesAvailable)
@@ -185,7 +185,7 @@ func generateMetrics() error {
 	}
 	evictionSoftImageFsBytesAvailable, err := extractPercent(imageFsBytes, imageFsBytesAvailableEvictionSignal, softEvictionMap)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if len(evictionSoftImageFsBytesAvailable) != 0 {
 		_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_bytes{mountpoint=\"%s\", type=\"soft\"} %s\n", imagefsMountpoint, evictionSoftImageFsBytesAvailable)
@@ -195,7 +195,7 @@ func generateMetrics() error {
 	}
 	evictionSoftImagesFsInodesAvailable, err := extractPercent(imageFsInodes, imageFsInodesFreeEvictionSignal, softEvictionMap)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if len(evictionSoftImagesFsInodesAvailable) != 0 {
 		_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_inodes{mountpoint=\"%s\", type=\"soft\"} %s\n", imagefsMountpoint, evictionSoftImagesFsInodesAvailable)
@@ -240,18 +240,19 @@ func parseThresholdStatement(realResource uint64, val string) (string, error) {
 	return fmt.Sprintf("%.2f", ret*100), nil
 }
 
-func getBytesAndInodeStatsFromPath(path string) (bytesTotal uint64, inodeTotal uint64, err error) {
+// getBytesAndInodeStatsFromPath returns (bytesTotal, inodeTotal uint64, err error).
+func getBytesAndInodeStatsFromPath(path string) (uint64, uint64, error) {
 	var stat unix.Statfs_t
 
-	err = unix.Statfs(path, &stat)
+	err := unix.Statfs(path, &stat)
 	if err != nil {
 		return 0, 0, fmt.Errorf("statfs on %s: %w", path, err)
 	}
 
-	bytesTotal = stat.Blocks * uint64(stat.Bsize)
-	inodeTotal = stat.Files
+	bytesTotal := stat.Blocks * uint64(stat.Bsize)
+	inodeTotal := stat.Files
 
-	return
+	return bytesTotal, inodeTotal, nil
 }
 
 func getKubeletRootDir() (string, error) {
@@ -287,8 +288,7 @@ func getKubeletRootDir() (string, error) {
 }
 
 func getRuntimeRootDir(runtime string) (string, error) {
-	switch runtime {
-	case "containerd":
+	if runtime == "containerd" {
 		return getContainerdRootDir()
 	}
 
