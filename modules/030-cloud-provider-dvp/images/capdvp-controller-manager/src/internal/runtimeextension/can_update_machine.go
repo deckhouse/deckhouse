@@ -31,10 +31,10 @@ import (
 type updateStrategy int
 
 const (
-	updateNone    updateStrategy = iota
-	updateHot                    // No VM restart: disk hot-plug, policy patch
-	updateWarm                   // Stop → patch spec → start
-	updateRecreate               // Full VM replacement required
+	updateNone     updateStrategy = iota
+	updateHot                     // No VM restart: disk hot-plug, policy patch
+	updateWarm                    // Stop → patch spec → start
+	updateRecreate                // Full VM replacement required
 )
 
 // changeSet describes what changed between two template specs and which
