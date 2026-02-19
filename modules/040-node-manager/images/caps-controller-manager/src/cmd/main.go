@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	deckhousev1alpha1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "caps-controller-manager/api/deckhouse.io/v1alpha2"
@@ -99,6 +100,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	webhookserver := webhook.NewServer(webhook.Options{
+		Port: 9443,
+	})
+
 	metricsServerOptions := metricsserver.Options{
 		BindAddress:   metricsAddr,
 		SecureServing: false,
@@ -127,6 +132,7 @@ func main() {
 		Cache: cache.Options{
 			SyncPeriod: &syncPeriod,
 		},
+		WebhookServer: webhookserver,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

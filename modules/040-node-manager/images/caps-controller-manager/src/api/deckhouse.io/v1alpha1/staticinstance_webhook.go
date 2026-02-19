@@ -39,19 +39,20 @@ var staticinstancelog = logf.Log.WithName("staticinstance-resource")
 func (r *StaticInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithDefaulter(&StaticInstanceCustomDefaulter{}).
+		WithValidator(&StaticInstanceCustomValidator{}).
 		Complete()
 }
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-///+kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha1-staticinstance,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=create;update,versions=v1alpha1,name=mstaticinstance.deckhouse.io,admissionReviewVersions=v1
-
 type StaticInstanceCustomDefaulter struct{}
 
+// +kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha1-staticinstance,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=create;update,versions=v1alpha1,name=mstaticinstance.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomDefaulter = &StaticInstanceCustomDefaulter{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *StaticInstanceCustomDefaulter) Default(_ context.Context, obj runtime.Object) error {
+func (*StaticInstanceCustomDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	staticInstance, ok := obj.(*StaticInstance)
 	if !ok {
 		return fmt.Errorf("expected an StaticInstance object but got %T", obj)
@@ -63,14 +64,13 @@ func (r *StaticInstanceCustomDefaulter) Default(_ context.Context, obj runtime.O
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha1-staticinstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=update;delete,versions=v1alpha1,name=vstaticinstance.deckhouse.io,admissionReviewVersions=v1
-
 type StaticInstanceCustomValidator struct{}
 
+// +kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha1-staticinstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=update;delete,versions=v1alpha1,name=vstaticinstance.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomValidator = &StaticInstanceCustomValidator{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticInstanceCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (*StaticInstanceCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	staticInstance, ok := obj.(*StaticInstance)
 	if !ok {
 		return nil, fmt.Errorf("expected an StaticInstance object but got %T", obj)
@@ -96,7 +96,7 @@ func (r *StaticInstanceCustomValidator) ValidateCreate(ctx context.Context, obj 
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticInstanceCustomValidator) ValidateUpdate(_ context.Context, new, old runtime.Object) (admission.Warnings, error) {
+func (*StaticInstanceCustomValidator) ValidateUpdate(_ context.Context, new, old runtime.Object) (admission.Warnings, error) {
 	staticInstance, ok := new.(*StaticInstance)
 	if !ok {
 		return nil, fmt.Errorf("expected an StaticInstance object but got %T", new)
@@ -122,7 +122,7 @@ func (r *StaticInstanceCustomValidator) ValidateUpdate(_ context.Context, new, o
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticInstanceCustomValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (*StaticInstanceCustomValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	staticInstance, ok := obj.(*StaticInstance)
 	if !ok {
 		return nil, fmt.Errorf("expected an StaticInstance object but got %T", obj)

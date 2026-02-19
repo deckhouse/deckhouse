@@ -31,7 +31,7 @@ type StaticInstanceSpec struct {
 
 	// The IP address of the host.
 	//+kubebuilder:validation:Pattern=`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`
-	Address        string                  `json:"address"`
+	Address string `json:"address"`
 
 	// The reference to the `SSHCredentials` object.
 	CredentialsRef *corev1.ObjectReference `json:"credentialsRef"`

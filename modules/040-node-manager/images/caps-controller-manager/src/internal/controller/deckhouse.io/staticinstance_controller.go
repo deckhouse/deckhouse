@@ -179,7 +179,6 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError) &&
 		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == metav1.ConditionTrue {
-
 		conditions.Set(instanceScope.Instance, metav1.Condition{
 			// TODO: StaticInstanceBootstrapSucceededCondition type?
 			Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
@@ -197,7 +196,6 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		}
 
 		instanceScope.Logger.Info("StaticInstance is pending")
-
 	}
 
 	if instanceScope.MachineScope != nil {

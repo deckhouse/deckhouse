@@ -40,11 +40,9 @@ func (r *SSHCredentials) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+type SSHCredentialsCustomDefaulter struct{}
 
-///+kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha2-sshcredentials,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha2,name=msshcredentials.deckhouse.io,admissionReviewVersions=v1
-
-type SSHCredentialsCustomDefaulter struct {}
-
+// +kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha2-sshcredentials,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha2,name=msshcredentials.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomDefaulter = &SSHCredentialsCustomDefaulter{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
@@ -59,10 +57,9 @@ func (r *SSHCredentialsCustomDefaulter) Default(_ context.Context, obj runtime.O
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha2-sshcredentials,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha2,name=vsshcredentials.deckhouse.io,admissionReviewVersions=v1
+type SSHCredentialsCustomValidator struct{}
 
-type SSHCredentialsCustomValidator struct {}
-
+// +kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha2-sshcredentials,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha2,name=vsshcredentials.deckhouse.io,admissionReviewVersions=v1
 var _ webhook.CustomValidator = &SSHCredentialsCustomValidator{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
