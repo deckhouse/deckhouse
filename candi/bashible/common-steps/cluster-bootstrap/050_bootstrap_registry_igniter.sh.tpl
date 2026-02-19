@@ -17,11 +17,14 @@
 
 bb-package-install "module-registry-auth:{{ .images.registry.dockerAuth }}" "module-registry-distribution:{{ .images.registry.dockerDistribution }}" "cfssl:{{ .images.registrypackages.cfssl165 }}"
 
+# Prepare proxy envs
+bb-set-proxy
+
 # Prepare vars
 discovered_node_ip="$(bb-d8-node-ip)"
 pki_path="${REGISTRY_MODULE_IGNITER_DIR}/pki"
 
-# Create a directories
+# Create the directories
 mkdir -p ${REGISTRY_MODULE_IGNITER_DIR}/{pki,logs} \
         /opt/deckhouse/registry/local_data
 
@@ -88,7 +91,7 @@ EOF
 )
 
 # Auth certs
-echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
+echo "$client_server_csr_json" | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-auth" \
   -ca="${pki_path}/ca.crt" \
   -ca-key="${pki_path}/ca.key" \
@@ -98,7 +101,7 @@ mv "${pki_path}/auth.pem" "${pki_path}/auth.crt"
 mv "${pki_path}/auth-key.pem" "${pki_path}/auth.key"
 
 # Distribution certs
-echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
+echo "$client_server_csr_json" | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-distribution" \
   -ca="${pki_path}/ca.crt" \
   -ca-key="${pki_path}/ca.key" \
@@ -108,7 +111,7 @@ mv "${pki_path}/distribution.pem" "${pki_path}/distribution.crt"
 mv "${pki_path}/distribution-key.pem" "${pki_path}/distribution.key"
 
 # Auth token certs
-echo $auth_token_csr_json | /opt/deckhouse/bin/cfssl gencert \
+echo "$auth_token_csr_json" | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-auth-token" \
   -ca="${pki_path}/ca.crt" \
   -ca-key="${pki_path}/ca.key" \
@@ -123,8 +126,7 @@ rm "${pki_path}/auth.csr"\
     "${pki_path}/token.csr" \
     "${pki_path}/profiles.json"
 
-
-# Prepare manifests
+# Prepare auth manifest
 bb-sync-file "${REGISTRY_MODULE_IGNITER_DIR}/auth_config.yaml" - << EOF
 server:
   addr: "127.0.0.1:5051"
@@ -140,7 +142,7 @@ token:
 users:
   {{ .registry.bootstrap.init.ro_user.name | quote }}:
     password: {{ .registry.bootstrap.init.ro_user.password_hash | quote | replace "$" "\\$" }}
-  
+
   {{- if eq .registry.mode "Local" }}
   {{ .registry.bootstrap.init.rw_user.name | quote }}:
     password: {{ .registry.bootstrap.init.rw_user.password_hash | quote | replace "$" "\\$" }}
@@ -157,6 +159,7 @@ acl:
   {{- end }}
 EOF
 
+# Prepare distribution manifest
 bb-sync-file "${REGISTRY_MODULE_IGNITER_DIR}/distribution_config.yaml" - << EOF
 version: 0.1
 log:
@@ -180,8 +183,8 @@ http:
       enabled: true
       path: /metrics
   tls:
-    certificate: ${pki_path}/distribution.crt
-    key: ${pki_path}/distribution.key
+    certificate: "${pki_path}/distribution.crt"
+    key: "${pki_path}/distribution.key"
 
 {{- with .registry.bootstrap.proxy }}
 proxy:
@@ -193,7 +196,7 @@ proxy:
   remotepathonly: {{ .path | quote }}
   localpathalias: "/system/deckhouse"
   {{- with .ca }}
-  ca: ${pki_path}/upstream-registry-ca.crt
+  ca: "${pki_path}/upstream-registry-ca.crt"
   {{- end }}
   {{- with .ttl }}
   ttl: {{ . | quote }}
@@ -205,13 +208,14 @@ auth:
     realm: https://${discovered_node_ip}:5051/auth
     service: Deckhouse registry
     issuer: Registry server
-    rootcertbundle: ${pki_path}/token.crt
+    rootcertbundle: "${pki_path}/token.crt"
     autoredirect: true
     proxy:
       url: https://127.0.0.1:5051/auth
-      ca: ${pki_path}/ca.crt
+      ca: "${pki_path}/ca.crt"
 EOF
 
+# Prepare start script
 bb-sync-file "${REGISTRY_MODULE_IGNITER_DIR}/start_registry_igniter.sh" - << EOF
 #!/bin/bash
 
@@ -255,19 +259,20 @@ fi
 echo "All services are starting in the background and logs are being written to ${REGISTRY_MODULE_IGNITER_DIR}/logs"
 EOF
 
+# Prepare stop script
 bb-sync-file "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh" - << EOF
 #!/bin/bash
 
 stop_service() {
     service_name=\$1
-    pkill -x \$service_name
+    pkill -x \$service_name || true
     wait_time=0
     while ps -C \$service_name > /dev/null; do
         sleep 1
         ((wait_time++))
         if [ \$wait_time -gt 20 ]; then
             echo "Process \$service_name has not completed in 20 seconds, SIGKILL is being sent..."
-            pkill -9 -x \$service_name
+            pkill -9 -x \$service_name || true
             break
         fi
     done
@@ -284,11 +289,12 @@ chmod a+x "${REGISTRY_MODULE_IGNITER_DIR}/start_registry_igniter.sh"
 chmod a+x "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh"
 
 
-# Start igniter
-bb-set-proxy
+# Switching registry from static pod to igniter
 rm -f /etc/kubernetes/manifests/registry-nodeservices.yaml
 bash "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh"
 bash "${REGISTRY_MODULE_IGNITER_DIR}/start_registry_igniter.sh"
+
+# Unset proxy envs
 bb-unset-proxy
 
 {{- end }}
