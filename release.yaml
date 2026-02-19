@@ -32,7 +32,7 @@ requirements:
   "ingressNginx": "1.10" # modules/402-ingress-nginx/requirements/check.go
   "nodesMinimalOSVersionUbuntu": "18.04" # modules/040-node-manager/requirements/check.go
   "nodesMinimalOSVersionDebian": "10" # modules/040-node-manager/requirements/check.go
-  "istioMinimalVersion": "1.19" # modules/110-istio/requirements/check.go
+  "istioMinimalVersion": "1.21" # modules/110-istio/requirements/check.go
   "metallbHasStandardConfiguration": "true" # ee/se/modules/380-metallb/requirements/check.go
   "unmetCloudConditions": "true" # modules/040-node-manager/requirements/check.go
   "nodesMinimalLinuxKernelVersion": "5.8.0" # modules/021-cni-cilium/requirements/check.go

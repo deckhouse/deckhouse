@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -27,11 +26,10 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/yandex-cloud/go-sdk/iamkey"
 )
 
 const (
-	prometheusMetricsUrl = "https://monitoring.api.cloud.yandex.net/monitoring/v2/prometheusMetrics"
+	prometheusMetricsURL = "https://monitoring.api.cloud.yandex.net/monitoring/v2/prometheusMetrics"
 	retries              = 3
 )
 
@@ -76,7 +74,7 @@ var services = map[string]struct{}{
 	"serverless-apigateway": {},
 }
 
-type CloudApi struct {
+type CloudAPI struct {
 	folderId        string
 	stopCh          chan struct{}
 	logger          *log.Entry
@@ -88,10 +86,9 @@ type CloudApi struct {
 	token      string
 
 	isInit bool
-	iamKey *iamkey.Key
 }
 
-func NewCloudAPI(logger *log.Entry, folderId string, stopCh chan struct{}) *CloudApi {
+func NewCloudAPI(logger *log.Entry, folderId string, stopCh chan struct{}) *CloudAPI {
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: (&net.Dialer{
@@ -100,7 +97,7 @@ func NewCloudAPI(logger *log.Entry, folderId string, stopCh chan struct{}) *Clou
 		},
 	}
 
-	return &CloudApi{
+	return &CloudAPI{
 		folderId: folderId,
 		logger:   logger,
 		// iam token available during 12 hours, but yandex recommend update renew token every one hour
@@ -110,25 +107,25 @@ func NewCloudAPI(logger *log.Entry, folderId string, stopCh chan struct{}) *Clou
 	}
 }
 
-func (a *CloudApi) WithAutoRenewPeriod(autoRenewPeriod time.Duration) *CloudApi {
+func (a *CloudAPI) WithAutoRenewPeriod(autoRenewPeriod time.Duration) *CloudAPI {
 	a.autoRenewPeriod = autoRenewPeriod
 
 	return a
 }
 
-func (a *CloudApi) WithRenewTokenErrorHandler(handler func()) *CloudApi {
+func (a *CloudAPI) WithRenewTokenErrorHandler(handler func()) *CloudAPI {
 	a.onRenewError = handler
 
 	return a
 }
 
-func (a *CloudApi) HasService(key string) bool {
+func (a *CloudAPI) HasService(key string) bool {
 	_, has := services[key]
 
 	return has
 }
 
-func (a *CloudApi) InitWithAPIKey(key string) {
+func (a *CloudAPI) InitWithAPIKey(key string) {
 	if a.isInit {
 		a.logger.Warningln("Yandex cloud api already init")
 		return
@@ -138,7 +135,7 @@ func (a *CloudApi) InitWithAPIKey(key string) {
 	a.isInit = true
 }
 
-func (a *CloudApi) RequestMetrics(ctx context.Context, serviceId string) ([]byte, error) {
+func (a *CloudAPI) RequestMetrics(ctx context.Context, serviceId string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.url(serviceId), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating request: %s", err)
@@ -160,7 +157,7 @@ func (a *CloudApi) RequestMetrics(ctx context.Context, serviceId string) ([]byte
 	}
 
 	if response.StatusCode != http.StatusOK {
-		responseData, err := ioutil.ReadAll(response.Body)
+		responseData, err := io.ReadAll(response.Body)
 		if err != nil {
 			errStr := fmt.Errorf("parse error for response body: %s", err).Error()
 			responseData = []byte(errStr)
@@ -172,8 +169,8 @@ func (a *CloudApi) RequestMetrics(ctx context.Context, serviceId string) ([]byte
 	return io.ReadAll(response.Body)
 }
 
-func (a *CloudApi) url(serviceId string) string {
-	u, _ := url.Parse(prometheusMetricsUrl)
+func (a *CloudAPI) url(serviceId string) string {
+	u, _ := url.Parse(prometheusMetricsURL)
 
 	query := u.Query()
 	query.Set("service", serviceId)
@@ -184,14 +181,14 @@ func (a *CloudApi) url(serviceId string) string {
 	return u.String()
 }
 
-func (a *CloudApi) getToken() string {
+func (a *CloudAPI) getToken() string {
 	a.tokenMutex.RLock()
 	defer a.tokenMutex.RUnlock()
 
 	return a.token
 }
 
-func (a *CloudApi) setToken(token string) {
+func (a *CloudAPI) setToken(token string) {
 	a.tokenMutex.Lock()
 	defer a.tokenMutex.Unlock()
 

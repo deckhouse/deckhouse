@@ -1,3 +1,4 @@
+{{- if (.Values.global.enabledModules | has "prometheus") }}
 {{- /* The dashboard will be imported only if the customer enables BGP balancing */ -}}
 {{- if and .Values.metallb.bgpPeers (gt (len .Values.metallb.bgpPeers) 0) }}
   {{- $resourceName := "metallb-kubernetes-cluster-metallb-bgp" }}
@@ -19,5 +20,8 @@
 {{- $definition := .Files.Get "monitoring/grafana-dashboards/kubernetes-cluster/metallb-pools.json" }}
 {{- $folder := "Kubernetes Cluster" }}
 {{- include "helm_lib_single_dashboard" (list . $resourceName $folder $definition) }}
+{{- end }}
 
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 {{- include "helm_lib_prometheus_rules" (list . "d8-metallb") }}
+{{- end }}

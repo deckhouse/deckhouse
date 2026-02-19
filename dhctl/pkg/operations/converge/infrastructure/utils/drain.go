@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +27,7 @@ import (
 
 	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"

@@ -70,14 +70,14 @@ const istioValues = `
       applicationNamespaces: []
       globalVersion: "1.21.6"
       versionMap:
+        "1.25.2":
+          revision: "v1x25x2"
+          fullVersion: "1.25.2"
+          imageSuffix: "V1x25x2"
         "1.21.6":
           revision: "v1x21x6"
           fullVersion: "1.21.6"
           imageSuffix: "V1x21x6"
-        "1.19.7":
-          revision: "v1x19x7"
-          fullVersion: "1.19.7"
-          imageSuffix: "V1x19x7"
       kialiSigningKey: "kiali"
       operatorVersionsToInstall:  []
       versionsToInstall: []
@@ -225,8 +225,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6","1.19.7"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21.6","1.19.7"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
 			f.ValuesSetFromYaml("istio.internal.applicationNamespaces", `[foo,bar]`)
 			f.HelmRender()
 		})
@@ -238,11 +238,12 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(mwh.Exists()).To(BeTrue())
 			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
 
+			// 1.25 uses sailoperator.io Istio CR, not IstioOperator
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
 			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			iopV19 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x19x7")
 
+			deploymentOperatorV25 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x25x2")
 			deploymentOperatorV21 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x21x6")
-			deploymentOperatorV19 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x19x7")
 
 			secretD8RegistryFoo := f.KubernetesResource("Secret", "foo", "d8-istio-sidecar-registry")
 			secretD8RegistryBar := f.KubernetesResource("Secret", "bar", "d8-istio-sidecar-registry")
@@ -251,10 +252,10 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 
 			serviceGlobal := f.KubernetesResource("Service", "d8-istio", "istiod")
 
+			Expect(istioV25.Exists()).To(BeTrue())
 			Expect(iopV21.Exists()).To(BeTrue())
-			Expect(iopV19.Exists()).To(BeTrue())
+			Expect(deploymentOperatorV25.Exists()).To(BeTrue())
 			Expect(deploymentOperatorV21.Exists()).To(BeTrue())
-			Expect(deploymentOperatorV19.Exists()).To(BeTrue())
 			Expect(secretCacerts.Exists()).To(BeTrue())
 
 			Expect(secretD8RegistryFoo.Exists()).To(BeTrue())
@@ -263,20 +264,19 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(mwh.Exists()).To(BeTrue())
 			Expect(serviceGlobal.Exists()).To(BeTrue())
 
+			// sailoperator.io Istio CR: name is the revision; meshConfig and proxy image under spec.values
+			Expect(istioV25.Field("metadata.name").String()).To(Equal(`v1x25x2`))
+			Expect(istioV25.Field("spec.values.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
+			Expect(istioV25.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x25x2`))
+
 			Expect(iopV21.Field("spec.revision").String()).To(Equal(`v1x21x6`))
-			Expect(iopV19.Field("spec.revision").String()).To(Equal(`v1x19x7`))
-
 			Expect(iopV21.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
-			Expect(iopV19.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 
+			Expect(deploymentOperatorV25.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com@imageHash-istio-operatorV1x25x2`))
 			Expect(deploymentOperatorV21.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com@imageHash-istio-operatorV1x21x6`))
-			Expect(deploymentOperatorV19.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com@imageHash-istio-operatorV1x19x7`))
 
 			Expect(iopV21.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x21x6`))
-			Expect(iopV19.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x19x7`))
-
 			Expect(iopV21.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com@imageHash-istio-pilotV1x21x6`))
-			Expect(iopV19.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com@imageHash-istio-pilotV1x19x7`))
 
 			Expect(mwh.Field("webhooks.0.clientConfig.service.name").String()).To(Equal(`istiod-v1x21x6`))
 			Expect(mwh.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXljZXJ0`)) // b64("mycert")

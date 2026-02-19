@@ -225,5 +225,5 @@ func cleanupMultilineError(err error) string {
 }
 
 func hasVersionedSettings(cfg *v1alpha1.ModuleConfig) bool {
-	return cfg != nil && cfg.Spec.Version > 0 && len(cfg.Spec.Settings.Raw) > 0
+	return cfg != nil && cfg.Spec.Version > 0 && cfg.Spec.Settings != nil && len(cfg.Spec.Settings.Raw) > 0
 }

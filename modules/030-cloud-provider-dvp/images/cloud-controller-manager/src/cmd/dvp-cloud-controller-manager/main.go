@@ -17,9 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"k8s.io/apimachinery/pkg/util/wait"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/cloud-provider/app"
@@ -63,8 +60,7 @@ func main() {
 	)
 
 	if err := command.Execute(); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+		klog.Fatalf("error: %v\n", err)
 	}
 }
 

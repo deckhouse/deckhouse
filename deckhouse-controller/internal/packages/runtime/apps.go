@@ -85,26 +85,26 @@ func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings ad
 
 // UpdateApp handles application updates (version changes and settings changes).
 // Version changes and settings changes are handled independently with separate contexts.
-func (r *Runtime) UpdateApp(repo registry.Remote, inst App) {
+func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if inst.Namespace == "" {
-		inst.Namespace = "default"
+	if app.Namespace == "" {
+		app.Namespace = "default"
 	}
 
 	settingsChecksum := ""
-	if len(inst.Settings) > 0 {
-		settingsChecksum = inst.Settings.Checksum()
+	if len(app.Settings) > 0 {
+		settingsChecksum = app.Settings.Checksum()
 	}
 
-	name := apps.BuildName(inst.Namespace, inst.Name)
-	version := inst.Definition.Version
+	name := apps.BuildName(app.Namespace, app.Name)
+	version := app.Definition.Version
 
-	r.apps.Update(name, version, settingsChecksum, func(ctx context.Context, event int, app *apps.Application) {
+	r.apps.Update(name, version, settingsChecksum, func(ctx context.Context, event int, pkg *apps.Application) {
 		var tasks []queue.Task
 		if event == lifecycle.EventVersionChanged {
-			if err := r.scheduler.Check(inst.Definition.Requirements.Checks()); err != nil {
+			if err := r.scheduler.Check(app.Definition.Requirements.Checks()); err != nil {
 				r.status.HandleError(name, err)
 				return
 			}
@@ -112,25 +112,25 @@ func (r *Runtime) UpdateApp(repo registry.Remote, inst App) {
 			r.status.ClearRuntimeConditions(name)
 			r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
-			packageName := inst.Definition.Name
-			packageVersion := inst.Definition.Version
+			packageName := app.Definition.Name
+			packageVersion := app.Definition.Version
 
 			tasks = []queue.Task{
 				taskdownload.NewAppTask(name, packageName, packageVersion, repo, r.installer, r.status, r.logger),
 				taskinstall.NewAppTask(name, packageName, packageVersion, repo, r.installer, r.status, r.logger),
-				taskload.NewAppTask(name, repo, inst.Settings, r.loadApp, r.status, r.logger),
+				taskload.NewAppTask(name, repo, app.Settings, r.loadApp, r.status, r.logger),
 			}
 
 			// If there's an existing app, disable it first
-			if app != nil {
-				tasks = slices.Insert(tasks, 0, taskdisable.NewTask(app, app.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger))
+			if pkg != nil {
+				tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger))
 			}
 		}
 
-		if event == lifecycle.EventSettingsChanged && app != nil {
+		if event == lifecycle.EventSettingsChanged && pkg != nil {
 			tasks = []queue.Task{
-				taskapplysettings.NewTask(app, inst.Settings, r.status, r.logger),
-				taskrun.NewTask(app, app.GetNamespace(), r.nelmService, r.status, r.logger),
+				taskapplysettings.NewTask(pkg, app.Settings, r.status, r.logger),
+				taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger),
 			}
 		}
 
@@ -143,7 +143,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, inst App) {
 // loadApp builds an Application from its package files, validates settings, and registers it
 // with the lifecycle store and scheduler. Called by the Load task after filesystem mount.
 func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, settings addonutils.Values, packagePath string) (string, error) {
-	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "LoadApp")
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadApp")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("path", packagePath))
@@ -202,9 +202,12 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	name := apps.BuildName(namespace, instance)
 	r.scheduler.Remove(name)
 
-	r.apps.HandleEvent(lifecycle.EventRemove, name, func(ctx context.Context, _ int, app *apps.Application) {
+	r.apps.HandleEvent(lifecycle.EventRemove, name, func(ctx context.Context, _ int, pkg *apps.Application) {
 		cleanup := queue.WithOnDone(func() {
 			go func() {
+				r.mu.Lock()
+				defer r.mu.Unlock()
+
 				if r.apps.Delete(name) {
 					r.queueService.Remove(name)
 					r.status.Delete(name)
@@ -212,7 +215,7 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 			}()
 		})
 
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(app, app.GetNamespace(), false, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, r.installer, r.logger), cleanup)
 	})
 }
@@ -222,10 +225,10 @@ func (r *Runtime) enableApp(name string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, app *apps.Application) {
+	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *apps.Application) {
 		tasks := []queue.Task{
-			taskstartup.NewTask(app, r.nelmService, r.queueService, r.status, r.logger),
-			taskrun.NewTask(app, app.GetNamespace(), r.nelmService, r.status, r.logger),
+			taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger),
+			taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger),
 		}
 
 		for _, task := range tasks {
@@ -239,9 +242,9 @@ func (r *Runtime) disableApp(name string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, app *apps.Application) {
+	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *apps.Application) {
 		tasks := []queue.Task{
-			taskdisable.NewTask(app, app.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger),
+			taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger),
 		}
 
 		for _, task := range tasks {
@@ -255,9 +258,9 @@ func (r *Runtime) runApp(name string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.apps.HandleEvent(lifecycle.EventRun, name, func(ctx context.Context, _ int, app *apps.Application) {
+	r.apps.HandleEvent(lifecycle.EventRun, name, func(ctx context.Context, _ int, pkg *apps.Application) {
 		tasks := []queue.Task{
-			taskrun.NewTask(app, app.GetNamespace(), r.nelmService, r.status, r.logger),
+			taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger),
 		}
 
 		for _, task := range tasks {
