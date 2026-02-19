@@ -6,15 +6,29 @@ document.addEventListener('DOMContentLoaded', function () {
   const ZOOM_MIN = 1;
   const ZOOM_MAX = 4;
 
-  function waitForLightbox(cb) {
+  function stopEvent(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function pollUntilReady(getValue, onReady, maxTries) {
     let tries = 0;
     function check() {
-      const container = document.querySelector('.glightbox-container');
-      if (container) return cb(container);
+      const value = getValue();
+      if (value) {
+        onReady(value);
+        return;
+      }
       tries += 1;
-      if (tries < 60) setTimeout(check, 50);
+      if (tries < maxTries) setTimeout(check, 50);
     }
     setTimeout(check, 50);
+  }
+
+  function waitForLightbox(cb) {
+    pollUntilReady(function () {
+      return document.querySelector('.glightbox-container');
+    }, cb, 60);
   }
 
   function getActiveImage(container) {
@@ -92,52 +106,42 @@ document.addEventListener('DOMContentLoaded', function () {
     const toolbar = document.createElement('div');
     toolbar.className = 'zoom-image-toolbar';
 
-    const zoomOut = document.createElement('button');
-    zoomOut.type = 'button';
-    zoomOut.className = 'zoom-image-zoom-btn zoom-image-zoom-out';
-    zoomOut.setAttribute('aria-label', 'Отдалить');
-    const zoomOutIcon = document.createElement('img');
-    zoomOutIcon.src = '/images/zoom-out.svg';
-    zoomOutIcon.alt = '';
-    zoomOutIcon.width = 22;
-    zoomOutIcon.height = 22;
-    zoomOutIcon.decoding = 'async';
-    zoomOut.appendChild(zoomOutIcon);
+    function createIconButton(className, label, iconSrc) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = className;
+      btn.setAttribute('aria-label', label);
+      if (iconSrc) {
+        const icon = document.createElement('img');
+        icon.src = iconSrc;
+        icon.alt = '';
+        icon.width = 22;
+        icon.height = 22;
+        icon.decoding = 'async';
+        btn.appendChild(icon);
+      }
+      return btn;
+    }
 
-    const zoomIn = document.createElement('button');
-    zoomIn.type = 'button';
-    zoomIn.className = 'zoom-image-zoom-btn zoom-image-zoom-in';
-    zoomIn.setAttribute('aria-label', 'Приблизить');
-    const zoomInIcon = document.createElement('img');
-    zoomInIcon.src = '/images/zoom-in.svg';
-    zoomInIcon.alt = '';
-    zoomInIcon.width = 22;
-    zoomInIcon.height = 22;
-    zoomInIcon.decoding = 'async';
-    zoomIn.appendChild(zoomInIcon);
+    const zoomOut = createIconButton('zoom-image-zoom-btn zoom-image-zoom-out', 'Отдалить', '/images/zoom-out.svg');
+    const zoomIn = createIconButton('zoom-image-zoom-btn zoom-image-zoom-in', 'Приблизить', '/images/zoom-in.svg');
 
     zoomOut.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
+      stopEvent(e);
       setScale(container, getState(container).scale - ZOOM_STEP);
     });
 
     zoomIn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
+      stopEvent(e);
       setScale(container, getState(container).scale + ZOOM_STEP);
     });
 
-    const closeProxy = document.createElement('button');
-    closeProxy.type = 'button';
-    closeProxy.className = 'zoom-image-zoom-btn zoom-image-close-proxy';
-    closeProxy.setAttribute('aria-label', 'Закрыть');
+    const closeProxy = createIconButton('zoom-image-zoom-btn zoom-image-close-proxy', 'Закрыть');
     closeProxy.innerHTML = '&times;';
     closeProxy.style.fontSize = '28px';
     closeProxy.style.lineHeight = '1';
     closeProxy.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
+      stopEvent(e);
       document.body.style.cursor = '';
       closeBtn.click();
       if (toolbar.parentNode) toolbar.parentNode.removeChild(toolbar);
@@ -194,8 +198,7 @@ document.addEventListener('DOMContentLoaded', function () {
       baseX = state.x;
       baseY = state.y;
       img.setPointerCapture(pointerId);
-      e.preventDefault();
-      e.stopPropagation();
+      stopEvent(e);
     }
 
     function pointerMove(e) {
@@ -212,8 +215,7 @@ document.addEventListener('DOMContentLoaded', function () {
       state.y = baseY + dy;
       clampPan(container);
       applyTransformRaf();
-      e.preventDefault();
-      e.stopPropagation();
+      stopEvent(e);
     }
 
     function pointerUp(e) {
@@ -227,20 +229,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function wheelZoom(e) {
-      e.preventDefault();
-      e.stopPropagation();
+      stopEvent(e);
       const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
       setScale(container, state.scale + delta, { x: e.clientX, y: e.clientY });
     }
 
     function clickZoom(e) {
       if (state.dragging || moved) {
-        e.preventDefault();
-        e.stopPropagation();
+        stopEvent(e);
         return;
       }
-      e.preventDefault();
-      e.stopPropagation();
+      stopEvent(e);
       setScale(container, state.scale + ZOOM_STEP, {
         x: window.innerWidth / 2,
         y: window.innerHeight / 2
@@ -284,20 +283,15 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       lb.open();
       waitForLightbox(function (container) {
-        let tries = 0;
-        function initWhenReady() {
+        pollUntilReady(function () {
           const imgInSlide = getActiveImage(container);
           const closeInSlide = container.querySelector('.gclose');
-          if (imgInSlide && closeInSlide) {
-            addToolbar(container);
-            enablePanAndWheelZoom(container);
-            applyTransform(container);
-            return;
-          }
-          tries += 1;
-          if (tries < 80) setTimeout(initWhenReady, 50);
-        }
-        initWhenReady();
+          return imgInSlide && closeInSlide;
+        }, function () {
+          addToolbar(container);
+          enablePanAndWheelZoom(container);
+          applyTransform(container);
+        }, 80);
       });
     });
   });
