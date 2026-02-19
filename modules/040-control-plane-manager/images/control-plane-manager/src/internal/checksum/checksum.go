@@ -18,7 +18,6 @@ package checksum
 
 import (
 	"crypto/sha256"
-	"encoding/binary"
 	"fmt"
 	"sort"
 
@@ -140,22 +139,4 @@ func BuildHotReloadChecksum(secretData map[string][]byte) (string, error) {
 		return "", fmt.Errorf("failed to hash manifest: %w", err)
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
-}
-
-// componentOrder is the fixed order for including component checksums into ConfigurationGeneration.
-var componentOrder = []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
-
-// CalculateConfigurationGeneration returns int64 generation from hashes of cmpSecret (via component + hotReload checksums) and pkiSecret (pkiChecksum).
-// Any change in any of these checksums produces a different generation.
-func CalculateConfigurationGeneration(pkiChecksum string, componentChecksums map[string]string, hotReloadChecksum string) int64 {
-	h := sha256.New()
-	h.Write([]byte(pkiChecksum))
-	for _, component := range componentOrder {
-		h.Write([]byte(componentChecksums[component]))
-	}
-	h.Write([]byte(hotReloadChecksum))
-	sum := h.Sum(nil)
-	// First 8 bytes as uint64, then mask to positive int64 range
-	u := binary.BigEndian.Uint64(sum[:8])
-	return int64(u & 0x7FFFFFFFFFFFFFFF)
 }
