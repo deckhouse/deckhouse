@@ -89,6 +89,8 @@ shell:
         cat <<'EOD' > /srv/jekyll-data/documentation/_data/topnav.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
         EOD
+        mkdir -p /srv/jekyll-data/documentation/pages
+        cp /src/modules/810-documentation/images/web/site/pages/LICENSE_AGREEMENT_RU.md /srv/jekyll-data/documentation/pages/
 {{ end }}
         # Creating additional config...
         echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
