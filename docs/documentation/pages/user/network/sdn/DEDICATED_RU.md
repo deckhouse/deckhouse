@@ -70,21 +70,33 @@ lang: ru
 
 Вы можете подключать к подам кластерные сети и сети проекта. Для этого используйте аннотацию пода, в которой укажите параметры подключаемых дополнительных сетей.
 
-Пример добавления к поду двух дополнительных сетей (кластерной `my-cluster-network` и сети проекта `my-network`):
+Пример манифеста пода с добавлением двух дополнительных сетей (кластерной `my-cluster-network` и сети проекта `my-network`):
+
+> В поле `ifName` (опциональное) задается имя TAP-интерфейса внутри пода. В поле `mac` (опциональное) задается MAC-адрес, который следует назначить TAP-интерфейсу.
 
 ```yaml
-network.deckhouse.io/networks-spec: |
-  [
-    {
-      "type": "Network", # Подключение сети проекта my-network.
-      "name": "my-network",
-      "ifName": "veth_mynet",    # Имя TAP-интерфейса внутри пода (опционально).
-      "mac": "aa:bb:cc:dd:ee:ff" # MAC-адрес, который следует назначить TAP-интерфейсу (опционально).
-    },
-    {
-      "type": "ClusterNetwork", # Подключение общедоступной сети my-cluster-network.
-      "name": "my-cluster-network",
-      "ifName": "veth_public",
-    }
-  ]
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-with-additional-networks
+  namespace: my-namespace
+  annotations:
+    network.deckhouse.io/networks-spec: |
+      [
+        {
+          "type": "Network",
+          "name": "my-network",
+          "ifName": "veth_mynet",
+          "mac": "aa:bb:cc:dd:ee:ff"
+        },
+        {
+          "type": "ClusterNetwork",
+          "name": "my-cluster-network",
+          "ifName": "veth_public"
+        }
+      ]
+spec:
+  containers:
+    - name: app
+    # остальные параметры...
 ```

@@ -69,21 +69,33 @@ After creating a network, you can [connect it to pods](#connecting-additional-ne
 
 You can connect cluster networks and project networks to pods. To do this, use the pod annotation, specifying the parameters of the additional networks to be connected.
 
-Example of adding two additional networks (cluster `my-cluster-network` and project network `my-network`) to a pod:
+Example of a pod manifest with two additional networks added (the cluster network `my-cluster-network` and the project network `my-network`):
+
+> The `ifName` field (optional) specifies the name of the TAP interface within the subnet. The `mac` field (optional) specifies the MAC address to be assigned to the TAP interface.
 
 ```yaml
-network.deckhouse.io/networks-spec: |
-  [
-    {
-      "type": "Network", # Connecting the my-network project network.
-      "name": "my-network",
-      "ifName": "veth_mynet",    # TAP interface name inside the pod (optional).
-      "mac": "aa:bb:cc:dd:ee:ff" # MAC address to assign to the TAP interface (optional).
-    },
-    {
-      "type": "ClusterNetwork", # Connecting to the public network my-cluster-network.
-      "name": "my-cluster-network",
-      "ifName": "veth_public",
-    }
-  ]
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-with-additional-networks
+  namespace: my-namespace
+  annotations:
+    network.deckhouse.io/networks-spec: |
+      [
+        {
+          "type": "Network",
+          "name": "my-network",
+          "ifName": "veth_mynet",
+          "mac": "aa:bb:cc:dd:ee:ff"
+        },
+        {
+          "type": "ClusterNetwork",
+          "name": "my-cluster-network",
+          "ifName": "veth_public"
+        }
+      ]
+spec:
+  containers:
+    - name: app
+    # other parameters...
 ```
