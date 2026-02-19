@@ -1,7 +1,3 @@
-@use "components/common/_variables.scss";
-@use 'components/common/_mixins.scss';
-@use 'components/common/_breakpoints.scss';
-
 .glightbox-container {
   background: rgba(0, 0, 0, 0.9) !important;
 }
@@ -18,9 +14,9 @@
 }
 
 .zoom-image-toolbar .gclose {
-  position: static !important;
-  top: auto !important;
-  right: auto !important;
+  position: static;
+  top: auto;
+  right: auto;
 }
 
 .glightbox-clean .gclose,
