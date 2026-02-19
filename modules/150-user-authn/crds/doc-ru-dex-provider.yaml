@@ -351,10 +351,12 @@ spec:
                     ca:
                       description: |
                         Путь к файлу корневого сертификата IdP-сервера.
+                        
                         Не требуется, если сертификат IdP подписан известным CA.
                     caData:
                       description: |
                         CA-сертификат IdP-сервера в формате PEM, закодированный в Base64.
+                        
                         Не требуется, если сертификат IdP подписан известным CA.
                     entityIssuer:
                       description: |
@@ -364,8 +366,9 @@ spec:
                         Значение Issuer, ожидаемое в SAML-ответе от IdP.
                     redirectURI:
                       description: |
-                        URI обратного вызова. Переопределяет URL callback по умолчанию.
-                        Должен быть установлен в `https://<dex-domain>/callback`.
+                        URI обратного вызова.
+                        
+                        Переопределяет URL callback по умолчанию. Должен быть установлен в `https://<dex-domain>/callback`.
                     usernameAttr:
                       description: |
                         SAML-атрибут для маппинга в claim username.

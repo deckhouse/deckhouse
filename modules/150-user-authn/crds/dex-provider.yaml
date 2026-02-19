@@ -543,16 +543,20 @@ spec:
                       type: string
                       description: |
                         Path to a trusted root certificate file for the IdP server.
+                        
                         Not required if the IdP certificate is signed by a well-known CA.
                     caData:
                       type: string
                       description: |
                         Base64-encoded PEM CA certificate of the IdP server.
+                        
                         Not required if the IdP certificate is signed by a well-known CA.
                     entityIssuer:
                       type: string
                       description: |
-                        Issuer value expected in the SAML response. Defaults to the callback URL.
+                        Issuer value expected in the SAML response.
+                        
+                        Defaults to the callback URL.
                     ssoIssuer:
                       type: string
                       description: |
@@ -560,8 +564,9 @@ spec:
                     redirectURI:
                       type: string
                       description: |
-                        Callback URI. Overrides the default callback URL.
-                        Should be set to `https://<dex-domain>/callback`.
+                        Callback URI.
+                        
+                        Overrides the default callback URL. Should be set to `https://<dex-domain>/callback`.
                     usernameAttr:
                       type: string
                       description: |
