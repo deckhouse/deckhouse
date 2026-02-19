@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/patch"
 
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
@@ -116,7 +115,7 @@ func (m *MachineScope) SetNotReady() {
 }
 
 // Fail marks the StaticMachine as failed.
-func (m *MachineScope) Fail(reason capierrors.MachineStatusError, err error) {
+func (m *MachineScope) Fail(reason string, err error) {
 	m.StaticMachine.Status.FailureReason = &reason
 
 	failureMessage := err.Error()

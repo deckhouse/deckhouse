@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -349,7 +348,7 @@ func (r *StaticMachineReconciler) cleanup(
 	estimated := DefaultStaticInstanceCleanupTimeout - time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning && estimated < (10*time.Second) {
-		instanceScope.MachineScope.Fail(capierrors.DeleteMachineError, errors.New("timed out waiting for StaticInstance to clean up"))
+		instanceScope.MachineScope.Fail("DeleteError", errors.New("timed out waiting for StaticInstance to clean up"))
 
 		r.Recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceCleanupTimeoutReached", "Timed out waiting for StaticInstance to clean up")
 
@@ -394,7 +393,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 		if estimated < (10 * time.Second) {
-			instanceScope.MachineScope.Fail(capierrors.UpdateMachineError,
+			instanceScope.MachineScope.Fail("UpdateError",
 				errors.New("timed out waiting for StaticInstance to adopt"))
 
 			r.Recorder.SendWarningEvent(instanceScope.Instance,
@@ -423,7 +422,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		estimated := DefaultStaticInstanceBootstrapTimeout - time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 		if estimated < (10 * time.Second) {
-			instanceScope.MachineScope.Fail(capierrors.CreateMachineError, errors.New("timed out waiting for StaticInstance to bootstrap"))
+			instanceScope.MachineScope.Fail("CreateError", errors.New("timed out waiting for StaticInstance to bootstrap"))
 
 			r.Recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceBootstrapTimeoutReached", "Timed out waiting for StaticInstance to bootstrap")
 

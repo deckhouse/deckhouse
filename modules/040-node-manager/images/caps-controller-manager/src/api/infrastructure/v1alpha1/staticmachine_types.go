@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	"sigs.k8s.io/cluster-api/errors"
 
 	"caps-controller-manager/internal/providerid"
 )
@@ -60,7 +59,7 @@ type StaticMachineStatus struct {
 	// FailureReason will be set in the event that there is a terminal problem
 	// reconciling the StaticMachine and will contain a succinct value suitable
 	// for machine interpretation.
-	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
+	FailureReason *string `json:"failureReason,omitempty"`
 
 	// +optional
 	// FailureMessage will be set in the event that there is a terminal problem
