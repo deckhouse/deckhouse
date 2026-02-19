@@ -129,13 +129,22 @@ func controlPlaneNodeResourcePredicate() predicate.Predicate {
 	}
 }
 
-// nodeControlPlaneLabelPredicate triggers when Node has control plane label (master count or label change).
+// nodeControlPlaneLabelPredicate triggers only when Node labels change
+// Ignores updates to status, capacity, etc.
 func nodeControlPlaneLabelPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			return hasControlPlaneLabel(e.Object)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldNode, okOld := e.ObjectOld.(*corev1.Node)
+			newNode, okNew := e.ObjectNew.(*corev1.Node)
+			if !okOld || !okNew {
+				return false
+			}
+			if equality.Semantic.DeepEqual(oldNode.Labels, newNode.Labels) {
+				return false
+			}
 			return hasControlPlaneLabel(e.ObjectNew) || hasControlPlaneLabel(e.ObjectOld)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
