@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if (.registry).mode }}
-{{- if has .registry.mode (list "Proxy" "Local") }}
+{{- if has (.registry).mode (list "Proxy" "Local") }}
 
 {{ $imgDockerDistribution := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerDistribution") }}
 {{ $imgDockerAuth := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerAuth") }}
@@ -363,5 +362,4 @@ mv "${static_pod_path}" /etc/kubernetes/manifests/registry-nodeservices.yaml
 # Unset proxy envs
 bb-unset-proxy
 
-{{- end }}
 {{- end }}
