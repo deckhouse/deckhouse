@@ -617,6 +617,7 @@ function bootstrap_static() {
       if $ssh_command "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
          cat <<'EOF' > /tmp/install-d8-and-pull-push-images.sh
 #!/bin/bash
+printf 'nameserver 8.8.8.8\nnameserver 8.8.4.4\n' | sudo tee -a /etc/resolv.conf >/dev/null
 apt-get update
 apt-get install -y docker.io docker-compose wget curl chrony
 # setup chrony

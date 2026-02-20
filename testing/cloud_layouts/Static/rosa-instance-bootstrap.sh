@@ -19,4 +19,5 @@ cat > /usr/local/bin/is-instance-bootstrapped << EOF
 set -Eeo pipefail
 cat /etc/rosa-release | grep -q "ROSA Enterprise Linux Server release 7.9 (Cobalt)"
 EOF
+echo 'root:testpass' | chpasswd
 chmod +x /usr/local/bin/is-instance-bootstrapped
