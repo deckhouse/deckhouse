@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: cni-cilium
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-networking-as: manager
+    rbac.deckhouse.io/kind: use
+  name: d8:use:capability:module:cni-cilium:edit
+rules:
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
