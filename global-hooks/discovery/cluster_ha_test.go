@@ -164,10 +164,17 @@ data:
 	})
 
 	Context("Invalid converge state secret", func() {
-		It("Must fail execution due to invalid state.json", func() {
-			Expect(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateFirstMasterNode + stateInvalidPreserveExistingHAMode))
-			}).To(Panic())
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateFirstMasterNode + stateInvalidPreserveExistingHAMode))
+			f.RunHook()
+		})
+
+		It("Must ignore invalid state.json and recalculate HA from master nodes", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(f.ValuesGet("global.discovery.clusterMasterCount").String()).To(Equal("1"))
+			Expect(f.ValuesGet("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool()).To(BeFalse())
 		})
 	})
 })
