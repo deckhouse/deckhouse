@@ -620,8 +620,7 @@ func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(
 
 	if len(podList.Items) > 0 {
 		return false, fmt.Sprintf(
-			"Removing current CNI agent pods (%s) | %d/%d",
-			dsNamespace,
+			"Removing current CNI agent pods | %d/%d",
 			m.Status.NodesTotal-len(podList.Items),
 			m.Status.NodesTotal,
 		), nil
@@ -916,8 +915,8 @@ func (r *CNIMigrationReconciler) checkWebhooksDisabled(ctx context.Context) (boo
 				if failurePolicy != "Ignore" {
 					// Found a blocking webhook
 					return false, fmt.Sprintf(
-						"Waiting for %s %s (policy: %s) to be disabled or removed by Helm",
-						kind,
+						"Waiting for %s %s (policy: %s) to be disabled",
+						strings.ToLower(kind),
 						name,
 						failurePolicy,
 					), nil
@@ -994,7 +993,7 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 				svc := &corev1.Service{}
 				if err := r.Get(ctx, types.NamespacedName{Name: svcName, Namespace: ns}, svc); err != nil {
 					if errors.IsNotFound(err) {
-						return false, fmt.Sprintf("Waiting for service %s/%s for webhook %s", ns, svcName, name), nil
+						return false, fmt.Sprintf("Waiting for service %s/%s for %s %s", ns, svcName, strings.ToLower(kind), name), nil
 					}
 					return false, "", err
 				}
@@ -1017,7 +1016,8 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 
 				if len(pods.Items) == 0 {
 					return false, fmt.Sprintf(
-						"Waiting for pods for webhook %s (service %s/%s)",
+						"Waiting for pods for %s %s (service %s/%s)",
+						strings.ToLower(kind),
 						name,
 						ns,
 						svcName,
@@ -1034,7 +1034,8 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 
 				if !anyReady {
 					return false, fmt.Sprintf(
-						"Waiting for ready pods for webhook %s (service %s/%s)",
+						"Waiting for ready pods for %s %s (service %s/%s)",
+						strings.ToLower(kind),
 						name,
 						ns,
 						svcName,
