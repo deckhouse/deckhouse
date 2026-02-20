@@ -57,9 +57,20 @@ var _ runtime.Object = (*ModuleConfig)(nil)
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=mc
+// +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=.spec.enabled,description="Module enabled state"
+// +kubebuilder:printcolumn:name="UpdatePolicy",type=string,JSONPath=.spec.updatePolicy,description="The update policy of the module.",priority=1
+// +kubebuilder:printcolumn:name="Source",type=string,JSONPath=.spec.source,description="The source of the module.",priority=1
+// +kubebuilder:printcolumn:name="Version",type=string,JSONPath=.status.version,description="Version of settings schema in use"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=.metadata.creationTimestamp,description="CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
+// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=.status.message,description="Additional information"
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +kubebuilder:metadata:labels="backup.deckhouse.io/cluster-config=true"
 
-// ModuleConfig is a configuration for module or for global config values.
+// ModuleConfig defines the configuration of the Deckhouse Kubernetes Platform module (module parameters).
+// The name of the ModuleConfig resource must match the name of the module (for example, `control-plane-manager` for the `control-plane-manager` module).
 type ModuleConfig struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -67,23 +78,48 @@ type ModuleConfig struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:validation:Required
 	Spec ModuleConfigSpec `json:"spec"`
 
 	Status ModuleConfigStatus `json:"status,omitempty"`
 }
 
 type ModuleConfigSpec struct {
-	Version      int    `json:"version,omitempty"`
-	Enabled      *bool  `json:"enabled,omitempty"`
+	// Version of settings schema.
+	// +optional
+	Version int `json:"version,omitempty"`
+	// Enables or disables the module.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+	// Module update policy.
+	// +optional
 	UpdatePolicy string `json:"updatePolicy,omitempty"`
-	Source       string `json:"source,omitempty"`
-	Maintenance  string `json:"maintenance,omitempty"`
+	// The source of the module it provided by one (otherwise empty).
+	// +optional
+	Source string `json:"source,omitempty"`
+	// Defines the module maintenance mode.
+	//
+	// - `NoResourceReconciliation`: A mode for developing or tweaking the module.
+	//
+	//   In this mode:
+	//
+	//   - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
+	//   - Resource monitoring is disabled, which prevents deleted resources from being restored.
+	//   - All the module's resources are labeled with `maintenance: NoResourceReconciliation`.
+	//   - The `ModuleIsInMaintenanceMode` alert is triggered.
+	// +optional
+	// +kubebuilder:validation:Enum=NoResourceReconciliation
+	Maintenance string `json:"maintenance,omitempty"`
+	// Module settings.
+	// +optional
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Settings *MappedFields `json:"settings,omitempty"`
 }
 
 type ModuleConfigStatus struct {
+	// Version of settings schema in use
 	Version string `json:"version"`
+	// Additional information
 	Message string `json:"message"`
 }
 

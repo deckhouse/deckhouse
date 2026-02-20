@@ -43,9 +43,16 @@ var _ runtime.Object = (*ModulePullOverride)(nil)
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=mpo
+// +kubebuilder:printcolumn:name="Updated",type="date",JSONPath=".status.updatedAt",format="date-time",description="When the module was last updated."
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.message",description="Detailed description."
+// +kubebuilder:printcolumn:name="Rollback",type="string",JSONPath=".spec.rollback",description="Indicates whether the module release should be rollback after deleting mpo."
+// +kubebuilder:storageversion
 
-// ModulePullOverride object
+// ModulePullOverride defines the resource configuration for downloading specific versions of Deckhouse modules.
+//
+// Caution. This resource is intended for development and debugging environments only.
+// Using it in production clusters is not recommended. Support for the resource might be removed in future Deckhouse Kubernetes Platform versions.
 type ModulePullOverride struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -53,24 +60,49 @@ type ModulePullOverride struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of an ModulePullOverride.
+	// Spec defines the behavior of a ModulePullOverride.
+	// +kubebuilder:validation:Required
 	Spec ModulePullOverrideSpec `json:"spec"`
 
-	// Status of an ModulePullOverride.
+	// Status of a ModulePullOverride.
+	// +optional
 	Status ModulePullOverrideStatus `json:"status,omitempty"`
 }
 
+// ModulePullOverrideSpec defines the desired state of ModulePullOverride
 type ModulePullOverrideSpec struct {
-	ImageTag     string          `json:"imageTag"`
-	ScanInterval libapi.Duration `json:"scanInterval"`
-	Rollback     bool            `json:"rollback"`
+	// Module container image tag, which will be pulled.
+	// +kubebuilder:validation:Required
+	ImageTag string `json:"imageTag"`
+
+	// Scan interval for checking the image digest. If the digest changes, the module is updated.
+	// +kubebuilder:default="15s"
+	// +optional
+	ScanInterval libapi.Duration `json:"scanInterval,omitempty"`
+
+	// Indicates whether the module release should be rollback after deleting mpo.
+	// +kubebuilder:default=false
+	// +optional
+	Rollback bool `json:"rollback,omitempty"`
 }
 
+// ModulePullOverrideStatus defines the observed state of ModulePullOverride
 type ModulePullOverrideStatus struct {
-	UpdatedAt   metav1.Time `json:"updatedAt"`
-	Message     string      `json:"message"`
-	ImageDigest string      `json:"imageDigest"`
-	Weight      uint32      `json:"weight"`
+	// When the module was last updated.
+	// +optional
+	UpdatedAt metav1.Time `json:"updatedAt,omitempty"`
+
+	// Details of the resource status.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Digest of the module image.
+	// +optional
+	ImageDigest string `json:"imageDigest,omitempty"`
+
+	// Module weight.
+	// +optional
+	Weight int `json:"weight,omitempty"`
 }
 
 // GetModuleName returns the module's name of the module pull override
@@ -84,7 +116,7 @@ func (mo *ModulePullOverride) GetReleaseVersion() string {
 }
 
 // GetWeight returns the weight of the module
-func (mo *ModulePullOverride) GetWeight() uint32 {
+func (mo *ModulePullOverride) GetWeight() int {
 	return mo.Status.Weight
 }
 
