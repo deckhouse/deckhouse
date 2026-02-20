@@ -233,8 +233,8 @@ func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageN
 	// Query both ApplicationPackageVersion and ModulePackageVersion lists since
 	// the package type is not known yet at this point.
 	matchLabels := client.MatchingLabels{
-		v1alpha1.ApplicationPackageVersionLabelRepository: s.repo.Name,
-		v1alpha1.ApplicationPackageVersionLabelPackage:    packageName,
+		v1alpha1.PackageVersionLabelRepository: s.repo.Name,
+		v1alpha1.PackageVersionLabelPackage:    packageName,
 	}
 
 	var versions []*semver.Version
