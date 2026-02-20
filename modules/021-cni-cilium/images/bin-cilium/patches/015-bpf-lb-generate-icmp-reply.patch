@@ -148,7 +148,7 @@ index a3243d93e3..bd1cbb93a2 100644
  			cDefinesMap["NODEPORT_NEIGH4"] = neighborsmap.Map4Name
  			cDefinesMap["NODEPORT_NEIGH4_SIZE"] = fmt.Sprintf("%d", option.Config.NeighMapEntriesGlobal)
 diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
-index 1a25f14957..b57f3d2523 100644
+index 87623dbed9..8db9bba793 100644
 --- a/pkg/defaults/defaults.go
 +++ b/pkg/defaults/defaults.go
 @@ -290,6 +290,8 @@ const (
@@ -329,7 +329,7 @@ index 12686cec41..fa50381045 100644
  }
  
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index e4390c0622..e77a0677eb 100644
+index 0cae99631d..022c7d8190 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
 @@ -245,6 +245,9 @@ const (
@@ -342,7 +342,7 @@ index e4390c0622..e77a0677eb 100644
  	// NodePortMode indicates in which mode NodePort implementation should run
  	// ("snat", "dsr" or "hybrid")
  	NodePortMode = "node-port-mode"
-@@ -1853,6 +1856,9 @@ type DaemonConfig struct {
+@@ -1865,6 +1868,9 @@ type DaemonConfig struct {
  	// EnableSVCSourceRangeCheck enables check of loadBalancerSourceRanges
  	EnableSVCSourceRangeCheck bool
  
@@ -352,7 +352,7 @@ index e4390c0622..e77a0677eb 100644
  	// EnableHealthDatapath enables IPIP health probes data path
  	EnableHealthDatapath bool
  
-@@ -2902,6 +2908,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+@@ -2918,6 +2924,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
  	c.EnableUnreachableRoutes = vp.GetBool(EnableUnreachableRoutes)
  	c.EnableNodePort = vp.GetBool(EnableNodePort)
  	c.EnableSVCSourceRangeCheck = vp.GetBool(EnableSVCSourceRangeCheck)
