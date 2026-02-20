@@ -302,18 +302,6 @@ func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfig
 }
 
 func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
-	msgChan := make(chan map[string][]string)
-	errorChan := make(chan error)
-
-	go func() {
-		err := CreateResourcesSilentLoop(ctx, kubeCl, resources, checkers, tasks, msgChan)
-		errorChan <- err
-	}()
-
-	return waitForResources(msgChan, errorChan)
-}
-
-func CreateResourcesSilentLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask, messageChan chan map[string][]string) error {
 	endChannel := time.After(app.ResourcesTimeout)
 
 	ticker := time.NewTicker(10 * time.Second)
@@ -361,7 +349,7 @@ func CreateResourcesSilentLoop(ctx context.Context, kubeCl *client.KubernetesCli
 			if len(createdResources) > 0 {
 				msg["created"] = createdResources
 			}
-			messageChan <- msg
+			logResources(msg)
 		}
 		if ready && err == nil {
 			return nil
@@ -371,7 +359,7 @@ func CreateResourcesSilentLoop(ctx context.Context, kubeCl *client.KubernetesCli
 		case <-endChannel:
 			if len(resources) > 0 {
 				_ = log.Process("Create Resources", "Failed to create", func() error {
-					log.InfoF("%s\n", strings.Join(remained, "\n"))
+					log.WarnF("%s\n", strings.Join(remained, "\n"))
 					return nil
 				})
 				return fmt.Errorf(
@@ -389,19 +377,8 @@ func CreateResourcesSilentLoop(ctx context.Context, kubeCl *client.KubernetesCli
 	}
 }
 
-func waitForResources(msgChan chan map[string][]string, errorChan chan error) error {
-	for {
-		select {
-		case chanErr := <-errorChan:
-			return chanErr
-		case msg := <-msgChan:
-			logResources(msg)
-		}
-	}
-}
-
 func logResources(res map[string][]string) {
-	_ = log.Process("Create Resources", "Resource rediness check", func() error {
+	_ = log.Process("Create Resources", "Resource readiness check", func() error {
 		remained, ok := res["remained"]
 		if ok {
 			for i, s := range remained {
@@ -429,11 +406,6 @@ func logResources(res map[string][]string) {
 
 		return nil
 	})
-}
-
-func customMgs(msg string, remained []string) string {
-	msg += strings.Join(remained, "\n")
-	return msg
 }
 
 func getUnstructuredName(obj *unstructured.Unstructured) string {

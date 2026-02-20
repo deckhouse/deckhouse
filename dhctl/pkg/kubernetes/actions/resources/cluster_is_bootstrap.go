@@ -250,12 +250,9 @@ func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 		n.attempts++
 	}()
 
-	notBootstrappedMsg := "The cluster has not been bootstrapped yet. Waiting for at least one non-master node in Ready status.\n"
-
 	ok, err := n.hasBootstrappedCM(ctx)
 	if err != nil {
 		logger.LogDebugF("Error while checking cluster state: %v\n", err)
-		logger.LogInfoF(notBootstrappedMsg)
 		return false, nil
 	}
 
