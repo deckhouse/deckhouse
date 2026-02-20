@@ -1,0 +1,14 @@
+ci:
+  features:
+    - summary: Added the ability to use a .trivyignore file when checking DKP components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17793
+  fixes:
+    - summary: Increase e2e bootstrap timeouts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17942
+    - summary: >-
+        Convert Docker authorization configuration parsing to the jq utility to avoid relying on
+        quotes and spaces.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17912
+    - summary: wait for bastion SSH before provisioning
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17818
+
