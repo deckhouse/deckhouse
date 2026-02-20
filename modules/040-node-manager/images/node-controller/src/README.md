@@ -149,67 +149,6 @@ kubectl get nodegroups.v1alpha2.deckhouse.io
 └─────────────────┘
 ```
 
-### Status Reconciliation Flow
-
-```
-┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────────┐
-│ NodeGroup│  │   Node   │  │ Machine  │  │ MachineDeployment │
-│  (watch) │  │  (watch) │  │  (watch) │  │     (watch)       │
-└────┬─────┘  └────┬─────┘  └────┬─────┘  └────────┬──────────┘
-     │             │             │                  │
-     └─────────────┴─────────────┴──────────────────┘
-                           │
-                           ▼
-          ┌────────────────────────────────┐
-          │  NodeGroupStatusReconciler     │
-          │                                │
-          │  For each NodeGroup:           │
-          │  ┌───────────────────────────┐ │
-          │  │ 1. Count nodes by label   │ │
-          │  │    node.deckhouse.io/group │ │
-          │  │                           │ │
-          │  │ 2. Count ready nodes      │ │
-          │  │    (condition Ready=True)  │ │
-          │  │                           │ │
-          │  │ 3. Count upToDate nodes   │ │
-          │  │    (checksum matches NG)   │ │
-          │  │                           │ │
-          │  │ 4. For CloudEphemeral:    │ │
-          │  │    ├─ machines count       │ │
-          │  │    │  (MCM Machine CRD)    │ │
-          │  │    ├─ desired from         │ │
-          │  │    │  MachineDeployment    │ │
-          │  │    └─ min/max from         │ │
-          │  │       cloudInstances spec  │ │
-          │  │                           │ │
-          │  │ 5. For non-CloudEphemeral:│ │
-          │  │    instances = nodes count │ │
-          │  │    desired = nodes count   │ │
-          │  │                           │ │
-          │  │ 6. Build conditions:      │ │
-          │  │    ├─ Ready               │ │
-          │  │    ├─ Updating            │ │
-          │  │    ├─ WaitingForDisrupt.  │ │
-          │  │    ├─ Error               │ │
-          │  │    ├─ Scaling (Ephemeral) │ │
-          │  │    └─ Frozen (Ephemeral)  │ │
-          │  │                           │ │
-          │  │ 7. Build conditionSummary │ │
-          │  │                           │ │
-          │  │ 8. Merge-patch status     │ │
-          │  │    (preserves other       │ │
-          │  │     controller fields)    │ │
-          │  └───────────────────────────┘ │
-          └────────────────────────────────┘
-                           │
-                           ▼
-                  ┌──────────────┐
-                  │  NodeGroup   │
-                  │  .status     │
-                  │  (patched)   │
-                  └──────────────┘
-```
-
 ## API Versions
 
 | Version | Role | nodeType values |
@@ -233,42 +172,294 @@ v1 → v1alpha1/v1alpha2:
   Static         → Static
 ```
 
+## How Shell-Operator Works
+
+Shell-Operator is a framework for building Kubernetes operators using scripts or Go functions.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           SHELL-OPERATOR                                     │
+│                                                                             │
+│  ╔═══════════════════════════════════════════════════════════════════════╗ │
+│  ║  STARTUP                                                               ║ │
+│  ║                                                                       ║ │
+│  ║  1. Reads all hooks from /hooks/                                      ║ │
+│  ║  2. For each hook, parses bindings (which resources to watch)         ║ │
+│  ║  3. For each binding:                                                 ║ │
+│  ║     • Makes List request to API Server (gets all objects)             ║ │
+│  ║     • Applies FilterFunc (extracts only needed fields)                ║ │
+│  ║     • Saves result in cache (separate cache per binding)              ║ │
+│  ║     • Opens Watch connection (for receiving events)                   ║ │
+│  ╚═══════════════════════════════════════════════════════════════════════╝ │
+│                                                                             │
+│  ╔═══════════════════════════════════════════════════════════════════════╗ │
+│  ║  RUNTIME                                                               ║ │
+│  ║                                                                       ║ │
+│  ║      Watch ◄═══════════════════════════════════════ API Server        ║ │
+│  ║        │                                                              ║ │
+│  ║        │  Event: "NodeGroup system changed"                           ║ │
+│  ║        │  • Streaming connection (not polling)                        ║ │
+│  ║        │  • API Server pushes events                                  ║ │
+│  ║        ▼                                                              ║ │
+│  ║   ┌─────────────────────────────────────────────────────────────┐    ║ │
+│  ║   │  FilterFunc(object)                                          │    ║ │
+│  ║   │  • Extracts only needed fields                              │    ║ │
+│  ║   │  • NodeGroup ~5KB → statusNodeGroup ~100 bytes              │    ║ │
+│  ║   └─────────────────────────────────────────────────────────────┘    ║ │
+│  ║        │                                                              ║ │
+│  ║        ▼                                                              ║ │
+│  ║   cachedObjects[binding] = FilterFunc result                          ║ │
+│  ║        │                                                              ║ │
+│  ║        ▼                                                              ║ │
+│  ║   Queue.Add(event)                                                    ║ │
+│  ╚═══════════════════════════════════════════════════════════════════════╝ │
+│                                                                             │
+│  ╔═══════════════════════════════════════════════════════════════════════╗ │
+│  ║  HOOK EXECUTION                                                        ║ │
+│  ║                                                                       ║ │
+│  ║   Build snapshots from cache (NO API requests):                       ║ │
+│  ║   snapshots = {                                                       ║ │
+│  ║     "ngs":   cachedObjects["ngs"],                                    ║ │
+│  ║     "nodes": cachedObjects["nodes"],                                  ║ │
+│  ║   }                                                                   ║ │
+│  ║        │                                                              ║ │
+│  ║        ▼                                                              ║ │
+│  ║   hook.Run(input)                                                     ║ │
+│  ║   • input.Snapshots contains all data                                 ║ │
+│  ║   • Hook reads: input.Snapshots.Get("ngs")                            ║ │
+│  ║   • Hook creates patches: input.PatchCollector.Patch(...)             ║ │
+│  ║        │                                                              ║ │
+│  ║        ▼                                                              ║ │
+│  ║   Apply patches → PATCH to API Server (only API request)              ║ │
+│  ╚═══════════════════════════════════════════════════════════════════════╝ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## How Node-Controller Works
+
+Node-Controller uses controller-runtime library with native Kubernetes patterns.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           NODE-CONTROLLER                                    │
+│                                                                             │
+│  ╔═══════════════════════════════════════════════════════════════════════╗ │
+│  ║  STARTUP                                                               ║ │
+│  ║                                                                       ║ │
+│  ║  1. Controller-manager starts                                         ║ │
+│  ║  2. Creates Shared Informer Cache:                                    ║ │
+│  ║     • Makes List for each resource type                               ║ │
+│  ║     • Saves FULL objects (no FilterFunc)                              ║ │
+│  ║     • Opens Watch connections                                         ║ │
+│  ║  3. Starts Webhook Server on :9443                                    ║ │
+│  ║  4. Registers Reconcilers                                             ║ │
+│  ║                                                                       ║ │
+│  ║  Key: ONE shared cache for all components                             ║ │
+│  ╚═══════════════════════════════════════════════════════════════════════╝ │
+│                                                                             │
+│  ╔═══════════════════════════════════════════════════════════════════════╗ │
+│  ║  SHARED INFORMER CACHE                                                 ║ │
+│  ║                                                                       ║ │
+│  ║   NodeGroup:         [master, system, worker]                         ║ │
+│  ║   Node:              [node-1, node-2, node-3, ...]                    ║ │
+│  ║   Machine:           [machine-1, machine-2, ...]                      ║ │
+│  ║   MachineDeployment: [md-system, md-worker, ...]                      ║ │
+│  ║                                                                       ║ │
+│  ║   • Stores FULL objects (all fields available)                        ║ │
+│  ║   • Updated automatically via Watch                                   ║ │
+│  ║   • All components read from ONE cache                                ║ │
+│  ║                         ▲                                             ║ │
+│  ║                         │ Watch (streaming)                           ║ │
+│  ║                    API Server                                         ║ │
+│  ╚═══════════════════════════════════════════════════════════════════════╝ │
+│                                                                             │
+│            ┌────────────────────┼────────────────────┐                     │
+│            ▼                    ▼                    ▼                     │
+│  ╔═════════════════╗ ╔═════════════════╗ ╔═════════════════╗              │
+│  ║   VALIDATING    ║ ║   CONVERSION    ║ ║   RECONCILER    ║              │
+│  ║    WEBHOOK      ║ ║    WEBHOOK      ║ ║                 ║              │
+│  ║                 ║ ║                 ║ ║                 ║              │
+│  ║ Called BEFORE   ║ ║ Called for      ║ ║ Called when     ║              │
+│  ║ saving to etcd  ║ ║ version convert ║ ║ resources change║              │
+│  ║                 ║ ║                 ║ ║                 ║              │
+│  ║ r.Get() → CACHE ║ ║ r.Get() → CACHE ║ ║ r.Get() → CACHE ║              │
+│  ╚═════════════════╝ ╚═════════════════╝ ╚═════════════════╝              │
+│                                                                             │
+│  ╔═══════════════════════════════════════════════════════════════════════╗ │
+│  ║  RECONCILER                                                            ║ │
+│  ║                                                                       ║ │
+│  ║   Reconcile(ctx, Request{Name: "system"})                             ║ │
+│  ║                                                                       ║ │
+│  ║   1. r.Get(ctx, name, &ng)       ──► reads from CACHE                 ║ │
+│  ║   2. r.List(ctx, &nodes, ...)    ──► reads from CACHE                 ║ │
+│  ║   3. r.List(ctx, &machines, ...) ──► reads from CACHE                 ║ │
+│  ║   4. Calculate status                                                 ║ │
+│  ║   5. r.Status().Patch()          ──► ONLY API request                 ║ │
+│  ║                                                                       ║ │
+│  ║   Built-in: rate limiting, backoff, leader election, metrics          ║ │
+│  ╚═══════════════════════════════════════════════════════════════════════╝ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Key Differences
+
+### Cache Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SHELL-OPERATOR                                                             │
+│                                                                             │
+│  Hook 1: cache [NodeGroup, Node, Machine, MachineDeployment]                │
+│  Hook 2: cache [NodeGroup, Secret, ModuleConfig, Endpoints]                 │
+│  Hook 3: cache [NodeGroup, Node]                                            │
+│                                                                             │
+│  → NodeGroup stored in 3 caches = memory duplication                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  NODE-CONTROLLER                                                            │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    SHARED INFORMER CACHE                             │   │
+│  │                                                                     │   │
+│  │  NodeGroup ─────┬────► Validating Webhook                           │   │
+│  │                 ├────► Conversion Webhook                           │   │
+│  │                 └────► Reconciler                                   │   │
+│  │                                                                     │   │
+│  │  One cache, all components read from it                             │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Controller Registration
+
+### Shell-Operator Style
+
+```go
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+    Queue: "/modules/node-manager/update_ngs_statuses",
+    Kubernetes: []go_hook.KubernetesConfig{
+        {
+            Name:       "ngs",
+            Kind:       "NodeGroup",
+            ApiVersion: "deckhouse.io/v1",
+            FilterFunc: updStatusFilterNodeGroup,  // filtering
+        },
+        {
+            Name:          "nodes",
+            Kind:          "Node",
+            LabelSelector: &metav1.LabelSelector{...},
+            FilterFunc:    updStatusFilterNode,
+        },
+    },
+}, handleUpdateNGStatus)
+```
+
+### Node-Controller Style
+
+```go
+// Step 1: Auto-register controller
+var _ = Register("NodeGroupStatus", SetupNodeGroupStatusController)
+
+// Step 2: Setup function
+func SetupNodeGroupStatusController(mgr ctrl.Manager) error {
+    return (&NodeGroupStatusReconciler{
+        Client:   mgr.GetClient(),
+        Recorder: mgr.GetEventRecorderFor("node-controller"),
+    }).SetupWithManager(mgr)
+}
+
+// Step 3: Configure watches
+func (r *NodeGroupStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
+    return ctrl.NewControllerManagedBy(mgr).
+        For(&v1.NodeGroup{}).                           // primary resource
+        Watches(                                        // secondary: Node
+            &corev1.Node{},
+            handler.EnqueueRequestsFromMapFunc(r.nodeToNodeGroup),
+            builder.WithPredicates(nodeHasGroupLabel),
+        ).
+        Watches(                                        // secondary: Machine
+            &unstructured.Unstructured{...MCMMachineGVK},
+            handler.EnqueueRequestsFromMapFunc(r.machineToNodeGroup),
+        ).
+        Watches(                                        // secondary: MachineDeployment
+            &unstructured.Unstructured{...MCMMachineDeploymentGVK},
+            handler.EnqueueRequestsFromMapFunc(r.mdToNodeGroup),
+        ).
+        Named("nodegroup-status").
+        Complete(r)
+}
+```
+
+### Registration Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1. Go loads package → var _ = Register(...) executes                       │
+│                                                                             │
+│  2. Register() adds to global controllers slice:                            │
+│     controllers = [{name: "NodeGroupStatus", setup: SetupFunc}]             │
+│                                                                             │
+│  3. main() calls controller.SetupAll(mgr, disabled)                         │
+│                                                                             │
+│  4. SetupAll loops through controllers, calls setup(mgr) for each           │
+│                                                                             │
+│  5. Setup configures:                                                       │
+│     • For(&NodeGroup{})           — primary, Reconcile gets its name        │
+│     • Watches(&Node{})            — secondary, mapFunc → primary name       │
+│     • Watches(&Machine{})         — secondary, mapFunc → primary name       │
+│     • Predicate                   — filters events (not objects)            │
+│                                                                             │
+│  6. mgr.Start() runs informers and reconcile loop                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ## Project Structure
 
 ```
-node-controller/
+node-controller/src/
 ├── api/deckhouse.io/
-│   ├── v1/                         # Hub version (storage)
+│   ├── v1/                                    # Hub version (storage)
 │   │   ├── groupversion_info.go
-│   │   ├── nodegroup_types.go      # Type definitions with all fields
-│   │   ├── nodegroup_conversion.go # Hub() marker
+│   │   ├── nodegroup_types.go                 # Type definitions with all fields
+│   │   ├── nodegroup_conversion.go            # Hub() marker
 │   │   └── zz_generated.deepcopy.go
-│   ├── v1alpha1/                   # Spoke version
+│   ├── v1alpha1/                              # Spoke version
 │   │   ├── doc.go
 │   │   ├── groupversion_info.go
 │   │   ├── nodegroup_types.go
-│   │   ├── nodegroup_conversion.go # ConvertTo/ConvertFrom
-│   │   ├── conversion.go          # Custom field mappings
+│   │   ├── nodegroup_conversion.go            # ConvertTo/ConvertFrom
+│   │   ├── conversion.go                      # Custom field mappings
 │   │   └── zz_generated.deepcopy.go
-│   └── v1alpha2/                   # Spoke version (+ NotManaged, ContainerdV2)
-│       └── ...
+│   └── v1alpha2/                              # Spoke version (+ NotManaged, ContainerdV2)
+│       ├── doc.go
+│       ├── groupversion_info.go
+│       ├── nodegroup_types.go
+│       ├── nodegroup_conversion.go
+│       └── zz_generated.deepcopy.go
 ├── cmd/
-│   └── main.go                     # Entry point, manager setup
+│   └── main.go                                # Entry point, manager setup
 ├── internal/
 │   ├── controller/
-│   │   └── nodegroup_status_controller.go  # Status reconciler
+│   │   ├── register_controller.go             # Registry + SetupAll for auto-registration
+│   │   ├── nodegroup_status_controller.go     # Status reconciler (init() auto-registers)
+│   │   └── nodegroup_status_controller_test.go
 │   └── webhook/
-│       ├── nodegroup_webhook.go             # Validation webhook (17 checks)
-│       └── nodegroup_conversion_handler.go  # Conversion webhook
+│       ├── nodegroup_webhook.go               # Validation webhook (17 checks)
+│       ├── nodegroup_webhook_test.go
+│       ├── nodegroup_conversion_handler.go    # Conversion webhook
+│       └── nodegroup_conversion_handler_test.go
 ├── docs/
-│   ├── conversion-migration.md
 │   └── hooks-migration.md
 ├── hack/
 │   └── boilerplate.go.txt
 ├── go.mod
 ├── go.sum
 ├── Makefile
-└── PROJECT
+├── PROJECT
+└── README.md
 ```
 
 ## Building
