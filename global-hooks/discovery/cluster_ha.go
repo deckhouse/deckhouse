@@ -76,8 +76,8 @@ func applyConvergeStateFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	var st convergeState
 	if err := json.Unmarshal(stateBytes, &st); err != nil {
-		slog.Info("Failed to unmarshal converge state", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("unmarshal converge state: %w", err)
+		slog.Warn("Failed to unmarshal converge state, falling back to autodetection", slog.String("error", err.Error()))
+		return false, nil
 	}
 
 	return st.PreserveExistingHAMode, nil
@@ -91,6 +91,7 @@ func isHighAvailabilityCluster(_ context.Context, input *go_hook.HookInput) erro
 	preserveExistingHAMode := false
 	for v, err := range sdkobjectpatch.SnapshotIter[bool](convergeStateSnap) {
 		if err != nil {
+			input.Logger.Info("Failed to parse converge_state snapshot item, skipping", slog.String("error", err.Error()))
 			continue
 		}
 		if v {

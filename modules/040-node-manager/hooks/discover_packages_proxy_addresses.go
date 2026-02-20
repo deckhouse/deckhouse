@@ -29,6 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -56,8 +58,28 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: packagesProxyPodFilter,
 		},
+		{
+			Name:       "nodes",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			FilterFunc: packagesProxyNodeFilter,
+		},
 	},
 }, handlePackagesProxyEndpoints)
+
+type packagesProxyPodInfo struct {
+	HostIP   string `json:"hostIP"`
+	NodeName string `json:"nodeName"`
+}
+
+type packagesProxyNodeInfo struct {
+	Name            string `json:"name"`
+	IsReady         bool   `json:"isReady"`
+	IsDeleting      bool   `json:"isDeleting"`
+	IsUnschedulable bool   `json:"isUnschedulable"`
+	IsManaged       bool   `json:"isManaged"`
+	IsControlPlane  bool   `json:"isControlPlane"`
+}
 
 func packagesProxyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var isReady bool
@@ -76,11 +98,57 @@ func packagesProxyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	if !isReady {
 		return nil, nil
 	}
-	return fmt.Sprintf("%s:%d", pod.Status.HostIP, packagesProxyPort), nil
+	return packagesProxyPodInfo{
+		HostIP:   pod.Status.HostIP,
+		NodeName: pod.Spec.NodeName,
+	}, nil
+}
+
+func packagesProxyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var isReady bool
+
+	node := &corev1.Node{}
+	err := sdk.FromUnstructured(obj, node)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse node object from unstructured: %v", err)
+	}
+
+	for _, cond := range node.Status.Conditions {
+		if cond.Type == corev1.NodeReady && cond.Status == corev1.ConditionTrue {
+			isReady = true
+			break
+		}
+	}
+
+	_, hasControlPlaneLabel := node.Labels["node-role.kubernetes.io/control-plane"]
+	_, hasMasterLabel := node.Labels["node-role.kubernetes.io/master"]
+	_, hasNodeGroupLabel := node.Labels["node.deckhouse.io/group"]
+
+	return packagesProxyNodeInfo{
+		Name:            node.Name,
+		IsReady:         isReady,
+		IsDeleting:      node.DeletionTimestamp != nil,
+		IsUnschedulable: node.Spec.Unschedulable,
+		IsManaged:       hasNodeGroupLabel,
+		IsControlPlane:  hasControlPlaneLabel || hasMasterLabel,
+	}, nil
 }
 
 func handlePackagesProxyEndpoints(_ context.Context, input *go_hook.HookInput) error {
-	endpointsSet := set.NewFromSnapshot(input.Snapshots.Get("packages_proxy"))
+	nodeByName, err := collectPackagesProxyNodes(input)
+	if err != nil {
+		return err
+	}
+
+	endpointsSet, fallbackEndpointsSet, err := collectPackagesProxyEndpoints(input, nodeByName)
+	if err != nil {
+		return err
+	}
+
+	if endpointsSet.Size() == 0 && fallbackEndpointsSet.Size() > 0 {
+		endpointsSet = fallbackEndpointsSet
+	}
+
 	endpointsList := endpointsSet.Slice() // sorted
 
 	if len(endpointsList) == 0 {
@@ -91,4 +159,65 @@ func handlePackagesProxyEndpoints(_ context.Context, input *go_hook.HookInput) e
 	input.Values.Set("nodeManager.internal.packagesProxy.addresses", endpointsList)
 
 	return nil
+}
+
+func collectPackagesProxyNodes(input *go_hook.HookInput) (map[string]packagesProxyNodeInfo, error) {
+	nodeByName := make(map[string]packagesProxyNodeInfo)
+
+	for node, err := range sdkobjectpatch.SnapshotIter[packagesProxyNodeInfo](input.Snapshots.Get("nodes")) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
+		}
+		nodeByName[node.Name] = node
+	}
+
+	return nodeByName, nil
+}
+
+func collectPackagesProxyEndpoints(input *go_hook.HookInput, nodeByName map[string]packagesProxyNodeInfo) (set.Set, set.Set, error) {
+	endpointsSet := set.New()
+	fallbackEndpointsSet := set.New()
+
+	for pod, err := range sdkobjectpatch.SnapshotIter[packagesProxyPodInfo](input.Snapshots.Get("packages_proxy")) {
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to iterate over 'packages_proxy' snapshots: %v", err)
+		}
+		processPackagesProxyPod(pod, nodeByName, endpointsSet, fallbackEndpointsSet)
+	}
+
+	return endpointsSet, fallbackEndpointsSet, nil
+}
+
+func processPackagesProxyPod(
+	pod packagesProxyPodInfo,
+	nodeByName map[string]packagesProxyNodeInfo,
+	endpointsSet set.Set,
+	fallbackEndpointsSet set.Set,
+) {
+	if pod.NodeName == "" {
+		return
+	}
+
+	node, ok := nodeByName[pod.NodeName]
+	if !ok {
+		return
+	}
+
+	if !node.IsReady || !node.IsManaged || node.IsUnschedulable {
+		return
+	}
+
+	endpoint := fmt.Sprintf("%s:%d", pod.HostIP, packagesProxyPort)
+
+	if !node.IsControlPlane {
+		fallbackEndpointsSet.Add(endpoint)
+		return
+	}
+
+	if node.IsDeleting {
+		return
+	}
+
+	fallbackEndpointsSet.Add(endpoint)
+	endpointsSet.Add(endpoint)
 }

@@ -54,7 +54,8 @@ If you want to drop the cache and continue, please run dhctl with "--yes-i-want-
 )
 
 type (
-	StateChecker func([]byte) error
+	StateChecker       func([]byte) error
+	VariablesRefresher func(context.Context) ([]byte, error)
 )
 
 type destructiveChangesReport struct {
@@ -110,6 +111,8 @@ type Runner struct {
 	infraExecutor Executor
 
 	hook InfraActionHook
+
+	variablesRefresher VariablesRefresher
 }
 
 func NewRunner(cfg *config.MetaConfig, stateCache state.Cache, executor Executor) *Runner {
@@ -212,6 +215,11 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 	}
 
 	r.variablesPath = tmpFile.Name()
+	return r
+}
+
+func (r *Runner) WithVariablesRefresher(refresher VariablesRefresher) *Runner {
+	r.variablesRefresher = refresher
 	return r
 }
 
@@ -418,6 +426,22 @@ func (r *Runner) Apply(ctx context.Context) error {
 			return nil
 		}
 
+		if r.changesInPlan != plan.HasNoChanges && r.hasVMDestruction {
+			didRefresh, err := r.refreshVariablesAfterBeforeAction(ctx)
+			if err != nil {
+				return err
+			}
+
+			if r.variablesRefresher != nil && r.planPath != "" {
+				if didRefresh {
+					r.logger.LogInfoLn("Refreshed variables are present. Applying without saved plan to use updated var-file.")
+				} else {
+					r.logger.LogInfoLn("Variables refresher returned empty data. Applying without saved plan to avoid stale variables embedded in plan.")
+				}
+				r.planPath = ""
+			}
+		}
+
 		if !govalue.IsNil(r.stateChecker) {
 			err = r.logger.LogProcess("default", "infrastructure state check before apply...", func() error {
 				if r.statePath == "" {
@@ -466,6 +490,35 @@ func (r *Runner) Apply(ctx context.Context) error {
 
 		return errRes.ErrorOrNil()
 	})
+}
+
+func (r *Runner) refreshVariablesAfterBeforeAction(ctx context.Context) (bool, error) {
+	if r.variablesRefresher == nil {
+		return false, nil
+	}
+
+	r.logger.LogInfoLn("Refreshing infrastructure variables after before-action hook.")
+	variablesData, err := r.variablesRefresher(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to refresh infrastructure variables after before-action hook: %w", err)
+	}
+
+	if len(variablesData) == 0 {
+		r.logger.LogInfoLn("Refreshed infrastructure variables are empty. Keeping existing variables.")
+		return false, nil
+	}
+
+	if r.variablesPath == "" {
+		return false, fmt.Errorf("cannot refresh infrastructure variables: variables path is empty")
+	}
+
+	err = os.WriteFile(r.variablesPath, variablesData, 0o600)
+	if err != nil {
+		return false, fmt.Errorf("failed to write refreshed infrastructure variables to %s: %w", r.variablesPath, err)
+	}
+
+	r.logger.LogInfoF("Infrastructure variables refreshed and saved to %s.\n", r.variablesPath)
+	return true, nil
 }
 
 func (r *Runner) ShowPlan(ctx context.Context) ([]byte, error) {

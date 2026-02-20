@@ -275,12 +275,13 @@ func (f *Context) GetConvergeBaseInfraRunner(ctx context.Context, metaConfig *co
 }
 
 type NodeRunnerOptions struct {
-	NodeName        string
-	NodeGroupName   string
-	NodeGroupStep   Step
-	NodeIndex       int
-	NodeState       []byte
-	NodeCloudConfig string
+	NodeName           string
+	NodeGroupName      string
+	NodeGroupStep      Step
+	NodeIndex          int
+	NodeState          []byte
+	NodeCloudConfig    string
+	VariablesRefresher VariablesRefresher
 
 	CommanderMode                    bool
 	StateCache                       dstate.Cache
@@ -301,6 +302,7 @@ func (f *Context) GetConvergeNodeRunner(ctx context.Context, metaConfig *config.
 
 	r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
 		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+		WithVariablesRefresher(opts.VariablesRefresher).
 		WithSkipChangesOnDeny(true).
 		WithName(opts.NodeName).
 		WithHook(opts.Hook)
