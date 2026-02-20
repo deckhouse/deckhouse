@@ -16,11 +16,19 @@ package digests
 
 import (
 	"embed"
+	"os"
 )
 
 //go:embed images_digests.json
 var imagesDigestsEmbeddedJSON embed.FS
 
+var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
+
 func ImagesDigestsBytes() ([]byte, error) {
-	return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
+	file, err := os.ReadFile(imagesDigestsJSON)
+	if err != nil {
+		return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
+	}
+
+	return file, nil
 }
