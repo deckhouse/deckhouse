@@ -30,7 +30,7 @@ status:
     type: Processed
   packages:
     processed:
-    - name: v1.0.0
+    - name: test-package
       type: Module
     processedOverall: 1
     total: 1
@@ -44,9 +44,9 @@ metadata:
   labels:
     heritage: deckhouse
     packages.deckhouse.io/draft: "true"
-    packages.deckhouse.io/package: v1.0.0
+    packages.deckhouse.io/package: test-package
     packages.deckhouse.io/repository: deckhouse
-  name: deckhouse-v1.0.0-v1.0.0
+  name: deckhouse-test-package-v1.0.0
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
     controller: true
@@ -55,7 +55,7 @@ metadata:
     uid: ""
   resourceVersion: "1"
 spec:
-  packageName: v1.0.0
+  packageName: test-package
   packageRepositoryName: deckhouse
   packageVersion: v1.0.0
 status: {}
@@ -66,7 +66,7 @@ metadata:
   creationTimestamp: null
   labels:
     heritage: deckhouse
-  name: v1.0.0
+  name: test-package
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
     controller: true
@@ -95,7 +95,7 @@ status:
     status: "True"
     type: LastOperationScanFinished
   packages:
-  - name: v1.0.0
+  - name: test-package
     type: Module
   packagesCount: 1
   phase: Active
