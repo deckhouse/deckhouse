@@ -15,8 +15,9 @@
 {{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
 
 {{- if eq .runType "ClusterBootstrap" }}
-# Read previously discovered IP
+# Read previously discovered IP and hostname
 export MY_IP="$(</var/lib/bashible/discovered-node-ip)"
+export MY_NODENAME="$(</var/lib/bashible/discovered-node-name)"
 
 function subst_config() {
     tmpfile=$(mktemp /opt/deckhouse/tmp/kubeadm-config.XXXXXX)
