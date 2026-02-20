@@ -11,20 +11,20 @@ index e207a79712..77465b5892 100644
        --enable-local-redirect-policy                              Enable Local Redirect Policy
        --enable-masquerade-to-route-source                         Masquerade packets to the source IP provided from the routing layer rather than interface address
 diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
-index 15dacfa4df..ce4fb1099a 100644
+index 51b9babf0f..1e5f5d6c8b 100644
 --- a/bpf/lib/lb.h
 +++ b/bpf/lib/lb.h
-@@ -1300,7 +1300,16 @@ lb4_extract_tuple(struct __ctx_buff *ctx, struct iphdr *ip4, int l3_off, int *l4
+@@ -1314,7 +1314,16 @@ lb4_extract_tuple(struct __ctx_buff *ctx, struct iphdr *ip4, int l3_off, int *l4
  			return ret;
  		return 0;
  	case IPPROTO_ICMP:
 +
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
-+		/* if loadbalancer-icmp-reply is enabled, we need to return 0 
++		/* if loadbalancer-icmp-reply is enabled, we need to return 0
 +		 * to allow the packet to be processed by the next part of the code */
 +		return 0;
 +#else
-+		/* if loadbalancer-icmp-reply is not enabled, return DROP_UNSUPP_SERVICE_PROTO 
++		/* if loadbalancer-icmp-reply is not enabled, return DROP_UNSUPP_SERVICE_PROTO
 +		 * to support old-style packet processing */
  		return DROP_UNSUPP_SERVICE_PROTO;
 +#endif
@@ -32,10 +32,10 @@ index 15dacfa4df..ce4fb1099a 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..0d54df0516 100644
+index 8873f05e86..a73aaaaf53 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
-@@ -2679,6 +2679,63 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+@@ -2677,6 +2677,63 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
  				  ext_err);
  }
  
@@ -99,7 +99,7 @@ index 0142716855..0d54df0516 100644
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2716,7 +2773,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2714,7 +2771,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	lb4_fill_key(&key, &tuple);
  
  	svc = lb4_lookup_service(&key, false);
@@ -107,7 +107,7 @@ index 0142716855..0d54df0516 100644
  	if (svc) {
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
 +		/* If the packet is an ICMP echo request, we need to check if special 
-+		port=0 service exists and if so, create a reply packet and send it back 
++		port=0 service exists and if so, create a reply packet and send it back
 +		to the original source.	This is only supported for LoadBalancer services. */
 +		if (ip4->protocol == IPPROTO_ICMP) {
 +			ret = make_icmp_responce_lb4(ctx, ip4);
@@ -120,7 +120,7 @@ index 0142716855..0d54df0516 100644
  					has_l4_header, l4_off,
  					src_sec_identity, punt_to_stack, ext_err);
 diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
-index 96e484911f..99da9bda87 100644
+index 3e7dc7a2c7..ac3333d1d4 100644
 --- a/daemon/cmd/daemon_main.go
 +++ b/daemon/cmd/daemon_main.go
 @@ -555,6 +555,9 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
@@ -134,10 +134,10 @@ index 96e484911f..99da9bda87 100644
  	flags.MarkHidden(option.AddressScopeMax)
  	option.BindEnv(vp, option.AddressScopeMax)
 diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
-index a3243d93e3..bd1cbb93a2 100644
+index 1b84e00605..3426566537 100644
 --- a/pkg/datapath/linux/config/config.go
 +++ b/pkg/datapath/linux/config/config.go
-@@ -430,6 +430,9 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+@@ -427,6 +427,9 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
  			}
  		}
  		cDefinesMap["ENABLE_NODEPORT"] = "1"
@@ -329,10 +329,10 @@ index 12686cec41..fa50381045 100644
  }
  
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index 0cae99631d..022c7d8190 100644
+index 7137f3903e..c1e39a16fd 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
-@@ -245,6 +245,9 @@ const (
+@@ -247,6 +247,9 @@ const (
  	// EnableSVCSourceRangeCheck enables check of service source range checks
  	EnableSVCSourceRangeCheck = "enable-svc-source-range-check"
  
@@ -342,7 +342,7 @@ index 0cae99631d..022c7d8190 100644
  	// NodePortMode indicates in which mode NodePort implementation should run
  	// ("snat", "dsr" or "hybrid")
  	NodePortMode = "node-port-mode"
-@@ -1865,6 +1868,9 @@ type DaemonConfig struct {
+@@ -1867,6 +1870,9 @@ type DaemonConfig struct {
  	// EnableSVCSourceRangeCheck enables check of loadBalancerSourceRanges
  	EnableSVCSourceRangeCheck bool
  
@@ -352,7 +352,7 @@ index 0cae99631d..022c7d8190 100644
  	// EnableHealthDatapath enables IPIP health probes data path
  	EnableHealthDatapath bool
  
-@@ -2918,6 +2924,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+@@ -2920,6 +2926,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
  	c.EnableUnreachableRoutes = vp.GetBool(EnableUnreachableRoutes)
  	c.EnableNodePort = vp.GetBool(EnableNodePort)
  	c.EnableSVCSourceRangeCheck = vp.GetBool(EnableSVCSourceRangeCheck)
