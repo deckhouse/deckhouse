@@ -61,8 +61,13 @@ EOF
 
 #kubeadm init phase control-plane all --config {{ $kubeadmDir}}/config.yaml
 cp {{ $kubeadmDir}}/patches/kube-apiserver-full.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
-kubeadm init phase control-plane scheduler --config {{ $kubeadmDir}}/config.yaml
-kubeadm init phase control-plane controller-manager --config {{ $kubeadmDir}}/config.yaml
+
+#kubeadm init phase control-plane scheduler --config {{ $kubeadmDir}}/config.yaml
+cp {{ $kubeadmDir}}/patches/kube-scheduler-full.yaml /etc/kubernetes/manifests/kube-scheduler.yaml
+
+#kubeadm init phase control-plane controller-manager --config {{ $kubeadmDir}}/config.yaml
+cp {{ $kubeadmDir}}/patches/kube-controller-manager-full.yaml /etc/kubernetes/manifests/kube-controller-manager.yaml
+
 check_container_running "kube-apiserver"
 check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
