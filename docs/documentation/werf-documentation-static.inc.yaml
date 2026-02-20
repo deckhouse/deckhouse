@@ -32,8 +32,7 @@ shell:
         cd _data
         yq eval-all -i 'select(fileIndex == 0) * {"k8s": select(fileIndex == 1).k8s, "d8": select(fileIndex == 1).d8}' supported_versions.yml version_map.yml
 
-        echo '[] Converting editions structure...'
-        yq e -o json editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
+        {{ .Files.Get (printf "%sdocs/documentation/werf-editions-convert-partials.inc.yaml" .ModulePath) | indent 8 }}
 
 {{ if ne .ModuleName "website-docs" }}
         # Syncing file from the documentation to the main site...
