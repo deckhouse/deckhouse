@@ -6,6 +6,7 @@ metadata:
     heritage: deckhouse
     module: cni-cilium
     rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-networking-as: manager
     rbac.deckhouse.io/kind: use
   name: d8:use:capability:module:cni-cilium:edit
 rules:
