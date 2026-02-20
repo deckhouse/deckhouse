@@ -66,6 +66,8 @@ type Module struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
+	globalValuesGetter GlobalValuesGetter
+
 	logger *log.Logger
 }
 
@@ -89,7 +91,11 @@ type Config struct {
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
+
+	GlobalValuesGetter GlobalValuesGetter
 }
+
+type GlobalValuesGetter func(prefix bool) addonutils.Values
 
 // NewModuleByConfig creates a new Module instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -108,6 +114,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
+	m.globalValuesGetter = cfg.GlobalValuesGetter
 	m.logger = logger
 
 	m.hooks = hooks.NewStorage()
@@ -176,7 +183,10 @@ func (m *Module) GetExtraNelmValues() string {
 	runtimeValues := m.GetRuntimeValues()
 	packageJSON, _ := json.Marshal(runtimeValues.Package)
 
-	return fmt.Sprintf("Package=%s", packageJSON)
+	globalValues := m.globalValuesGetter(false)
+	globalJSON, _ := json.Marshal(globalValues)
+
+	return fmt.Sprintf("Package=%s,Deckhouse=%s", packageJSON, globalJSON)
 }
 
 // GetName returns the full module identifier.
@@ -252,7 +262,9 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 
 // GetValues returns values for rendering
 func (m *Module) GetValues() addonutils.Values {
-	return m.values.GetValues()
+	return addonutils.MergeValues(
+		addonutils.Values{"global": m.globalValuesGetter(false)},
+		m.values.GetValues())
 }
 
 // ApplySettings apply settings values

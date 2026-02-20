@@ -1,0 +1,9 @@
+docs:
+  fixes:
+    - summary: Escape HTML in OpenAPI descriptions
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18048
+extended-monitoring:
+  fixes:
+    - summary: Cleanup exporter metrics when the monitored resource has been deleted
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17988
+

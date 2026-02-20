@@ -86,6 +86,8 @@ type Runtime struct {
 	apps    *lifecycle.Store[*apps.Application]
 	modules *lifecycle.Store[*modules.Module]
 
+	addonModuleManager moduleManagerI
+
 	logger *log.Logger
 }
 
@@ -110,6 +112,7 @@ func New(moduleManager moduleManagerI, dc dependency.Container, logger *log.Logg
 	r.modules = lifecycle.NewStore[*modules.Module]()
 
 	// Initialize foundational services
+	r.addonModuleManager = moduleManager
 	r.logger = logger.Named("package-runtime")
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
