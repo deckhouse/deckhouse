@@ -609,9 +609,11 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("successful module completion", func() {
-		// Create a mock PSM with a mock client that returns module packages
-		mockClient := &mockRegistryClient{
-			listTagsFunc: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+		segmentAwareMock := &segmentAwareMockClient{
+			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"test-package"}, nil
+			},
+			packageListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 				return []string{"v1.0.0"}, nil
 			},
 			getImageConfigFunc: func(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
@@ -624,7 +626,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				}, nil
 			},
 		}
-		psm := createMockPSM(mockClient)
+		psm := createMockPSM(segmentAwareMock)
 
 		suite.setupController("successful-module-completion.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
