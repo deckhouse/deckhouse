@@ -26,7 +26,7 @@ Perform the following steps:
    kubeconfig-generator-7c46977b9f-5kdmc   1/1     Running   0          20h
    ```
 
-   If the module is functioning properly and the correct configuration is specified in [DexProvider](/modules/user-authn/cr.html#dexprovider), all pods will have the status `Running`. If there is a problem, one or more pods will have a status other than `Running`, and it will be impossible to log into the platform's web interface with any type of authorization.
+   If the module is functioning properly and the correct configuration is specified in [DexProvider](/modules/user-authn/cr.html#dexprovider), all pods will have the status `Running`.
 
 1. Check the logs for the problematic pod:
 
