@@ -154,17 +154,19 @@ spec:
     - --requestheader-group-headers=X-Remote-Group
     - --requestheader-username-headers=X-Remote-User
     - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR }}
+    {{- if hasKey . "nodeIP" }}
     - --advertise-address={{ .nodeIP }}
+    {{- end }}
     - --enable-bootstrap-token-auth=true
     - --allow-privileged=true
 {{- if ne .runType "ClusterBootstrap" }}
     - --enable-admission-plugins={{ $admissionPlugins | sortAlpha | join "," }}
     - --admission-control-config-file=/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml
     - --kubelet-certificate-authority=/etc/kubernetes/pki/ca.crt
+{{- end }}
     - --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt
     - --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key
     - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
-{{- end }}
 {{- if .apiserver.auditPolicy }}
     - --audit-policy-file=/etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
     - --audit-log-format=json
