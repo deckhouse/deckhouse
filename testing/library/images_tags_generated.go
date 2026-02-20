@@ -170,6 +170,8 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"common": map[string]interface{}{
 		"checkKernelVersion":             "imageHash-common-checkKernelVersion",
+		"cniMigrationController":         "imageHash-common-cniMigrationController",
+		"cniMigrationInitChecker":        "imageHash-common-cniMigrationInitChecker",
 		"coredns":                        "imageHash-common-coredns",
 		"csiExternalAttacher131":         "imageHash-common-csiExternalAttacher131",
 		"csiExternalAttacher132":         "imageHash-common-csiExternalAttacher132",
