@@ -169,7 +169,11 @@ func (p *IstioDrivenPod) getIstioCurrentRevision() string {
 		_ = json.Unmarshal([]byte(istioStatusJSON), &istioPodStatus)
 
 		if istioPodStatus.Revision != "" {
-			revision = istioPodStatus.Revision
+			if istioPodStatus.Revision == "default" {
+				revision = "global"
+			} else {
+				revision = istioPodStatus.Revision
+			}
 		} else {
 			revision = istioRevsionAbsent
 		}
@@ -266,7 +270,11 @@ func applyIstioDrivenNamespaceFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	}
 
 	if revision, ok := obj.GetLabels()["istio.io/rev"]; ok {
-		namespaceInfo.RevisionRaw = revision
+		if revision == "default" {
+			namespaceInfo.RevisionRaw = "global"
+		} else {
+			namespaceInfo.RevisionRaw = revision
+		}
 	} else {
 		namespaceInfo.RevisionRaw = "global"
 	}
@@ -540,6 +548,11 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 		// we don't need metrics for pod without desired revision and without istio sidecar
 		if desiredRevision == istioRevsionAbsent && istioPod.Revision == istioRevsionAbsent {
 			continue
+		}
+
+		// istioPod.Revision normalized for pod in getIstioCurrentRevision
+		if desiredRevision == istioRevsionAbsent && istioPod.Revision == "global" {
+			desiredRevision = globalRevision
 		}
 
 		desiredFullVersion := versionMap.GetFullVersionByRevision(desiredRevision)

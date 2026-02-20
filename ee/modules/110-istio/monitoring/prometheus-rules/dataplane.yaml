@@ -64,7 +64,7 @@
       (
         max by (dataplane_pod, namespace, revision, version, desired_version)
         (
-          label_replace( d8_istio_dataplane_metadata{ desired_revision!="absent" }, "revision", "$1", "desired_revision", "(.+)" )
+          label_replace( d8_istio_dataplane_metadata{ desired_revision!="absent", desired_revision!="default" }, "revision", "$1", "desired_revision", "(.+)" )
           unless on (revision)
           (
             istio_build{ component="pilot" }
@@ -154,7 +154,7 @@
     expr: |
       max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
       (
-        d8_istio_dataplane_metadata{revision!="absent", desired_revision!="absent"}
+        d8_istio_dataplane_metadata{revision!="absent", desired_revision!="absent", desired_revision!="default" }
       )
       unless on (revision, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "revision", "$1", "desired_revision", "(.+)")
     for: 5m
