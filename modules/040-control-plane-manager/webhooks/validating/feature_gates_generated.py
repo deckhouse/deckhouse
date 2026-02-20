@@ -255,7 +255,6 @@ versions = {
             "ResourceHealthStatus",
             "RestartAllContainersOnContainerExits",
             "SELinuxMount",
-            "UserNamespacesHostNetworkSupport",
         ],
         "apiserver": [
             "AllowUnsafeMalformedObjectDeletion",
@@ -264,6 +263,7 @@ versions = {
             "ConcurrentWatchObjectDecode",
             "ConstrainedImpersonation",
             "ContainerStopSignals",
+            "CRDObservedGenerationTracking",
             "CrossNamespaceVolumeDataSource",
             "HPAScaleToZero",
             "MutablePodResourcesForSuspendedJobs",
@@ -277,13 +277,11 @@ versions = {
             "SELinuxMount",
             "StrictIPCIDRValidation",
             "TaintTolerationComparisonOperators",
-            "UserNamespacesHostNetworkSupport",
         ],
         "kubeControllerManager": [
             "ComponentFlagz",
             "ComponentStatusz",
             "ConcurrentWatchObjectDecode",
-            "CRDObservedGenerationTracking",
             "CrossNamespaceVolumeDataSource",
             "SELinuxMount",
         ],
@@ -293,7 +291,6 @@ versions = {
             "ConcurrentWatchObjectDecode",
             "NodeDeclaredFeatures",
             "TaintTolerationComparisonOperators",
-            "UserNamespacesHostNetworkSupport",
         ],
     },
 }

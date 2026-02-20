@@ -233,7 +233,6 @@
     - ResourceHealthStatus
     - RestartAllContainersOnContainerExits
     - SELinuxMount
-    - UserNamespacesHostNetworkSupport
   apiserver:
     - AllowUnsafeMalformedObjectDeletion
     - ComponentFlagz
@@ -241,6 +240,7 @@
     - ConcurrentWatchObjectDecode
     - ConstrainedImpersonation
     - ContainerStopSignals
+    - CRDObservedGenerationTracking
     - CrossNamespaceVolumeDataSource
     - HPAScaleToZero
     - MutablePodResourcesForSuspendedJobs
@@ -254,12 +254,10 @@
     - SELinuxMount
     - StrictIPCIDRValidation
     - TaintTolerationComparisonOperators
-    - UserNamespacesHostNetworkSupport
   kubeControllerManager:
     - ComponentFlagz
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
-    - CRDObservedGenerationTracking
     - CrossNamespaceVolumeDataSource
     - SELinuxMount
   kubeScheduler:
@@ -268,4 +266,3 @@
     - ConcurrentWatchObjectDecode
     - NodeDeclaredFeatures
     - TaintTolerationComparisonOperators
-    - UserNamespacesHostNetworkSupport

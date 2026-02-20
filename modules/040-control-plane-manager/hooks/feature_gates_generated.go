@@ -337,7 +337,6 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"ResourceHealthStatus",
 			"RestartAllContainersOnContainerExits",
 			"SELinuxMount",
-			"UserNamespacesHostNetworkSupport",
 		},
 		APIServer: []string{
 			"AllowUnsafeMalformedObjectDeletion",
@@ -346,6 +345,7 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"ConcurrentWatchObjectDecode",
 			"ConstrainedImpersonation",
 			"ContainerStopSignals",
+			"CRDObservedGenerationTracking",
 			"CrossNamespaceVolumeDataSource",
 			"HPAScaleToZero",
 			"MutablePodResourcesForSuspendedJobs",
@@ -359,13 +359,11 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"SELinuxMount",
 			"StrictIPCIDRValidation",
 			"TaintTolerationComparisonOperators",
-			"UserNamespacesHostNetworkSupport",
 		},
 		KubeControllerManager: []string{
 			"ComponentFlagz",
 			"ComponentStatusz",
 			"ConcurrentWatchObjectDecode",
-			"CRDObservedGenerationTracking",
 			"CrossNamespaceVolumeDataSource",
 			"SELinuxMount",
 		},
@@ -375,7 +373,6 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"ConcurrentWatchObjectDecode",
 			"NodeDeclaredFeatures",
 			"TaintTolerationComparisonOperators",
-			"UserNamespacesHostNetworkSupport",
 		},
 	},
 }
