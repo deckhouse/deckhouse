@@ -28,10 +28,10 @@ const (
 	ModulePackageVersionResource = "modulepackageversions"
 	ModulePackageVersionKind     = "ModulePackageVersion"
 
-	ModulePackageVersionLabelDraft           = PackageVersionLabelDraft
-	ModulePackageVersionLabelPackage         = PackageVersionLabelPackage
-	ModulePackageVersionLabelRepository      = PackageVersionLabelRepository
-	ModulePackageVersionLabelExistInRegistry = PackageVersionLabelExistInRegistry
+	ModulePackageVersionLabelDraft           = "packages.deckhouse.io/draft"
+	ModulePackageVersionLabelPackage         = "packages.deckhouse.io/package"
+	ModulePackageVersionLabelRepository      = "packages.deckhouse.io/repository"
+	ModulePackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
 
 	ModulePackageVersionConditionTypeMetadataLoaded         = "MetadataLoaded"
 	ModulePackageVersionConditionReasonFetchErr             = "FetchingReleaseError"
