@@ -122,6 +122,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, settings
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
+	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
 
 	module, err := modules.NewModuleByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {
