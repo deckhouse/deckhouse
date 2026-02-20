@@ -99,16 +99,20 @@ func (e *Extension) HandleUpdateMachine(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, resp)
 }
 
-// specFromActualVM builds a DeckhouseMachineSpecTemplate from the real VM and disk
-// state in the DVP parent cluster, not from the Kubernetes DeckhouseMachine object
-// (which CAPI may have already updated to the desired state).
-func (e *Extension) specFromActualVM(ctx context.Context, vmName string) (*infrastructurev1a1.DeckhouseMachineSpecTemplate, error) {
+// specFromActualVM builds a DeckhouseMachineSpecTemplate by combining:
+//   - Mutable fields from the real VM/disk state in DVP (CPU, memory, vmClass, rootDiskSize, runPolicy)
+//   - Immutable fields from the DeckhouseMachine K8s object (bootloader, bootDiskImageRef, rootDiskStorageClass)
+//
+// This is needed because CAPI updates the DeckhouseMachine spec to the desired state
+// BEFORE calling UpdateMachine, so we can't use the K8s object for mutable fields.
+func (e *Extension) specFromActualVM(ctx context.Context, vmName string, currentMachine *infrastructurev1a1.DeckhouseMachine) (*infrastructurev1a1.DeckhouseMachineSpecTemplate, error) {
 	vm, err := e.dvp.ComputeService.GetVMByName(ctx, vmName)
 	if err != nil {
 		return nil, fmt.Errorf("get VM %s: %w", vmName, err)
 	}
 
 	spec := &infrastructurev1a1.DeckhouseMachineSpecTemplate{
+		// Mutable fields — from real VM state
 		VMClassName: vm.Spec.VirtualMachineClassName,
 		CPU: infrastructurev1a1.CPU{
 			Cores:    vm.Spec.CPU.Cores,
@@ -116,6 +120,12 @@ func (e *Extension) specFromActualVM(ctx context.Context, vmName string) (*infra
 		},
 		Memory:    vm.Spec.Memory.Size,
 		RunPolicy: string(vm.Spec.RunPolicy),
+
+		// Immutable fields — safe to take from the K8s object (they never change in-place)
+		Bootloader:           currentMachine.Spec.Bootloader,
+		BootDiskImageRef:     currentMachine.Spec.BootDiskImageRef,
+		RootDiskStorageClass: currentMachine.Spec.RootDiskStorageClass,
+		AdditionalDisks:      currentMachine.Spec.AdditionalDisks,
 	}
 
 	bootDiskName := vmName + "-boot"
@@ -138,7 +148,7 @@ func (e *Extension) performInPlaceUpdate(
 ) error {
 	vmName := currentMachine.Name
 
-	oldSpec, err := e.specFromActualVM(ctx, vmName)
+	oldSpec, err := e.specFromActualVM(ctx, vmName, currentMachine)
 	if err != nil {
 		return fmt.Errorf("get actual VM state: %w", err)
 	}
