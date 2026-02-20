@@ -1,0 +1,11 @@
+docs:
+  fixes:
+    - summary: Editing FAQ problems applying dexprovider
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18079
+    - summary: Editing flannel to cillium.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18073
+istio:
+  fixes:
+    - summary: Fixing the list of requests from istiod to gateway API
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18056
+
