@@ -1,23 +1,20 @@
 type: object
 properties:
   provider:
-    type: object
-    required:
-      - kubeconfigDataBase64
-      - namespace
+    description: |
+      Содержит параметры подключения к API Deckhouse Kubernetes Platform.
     properties:
       kubeconfigDataBase64:
-        type: string
-        x-examples:
-          - ZXhhbXBsZQo=
+        description: |
+          Kubeconfig для подключения к API Deckhouse Kubernetes Platform, закодированный в base64.
       namespace:
-        type: string
-        x-examples:
-          - default
+        description: |
+          Namespace, в котором будут создаваться ресурсы кластера DKP.
+          > Внимание! Если значение явно не указано, будет использован namespace по умолчанию из kubeconfig.
 
   zones:
-    type: array
-    items:
-      type: string
-    x-examples:
-      - [zone-a, zone-b]
+    description: |
+      Набор зон, в которых могут создаваться узлы.
+      Для использования этой настройки на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
+      Подробнее о топологических метках см. в документации Kubernetes.
+      > Внимание! Чтобы задать необходимую метку для узла DVP, следуйте документации по NodeGroup.
