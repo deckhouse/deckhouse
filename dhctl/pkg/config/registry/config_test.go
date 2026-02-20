@@ -28,12 +28,14 @@ type (
 	updateRegistrySettings func(*module_config.RegistrySettings)
 	updateLegacyMode       func() bool
 	updateMode             func() constant.ModeType
+	updateTTL              func() string
 )
 
 func ConfigBuilder(opts ...any) Config {
 	var (
 		mode             = constant.ModeUnmanaged
 		legacyMode       = false
+		ttl              = ""
 		registrySettings = module_config.RegistrySettings{
 			ImagesRepo: constant.DefaultImagesRepo,
 			Scheme:     constant.DefaultScheme,
@@ -50,6 +52,9 @@ func ConfigBuilder(opts ...any) Config {
 
 		case updateMode:
 			mode = fn()
+
+		case updateTTL:
+			ttl = fn()
 		}
 	}
 
@@ -60,6 +65,15 @@ func ConfigBuilder(opts ...any) Config {
 		deckhouseSettings = module_config.DeckhouseSettings{
 			Mode:   constant.ModeDirect,
 			Direct: &registrySettings,
+		}
+
+	case constant.ModeProxy:
+		deckhouseSettings = module_config.DeckhouseSettings{
+			Mode: constant.ModeProxy,
+			Proxy: &module_config.ProxySettings{
+				RegistrySettings: registrySettings,
+				TTL:              ttl,
+			},
 		}
 
 	default:
@@ -115,6 +129,12 @@ func WithLicense(license string) updateRegistrySettings {
 	}
 }
 
+func WithTTL(ttl string) updateTTL {
+	return func() string {
+		return ttl
+	}
+}
+
 func WithModeDirect() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeDirect
@@ -124,6 +144,12 @@ func WithModeDirect() updateMode {
 func WithModeUnmanaged() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeUnmanaged
+	}
+}
+
+func WithModeProxy() updateMode {
+	return func() constant.ModeType {
+		return constant.ModeProxy
 	}
 }
 
@@ -246,6 +272,20 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 			},
 		},
 		{
+			name: "proxy -> not legacy && no errors",
+			input: input{
+				deckhouse: module_config.DeckhouseSettings{
+					Mode: constant.ModeProxy,
+					Proxy: &module_config.ProxySettings{
+						RegistrySettings: module_config.RegistrySettings{
+							ImagesRepo: "registry.example.com",
+							Scheme:     "HTTPS",
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "unmanaged -> not legacy && no errors",
 			input: input{
 				deckhouse: module_config.DeckhouseSettings{
@@ -274,15 +314,43 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 
 func TestConfig_DeepCopy(t *testing.T) {
 	t.Run("should create a deep copy of Config", func(t *testing.T) {
-		config := ConfigBuilder(
-			WithModeDirect(),
-		)
-		original := &config
+		tests := []struct {
+			name   string
+			config *Config
+		}{
+			{
+				name: "Direct mode",
+				config: func() *Config {
+					c := ConfigBuilder(WithModeDirect())
+					return &c
+				}(),
+			},
+			{
+				name: "Proxy mode",
+				config: func() *Config {
+					c := ConfigBuilder(WithModeProxy())
+					return &c
+				}(),
+			},
+			{
+				name: "Unmanaged mode",
+				config: func() *Config {
+					c := ConfigBuilder(WithModeUnmanaged())
+					return &c
+				}(),
+			},
+		}
 
-		copied := original.DeepCopy()
-		require.NotNil(t, copied)
-		require.NotSame(t, original, copied)
-		require.EqualValues(t, original, copied)
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				original := tt.config
+				copied := original.DeepCopy()
+
+				require.NotNil(t, copied)
+				require.NotSame(t, original, copied)
+				require.EqualValues(t, original, copied)
+			})
+		}
 	})
 
 	t.Run("should handle nil receiver", func(t *testing.T) {

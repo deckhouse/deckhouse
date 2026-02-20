@@ -25,12 +25,14 @@ type (
 	updateRegistrySettings func(*module_config.RegistrySettings)
 	updateLegacyMode       func() bool
 	updateMode             func() constant.ModeType
+	updateTTL              func() string
 )
 
 func ConfigBuilder(opts ...any) registry.Config {
 	var (
 		mode             = constant.ModeUnmanaged
 		legacyMode       = false
+		ttl              = ""
 		registrySettings = module_config.RegistrySettings{
 			ImagesRepo: constant.DefaultImagesRepo,
 			Scheme:     constant.DefaultScheme,
@@ -47,6 +49,9 @@ func ConfigBuilder(opts ...any) registry.Config {
 
 		case updateMode:
 			mode = fn()
+
+		case updateTTL:
+			ttl = fn()
 		}
 	}
 
@@ -57,6 +62,15 @@ func ConfigBuilder(opts ...any) registry.Config {
 		deckhouseSettings = module_config.DeckhouseSettings{
 			Mode:   constant.ModeDirect,
 			Direct: &registrySettings,
+		}
+
+	case constant.ModeProxy:
+		deckhouseSettings = module_config.DeckhouseSettings{
+			Mode: constant.ModeProxy,
+			Proxy: &module_config.ProxySettings{
+				RegistrySettings: registrySettings,
+				TTL:              ttl,
+			},
 		}
 
 	default:
@@ -112,6 +126,12 @@ func WithLicense(license string) updateRegistrySettings {
 	}
 }
 
+func WithTTL(ttl string) updateTTL {
+	return func() string {
+		return ttl
+	}
+}
+
 func WithModeDirect() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeDirect
@@ -121,6 +141,12 @@ func WithModeDirect() updateMode {
 func WithModeUnmanaged() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeUnmanaged
+	}
+}
+
+func WithModeProxy() updateMode {
+	return func() constant.ModeType {
+		return constant.ModeProxy
 	}
 }
 

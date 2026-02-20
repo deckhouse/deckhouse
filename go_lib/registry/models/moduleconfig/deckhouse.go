@@ -25,10 +25,17 @@ import (
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
+var (
+	_ validation.Validatable = DeckhouseSettings{}
+	_ validation.Validatable = RegistrySettings{}
+	_ validation.Validatable = ProxySettings{}
+)
+
 type DeckhouseSettings struct {
 	Mode      constant.ModeType `json:"mode" yaml:"mode"`
 	Direct    *RegistrySettings `json:"direct,omitempty" yaml:"direct,omitempty"`
 	Unmanaged *RegistrySettings `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
+	Proxy     *ProxySettings    `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 }
 
 func (settings DeckhouseSettings) ToMap() map[string]any {
@@ -42,6 +49,10 @@ func (settings DeckhouseSettings) ToMap() map[string]any {
 
 	if settings.Unmanaged != nil {
 		result["unmanaged"] = settings.Unmanaged.ToMap()
+	}
+
+	if settings.Proxy != nil {
+		result["proxy"] = settings.Proxy.ToMap()
 	}
 
 	return result
@@ -64,6 +75,12 @@ func (settings *DeckhouseSettings) ApplySettings(userSettings DeckhouseSettings)
 		unmanaged.ApplySettings(userSettings.Unmanaged)
 
 		settings.Unmanaged = &unmanaged
+
+	case constant.ModeProxy:
+		var proxy ProxySettings
+		proxy.ApplySettings(userSettings.Proxy)
+
+		settings.Proxy = &proxy
 	}
 }
 
@@ -72,7 +89,7 @@ func (settings DeckhouseSettings) Validate() error {
 		validation.Field(&settings.Mode,
 			validation.Required.
 				Error(fmt.Sprintf("Unknown registry mode: %s", settings.Mode)),
-			validation.In(constant.ModeDirect, constant.ModeUnmanaged).
+			validation.In(constant.ModeDirect, constant.ModeUnmanaged, constant.ModeProxy, constant.ModeLocal).
 				Error(fmt.Sprintf("Unknown registry mode: %s", settings.Mode)),
 		),
 		validation.Field(&settings.Direct,
@@ -91,6 +108,14 @@ func (settings DeckhouseSettings) Validate() error {
 				validation.Nil.Error("Section 'unmanaged' must be empty when mode is not 'Unmanaged'"),
 			),
 		),
+		validation.Field(&settings.Proxy,
+			validation.When(settings.Mode == constant.ModeProxy,
+				validation.NotNil,
+				validation.Required.Error("Section 'proxy' is required when mode is 'Proxy'"),
+			).Else(
+				validation.Nil.Error("Section 'proxy' must be empty when mode is not 'Proxy'"),
+			),
+		),
 	)
 }
 
@@ -105,6 +130,11 @@ func (settings *DeckhouseSettings) DeepCopyInto(out *DeckhouseSettings) {
 	if settings.Unmanaged != nil {
 		out.Unmanaged = new(RegistrySettings)
 		settings.Unmanaged.DeepCopyInto(out.Unmanaged)
+	}
+
+	if settings.Proxy != nil {
+		out.Proxy = new(ProxySettings)
+		settings.Proxy.DeepCopyInto(out.Proxy)
 	}
 }
 
@@ -245,6 +275,64 @@ func (settings *RegistrySettings) DeepCopy() *RegistrySettings {
 		return nil
 	}
 	out := new(RegistrySettings)
+	settings.DeepCopyInto(out)
+	return out
+}
+
+type ProxySettings struct {
+	RegistrySettings
+	TTL string `json:"ttl,omitempty" yaml:"ttl,omitempty"`
+}
+
+func (settings ProxySettings) ToMap() map[string]any {
+	ret := settings.RegistrySettings.ToMap()
+
+	if settings.TTL != "" {
+		ret["ttl"] = settings.TTL
+	}
+
+	return ret
+}
+
+func (settings *ProxySettings) ApplySettings(userSettings *ProxySettings) {
+	var registrySettings RegistrySettings
+	var ttl string
+
+	if userSettings != nil {
+		ttl = userSettings.TTL
+		registrySettings.ApplySettings(&userSettings.RegistrySettings)
+	} else {
+		registrySettings.ApplySettings(nil)
+	}
+
+	settings.RegistrySettings = registrySettings
+	settings.TTL = ttl
+}
+
+func (settings ProxySettings) Validate() error {
+	if err := settings.RegistrySettings.Validate(); err != nil {
+		return err
+	}
+
+	ttl := settings.TTL
+	if len(ttl) > 0 {
+		if err := validateTTL(ttl); err != nil {
+			return fmt.Errorf("invalid ttl format %q: %w", ttl, err)
+		}
+	}
+	return nil
+}
+
+func (settings *ProxySettings) DeepCopyInto(out *ProxySettings) {
+	*out = *settings
+	settings.RegistrySettings.DeepCopyInto(&out.RegistrySettings)
+}
+
+func (settings *ProxySettings) DeepCopy() *ProxySettings {
+	if settings == nil {
+		return nil
+	}
+	out := new(ProxySettings)
 	settings.DeepCopyInto(out)
 	return out
 }
