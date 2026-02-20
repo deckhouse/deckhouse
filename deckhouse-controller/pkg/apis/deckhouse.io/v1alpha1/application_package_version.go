@@ -29,10 +29,10 @@ const (
 	ApplicationPackageVersionResource = "applicationpackageversions"
 	ApplicationPackageVersionKind     = "ApplicationPackageVersion"
 
-	ApplicationPackageVersionLabelDraft           = "packages.deckhouse.io/draft"
-	ApplicationPackageVersionLabelPackage         = "packages.deckhouse.io/package"
-	ApplicationPackageVersionLabelRepository      = "packages.deckhouse.io/repository"
-	ApplicationPackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
+	ApplicationPackageVersionLabelDraft           = PackageVersionLabelDraft
+	ApplicationPackageVersionLabelPackage         = PackageVersionLabelPackage
+	ApplicationPackageVersionLabelRepository      = PackageVersionLabelRepository
+	ApplicationPackageVersionLabelExistInRegistry = PackageVersionLabelExistInRegistry
 
 	ApplicationPackageVersionConditionTypeMetadataLoaded         = "MetadataLoaded"
 	ApplicationPackageVersionConditionReasonFetchErr             = "FetchingReleaseError"
