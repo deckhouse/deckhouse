@@ -21,7 +21,7 @@ For more information about the `Direct` mode, see the section [Using the interna
 ## Proxy mode architecture
 
 {% alert level="warning" %}
-It is recommended to use separate disks for storing registry (`/opt/deckhouse/registry`) and etcd data. Using a single disk may lead to etcd performance degradation during registry operations.
+It is recommended to use separate disks for storing registry (`/opt/deckhouse/registry`) and etcd data. Using a single disk may lead to etcd performance degradation during concurrent registry operations.
 {% endalert %}
 
 The `Proxy` mode allows the registry to act as an intermediate proxy server between the client and the remote registry.
@@ -40,7 +40,7 @@ For more information about the `Proxy` mode, see the section [Using the internal
 ## Local mode architecture
 
 {% alert level="warning" %}
-It is recommended to use separate disks for storing registry (`/opt/deckhouse/registry`) and etcd data. Using a single disk may lead to etcd performance degradation during registry operations.
+It is recommended to use separate disks for storing registry (`/opt/deckhouse/registry`) and etcd data. Using a single disk may lead to etcd performance degradation during concurrent registry operations.
 {% endalert %}
 
 The `Local` mode allows creating a local copy of the registry inside the cluster. Images from the remote registry are fully copied to local storage and synchronized between replicas of the local registry.
