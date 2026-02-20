@@ -26,6 +26,8 @@ roleRef:
 subjects:
 - kind: Group
   name: ingress-nginx:auth
+- kind: Group
+  name: alb-istio:auth
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1

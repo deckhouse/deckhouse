@@ -44,6 +44,21 @@ properties:
     default: {}
     type: object
     properties:
+      gatewayAPIdefaultGateway:
+        type: object
+        default:
+          name: deckhouse-gateway
+          namespace: d8-alb-istio
+        properties:
+          name:
+            type: string
+          namespace:
+            type: string
+        requied:
+          - name
+          - namespace
+        Description: |
+          The name of the default Gateway used for Deckhouse modules if Gateway API is used.
       ingressClass:
         type: string
         default: nginx
