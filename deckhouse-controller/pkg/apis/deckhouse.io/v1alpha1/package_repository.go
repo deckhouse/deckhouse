@@ -34,12 +34,6 @@ const (
 	PackageRepositoryAnnotationRegistryChecksum = "packages.deckhouse.io/registry-spec-checksum"
 
 	PackageRepositoryConditionLastOperationScanFinished = "LastOperationScanFinished"
-
-	// Shared label keys for all package version types (Application, Module, etc.)
-	PackageVersionLabelDraft           = "packages.deckhouse.io/draft"
-	PackageVersionLabelPackage         = "packages.deckhouse.io/package"
-	PackageVersionLabelRepository      = "packages.deckhouse.io/repository"
-	PackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
 )
 
 var (
