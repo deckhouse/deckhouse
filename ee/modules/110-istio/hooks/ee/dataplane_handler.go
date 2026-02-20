@@ -169,11 +169,7 @@ func (p *IstioDrivenPod) getIstioCurrentRevision() string {
 		_ = json.Unmarshal([]byte(istioStatusJSON), &istioPodStatus)
 
 		if istioPodStatus.Revision != "" {
-			if istioPodStatus.Revision == "default" {
-				revision = "global"
-			} else {
-				revision = istioPodStatus.Revision
-			}
+			revision = istioPodStatus.Revision
 		} else {
 			revision = istioRevsionAbsent
 		}
@@ -205,6 +201,9 @@ func (p *IstioDrivenPod) injectLabel() bool {
 
 func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 	if specificPodRevision, ok := p.Labels["istio.io/rev"]; ok {
+		if specificPodRevision == "default" {
+			specificPodRevision = "global"
+		}
 		return specificPodRevision
 	}
 	return ""
