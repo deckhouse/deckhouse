@@ -597,7 +597,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -624,7 +624,6 @@ jobs:
 
   build_ee:
     name: Build EE
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_EE == 'true') }}
     needs:
       - git_info
       - go_generate
@@ -889,7 +888,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -916,7 +915,6 @@ jobs:
 
   build_se:
     name: Build SE
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE == 'true') }}
     needs:
       - git_info
       - go_generate
@@ -1181,7 +1179,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1196,7 +1194,6 @@ jobs:
 
   build_se_plus:
     name: Build SE-plus
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE-plus == 'true') }}
     needs:
       - git_info
       - go_generate
@@ -1461,7 +1458,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1476,7 +1473,6 @@ jobs:
 
   build_be:
     name: Build BE
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_BE == 'true') }}
     needs:
       - git_info
       - go_generate
@@ -1741,7 +1737,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1756,7 +1752,6 @@ jobs:
 
   build_ce:
     name: Build CE
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_CE == 'true') }}
     needs:
       - git_info
       - go_generate
@@ -2021,7 +2016,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
