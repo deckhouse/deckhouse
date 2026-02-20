@@ -99,15 +99,50 @@ func (e *Extension) HandleUpdateMachine(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// specFromActualVM builds a DeckhouseMachineSpecTemplate from the real VM and disk
+// state in the DVP parent cluster, not from the Kubernetes DeckhouseMachine object
+// (which CAPI may have already updated to the desired state).
+func (e *Extension) specFromActualVM(ctx context.Context, vmName string) (*infrastructurev1a1.DeckhouseMachineSpecTemplate, error) {
+	vm, err := e.dvp.ComputeService.GetVMByName(ctx, vmName)
+	if err != nil {
+		return nil, fmt.Errorf("get VM %s: %w", vmName, err)
+	}
+
+	spec := &infrastructurev1a1.DeckhouseMachineSpecTemplate{
+		VMClassName: vm.Spec.VirtualMachineClassName,
+		CPU: infrastructurev1a1.CPU{
+			Cores:    vm.Spec.CPU.Cores,
+			Fraction: string(vm.Spec.CPU.CoreFraction),
+		},
+		Memory:    vm.Spec.Memory.Size,
+		RunPolicy: string(vm.Spec.RunPolicy),
+	}
+
+	bootDiskName := vmName + "-boot"
+	bootDisk, err := e.dvp.DiskService.GetDiskByName(ctx, bootDiskName)
+	if err != nil {
+		return nil, fmt.Errorf("get boot disk %s: %w", bootDiskName, err)
+	}
+	if bootDisk.Spec.PersistentVolumeClaim.Size != nil {
+		spec.RootDiskSize = *bootDisk.Spec.PersistentVolumeClaim.Size
+	}
+
+	return spec, nil
+}
+
 // performInPlaceUpdate applies in-place changes to a running DVP VM.
 func (e *Extension) performInPlaceUpdate(
 	ctx context.Context,
 	currentMachine *infrastructurev1a1.DeckhouseMachine,
 	desiredSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
 ) error {
-	oldSpec := specFromMachine(&currentMachine.Spec)
-	cs := classifyChanges(oldSpec, desiredSpec)
 	vmName := currentMachine.Name
+
+	oldSpec, err := e.specFromActualVM(ctx, vmName)
+	if err != nil {
+		return fmt.Errorf("get actual VM state: %w", err)
+	}
+	cs := classifyChanges(oldSpec, desiredSpec)
 
 	e.log.Info("In-place update plan",
 		"vm", vmName,
