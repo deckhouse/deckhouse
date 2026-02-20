@@ -181,7 +181,8 @@ func NewPackageService(client registry.Client, logger *log.Logger) *PackageServi
 	}
 }
 
-func (s *PackageService) ReleaseChannels() *PackageVersionService {
+// TODO: add methods for legacy behaviour
+func (s *PackageService) Versions() *PackageVersionService {
 	return s.packageVersion
 }
 

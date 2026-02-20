@@ -209,6 +209,8 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 	}
 
 	// Module package controllers (feature flag)

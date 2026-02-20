@@ -72,14 +72,11 @@ spec:
                 - repo
                 type: object
               scanInterval:
-                description: |
+                description: |-
                   Interval for registry scan.
 
                   Defines the frequency of checking the container registry for new packages.
-                pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                 type: string
-                x-doc-default: 6h
-                x-doc-examples: ['5m', '1h', '6h30m']
             required:
             - registry
             type: object
@@ -90,6 +87,8 @@ spec:
                 description: Conditions represent the latest available observations
                   of the repository's state.
                 items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-

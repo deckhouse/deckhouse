@@ -345,6 +345,26 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 		result.Write(got)
 	}
 
+	var mpvList v1alpha1.ModulePackageVersionList
+	err = suite.kubeClient.List(context.TODO(), &mpvList)
+	require.NoError(suite.T(), err)
+
+	for _, item := range mpvList.Items {
+		got, _ := yaml.Marshal(item)
+		result.WriteString("---\n")
+		result.Write(got)
+	}
+
+	var mpList v1alpha1.ModulePackageList
+	err = suite.kubeClient.List(context.TODO(), &mpList)
+	require.NoError(suite.T(), err)
+
+	for _, item := range mpList.Items {
+		got, _ := yaml.Marshal(item)
+		result.WriteString("---\n")
+		result.Write(got)
+	}
+
 	var repoList v1alpha1.PackageRepositoryList
 	err = suite.kubeClient.List(context.TODO(), &repoList)
 	require.NoError(suite.T(), err)
@@ -387,6 +407,8 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		WithStatusSubresource(&v1alpha1.PackageRepositoryOperation{}).
 		WithStatusSubresource(&v1alpha1.ApplicationPackage{}).
 		WithStatusSubresource(&v1alpha1.ApplicationPackageVersion{}).
+		WithStatusSubresource(&v1alpha1.ModulePackage{}).
+		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}).
 		WithStatusSubresource(&v1alpha1.PackageRepository{}).
 		Build()
 
@@ -434,6 +456,19 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 				err := yaml.Unmarshal([]byte(manifest), &repo)
 				require.NoError(t, err)
 				require.NoError(t, kubeClient.Create(context.TODO(), &repo))
+			case "ModulePackageVersion":
+				var mpv v1alpha1.ModulePackageVersion
+				err := yaml.Unmarshal([]byte(manifest), &mpv)
+				require.NoError(t, err)
+				savedStatus := mpv.Status
+				require.NoError(t, kubeClient.Create(context.TODO(), &mpv))
+				mpv.Status = savedStatus
+				require.NoError(t, kubeClient.Status().Update(context.TODO(), &mpv))
+			case "ModulePackage":
+				var mp v1alpha1.ModulePackage
+				err := yaml.Unmarshal([]byte(manifest), &mp)
+				require.NoError(t, err)
+				require.NoError(t, kubeClient.Create(context.TODO(), &mp))
 			}
 		}
 	}
@@ -573,6 +608,40 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("successful module completion", func() {
+		segmentAwareMock := &segmentAwareMockClient{
+			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"test-package"}, nil
+			},
+			packageListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"v1.0.0"}, nil
+			},
+			getImageConfigFunc: func(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
+				return &crv1.ConfigFile{
+					Config: crv1.Config{
+						Labels: map[string]string{
+							"io.deckhouse.package.type": "Module",
+						},
+					},
+				}, nil
+			},
+		}
+		psm := createMockPSM(segmentAwareMock)
+
+		suite.setupController("successful-module-completion.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("failed versions from registry", func() {
 		// Create a custom mock that differentiates between root and package calls:
 		// - Returns package name "test-package" when listing tags at root level
@@ -609,6 +678,90 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		}
 		suite.ctr.client = errorClient
 
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("failed module versions from registry", func() {
+		// Same as "failed versions from registry" but for Module package type:
+		// verifies that partial ModulePackageVersion creation failures are recorded correctly
+		segmentAwareMock := &segmentAwareMockClient{
+			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"test-package"}, nil
+			},
+			packageListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"v1.0.0", "v1.1.0", "v1.2.0"}, nil
+			},
+			getImageConfigFunc: func(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
+				return &crv1.ConfigFile{
+					Config: crv1.Config{
+						Labels: map[string]string{
+							"io.deckhouse.package.type": "Module",
+						},
+					},
+				}, nil
+			},
+		}
+		psm := createMockPSM(segmentAwareMock)
+
+		suite.setupController("failed-module-versions.yaml", withPackageServiceManager(psm))
+
+		// Wrap the client to inject errors for specific ModulePackageVersion creates
+		// The names are built as: <repo>-<package>-<version> (e.g., deckhouse-test-package-v1.1.0)
+		errorClient := &errorInjectingClient{
+			Client: suite.kubeClient,
+			createErrorNames: map[string]error{
+				"deckhouse-test-package-v1.1.0": fmt.Errorf("simulated create error for v1.1.0"),
+				"deckhouse-test-package-v1.2.0": fmt.Errorf("simulated create error for v1.2.0"),
+			},
+		}
+		suite.ctr.client = errorClient
+
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("incremental module scan", func() {
+		// Pre-existing ModulePackageVersion v1.0.0 with packageMetadata (marks it as "processed").
+		// Mock returns v1.0.0 and v1.1.0 — incremental scan should only create v1.1.0.
+		segmentAwareMock := &segmentAwareMockClient{
+			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"test-package"}, nil
+			},
+			packageListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"v1.0.0", "v1.1.0"}, nil
+			},
+			getImageConfigFunc: func(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
+				return &crv1.ConfigFile{
+					Config: crv1.Config{
+						Labels: map[string]string{
+							"io.deckhouse.package.type": "Module",
+						},
+					},
+				}, nil
+			},
+		}
+		psm := createMockPSM(segmentAwareMock)
+
+		suite.setupController("incremental-module-scan.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

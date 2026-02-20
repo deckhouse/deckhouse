@@ -32,8 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
-
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -50,6 +48,7 @@ const (
 
 	// TODO: unify constant
 	packageTypeApplication = "Application"
+	packageTypeModule      = "Module"
 
 	// cleanupOldOperationsCount is the number of operations to keep for the same repository, older operations will be deleted
 	cleanupOldOperationsCount = 10
@@ -473,20 +472,29 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	r.logger.Info("processing package",
 		slog.String("package", currentPackage.Name))
 
-	// Create or update ApplicationPackage or ClusterApplicationPackage
-	err := svc.EnsureApplicationPackage(ctx, currentPackage.Name)
-	if err != nil {
-		r.logger.Error("failed to ensure package resource",
-			slog.String("package", currentPackage.Name),
-			log.Err(err))
-	}
-
 	processResult, err := svc.ProcessPackageVersions(ctx, currentPackage.Name, operation)
 	if err != nil {
 		r.logger.Error("failed to process package versions",
 			slog.String("package", currentPackage.Name),
 			log.Err(err))
 		// Continue with next package even if this one fails
+	}
+
+	// Ensure the appropriate package resource based on detected type
+	switch processResult.PackageType {
+	case packageTypeModule:
+		if ensureErr := svc.EnsureModulePackage(ctx, currentPackage.Name); ensureErr != nil {
+			r.logger.Error("failed to ensure module package resource",
+				slog.String("package", currentPackage.Name),
+				log.Err(ensureErr))
+		}
+	default:
+		// Default to Application for unknown or Application types
+		if ensureErr := svc.EnsureApplicationPackage(ctx, currentPackage.Name); ensureErr != nil {
+			r.logger.Error("failed to ensure application package resource",
+				slog.String("package", currentPackage.Name),
+				log.Err(ensureErr))
+		}
 	}
 
 	// Remove processed package from queue
@@ -639,43 +647,6 @@ func (r *reconciler) SetConditionFalse(operation *v1alpha1.PackageRepositoryOper
 	})
 
 	return operation
-}
-
-func (r *reconciler) setOperationFailed(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, condType, reason, message string) error {
-	original := operation.DeepCopy()
-
-	operation.Status.CompletionTime = ptr.To(metav1.Now())
-
-	r.SetConditionFalse(
-		operation,
-		condType,
-		reason,
-		message,
-	)
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *reconciler) setOperationTruePhase(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, phase string) error {
-	original := operation.DeepCopy()
-
-	operation.Status.Phase = phase
-	operation.Status.CompletionTime = ptr.To(metav1.Now())
-
-	r.SetConditionTrue(
-		operation,
-		v1alpha1.PackageRepositoryOperationConditionProcessed,
-	)
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoName string, success bool, reason, message string) error {
