@@ -39,17 +39,6 @@ fromImage: builder/alt-2026-02-07
 final: false
 shell:
   beforeInstall:
-  {{- include "alt archive repos 2026-02-07" . | nindent 2 }}
-  {{- include "alt packages proxy" . | nindent 2 }}
-  {{- include "alt dist upgrade" . | nindent 2 }}
-  # ssh auth to 3p repos
-  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
----
-image: {{ .ModuleName }}/{{ .ImageName }}-2026-02-07
-fromImage: builder/alt-2026-02-07
-final: false
-shell:
-  beforeInstall:
   {{- include "alt archive repos" . | nindent 2 }}
   - cp /etc/apt/sources.list.d/alt.list /etc/apt/sources.list.d/alt.list.orig
   {{- include "alt packages proxy" . | nindent 2 }}
