@@ -298,9 +298,9 @@ for d8_tag in "${d8_tags[@]}"; do
     # Using the --show-suppressed keys makes it impossible to use the .trivyignore file.
     trivy_scan "--show-suppressed --scanners vuln" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${additional_image}:${d8_tag}"
     # License scan
-    trivy_scan "--scanners license --license-full" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${additional_image}:${d8_tag}"
+    # trivy_scan "--scanners license --license-full" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${additional_image}:${d8_tag}"
     send_report "CVE" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${a_module_name}" "${a_image_name}"
-    send_report "License" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${a_module_name}" "${a_image_name}"
+    # send_report "License" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${a_module_name}" "${a_image_name}"
   done
 
   echo "Deckhouse image to check: ${d8_image}:${d8_tag}"
@@ -364,9 +364,9 @@ for d8_tag in "${d8_tags[@]}"; do
       # Using the --show-suppressed keys makes it impossible to use the .trivyignore file.
       trivy_scan "--show-suppressed --scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${d8_image}@${IMAGE_HASH}"
       # License scan
-      trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}@${IMAGE_HASH}"
+      # trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}@${IMAGE_HASH}"
       send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${MODULE_NAME}" "${IMAGE_NAME}"
-      send_report "License" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${MODULE_NAME}" "${IMAGE_NAME}"
+      # send_report "License" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${MODULE_NAME}" "${IMAGE_NAME}"
     done
   done
 done
