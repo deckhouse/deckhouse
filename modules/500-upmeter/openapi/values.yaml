@@ -44,7 +44,16 @@ properties:
         default: {}
         required:
           - sts
+          - pdb
         properties:
+          pdb:
+            type: object
+            default: {}
+            required: ["maxUnavailable"]
+            properties:
+              maxUnavailable:
+                type: number
+                default: 1
           sts:
             type: object
             default: {}

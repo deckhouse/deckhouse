@@ -72,6 +72,8 @@ internal:
     tls.key: KEYKEYKEY
   disabledProbes: []
   smokeMini:
+    pdb:
+      maxUnavailable: 3
     sts:
       a: {}
       b: {}
