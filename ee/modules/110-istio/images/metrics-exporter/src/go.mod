@@ -1,6 +1,6 @@
 module metrics-exporter
 
-go 1.23.1
+go 1.25
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250331174011-0de986a9bfa9
