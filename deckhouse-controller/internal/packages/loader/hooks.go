@@ -26,14 +26,16 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/flant/addon-operator/pkg/module_manager/models/hooks"
+	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
+	addonsdk "github.com/flant/addon-operator/sdk"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/executor"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -61,13 +63,13 @@ var (
 
 type hookLoadResult struct {
 	settingsCheck *kind.SettingsCheck
-	hooks         []*hooks.ModuleHook
+	hooks         []hooks.Hook
 }
 
 // loadAppHooks discovers and loads all package hooks from the filesystem.
-// It searches for both shell hooks (.sh, .py) and batch hooks (executables).
+// It searches for batch hooks (executables).
 func loadAppHooks(ctx context.Context, namespace, name, path string, logger *log.Logger) (*hookLoadResult, error) {
-	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "load")
+	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loaAppHooks")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
@@ -87,10 +89,27 @@ func loadAppHooks(ctx context.Context, namespace, name, path string, logger *log
 	return res, nil
 }
 
+func loadGlobalHooks(ctx context.Context, logger *log.Logger) ([]hooks.GlobalHook, error) {
+	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loaGlobalHooks")
+	defer span.End()
+
+	logger.Debug("load hooks")
+
+	// find global hooks in go hooks registry
+	var res []hooks.GlobalHook
+	for _, h := range addonsdk.Registry().GetGlobalHooks() {
+		res = append(res, addonhooks.NewGlobalHook(h))
+	}
+
+	logger.Info("found hooks", slog.Int("count", len(res)))
+
+	return res, nil
+}
+
 // loadModuleHooks discovers and loads all package hooks from the filesystem.
-// It searches for both shell hooks (.sh, .py) and batch hooks (executables).
+// It searches for batch hooks (executables).
 func loadModuleHooks(ctx context.Context, name, path string, logger *log.Logger) (*hookLoadResult, error) {
-	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "load")
+	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loadModuleHooks")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
@@ -153,7 +172,7 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 				hookPath, namespace, name, kind.BatchHookReadyKey,
 				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
 
-			result.hooks = append(result.hooks, hooks.NewModuleHook(hook))
+			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
 
 		if hookConfig.HasSettingsCheck {
@@ -173,7 +192,7 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 				hookPath, namespace, name, key,
 				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
 
-			result.hooks = append(result.hooks, hooks.NewModuleHook(hook))
+			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
 	}
 
@@ -224,7 +243,7 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 				hookPath, name, kind.BatchHookReadyKey,
 				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
 
-			result.hooks = append(result.hooks, hooks.NewModuleHook(hook))
+			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
 
 		if hookConfig.HasSettingsCheck {
@@ -244,7 +263,7 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 				hookPath, name, key,
 				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
 
-			result.hooks = append(result.hooks, hooks.NewModuleHook(hook))
+			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
 	}
 
