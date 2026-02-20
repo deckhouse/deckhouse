@@ -1122,15 +1122,14 @@ entries:
             ru: Обзор
           url: /architecture/
         - title:
-            en: TODO Overview
-            ru: TODO Обзор
-          url: /architecture/architecture-overview.html
+            en: System requirements
+            ru: Системные требования
           draft: true
+          url: /architecture/system-requirements/
         - title:
-            en: TODO Installation
-            ru: TODO Установка
-          url: /architecture/installation.html
-          draft: true
+            en: C4 model
+            ru: Модель C4
+          url: /architecture/c4-model/
         - title:
             en: Modules
             ru: Модули
@@ -1188,69 +1187,173 @@ entries:
             ru: Обновление
           url: /architecture/updating.html
         - title:
-            en: Logging
-            ru: Логирование
+            en: Deckhouse subsystem
+            ru: Подсистема Deckhouse
           folders:
             - title:
-                en: Log collection and delivery
-                ru: Сбор и доставка логов
-              url: /architecture/logging/delivery.html
+                en: Overview
+                ru: Обзор
+              url: /architecture/deckhouse/
             - title:
-                en: Short-term storage
-                ru: Кратковременное хранение
-              url: /architecture/logging/storage.html
+                en: Direct mode of registry module
+                ru: Режим Direct модуля registry
+              url: /architecture/registry-direct-mode.html
         - title:
-            en: VPA
-            ru: VPA
-          url: /architecture/vpa.html
-        - title:
-            en: Authentication
-            ru: Аутентификация
-          url: /architecture/authentication.html
-        - title:
-            en: Node management
-            ru: Управление узлами
-          url: /architecture/node.html
-        - title:
-            en: Monitoring
-            ru: Мониторинг
-          url: /architecture/monitoring/
-        - title:
-            en: Network
-            ru: Сеть
+            en: Kubernetes & Scheduling subsystem
+            ru: Подсистема Kubernetes & Scheduling
           folders:
-          - title:
-              en: Cluster architecture with Istio enabled
-              ru: Архитектура кластера с включенным Istio
-            url: /architecture/network/cluster-with-istio.html
-          - title:
-              en: Application service architecture with Istio enabled
-              ru: Архитектура прикладного сервиса с включенным Istio
-            url: /architecture/network/service-with-istio.html
-          - title:
-              en: Caching DNS server in a cluster
-              ru: Кеширующий DNS-сервер в кластере
-            url: /architecture/network/dns-caching.html
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/kubernetes-and-scheduling/
+            - title:
+                en: Cluster control plane
+                ru: Control plane кластера
+              url: /architecture/kubernetes-and-scheduling/control-plane/
+            - title:
+                en: Kubelet
+                ru: Kubelet
+              url: /architecture/kubernetes-and-scheduling/kubelet/
+            - title:
+                en: Cluster control plane management
+                ru: Управление компонентами control plane кластера
+              url: /architecture/kubernetes-and-scheduling/control-plane-management/
+            - title:
+                en: Vertical Pod Autoscaling
+                ru: Вертикальное масштабирование
+              url: /architecture/vpa.html
         - title:
-            en: Multitenancy
-            ru: Мультитенантность
-          url: /architecture/multitenancy/
-        - title:
-            en: Security
-            ru: Безопасность
+            en: Cluster & Infrastructure subsystem
+            ru: Подсистема Cluster & Infrastructure
           folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/cluster-and-infrastructure/
+            - title:
+                en: Node management
+                ru: Управление узлами
+              url: /architecture/node.html
+            - title:
+                en: Bashible
+                ru: Bashible
+              url: /architecture/cluster-and-infrastructure/bashible/
+            - title:
+                en: node-manager module
+                ru: Модуль node-manager
+              url: /architecture/cluster-and-infrastructure/node-manager/
+            - title:
+                en: CloudEphemeral nodes management
+                ru: Управление CloudEphemeral-узлами
+              url: /architecture/cluster-and-infrastructure/cloud-ephemeral-nodes/
+            - title:
+                en: CloudPermanent nodes management
+                ru: Управление CloudPermanent-узлами
+              url: /architecture/cluster-and-infrastructure/cloud-permanent-nodes/
+            - title:
+                en: CloudStatic nodes management
+                ru: Управление CloudStatic-узлами
+              url: /architecture/cluster-and-infrastructure/cloud-static-nodes/
+            - title:
+                en: Static nodes management
+                ru: Управление Static-узлами
+              url: /architecture/cluster-and-infrastructure/static-nodes/
+            - title:
+                en: Hybrid nodegroups and clusters management
+                ru: Управление гибридными группами узлов и кластерами
+              url: /architecture/cluster-and-infrastructure/hybrid-nodegroups-and-clusters/
+            - title:
+                en: terraform-manager module
+                ru: Модуль terraform-manager
+              url: /architecture/cluster-and-infrastructure/terraform-manager/
+            - title:
+                en: CSI-driver
+                ru: CSI-драйвер
+              url: /architecture/cluster-and-infrastructure/csi-driver/
+        - title:
+            en: IAM subsystem
+            ru: Подсистема IAM
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/iam/
+            - title:
+                en: Authentication
+                ru: Аутентификация
+              url: /architecture/authentication.html
+            - title:
+                en: Multitenancy
+                ru: Мультитенантность
+              url: /architecture/multitenancy/
+            - title:
+                en: user-authn module
+                ru: Модуль user-authn
+              url: /architecture/iam/user-authn/
+        - title:
+            en: Security subsystem
+            ru: Подсистема Security
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/security/
             - title:
                 en: Integrity control
                 ru: Контроль целостности
               url: /architecture/security/integrity-control.html
             - title:
-                en: Architecture of security event audit
-                ru: Архитектура аудита событий безопасности
+                en: Security events audit
+                ru: Аудит событий безопасности
               url: /architecture/security/runtime-audit.html
         - title:
-            en: Direct mode architecture (registry)
-            ru: Архитектура режима Direct (registry)
-          url: /architecture/registry-direct-mode.html
+            en: Network subsystem
+            ru: Подсистема Network
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/network/
+            - title:
+                en: ingress-nginx module
+                ru: Модуль ingress-nginx
+              url: /architecture/network/ingress-nginx/
+            - title:
+                en: metallb module
+                ru: Модуль metallb
+              url: /architecture/network/metallb/
+            - title:
+                en: Cluster architecture with Istio enabled
+                ru: Архитектура кластера с включенным Istio
+              url: /architecture/network/cluster-with-istio.html
+            - title:
+                en: Application service architecture with Istio enabled
+                ru: Архитектура прикладного сервиса с включенным Istio
+              url: /architecture/network/service-with-istio.html
+            - title:
+                en: Caching DNS server in a cluster
+                ru: Кеширующий DNS-сервер в кластере
+              url: /architecture/network/dns-caching.html
+        - title:
+            en: Observability subsystem
+            ru: Подсистема Observability
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/observability/
+            - title:
+                en: Monitoring
+                ru: Мониторинг
+              url: /architecture/monitoring/
+            - title:
+                en: Log collection and delivery
+                ru: Сбор и доставка логов
+              url: /architecture/logging/delivery.html
+            - title:
+                en: Logging modules
+                ru: Модули логирования
+              url: /architecture/observability/logging/
     - title:
         en: Reference
         ru: Справка
