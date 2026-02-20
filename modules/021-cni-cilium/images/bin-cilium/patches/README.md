@@ -75,4 +75,4 @@ Added kernel verifer statistics in logs and prometeus metric as max bpf program 
 
 ## 015-bpf-lb-generate-icmp-reply.patch
 
-A feature has been added to cni-cilium for reply with icmp response in load balancer module
+A ICMP echo reply feature has been added to reply on LoadBalancer's service IP
