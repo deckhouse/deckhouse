@@ -260,8 +260,8 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 	}, nil
 }
 
-// GetNelmValues returns values for rendering
-func (m *Module) GetNelmValues() addonutils.Values {
+// GetValues returns values for rendering
+func (m *Module) GetValues() addonutils.Values {
 	return addonutils.MergeValues(
 		addonutils.Values{"global": m.globalValuesGetter(false)},
 		m.values.GetValues())

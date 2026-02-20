@@ -279,8 +279,8 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 	}, nil
 }
 
-// GetNelmValues returns values for rendering
-func (a *Application) GetNelmValues() addonutils.Values {
+// GetValues returns values for rendering
+func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
 }
 

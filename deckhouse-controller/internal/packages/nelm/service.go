@@ -48,7 +48,7 @@ var ErrPackageNotHelm = errors.New("package not helm")
 type Package interface {
 	GetName() string
 	GetPath() string
-	GetNelmValues() addonutils.Values
+	GetValues() addonutils.Values
 	GetExtraNelmValues() string
 }
 
@@ -131,7 +131,7 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 	}
 
 	// Create temporary values file (cleaned up after rendering)
-	valuesPath, err := s.createTmpValuesFile(pkg.GetName(), pkg.GetNelmValues())
+	valuesPath, err := s.createTmpValuesFile(pkg.GetName(), pkg.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", fmt.Errorf("create temp values file: %w", err)
@@ -199,7 +199,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		return ErrPackageNotHelm
 	}
 
-	valuesPath, err := s.createTmpValuesFile(pkg.GetName(), pkg.GetNelmValues())
+	valuesPath, err := s.createTmpValuesFile(pkg.GetName(), pkg.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newCreateValuesError(err)
