@@ -193,7 +193,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 
 			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
 			Expect(mwh.Exists()).To(BeTrue())
-			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
+			Expect(len(mwh.Field("webhooks").Array())).To(Equal(4))
 
 			drApiserver := f.KubernetesResource("DestinationRule", "d8-istio", "kube-apiserver")
 
@@ -236,7 +236,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 
 			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
 			Expect(mwh.Exists()).To(BeTrue())
-			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
+			Expect(len(mwh.Field("webhooks").Array())).To(Equal(4))
 
 			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
 			iopV19 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x19x7")
