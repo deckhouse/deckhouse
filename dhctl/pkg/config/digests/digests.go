@@ -17,6 +17,8 @@ package digests
 import (
 	"embed"
 	"os"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 //go:embed images_digests.json
@@ -27,6 +29,7 @@ var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 func ImagesDigestsBytes() ([]byte, error) {
 	file, err := os.ReadFile(imagesDigestsJSON)
 	if err != nil {
+		log.WarnF("Cannot open file %s. Fallback to embedded images_digests.json", imagesDigestsJSON)
 		return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
 	}
 
