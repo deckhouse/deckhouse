@@ -12,54 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package modules
+package global
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
-	"slices"
 
 	"github.com/flant/addon-operator/pkg"
-	"github.com/flant/addon-operator/pkg/hook/types"
-	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
-	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// Module represents a running instance of a package.
-// It contains hooks, values storage, and configuration for execution.
-//
-// Thread Safety: The Module itself is not thread-safe, but its hooks and values
-// storage components use internal synchronization.
 type Module struct {
 	name string // Package name
 	path string // path to the package dir on fs
 
-	definition Definition        // Module definition
-	digests    map[string]string // Package digests
-	repository registry.Remote   // Module repository
-
-	hooks         *hooks.Storage      // Hook storage with indices
-	values        *values.Storage     // Values storage with layering
-	settingsCheck *kind.SettingsCheck // Hook to validate settings
+	hooks  *hooks.GlobalStorage // Hook storage with indices
+	values *values.Storage      // Values storage with layering
 
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
@@ -73,17 +55,10 @@ type Config struct {
 	Path         string            // Path to package dir
 	StaticValues addonutils.Values // Static values from values.yaml files
 
-	Definition Definition // Module definition
-
-	Digests    map[string]string // Package images digests(images_digests.json)
-	Repository registry.Remote   // Package repository options
-
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
 
-	Hooks []hooks.Hook // Discovered hooks
-
-	SettingsCheck *kind.SettingsCheck
+	Hooks []hooks.GlobalHook // Discovered hooks
 
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
@@ -94,22 +69,18 @@ type Config struct {
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
 //
 // Returns error if hook initialization or values storage creation fails.
-func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, error) {
+func NewModuleByConfig(cfg *Config, logger *log.Logger) (*Module, error) {
 	m := new(Module)
 
-	m.name = name
+	m.name = "global"
 
 	m.path = cfg.Path
-	m.definition = cfg.Definition
-	m.digests = cfg.Digests
-	m.repository = cfg.Repository
-	m.settingsCheck = cfg.SettingsCheck
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
 	m.logger = logger
 
-	m.hooks = hooks.NewStorage()
+	m.hooks = hooks.NewGlobalStorage()
 	if err := m.addHooks(cfg.Hooks...); err != nil {
 		return nil, fmt.Errorf("add hooks: %v", err)
 	}
@@ -125,7 +96,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 
 // addHooks initializes and adds hooks to the module's hook storage.
 // For each hook, it initializes the configuration and sets up logging/metrics labels.
-func (m *Module) addHooks(found ...hooks.Hook) error {
+func (m *Module) addHooks(found ...hooks.GlobalHook) error {
 	for _, hook := range found {
 		if err := hook.InitializeHookConfig(); err != nil {
 			return fmt.Errorf("initialize hook configuration: %w", err)
@@ -150,34 +121,6 @@ func (m *Module) addHooks(found ...hooks.Hook) error {
 	return nil
 }
 
-// RuntimeValues holds runtime values that are not part of schema.
-// These values are passed to helm templates under .Runtime prefix.
-type RuntimeValues struct {
-	Package addonutils.Values
-}
-
-// GetRuntimeValues returns values that are not part of schema.
-// Instance contains name and namespace of the running instance.
-// Package contains package metadata (name, version, digests, registry).
-func (m *Module) GetRuntimeValues() RuntimeValues {
-	return RuntimeValues{
-		Package: addonutils.Values{
-			"Name":     m.definition.Name,
-			"Digests":  m.digests,
-			"Registry": m.repository,
-			"Version":  m.definition.Version,
-		},
-	}
-}
-
-// GetExtraNelmValues returns runtime values in string format
-func (m *Module) GetExtraNelmValues() string {
-	runtimeValues := m.GetRuntimeValues()
-	packageJSON, _ := json.Marshal(runtimeValues.Package)
-
-	return fmt.Sprintf("Package=%s", packageJSON)
-}
-
 // GetName returns the full module identifier.
 func (m *Module) GetName() string {
 	return m.name
@@ -185,33 +128,12 @@ func (m *Module) GetName() string {
 
 // GetVersion return the package version
 func (m *Module) GetVersion() string {
-	return m.definition.Version
+	return "v0.0.0"
 }
 
 // GetPath returns path to the package dir
 func (m *Module) GetPath() string {
 	return m.path
-}
-
-// GetQueues returns package queues from all hooks
-func (m *Module) GetQueues() []string {
-	var res []string //nolint:prealloc
-	scheduleHooks := m.hooks.GetHooksByBinding(shtypes.Schedule)
-	for _, hook := range scheduleHooks {
-		for _, hookBinding := range hook.GetHookConfig().Schedules {
-			res = append(res, hookBinding.Queue)
-		}
-	}
-
-	kubeEventsHooks := m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
-	for _, hook := range kubeEventsHooks {
-		for _, hookBinding := range hook.GetHookConfig().OnKubernetesEvents {
-			res = append(res, hookBinding.Queue)
-		}
-	}
-
-	slices.Sort(res)
-	return slices.Compact(res)
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -226,8 +148,13 @@ func (m *Module) GetSettingsChecksum() string {
 	return m.values.GetConfigChecksum()
 }
 
-// ValidateSettings validates settings against openAPI and call setting check if exists
-func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+// GetValues returns values for rendering
+func (m *Module) GetValues() addonutils.Values {
+	return m.values.GetValues()
+}
+
+// ValidateSettings validates settings against openAPI
+func (m *Module) ValidateSettings(_ context.Context, settings addonutils.Values) (settingscheck.Result, error) {
 	if err := m.values.ValidateConfigValues(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
@@ -240,33 +167,14 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 		return settingscheck.Result{Valid: true}, nil
 	}
 
-	if m.settingsCheck != nil {
-		return m.settingsCheck.Check(ctx, settings)
-	}
-
 	return settingscheck.Result{
 		Valid: true,
 	}, nil
 }
 
-// GetValues returns values for rendering
-func (m *Module) GetValues() addonutils.Values {
-	return m.values.GetValues()
-}
-
 // ApplySettings apply settings values
 func (m *Module) ApplySettings(settings addonutils.Values) error {
 	return m.values.ApplyConfigValues(settings)
-}
-
-// GetChecks return scheduler checks, their determine if an app should be enabled/disabled
-func (m *Module) GetChecks() schedule.Checks {
-	return m.definition.Requirements.Checks()
-}
-
-// GetHooks returns all hooks for this module in arbitrary order.
-func (m *Module) GetHooks() []hooks.Hook {
-	return m.hooks.GetHooks()
 }
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
@@ -293,47 +201,8 @@ func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 	}
 }
 
-// GetHooksByBinding returns all hooks for the specified binding type, sorted by order.
-func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook {
-	return m.hooks.GetHooksByBinding(binding)
-}
-
-// RunHooksByBinding executes all hooks for a specific binding type in order.
-// It creates a binding context with snapshots for BeforeHelm/AfterHelm/AfterDeleteHelm hooks.
-func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error {
-	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "RunHooksByBinding")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("binding", string(binding)))
-
-	for _, hook := range m.hooks.GetHooksByBinding(binding) {
-		bc := bctx.BindingContext{
-			Binding: string(binding),
-		}
-		// Update kubernetes snapshots just before execute m hook
-		if binding == types.BeforeHelm || binding == types.AfterHelm || binding == types.AfterDeleteHelm {
-			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
-			bc.Metadata.IncludeAllSnapshots = true
-		}
-		bc.Metadata.BindingType = binding
-
-		if err := m.runHook(ctx, hook, []bctx.BindingContext{bc}); err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
-		}
-	}
-
-	return nil
-}
-
-// RunHookByName executes a specific hook by name with the provided binding context.
-// Returns nil if hook is not found (silent no-op).
+// RunHookByName runs some specified hook by its name
 func (m *Module) RunHookByName(ctx context.Context, name string, bctx []bctx.BindingContext) error {
-	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "RunHookByName")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("name", name))
-
 	hook := m.hooks.GetHookByName(name)
 	if hook == nil {
 		return nil
@@ -341,6 +210,20 @@ func (m *Module) RunHookByName(ctx context.Context, name string, bctx []bctx.Bin
 
 	// Update kubernetes snapshots just before execute m hook
 	bctx = hook.GetHookController().UpdateSnapshots(bctx)
+
+	// if binding == types.BeforeAll || binding == types.AfterAll {
+	// 	snapshots := globalHook.GetHookController().KubernetesSnapshots()
+	//
+	// 	newBindingContext := make([]bctx.BindingContext, 0, len(bindingContext))
+	//
+	// 	for _, bc := range bindingContext {
+	// 		bc.Snapshots = snapshots
+	// 		bc.Metadata.IncludeAllSnapshots = true
+	// 		newBindingContext = append(newBindingContext, bc)
+	// 	}
+	//
+	// 	bindingContext = newBindingContext
+	// }
 
 	return m.runHook(ctx, hook, bctx)
 }
@@ -355,7 +238,7 @@ func (m *Module) RunHookByName(ctx context.Context, name string, bctx []bctx.Bin
 //  4. Apply values patches to storage
 //
 // Returns error if hook execution or patch fails.
-func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingContext) error {
+func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.BindingContext) error {
 	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "runHook")
 	defer span.End()
 

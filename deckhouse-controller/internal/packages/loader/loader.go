@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -41,6 +42,8 @@ const (
 	loaderTracer = "package-loader"
 
 	digestsFile = "images_digests.json"
+
+	globalPath = "global-hooks"
 )
 
 var (
@@ -167,10 +170,8 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		return nil, fmt.Errorf("load values: %w", err)
 	}
 
-	packageName := filepath.Base(moduleDir)
-
 	// Discover and load hooks (shell and batch)
-	hooks, err := loadModuleHooks(ctx, packageName, moduleDir, logger)
+	hooks, err := loadModuleHooks(ctx, def.Name, moduleDir, logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load hooks: %w", err)
@@ -201,6 +202,54 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		Hooks: hooks.hooks,
 
 		SettingsCheck: hooks.settingsCheck,
+	}, nil
+}
+
+// LoadGlobalConf loads the global module configuration from the filesystem.
+// It performs the following steps:
+//  1. Validates the global module directory exists
+//  2. Loads values (static values.yaml and OpenAPI schemas)
+//  3. Discovers and loads global hooks
+//  4. Creates and returns a global Config
+//
+// Returns ErrPackageNotFound if the global module directory doesn't exist.
+func LoadGlobalConf(ctx context.Context, logger *log.Logger) (*global.Config, error) {
+	ctx, span := otel.Tracer(loaderTracer).Start(ctx, "LoadGlobalConf")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("path", globalPath))
+
+	logger = logger.With(slog.String("path", globalPath))
+
+	logger.Debug("load global module from directory", slog.String("path", globalPath))
+
+	if _, err := os.Stat(globalPath); os.IsNotExist(err) {
+		span.SetStatus(codes.Error, ErrPackageNotFound.Error())
+		return nil, ErrPackageNotFound
+	}
+
+	// Load values from values.yaml and openapi schemas
+	static, config, values, err := loadValues("global", globalPath)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load values: %w", err)
+	}
+
+	// Load hooks from registry
+	hooks, err := loadGlobalHooks(ctx, logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load hooks: %w", err)
+	}
+
+	return &global.Config{
+		Path: globalPath,
+
+		StaticValues: static,
+		ConfigSchema: config,
+		ValuesSchema: values,
+
+		Hooks: hooks,
 	}, nil
 }
 

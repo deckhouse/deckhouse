@@ -26,7 +26,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
-	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
@@ -88,7 +87,7 @@ type Config struct {
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
 
-	Hooks []*addonhooks.ModuleHook // Discovered hooks
+	Hooks []hooks.Hook // Discovered hooks
 
 	SettingsCheck *kind.SettingsCheck
 
@@ -140,7 +139,7 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 
 // addHooks initializes and adds hooks to the application's hook storage.
 // For each hook, it initializes the configuration and sets up logging/metrics labels.
-func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
+func (a *Application) addHooks(found ...hooks.Hook) error {
 	for _, hook := range found {
 		if err := hook.InitializeHookConfig(); err != nil {
 			return fmt.Errorf("initialize hook configuration: %w", err)
@@ -227,14 +226,14 @@ func (a *Application) GetPath() string {
 // GetQueues returns package queues from all hooks
 func (a *Application) GetQueues() []string {
 	var res []string //nolint:prealloc
-	scheduleHooks := a.GetHooksByBinding(shtypes.Schedule)
+	scheduleHooks := a.hooks.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range scheduleHooks {
 		for _, hookBinding := range hook.GetHookConfig().Schedules {
 			res = append(res, hookBinding.Queue)
 		}
 	}
 
-	kubeEventsHooks := a.GetHooksByBinding(shtypes.OnKubernetesEvent)
+	kubeEventsHooks := a.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
 	for _, hook := range kubeEventsHooks {
 		for _, hookBinding := range hook.GetHookConfig().OnKubernetesEvents {
 			res = append(res, hookBinding.Queue)
@@ -329,7 +328,7 @@ func (a *Application) UnlockKubernetesMonitors(hook string, monitors ...string) 
 }
 
 // GetHooksByBinding returns all hooks for the specified binding type, sorted by order.
-func (a *Application) GetHooksByBinding(binding shtypes.BindingType) []*addonhooks.ModuleHook {
+func (a *Application) GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook {
 	return a.hooks.GetHooksByBinding(binding)
 }
 
@@ -390,7 +389,7 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bct
 //  4. Apply values patches to storage
 //
 // Returns error if hook execution or patch application fails.
-func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bctx.BindingContext) error {
+func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingContext) error {
 	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "runHook")
 	defer span.End()
 
