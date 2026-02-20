@@ -9,9 +9,11 @@ spec:
   region: {{ .Values.nodeManager.internal.cloudProvider.gcp.region | quote }}
   zone: {{ .zoneName }}
   machineType: {{ .nodeGroup.instanceClass.machineType }}
-{{- if .nodeGroup.instanceClass.nestedVirtualization | default false }}
+{{- if hasKey .nodeGroup.instanceClass "nestedVirtualization" }}
+  {{- if .nodeGroup.instanceClass.nestedVirtualization }}
   advancedMachineFeatures:
     enableNestedVirtualization: true
+  {{- end }}
 {{- end }}
   disks:
   - autoDelete: true
@@ -64,8 +66,6 @@ spec:
   metadata:
   - key: ssh-keys
     value: 'user:{{ .Values.nodeManager.internal.cloudProvider.gcp.sshKey }}'
-  - key: debug-nestedvirt
-    value: '{{ .nodeGroup.instanceClass.nestedVirtualization }}'
   tags:
   # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
   - kubernetes-io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}
