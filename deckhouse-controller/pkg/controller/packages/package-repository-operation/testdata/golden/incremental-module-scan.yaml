@@ -1,0 +1,120 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: null
+  labels:
+    packages.deckhouse.io/operation-trigger: manual
+    packages.deckhouse.io/operation-type: Update
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1571326380
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+  resourceVersion: "7"
+spec:
+  packageRepositoryName: deckhouse
+  type: Update
+  update:
+    timeout: 5m
+status:
+  completionTime: "2025-10-31T12:00:00Z"
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: Processed
+  packages:
+    processed:
+    - name: test-package
+      type: Module
+    processedOverall: 1
+    total: 1
+  phase: Completed
+  startTime: "2025-10-31T12:00:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    packages.deckhouse.io/draft: "true"
+    packages.deckhouse.io/package: test-package
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-test-package-v1.0.0
+  resourceVersion: "2"
+spec:
+  packageName: test-package
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
+status:
+  packageMetadata:
+    stage: stable
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    packages.deckhouse.io/draft: "true"
+    packages.deckhouse.io/package: test-package
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-test-package-v1.1.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+  resourceVersion: "1"
+spec:
+  packageName: test-package
+  packageRepositoryName: deckhouse
+  packageVersion: v1.1.0
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: test-package
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+  resourceVersion: "2"
+status:
+  availableRepositories:
+  - deckhouse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  creationTimestamp: null
+  name: deckhouse
+  resourceVersion: "3"
+spec:
+  registry:
+    repo: registry.example.com/test
+status:
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: Successfully scanned repository, found 1 package(s)
+    reason: ""
+    status: "True"
+    type: LastOperationScanFinished
+  packages:
+  - name: test-package
+    type: Module
+  packagesCount: 1
+  phase: Active
+  syncTime: "2025-10-31T12:00:00Z"
