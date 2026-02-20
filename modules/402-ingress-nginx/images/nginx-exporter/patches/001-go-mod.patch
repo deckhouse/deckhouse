@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index aaa6d8d..4649e36 100644
+index aaa6d8d..4ebc699 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,13 +1,20 @@
  module github.com/nginxinc/nginx-prometheus-exporter
  
 -go 1.14
-+go 1.23.0
++go 1.25.7
  
  require (
 -	github.com/golang/protobuf v1.4.2 // indirect

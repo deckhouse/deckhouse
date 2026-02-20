@@ -90,7 +90,7 @@ shell:
 ---
 # dumb-init
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -107,7 +107,7 @@ shell:
 ---
 # luarocks
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -379,7 +379,7 @@ shell:
 # Final image
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11
+fromImage: common/alt-p11-2026-02-07
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
