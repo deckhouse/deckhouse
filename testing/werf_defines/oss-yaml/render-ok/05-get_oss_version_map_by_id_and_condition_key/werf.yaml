@@ -1,0 +1,20 @@
+{{- $_ := set . "OssYamlPath" "oss.yaml" -}}
+project: test-oss-yaml-helper
+configVersion: 1
+---
+image: test
+from: alpine:3.20
+shell:
+  install:
+  - echo ok
+
+{{- $m := include "get_oss_version_map_by_id_and_condition_key" (list "example-service" "k8s" $) | fromYaml -}}
+{{- if ne (get $m "1.31") "1.2.1" -}}
+  {{- fail (printf "expected map[1.31]=1.2.1, got %v" $m) -}}
+{{- end -}}
+{{- if ne (get $m "1.32") "1.2.1" -}}
+  {{- fail (printf "expected map[1.32]=1.2.1, got %v" $m) -}}
+{{- end -}}
+{{- if ne (get $m "1.33") "1.2.2" -}}
+  {{- fail (printf "expected map[1.33]=1.2.2, got %v" $m) -}}
+{{- end -}}
