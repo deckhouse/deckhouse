@@ -197,6 +197,18 @@ func (e *Extension) performInPlaceUpdate(
 	return nil
 }
 
+// deleteVMOperation removes a VirtualMachineOperation by name, ignoring NotFound.
+// This is needed because StopVM/StartVM create VMOPs with the same name (the VM name),
+// so we must clean up the previous one before creating the next.
+func (e *Extension) deleteVMOperation(ctx context.Context, vmName string) {
+	vmop := &v1alpha2.VirtualMachineOperation{}
+	vmop.Name = vmName
+	vmop.Namespace = e.dvp.ProjectNamespace()
+	if err := e.dvp.Service.GetClient().Delete(ctx, vmop); err != nil {
+		e.log.V(1).Info("Failed to delete VMOperation (may not exist)", "vm", vmName, "error", err.Error())
+	}
+}
+
 // warmUpdate stops the VM, patches its spec, and starts it again.
 func (e *Extension) warmUpdate(
 	ctx context.Context,
@@ -205,6 +217,8 @@ func (e *Extension) warmUpdate(
 	desiredSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
 	cs *changeSet,
 ) error {
+	e.deleteVMOperation(ctx, vmName)
+
 	e.log.Info("Warm update: stopping VM", "vm", vmName)
 	if err := e.dvp.ComputeService.StopVM(ctx, vmName); err != nil {
 		return fmt.Errorf("stop VM %s: %w", vmName, err)
@@ -213,6 +227,7 @@ func (e *Extension) warmUpdate(
 	if cs.cpuChanged || cs.memoryChanged || cs.vmClassChanged {
 		e.log.Info("Warm update: patching VM spec", "vm", vmName)
 		if err := e.patchVMSpec(ctx, vmName, desiredSpec, cs); err != nil {
+			e.deleteVMOperation(ctx, vmName)
 			_ = e.dvp.ComputeService.StartVM(ctx, vmName)
 			return fmt.Errorf("patch VM spec: %w", err)
 		}
@@ -226,10 +241,13 @@ func (e *Extension) warmUpdate(
 			"newSize", desiredSpec.RootDiskSize.String(),
 		)
 		if err := e.dvp.DiskService.ResizeDisk(ctx, bootDiskName, desiredSpec.RootDiskSize.String()); err != nil {
+			e.deleteVMOperation(ctx, vmName)
 			_ = e.dvp.ComputeService.StartVM(ctx, vmName)
 			return fmt.Errorf("resize root disk %s: %w", bootDiskName, err)
 		}
 	}
+
+	e.deleteVMOperation(ctx, vmName)
 
 	e.log.Info("Warm update: starting VM", "vm", vmName)
 	if err := e.dvp.ComputeService.StartVM(ctx, vmName); err != nil {
