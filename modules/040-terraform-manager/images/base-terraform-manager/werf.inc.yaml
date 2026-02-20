@@ -3,7 +3,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 final: false
 fromImage: common/distroless
 import:
-- image: dhctl # from main werf.yaml
+- image: dhctl-base # from main werf.yaml
   add: /dhctl/bin/dhctl
   to: /dhctl
   before: setup
@@ -22,7 +22,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-opentofu
 final: false
 fromImage: common/distroless
 import:
-- image: dhctl # from main werf.yaml
+- image: dhctl-base # from main werf.yaml
   add: /dhctl/bin/dhctl
   to: /dhctl
   before: setup
