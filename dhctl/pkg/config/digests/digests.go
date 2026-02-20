@@ -16,6 +16,7 @@ package digests
 
 import (
 	"embed"
+	"errors"
 	"os"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -27,11 +28,27 @@ var imagesDigestsEmbeddedJSON embed.FS
 var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
 func ImagesDigestsBytes() ([]byte, error) {
-	file, err := os.ReadFile(imagesDigestsJSON)
+	stat, err := os.Stat(imagesDigestsJSON)
 	if err != nil {
-		log.WarnF("Cannot open file %s. Fallback to embedded images_digests.json", imagesDigestsJSON)
+		if errors.Is(err, os.ErrNotExist) {
+			log.InfoF("%s not exists. Fallback to embedded images_digests.json", imagesDigestsJSON, err)
+		} else {
+			log.WarnF("Failed to stat %s: %w. Fallback to embedded images_digests.json", imagesDigestsJSON, err)
+		}
 		return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
 	}
 
+	if stat.IsDir() {
+		log.WarnF("%s stats as directory. Fallback to embedded images_digests.json", imagesDigestsJSON)
+		return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
+	}
+
+	file, err := os.ReadFile(imagesDigestsJSON)
+	if err != nil {
+		log.WarnF("Failed to open %s. Fallback to embedded images_digests.json", imagesDigestsJSON)
+		return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
+	}
+
+	log.DebugF("Using %s\n", imagesDigestsJSON)
 	return file, nil
 }
