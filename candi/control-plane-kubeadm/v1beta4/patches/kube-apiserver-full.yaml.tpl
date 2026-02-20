@@ -120,24 +120,6 @@ spec:
     name: kube-audit-log
 {{- end }}
 {{- end }}
-{{- if hasKey . "images" }}
-{{- if hasKey .images "controlPlaneManager" }}
-{{- if hasKey .images.controlPlaneManager "kubeApiserverHealthcheck" }}
-  - name: healthcheck-secrets-ca
-    hostPath:
-      path: /etc/kubernetes/pki/ca.crt
-      type: File
-  - name: healthcheck-secrets-client-crt
-    hostPath:
-      path: /etc/kubernetes/pki/apiserver-kubelet-client.crt
-      type: File
-  - name: healthcheck-secrets-client-key
-    hostPath:
-      path: /etc/kubernetes/pki/apiserver-kubelet-client.key
-      type: File
-{{- end }}
-{{- end }}
-{{- end }}
   containers:
   - name: kube-apiserver
 {{- if hasKey . "images" }}
@@ -284,9 +266,6 @@ spec:
     env:
     - name: GOGC
       value: "50"
-{{- if hasKey . "images" }}
-{{- if hasKey .images "controlPlaneManager" }}
-{{- if hasKey .images.controlPlaneManager "kubeApiserverHealthcheck" }}
     readinessProbe:
       httpGet:
 {{- if hasKey . "nodeIP" }}
@@ -311,6 +290,3 @@ spec:
         path: /livez
         port: 6443
         scheme: HTTPS
-{{- end }}
-{{- end }}
-{{- end }}
