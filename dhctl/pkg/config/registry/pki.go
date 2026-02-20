@@ -51,17 +51,17 @@ func GetPKI(ctx context.Context, kubeClient client.KubeClient) (PKI, error) {
 }
 
 func GeneratePKI() (PKI, error) {
-	ca, err := GeneratePKICA(certificateCommonName)
+	ca, err := generatePKICA(certificateCommonName)
 	if err != nil {
 		return PKI{}, fmt.Errorf("generate CA for common name %q: %w", certificateCommonName, err)
 	}
 
-	ro, err := GeneratePKIUser(roUsername)
+	ro, err := generatePKIUser(roUsername)
 	if err != nil {
 		return PKI{}, fmt.Errorf("generate user %q: %w", roUsername, err)
 	}
 
-	rw, err := GeneratePKIUser(rwUsername)
+	rw, err := generatePKIUser(rwUsername)
 	if err != nil {
 		return PKI{}, fmt.Errorf("generate user %q: %w", rwUsername, err)
 	}
@@ -73,7 +73,7 @@ func GeneratePKI() (PKI, error) {
 	}, nil
 }
 
-func GeneratePKIUser(name string) (PKIUser, error) {
+func generatePKIUser(name string) (PKIUser, error) {
 	password, err := pki.GenerateUserPassword()
 	if err != nil {
 		return PKIUser{}, fmt.Errorf("generate password: %w", err)
@@ -91,7 +91,7 @@ func GeneratePKIUser(name string) (PKIUser, error) {
 	}, nil
 }
 
-func GeneratePKICA(commonName string) (PKICertKey, error) {
+func generatePKICA(commonName string) (PKICertKey, error) {
 	certKey, err := pki.GenerateCACertificate(commonName)
 	if err != nil {
 		return PKICertKey{}, fmt.Errorf("generate CA certificate: %w", err)

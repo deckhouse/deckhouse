@@ -32,7 +32,7 @@ func CreatePKISecret(ctx context.Context, kubeClient client.KubeClient) error {
 		return err
 	}
 
-	pkiYaml, err := yaml.Marshal(pki)
+	pkiYAML, err := yaml.Marshal(pki)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func CreatePKISecret(ctx context.Context, kubeClient client.KubeClient) error {
 			Namespace: "d8-system",
 		},
 		Data: map[string][]byte{
-			"config": pkiYaml,
+			"config": pkiYAML,
 		},
 	}
 
