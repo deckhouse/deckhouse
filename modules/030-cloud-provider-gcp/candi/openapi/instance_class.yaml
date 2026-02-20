@@ -112,6 +112,74 @@ spec:
                   x-kubernetes-preserve-unknown-fields: true
                   additionalProperties:
                     type: string
+                nestedVirtualization:
+                  description: |
+                    Enables [nested virtualization](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview) on the instance.
+
+                    Required for running virtual machine workloads (e.g., KVM-based VMs) inside GCP instances.
+
+                    > **Note.** Only supported on specific machine types. See the [GCP documentation](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types) for the list of compatible types.
+                  type: boolean
+                  x-doc-default: false
+                additionalDisks:
+                  description: |
+                    A list of additional disks to attach to the instance.
+
+                    Useful for storage workloads such as LinStor, Ceph, NFS, and similar.
+                  type: array
+                  x-doc-examples:
+                  - - sizeGb: 100
+                      type: pd-ssd
+                  items:
+                    type: object
+                    required:
+                      - sizeGb
+                      - type
+                    properties:
+                      sizeGb:
+                        description: Disk size in gibibytes.
+                        type: integer
+                        minimum: 1
+                        x-doc-examples: [100]
+                      type:
+                        description: |
+                          Disk type.
+
+                          - `pd-standard` — standard Persistent Disk (HDD).
+                          - `pd-balanced` — balanced Persistent Disk (SSD).
+                          - `pd-ssd` — SSD Persistent Disk.
+                          - `pd-extreme` — extreme Persistent Disk; requires `provisionedIops`.
+                          - `hyperdisk-balanced` — Hyperdisk with balanced performance.
+                          - `hyperdisk-throughput` — Hyperdisk optimized for throughput.
+                          - `hyperdisk-extreme` — Hyperdisk with maximum performance; requires `provisionedIops`.
+                        type: string
+                        enum:
+                          - "pd-standard"
+                          - "pd-balanced"
+                          - "pd-ssd"
+                          - "pd-extreme"
+                          - "hyperdisk-balanced"
+                          - "hyperdisk-throughput"
+                          - "hyperdisk-extreme"
+                        x-doc-examples: ["pd-ssd"]
+                      autoDelete:
+                        description: Automatically delete the disk when the instance is deleted.
+                        type: boolean
+                        x-doc-default: true
+                      provisionedIops:
+                        description: |
+                          Provisioned IOPS for the disk.
+
+                          Required for `pd-extreme` and `hyperdisk-extreme` disk types.
+                        type: integer
+                        minimum: 1
+                      provisionedThroughput:
+                        description: |
+                          Provisioned throughput in MiB/s for the disk.
+
+                          Applicable for `hyperdisk-balanced` and `hyperdisk-throughput` disk types.
+                        type: integer
+                        minimum: 1
             status:
               type: object
               properties:

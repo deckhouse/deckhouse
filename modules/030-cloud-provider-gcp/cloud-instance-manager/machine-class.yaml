@@ -9,12 +9,32 @@ spec:
   region: {{ .Values.nodeManager.internal.cloudProvider.gcp.region | quote }}
   zone: {{ .zoneName }}
   machineType: {{ .nodeGroup.instanceClass.machineType }}
+{{- if hasKey .nodeGroup.instanceClass "nestedVirtualization" }}
+  {{- if .nodeGroup.instanceClass.nestedVirtualization }}
+  advancedMachineFeatures:
+    enableNestedVirtualization: true
+  {{- end }}
+{{- end }}
   disks:
   - autoDelete: true
     boot: true
     sizeGb: {{ if hasKey .nodeGroup.instanceClass "diskSizeGb" }}{{ .nodeGroup.instanceClass.diskSizeGb }}{{ else }}{{ .Values.nodeManager.internal.cloudProvider.gcp.diskSizeGb }}{{ end }}
     type: {{ if hasKey .nodeGroup.instanceClass "diskType" }}{{ .nodeGroup.instanceClass.diskType | quote }}{{ else }}{{ .Values.nodeManager.internal.cloudProvider.gcp.diskType | quote }}{{ end }}
     image: {{ if hasKey .nodeGroup.instanceClass "image" }}{{ .nodeGroup.instanceClass.image | quote }}{{ else }}{{ .Values.nodeManager.internal.cloudProvider.gcp.image | quote }}{{ end }}
+{{- if hasKey .nodeGroup.instanceClass "additionalDisks" }}
+  {{- range .nodeGroup.instanceClass.additionalDisks }}
+  - boot: false
+    autoDelete: {{ if hasKey . "autoDelete" }}{{ .autoDelete }}{{ else }}true{{ end }}
+    sizeGb: {{ .sizeGb }}
+    type: {{ .type | quote }}
+    {{- if hasKey . "provisionedIops" }}
+    provisionedIops: {{ .provisionedIops }}
+    {{- end }}
+    {{- if hasKey . "provisionedThroughput" }}
+    provisionedThroughput: {{ .provisionedThroughput }}
+    {{- end }}
+  {{- end }}
+{{- end }}
   serviceAccounts:
   - email: {{ index (.Values.nodeManager.internal.cloudProvider.gcp.serviceAccountJSON | fromJson) "client_email" | quote }}
     scopes:
