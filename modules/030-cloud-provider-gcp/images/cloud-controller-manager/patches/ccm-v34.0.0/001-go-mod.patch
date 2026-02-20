@@ -1,0 +1,301 @@
+diff --git a/go.mod b/go.mod
+index 0bbac4897..e3249448a 100644
+--- a/go.mod
++++ b/go.mod
+@@ -15,18 +15,18 @@ require (
+ 	google.golang.org/api v0.199.0
+ 	gopkg.in/gcfg.v1 v1.2.3 // indirect
+ 	gopkg.in/warnings.v0 v0.1.2 // indirect
+-	k8s.io/api v0.34.0
+-	k8s.io/apimachinery v0.34.0
+-	k8s.io/apiserver v0.34.0
+-	k8s.io/client-go v0.34.0
+-	k8s.io/code-generator v0.34.0
+-	k8s.io/component-base v0.34.0
+-	k8s.io/component-helpers v0.34.0
+-	k8s.io/controller-manager v0.34.0
++	k8s.io/api v0.34.2
++	k8s.io/apimachinery v0.34.2
++	k8s.io/apiserver v0.34.2
++	k8s.io/client-go v0.34.2
++	k8s.io/code-generator v0.34.2
++	k8s.io/component-base v0.34.2
++	k8s.io/component-helpers v0.34.2
++	k8s.io/controller-manager v0.34.2
+ 	k8s.io/klog/v2 v2.130.1
+-	k8s.io/kube-controller-manager v0.34.0
+-	k8s.io/kubelet v0.34.0
+-	k8s.io/metrics v0.34.0
++	k8s.io/kube-controller-manager v0.34.2
++	k8s.io/kubelet v0.34.2
++	k8s.io/metrics v0.34.2
+ 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
+ 	sigs.k8s.io/controller-tools v0.17.2
+ )
+@@ -35,9 +35,9 @@ require (
+ 	github.com/GoogleCloudPlatform/gke-networking-api v0.1.2-0.20240904205008-bc15495fd43f
+ 	github.com/hashicorp/go-multierror v1.1.1
+ 	github.com/natefinch/atomic v1.0.1
+-	k8s.io/cloud-provider v0.34.0
++	k8s.io/cloud-provider v0.34.2
+ 	k8s.io/cloud-provider-gcp/providers v0.0.0-00010101000000-000000000000
+-	k8s.io/kubernetes v1.34.0
++	k8s.io/kubernetes v1.34.2
+ )
+ 
+ require (
+@@ -58,6 +58,7 @@ require (
+ 	go.yaml.in/yaml/v2 v2.4.2 // indirect
+ 	go.yaml.in/yaml/v3 v3.0.4 // indirect
+ 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
++	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
+ 	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb // indirect
+ 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb // indirect
+ 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+@@ -128,54 +129,54 @@ require (
+ 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
+ 	go.uber.org/multierr v1.11.0 // indirect
+ 	go.uber.org/zap v1.27.0 // indirect
+-	golang.org/x/crypto v0.36.0 // indirect
+-	golang.org/x/mod v0.23.0 // indirect
+-	golang.org/x/net v0.38.0 // indirect
+-	golang.org/x/sync v0.12.0 // indirect
+-	golang.org/x/sys v0.31.0 // indirect
+-	golang.org/x/term v0.30.0 // indirect
+-	golang.org/x/text v0.23.0 // indirect
++	golang.org/x/crypto v0.45.0 // indirect
++	golang.org/x/mod v0.29.0 // indirect
++	golang.org/x/net v0.47.0 // indirect
++	golang.org/x/sync v0.18.0 // indirect
++	golang.org/x/sys v0.38.0 // indirect
++	golang.org/x/term v0.37.0 // indirect
++	golang.org/x/text v0.31.0 // indirect
+ 	golang.org/x/time v0.10.0 // indirect
+-	golang.org/x/tools v0.30.0 // indirect
++	golang.org/x/tools v0.38.0 // indirect
+ 	google.golang.org/grpc v1.72.1 // indirect
+ 	google.golang.org/protobuf v1.36.5 // indirect
+ 	gopkg.in/inf.v0 v0.9.1 // indirect
+ 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
+ 	gopkg.in/yaml.v2 v2.4.0 // indirect
+ 	gopkg.in/yaml.v3 v3.0.1 // indirect
+-	k8s.io/apiextensions-apiserver v0.34.0 // indirect
+-	k8s.io/kms v0.34.0 // indirect
++	k8s.io/apiextensions-apiserver v0.34.2 // indirect
++	k8s.io/kms v0.34.2 // indirect
+ 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
+ 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
+ 	sigs.k8s.io/yaml v1.6.0 // indirect
+ )
+ 
+ replace (
+-	k8s.io/api => k8s.io/api v0.34.0
+-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.34.0
+-	k8s.io/apimachinery => k8s.io/apimachinery v0.34.0
+-	k8s.io/apiserver => k8s.io/apiserver v0.34.0
+-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.34.0
+-	k8s.io/client-go => k8s.io/client-go v0.34.0
+-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.34.0
++	k8s.io/api => k8s.io/api v0.34.2
++	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.34.2
++	k8s.io/apimachinery => k8s.io/apimachinery v0.34.2
++	k8s.io/apiserver => k8s.io/apiserver v0.34.2
++	k8s.io/cli-runtime => k8s.io/cli-runtime v0.34.2
++	k8s.io/client-go => k8s.io/client-go v0.34.2
++	k8s.io/cloud-provider => k8s.io/cloud-provider v0.34.2
+ 
+ 	k8s.io/cloud-provider-gcp/providers => ./providers
+-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.34.0
+-	k8s.io/code-generator => k8s.io/code-generator v0.34.0
+-	k8s.io/component-base => k8s.io/component-base v0.34.0
+-	k8s.io/component-helpers => k8s.io/component-helpers v0.34.0
+-	k8s.io/controller-manager => k8s.io/controller-manager v0.34.0
+-	k8s.io/cri-api => k8s.io/cri-api v0.34.0
+-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.34.0
+-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.34.0
+-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.34.0
+-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.34.0
+-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.34.0
+-	k8s.io/kubectl => k8s.io/kubectl v0.34.0
+-	k8s.io/kubelet => k8s.io/kubelet v0.34.0
+-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.34.0
+-	k8s.io/metrics => k8s.io/metrics v0.34.0
+-	k8s.io/mount-utils => k8s.io/mount-utils v0.34.0
+-	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.34.0
+-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.34.0
++	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.34.2
++	k8s.io/code-generator => k8s.io/code-generator v0.34.2
++	k8s.io/component-base => k8s.io/component-base v0.34.2
++	k8s.io/component-helpers => k8s.io/component-helpers v0.34.2
++	k8s.io/controller-manager => k8s.io/controller-manager v0.34.2
++	k8s.io/cri-api => k8s.io/cri-api v0.34.2
++	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.34.2
++	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.34.2
++	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.34.2
++	k8s.io/kube-proxy => k8s.io/kube-proxy v0.34.2
++	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.34.2
++	k8s.io/kubectl => k8s.io/kubectl v0.34.2
++	k8s.io/kubelet => k8s.io/kubelet v0.34.2
++	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.34.2
++	k8s.io/metrics => k8s.io/metrics v0.34.2
++	k8s.io/mount-utils => k8s.io/mount-utils v0.34.2
++	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.34.2
++	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.34.2
+ )
+diff --git a/go.sum b/go.sum
+index 70138557e..f59030105 100644
+--- a/go.sum
++++ b/go.sum
+@@ -278,8 +278,8 @@ go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
+ golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
+ golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
+ golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+-golang.org/x/crypto v0.36.0 h1:AnAEvhDddvBdpY+uR+MyHmuZzzNqXSe/GvuDeob5L34=
+-golang.org/x/crypto v0.36.0/go.mod h1:Y4J0ReaxCR1IMaabaSMugxJES1EpwhBHhv2bDHklZvc=
++golang.org/x/crypto v0.45.0 h1:jMBrvKuj23MTlT0bQEOBcAE0mjg8mK9RXFhRH6nyF3Q=
++golang.org/x/crypto v0.45.0/go.mod h1:XTGrrkGJve7CYK7J8PEww4aY7gM3qMCElcJQ8n8JdX4=
+ golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
+ golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f h1:XdNn9LlyWAhLVp6P/i8QYBW+hlyhrhei9uErw2B5GJo=
+ golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f/go.mod h1:D5SMRVC3C2/4+F/DB1wZsLRnSNimn2Sp/NPsCrsv8ak=
+@@ -288,8 +288,8 @@ golang.org/x/lint v0.0.0-20190227174305-5b3e6a55c961/go.mod h1:wehouNa3lNwaWXcvx
+ golang.org/x/lint v0.0.0-20190313153728-d0100b6bd8b3/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
+ golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+ golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+-golang.org/x/mod v0.23.0 h1:Zb7khfcRGKk+kqfxFaP5tZqCnDZMjC5VtUBs87Hr6QM=
+-golang.org/x/mod v0.23.0/go.mod h1:6SkKJ3Xj0I0BrPOZoBy3bdMptDDU9oJrpohJ3eWZ1fY=
++golang.org/x/mod v0.29.0 h1:HV8lRxZC4l2cr3Zq1LvtOsi/ThTgWnUk/y64QSs8GwA=
++golang.org/x/mod v0.29.0/go.mod h1:NyhrlYXJ2H4eJiRy/WDBO6HMqZQ6q9nk4JzS3NuCK+w=
+ golang.org/x/net v0.0.0-20180724234803-3673e40ba225/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+ golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+ golang.org/x/net v0.0.0-20190213061140-3a22650c66bd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+@@ -299,8 +299,8 @@ golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLL
+ golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
+ golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
+ golang.org/x/net v0.0.0-20201110031124-69a78807bb2b/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
+-golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
+-golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
++golang.org/x/net v0.47.0 h1:Mx+4dIFzqraBXUugkia1OOvlD6LemFo1ALMHjrXDOhY=
++golang.org/x/net v0.47.0/go.mod h1:/jNxtkgq5yWUGYkaZGqo27cfGZ1c5Nen03aYrrKpVRU=
+ golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
+ golang.org/x/oauth2 v0.27.0 h1:da9Vo7/tDv5RH/7nZDz1eMGS/q1Vv1N/7FCrBhI9I3M=
+ golang.org/x/oauth2 v0.27.0/go.mod h1:onh5ek6nERTohokkhCD/y2cV4Do3fxFHFuAejCkRWT8=
+@@ -309,8 +309,8 @@ golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJ
+ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+-golang.org/x/sync v0.12.0 h1:MHc5BpPuC30uJk597Ri8TV3CNZcTLu6B6z4lJy+g6Jw=
+-golang.org/x/sync v0.12.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
++golang.org/x/sync v0.18.0 h1:kr88TuHDroi+UVf+0hZnirlk8o8T+4MrK6mr60WkH/I=
++golang.org/x/sync v0.18.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
+ golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+ golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+ golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+@@ -318,14 +318,14 @@ golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f/go.mod h1:h1NjWce9XRLGQEsW7w
+ golang.org/x/sys v0.0.0-20210616094352-59db8d763f22/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+-golang.org/x/sys v0.31.0 h1:ioabZlmFYtWhL+TRYpcnNlLwhyxaM9kWTDEmfnprqik=
+-golang.org/x/sys v0.31.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
+-golang.org/x/term v0.30.0 h1:PQ39fJZ+mfadBm0y5WlL4vlM7Sx1Hgf13sMIY2+QS9Y=
+-golang.org/x/term v0.30.0/go.mod h1:NYYFdzHoI5wRh/h5tDMdMqCqPJZEuNqVR5xJLd/n67g=
++golang.org/x/sys v0.38.0 h1:3yZWxaJjBmCWXqhN1qh02AkOnCQ1poK6oF+a7xWL6Gc=
++golang.org/x/sys v0.38.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
++golang.org/x/term v0.37.0 h1:8EGAD0qCmHYZg6J17DvsMy9/wJ7/D/4pV/wfnld5lTU=
++golang.org/x/term v0.37.0/go.mod h1:5pB4lxRNYYVZuTLmy8oR2BH8dflOR+IbTYFD8fi3254=
+ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
+-golang.org/x/text v0.23.0 h1:D71I7dUrlY+VX0gQShAThNGHFxZ13dGLBHQLVl1mJlY=
+-golang.org/x/text v0.23.0/go.mod h1:/BLNzu4aZCJ1+kcD0DNRotWKage4q2rGVAg4o22unh4=
++golang.org/x/text v0.31.0 h1:aC8ghyu4JhP8VojJ2lEHBnochRno1sgL6nEi9WGFGMM=
++golang.org/x/text v0.31.0/go.mod h1:tKRAlv61yKIjGGHX/4tP1LTbc13YSec1pxVEWXzfoeM=
+ golang.org/x/time v0.10.0 h1:3usCWA8tQn0L8+hFJQNgzpWbd89begxN66o1Ojdn5L4=
+ golang.org/x/time v0.10.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
+ golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
+@@ -336,8 +336,12 @@ golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135/go.mod h1:RgjU9mgBXZiqYHBn
+ golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
+ golang.org/x/tools v0.0.0-20200619180055-7c47624df98f/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
+ golang.org/x/tools v0.0.0-20210106214847-113979e3529a/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
+-golang.org/x/tools v0.30.0 h1:BgcpHewrV5AUp2G9MebG4XPFI1E2W41zU1SaqVA9vJY=
+-golang.org/x/tools v0.30.0/go.mod h1:c347cR/OJfw5TI+GfX7RUPNMdDRRbjvYTS0jPyvsVtY=
++golang.org/x/tools v0.38.0 h1:Hx2Xv8hISq8Lm16jvBZ2VQf+RLmbd7wVUsALibYI/IQ=
++golang.org/x/tools v0.38.0/go.mod h1:yEsQ/d/YK8cjh0L6rZlY8tgtlKiBNTL14pGDJPJpYQs=
++golang.org/x/tools/go/expect v0.1.0-deprecated h1:jY2C5HGYR5lqex3gEniOQL0r7Dq5+VGVgY1nudX5lXY=
++golang.org/x/tools/go/expect v0.1.0-deprecated/go.mod h1:eihoPOH+FgIqa3FpoTwguz/bVUSGBlGQU67vpBeOrBY=
++golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated h1:1h2MnaIAIXISqTFKdENegdpAgUXz6NrPEsbIeWaBRvM=
++golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated/go.mod h1:RVAQXBGNv1ib0J382/DPCRS/BPnsGebyM1Gj5VSDpG8=
+ golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+ golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+ golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+@@ -393,42 +397,42 @@ gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+ gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+ honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
+ honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
+-k8s.io/api v0.34.0 h1:L+JtP2wDbEYPUeNGbeSa/5GwFtIA662EmT2YSLOkAVE=
+-k8s.io/api v0.34.0/go.mod h1:YzgkIzOOlhl9uwWCZNqpw6RJy9L2FK4dlJeayUoydug=
+-k8s.io/apiextensions-apiserver v0.34.0 h1:B3hiB32jV7BcyKcMU5fDaDxk882YrJ1KU+ZSkA9Qxoc=
+-k8s.io/apiextensions-apiserver v0.34.0/go.mod h1:hLI4GxE1BDBy9adJKxUxCEHBGZtGfIg98Q+JmTD7+g0=
+-k8s.io/apimachinery v0.34.0 h1:eR1WO5fo0HyoQZt1wdISpFDffnWOvFLOOeJ7MgIv4z0=
+-k8s.io/apimachinery v0.34.0/go.mod h1:/GwIlEcWuTX9zKIg2mbw0LRFIsXwrfoVxn+ef0X13lw=
+-k8s.io/apiserver v0.34.0 h1:Z51fw1iGMqN7uJ1kEaynf2Aec1Y774PqU+FVWCFV3Jg=
+-k8s.io/apiserver v0.34.0/go.mod h1:52ti5YhxAvewmmpVRqlASvaqxt0gKJxvCeW7ZrwgazQ=
+-k8s.io/client-go v0.34.0 h1:YoWv5r7bsBfb0Hs2jh8SOvFbKzzxyNo0nSb0zC19KZo=
+-k8s.io/client-go v0.34.0/go.mod h1:ozgMnEKXkRjeMvBZdV1AijMHLTh3pbACPvK7zFR+QQY=
+-k8s.io/cloud-provider v0.34.0 h1:OgrNE+WSgfvDBQf6WS9qFM7Xr37bc0Og5kkL4hyWDmU=
+-k8s.io/cloud-provider v0.34.0/go.mod h1:JbMa0t6JIGDMLI7Py6bdp9TN6cfuHrWGq+E/X+Ljkmo=
+-k8s.io/code-generator v0.34.0 h1:Ze2i1QsvUprIlX3oHiGv09BFQRLCz+StA8qKwwFzees=
+-k8s.io/code-generator v0.34.0/go.mod h1:Py2+4w2HXItL8CGhks8uI/wS3Y93wPKO/9mBQUYNua0=
+-k8s.io/component-base v0.34.0 h1:bS8Ua3zlJzapklsB1dZgjEJuJEeHjj8yTu1gxE2zQX8=
+-k8s.io/component-base v0.34.0/go.mod h1:RSCqUdvIjjrEm81epPcjQ/DS+49fADvGSCkIP3IC6vg=
+-k8s.io/component-helpers v0.34.0 h1:5T7P9XGMoUy1JDNKzHf0p/upYbeUf8ZaSf9jbx0QlIo=
+-k8s.io/component-helpers v0.34.0/go.mod h1:kaOyl5tdtnymriYcVZg4uwDBe2d1wlIpXyDkt6sVnt4=
+-k8s.io/controller-manager v0.34.0 h1:oCHoqS8dcFp7zDSu7HUvTpakq3isSxil3GprGGlJMsE=
+-k8s.io/controller-manager v0.34.0/go.mod h1:XFto21U+Mm9BT8r/Jd5E4tHCGtwjKAUFOuDcqaj2VK0=
++k8s.io/api v0.34.2 h1:fsSUNZhV+bnL6Aqrp6O7lMTy6o5x2C4XLjnh//8SLYY=
++k8s.io/api v0.34.2/go.mod h1:MMBPaWlED2a8w4RSeanD76f7opUoypY8TFYkSM+3XHw=
++k8s.io/apiextensions-apiserver v0.34.2 h1:WStKftnGeoKP4AZRz/BaAAEJvYp4mlZGN0UCv+uvsqo=
++k8s.io/apiextensions-apiserver v0.34.2/go.mod h1:398CJrsgXF1wytdaanynDpJ67zG4Xq7yj91GrmYN2SE=
++k8s.io/apimachinery v0.34.2 h1:zQ12Uk3eMHPxrsbUJgNF8bTauTVR2WgqJsTmwTE/NW4=
++k8s.io/apimachinery v0.34.2/go.mod h1:/GwIlEcWuTX9zKIg2mbw0LRFIsXwrfoVxn+ef0X13lw=
++k8s.io/apiserver v0.34.2 h1:2/yu8suwkmES7IzwlehAovo8dDE07cFRC7KMDb1+MAE=
++k8s.io/apiserver v0.34.2/go.mod h1:gqJQy2yDOB50R3JUReHSFr+cwJnL8G1dzTA0YLEqAPI=
++k8s.io/client-go v0.34.2 h1:Co6XiknN+uUZqiddlfAjT68184/37PS4QAzYvQvDR8M=
++k8s.io/client-go v0.34.2/go.mod h1:2VYDl1XXJsdcAxw7BenFslRQX28Dxz91U9MWKjX97fE=
++k8s.io/cloud-provider v0.34.2 h1:tNxZ6c+3cJdpNHvurzUdVvKNbB0pDxx3jE1AcZ8pMKA=
++k8s.io/cloud-provider v0.34.2/go.mod h1:8XqzAplSoVLZzqut82sWHusz6X00C1Djk3BpeKAjfHY=
++k8s.io/code-generator v0.34.2 h1:9bG6jTxmsU3HXE5BNYJTC8AZ1D6hVVfkm8yYSkdkGY0=
++k8s.io/code-generator v0.34.2/go.mod h1:dnDDEd6S/z4uZ+PG1aE58ySCi/lR4+qT3a4DddE4/2I=
++k8s.io/component-base v0.34.2 h1:HQRqK9x2sSAsd8+R4xxRirlTjowsg6fWCPwWYeSvogQ=
++k8s.io/component-base v0.34.2/go.mod h1:9xw2FHJavUHBFpiGkZoKuYZ5pdtLKe97DEByaA+hHbM=
++k8s.io/component-helpers v0.34.2 h1:RIUGDdU+QFzeVKLZ9f05sXTNAtJrRJ3bnbMLrogCrvM=
++k8s.io/component-helpers v0.34.2/go.mod h1:pLi+GByuRTeFjjcezln8gHL7LcT6HImkwVQ3A2SQaEE=
++k8s.io/controller-manager v0.34.2 h1:bjdSLh5nnSde5jfRW/rdPDOSYbwUMxs+9JUcbyL6LP8=
++k8s.io/controller-manager v0.34.2/go.mod h1:sR6wSdANfbdXBTtg2Fwp1ruo/1TJgSilooT6FDxZj4A=
+ k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f h1:SLb+kxmzfA87x4E4brQzB33VBbT2+x7Zq9ROIHmGn9Q=
+ k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f/go.mod h1:EJykeLsmFC60UQbYJezXkEsG2FLrt0GPNkU5iK5GWxU=
+ k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
+ k8s.io/klog/v2 v2.130.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
+-k8s.io/kms v0.34.0 h1:u+/rcxQ3Jr7gC9AY5nXuEnBcGEB7ZOIJ9cdLdyHyEjQ=
+-k8s.io/kms v0.34.0/go.mod h1:s1CFkLG7w9eaTYvctOxosx88fl4spqmixnNpys0JAtM=
+-k8s.io/kube-controller-manager v0.34.0 h1:NYe0k+zu04j24WTEfB81RJ1SviSGjbJ2SX1DdiLErUQ=
+-k8s.io/kube-controller-manager v0.34.0/go.mod h1:qhiHYDzVwqtZBwg2bp2DiuyXpb2xPYgl6EfOyD1puzI=
++k8s.io/kms v0.34.2 h1:91rj4MDZLyIT9KxG8J5/CcMH666Z88CF/xJQeuPfJc8=
++k8s.io/kms v0.34.2/go.mod h1:s1CFkLG7w9eaTYvctOxosx88fl4spqmixnNpys0JAtM=
++k8s.io/kube-controller-manager v0.34.2 h1:+9BSj9DOIRRy5orJ1OwGe0CrnOP0ebx4wonLHKdulsw=
++k8s.io/kube-controller-manager v0.34.2/go.mod h1:YbqAqbvTSKe/s3xPKXLMk+5wHGnTlBgcr/7J3w/+YTY=
+ k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b h1:MloQ9/bdJyIu9lb1PzujOPolHyvO06MXG5TUIj2mNAA=
+ k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b/go.mod h1:UZ2yyWbFTpuhSbFhv24aGNOdoRdJZgsIObGBUaYVsts=
+-k8s.io/kubelet v0.34.0 h1:1nZt1Q6Kfx7xCaTS9vnqR9sjZDxf3cRSQkAFCczULmc=
+-k8s.io/kubelet v0.34.0/go.mod h1:NqbF8ViVettlZbf9hw9DJhubaWn7rGvDDTcLMDm6tQ0=
+-k8s.io/kubernetes v1.34.0 h1:NvUrwPAVB4W3mSOpJ/RtNGHWWYyUP/xPaX5rUSpzA0w=
+-k8s.io/kubernetes v1.34.0/go.mod h1:iu+FhII+Oc/1gGWLJcer6wpyih441aNFHl7Pvm8yPto=
+-k8s.io/metrics v0.34.0 h1:nYSfG2+tnL6/MRC2I+sGHjtNEGoEoM/KktgGOoQFwws=
+-k8s.io/metrics v0.34.0/go.mod h1:KCuXmotE0v4AvoARKUP8NC4lUnbK/Du1mluGdor5h4M=
++k8s.io/kubelet v0.34.2 h1:Dl+1uh7xwJr70r+SHKyIpvu6XvzuoPu0uDIC4cqgJUs=
++k8s.io/kubelet v0.34.2/go.mod h1:RfwR03iuKeVV7Z1qD9XKH98c3tlPImJpQ3qHIW40htM=
++k8s.io/kubernetes v1.34.2 h1:WQdDvYJazkmkwSncgNwGvVtaCt4TYXIU3wSMRgvp3MI=
++k8s.io/kubernetes v1.34.2/go.mod h1:m6pZk6a179pRo2wsTiCPORJ86iOEQmfIzUvtyEF8BwA=
++k8s.io/metrics v0.34.2 h1:zao91FNDVPRGIiHLO2vqqe21zZVPien1goyzn0hsz90=
++k8s.io/metrics v0.34.2/go.mod h1:Ydulln+8uZZctUM8yrUQX4rfq/Ay6UzsuXf24QJ37Vc=
+ k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 h1:hwvWFiBzdWw1FhfY1FooPn3kzWuJ8tmbZBHi4zVsl1Y=
+ k8s.io/utils v0.0.0-20250604170112-4c0f3b243397/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
+ sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 h1:jpcvIRr3GLoUoEKRkHKSmGjxb6lWwrBlJsXc+eUYQHM=
