@@ -302,7 +302,7 @@ func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfig
 }
 
 func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
-	msgChan := make(chan string)
+	msgChan := make(chan map[string][]string)
 	errorChan := make(chan error)
 
 	go func() {
@@ -313,7 +313,7 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 	return waitForResources(msgChan, errorChan)
 }
 
-func CreateResourcesSilentLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask, messageChan chan string) error {
+func CreateResourcesSilentLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask, messageChan chan map[string][]string) error {
 	endChannel := time.After(app.ResourcesTimeout)
 
 	ticker := time.NewTicker(10 * time.Second)
@@ -356,10 +356,12 @@ func CreateResourcesSilentLoop(ctx context.Context, kubeCl *client.KubernetesCli
 		}
 
 		if len(remained) > 0 && attempt%10 == 0 {
-			messageChan <- customMgs("REMAINED", remained)
+			msg := make(map[string][]string)
+			msg["remained"] = remained
 			if len(createdResources) > 0 {
-				messageChan <- customMgs("CREATED", createdResources)
+				msg["created"] = createdResources
 			}
+			messageChan <- msg
 		}
 		if ready && err == nil {
 			return nil
@@ -387,34 +389,44 @@ func CreateResourcesSilentLoop(ctx context.Context, kubeCl *client.KubernetesCli
 	}
 }
 
-func waitForResources(msgChan chan string, errorChan chan error) error {
+func waitForResources(msgChan chan map[string][]string, errorChan chan error) error {
 	for {
 		select {
 		case chanErr := <-errorChan:
 			return chanErr
 		case msg := <-msgChan:
-			switch {
-			case strings.Contains(msg, "REMAINED"):
-				logResources("Resources not ready", msg)
-			case strings.Contains(msg, "CREATED"):
-				logResources("Resources ready", msg)
-			default:
-				log.InfoF("%s\n", msg)
-			}
+			logResources(msg)
 		}
 	}
 }
 
-func logResources(header, msg string) {
-	_ = log.Process("Create Resources", header, func() error {
-		toPrint := strings.Split(msg, "\n")
-		toPrint = toPrint[1:]
-		for i, s := range toPrint {
-			if strings.Contains(s, "cluster") {
-				toPrint = slices.Delete(toPrint, i, i+1)
+func logResources(res map[string][]string) {
+	_ = log.Process("Create Resources", "Resource rediness check", func() error {
+		remained, ok := res["remained"]
+		if ok {
+			for i, s := range remained {
+				if strings.Contains(s, "cluster") {
+					remained = slices.Delete(remained, i, i+1)
+				}
 			}
+			_ = log.Process("Create Resources", "Resource not ready", func() error {
+				log.InfoF("%s\n", strings.Join(remained, "\n"))
+				return nil
+			})
 		}
-		log.InfoF("%s\n", strings.Join(toPrint, "\n"))
+		created, ok := res["created"]
+		if ok {
+			for i, s := range created {
+				if strings.Contains(s, "cluster") {
+					created = slices.Delete(created, i, i+1)
+				}
+			}
+			_ = log.Process("Create Resources", "Resource ready", func() error {
+				log.InfoF("%s\n", strings.Join(created, "\n"))
+				return nil
+			})
+		}
+
 		return nil
 	})
 }
