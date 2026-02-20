@@ -50,16 +50,7 @@ type ManifestBuilder struct {
 func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (SecretData, error) {
 	var inClusterData Data
 
-	// For managed clusters in unmanaged mode, pkiProvider cannot get PKI
-	// because the PKI secret doesn't exist in the cluster.
-	// In this case, we use remote data directly.
-	if b.legacyMode &&
-		b.modeModel.Mode == constant.ModeUnmanaged {
-		inClusterData = b.modeModel.RemoteData
-
-	} else {
-		// For all other cases, obtain PKI and generate
-		// in-cluster configuration data
+	if !b.legacyMode {
 		pki, err := pkiProvider()
 		if err != nil {
 			return nil, fmt.Errorf("get PKI: %w", err)
@@ -69,6 +60,12 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (
 		if err != nil {
 			return nil, fmt.Errorf("get incluster data: %w", err)
 		}
+
+	} else {
+		// For managed clusters in unmanaged mode, pkiProvider cannot get PKI
+		// because the PKI secret doesn't exist in the cluster.
+		// In this case, we use remote data directly.
+		inClusterData = b.modeModel.RemoteData
 	}
 
 	address, path := inClusterData.AddressAndPath()
