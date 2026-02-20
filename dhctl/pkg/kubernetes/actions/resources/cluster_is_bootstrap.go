@@ -232,7 +232,11 @@ func (n *clusterIsBootstrapCheck) outputMachineFailures(ctx context.Context) {
 }
 
 func (n *clusterIsBootstrapCheck) Name() string {
-	return "Waiting for the cluster to become bootstrapped."
+	return "cluster"
+}
+
+func (n *clusterIsBootstrapCheck) ReadyMsg() string {
+	return "The cluster is bootstrapped."
 }
 
 func (n *clusterIsBootstrapCheck) Single() bool {

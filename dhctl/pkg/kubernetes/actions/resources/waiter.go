@@ -16,8 +16,6 @@ package resources
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
@@ -33,6 +31,7 @@ type Checker interface {
 	IsReady(ctx context.Context) (bool, error)
 	Name() string
 	Single() bool
+	ReadyMsg() string
 }
 
 type constructorParams struct {
@@ -127,18 +126,26 @@ func (w *Waiter) ReadyAll(ctx context.Context) (bool, error) {
 	return len(w.checkers) == 0, nil
 }
 
-func (w *Waiter) PrintCheckers() string {
-	checkers := ""
+func (w *Waiter) ReadyAllWithRes(ctx context.Context) (bool, []string, []string, error) {
+	checkersToStay := make([]Checker, 0)
+	readyResources := make([]string, 0)
+	remainedResources := make([]string, 0)
+
 	for _, c := range w.checkers {
-		checker, ok := c.(*resourceReadinessChecker)
-		if !ok {
-			continue
+		ready, err := c.IsReady(ctx)
+		if err != nil {
+			return false, readyResources, remainedResources, err
 		}
-		checkers += fmt.Sprintf("%s: %s\n", checker.resource.DetailedGVKString(), checker.resourceName)
-	}
-	if len(checkers) > 0 {
-		checkers = strings.TrimRight(", ", checkers)
+
+		if !ready {
+			checkersToStay = append(checkersToStay, c)
+			remainedResources = append(remainedResources, c.Name())
+		} else {
+			readyResources = append(readyResources, c.Name())
+		}
 	}
 
-	return checkers
+	w.checkers = checkersToStay
+
+	return len(w.checkers) == 0, readyResources, remainedResources, nil
 }

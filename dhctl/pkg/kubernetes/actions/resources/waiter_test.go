@@ -311,6 +311,10 @@ func (n *testChecker) Name() string {
 	return "Test checker"
 }
 
+func (n *testChecker) ReadyMsg() string {
+	return "Ready"
+}
+
 func (n *testChecker) Single() bool {
 	return n.single
 }
