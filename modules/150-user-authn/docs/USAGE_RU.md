@@ -407,6 +407,48 @@ spec:
 Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` кастомного ресурса [DexProvider](cr.html#dexprovider). В параметре `bindPW` укажите пароль в открытом виде (plain text). Стратегии с передачей хешированных паролей не предусмотрены.
 Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
 
+### SAML
+
+В примере представлены настройки провайдера для интеграции с SAML 2.0 Identity Provider (например, AD FS, Okta, Keycloak).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: saml-provider
+spec:
+  type: SAML
+  displayName: Корпоративный SAML
+  saml:
+    ssoURL: https://saml-idp.example.com/saml/sso
+    ca: |
+      -----BEGIN CERTIFICATE-----
+      MIIFaDC...
+      -----END CERTIFICATE-----
+    entityIssuer: https://dex.example.com/callback
+    ssoIssuer: https://saml-idp.example.com
+    usernameAttr: name
+    emailAttr: email
+    groupsAttr: groups
+    nameIDPolicyFormat: persistent
+```
+
+Для настройки SAML Identity Provider:
+
+1. Зарегистрируйте Dex как Service Provider (SP) в вашем IdP со следующими параметрами:
+   - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
+   - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
+   - **Формат NameID**: `persistent` или `emailAddress`
+   - **SLO URL** (опционально): `https://dex.<modules.publicDomainTemplate>/saml/slo/<имя-провайдера>`
+
+1. Настройте маппинг атрибутов в IdP для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
+
+1. Экспортируйте сертификат подписи IdP и укажите его в поле `ca` или `caData` ресурса DexProvider.
+
+{% alert level="info" %}
+SAML не поддерживает refresh tokens нативно. Dex кеширует identity пользователя из первичного SAML assertion и возвращает её при последующих запросах refresh. Время жизни сессии контролируется настройками `expiry.refreshTokens` в конфигурации модуля `user-authn`.
+{% endalert %}
+
 ## Настройка OAuth2-клиента в Dex для подключения приложения
 
 Этот вариант настройки подходит приложениям, которые имеют возможность использовать OAuth2-аутентификацию самостоятельно, без помощи `oauth2-proxy`.

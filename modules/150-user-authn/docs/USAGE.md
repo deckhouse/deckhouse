@@ -404,6 +404,48 @@ Specify the generated user path and password in the `bindDN` and `bindPW` fields
 
 You can omit these settings if anonymous read access is configured for LDAP.
 
+### SAML
+
+The example shows the provider's settings for integration with a SAML 2.0 Identity Provider (e.g., AD FS, Okta, Keycloak).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: saml-provider
+spec:
+  type: SAML
+  displayName: Corporate SAML
+  saml:
+    ssoURL: https://saml-idp.example.com/saml/sso
+    ca: |
+      -----BEGIN CERTIFICATE-----
+      MIIFaDC...
+      -----END CERTIFICATE-----
+    entityIssuer: https://dex.example.com/callback
+    ssoIssuer: https://saml-idp.example.com
+    usernameAttr: name
+    emailAttr: email
+    groupsAttr: groups
+    nameIDPolicyFormat: persistent
+```
+
+To configure the SAML Identity Provider:
+
+1. Register Dex as a Service Provider (SP) in your IdP with the following settings:
+   - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
+   - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
+   - **NameID format**: `persistent` or `emailAddress`
+   - **SLO URL** (optional): `https://dex.<modules.publicDomainTemplate>/saml/slo/<provider-name>`
+
+1. Configure attribute mappings in the IdP to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
+
+1. Export the IdP signing certificate and specify it in the `ca` or `caData` field of the DexProvider resource.
+
+{% alert level="info" %}
+SAML does not natively support refresh tokens. Dex caches the user identity from the initial SAML assertion and returns it on subsequent refresh requests. The session lifetime is controlled by the `expiry.refreshTokens` settings in the `user-authn` module configuration.
+{% endalert %}
+
 ## Configuring the OAuth2 client in Dex for connecting an application
 
 This configuration is suitable for applications that can independently perform oauth2 authentication without using an oauth2 proxy.
