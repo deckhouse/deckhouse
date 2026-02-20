@@ -38,6 +38,7 @@ memory: 10Mi
 
 {{- $tpl_context := (.Files.Get "candi/version_map.yml" | fromYaml) }}
 {{- $_ := set $tpl_context "nodeIP" "$MY_IP" }}
+{{- $_ := set $tpl_context "nodeName" "$NODE_NAME" }}
 {{- $_ := set $tpl_context "runType" "Normal" }}
 {{- $_ := set $tpl_context "etcd" (dict "existingCluster" true) }}
 {{- $_ := set $tpl_context "images" (dict "controlPlaneManager" $images) }}
@@ -238,10 +239,6 @@ spec:
       labels:
         app: {{ $dsMode }}
         component: control-plane-manager
-      annotations:
-        checksum/config: {{ include "control_plane_config" (list $ $tpl_context) | sha256sum }}
-        checksum/pki: {{ $.Values.controlPlaneManager.internal.pkiChecksum | quote }}
-        rollout-epoch: {{ $.Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
       {{- if eq $profile "main" }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
