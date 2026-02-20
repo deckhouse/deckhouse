@@ -193,7 +193,7 @@ func extractOnlySemverTags(rawTags []string) []*semver.Version {
 func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName string, lastVersion string) ([]*semver.Version, error) {
 	// List all tags from the registry and filter those that are greater than lastVersion
 	// WARNING! it works only if your registry supports tag listing with filtering by last version
-	rawTags, err := s.svc.Package(packageName).ListTags(ctx, regClient.WithTagsLast(lastVersion))
+	rawTags, err := s.svc.Package(packageName).Versions().ListTags(ctx, regClient.WithTagsLast(lastVersion))
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
