@@ -1,0 +1,85 @@
+{
+  "sources": {
+    "cluster_logging_config/test-source": {
+      "type": "file",
+      "include": [
+        "/var/log/kube-audit/audit.log"
+      ]
+    }
+  },
+  "transforms": {
+    "transform/File/destination/syslog-dest/00_extra_fields": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/File/source/test-source/02_clean_up_file"
+      ],
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.env=\"prod\" \n if exists(.parsed_data.test) { .test=.parsed_data.test }",
+      "type": "remap"
+    },
+    "transform/File/destination/syslog-dest/01_syslog_labels": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/File/destination/syslog-dest/00_extra_fields"
+      ],
+      "source": "sd_params = []\n\nif exists(.env) \u0026\u0026 !is_null(.env) {\n  sd_params = append(sd_params, [\"env\" + \"=\\\"\" + to_string!(.env) + \"\\\"\"])\n}\nif exists(.file) \u0026\u0026 !is_null(.file) {\n  sd_params = append(sd_params, [\"file\" + \"=\\\"\" + to_string!(.file) + \"\\\"\"])\n}\nif exists(.host) \u0026\u0026 !is_null(.host) {\n  sd_params = append(sd_params, [\"host\" + \"=\\\"\" + to_string!(.host) + \"\\\"\"])\n}\nif exists(.host_ip) \u0026\u0026 !is_null(.host_ip) {\n  sd_params = append(sd_params, [\"host_ip\" + \"=\\\"\" + to_string!(.host_ip) + \"\\\"\"])\n}\nif exists(.test) \u0026\u0026 !is_null(.test) {\n  sd_params = append(sd_params, [\"test\" + \"=\\\"\" + to_string!(.test) + \"\\\"\"])\n}\n.sd_labels = if length(sd_params) \u003e 0 { \"[\" + \"deckhouse@0\" + \" \" + join!(sd_params, separator: \" \") + \"]\" }",
+      "type": "remap"
+    },
+    "transform/File/destination/syslog-dest/02_syslog_encoding": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/File/destination/syslog-dest/01_syslog_labels"
+      ],
+      "source": "if !exists(.syslog.severity) {\n  .syslog.severity = 6;\n} else if is_string(.syslog.severity) {\n  .syslog.severity = to_syslog_severity!(.syslog.severity);\n} else {\n  .syslog.severity = 6;\n};\n\npri = 1 * 8 + .syslog.severity;\n\n., err = join([\n  \"\u003c\" + to_string(pri) + \"\u003e\" + \"1\",     # \u003cpri\u003eversion\n  to_string!(.timestamp),\n  to_string!(.pod_name || .host || \"${VECTOR_SELF_NODE_NAME}\"),  # hostname\n  to_string!(.app || .pod_labels.app || .syslog.app || \"-\"), # app-name\n  \"-\", # procid\n  to_string!(.syslog.message_id || \"-\"), # msgid\n  to_string!(.sd_labels || \"-\"), # structured-data\n  decode_base16!(\"EFBBBF\") + to_string!(.message || encode_json(.)) # msg\n], separator: \" \")\n\nif err != null {\n  log(\"Unable to construct syslog message for event:\" + err + \". Dropping invalid event: \" + encode_json(.), level: \"error\", rate_limit_secs: 10)\n}",
+      "type": "remap"
+    },
+    "transform/File/destination/syslog-dest/03_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/File/destination/syslog-dest/02_syslog_encoding"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "type": "remap"
+    },
+    "transform/File/source/test-source/00_file_host": {
+      "drop_on_abort": false,
+      "inputs": [
+        "cluster_logging_config/test-source"
+      ],
+      "source": ".host = \"${VECTOR_SELF_NODE_NAME:-unknown-host}\"\n\n.host_ip = \"${VECTOR_HOST_IP:-unknown-ip}\"",
+      "type": "remap"
+    },
+    "transform/File/source/test-source/01_local_timezone": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/File/source/test-source/00_file_host"
+      ],
+      "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
+      "type": "remap"
+    },
+    "transform/File/source/test-source/02_clean_up_file": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/File/source/test-source/01_local_timezone"
+      ],
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
+      "type": "remap"
+    }
+  },
+  "sinks": {
+    "File/destination/cluster/syslog-dest": {
+      "type": "socket",
+      "inputs": [
+        "transform/File/destination/syslog-dest/03_del_parsed_data"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "encoding": {
+        "codec": "text",
+        "timestamp_format": "rfc3339"
+      },
+      "mode": "udp",
+      "address": "192.168.1.1:514"
+    }
+  }
+}
