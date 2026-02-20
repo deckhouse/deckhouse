@@ -433,7 +433,7 @@ func (r *CNIMigrationReconciler) ensureAgentsReady(
 
 	if len(nodeMigrations.Items) < len(nodes.Items) {
 		return false, fmt.Sprintf(
-			"Waiting for node registrations: %d/%d",
+			"Waiting for node registrations | %d/%d",
 			len(nodeMigrations.Items),
 			len(nodes.Items),
 		), nil
@@ -456,7 +456,7 @@ func (r *CNIMigrationReconciler) ensureAgentsReady(
 
 	if readyAgents < len(nodes.Items) {
 		return false, fmt.Sprintf(
-			"Waiting for agents to be prepared (pods annotated): %d/%d",
+			"Preparing agents (annotating pods) | %d/%d",
 			readyAgents,
 			len(nodes.Items),
 		), nil
@@ -534,7 +534,7 @@ func (r *CNIMigrationReconciler) checkDaemonSetInitialized(
 
 	if len(pods.Items) < int(ds.Status.DesiredNumberScheduled) {
 		return false, fmt.Sprintf(
-			"Waiting for %s pods creation: %d/%d",
+			"Waiting for %s pods creation | %d/%d",
 			name,
 			len(pods.Items),
 			ds.Status.DesiredNumberScheduled,
@@ -598,10 +598,20 @@ func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(
 		return false, fmt.Sprintf("Disabling module %s", moduleName), nil
 	}
 
-	// 2. Wait for all pods in the CNI namespace to be deleted.
+	// 2. Wait for only the current CNI agent pods to be deleted.
 	dsNamespace := cniNamespacePrefix + currentCNI
+	dsName, ok := CNIDaemonSetMap[currentCNI]
+	if !ok {
+		return false, "", fmt.Errorf("unknown CNI: %s", currentCNI)
+	}
+
 	podList := &corev1.PodList{}
-	if err := r.List(ctx, podList, client.InNamespace(dsNamespace)); err != nil {
+	if err := r.List(
+		ctx,
+		podList,
+		client.InNamespace(dsNamespace),
+		client.MatchingLabels{"app": dsName},
+	); err != nil {
 		if errors.IsNotFound(err) {
 			return true, "", nil
 		}
@@ -610,10 +620,41 @@ func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(
 
 	if len(podList.Items) > 0 {
 		return false, fmt.Sprintf(
-			"Waiting for %d old CNI pods to be physically removed in %s",
-			len(podList.Items),
+			"Removing current CNI agent pods (%s) | %d/%d",
 			dsNamespace,
+			m.Status.NodesTotal-len(podList.Items),
+			m.Status.NodesTotal,
 		), nil
+	}
+
+	// 3. If target is Cilium, wait for kube-proxy pods to be removed (if module is disabled)
+	targetCNI := strings.ToLower(m.Spec.TargetCNI)
+	if targetCNI == cnimigrationv1alpha1.CNINameCilium {
+		kpEnabled, err := r.isModuleEnabled(ctx, "kube-proxy")
+		if err != nil && !errors.IsNotFound(err) {
+			return false, "", err
+		}
+		// If module is disabled (or not found), wait for pod removal
+		if !kpEnabled {
+			kpPodList := &corev1.PodList{}
+			if err := r.List(
+				ctx,
+				kpPodList,
+				client.InNamespace(kubeProxyNamespace),
+				client.MatchingLabels{"app": kubeProxyDaemonSetName},
+			); err != nil {
+				if !errors.IsNotFound(err) {
+					return false, "", err
+				}
+			} else if len(kpPodList.Items) > 0 {
+				return false, fmt.Sprintf(
+					"Removing %s pods | %d/%d",
+					kubeProxyDaemonSetName,
+					m.Status.NodesTotal-len(kpPodList.Items),
+					m.Status.NodesTotal,
+				), nil
+			}
+		}
 	}
 
 	return true, "", nil
@@ -695,14 +736,14 @@ func (r *CNIMigrationReconciler) ensureNodesCleaned(
 
 	if len(nodeMigrations.Items) < len(nodes.Items) {
 		return false, fmt.Sprintf(
-			"Waiting for node registrations: %d/%d",
+			"Waiting for node registrations | %d/%d",
 			len(nodeMigrations.Items),
 			len(nodes.Items),
 		), nil
 	}
 
 	if cleanedNodes < len(nodes.Items) {
-		return false, fmt.Sprintf("Waiting for nodes cleanup: %d/%d succeeded", cleanedNodes, len(nodes.Items)), nil
+		return false, fmt.Sprintf("Cleaning nodes | %d/%d", cleanedNodes, len(nodes.Items)), nil
 	}
 
 	return true, "", nil
@@ -724,18 +765,18 @@ func (r *CNIMigrationReconciler) ensureTargetCNIReady(
 	err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: cniNamespacePrefix + targetCNI}, ds)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return false, fmt.Sprintf("Waiting for target CNI DaemonSet to be created (module %s)", moduleName), nil
+			return false, fmt.Sprintf("Waiting for target CNI DaemonSet to be created (%s)", moduleName), nil
 		}
 		return false, "", err
 	}
 
 	if ds.Status.DesiredNumberScheduled == 0 {
-		return false, fmt.Sprintf("Waiting for target CNI DaemonSet to schedule pods (module %s)", moduleName), nil
+		return false, fmt.Sprintf("Waiting for target CNI DaemonSet to schedule pods (%s)", moduleName), nil
 	}
 
 	if ds.Status.NumberReady < ds.Status.DesiredNumberScheduled {
 		return false, fmt.Sprintf(
-			"Waiting for target CNI pods ready (module %s): %d/%d",
+			"Waiting for target CNI pods (%s) | %d/%d",
 			moduleName,
 			ds.Status.NumberReady,
 			ds.Status.DesiredNumberScheduled,
@@ -757,7 +798,7 @@ func (r *CNIMigrationReconciler) ensureTargetCNIReady(
 		}
 		if kpDS.Status.NumberReady < kpDS.Status.DesiredNumberScheduled || kpDS.Status.DesiredNumberScheduled == 0 {
 			return false, fmt.Sprintf(
-				"Waiting for %s pods ready: %d/%d",
+				"Waiting for %s pods | %d/%d",
 				kubeProxyDaemonSetName,
 				kpDS.Status.NumberReady,
 				kpDS.Status.DesiredNumberScheduled,
@@ -799,7 +840,7 @@ func (r *CNIMigrationReconciler) ensurePodsRestarted(
 
 	if restartedNodes < len(nodes.Items) {
 		return false, fmt.Sprintf(
-			"Waiting for pod restarts: %d/%d nodes completed",
+			"Restarting pods on nodes | %d/%d",
 			restartedNodes,
 			len(nodes.Items),
 		), nil
