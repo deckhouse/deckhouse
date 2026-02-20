@@ -486,7 +486,7 @@ neighbour-0:
 
 			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
 			Expect(mwh.Exists()).To(BeTrue())
-			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
+			Expect(len(mwh.Field("webhooks").Array())).To(Equal(4))
 
 			kubeconfigSecret := f.KubernetesResource("Secret", "d8-istio", "istio-remote-secret-neighbour-0")
 			Expect(kubeconfigSecret.Exists()).To(BeTrue())
