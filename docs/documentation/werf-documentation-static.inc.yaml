@@ -132,6 +132,13 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+{{ if ne .Edition "CE" }}
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/pages/LICENSE_AGREEMENT_RU.md
+  to: /srv/jekyll-data/documentation/pages/LICENSE_AGREEMENT_RU.md
+  stageDependencies:
+    setup:
+    - '**/*'
+{{ end }}
 {{ end }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules-bundles.inc.yaml" .ModulePath)) . }}

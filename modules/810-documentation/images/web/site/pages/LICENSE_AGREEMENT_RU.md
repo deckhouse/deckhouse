@@ -6,4 +6,4 @@ lang: ru
 
 При приобретении лицензии вы приняли условия лицензионного соглашения.
 
-Ознакомиться с текстом лицензионного соглашения можно на сайте [legal.flant.ru](legal.flant.ru) в разделе «Лицензионные соглашения» — «Deckhouse Kubernetes Platform».
+Ознакомиться с текстом лицензионного соглашения можно на сайте <a href="https://legal.flant.ru" target="_blank">legal.flant.ru</a> в разделе «Лицензионные соглашения» — «Deckhouse Kubernetes Platform».
