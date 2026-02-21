@@ -236,7 +236,7 @@ certName="kubernetes"            # Имя сертификата для клас
 mkdir -p "${caName}"
 cd "${caName}"
 
-[ ! -f "${caName}.key" ] && openssl genrsa -out "${caName}.key" 4096
+[ ! -f "${caName}.key" ] && openssl ecparam -name prime256v1 -genkey -out "${caName}.key" 4096
 
 [ ! -f "${caName}.crt" ] &&  openssl req -x509 -new -nodes -key "${caName}.key" -sha256 -days 1826 -out "${caName}.crt" \
    -subj "/CN=${caName}/O=MyOrganisation"

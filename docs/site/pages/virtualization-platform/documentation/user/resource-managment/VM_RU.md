@@ -677,7 +677,7 @@ Cloud-Init — это инструмент для автоматической �
    ```yaml
    #cloud-config
    ssh_authorized_keys:
-     - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
+     - ssh-ed25519 AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
    ```
 
 1. Создание пользователя с паролем и SSH-ключом:
@@ -691,7 +691,7 @@ Cloud-Init — это инструмент для автоматической �
        sudo: ALL=(ALL) NOPASSWD:ALL
        shell: /bin/bash
        ssh-authorized-keys:
-         - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
+         - ssh-ed25519 AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
    ssh_pwauth: True
    ```
 
