@@ -48,10 +48,21 @@ var (
 	nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 )
 
+const (
+	defaultCloudConfigRetryAttempts = 60
+	defaultCloudConfigRetryInterval = 10 * time.Second
+)
+
 type NodeIP struct {
 	InternalIP string
 	ExternalIP string
 	NodeName   string
+}
+
+type CloudConfigOptions struct {
+	ExcludePackagesProxyEndpointIP string
+	RetryAttempts                  int
+	RetryInterval                  time.Duration
 }
 
 func (i *NodeIP) Name() string {
@@ -63,7 +74,20 @@ func (i *NodeIP) Name() string {
 }
 
 func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, logger log.Logger, apiserverHosts ...string) (string, error) {
+	return GetCloudConfigWithOptions(ctx, kubeCl, nodeGroupName, showDeckhouseLogs, logger, CloudConfigOptions{}, apiserverHosts...)
+}
+
+func GetCloudConfigWithOptions(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	nodeGroupName string,
+	showDeckhouseLogs bool,
+	logger log.Logger,
+	opts CloudConfigOptions,
+	apiserverHosts ...string,
+) (string, error) {
 	var cloudData string
+	retryAttempts, retryInterval := resolveCloudConfigRetryOptions(opts)
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
 	err := logger.LogProcess("default", name, func() error {
@@ -85,14 +109,15 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 			}()
 		}
 
-		allPassedHosts := ""
-		if len(apiserverHosts) > 0 {
-			strings.Join(apiserverHosts, ",")
-		}
-
-		err := retry.NewSilentLoop(name, 45, 5*time.Second).RunContext(ctx, func() error {
+		err := retry.NewSilentLoop(name, retryAttempts, retryInterval).RunContext(ctx, func() error {
 			if nodeGroupName == global.MasterNodeGroupName {
-				logger.LogInfoF("Waiting while all API-server endpoints '%s' will be available in bootstrap secret\n", allPassedHosts)
+				if opts.ExcludePackagesProxyEndpointIP != "" {
+					logger.LogInfoF(
+						"Waiting while packages proxy endpoint IP '%s' is excluded from bootstrap secret for node group '%s'\n",
+						opts.ExcludePackagesProxyEndpointIP,
+						nodeGroupName,
+					)
+				}
 			}
 			secret, err := kubeCl.CoreV1().
 				Secrets("d8-cloud-instance-manager").
@@ -135,6 +160,42 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 				logger.LogDebugLn("Got empty apiserver endpoints from arguments")
 			}
 
+			if opts.ExcludePackagesProxyEndpointIP != "" {
+				endpoints, err := extractPackagesProxyAddressesFromBootstrapSecret(secret.Data)
+				if err != nil {
+					return fmt.Errorf("failed to parse packages proxy endpoints from bootstrap secret: %v", err)
+				}
+				if len(endpoints) == 0 {
+					return fmt.Errorf(
+						"packages proxy endpoints are not found in bootstrap secret while waiting to exclude IP '%s'",
+						opts.ExcludePackagesProxyEndpointIP,
+					)
+				}
+
+				logger.LogInfoF(
+					"Bootstrap secret packages proxy endpoints for node group '%s': %s\n",
+					nodeGroupName,
+					strings.Join(endpoints, ","),
+				)
+
+				for _, endpoint := range endpoints {
+					host := endpoint
+					if parsedHost, _, splitErr := net.SplitHostPort(endpoint); splitErr == nil {
+						host = parsedHost
+					}
+					if host == "" {
+						return fmt.Errorf("packages proxy endpoint `%s` has empty host", endpoint)
+					}
+					if host == opts.ExcludePackagesProxyEndpointIP {
+						return fmt.Errorf(
+							"packages proxy endpoint with excluded IP '%s' is still present in bootstrap secret. Current endpoints: %s",
+							opts.ExcludePackagesProxyEndpointIP,
+							strings.Join(endpoints, ","),
+						)
+					}
+				}
+			}
+
 			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
 
 			return nil
@@ -147,6 +208,43 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 		return nil
 	})
 	return cloudData, err
+}
+
+func resolveCloudConfigRetryOptions(opts CloudConfigOptions) (int, time.Duration) {
+	attempts := opts.RetryAttempts
+	if attempts <= 0 {
+		attempts = defaultCloudConfigRetryAttempts
+	}
+
+	interval := opts.RetryInterval
+	if interval <= 0 {
+		interval = defaultCloudConfigRetryInterval
+	}
+
+	return attempts, interval
+}
+
+func extractPackagesProxyAddressesFromBootstrapSecret(secretData map[string][]byte) ([]string, error) {
+	rawAddresses := secretData["packagesProxyAddresses"]
+	if len(rawAddresses) == 0 {
+		return nil, nil
+	}
+
+	var addresses []string
+	if err := yaml.Unmarshal(rawAddresses, &addresses); err != nil {
+		return nil, fmt.Errorf("unmarshal packagesProxyAddresses: %v", err)
+	}
+
+	cleanAddresses := make([]string, 0, len(addresses))
+	for _, addr := range addresses {
+		addr = strings.TrimSpace(addr)
+		if addr == "" {
+			continue
+		}
+		cleanAddresses = append(cleanAddresses, addr)
+	}
+
+	return cleanAddresses, nil
 }
 
 func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, logger log.Logger, data map[string]interface{}) error {

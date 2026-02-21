@@ -280,6 +280,143 @@ func TestConcurrentExec(t *testing.T) {
 	require.Equal(t, "Infrastructure utility have been already executed.", err.Error())
 }
 
+type applyCaptureExecutor struct {
+	applyOpts ApplyOpts
+}
+
+func (e *applyCaptureExecutor) IsVMChange(rc plan.ResourceChange) bool { return false }
+func (e *applyCaptureExecutor) GetStatesDir() string                    { return os.TempDir() }
+func (e *applyCaptureExecutor) Step() Step                              { return MasterNodeStep }
+func (e *applyCaptureExecutor) Init(ctx context.Context) error          { return nil }
+func (e *applyCaptureExecutor) Apply(ctx context.Context, opts ApplyOpts) error {
+	e.applyOpts = opts
+	return nil
+}
+func (e *applyCaptureExecutor) Plan(ctx context.Context, opts PlanOpts) (int, error) {
+	return 0, nil
+}
+func (e *applyCaptureExecutor) Output(ctx context.Context, statePath string, outFields ...string) ([]byte, error) {
+	return nil, nil
+}
+func (e *applyCaptureExecutor) Destroy(ctx context.Context, opts DestroyOpts) error { return nil }
+func (e *applyCaptureExecutor) Show(ctx context.Context, planPath string) ([]byte, error) {
+	return nil, nil
+}
+func (e *applyCaptureExecutor) GetActions(ctx context.Context, planPath string) ([]string, error) {
+	return nil, nil
+}
+func (e *applyCaptureExecutor) SetExecutorLogger(logger log.Logger) {}
+func (e *applyCaptureExecutor) Stop()                               {}
+
+func TestRunnerApply_ClearsPlanPathAfterVariablesRefresh(t *testing.T) {
+	executor := &applyCaptureExecutor{}
+	runner := newTestRunner(executor)
+	runner.changesInPlan = plan.HasChanges
+	runner.hasVMDestruction = true
+	runner.WithAutoApprove(true)
+	runner.WithVariables([]byte(`{"before":"refresh"}`))
+	runner.planPath = "/tmp/test.plan"
+	runner.variablesRefresher = func(ctx context.Context) ([]byte, error) {
+		return []byte(`{"after":"refresh"}`), nil
+	}
+
+	err := runner.Apply(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, "", executor.applyOpts.PlanPath)
+	require.NotEmpty(t, executor.applyOpts.VariablesPath)
+}
+
+func TestRunnerApply_NoChangesDoesNotRunVariablesRefresh(t *testing.T) {
+	executor := &applyCaptureExecutor{}
+	runner := newTestRunner(executor)
+	runner.changesInPlan = plan.HasNoChanges
+	runner.WithAutoApprove(true)
+	runner.WithVariables([]byte(`{"unchanged":true}`))
+	runner.planPath = "/tmp/test.plan"
+
+	refreshCalled := false
+	runner.variablesRefresher = func(ctx context.Context) ([]byte, error) {
+		refreshCalled = true
+		return []byte(`{"unexpected":true}`), nil
+	}
+
+	err := runner.Apply(context.Background())
+	require.NoError(t, err)
+	require.False(t, refreshCalled)
+	require.Equal(t, "/tmp/test.plan", executor.applyOpts.PlanPath)
+}
+
+func TestRunnerApply_NilRefresherKeepsPlanPath(t *testing.T) {
+	executor := &applyCaptureExecutor{}
+	runner := newTestRunner(executor)
+	runner.changesInPlan = plan.HasChanges
+	runner.WithAutoApprove(true)
+	runner.WithVariables([]byte(`{"existing":true}`))
+	runner.planPath = "/tmp/test.plan"
+	runner.variablesRefresher = nil
+
+	err := runner.Apply(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, "/tmp/test.plan", executor.applyOpts.PlanPath)
+}
+
+func TestRunnerApply_EmptyRefreshClearsPlanPath(t *testing.T) {
+	executor := &applyCaptureExecutor{}
+	runner := newTestRunner(executor)
+	runner.changesInPlan = plan.HasChanges
+	runner.hasVMDestruction = true
+	runner.WithAutoApprove(true)
+	runner.WithVariables([]byte(`{"existing":true}`))
+	runner.planPath = "/tmp/test.plan"
+	runner.variablesRefresher = func(ctx context.Context) ([]byte, error) {
+		return []byte{}, nil
+	}
+
+	err := runner.Apply(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, "", executor.applyOpts.PlanPath)
+	require.NotEmpty(t, executor.applyOpts.VariablesPath)
+}
+
+func TestRunnerApply_WithVMDestructionClearsPlanPathAfterVariablesRefresh(t *testing.T) {
+	executor := &applyCaptureExecutor{}
+	runner := newTestRunner(executor)
+	runner.changesInPlan = plan.HasDestructiveChanges
+	runner.hasVMDestruction = true
+	runner.WithAutoApprove(true)
+	runner.WithVariables([]byte(`{"before":"refresh"}`))
+	runner.planPath = "/tmp/test.plan"
+	runner.variablesRefresher = func(ctx context.Context) ([]byte, error) {
+		return []byte(`{"after":"refresh"}`), nil
+	}
+
+	err := runner.Apply(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, "", executor.applyOpts.PlanPath)
+	require.NotEmpty(t, executor.applyOpts.VariablesPath)
+}
+
+func TestRunnerApply_WithoutVMDestructionDoesNotRunVariablesRefresh(t *testing.T) {
+	executor := &applyCaptureExecutor{}
+	runner := newTestRunner(executor)
+	runner.changesInPlan = plan.HasChanges
+	runner.hasVMDestruction = false
+	runner.WithAutoApprove(true)
+	runner.WithVariables([]byte(`{"existing":true}`))
+	runner.planPath = "/tmp/test.plan"
+
+	refreshCalled := false
+	runner.variablesRefresher = func(ctx context.Context) ([]byte, error) {
+		refreshCalled = true
+		return []byte(`{"unexpected":true}`), nil
+	}
+
+	err := runner.Apply(context.Background())
+	require.NoError(t, err)
+	require.False(t, refreshCalled)
+	require.Equal(t, "/tmp/test.plan", executor.applyOpts.PlanPath)
+}
+
 var destructivelyChanged = &plan.DestructiveChanges{
 	ResourcesDeleted: nil,
 	ResourcesRecreated: []plan.ValueChange{
