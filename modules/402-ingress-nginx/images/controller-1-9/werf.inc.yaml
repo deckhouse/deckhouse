@@ -81,8 +81,6 @@ shell:
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
   - patch -p1 < /patches/rootfs/003-auth-cookie-always.patch
   - patch -p1 < /patches/rootfs/004-cve-03022026.patch
-  - cd /src/ingress-nginx/
-  - patch -p1 < /patches/rootfs/005-nginx-version-02.patch
   - rm -r /src/dumb-init/.git
   - rm -r /src/lua-protobuf/.git
   - rm -r /src/lua-iconv/.git
@@ -207,7 +205,7 @@ import:
 shell:
   setup:
   - export SOURCE_REPO={{ $.SOURCE_REPO }}
-  - export CONTROLLER_BRANCH={{ $controllerBranch }}
+  - export CONTROLLER_BRANCH="controller-v1.10.4-nginx-v1.29.5"
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - cd /pcre
   - ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit
