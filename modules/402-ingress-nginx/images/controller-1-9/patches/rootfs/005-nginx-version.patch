@@ -1,0 +1,26 @@
+diff --git a/images/nginx/rootfs/build.sh b/images/nginx/rootfs/build.sh
+index 8bf372f21..78ecaac80 100755
+--- a/images/nginx/rootfs/build.sh
++++ b/images/nginx/rootfs/build.sh
+@@ -18,7 +18,7 @@ set -o errexit
+ set -o nounset
+ set -o pipefail
+ 
+-export NGINX_VERSION=1.21.6
++export NGINX_VERSION=1.29.5
+ 
+ # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.2...master
+ export NDK_VERSION=0.3.2
+diff --git a/images/opentelemetry/rootfs/build.sh b/images/opentelemetry/rootfs/build.sh
+index ebf95e219..f8adc0c18 100755
+--- a/images/opentelemetry/rootfs/build.sh
++++ b/images/opentelemetry/rootfs/build.sh
+@@ -148,7 +148,7 @@ get_src()
+ 
+ install_nginx()
+ {
+-  export NGINX_VERSION=1.21.6
++  export NGINX_VERSION=1.29.5
+ 
+   # Check for recent changes: https://github.com/open-telemetry/opentelemetry-cpp-contrib/compare/2656a4...main
+   export OPENTELEMETRY_CONTRIB_COMMIT=aaa51e2297bcb34297f3c7aa44fa790497d2f7f3

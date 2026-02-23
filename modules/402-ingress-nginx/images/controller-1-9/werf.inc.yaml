@@ -67,7 +67,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/007-geoip.patch
   - patch -p1 < /patches/ingress-nginx/008-new-metrics.patch
   - patch -p1 < /patches/ingress-nginx/009-default-backend-fix.patch
-  - patch -p1 < /patches/ingress-nginx/010-cve-22122025.patch
+  - patch -p1 < /patches/ingress-nginx/010-cve-22122025-01.patch
   - patch -p1 < /patches/ingress-nginx/011-nginx-build.patch
   - patch -p1 < /patches/ingress-nginx/012-validation-mode.patch
   - patch -p1 < /patches/ingress-nginx/013-verbose-maxmind-logs.patch
@@ -81,6 +81,7 @@ shell:
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
   - patch -p1 < /patches/rootfs/003-auth-cookie-always.patch
   - patch -p1 < /patches/rootfs/004-cve-03022026.patch
+  - patch -p1 < /patches/rootfs/005-nginx-version.patch
   - rm -r /src/dumb-init/.git
   - rm -r /src/lua-protobuf/.git
   - rm -r /src/lua-iconv/.git
@@ -154,7 +155,7 @@ shell:
 ---
 # Controller artifact
 image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/golang-alpine-1.25.7
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

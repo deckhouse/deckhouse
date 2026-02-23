@@ -53,7 +53,7 @@ https://github.com/kubernetes/ingress-nginx/issues/12158
 https://github.com/kubernetes/ingress-nginx/issues/12173
 https://github.com/deckhouse/deckhouse/issues/9933
 
-### 010-cve-22122025.patch
+### 010-cve-22122025-01.patch
 
 Fix cve vulnerabilities.
 
