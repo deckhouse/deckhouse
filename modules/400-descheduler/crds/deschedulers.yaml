@@ -639,12 +639,40 @@ spec:
                           type: boolean
                           default: false
                           description: Makes the strategy active.
+                    removePodsViolatingTopologySpreadConstraint:
+                      type: object
+                      description: |-
+                        The strategy ensures that pods violating [topology spread constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) are evicted from nodes. It evicts the minimum number of pods required to balance topology domains to within each constraint's `maxSkew`.
+
+                        This is useful for rebalancing pods across zones after a zone outage recovery.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Makes the strategy active.
+                        constraints:
+                          type: array
+                          description: |-
+                            List of topology spread constraint types to consider.
+                            By default, only `DoNotSchedule` (hard constraints) are considered.
+                          items:
+                            type: string
+                            enum: ["DoNotSchedule", "ScheduleAnyway"]
+                          default: ["DoNotSchedule"]
+                        topologyBalanceNodeFit:
+                          type: boolean
+                          default: true
+                          description: |-
+                            If set to `true`, the strategy will consider whether the pods can fit on other nodes
+                            when balancing topology domains. Different from the DefaultEvictor's `nodeFit` which
+                            is used in pre-eviction filtering.
                   anyOf:
                     - required: ["lowNodeUtilization"]
                     - required: ["highNodeUtilization"]
                     - required: ["removeDuplicates"]
                     - required: ["removePodsViolatingNodeAffinity"]
                     - required: ["removePodsViolatingInterPodAntiAffinity"]
+                    - required: ["removePodsViolatingTopologySpreadConstraint"]
               required:
                 - strategies
           required:
