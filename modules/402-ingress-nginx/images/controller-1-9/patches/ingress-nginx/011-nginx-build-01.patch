@@ -1,8 +1,8 @@
 diff --git a/images/nginx/rootfs/build.sh b/images/nginx/rootfs/build.sh
-index 8bf372f21..921c90728 100755
+index 8bf372f21..0946c5efd 100755
 --- a/images/nginx/rootfs/build.sh
 +++ b/images/nginx/rootfs/build.sh
-@@ -14,6 +14,9 @@
+@@ -14,11 +14,14 @@
  # See the License for the specific language governing permissions and
  # limitations under the License.
  
@@ -12,6 +12,12 @@ index 8bf372f21..921c90728 100755
  set -o errexit
  set -o nounset
  set -o pipefail
+ 
+-export NGINX_VERSION=1.21.6
++export NGINX_VERSION=1.29.5
+ 
+ # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.2...master
+ export NDK_VERSION=0.3.2
 @@ -126,6 +129,7 @@ export LUA_RESTY_GLOBAL_THROTTLE_VERSION=0.2.0
  export MIMALOC_VERSION=1.7.6
  
