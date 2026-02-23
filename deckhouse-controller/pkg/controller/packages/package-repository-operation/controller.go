@@ -477,7 +477,11 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 		r.logger.Error("failed to process package versions",
 			slog.String("package", currentPackage.Name),
 			log.Err(err))
-		// Continue with next package even if this one fails
+	}
+
+	// Processing failed entirely — record error and move to next package
+	if processResult == nil {
+		return r.dequeuePackageWithError(ctx, operation, currentPackage.Name, err)
 	}
 
 	// Ensure the appropriate package resource based on detected type
@@ -497,33 +501,57 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 		}
 	}
 
-	// Remove processed package from queue
+	return r.dequeuePackageWithResult(ctx, operation, currentPackage.Name, processResult)
+}
+
+func (r *reconciler) dequeuePackageWithError(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, packageName string, processErr error) (ctrl.Result, error) {
 	original := operation.DeepCopy()
+
 	if len(operation.Status.Packages.Discovered) > 0 {
 		operation.Status.Packages.Discovered = operation.Status.Packages.Discovered[1:]
 	}
+	if operation.Status.Packages != nil {
+		operation.Status.Packages.ProcessedOverall++
+	}
 
+	operation.Status.Packages.Failed = append(operation.Status.Packages.Failed, v1alpha1.PackageRepositoryOperationStatusFailedPackage{
+		Name: packageName,
+		Errors: []v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
+			{Error: processErr.Error()},
+		},
+	})
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+	}
+	return ctrl.Result{Requeue: true}, nil
+}
+
+func (r *reconciler) dequeuePackageWithResult(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, packageName string, result *PackageProcessResult) (ctrl.Result, error) {
+	original := operation.DeepCopy()
+
+	if len(operation.Status.Packages.Discovered) > 0 {
+		operation.Status.Packages.Discovered = operation.Status.Packages.Discovered[1:]
+	}
 	if operation.Status.Packages != nil {
 		operation.Status.Packages.ProcessedOverall++
 	}
 
 	operation.Status.Packages.Processed = append(operation.Status.Packages.Processed, v1alpha1.PackageRepositoryOperationStatusPackage{
-		Name: currentPackage.Name,
-		Type: processResult.PackageType,
+		Name: packageName,
+		Type: result.PackageType,
 	})
 
-	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(processResult.Failed))
-	for _, failedVersion := range processResult.Failed {
+	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(result.Failed))
+	for _, fv := range result.Failed {
 		failedList = append(failedList, v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
-			Version: failedVersion.Name,
-			Error:   failedVersion.Error,
+			Version: fv.Name,
+			Error:   fv.Error,
 		})
 	}
-
-	// Only add to Failed list if there were actual failures
 	if len(failedList) > 0 {
 		operation.Status.Packages.Failed = append(operation.Status.Packages.Failed, v1alpha1.PackageRepositoryOperationStatusFailedPackage{
-			Name:   currentPackage.Name,
+			Name:   packageName,
 			Errors: failedList,
 		})
 	}
@@ -531,8 +559,6 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
-
-	// Requeue to process next package
 	return ctrl.Result{Requeue: true}, nil
 }
 

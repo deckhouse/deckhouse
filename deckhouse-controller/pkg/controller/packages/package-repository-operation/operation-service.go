@@ -231,12 +231,12 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageName string) string {
 	// Query both ApplicationPackageVersion and ModulePackageVersion lists since
 	// the package type is not known yet at this point.
+	var versions []*semver.Version
+
 	matchLabels := client.MatchingLabels{
 		v1alpha1.ApplicationPackageVersionLabelRepository: s.repo.Name,
 		v1alpha1.ApplicationPackageVersionLabelPackage:    packageName,
 	}
-
-	var versions []*semver.Version
 
 	appList := &v1alpha1.ApplicationPackageVersionList{}
 	if err := s.client.List(ctx, appList, matchLabels); err != nil {
