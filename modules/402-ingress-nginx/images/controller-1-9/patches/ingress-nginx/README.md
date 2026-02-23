@@ -97,8 +97,3 @@ CVE-2026-24512
 CVE-2026-24513
 CVE-2026-24514
 https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
-
-### 022-nginx-patches.patch
-
-Applies latest nginx patches (similarly to how v1.14.3 is patched).
-
