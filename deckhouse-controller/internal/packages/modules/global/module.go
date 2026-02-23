@@ -20,14 +20,17 @@ import (
 	"os"
 
 	"github.com/flant/addon-operator/pkg"
+	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
+	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -211,21 +214,35 @@ func (m *Module) RunHookByName(ctx context.Context, name string, bctx []bctx.Bin
 	// Update kubernetes snapshots just before execute m hook
 	bctx = hook.GetHookController().UpdateSnapshots(bctx)
 
-	// if binding == types.BeforeAll || binding == types.AfterAll {
-	// 	snapshots := globalHook.GetHookController().KubernetesSnapshots()
-	//
-	// 	newBindingContext := make([]bctx.BindingContext, 0, len(bindingContext))
-	//
-	// 	for _, bc := range bindingContext {
-	// 		bc.Snapshots = snapshots
-	// 		bc.Metadata.IncludeAllSnapshots = true
-	// 		newBindingContext = append(newBindingContext, bc)
-	// 	}
-	//
-	// 	bindingContext = newBindingContext
-	// }
-
 	return m.runHook(ctx, hook, bctx)
+}
+
+// RunHooksByBinding executes all hooks for a specific binding type in order.
+// It creates a binding context with snapshots for BeforeAll hooks.
+func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error {
+	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "RunHooksByBinding")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("binding", string(binding)))
+
+	for _, hook := range m.hooks.GetHooksByBinding(binding) {
+		bc := bctx.BindingContext{
+			Binding: string(binding),
+		}
+		// Update kubernetes snapshots just before execute m hook
+		if binding == addontypes.BeforeAll {
+			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
+			bc.Metadata.IncludeAllSnapshots = true
+		}
+		bc.Metadata.BindingType = binding
+
+		if err := m.runHook(ctx, hook, []bctx.BindingContext{bc}); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
+		}
+	}
+
+	return nil
 }
 
 // runHook executes a single hook with the specified binding context.

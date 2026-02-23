@@ -19,13 +19,13 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )

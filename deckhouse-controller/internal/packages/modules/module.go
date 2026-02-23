@@ -22,7 +22,7 @@ import (
 	"slices"
 
 	"github.com/flant/addon-operator/pkg"
-	"github.com/flant/addon-operator/pkg/hook/types"
+	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
@@ -311,7 +311,7 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 			Binding: string(binding),
 		}
 		// Update kubernetes snapshots just before execute m hook
-		if binding == types.BeforeHelm || binding == types.AfterHelm || binding == types.AfterDeleteHelm {
+		if binding == addontypes.BeforeHelm || binding == addontypes.AfterHelm || binding == addontypes.AfterDeleteHelm {
 			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
 			bc.Metadata.IncludeAllSnapshots = true
 		}

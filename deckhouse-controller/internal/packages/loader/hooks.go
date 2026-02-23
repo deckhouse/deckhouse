@@ -96,7 +96,7 @@ func loadGlobalHooks(ctx context.Context, logger *log.Logger) ([]hooks.GlobalHoo
 	logger.Debug("load hooks")
 
 	// find global hooks in go hooks registry
-	var res []hooks.GlobalHook
+	var res []hooks.GlobalHook //nolint:prealloc
 	for _, h := range addonsdk.Registry().GetGlobalHooks() {
 		res = append(res, addonhooks.NewGlobalHook(h))
 	}

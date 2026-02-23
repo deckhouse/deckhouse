@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"sort"
 	"sync"
 
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
@@ -46,17 +47,20 @@ type GlobalHook interface {
 // GlobalStorage provides thread-safe storage for global hooks.
 // It maintains a single index:
 //   - byName: Fast lookup by hook name (O(1))
+//   - byBinding: Fast lookup by binding type (O(1))
 //
 // Thread Safety: All methods use RWMutex for concurrent access.
 type GlobalStorage struct {
-	mu     sync.RWMutex          // Protects all fields
-	byName map[string]GlobalHook // Hooks indexed by name
+	mu        sync.RWMutex                         // Protects all fields
+	byBinding map[shtypes.BindingType][]GlobalHook // Hooks grouped by binding type
+	byName    map[string]GlobalHook                // Hooks indexed by name
 }
 
 // NewGlobalStorage creates a new empty global hook storage.
 func NewGlobalStorage() *GlobalStorage {
 	return &GlobalStorage{
-		byName: make(map[string]GlobalHook),
+		byBinding: make(map[shtypes.BindingType][]GlobalHook),
+		byName:    make(map[string]GlobalHook),
 	}
 }
 
@@ -67,6 +71,29 @@ func (s *GlobalStorage) Add(hook GlobalHook) {
 	defer s.mu.Unlock()
 
 	s.byName[hook.GetName()] = hook
+	for _, binding := range hook.GetHookConfig().Bindings() {
+		s.byBinding[binding] = append(s.byBinding[binding], hook)
+	}
+}
+
+// GetHooksByBinding returns copied slices of all hooks for a specific binding type, sorted by order.
+func (s *GlobalStorage) GetHooksByBinding(binding shtypes.BindingType) []GlobalHook {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stored, ok := s.byBinding[binding]
+	if !ok {
+		return nil
+	}
+
+	res := make([]GlobalHook, len(stored))
+	copy(res, stored)
+
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Order(binding) < res[j].Order(binding)
+	})
+
+	return res
 }
 
 // GetHooks returns all hooks in storage in arbitrary order.
