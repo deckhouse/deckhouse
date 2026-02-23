@@ -1,0 +1,13 @@
+diff --git a/images/nginx/rootfs/build.sh b/images/nginx/rootfs/build.sh
+index 8bf372f21..78ecaac80 100755
+--- a/images/nginx/rootfs/build.sh
++++ b/images/nginx/rootfs/build.sh
+@@ -18,7 +18,7 @@ set -o errexit
+ set -o nounset
+ set -o pipefail
+ 
+-export NGINX_VERSION=1.21.6
++export NGINX_VERSION=1.29.5
+ 
+ # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.2...master
+ export NDK_VERSION=0.3.2
