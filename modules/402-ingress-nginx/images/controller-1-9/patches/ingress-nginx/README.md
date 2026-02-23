@@ -98,6 +98,6 @@ CVE-2026-24513
 CVE-2026-24514
 https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
 
-### 022-remove-patch.patch
+### 022-remove-patch-01.patch
 
 This patch deletes unneeded nginx patch.
