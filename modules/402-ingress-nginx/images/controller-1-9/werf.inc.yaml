@@ -205,7 +205,7 @@ import:
 shell:
   setup:
   - export SOURCE_REPO={{ $.SOURCE_REPO }}
-  - export CONTROLLER_BRANCH="controller-v1.10.4-nginx-v1.29.5"
+  - export CONTROLLER_BRANCH="controller-v1.9.5-nginx-v1.29.5"
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - cd /pcre
   - ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit
