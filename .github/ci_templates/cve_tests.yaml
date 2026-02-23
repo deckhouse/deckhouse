@@ -69,6 +69,7 @@ remove_labels:
     else
       echo "Wrong input parameters"
       exit 1
+    fi
 {!{- end -}!}
 
 {!{ define "cve_scan_type_pr" }!}
