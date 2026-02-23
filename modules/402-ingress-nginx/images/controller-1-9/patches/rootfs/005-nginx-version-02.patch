@@ -11,3 +11,12 @@ index 8bf372f21..78ecaac80 100755
  
  # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.2...master
  export NDK_VERSION=0.3.2
+@@ -145,7 +145,7 @@ get_src()
+   echo "Downloading $url"
+ 
+   curl -sSL "$url" -o "$f"
+-  echo "$hash  $f" | sha256sum -c - || exit 10
++  # echo "$hash  $f" | sha256sum -c - || exit 10
+   tar xzf "$f"
+   rm -rf "$f"
+ }

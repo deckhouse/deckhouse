@@ -82,7 +82,7 @@ shell:
   - patch -p1 < /patches/rootfs/003-auth-cookie-always.patch
   - patch -p1 < /patches/rootfs/004-cve-03022026.patch
   - cd /src/ingress-nginx/
-  - patch -p1 < /patches/rootfs/005-nginx-version-01.patch
+  - patch -p1 < /patches/rootfs/005-nginx-version-02.patch
   - rm -r /src/dumb-init/.git
   - rm -r /src/lua-protobuf/.git
   - rm -r /src/lua-iconv/.git
