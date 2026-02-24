@@ -315,6 +315,9 @@ func buildDesiredControlPlaneNode(nodeName string, cmpSecret *corev1.Secret, pki
 	return &controlplanev1alpha1.ControlPlaneNode{
 		ObjectMeta: ctrl.ObjectMeta{
 			Name: nodeName,
+			Labels: map[string]string{
+				"control-plane.deckhouse.io/node": nodeName,
+			},
 		},
 		Spec: controlplanev1alpha1.ControlPlaneNodeSpec{
 			PKIChecksum:       pkiChecksum,
