@@ -182,6 +182,12 @@ func (e *Extension) performInPlaceUpdate(
 		}
 	}
 
+	if cs.rootDiskResized {
+		if err := e.resizeRootDisk(ctx, currentMachine, desiredSpec); err != nil {
+			return err
+		}
+	}
+
 	if cs.newDisksAdded {
 		if err := e.hotPlugNewDisks(ctx, currentMachine, desiredSpec); err != nil {
 			return err
@@ -356,20 +362,6 @@ func (e *Extension) warmUpdate(
 		}
 	}
 
-	if cs.rootDiskResized {
-		bootDiskName := currentMachine.Name + "-boot"
-		e.log.Info("Warm update: resizing root disk",
-			"vm", vmName,
-			"disk", bootDiskName,
-			"newSize", desiredSpec.RootDiskSize.String(),
-		)
-		if err := e.dvp.DiskService.ResizeDisk(ctx, bootDiskName, desiredSpec.RootDiskSize.String()); err != nil {
-			e.deleteVMOperation(ctx, vmName)
-			_ = e.dvp.ComputeService.StartVM(ctx, vmName)
-			return fmt.Errorf("resize root disk %s: %w", bootDiskName, err)
-		}
-	}
-
 	e.deleteVMOperation(ctx, vmName)
 
 	e.log.Info("Warm update: starting VM", "vm", vmName)
@@ -377,6 +369,23 @@ func (e *Extension) warmUpdate(
 		return fmt.Errorf("start VM %s: %w", vmName, err)
 	}
 
+	return nil
+}
+
+func (e *Extension) resizeRootDisk(
+	ctx context.Context,
+	currentMachine *infrastructurev1a1.DeckhouseMachine,
+	desiredSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
+) error {
+	bootDiskName := currentMachine.Name + "-boot"
+	e.log.Info("Hot update: resizing root disk",
+		"vm", currentMachine.Name,
+		"disk", bootDiskName,
+		"newSize", desiredSpec.RootDiskSize.String(),
+	)
+	if err := e.dvp.DiskService.ResizeDisk(ctx, bootDiskName, desiredSpec.RootDiskSize.String()); err != nil {
+		return fmt.Errorf("resize root disk %s: %w", bootDiskName, err)
+	}
 	return nil
 }
 
