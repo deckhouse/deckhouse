@@ -142,7 +142,7 @@ import:
 shell:
   install:
   - apt-get -y update
-  - apt-get -y install libpcre2-devel libcurl-devel libgnutls-openssl-devel libcares-devel ninja-build libgtest-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins
+  - apt-get install -y libgnutls-openssl-devel liblua5.3-devel lua5.3 libgtest-devel libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libgrpc++-devel libgrpc++ libre2-devel libre2 libgrpc libgrpc-devel libssl-devel libmaxminddb libmaxminddb-devel libpcre-devel libpcre16 git cmake ninja-build libabseil-cpp-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
   setup:
   - set -x
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
