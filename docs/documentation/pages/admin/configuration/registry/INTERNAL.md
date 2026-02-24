@@ -10,7 +10,7 @@ The internal registry allows for optimizing the downloading and storage of image
 
 ## Modes of operation with the internal registry
 
-The [`registry`](/modules/registry/) module, which implements internal storage, operates in the following modes:
+DKP implements the following modes of operation with internal registry:
 
 - `Direct`: Provides direct access to an external registry via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address prevents DKP images from being re-downloaded and components from being restarted when registry parameters are changed. Switching between modes and registries is done through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section ["Direct mode Architecture"](../../../architecture/registry-modes.html#direct-mode-architecture).
 
@@ -30,7 +30,7 @@ The [`registry`](/modules/registry/) module, which implements internal storage, 
 
 ## Restrictions on working with the internal registry
 
-Working with the internal registry using the [`registry`](/modules/registry/) module has a number of limitations and restrictions concerning installation, operating conditions, and mode switching.
+Working with internal registry has a number of limitations and peculiarities related to installation, operating conditions, and mode switching.
 
 Registry configuration via the `deckhouse` moduleConfig during DKP cluster bootstrap is not supported.
 
@@ -43,7 +43,7 @@ The following restrictions apply when installing a cluster:
 
 ### Operating conditions restrictions
 
-The [`registry`](/modules/registry/) module works under the following conditions:
+To use the internal registry in DKP, the following conditions must be met:
 
 - If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
 - The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
