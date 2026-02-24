@@ -57,7 +57,7 @@ https://github.com/deckhouse/deckhouse/issues/9933
 
 Fix cve vulnerabilities.
 
-### 011-nginx-build-06.patch
+### 011-nginx-build-07.patch
 
 Build nginx for controller on ALT Linux.
 
