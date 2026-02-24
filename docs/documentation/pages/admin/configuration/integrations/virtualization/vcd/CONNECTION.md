@@ -159,6 +159,30 @@ This address is managed by MetalLB in L2 mode on dedicated frontend nodes.
 
    This rule allows VMs from the "192.168.199.0/24" subnet to access the internet.
 
+### Let's Encrypt certificate issuance
+
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` deployment layout.
+{% endalert %}
+
+When using [`cert-manager`](/modules/cert-manager/) with the `HTTP-01` ACME challenge type, you may need to configure `Hairpin NAT` (NAT loopback) on the `Edge Gateway`.
+
+This is required when the Ingress domain name resolves to the external IP address of the `Edge Gateway`, while requests to that address are made from **inside** the cluster (from the node network). In this case, the traffic must be correctly routed back to the internal network to the Ingress address (for example, the [`MetalLB`](/modules/metallb/) address).
+
+This is important for issuing Let's Encrypt certificates because [`cert-manager`](/modules/cert-manager/) performs a preliminary self-check of the challenge URL before sending a request to the ACME provider. If the URL is not reachable from inside the cluster, certificate issuance will not start, even if the address is accessible from outside.
+
+Example (cluster network `192.168.199.0/24`):
+
+- internal node network: `192.168.199.0/24`
+- external `Edge Gateway` IP address: `194.117.83.19`
+- internal Ingress address (for example, `MetalLB`): `192.168.199.251`.
+
+In this case, you must configure `Hairpin NAT` for traffic from the `192.168.199.0/24` network that is sent to the external IP `194.117.83.19`, with translation to the internal Ingress address `192.168.199.251`.
+
+> `Hairpin NAT` configuration may be required for Edge Gateway based on NSX-V.
+>
+> For `NSX-T`, the loopback scenario is often supported by default, but the actual behavior depends on the VMware Cloud Director provider configuration.
+
 ### Firewall setup
 
 {% alert level="info" %}
