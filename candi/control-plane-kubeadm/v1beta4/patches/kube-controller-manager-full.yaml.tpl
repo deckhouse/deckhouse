@@ -1,36 +1,32 @@
-
-    {{- $millicpu := $.resourcesRequestsMilliCpuControlPlane | default 512 -}}
-    {{- $memory := $.resourcesRequestsMemoryControlPlane | default 536870912 }}
-    {{- $nodeMonitorPeriod := .arguments.nodeMonitorPeriod | default "5" -}}
-    {{- $nodeMonitorGracePeriod := .arguments.nodeMonitorGracePeriod | default "40" -}}
-    {{- $nodesCount := .nodesCount | default 0 | int }}
-    {{- $gcThresholdCount := 1000 }}
-    {{- if lt $nodesCount 100 }}
-        {{- $gcThresholdCount = 1000 }}
-    {{- else if lt $nodesCount 300 }}
-        {{- $gcThresholdCount = 3000 }}
-    {{- else }}
-        {{- $gcThresholdCount = 6000 }}
-    {{- end }}
-
-    {{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
-    {{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
-    {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
-      {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
-    {{- end }}
-    {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
-      {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
-    {{- end }}
-    {{- if semverCompare "<=1.31" .clusterConfiguration.kubernetesVersion }}
-      {{- $baseFeatureGates = append $baseFeatureGates "AnonymousAuthConfigurableEndpoints=true" -}}
-    {{- end }}
-    {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
-    {{- if hasKey . "allowedFeatureGates" -}}
-      {{- range .allowedFeatureGates.kubeControllerManager -}}
-        {{- $controllerManagerFeatureGates = append $controllerManagerFeatureGates (printf "%s=true" .) -}}
-      {{- end -}}
-    {{- end -}}
-    {{- $controllerManagerFeatureGatesStr := $controllerManagerFeatureGates | uniq | join "," -}}
+{{- $millicpu := $.resourcesRequestsMilliCpuControlPlane | default 512 -}}
+{{- $memory := $.resourcesRequestsMemoryControlPlane | default 536870912 }}
+{{- $nodesCount := .nodesCount | default 0 | int }}
+{{- $gcThresholdCount := 1000 }}
+{{- if lt $nodesCount 100 }}
+    {{- $gcThresholdCount = 1000 }}
+{{- else if lt $nodesCount 300 }}
+    {{- $gcThresholdCount = 3000 }}
+{{- else }}
+    {{- $gcThresholdCount = 6000 }}
+{{- end }}
+{{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
+{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
+{{- end }}
+{{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
+{{- end }}
+{{- if semverCompare "<=1.31" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "AnonymousAuthConfigurableEndpoints=true" -}}
+{{- end }}
+{{- $controllerManagerFeatureGates := $baseFeatureGates -}}
+{{- if hasKey . "allowedFeatureGates" -}}
+  {{- range .allowedFeatureGates.kubeControllerManager -}}
+    {{- $controllerManagerFeatureGates = append $controllerManagerFeatureGates (printf "%s=true" .) -}}
+  {{- end -}}
+{{- end -}}
+{{- $controllerManagerFeatureGatesStr := $controllerManagerFeatureGates | uniq | join "," -}}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -66,8 +62,12 @@ spec:
         - --feature-gates={{ $controllerManagerFeatureGatesStr | quote }}
         - --node-cidr-mask-size={{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
         - --bind-address=127.0.0.1
-        - --node-monitor-period={{ $nodeMonitorPeriod }}s
-        - --node-monitor-grace-period={{ $nodeMonitorGracePeriod }}s
+        {{- if hasKey . "arguments" }}
+          {{- if hasKey .arguments "nodeMonitorPeriod" }}
+        - --node-monitor-period="{{ .arguments.nodeMonitorPeriod }}s"
+        - --node-monitor-grace-period="{{ .arguments.nodeMonitorGracePeriod }}s"
+          {{- end }}
+        {{- end }}
         {{- if eq .clusterConfiguration.clusterType "Cloud" }}
         - -- cloud-provider external
         {{- end }}
@@ -174,4 +174,3 @@ spec:
         path: /usr/share/ca-certificates
         type: DirectoryOrCreate
       name: usr-share-ca-certificates
-
