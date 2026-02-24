@@ -22,15 +22,17 @@ import (
 	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/operations"
 	"fmt"
+	"log/slog"
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -46,7 +48,7 @@ import (
 )
 
 const (
-	maxConcurrentReconciles = 1
+	maxConcurrentReconciles = 3
 	cacheSyncTimeout        = 3 * time.Minute
 	requeueInterval         = 5 * time.Minute
 )
@@ -58,6 +60,15 @@ type Reconciler struct {
 func Register(mgr manager.Manager) error {
 	r := &Reconciler{
 		client: mgr.GetClient(),
+	}
+
+	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			constants.ControlPlaneNodeLabelKey: "",
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create node label predicate: %w", err)
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -84,7 +95,7 @@ func Register(mgr manager.Manager) error {
 		).
 		Watches(&corev1.Node{},
 			handler.EnqueueRequestsFromMapFunc(r.mapNodeToControlPlaneNode),
-			builder.WithPredicates(nodeControlPlaneLabelPredicate()),
+			builder.WithPredicates(nodeLabelPredicate),
 		).
 		Complete(r)
 }
@@ -101,7 +112,7 @@ func getSecretPredicate() predicate.Predicate {
 		},
 
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return isControlPlaneManagerConfigSecret(e.Object)
+			return false
 		},
 
 		GenericFunc: func(e event.GenericEvent) bool {
@@ -127,42 +138,6 @@ func controlPlaneNodeResourcePredicate() predicate.Predicate {
 		DeleteFunc:  func(event.DeleteEvent) bool { return true },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
-}
-
-// nodeControlPlaneLabelPredicate triggers only when Node labels change
-// Ignores updates to status, capacity, etc.
-func nodeControlPlaneLabelPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			return hasControlPlaneLabel(e.Object)
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldNode, okOld := e.ObjectOld.(*corev1.Node)
-			newNode, okNew := e.ObjectNew.(*corev1.Node)
-			if !okOld || !okNew {
-				return false
-			}
-			if equality.Semantic.DeepEqual(oldNode.Labels, newNode.Labels) {
-				return false
-			}
-			return hasControlPlaneLabel(e.ObjectNew) || hasControlPlaneLabel(e.ObjectOld)
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			return hasControlPlaneLabel(e.Object)
-		},
-		GenericFunc: func(e event.GenericEvent) bool {
-			return false
-		},
-	}
-}
-
-func hasControlPlaneLabel(o client.Object) bool {
-	node, ok := o.(*corev1.Node)
-	if !ok {
-		return false
-	}
-	_, has := node.Labels[constants.ControlPlaneNodeLabelKey]
-	return has
 }
 
 // mapSecretToControlPlaneNodes enqueues reconcile for every master node (secret change affects all ControlPlaneNodes).
@@ -216,7 +191,7 @@ func (r *Reconciler) getControlPlaneNodes(ctx context.Context) ([]corev1.Node, e
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	nodeName := req.Name
-	klog.Infof("Reconcile started for ControlPlaneNode: %s", nodeName)
+	log.Info("Reconcile started for ControlPlaneNode", slog.String("node", nodeName))
 
 	node := &corev1.Node{}
 	err := r.client.Get(ctx, client.ObjectKey{Name: nodeName}, node)
@@ -240,34 +215,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	cmpSecret, err := r.getSecret(ctx, constants.ControlPlaneManagerConfigSecretName)
 	if err != nil {
-		klog.Error("Error occurred while getting secret",
-			"secret", constants.ControlPlaneManagerConfigSecretName,
-			"namespace", constants.KubeSystemNamespace,
-			err,
+		log.Error("Error occurred while getting secret",
+			slog.String("secret", constants.ControlPlaneManagerConfigSecretName),
+			slog.String("namespace", constants.KubeSystemNamespace),
+			log.Err(err),
 		)
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 	pkiSecret, err := r.getSecret(ctx, constants.PkiSecretName)
 	if err != nil {
-		klog.Error("Error occurred while getting secret",
-			"secret", constants.PkiSecretName,
-			"namespace", constants.KubeSystemNamespace,
-			err,
+		log.Error("Error occurred while getting secret",
+			slog.String("secret", constants.PkiSecretName),
+			slog.String("namespace", constants.KubeSystemNamespace),
+			log.Err(err),
 		)
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
 	desiredCPN, err := buildDesiredControlPlaneNode(nodeName, cmpSecret, pkiSecret)
 	if err != nil {
-		klog.Error("Error occurred while building desired ControlPlaneNode", "node", nodeName, "err", err)
+		log.Error("Error occurred while building desired ControlPlaneNode", slog.String("node", nodeName), log.Err(err))
 		return reconcile.Result{}, err
 	}
 	if err := r.applyControlPlaneNode(ctx, desiredCPN); err != nil {
-		klog.Error("Error occurred while reconciling ControlPlaneNode", "node", nodeName, "err", err)
+		log.Error("Error occurred while reconciling ControlPlaneNode", slog.String("node", nodeName), log.Err(err))
 		return reconcile.Result{}, err
 	}
 
-	klog.Infof("Reconcile completed for ControlPlaneNode: %s", nodeName)
+	log.Info("Reconcile completed for ControlPlaneNode", slog.String("node", nodeName))
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
 }
 
@@ -281,7 +256,7 @@ func (r *Reconciler) deleteControlPlaneNodeIfExists(ctx context.Context, name st
 	if err != nil {
 		return err
 	}
-	klog.Info("Deleting orphaned ControlPlaneNode", "name", name)
+	log.Info("Deleting orphaned ControlPlaneNode", slog.String("name", name))
 	return client.IgnoreNotFound(r.client.Delete(ctx, cpn))
 }
 
@@ -291,14 +266,14 @@ func (r *Reconciler) applyControlPlaneNode(ctx context.Context, desired *control
 	key := client.ObjectKey{Name: desired.Name}
 	err := r.client.Get(ctx, key, current)
 	if apierrors.IsNotFound(err) {
-		klog.Info("ControlPlaneNode not found, creating", "node", desired.Name)
+		log.Info("ControlPlaneNode not found, creating", slog.String("node", desired.Name))
 		return r.client.Create(ctx, desired)
 	}
 	if err != nil {
 		return err
 	}
 	if !equality.Semantic.DeepEqual(desired.Spec, current.Spec) {
-		klog.Info("ControlPlaneNode spec differs from desired, updating", "node", desired.Name)
+		log.Info("ControlPlaneNode spec differs from desired, updating", slog.String("node", desired.Name))
 		patch := client.MergeFrom(current.DeepCopy())
 		current.Spec = desired.Spec
 		return r.client.Patch(ctx, current, patch)
