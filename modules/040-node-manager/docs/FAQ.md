@@ -52,7 +52,7 @@ To add a static node to a cluster (bare metal server or virtual machine), follow
 1. Generate a pair of SSH keys with an empty passphrase on the server:
 
    ```shell
-   ssh-keygen -t rsa -f caps-id -C "" -N ""
+   ssh-keygen -t ed25519 -f caps-id -C "" -N ""
    ```
 
    The public and private keys of the caps user will be stored in the `caps-id.pub` and `caps-id` files in the current directory on the server.

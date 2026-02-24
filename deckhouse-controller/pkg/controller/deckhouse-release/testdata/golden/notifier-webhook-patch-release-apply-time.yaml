@@ -30,7 +30,7 @@ spec:
   version: v1.25.1
 status:
   approved: false
-  message: Release is postponed by notification until 18 Oct 19 08:00 UTC
+  message: Release is postponed by notification until 18 Oct 2019 08:00 UTC
   phase: Pending
   transitionTime: null
 ---

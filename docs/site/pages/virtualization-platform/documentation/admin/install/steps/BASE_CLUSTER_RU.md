@@ -150,9 +150,11 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
    ```shell
    dhctl bootstrap \
      --ssh-host=54.43.32.21 \
-     --ssh-user=dvpinstall --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --ssh-user=dvpinstall --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
      --config=/config.yaml --ask-become-pass
    ```
+
+> Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 Если для запуска `sudo` на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`.
 Параметр `--ask-become-pass` можно не указывать, если при подготовке узла был настроен запуск `sudo` без пароля.
@@ -256,9 +258,11 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 ```shell
     dhctl bootstrap \
-    --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+    --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
     --config=/config.yml \
     --preflight-skip-all-checks 
 ```
+
+> Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 {% endofftopic %}

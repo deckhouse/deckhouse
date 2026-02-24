@@ -93,15 +93,7 @@ permalink: en/admin/configuration/network/internal/flannel-to-cilium.html
 
 To ensure the CNI switching from Flannel to Cilium was completed successfully, follow these steps:
 
-1. Check the Deckhouse queue:
-
-   - If using a single master node:
-
-     ```shell
-     d8 system queue list
-     ```
-
-   - If using a multi-master installation:
+1. Check the cluster task queue:
 
      ```shell
      d8 system queue list

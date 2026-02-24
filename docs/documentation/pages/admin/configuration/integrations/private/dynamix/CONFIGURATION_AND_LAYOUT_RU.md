@@ -22,7 +22,7 @@ Deckhouse Kubernetes Platform поддерживает две схемы раз�
 apiVersion: deckhouse.io/v1
 kind: DynamixClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa AAAA"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 location: dynamix
 account: acc_user
 provider:
@@ -51,7 +51,7 @@ masterNodeGroup:
 apiVersion: deckhouse.io/v1
 kind: DynamixClusterConfiguration
 layout: StandardWithInternalNetwork
-sshPublicKey: "ssh-rsa AAAA"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 location: dynamix
 account: acc_user
 nodeNetworkCIDR: "10.241.32.0/24"

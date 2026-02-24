@@ -230,7 +230,7 @@ docker run -it --pull=always \
 
 ```shell
 dhctl bootstrap \
-  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
   --config=/config.yaml --config=/resources.yaml
 ```
 
@@ -238,7 +238,8 @@ dhctl bootstrap \
 - `/config.yaml` — файл конфигурации установки;
 - `/resources.yaml` — файл манифестов ресурсов;
 - `<SSH_USER>` — пользователь на сервере для подключения по SSH;
-- `--ssh-agent-private-keys` — файл приватного SSH-ключа для подключения по SSH.
+- `--ssh-agent-private-keys` — файл приватного SSH-ключа для подключения по SSH;
+- `<SSH_PRIVATE_KEY_FILE>` — имя приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 Далее подключитесь к master-узлу по SSH (IP-адрес master-узла выводится инсталлятором по завершении установки):
 
