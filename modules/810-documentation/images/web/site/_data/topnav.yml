@@ -16,4 +16,4 @@ topnav:
       url: /modules/
     - title: Лицензионное соглашение
       url: /license-agreement.html
-      editions: [BE, SE, SE-plus, EE]
+      editions: [BE, SE, SE-plus, EE, FE]
