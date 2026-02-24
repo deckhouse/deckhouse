@@ -163,31 +163,28 @@ func (m *capiMachine) calculatePhase() deckhousev1alpha2.InstancePhase {
 }
 
 func (m *capiMachine) calculateMachineStatusAndMessage(conditions []metav1.Condition) (string, string) {
+	infra := findCondition(conditions, capi.InfrastructureReadyCondition)
+	ready := findCondition(conditions, capi.ReadyCondition)
+
+	if infra != nil && infra.Status == metav1.ConditionFalse {
+		return MachineStatusProgressing, conditionMessageOrReason(infra)
+	}
+
 	deleting := findCondition(conditions, capi.DeletingCondition)
 	if deleting != nil && deleting.Status == metav1.ConditionTrue {
-		return MachineStatusProgressing, deleting.Message
+		return MachineStatusProgressing, conditionMessageOrReason(deleting)
 	}
 
-	infra := findCondition(conditions, capi.InfrastructureReadyCondition)
-	if infra != nil && infra.Status == metav1.ConditionFalse {
-		if infra.Reason != "WaitingForInfrastructure" {
-			return MachineStatusError, conditionMessageOrReason(infra)
-		}
-	}
-
-	ready := findCondition(conditions, capi.ReadyCondition)
-	if ready != nil {
-		if ready.Status == metav1.ConditionTrue {
-			return MachineStatusReady, ""
-		}
+	if ready != nil && ready.Status == metav1.ConditionTrue {
+		return MachineStatusReady, ""
 	}
 
 	msg := ""
-	if ready != nil {
-		msg = ready.Message
+	if msg == "" && ready != nil {
+		msg = conditionMessageOrReason(ready)
 	}
 	if msg == "" && infra != nil {
-		msg = infra.Message
+		msg = conditionMessageOrReason(infra)
 	}
 
 	return MachineStatusProgressing, msg
@@ -215,27 +212,41 @@ func (m *capiMachine) convertConditions(conditions []metav1.Condition) []deckhou
 }
 
 func aggregateMachineReadyCondition(conditions []metav1.Condition) *deckhousev1alpha2.InstanceCondition {
+	infra := findCondition(conditions, capi.InfrastructureReadyCondition)
+	if infra != nil && infra.Status == metav1.ConditionFalse {
+		severity := string(capi.ConditionSeverityWarning)
+		if infra.Reason == "WaitingForInfrastructure" {
+			severity = string(capi.ConditionSeverityInfo)
+		}
+
+		return machineReadyConditionFrom(
+			infra,
+			infra.Status,
+			severity,
+			infra.Message,
+		)
+	}
+
 	deleting := findCondition(conditions, capi.DeletingCondition)
 	if deleting != nil && deleting.Status == metav1.ConditionTrue {
 		return machineReadyConditionFrom(
 			deleting,
 			metav1.ConditionFalse,
-			string(capi.ConditionSeverityWarning),
+			"",
 			deleting.Message,
 		)
 	}
 
-	infra := findCondition(conditions, capi.InfrastructureReadyCondition)
-	if infra != nil && infra.Status == metav1.ConditionFalse && infra.Reason != "WaitingForInfrastructure" {
+	ready := findCondition(conditions, capi.ReadyCondition)
+	if ready != nil && ready.Status == metav1.ConditionTrue {
 		return machineReadyConditionFrom(
-			infra,
-			infra.Status,
-			string(capi.ConditionSeverityWarning),
-			infra.Message,
+			ready,
+			ready.Status,
+			"",
+			ready.Message,
 		)
 	}
 
-	ready := findCondition(conditions, capi.ReadyCondition)
 	if ready != nil {
 		return machineReadyConditionFrom(
 			ready,
@@ -246,15 +257,10 @@ func aggregateMachineReadyCondition(conditions []metav1.Condition) *deckhousev1a
 	}
 
 	if infra != nil {
-		severity := ""
-		if infra.Status == metav1.ConditionFalse && infra.Reason == "WaitingForInfrastructure" {
-			severity = string(capi.ConditionSeverityInfo)
-		}
-
 		return machineReadyConditionFrom(
 			infra,
 			infra.Status,
-			severity,
+			"",
 			infra.Message,
 		)
 	}
