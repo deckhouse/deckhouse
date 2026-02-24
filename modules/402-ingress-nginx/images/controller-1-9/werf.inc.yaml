@@ -68,7 +68,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/008-new-metrics.patch
   - patch -p1 < /patches/ingress-nginx/009-default-backend-fix.patch
   - patch -p1 < /patches/ingress-nginx/010-cve-22122025-01.patch
-  - patch -p1 < /patches/ingress-nginx/011-nginx-build-03.patch
+  - patch -p1 < /patches/ingress-nginx/011-nginx-build-04.patch
   - patch -p1 < /patches/ingress-nginx/012-validation-mode.patch
   - patch -p1 < /patches/ingress-nginx/013-verbose-maxmind-logs.patch
   - patch -p1 < /patches/ingress-nginx/014-fix-success-reload-metric.patch
@@ -206,7 +206,6 @@ import:
 shell:
   setup:
   - set -x
-  - echo newrun
   - export SOURCE_REPO={{ $.SOURCE_REPO }}
   - export CONTROLLER_BRANCH="controller-v1.9.5-nginx-v1.29.5"
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
