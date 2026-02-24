@@ -20,10 +20,14 @@ import (
 	"context"
 	"fmt"
 
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // InstanceReconciler owns only Instance reconciliation flow.
@@ -31,6 +35,8 @@ import (
 type InstanceReconciler struct {
 	client.Client
 }
+
+const instanceControllerFinalizer = "node-manager.hooks.deckhouse.io/instance-controller"
 
 func SetupInstanceController(mgr ctrl.Manager) error {
 	if err := (&InstanceReconciler{
@@ -70,9 +76,123 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 }
 
 func (r *InstanceReconciler) reconcileInstance(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
-	_ = ctx
-	_ = instance
+	isDeleting := instance.DeletionTimestamp != nil && !instance.DeletionTimestamp.IsZero()
+	if isDeleting {
+		return r.reconcileInstanceDeletion(ctx, instance)
+	}
 
-	// TODO
+	return r.ensureInstanceFinalizer(ctx, instance)
+}
+
+func (r *InstanceReconciler) reconcileInstanceDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
+	if !controllerutil.ContainsFinalizer(instance, instanceControllerFinalizer) {
+		return nil
+	}
+
+	machineGone, err := r.reconcileLinkedMachineDeletion(ctx, instance)
+	if err != nil {
+		return err
+	}
+	if !machineGone {
+		return nil
+	}
+
+	return r.removeInstanceFinalizer(ctx, instance)
+}
+
+func (r *InstanceReconciler) ensureInstanceFinalizer(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
+	if controllerutil.ContainsFinalizer(instance, instanceControllerFinalizer) {
+		return nil
+	}
+
+	updated := instance.DeepCopy()
+	controllerutil.AddFinalizer(updated, instanceControllerFinalizer)
+	if err := r.Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
+		return fmt.Errorf("ensure finalizer on instance %q: %w", instance.Name, err)
+	}
+
+	*instance = *updated
 	return nil
+}
+
+func (r *InstanceReconciler) removeInstanceFinalizer(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
+	if !controllerutil.ContainsFinalizer(instance, instanceControllerFinalizer) {
+		return nil
+	}
+
+	updated := instance.DeepCopy()
+	controllerutil.RemoveFinalizer(updated, instanceControllerFinalizer)
+	if err := r.Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
+		return fmt.Errorf("remove finalizer from instance %q: %w", instance.Name, err)
+	}
+
+	*instance = *updated
+	return nil
+}
+
+func (r *InstanceReconciler) reconcileLinkedMachineDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
+	ref := instance.Spec.MachineRef
+	if ref == nil || ref.Name == "" {
+		return true, nil
+	}
+
+	namespace := ref.Namespace
+	if namespace == "" {
+		namespace = MachineNamespace
+	}
+
+	switch ref.APIVersion {
+	case "", capiv1beta2.GroupVersion.String():
+		return r.ensureCAPIMachineDeleted(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name})
+	case mcmv1alpha1.SchemeGroupVersion.String():
+		return r.ensureMCMMachineDeleted(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name})
+	default:
+		return true, nil
+	}
+}
+
+func (r *InstanceReconciler) ensureCAPIMachineDeleted(ctx context.Context, key types.NamespacedName) (bool, error) {
+	machine := &capiv1beta2.Machine{}
+	if err := r.Get(ctx, key, machine); err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("get capi machine %q: %w", key.String(), err)
+	}
+
+	if !machine.DeletionTimestamp.IsZero() {
+		return false, nil
+	}
+
+	if err := r.Delete(ctx, machine); err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("delete capi machine %q: %w", key.String(), err)
+	}
+
+	return false, nil
+}
+
+func (r *InstanceReconciler) ensureMCMMachineDeleted(ctx context.Context, key types.NamespacedName) (bool, error) {
+	machine := &mcmv1alpha1.Machine{}
+	if err := r.Get(ctx, key, machine); err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("get mcm machine %q: %w", key.String(), err)
+	}
+
+	if !machine.DeletionTimestamp.IsZero() {
+		return false, nil
+	}
+
+	if err := r.Delete(ctx, machine); err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("delete mcm machine %q: %w", key.String(), err)
+	}
+
+	return false, nil
 }

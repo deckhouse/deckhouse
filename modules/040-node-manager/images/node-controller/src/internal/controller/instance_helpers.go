@@ -60,9 +60,7 @@ func ensureInstanceExists(ctx context.Context, c client.Client, name string) (*d
 }
 
 func (r *CAPIMachineReconciler) deleteInstanceIfExists(ctx context.Context, name string) (bool, error) {
-	instance := &deckhousev1alpha2.Instance{}
-	instance.Name = name
-
+	instance := &deckhousev1alpha2.Instance{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	if err := r.Delete(ctx, instance); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return false, nil

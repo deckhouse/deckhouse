@@ -57,7 +57,15 @@ func (r *CAPIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	capiMachine := &capiv1beta2.Machine{}
 	if err := r.Get(ctx, key, capiMachine); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		if client.IgnoreNotFound(err) == nil {
+			deleted, delErr := r.deleteInstanceIfExists(ctx, req.Name)
+			if delErr != nil {
+				return ctrl.Result{}, delErr
+			}
+			log.V(1).Info("machine not found, linked instance delete handled", "instance", req.Name, "deleted", deleted)
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
 	}
 
 	factory := r.machineFactory
@@ -73,16 +81,7 @@ func (r *CAPIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if instanceName == "" {
 		instanceName = machine.GetName()
 	}
-
-	if !capiMachine.DeletionTimestamp.IsZero() {
-		deleted, err := r.deleteInstanceIfExists(ctx, instanceName)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		log.V(1).Info("linked instance delete handled", "instance", instanceName, "deleted", deleted)
-		return ctrl.Result{}, nil
-	}
+	machineRef := machine.GetMachineRef()
 
 	status := machine.GetStatus()
 	nodeGroup := machine.GetNodeGroup()
@@ -92,11 +91,16 @@ func (r *CAPIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	specUpdated, instance, err := r.updateInstanceMachineRef(ctx, instance, machineRef)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	updated, err := r.updateInstanceMachineStatus(ctx, instance, status)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	log.V(1).Info("linked instance reconciled", "instance", instance.Name, "updated", updated)
+	log.V(1).Info("linked instance reconciled", "instance", instance.Name, "specUpdated", specUpdated, "statusUpdated", updated)
 
 	log.Info("CAPIMachineReconciler", "status", status, "nodeGroup", nodeGroup)
 
@@ -123,4 +127,28 @@ func (r *CAPIMachineReconciler) updateInstanceMachineStatus(
 	}
 
 	return true, nil
+}
+
+func (r *CAPIMachineReconciler) updateInstanceMachineRef(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+	machineRef *deckhousev1alpha2.MachineRef,
+) (bool, *deckhousev1alpha2.Instance, error) {
+	updated := instance.DeepCopy()
+	if machineRef == nil {
+		updated.Spec.MachineRef = nil
+	} else {
+		refCopy := *machineRef
+		updated.Spec.MachineRef = &refCopy
+	}
+
+	if apiequality.Semantic.DeepEqual(instance.Spec, updated.Spec) {
+		return false, instance, nil
+	}
+
+	if err := r.Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
+		return false, nil, fmt.Errorf("patch instance %q spec: %w", instance.Name, err)
+	}
+
+	return true, updated, nil
 }
