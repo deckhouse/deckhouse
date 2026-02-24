@@ -1,5 +1,5 @@
 diff --git a/images/nginx/rootfs/build.sh b/images/nginx/rootfs/build.sh
-index 8bf372f21..0946c5efd 100755
+index 8bf372f21..29d8b0223 100755
 --- a/images/nginx/rootfs/build.sh
 +++ b/images/nginx/rootfs/build.sh
 @@ -14,11 +14,14 @@
@@ -18,6 +18,15 @@ index 8bf372f21..0946c5efd 100755
  
  # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.2...master
  export NDK_VERSION=0.3.2
+@@ -69,7 +72,7 @@ export OWASP_MODSECURITY_CRS_VERSION=v3.3.5
+ export LUA_NGX_VERSION=0.10.25
+ 
+ # Check for recent changes: https://github.com/openresty/stream-lua-nginx-module/compare/v0.0.13...master
+-export LUA_STREAM_NGX_VERSION=0.0.13
++export LUA_STREAM_NGX_VERSION=bea8a0c0de94cede71554f53818ac0267d675d63
+ 
+ # Check for recent changes: https://github.com/openresty/lua-upstream-nginx-module/compare/8aa93ead98ba2060d4efd594ae33a35d153589bf...master
+ export LUA_UPSTREAM_VERSION=8aa93ead98ba2060d4efd594ae33a35d153589bf
 @@ -126,6 +129,7 @@ export LUA_RESTY_GLOBAL_THROTTLE_VERSION=0.2.0
  export MIMALOC_VERSION=1.7.6
  
