@@ -132,7 +132,7 @@ shell:
 ---
 # opentelemetry
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentelemetry-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -189,7 +189,7 @@ shell:
 ---
 # NGINX PCRE
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -222,7 +222,7 @@ shell:
 ---
 # chroot
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
