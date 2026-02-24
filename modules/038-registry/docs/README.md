@@ -26,7 +26,7 @@ The `registry` module has a number of limitations and features related to instal
 
 ### Cluster installation limitations
 
-- DKP cluster bootstrap is only supported in the `Direct` and `Unmanaged` modes (`Local` and `Proxy` modes are not supported). Registry settings during cluster installation are configured via the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry).
+- DKP cluster bootstrap is supported only in `Direct`, `Unmanaged`, and `Proxy` modes (bootstrap in `Local` mode is not supported). Registry settings during cluster installation are configured via the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry).
 - To launch a cluster in the non-configurable `Unmanaged` mode (Legacy), registry parameters must be specified in [`initConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
 ### Operating conditions restrictions
