@@ -1,12 +1,15 @@
 ---
-title: Переключение работающего кластера DKP на использование стороннего хранилища образов контейнеров
+title: Переключение работающего Managed Kubernetes кластера на использование стороннего хранилища образов контейнеров
 permalink: ru/admin/configuration/registry/third-party.html
 description: "Переключение Deckhouse Kubernetes Platform на использование стороннего хранилища образов контейнеров. Настройка внешних хранилищ образов и миграция с официального хранилища образов."
 lang: ru
 ---
 
+
 {% alert level="warning" %}
-При использовании модуля [`registry`](/modules/registry/) смена адреса и параметров хранилища образов контейнеров выполняется в секции [registry](/modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`. Пример настройки приведен в документации модуля [`registry`](/modules/registry/examples.html).
+Информация на этой странице актуальна для Managed Kubernetes кластеров: в них недоступно управление хранилищем образов через модуль `registry`.
+
+При использовании модуля [`registry`](/modules/registry/) (в кластерах, полностью управляемых DKP) смена адреса и параметров хранилища образов контейнеров выполняется в секции [registry](/modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`. Пример настройки приведен в документации модуля [`registry`](/modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
