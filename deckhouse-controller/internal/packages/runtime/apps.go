@@ -226,14 +226,10 @@ func (r *Runtime) enableApp(name string) {
 	defer r.mu.Unlock()
 
 	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *apps.Application) {
-		tasks := []queue.Task{
-			taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger),
-			taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger),
-		}
-
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
+		r.queueService.Enqueue(ctx, name, taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), queue.WithOnDone(func() {
+			r.scheduler.Complete(name)
+		}))
 	})
 }
 

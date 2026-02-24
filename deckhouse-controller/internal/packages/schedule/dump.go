@@ -30,7 +30,6 @@ type dump struct {
 
 // nodeDump combines status info for a single node.
 type nodeDump struct {
-	Name      string         `json:"name" yaml:"name"`
 	Version   string         `json:"version" yaml:"version"`
 	Order     Order          `json:"order" yaml:"order"`
 	State     nodeState      `json:"state" yaml:"state"`
@@ -50,7 +49,6 @@ func (s *Scheduler) Dump() []byte {
 
 	for _, n := range s.nodes {
 		d.Nodes[n.name] = nodeDump{
-			Name:      n.name,
 			Version:   n.version.String(),
 			Order:     n.order,
 			State:     n.state,

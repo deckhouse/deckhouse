@@ -47,6 +47,25 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 		})
 	definePackagesDebugSocketFlag(packagesDumpCmd)
 
+	schedulerDumpCmd := packagesCmd.Command("dump", "Dump all scheduler node state from memory.").
+		Action(func(_ *kingpin.ParseContext) error {
+			client, err := debug.NewClient(packagesDebugSocket)
+			if err != nil {
+				return err
+			}
+			defer client.Close()
+
+			ctx := context.Background()
+			out, err := client.Get(ctx, "packages/scheduler/dump")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(out))
+
+			return nil
+		})
+	definePackagesDebugSocketFlag(schedulerDumpCmd)
+
 	packagesQueueCmd := packagesCmd.Command("queue", "Queue operations.")
 	packagesQueueListCmd := packagesQueueCmd.Command("list", "List all package queues with tasks.").
 		Action(func(_ *kingpin.ParseContext) error {
