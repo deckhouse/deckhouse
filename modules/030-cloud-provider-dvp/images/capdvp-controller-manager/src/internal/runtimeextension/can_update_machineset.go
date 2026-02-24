@@ -18,12 +18,36 @@ package runtimeextension
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 
 	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
 )
+
+func machineSetReplicas(raw json.RawMessage) (int64, error) {
+	var machineSet map[string]interface{}
+	if err := json.Unmarshal(raw, &machineSet); err != nil {
+		return 0, err
+	}
+	specVal, ok := machineSet["spec"].(map[string]interface{})
+	if !ok {
+		return 0, fmt.Errorf("machineset.spec is missing")
+	}
+	replicasVal, ok := specVal["replicas"]
+	if !ok {
+		return 0, nil
+	}
+	switch v := replicasVal.(type) {
+	case float64:
+		return int64(v), nil
+	case int64:
+		return v, nil
+	default:
+		return 0, fmt.Errorf("unexpected replicas type %T", replicasVal)
+	}
+}
 
 // HandleCanUpdateMachineSet is called by the CAPI MachineDeployment controller
 // as a fast pre-check. If this returns empty patches, CAPI falls back to rolling update.
@@ -53,10 +77,23 @@ func (e *Extension) HandleCanUpdateMachineSet(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	canUpdate, message := canUpdateInPlace(
-		&currentTmpl.Spec.Template.Spec,
-		&desiredTmpl.Spec.Template.Spec,
-	)
+	cs := classifyChanges(&currentTmpl.Spec.Template.Spec, &desiredTmpl.Spec.Template.Spec)
+	canUpdate := cs.strategy != updateRecreate
+	message := cs.reason
+
+	// Business rule:
+	// For single-replica MachineSets we avoid warm in-place updates (stop/start VM),
+	// because that makes the only machine temporarily unavailable.
+	replicas, err := machineSetReplicas(req.Current.MachineSet)
+	if err != nil {
+		e.log.Error(err, "failed to parse MachineSet replicas from request")
+		writeError(w, http.StatusBadRequest, "failed to parse machineSet replicas: "+err.Error())
+		return
+	}
+	if replicas == 1 && cs.strategy == updateWarm {
+		canUpdate = false
+		message = "single-replica warm update would make machine unavailable; fallback to rollout"
+	}
 
 	resp := CanUpdateMachineSetResponse{
 		CommonResponse: CommonResponse{Status: "Success", Message: message},
