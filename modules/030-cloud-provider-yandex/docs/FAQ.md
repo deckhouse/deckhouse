@@ -96,4 +96,4 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
    --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
 
-   > Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa`, and for a key with ED25519 encryption, it will be with `id_ed25519`.
+   > Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it can be `id_rsa`, and for a key with ED25519 encryption, it can be `id_ed25519`.

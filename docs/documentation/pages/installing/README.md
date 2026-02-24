@@ -568,7 +568,7 @@ Where:
 - `/config.yml`: Installation configuration file.
 - `<SSH_USER>`: Username for SSH connection to the server.
 - `--ssh-agent-private-keys`: Private SSH key file for SSH connection.
-- `<SSH_PRIVATE_KEY_FILE>`: Name of private key. For example, for a key with RSA encryption, it will be `id_rsa`, and for a key with ED25519 encryption, it will be with `id_ed25519`.
+- `<SSH_PRIVATE_KEY_FILE>`: Name of private key. For example, for a key with RSA encryption, it can be `id_rsa`, and for a key with ED25519 encryption, it can be `id_ed25519`.
 
 ### Pre-installation checks
 
@@ -659,7 +659,7 @@ Example of using a preflight skip flag:
       --preflight-skip-all-checks
   ```
 
-> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa`, and for a key with ED25519 encryption, it will be with `id_ed25519`.
+> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it can be `id_rsa`, and for a key with ED25519 encryption, it can be `id_ed25519`.
 
 {% endofftopic %}
 
