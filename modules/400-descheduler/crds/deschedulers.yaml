@@ -660,7 +660,7 @@ spec:
 
                             By default, only `DoNotSchedule` (hard constraints) are considered — these are
                             constraints that the scheduler strictly enforces: a pod will NOT be placed if
-                            doing so would violate the constraint. The descheduler will evict pods that are
+                            doing so would violate the constraint. `Descheduler` will evict pods that are
                             currently violating such constraints (e.g. due to node failures or cluster
                             topology changes after initial scheduling).
 
@@ -668,7 +668,7 @@ spec:
                             constraints that the scheduler tries to satisfy but does not strictly enforce:
                             a pod WILL be placed even if the constraint cannot be satisfied, though the
                             scheduler will attempt to minimize the imbalance. Including this type causes
-                            the descheduler to also evict pods that violate soft constraints.
+                            `Descheduler` to also evict pods that violate soft constraints.
                           items:
                             type: string
                             enum: ["DoNotSchedule", "ScheduleAnyway"]
