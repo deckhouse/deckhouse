@@ -31,7 +31,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,7 +47,7 @@ import (
 )
 
 const (
-	maxConcurrentReconciles = 3
+	maxConcurrentReconciles = 1
 	cacheSyncTimeout        = 3 * time.Minute
 	requeueInterval         = 5 * time.Minute
 )
@@ -60,15 +59,6 @@ type Reconciler struct {
 func Register(mgr manager.Manager) error {
 	r := &Reconciler{
 		client: mgr.GetClient(),
-	}
-
-	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			constants.ControlPlaneNodeLabelKey: "",
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("create node label predicate: %w", err)
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -95,39 +85,23 @@ func Register(mgr manager.Manager) error {
 		).
 		Watches(&corev1.Node{},
 			handler.EnqueueRequestsFromMapFunc(r.mapNodeToControlPlaneNode),
-			builder.WithPredicates(nodeLabelPredicate),
+			builder.WithPredicates(nodeControlPlaneLabelPredicate()),
 		).
 		Complete(r)
 }
 
 // getSecretPredicate checks if the secret is d8-control-plane-manager-config or d8-pki.
 func getSecretPredicate() predicate.Predicate {
+	isTarget := func(o client.Object) bool {
+		return (o.GetName() == constants.ControlPlaneManagerConfigSecretName || o.GetName() == constants.PkiSecretName) &&
+			o.GetNamespace() == constants.KubeSystemNamespace
+	}
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			return isControlPlaneManagerConfigSecret(e.Object)
-		},
-
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			return isControlPlaneManagerConfigSecret(e.ObjectNew)
-		},
-
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			return false
-		},
-
-		GenericFunc: func(e event.GenericEvent) bool {
-			return false
-		},
+		CreateFunc:  func(e event.CreateEvent) bool { return isTarget(e.Object) },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return isTarget(e.ObjectNew) },
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
-}
-
-// isControlPlaneManagerConfigSecret checks if the secret is d8-control-plane-manager-config or d8-pki.
-func isControlPlaneManagerConfigSecret(o client.Object) bool {
-	secret, ok := o.(*corev1.Secret)
-	if !ok {
-		return false
-	}
-	return (secret.Name == constants.ControlPlaneManagerConfigSecretName || secret.Name == constants.PkiSecretName) && secret.Namespace == constants.KubeSystemNamespace
 }
 
 // controlPlaneNodeResourcePredicate triggers on any create/update/delete of ControlPlaneNode CR.
@@ -137,6 +111,37 @@ func controlPlaneNodeResourcePredicate() predicate.Predicate {
 		UpdateFunc:  func(event.UpdateEvent) bool { return true },
 		DeleteFunc:  func(event.DeleteEvent) bool { return true },
 		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
+}
+
+// nodeControlPlaneLabelPredicate triggers only when Node labels change
+// Ignores updates to status, capacity, etc.
+func nodeControlPlaneLabelPredicate() predicate.Predicate {
+	hasLabel := func(o client.Object) bool {
+		_, has := o.GetLabels()[constants.ControlPlaneNodeLabelKey]
+		return has
+	}
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return hasLabel(e.Object)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldNode, okOld := e.ObjectOld.(*corev1.Node)
+			newNode, okNew := e.ObjectNew.(*corev1.Node)
+			if !okOld || !okNew {
+				return false
+			}
+			if equality.Semantic.DeepEqual(oldNode.Labels, newNode.Labels) {
+				return false
+			}
+			return hasLabel(e.ObjectNew) || hasLabel(e.ObjectOld)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return hasLabel(e.Object)
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
 	}
 }
 
