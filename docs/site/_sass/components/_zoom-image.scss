@@ -1,3 +1,20 @@
+.zoom-image-wrap {
+  position: relative;
+  display: inline-block;
+
+  &::before {
+    content: '';
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    z-index: 2;
+    width: 26px;
+    height: 26px;
+    background: url('/images/zooming.svg') center center / 26px 26px no-repeat;
+    pointer-events: none;
+  }
+}
+
 .glightbox-container {
   background: rgba(0, 0, 0, 0.9) !important;
 }
