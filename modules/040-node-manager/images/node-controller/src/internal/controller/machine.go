@@ -28,9 +28,10 @@ import (
 )
 
 const (
-	mcmNodeGroupLabelKey     = "node.deckhouse.io/group"
-	capiNodeGroupLabelKey    = "node-group"
-	capiFallbackNodeGroupKey = "node.deckhouse.io/group"
+	mcmNodeGroupLabelKey      = "node.deckhouse.io/group"
+	capiNodeGroupLabelKey     = "node-group"
+	capiFallbackNodeGroupKey  = "node.deckhouse.io/group"
+	machineReadyConditionType = "MachineReady"
 
 	MachineStatusProgressing = "Progressing"
 	MachineStatusReady       = "Ready"
@@ -215,21 +216,11 @@ func (m *capiMachine) filterConditions() []metav1.Condition {
 }
 
 func (m *capiMachine) convertConditions(conditions []metav1.Condition) []deckhousev1alpha2.InstanceCondition {
-	if len(conditions) == 0 {
+	c := aggregateMachineReadyCondition(conditions)
+	if c == nil {
 		return nil
 	}
-	result := make([]deckhousev1alpha2.InstanceCondition, 0, len(conditions))
-	for _, c := range conditions {
-		result = append(result, deckhousev1alpha2.InstanceCondition{
-			Type:               c.Type,
-			Status:             c.Status,
-			Reason:             c.Reason,
-			Message:            c.Message,
-			LastTransitionTime: c.LastTransitionTime,
-			ObservedGeneration: c.ObservedGeneration,
-		})
-	}
-	return result
+	return []deckhousev1alpha2.InstanceCondition{*c}
 }
 
 func findCondition(conditions []metav1.Condition, condType string) *metav1.Condition {
@@ -268,4 +259,80 @@ func conditionMessageOrReason(c *metav1.Condition) string {
 		return c.Message
 	}
 	return c.Reason
+}
+
+func aggregateMachineReadyCondition(conditions []metav1.Condition) *deckhousev1alpha2.InstanceCondition {
+	deleting := findCondition(conditions, capi.DeletingCondition)
+	if deleting != nil && deleting.Status == metav1.ConditionTrue {
+		return machineReadyConditionFrom(
+			deleting,
+			metav1.ConditionFalse,
+			string(capi.ConditionSeverityWarning),
+			drainMessage(deleting.Message),
+		)
+	}
+
+	infra := findCondition(conditions, capi.InfrastructureReadyCondition)
+	ready := findCondition(conditions, capi.ReadyCondition)
+
+	if infra != nil && infra.Status == metav1.ConditionFalse && infra.Reason != "WaitingForInfrastructure" {
+		return machineReadyConditionFrom(infra, infra.Status, string(capi.ConditionSeverityWarning), infra.Message)
+	}
+
+	if ready != nil {
+		severity := ""
+		if ready.Status == metav1.ConditionFalse && isDrainBlocked(ready.Message) {
+			severity = string(capi.ConditionSeverityWarning)
+		}
+		return machineReadyConditionFrom(ready, ready.Status, severity, ready.Message)
+	}
+
+	if infra != nil {
+		severity := ""
+		if infra.Status == metav1.ConditionFalse && infra.Reason == "WaitingForInfrastructure" {
+			severity = string(capi.ConditionSeverityInfo)
+		}
+		return machineReadyConditionFrom(infra, infra.Status, severity, infra.Message)
+	}
+
+	return nil
+}
+
+func machineReadyConditionFrom(
+	src *metav1.Condition,
+	status metav1.ConditionStatus,
+	severity string,
+	message string,
+) *deckhousev1alpha2.InstanceCondition {
+	if src == nil {
+		return nil
+	}
+
+	return &deckhousev1alpha2.InstanceCondition{
+		Type:               machineReadyConditionType,
+		Status:             status,
+		Reason:             src.Reason,
+		Severity:           severity,
+		Message:            message,
+		LastTransitionTime: src.LastTransitionTime,
+		ObservedGeneration: src.ObservedGeneration,
+	}
+}
+
+func drainMessage(message string) string {
+	if !isDrainBlocked(message) {
+		return message
+	}
+
+	for _, line := range strings.Split(message, "\n") {
+		line = strings.TrimSpace(strings.TrimPrefix(line, "*"))
+		if line == "" {
+			continue
+		}
+		if strings.Contains(strings.ToLower(line), "cannot evict") || strings.Contains(strings.ToLower(line), "disruption budget") {
+			return line
+		}
+	}
+
+	return message
 }
