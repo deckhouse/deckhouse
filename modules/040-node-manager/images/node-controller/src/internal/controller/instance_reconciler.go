@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
@@ -64,40 +65,44 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if err := r.reconcileInstance(ctx, instance); err != nil {
+	requeue, err := r.reconcileInstance(ctx, instance)
+	if err != nil {
 		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err
+	}
+	if requeue {
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	log.V(1).Info("instance reconciled")
 	return ctrl.Result{}, nil
 }
 
-func (r *InstanceReconciler) reconcileInstance(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
+func (r *InstanceReconciler) reconcileInstance(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
 	isDeleting := instance.DeletionTimestamp != nil && !instance.DeletionTimestamp.IsZero()
 	if isDeleting {
 		return r.reconcileInstanceDeletion(ctx, instance)
 	}
 
-	return r.ensureInstanceFinalizer(ctx, instance)
+	return false, r.ensureInstanceFinalizer(ctx, instance)
 }
 
-func (r *InstanceReconciler) reconcileInstanceDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
-	if !controllerutil.ContainsFinalizer(instance, instanceControllerFinalizer) {
-		return nil
-	}
-
+func (r *InstanceReconciler) reconcileInstanceDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
 	machineGone, err := r.reconcileLinkedMachineDeletion(ctx, instance)
 	if err != nil {
-		return err
-	}
-	if !machineGone {
-		return nil
+		return false, err
 	}
 
-	return r.removeInstanceFinalizer(ctx, instance)
+	if !controllerutil.ContainsFinalizer(instance, instanceControllerFinalizer) {
+		return !machineGone, nil
+	}
+	if !machineGone {
+		return true, nil
+	}
+
+	return false, r.removeInstanceFinalizer(ctx, instance)
 }
 
 func (r *InstanceReconciler) ensureInstanceFinalizer(ctx context.Context, instance *deckhousev1alpha2.Instance) error {

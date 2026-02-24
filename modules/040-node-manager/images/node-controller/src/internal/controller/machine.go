@@ -27,22 +27,22 @@ import (
 )
 
 const (
-	mcmNodeGroupLabelKey  = "node.deckhouse.io/group"
-	capiNodeGroupLabelKey = "node-group"
-
 	MachineStatusProgressing = "Progressing"
 	MachineStatusReady       = "Ready"
 	MachineStatusBlocked     = "Blocked"
-	MachineStatusRebooting   = "Rebooting"
-	MachineStatusError       = "Error"
+)
 
+const (
+	mcmNodeGroupLabelKey            = "node.deckhouse.io/group"
+	mcmAdapterNotImplementedMessage = "MCM machine adapter is not implemented yet"
+)
+
+const (
 	machineReadyConditionType       = "MachineReady"
 	waitingForInfrastructureMessage = "Waiting for infrastructure"
 	reasonWaitingForInfra           = "WaitingForInfrastructure"
 	reasonNotReady                  = "NotReady"
 	reasonReady                     = "Ready"
-
-	mcmAdapterNotImplementedMessage = "MCM machine adapter is not implemented yet"
 )
 
 type MachineFactory interface {
@@ -81,6 +81,15 @@ func (f *machineFactory) NewMachine(obj client.Object) (Machine, error) {
 	}
 }
 
+func newMachineRef(apiVersion, name string) *deckhousev1alpha2.MachineRef {
+	return &deckhousev1alpha2.MachineRef{
+		Kind:       "Machine",
+		APIVersion: apiVersion,
+		Name:       name,
+		Namespace:  MachineNamespace,
+	}
+}
+
 type mcmMachine struct {
 	machine *mcmv1alpha1.Machine
 }
@@ -98,12 +107,7 @@ func (m *mcmMachine) GetNodeGroup() string {
 }
 
 func (m *mcmMachine) GetMachineRef() *deckhousev1alpha2.MachineRef {
-	return &deckhousev1alpha2.MachineRef{
-		Kind:       "Machine",
-		APIVersion: mcmv1alpha1.SchemeGroupVersion.String(),
-		Name:       m.machine.Name,
-		Namespace:  MachineNamespace,
-	}
+	return newMachineRef(mcmv1alpha1.SchemeGroupVersion.String(), m.machine.Name)
 }
 
 func (m *mcmMachine) GetStatus() MachineStatus {
@@ -111,7 +115,6 @@ func (m *mcmMachine) GetStatus() MachineStatus {
 		Phase:         deckhousev1alpha2.InstancePhaseUnknown,
 		MachineStatus: MachineStatusProgressing,
 		Message:       mcmAdapterNotImplementedMessage,
-		Conditions:    nil,
 	}
 }
 
@@ -131,39 +134,24 @@ func (m *capiMachine) GetNodeGroup() string {
 	if m.machine.Labels == nil {
 		return ""
 	}
-	return m.machine.Labels[capiNodeGroupLabelKey]
+	return m.machine.Labels["node-group"]
 }
 
 func (m *capiMachine) GetMachineRef() *deckhousev1alpha2.MachineRef {
-	return &deckhousev1alpha2.MachineRef{
-		Kind:       "Machine",
-		APIVersion: capi.GroupVersion.String(),
-		Name:       m.machine.Name,
-		Namespace:  MachineNamespace,
-	}
+	return newMachineRef(capi.GroupVersion.String(), m.machine.Name)
 }
 
 func (m *capiMachine) GetStatus() MachineStatus {
 	phase := m.calculatePhase()
-	state := m.calculateState()
-
-	condition := deckhousev1alpha2.InstanceCondition{
-		Type:     machineReadyConditionType,
-		Status:   state.conditionStatus,
-		Reason:   state.reason,
-		Message:  state.message,
-		Severity: state.severity,
-	}
-	if state.sourceCondition != nil {
-		condition.LastTransitionTime = state.sourceCondition.LastTransitionTime
-		condition.ObservedGeneration = state.sourceCondition.ObservedGeneration
-	}
-
+	state := calculateCAPIState(
+		m.machine.Status.Conditions,
+		capi.MachinePhase(m.machine.Status.Phase),
+	)
 	return MachineStatus{
 		Phase:         phase,
 		MachineStatus: state.statusString,
 		Message:       state.message,
-		Conditions:    []deckhousev1alpha2.InstanceCondition{condition},
+		Conditions:    []deckhousev1alpha2.InstanceCondition{buildMachineReadyCondition(state)},
 	}
 }
 
@@ -171,7 +159,6 @@ func (m *capiMachine) calculatePhase() deckhousev1alpha2.InstancePhase {
 	if !m.machine.DeletionTimestamp.IsZero() {
 		return deckhousev1alpha2.InstancePhaseTerminating
 	}
-
 	switch capi.MachinePhase(m.machine.Status.Phase) {
 	case capi.MachinePhasePending:
 		return deckhousev1alpha2.InstancePhasePending
@@ -197,36 +184,10 @@ type machineState struct {
 	sourceCondition *metav1.Condition
 }
 
-type machineStatePriority int
-
-const (
-	machineStatePriorityNone machineStatePriority = iota
-	machineStatePriorityReady
-	machineStatePriorityDeleting
-	machineStatePriorityInfraWait
-	machineStatePriorityInfraProblem
-)
-
 type capiConditionRefs struct {
 	infra    *metav1.Condition
 	deleting *metav1.Condition
 	ready    *metav1.Condition
-}
-
-func (m *capiMachine) calculateState() machineState {
-	refs := indexMachineConditions(m.machine.Status.Conditions)
-	switch m.detectMachineStatePriority(refs) {
-	case machineStatePriorityInfraWait:
-		return m.stateFromInfrastructureWait(refs.infra)
-	case machineStatePriorityInfraProblem:
-		return m.stateFromInfrastructureProblem(refs.infra)
-	case machineStatePriorityDeleting:
-		return m.stateFromDeleting(refs.deleting)
-	case machineStatePriorityReady:
-		return m.stateFromReady(refs.ready)
-	}
-
-	return defaultMachineState()
 }
 
 func indexMachineConditions(conditions []metav1.Condition) capiConditionRefs {
@@ -245,38 +206,51 @@ func indexMachineConditions(conditions []metav1.Condition) capiConditionRefs {
 	return refs
 }
 
-func (m *capiMachine) detectMachineStatePriority(refs capiConditionRefs) machineStatePriority {
+func calculateCAPIState(conditions []metav1.Condition, phase capi.MachinePhase) machineState {
+	refs := indexMachineConditions(conditions)
+
 	if refs.infra != nil && refs.infra.Status == metav1.ConditionFalse {
-		if m.isExpectedInfrastructureWait(refs.infra) {
-			return machineStatePriorityInfraWait
-		}
-		return machineStatePriorityInfraProblem
+		return stateFromInfra(phase, refs.infra)
 	}
 	if refs.deleting != nil && refs.deleting.Status == metav1.ConditionTrue {
-		return machineStatePriorityDeleting
+		return stateFromDeleting(refs.deleting)
 	}
 	if refs.ready != nil {
-		return machineStatePriorityReady
+		return stateFromReady(refs.ready)
 	}
-	return machineStatePriorityNone
+	return defaultMachineState()
 }
 
-func (m *capiMachine) stateFromInfrastructureWait(infra *metav1.Condition) machineState {
-	reason := infra.Reason
-	if reason == "" {
-		reason = reasonWaitingForInfra
+func buildMachineReadyCondition(state machineState) deckhousev1alpha2.InstanceCondition {
+	cond := deckhousev1alpha2.InstanceCondition{
+		Type:     machineReadyConditionType,
+		Status:   state.conditionStatus,
+		Reason:   state.reason,
+		Message:  state.message,
+		Severity: state.severity,
 	}
-	return machineState{
-		statusString:    MachineStatusProgressing,
-		conditionStatus: metav1.ConditionFalse,
-		reason:          reason,
-		message:         waitingForInfrastructureMessage,
-		severity:        string(capi.ConditionSeverityInfo),
-		sourceCondition: infra,
+	if state.sourceCondition != nil {
+		cond.LastTransitionTime = state.sourceCondition.LastTransitionTime
+		cond.ObservedGeneration = state.sourceCondition.ObservedGeneration
 	}
+	return cond
 }
 
-func (m *capiMachine) stateFromInfrastructureProblem(infra *metav1.Condition) machineState {
+func stateFromInfra(phase capi.MachinePhase, infra *metav1.Condition) machineState {
+	if isExpectedInfrastructureWait(phase, infra) {
+		reason := infra.Reason
+		if reason == "" {
+			reason = reasonWaitingForInfra
+		}
+		return machineState{
+			statusString:    MachineStatusProgressing,
+			conditionStatus: metav1.ConditionFalse,
+			reason:          reason,
+			message:         waitingForInfrastructureMessage,
+			severity:        string(capi.ConditionSeverityInfo),
+			sourceCondition: infra,
+		}
+	}
 	return machineState{
 		statusString:    MachineStatusProgressing,
 		conditionStatus: metav1.ConditionFalse,
@@ -287,7 +261,7 @@ func (m *capiMachine) stateFromInfrastructureProblem(infra *metav1.Condition) ma
 	}
 }
 
-func (m *capiMachine) stateFromDeleting(deleting *metav1.Condition) machineState {
+func stateFromDeleting(deleting *metav1.Condition) machineState {
 	if isDrainBlockedDeletingCondition(deleting) {
 		return machineState{
 			statusString:    MachineStatusBlocked,
@@ -298,7 +272,6 @@ func (m *capiMachine) stateFromDeleting(deleting *metav1.Condition) machineState
 			sourceCondition: deleting,
 		}
 	}
-
 	return machineState{
 		statusString:    MachineStatusProgressing,
 		conditionStatus: metav1.ConditionFalse,
@@ -309,7 +282,7 @@ func (m *capiMachine) stateFromDeleting(deleting *metav1.Condition) machineState
 	}
 }
 
-func (m *capiMachine) stateFromReady(ready *metav1.Condition) machineState {
+func stateFromReady(ready *metav1.Condition) machineState {
 	if ready.Status == metav1.ConditionTrue {
 		return machineState{
 			statusString:    MachineStatusReady,
@@ -319,7 +292,6 @@ func (m *capiMachine) stateFromReady(ready *metav1.Condition) machineState {
 			sourceCondition: ready,
 		}
 	}
-
 	return machineState{
 		statusString:    MachineStatusProgressing,
 		conditionStatus: metav1.ConditionFalse,
@@ -340,6 +312,21 @@ func defaultMachineState() machineState {
 	}
 }
 
+func isExpectedInfrastructureWait(phase capi.MachinePhase, c *metav1.Condition) bool {
+	if c.Reason == reasonWaitingForInfra {
+		return true
+	}
+	if c.Reason != reasonNotReady {
+		return false
+	}
+	switch phase {
+	case capi.MachinePhasePending, capi.MachinePhaseProvisioning:
+		return true
+	default:
+		return false
+	}
+}
+
 func conditionMessageOrReason(c *metav1.Condition) string {
 	if c == nil {
 		return ""
@@ -351,24 +338,5 @@ func conditionMessageOrReason(c *metav1.Condition) string {
 }
 
 func isDrainBlockedDeletingCondition(c *metav1.Condition) bool {
-	if c.Reason != capi.MachineDeletingDrainingNodeReason {
-		return false
-	}
-	return c.Message != ""
-}
-
-func (m *capiMachine) isExpectedInfrastructureWait(c *metav1.Condition) bool {
-	if c.Reason == reasonWaitingForInfra {
-		return true
-	}
-	if c.Reason != reasonNotReady {
-		return false
-	}
-
-	switch capi.MachinePhase(m.machine.Status.Phase) {
-	case capi.MachinePhasePending, capi.MachinePhaseProvisioning:
-		return true
-	default:
-		return false
-	}
+	return c.Reason == capi.MachineDeletingDrainingNodeReason && c.Message != ""
 }
