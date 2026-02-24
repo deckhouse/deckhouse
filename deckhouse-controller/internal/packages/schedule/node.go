@@ -16,6 +16,7 @@ package schedule
 
 import (
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
@@ -136,7 +137,7 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.checkers = append(n.checkers, dependency.NewChecker(s.getVersion, deps))
 	}
 
-	if constraints.Order == functionalWeight && s.bootstrapCondition != nil {
+	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
 		n.checkers = append(n.checkers, condition.NewChecker(s.bootstrapCondition, ""))
 	}
 
