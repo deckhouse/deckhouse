@@ -89,8 +89,7 @@ spec:
                       type: boolean
                   type: object
                 ready:
-                  description: Ready denotes that the static cluster (infrastructure)
-                    is ready.
+                  description: Ready denotes that the static cluster (infrastructure) is ready.
                   type: boolean
               type: object
           type: object
