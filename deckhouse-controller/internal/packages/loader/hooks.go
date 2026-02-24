@@ -43,6 +43,7 @@ const (
 	// hooksDir is the subdirectory name containing hook scripts
 	hooksDir = "hooks"
 
+	// hooksLoaderTracer is the OpenTelemetry tracer name for hook loading operations.
 	hooksLoaderTracer = "hooks-loader"
 )
 
@@ -57,19 +58,22 @@ var (
 	// the list of subdirectories to exclude when searching for a module's hooks
 	hooksExcludedDir = []string{"venv", "lib"}
 
-	// compiledHooksFound matches the output of batch hooks' "hook list" command
+	// compiledHooksFound matches the "Found N items" output of a batch hook's "hook list" command,
+	// where N is a positive integer (1–9999). Used to identify valid batch hook binaries.
 	compiledHooksFound = regexp.MustCompile(`Found ([1-9]|[1-9]\d|[1-9]\d\d|[1-9]\d\d\d) items`)
 )
 
+// hookLoadResult holds the hooks and optional settings validation discovered from a package directory.
 type hookLoadResult struct {
 	settingsCheck *kind.SettingsCheck
 	hooks         []hooks.Hook
 }
 
-// loadAppHooks discovers and loads all package hooks from the filesystem.
-// It searches for batch hooks (executables).
+// loadAppHooks discovers and loads all application hooks from the given package directory.
+// It searches for batch hook executables in the "hooks" subdirectory and returns
+// the loaded hooks along with an optional settings check handler.
 func loadAppHooks(ctx context.Context, namespace, name, path string, logger *log.Logger) (*hookLoadResult, error) {
-	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loaAppHooks")
+	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loadAppHooks")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
@@ -81,7 +85,7 @@ func loadAppHooks(ctx context.Context, namespace, name, path string, logger *log
 	res, err := searchBatchAppHooks(namespace, name, path, logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return res, fmt.Errorf("search hooks failed: %w", err)
+		return nil, fmt.Errorf("search hooks failed: %w", err)
 	}
 
 	logger.Debug("found hooks", slog.Int("count", len(res.hooks)))
@@ -89,13 +93,15 @@ func loadAppHooks(ctx context.Context, namespace, name, path string, logger *log
 	return res, nil
 }
 
+// loadGlobalHooks loads all global hooks registered via the Go SDK addon registry.
+// Unlike app and module hooks, global hooks are compiled into the binary rather than
+// discovered from the filesystem.
 func loadGlobalHooks(ctx context.Context, logger *log.Logger) ([]hooks.GlobalHook, error) {
-	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loaGlobalHooks")
+	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loadGlobalHooks")
 	defer span.End()
 
 	logger.Debug("load hooks")
 
-	// find global hooks in go hooks registry
 	var res []hooks.GlobalHook //nolint:prealloc
 	for _, h := range addonsdk.Registry().GetGlobalHooks() {
 		res = append(res, addonhooks.NewGlobalHook(h))
@@ -106,8 +112,9 @@ func loadGlobalHooks(ctx context.Context, logger *log.Logger) ([]hooks.GlobalHoo
 	return res, nil
 }
 
-// loadModuleHooks discovers and loads all package hooks from the filesystem.
-// It searches for batch hooks (executables).
+// loadModuleHooks discovers and loads all module hooks from the given module directory.
+// It searches for batch hook executables in the "hooks" subdirectory and returns
+// the loaded hooks along with an optional settings check handler.
 func loadModuleHooks(ctx context.Context, name, path string, logger *log.Logger) (*hookLoadResult, error) {
 	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loadModuleHooks")
 	defer span.End()
@@ -120,7 +127,7 @@ func loadModuleHooks(ctx context.Context, name, path string, logger *log.Logger)
 	res, err := searchBatchModuleHooks(name, path, logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return res, fmt.Errorf("search hooks failed: %w", err)
+		return nil, fmt.Errorf("search hooks failed: %w", err)
 	}
 
 	logger.Debug("found hooks", slog.Int("count", len(res.hooks)))
@@ -128,6 +135,9 @@ func loadModuleHooks(ctx context.Context, name, path string, logger *log.Logger)
 	return res, nil
 }
 
+// searchBatchAppHooks walks the "hooks" subdirectory of an application package,
+// identifies batch hook executables, and constructs ApplicationBatchHook instances
+// for each hook entry (including readiness and settings check handlers).
 func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hookLoadResult, error) {
 	hooksPath := filepath.Join(path, hooksDir)
 	if _, err := os.Stat(hooksPath); os.IsNotExist(err) {
@@ -199,6 +209,9 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 	return result, nil
 }
 
+// searchBatchModuleHooks walks the "hooks" subdirectory of a module package,
+// identifies batch hook executables, and constructs BatchHook instances
+// for each hook entry (including readiness and settings check handlers).
 func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadResult, error) {
 	hooksPath := filepath.Join(path, hooksDir)
 	if _, err := os.Stat(hooksPath); os.IsNotExist(err) {
@@ -270,6 +283,10 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 	return result, nil
 }
 
+// getHookExecutablePaths recursively walks dir and returns absolute paths to executable files.
+// Hidden directories and directories in hooksExcludedDir are skipped.
+// If checkBatch is true, each executable is additionally verified to be a valid batch hook
+// by running it with "hook list" and checking the output.
 func getHookExecutablePaths(dir string, checkBatch bool, logger *log.Logger) ([]string, error) {
 	paths := make([]string, 0)
 
@@ -311,16 +328,17 @@ func getHookExecutablePaths(dir string, checkBatch bool, logger *log.Logger) ([]
 	return paths, nil
 }
 
+// isExecutableBatchHook checks that a file is both executable and a valid batch hook.
+// Files with any extension are rejected — only extensionless binaries are considered.
 func isExecutableBatchHook(path string, file os.FileInfo) error {
 	if err := isExecutable(file); err != nil {
 		return err
 	}
 
 	switch filepath.Ext(file.Name()) {
-	// ignore any extension and hidden files
 	case "":
+		// extensionless binary — verify it responds to "hook list"
 		return isBatchHook(path)
-	// ignore all with extensions
 	default:
 		return ErrFileWrongExtension
 	}
@@ -336,7 +354,6 @@ func isBatchHook(path string) error {
 	// TODO: check binary another way
 	args := []string{"hook", "list"}
 
-	// Execute the binary to check if it's a batch hook
 	cmd := executor.NewExecutor(
 		"",
 		path,
@@ -348,7 +365,7 @@ func isBatchHook(path string) error {
 		return fmt.Errorf("exec file '%s': %w", path, err)
 	}
 
-	// Check if output matches expected batch hook format
+	// Match "Found N items" output to confirm this is a batch hook
 	if compiledHooksFound.Match(out) {
 		return nil
 	}
@@ -356,7 +373,7 @@ func isBatchHook(path string) error {
 	return ErrFileNotBatchHook
 }
 
-// isExecutable checks if a file has executable permissions.
+// isExecutable checks whether any execute bit (owner, group, or other) is set on the file.
 func isExecutable(file os.FileInfo) error {
 	if file.Mode()&0o111 != 0 {
 		return nil
@@ -365,6 +382,9 @@ func isExecutable(file os.FileInfo) error {
 	return ErrFileNotExecutable
 }
 
+// normalizeHookPath converts an absolute hook file path into a relative name suitable for display.
+// If the path contains a "/hooks/" segment, everything from "hooks/" onward is returned.
+// Otherwise it falls back to computing a path relative to modulePath.
 func normalizeHookPath(modulePath, hookPath string) (string, error) {
 	hooksIdx := strings.Index(hookPath, "/hooks/")
 	if hooksIdx == -1 {
