@@ -63,6 +63,7 @@ apiVersions:
         enum: [DynamixClusterConfiguration]
       sshPublicKey:
         type: string
+        x-rules: [sshPublicKey]
         description: A public key for accessing nodes.
       location:
         type: string
