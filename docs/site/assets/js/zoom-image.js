@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const parent = img.parentElement;
     if (!parent) return;
-
+    
     if (parent.classList.contains('zoom-image-wrap')) return;
 
     const wrapper = document.createElement('div');
