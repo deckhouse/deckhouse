@@ -66,6 +66,23 @@ func NewStorage() *Storage {
 	}
 }
 
+// Initialized reports whether the hook storage has been fully initialized.
+// It checks if any stored hook has a controller attached — the controller is set
+// during initialization, so its presence indicates that loading is complete.
+// Returns true if the storage is empty (no hooks to initialize) or if hooks
+// have their controllers set.
+func (s *Storage) Initialized() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, hook := range s.byName {
+		// if controller set - hooks storage already initialized
+		return hook.GetHookController() != nil
+	}
+
+	return true
+}
+
 // Add adds a hook to storage, indexing it by name and all its bindings.
 // If a hook with the same name exists, it will be replaced.
 // Each binding type the hook declares will have the hook added to its list.
