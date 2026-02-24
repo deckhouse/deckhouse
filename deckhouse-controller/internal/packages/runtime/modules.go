@@ -70,7 +70,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	r.modules.Update(name, version, settingsChecksum, func(ctx context.Context, event int, pkg *modules.Module) {
 		var tasks []queue.Task
 		if event == lifecycle.EventVersionChanged {
-			if err := r.scheduler.CheckByConstraints(module.Definition.Requirements.Constraints()); err != nil {
+			if err := r.scheduler.CheckByConstraints(module.Definition.Constraints()); err != nil {
 				r.status.HandleError(name, err)
 				return
 			}

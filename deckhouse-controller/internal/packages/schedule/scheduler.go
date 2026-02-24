@@ -31,10 +31,10 @@ const (
 	// It acts as the root of the dependency graph and must complete before any scheduling begins.
 	packageGlobal = "global"
 
-	// functionalWeight is the Order value assigned to functional (non-critical) packages.
+	// FunctionalOrder is the Order value assigned to functional (non-critical) packages.
 	// It is higher than any critical package order, ensuring functional packages are
 	// scheduled only after all critical packages have been processed.
-	functionalWeight = 999
+	FunctionalOrder = 999
 )
 
 // Scheduler manages a dependency graph of packages and their lifecycle.
@@ -160,7 +160,7 @@ func (s *Scheduler) CheckByConstraints(constraints Constraints) error {
 		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, string(ConditionReasonRequirementsDeckhouse)))
 	}
 
-	if constraints.Order == functionalWeight && s.bootstrapCondition != nil {
+	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
 		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, string(ConditionReasonRequirementsBootstrap)))
 	}
 

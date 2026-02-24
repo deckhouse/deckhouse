@@ -104,7 +104,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.apps.Update(name, version, settingsChecksum, func(ctx context.Context, event int, pkg *apps.Application) {
 		var tasks []queue.Task
 		if event == lifecycle.EventVersionChanged {
-			if err := r.scheduler.CheckByConstraints(app.Definition.Requirements.Constraints()); err != nil {
+			if err := r.scheduler.CheckByConstraints(app.Definition.Constraints()); err != nil {
 				r.status.HandleError(name, err)
 				return
 			}

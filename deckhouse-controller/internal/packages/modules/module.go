@@ -281,7 +281,7 @@ func (m *Module) ApplySettings(settings addonutils.Values) error {
 
 // GetConstraints return scheduler checks, their determine if an app should be enabled/disabled
 func (m *Module) GetConstraints() schedule.Constraints {
-	return m.definition.Requirements.Constraints()
+	return m.definition.Constraints()
 }
 
 // GetHooks returns all hooks for this module in arbitrary order.

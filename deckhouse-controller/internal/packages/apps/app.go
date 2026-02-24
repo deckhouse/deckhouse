@@ -299,7 +299,7 @@ func (a *Application) ApplySettings(settings addonutils.Values) error {
 
 // GetConstraints return scheduler checks, their determine if an app should be enabled/disabled
 func (a *Application) GetConstraints() schedule.Constraints {
-	return a.definition.Requirements.Constraints()
+	return a.definition.Constraints()
 }
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules

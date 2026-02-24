@@ -48,13 +48,9 @@ type DisableOptions struct {
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }
 
-func (r *Requirements) Constraints() schedule.Constraints {
-	if r == nil {
-		return schedule.Constraints{}
-	}
-
+func (d Definition) Constraints() schedule.Constraints {
 	deps := make(map[string]schedule.Dependency)
-	for module, dep := range r.Modules {
+	for module, dep := range d.Requirements.Modules {
 		deps[module] = schedule.Dependency{
 			Constraint: dep.Constraints,
 			Optional:   dep.Optional,
@@ -62,8 +58,9 @@ func (r *Requirements) Constraints() schedule.Constraints {
 	}
 
 	return schedule.Constraints{
-		Kubernetes:   r.Kubernetes,
-		Deckhouse:    r.Deckhouse,
+		Order:        schedule.FunctionalOrder,
+		Kubernetes:   d.Requirements.Kubernetes,
+		Deckhouse:    d.Requirements.Deckhouse,
 		Dependencies: deps,
 	}
 }
