@@ -294,7 +294,7 @@ import:
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel libpcre-devel
+  - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel libpcre-devel libgsasl7
   setup:
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
