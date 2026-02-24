@@ -304,7 +304,7 @@ Depending on the [bundle used](/modules/deckhouse/configuration.html#parameters-
 
 {% alert level="warning" %}
 The table below describes module bundles only for built-in modules of Deckhouse Kubernetes Platform.  
-External modules are not included in this table.
+Modules from sources are not included in this table.
 {% endalert %}
 
 <table>
