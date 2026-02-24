@@ -11,10 +11,10 @@ index e207a79712..77465b5892 100644
        --enable-local-redirect-policy                              Enable Local Redirect Policy
        --enable-masquerade-to-route-source                         Masquerade packets to the source IP provided from the routing layer rather than interface address
 diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
-index 71f432a016..3b87609557 100644
+index c34db87997..42f074f3c1 100644
 --- a/bpf/lib/lb.h
 +++ b/bpf/lib/lb.h
-@@ -1323,7 +1323,16 @@ lb4_extract_tuple(struct __ctx_buff *ctx, struct iphdr *ip4, int l3_off, int *l4
+@@ -1378,7 +1378,14 @@ lb4_extract_tuple(struct __ctx_buff *ctx, struct iphdr *ip4, int l3_off, int *l4
  			return ret;
  		return 0;
  	case IPPROTO_ICMP:
@@ -24,8 +24,6 @@ index 71f432a016..3b87609557 100644
 +		 * to allow the packet to be processed by the next part of the code */
 +		return 0;
 +#else
-+		/* if loadbalancer-icmp-reply is not enabled, return DROP_UNSUPP_SERVICE_PROTO
-+		 * to support old-style packet processing */
  		return DROP_UNSUPP_SERVICE_PROTO;
 +#endif
  	default:
@@ -106,7 +104,7 @@ index 8873f05e86..a73aaaaf53 100644
 +
  	if (svc) {
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
-+		/* If the packet is an ICMP echo request, we need to check if special
++		/* If the packet is an ICMP echo request, we need to check if special 
 +		port=0 service exists and if so, create a reply packet and send it back
 +		to the original source.	This is only supported for LoadBalancer services. */
 +		if (ip4->protocol == IPPROTO_ICMP) {
@@ -120,7 +118,7 @@ index 8873f05e86..a73aaaaf53 100644
  					has_l4_header, l4_off,
  					src_sec_identity, punt_to_stack, ext_err);
 diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
-index 3e7dc7a2c7..ac3333d1d4 100644
+index 30ab069023..48044295bd 100644
 --- a/daemon/cmd/daemon_main.go
 +++ b/daemon/cmd/daemon_main.go
 @@ -555,6 +555,9 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
@@ -134,7 +132,7 @@ index 3e7dc7a2c7..ac3333d1d4 100644
  	flags.MarkHidden(option.AddressScopeMax)
  	option.BindEnv(vp, option.AddressScopeMax)
 diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
-index f868391704..eef152b0f3 100644
+index 8bbb2b654d..61421310b1 100644
 --- a/pkg/datapath/linux/config/config.go
 +++ b/pkg/datapath/linux/config/config.go
 @@ -427,6 +427,9 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
@@ -147,6 +145,18 @@ index f868391704..eef152b0f3 100644
  		if option.Config.EnableIPv4 {
  			cDefinesMap["NODEPORT_NEIGH4"] = neighborsmap.Map4Name
  			cDefinesMap["NODEPORT_NEIGH4_SIZE"] = fmt.Sprintf("%d", option.Config.NeighMapEntriesGlobal)
+diff --git a/pkg/datapath/types/lbmap.go b/pkg/datapath/types/lbmap.go
+index 742b0d8eb5..598afa5526 100644
+--- a/pkg/datapath/types/lbmap.go
++++ b/pkg/datapath/types/lbmap.go
+@@ -28,6 +28,7 @@ type LBMap interface {
+ 	DumpAffinityMatches() (BackendIDByServiceIDSet, error)
+ 	DumpSourceRanges(bool) (SourceRangeSetByServiceID, error)
+ 	ExistsSockRevNat(cookie uint64, addr net.IP, port uint16) bool
++	InitICMPReplyEntityForService(*loadbalancer.SVC) error
+ }
+ 
+ type UpsertServiceParams struct {
 diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
 index 87623dbed9..8db9bba793 100644
 --- a/pkg/defaults/defaults.go
@@ -161,7 +171,7 @@ index 87623dbed9..8db9bba793 100644
  	// EnableHealthCheckLoadBalancerIP
  	EnableHealthCheckLoadBalancerIP = false
 diff --git a/pkg/maps/lbmap/lbmap.go b/pkg/maps/lbmap/lbmap.go
-index 7f308c4c14..cc521abdfb 100644
+index 70d220b69c..dc8918813d 100644
 --- a/pkg/maps/lbmap/lbmap.go
 +++ b/pkg/maps/lbmap/lbmap.go
 @@ -15,6 +15,7 @@ import (
@@ -172,7 +182,7 @@ index 7f308c4c14..cc521abdfb 100644
  	"github.com/cilium/cilium/pkg/ip"
  	"github.com/cilium/cilium/pkg/loadbalancer"
  	"github.com/cilium/cilium/pkg/logging"
-@@ -238,7 +239,14 @@ func deleteServiceProto(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev
+@@ -239,7 +240,14 @@ func deleteServiceProto(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev
  	if err := deleteRevNatLocked(revNATKey); err != nil {
  		return fmt.Errorf("Unable to delete revNAT entry %+v: %w", revNATKey, err)
  	}
@@ -188,7 +198,7 @@ index 7f308c4c14..cc521abdfb 100644
  	return nil
  }
  
-@@ -612,6 +620,120 @@ func (*LBBPFMap) IsMaglevLookupTableRecreated(ipv6 bool) bool {
+@@ -613,6 +621,197 @@ func (*LBBPFMap) IsMaglevLookupTableRecreated(ipv6 bool) bool {
  	return maglevRecreatedIPv4
  }
  
@@ -258,6 +268,10 @@ index 7f308c4c14..cc521abdfb 100644
 +	_, lookupErr := fe.Map().Lookup(fe.ToNetwork())
 +	keyExists := lookupErr == nil
 +
++	if keyExists {
++		return nil
++	}
++
 +	// Create a special instance of loadbalancer with port=0 key with same IP, protocol ICMP, and scope
 +	var portZeroKey ServiceKey
 +	var portZeroValue ServiceValue
@@ -268,20 +282,12 @@ index 7f308c4c14..cc521abdfb 100644
 +		portZeroKey = NewService4Key(fe.GetAddress(), 0, u8proto.U8proto(1), fe.GetScope(), 0)
 +		portZeroValue = &Service4Value{}
 +	}
++
 +	// Set the initial value for the special instance
 +	portZeroValue.SetCount(1)
 +	portZeroValue.SetRevNat(0)
 +	portZeroValue.SetFlags(0)
 +	portZeroValue.SetQCount(0)
-+
-+	if !keyExists {
-+		// Original key doesn't exist: add port=0 key with Count=1
-+		if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), portZeroValue.ToNetwork()); err != nil {
-+			return fmt.Errorf("EnableLoadBalancerICMPReply unable to add special instance port=0 key: %w", err)
-+		}
-+		return nil
-+	}
-+
 +	// Original key exists: increment Count of port=0 key
 +	existingValue, err := portZeroKey.Map().Lookup(portZeroKey.ToNetwork())
 +	if err != nil {
@@ -306,13 +312,99 @@ index 7f308c4c14..cc521abdfb 100644
 +	return nil
 +}
 +
++// InitICMPReplyEntityForService initializes BPF map ICMP entities for LoadBalancer service
++// during agent startup. This provide all port=0 keys existance with the correct backend count.
++func (*LBBPFMap) InitICMPReplyEntityForService(svc *loadbalancer.SVC) error {
++	// Only process LoadBalancer services with non-zero ports
++	if svc.Type != loadbalancer.SVCTypeLoadBalancer || svc.Frontend.Port == 0 {
++		return nil
++	}
++
++	// Count active backends (non-nil backends)
++	backendCount := 0
++	for _, backend := range svc.Backends {
++		if backend != nil {
++			backendCount++
++		}
++	}
++
++	// Skip if no backends
++	if backendCount == 0 {
++		return nil
++	}
++
++	// Create port=0 key with same IP, protocol ICMP (1), and scope
++	var portZeroKey ServiceKey
++	var portZeroValue ServiceValue
++	ipv6 := svc.Frontend.IsIPv6()
++	if ipv6 {
++		portZeroKey = NewService6Key(svc.Frontend.AddrCluster.AsNetIP(), 0, u8proto.U8proto(1), svc.Frontend.Scope, 0)
++		portZeroValue = &Service6Value{}
++	} else {
++		portZeroKey = NewService4Key(svc.Frontend.AddrCluster.AsNetIP(), 0, u8proto.U8proto(1), svc.Frontend.Scope, 0)
++		portZeroValue = &Service4Value{}
++	}
++
++	// Check if port=0 key already exists
++	existingValue, err := portZeroKey.Map().Lookup(portZeroKey.ToNetwork())
++	if err != nil {
++		if errors.Is(err, ebpf.ErrKeyNotExist) {
++			// Port=0 key doesn't exist, create it with backend count
++			portZeroValue.SetCount(backendCount)
++			portZeroValue.SetRevNat(0)
++			portZeroValue.SetFlags(0)
++			portZeroValue.SetQCount(0)
++			if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), portZeroValue.ToNetwork()); err != nil {
++				log.WithFields(logrus.Fields{
++					logfields.ServiceKey: portZeroKey,
++					logfields.ServiceID:  svc.Frontend.ID,
++				}).WithError(err).Warn("LoadBalancerICMPReply Unable to initialize port=0 key during restore")
++				return nil
++			}
++			log.WithFields(logrus.Fields{
++				logfields.ServiceKey: portZeroKey,
++				logfields.ServiceID:  svc.Frontend.ID,
++				"backendCount":       backendCount,
++			}).Debug("LoadBalancerICMPReply Initialized port=0 key during restore")
++		} else {
++			log.WithFields(logrus.Fields{
++				logfields.ServiceKey: portZeroKey,
++				logfields.ServiceID:  svc.Frontend.ID,
++			}).WithError(err).Warn("LoadBalancerICMPReply Unable to lookup port=0 key during restore")
++		}
++	} else {
++		// Port=0 key exists, update it with correct backend count
++		existingValueHost := existingValue.(ServiceValue).ToHost()
++		existingValueHost.SetCount(backendCount)
++		if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), existingValueHost.ToNetwork()); err != nil {
++			log.WithFields(logrus.Fields{
++				logfields.ServiceKey: portZeroKey,
++				logfields.ServiceID:  svc.Frontend.ID,
++			}).WithError(err).Warn("LoadBalancerICMPReply Unable to update port=0 key count during restore")
++		} else {
++			log.WithFields(logrus.Fields{
++				logfields.ServiceKey: portZeroKey,
++				logfields.ServiceID:  svc.Frontend.ID,
++				"backendCount":       backendCount,
++			}).Debug("LoadBalancerICMPReply Updated port=0 key count during restore")
++		}
++	}
++
++	return nil
++}
++
  func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quarantinedBackends int, revNATID int,
  	svcType loadbalancer.SVCType, svcForwardingMode loadbalancer.SVCForwardingMode, svcExtLocal, svcIntLocal bool,
  	svcNatPolicy loadbalancer.SVCNatPolicy, sessionAffinity bool, sessionAffinityTimeoutSec uint32,
-@@ -651,6 +773,16 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
- 		deleteLeastConnServiceMap(fe)
+@@ -648,10 +847,20 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
+ 		v.SetL7LBProxyPort(l7lbProxyPort)
  	}
  
+-	if IsLeastConnEnabled() && loadBalancingAlgorithm != loadbalancer.SVCLoadBalancingAlgorithmLeastConn {
++	/*if IsLeastConnEnabled() && loadBalancingAlgorithm != loadbalancer.SVCLoadBalancingAlgorithmLeastConn {
+ 		deleteLeastConnServiceMap(fe)
++	}*/
++
 +	if option.Config.EnableLoadBalancerICMPReply {
 +		/*
 +			EnableLoadBalancerICMPReply feature is used to generate ICMP reply packets for LoadBalancer services.
@@ -322,12 +414,13 @@ index 7f308c4c14..cc521abdfb 100644
 +		if err := lbICMPReplyHandleSvcIncrement(fe, svcType); err != nil {
 +			return err
 +		}
-+	}
+ 	}
+-
  	return updateServiceEndpoint(fe, v)
  }
  
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index 7137f3903e..c1e39a16fd 100644
+index b2abedec59..1cec05394d 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
 @@ -247,6 +247,9 @@ const (
@@ -340,7 +433,7 @@ index 7137f3903e..c1e39a16fd 100644
  	// NodePortMode indicates in which mode NodePort implementation should run
  	// ("snat", "dsr" or "hybrid")
  	NodePortMode = "node-port-mode"
-@@ -1867,6 +1870,9 @@ type DaemonConfig struct {
+@@ -1870,6 +1873,9 @@ type DaemonConfig struct {
  	// EnableSVCSourceRangeCheck enables check of loadBalancerSourceRanges
  	EnableSVCSourceRangeCheck bool
  
@@ -350,7 +443,7 @@ index 7137f3903e..c1e39a16fd 100644
  	// EnableHealthDatapath enables IPIP health probes data path
  	EnableHealthDatapath bool
  
-@@ -2920,6 +2926,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+@@ -2923,6 +2929,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
  	c.EnableUnreachableRoutes = vp.GetBool(EnableUnreachableRoutes)
  	c.EnableNodePort = vp.GetBool(EnableNodePort)
  	c.EnableSVCSourceRangeCheck = vp.GetBool(EnableSVCSourceRangeCheck)
@@ -358,3 +451,33 @@ index 7137f3903e..c1e39a16fd 100644
  	c.EnableHostPort = vp.GetBool(EnableHostPort)
  	c.EnableHostLegacyRouting = vp.GetBool(EnableHostLegacyRouting)
  	c.NodePortBindProtection = vp.GetBool(NodePortBindProtection)
+diff --git a/pkg/service/service.go b/pkg/service/service.go
+index fb2494991c..956ed26c22 100644
+--- a/pkg/service/service.go
++++ b/pkg/service/service.go
+@@ -1956,6 +1956,13 @@ func (s *Service) restoreServicesLocked(svcBackendsById map[lb.BackendID]struct{
+ 		s.svcByHash[newSVC.hash] = newSVC
+ 		s.svcByID[newSVC.frontend.ID] = newSVC
+ 		restored++
++
++		// Initialize ICMP entity for current LoadBalancer service
++		if option.Config.EnableLoadBalancerICMPReply {
++			if err := s.lbmap.InitICMPReplyEntityForService(svc); err != nil {
++				log.WithError(err).Warn("Failed to initialize LoadBalancerICMPReply port=0 keys")
++			}
++		}
+ 	}
+ 
+ 	log.WithFields(logrus.Fields{
+diff --git a/pkg/testutils/mockmaps/lbmap.go b/pkg/testutils/mockmaps/lbmap.go
+index 6790db499d..c2f671cc32 100644
+--- a/pkg/testutils/mockmaps/lbmap.go
++++ b/pkg/testutils/mockmaps/lbmap.go
+@@ -265,3 +265,7 @@ func (m *LBMockMap) ExistsSockRevNat(cookie uint64, addr net.IP, port uint16) bo
+ 
+ 	return false
+ }
++
++func (m *LBMockMap) InitICMPReplyEntityForService(svc *lb.SVC) error {
++	return nil
++}
