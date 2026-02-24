@@ -47,7 +47,8 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 		})
 	definePackagesDebugSocketFlag(packagesDumpCmd)
 
-	schedulerDumpCmd := packagesCmd.Command("dump", "Dump all scheduler node state from memory.").
+	schedulerCmd := packagesCmd.Command("scheduler", "Scheduler operations.")
+	schedulerDumpCmd := schedulerCmd.Command("dump", "Dump all scheduler node state from memory.").
 		Action(func(_ *kingpin.ParseContext) error {
 			client, err := debug.NewClient(packagesDebugSocket)
 			if err != nil {
