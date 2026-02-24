@@ -35,7 +35,7 @@ imageSpec:
 {{- end }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-2026-02-07
-fromImage: builder/alt
+fromImage: builder/alt-2026-02-07
 final: false
 shell:
   beforeInstall:
