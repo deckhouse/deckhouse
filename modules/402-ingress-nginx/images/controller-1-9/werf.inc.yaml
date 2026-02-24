@@ -382,7 +382,7 @@ shell:
 # Final image
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11-2026-02-07
+fromImage: common/alt-p11-artifact-2026-02-07
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
