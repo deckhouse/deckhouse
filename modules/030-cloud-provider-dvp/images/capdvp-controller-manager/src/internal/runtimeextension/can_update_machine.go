@@ -110,9 +110,9 @@ func classifyChanges(oldSpec, newSpec *infrastructurev1a1.DeckhouseMachineSpecTe
 
 	if newSpec.RootDiskSize.Cmp(oldSpec.RootDiskSize) > 0 {
 		cs.rootDiskResized = true
-		if cs.strategy < updateWarm {
-			cs.strategy = updateWarm
-			cs.reason = "root disk size increased — warm update (stop → resize → start)"
+		if cs.strategy < updateHot {
+			cs.strategy = updateHot
+			cs.reason = "root disk size increased — online resize"
 		}
 	}
 
