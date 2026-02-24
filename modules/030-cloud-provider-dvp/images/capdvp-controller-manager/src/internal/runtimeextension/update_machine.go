@@ -23,7 +23,12 @@ import (
 	"net/http"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
@@ -209,6 +214,102 @@ func (e *Extension) deleteVMOperation(ctx context.Context, vmName string) {
 	}
 }
 
+func (e *Extension) getMachineNodeName(ctx context.Context, machineName, machineNamespace string) (string, error) {
+	machine := &clusterv1.Machine{}
+	if err := e.client.Get(ctx, types.NamespacedName{Name: machineName, Namespace: machineNamespace}, machine); err != nil {
+		return "", err
+	}
+	if machine.Status.NodeRef == nil || machine.Status.NodeRef.Name == "" {
+		return "", nil
+	}
+	return machine.Status.NodeRef.Name, nil
+}
+
+func (e *Extension) setNodeUnschedulable(ctx context.Context, nodeName string, unschedulable bool) error {
+	node := &corev1.Node{}
+	if err := e.client.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
+		return err
+	}
+	if node.Spec.Unschedulable == unschedulable {
+		return nil
+	}
+	before := node.DeepCopy()
+	node.Spec.Unschedulable = unschedulable
+	return e.client.Patch(ctx, node, client.MergeFrom(before))
+}
+
+func isEvictablePod(pod *corev1.Pod) bool {
+	if pod.DeletionTimestamp != nil {
+		return false
+	}
+	if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+		return false
+	}
+	if _, ok := pod.Annotations[corev1.MirrorPodAnnotationKey]; ok {
+		return false
+	}
+	for _, owner := range pod.OwnerReferences {
+		if owner.Kind == "DaemonSet" && owner.Controller != nil && *owner.Controller {
+			return false
+		}
+	}
+	return true
+}
+
+func (e *Extension) drainNode(ctx context.Context, nodeName string, timeout time.Duration) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			return fmt.Errorf("timeout draining node %s", nodeName)
+		case <-ticker.C:
+			podList := &corev1.PodList{}
+			if err := e.client.List(ctx, podList); err != nil {
+				return fmt.Errorf("list pods for drain: %w", err)
+			}
+
+			var evictable []*corev1.Pod
+			for i := range podList.Items {
+				pod := &podList.Items[i]
+				if pod.Spec.NodeName != nodeName {
+					continue
+				}
+				if !isEvictablePod(pod) {
+					continue
+				}
+				evictable = append(evictable, pod)
+			}
+
+			if len(evictable) == 0 {
+				e.log.Info("Node drain completed", "node", nodeName)
+				return nil
+			}
+
+			for _, pod := range evictable {
+				eviction := &policyv1.Eviction{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      pod.Name,
+						Namespace: pod.Namespace,
+					},
+				}
+				err := e.client.SubResource("eviction").Create(ctx, pod, eviction)
+				if err == nil || apierrors.IsNotFound(err) {
+					continue
+				}
+				if apierrors.IsTooManyRequests(err) || apierrors.IsConflict(err) {
+					continue
+				}
+				return fmt.Errorf("evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
+			}
+		}
+	}
+}
+
 // warmUpdate stops the VM, patches its spec, and starts it again.
 func (e *Extension) warmUpdate(
 	ctx context.Context,
@@ -217,6 +318,28 @@ func (e *Extension) warmUpdate(
 	desiredSpec *infrastructurev1a1.DeckhouseMachineSpecTemplate,
 	cs *changeSet,
 ) error {
+	nodeName, err := e.getMachineNodeName(ctx, currentMachine.Name, currentMachine.Namespace)
+	if err != nil {
+		return fmt.Errorf("get machine node name: %w", err)
+	}
+	if nodeName != "" {
+		e.log.Info("Warm update: cordoning node", "node", nodeName, "vm", vmName)
+		if err := e.setNodeUnschedulable(ctx, nodeName, true); err != nil {
+			return fmt.Errorf("cordon node %s: %w", nodeName, err)
+		}
+		defer func() {
+			e.log.Info("Warm update: uncordoning node", "node", nodeName, "vm", vmName)
+			if err := e.setNodeUnschedulable(ctx, nodeName, false); err != nil {
+				e.log.Error(err, "failed to uncordon node after warm update", "node", nodeName, "vm", vmName)
+			}
+		}()
+
+		e.log.Info("Warm update: draining node", "node", nodeName, "vm", vmName)
+		if err := e.drainNode(ctx, nodeName, 10*time.Minute); err != nil {
+			return fmt.Errorf("drain node %s: %w", nodeName, err)
+		}
+	}
+
 	e.deleteVMOperation(ctx, vmName)
 
 	e.log.Info("Warm update: stopping VM", "vm", vmName)
