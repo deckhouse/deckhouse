@@ -668,7 +668,7 @@ spec:
                             constraints that the scheduler tries to satisfy but does not strictly enforce:
                             a pod WILL be placed even if the constraint cannot be satisfied, though the
                             scheduler will attempt to minimize the imbalance. Including this type causes
-                            `Descheduler` to also evict pods that violate soft constraints.
+                            `descheduler` to also evict pods that violate soft constraints.
                           items:
                             type: string
                             enum: ["DoNotSchedule", "ScheduleAnyway"]
