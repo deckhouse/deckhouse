@@ -353,7 +353,7 @@ Example of starting a platform installation with cluster deployment in the cloud
 
 ```shell
 dhctl bootstrap \
-  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
   --config=/config.yaml --config=/resources.yaml
 ```
 
@@ -362,7 +362,8 @@ where:
 - `/config.yaml` — installation configuration file;
 - `/resources.yaml` — resource manifests file;
 - `<SSH_USER>` — user on the server for SSH connection;
-- `--ssh-agent-private-keys` — file containing the private SSH key for the connection.
+- `--ssh-agent-private-keys` — file containing the private SSH key for the connection;
+- `<SSH_PRIVATE_KEY_FILE>` — the name of your private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
 
 Next, connect to the master node via SSH (the master node's IP address is provided by the installer at the end of the installation):
 

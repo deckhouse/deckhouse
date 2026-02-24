@@ -112,7 +112,7 @@ mkdir certs
 Сгенерируйте сертификаты для внешнего доступа следующими командами:
 
 ```bash
-openssl genrsa -out ca.key 4096
+openssl ecparam -name prime256v1 -genkey -out ca.key
 ```
 
 ```bash
@@ -122,7 +122,7 @@ openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST=Moscow/L=Moscow
 Сгенерируйте сертификаты для внутреннего доменного имени `harbor.local`, чтобы внутри приватной сети обращаться к серверу Bastion по защищённому соединению:
 
 ```bash
-openssl genrsa -out harbor.local.key 4096
+openssl ecparam -name prime256v1 -genkey -out harbor.local.key
 ```
 
 ```bash
@@ -943,7 +943,7 @@ Login Succeeded
 useradd deckhouse -m -s /bin/bash -G sudo
 echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
 mkdir /home/deckhouse/.ssh
-export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
+export KEY='ssh-ed25519 AAAAB3NzaC1yc2EAAAADA...'
 echo $KEY >> /home/deckhouse/.ssh/authorized_keys
 chown -R deckhouse:deckhouse /home/deckhouse
 chmod 700 /home/deckhouse/.ssh
@@ -951,8 +951,10 @@ chmod 600 /home/deckhouse/.ssh/authorized_keys
 ```
 
 {% offtopic title="Как узнать публичную часть ключа..." %}
-Узнать публичную часть ключа можно командой `cat ~/.ssh/id_rsa.pub`.
+Узнать публичную часть ключа можно командой `cat ~/.ssh/<SSH_PUBLIC_KEY_FILE>`.
 {% endofftopic %}
+
+> Замените здесь `<SSH_PUBLIC_KEY_FILE>` на имя вашего публичного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
 
 В результате этих команд:
 
@@ -1216,10 +1218,12 @@ docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/t
 Запустите установку DKP командой (укажите внутренний IP-адрес master-узла):
 
 ```bash
-dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
   --config=/config.yml \
   --ask-become-pass
 ```
+
+> Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 Процесс установки может занять до 30 минут в зависимости от скорости сетевого соединения.
 
@@ -1287,7 +1291,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 * Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на master-узле следующую команду:
 
   ```bash
-  ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+  ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
   ```
 
 * Создайте в кластере ресурс [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials). Для этого выполните на master-узле следующую команду:

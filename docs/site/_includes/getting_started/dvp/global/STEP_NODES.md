@@ -29,7 +29,7 @@ Add a new node to the cluster (for more information about adding a static node t
 - Generate an SSH key with an empty passphrase. To do this, run the following command on the **master node**:
 
   ```shell
-  ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+  ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
   ```
 
 - Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster. To do this, run the following command on the **master node**:

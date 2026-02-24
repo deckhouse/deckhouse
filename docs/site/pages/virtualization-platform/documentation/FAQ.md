@@ -314,7 +314,7 @@ d8 k create secret generic sysprep-config --type="provisioning.virtualization.de
 Then you can create a virtual machine that will use an answer file during installation.
 To provide the Windows virtual machine with the answer file,
 you need to specify provisioning with the type SysprepRef.
-You can also specify here other files in base64 format (customize.ps1, id_rsa.pub, ...)
+You can also specify here other files in Base64 format (customize.ps1, id_ed25519.pub, ...)
 that you need to successfully execute scripts inside the answer file.
 
 ```yaml

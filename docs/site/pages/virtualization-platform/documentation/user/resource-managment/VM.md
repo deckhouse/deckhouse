@@ -665,7 +665,7 @@ The main capabilities of Cloud-Init include:
    ```yaml
    #cloud-config
    ssh_authorized_keys:
-     - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
+     - ssh-ed25519 AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
    ```
 
 1. Creating a user with a password and SSH key:
@@ -679,7 +679,7 @@ The main capabilities of Cloud-Init include:
        sudo: ALL=(ALL) NOPASSWD:ALL
        shell: /bin/bash
        ssh-authorized-keys:
-         - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
+         - ssh-ed25519 AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
    ssh_pwauth: True
    ```
 

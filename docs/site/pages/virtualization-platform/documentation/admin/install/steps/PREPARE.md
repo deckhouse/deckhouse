@@ -86,7 +86,7 @@ Before installing the virtualization platform, you need to plan its parameters:
    - Generate an SSH key that will be used to access the nodes:
 
      ```shell
-     ssh-keygen -t rsa -b 4096 -f dvp-install-key -N "" -C "dvp-node" -v
+     ssh-keygen -t ed25519 -b 4096 -f dvp-install-key -N "" -C "dvp-node" -v
      ```
 
    - Using the set password, allow SSH connections using the generated key:
