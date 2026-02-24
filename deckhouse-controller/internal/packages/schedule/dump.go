@@ -15,34 +15,41 @@
 package schedule
 
 import (
-	"encoding/json"
 	"maps"
 	"slices"
+
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
 )
 
-// dump is the JSON-serializable snapshot of a single node, used by Dump.
+// dump is the serialization envelope for the debug endpoint.
 type dump struct {
-	Status    checker.Result `json:"status"`
-	Name      string         `json:"name"`
-	Version   string         `json:"version"`
-	Order     Order          `json:"order"`
-	State     nodeState      `json:"state"`
-	Followees []string       `json:"followees,omitempty"`
-	Followers []string       `json:"followers,omitempty"`
+	Nodes map[string]nodeDump `json:"nodes" yaml:"nodes"`
 }
 
-// Dump returns a JSON snapshot of all nodes in topological order.
+// nodeDump combines status info for a single node.
+type nodeDump struct {
+	Name      string         `json:"name" yaml:"name"`
+	Version   string         `json:"version" yaml:"version"`
+	Order     Order          `json:"order" yaml:"order"`
+	State     nodeState      `json:"state" yaml:"state"`
+	Status    checker.Result `json:"status" yaml:"status"`
+	Followees []string       `json:"followees,omitempty" yaml:"followees,omitempty"`
+	Followers []string       `json:"followers,omitempty" yaml:"followers,omitempty"`
+}
+
+// Dump returns a YAML snapshot of all nodes and their current state.
 func (s *Scheduler) Dump() []byte {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	sorted := topoSort(s.nodes)
+	d := &dump{
+		Nodes: make(map[string]nodeDump, len(s.nodes)),
+	}
 
-	res := make([]dump, len(sorted))
-	for _, n := range sorted {
-		res = append(res, dump{
+	for _, n := range s.nodes {
+		d.Nodes[n.name] = nodeDump{
 			Name:      n.name,
 			Version:   n.version.String(),
 			Order:     n.order,
@@ -50,9 +57,9 @@ func (s *Scheduler) Dump() []byte {
 			Status:    n.status,
 			Followees: slices.Collect(maps.Keys(n.followees)),
 			Followers: slices.Collect(maps.Keys(n.followers)),
-		})
+		}
 	}
 
-	marshalled, _ := json.MarshalIndent(res, "", "  ")
+	marshalled, _ := yaml.Marshal(d)
 	return marshalled
 }
