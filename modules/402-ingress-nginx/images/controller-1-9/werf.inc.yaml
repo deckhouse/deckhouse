@@ -144,6 +144,7 @@ shell:
   - apt-get -y update
   - apt-get -y install libpcre2-devel libcurl-devel libgnutls-openssl-devel libcares-devel ninja-build libgtest-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins
   setup:
+  - set -x
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - export SOURCE_REPO={{ $.SOURCE_REPO }}
   - export NINJA_STATUS="[%p/%f/%t] "
