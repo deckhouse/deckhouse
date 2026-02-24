@@ -302,6 +302,13 @@ func (a *Application) GetConstraints() schedule.Constraints {
 	return a.definition.Constraints()
 }
 
+// NeedStartup reports whether the application requires a startup phase.
+// This is true when hooks have not yet been initialized (no controllers attached),
+// meaning the app needs to go through the full startup sequence before it can run.
+func (a *Application) NeedStartup() bool {
+	return !a.hooks.Initialized()
+}
+
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
 func (a *Application) InitializeHooks() {
 	namespace := a.GetNamespace()

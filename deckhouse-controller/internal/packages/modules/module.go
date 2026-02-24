@@ -289,6 +289,13 @@ func (m *Module) GetHooks() []hooks.Hook {
 	return m.hooks.GetHooks()
 }
 
+// NeedStartup reports whether the application requires a startup phase.
+// This is true when hooks have not yet been initialized (no controllers attached),
+// meaning the app needs to go through the full startup sequence before it can run.
+func (m *Module) NeedStartup() bool {
+	return !m.hooks.Initialized()
+}
+
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
 func (m *Module) InitializeHooks() {
 	for _, hook := range m.hooks.GetHooks() {

@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
+
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
@@ -41,6 +42,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
+	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
+	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
+	taskstartup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/startup"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -315,7 +319,7 @@ func (r *Runtime) buildNelmService() error {
 		return fmt.Errorf("cache sync failed")
 	}
 
-	r.nelmService = nelm.NewService(cache, r.runApp, r.logger)
+	r.nelmService = nelm.NewService(cache, r.scheduler.Reschedule, r.logger)
 
 	return nil
 }
@@ -392,8 +396,51 @@ func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
 		schedule.WithKubeVersionGetter(kubernetesVersionGetter),
-		schedule.WithOnSchedule(r.enableApp),
-		schedule.WithOnDisable(r.disableApp))
+		schedule.WithOnSchedule(r.schedulePackage),
+		schedule.WithOnDisable(r.disablePackage))
+}
+
+// schedulePackage is the scheduler's onSchedule callback, invoked when a package's
+// constraints are met and it should be enabled. It enqueues Startup → Run tasks
+// for the package. The Run task includes an onDone callback that notifies the scheduler
+// upon completion, allowing it to track active packages.
+// Note: EventSchedule is shared between enable and disable, so enqueueing here
+// automatically cancels any in-flight disable tasks for the same package.
+func (r *Runtime) schedulePackage(name string) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	onDone := queue.WithOnDone(func() {
+		r.scheduler.Complete(name)
+	})
+
+	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *apps.Application) {
+		r.queueService.Enqueue(ctx, name, taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
+	})
+
+	r.modules.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *modules.Module) {
+		r.queueService.Enqueue(ctx, name, taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
+	})
+}
+
+// disablePackage is the scheduler's onDisable callback, invoked when a package's
+// constraints are no longer met and it should be disabled. It enqueues a Disable task
+// that tears down the package's hooks and Helm release.
+// Note: EventSchedule is shared between enable and disable, so enqueueing here
+// automatically cancels any in-flight startup/run tasks for the same package.
+func (r *Runtime) disablePackage(name string) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *apps.Application) {
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+	})
+
+	r.modules.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *modules.Module) {
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+	})
 }
 
 // Stop performs graceful shutdown of all operator subsystems.

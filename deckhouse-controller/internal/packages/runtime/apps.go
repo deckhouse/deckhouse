@@ -37,7 +37,6 @@ import (
 	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
-	taskstartup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/startup"
 	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -217,50 +216,5 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, r.installer, r.logger), cleanup)
-	})
-}
-
-// enableApp is called by the scheduler when a package becomes enabled.
-func (r *Runtime) enableApp(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *apps.Application) {
-		r.queueService.Enqueue(ctx, name, taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), queue.WithOnDone(func() {
-			r.scheduler.Complete(name)
-		}))
-	})
-}
-
-// disableApp is called by the scheduler when a package becomes disabled.
-func (r *Runtime) disableApp(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *apps.Application) {
-		tasks := []queue.Task{
-			taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger),
-		}
-
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
-	})
-}
-
-// runApp is called by NELM monitor when a package needs to re-run.
-func (r *Runtime) runApp(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.apps.HandleEvent(lifecycle.EventRun, name, func(ctx context.Context, _ int, pkg *apps.Application) {
-		tasks := []queue.Task{
-			taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger),
-		}
-
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
 	})
 }

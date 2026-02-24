@@ -66,7 +66,7 @@ func (r *Runtime) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 					slog.String("event", kubeEvent.String()))
 
 				queueName := fmt.Sprintf("%s/%s", app.GetName(), info.QueueName)
-				t := taskhookrun.NewTask(app, hook.GetName(), info.BindingContext, r.runApp, r.nelmService, r.status, r.logger)
+				t := taskhookrun.NewTask(app, hook.GetName(), info.BindingContext, r.scheduler.Reschedule, r.nelmService, r.status, r.logger)
 				res[queueName] = append(res[queueName], t)
 			})
 		}
@@ -111,7 +111,7 @@ func (r *Runtime) BuildScheduleTasks(ctx context.Context, crontab string) map[st
 
 				// queue = <name>/<queue>
 				queueName := fmt.Sprintf("%s/%s", app.GetName(), info.QueueName)
-				t := taskhookrun.NewTask(app, hook.GetName(), info.BindingContext, r.runApp, r.nelmService, r.status, r.logger)
+				t := taskhookrun.NewTask(app, hook.GetName(), info.BindingContext, r.scheduler.Reschedule, r.nelmService, r.status, r.logger)
 
 				res[queueName] = append(res[queueName], t)
 			})
