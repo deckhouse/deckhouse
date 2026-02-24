@@ -131,6 +131,35 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(disabledProbes).NotTo(ContainElement("extensions/prometheus-longterm"))
 			})
 		})
+
+		Context("with grafana enabled flag", func() {
+			f := HookExecutionConfigInit(initValues, `{}`)
+
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+			})
+
+			It("extensions/grafana-v10 probe is disabled when prometheus.internal.grafana.enabled is false", func() {
+				f.ValuesSet("prometheus.internal.grafana.enabled", false)
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("extensions/grafana-v10"))
+			})
+
+			It("extensions/grafana-v10 probe is enabled when prometheus.internal.grafana.enabled is true", func() {
+				f.ValuesSet("prometheus.internal.grafana.enabled", true)
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).NotTo(ContainElement("extensions/grafana-v10"))
+			})
+		})
 	})
 
 	Context("load-balancing probes depending on deployed apps", func() {
@@ -235,7 +264,7 @@ func Test_calcDisabledProbes(t *testing.T) {
 			name: "MAA group and Grafana probe are off without Prometheus",
 			expectDisabled: set.New(
 				"monitoring-and-autoscaling/",
-				"extensions/grafana",
+				"extensions/grafana-v10",
 			),
 		},
 		{
@@ -245,7 +274,7 @@ func Test_calcDisabledProbes(t *testing.T) {
 			},
 			expectNotDisabled: set.New(
 				"monitoring-and-autoscaling/",
-				"extensions/grafana",
+				"extensions/grafana-v10",
 			),
 		},
 

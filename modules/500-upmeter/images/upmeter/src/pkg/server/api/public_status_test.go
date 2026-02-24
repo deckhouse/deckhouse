@@ -355,6 +355,51 @@ func Test_calculateAvailability(t *testing.T) {
 	}
 }
 
+func Test_calculateGroupStatus(t *testing.T) {
+	type args struct {
+		probeStatuses []PublicStatus
+	}
+	tests := []struct {
+		name string
+		args args
+		want PublicStatus
+	}{
+		{
+			name: "empty statuses",
+			args: args{probeStatuses: []PublicStatus{}},
+			want: StatusNoData,
+		},
+		{
+			name: "all operational",
+			args: args{probeStatuses: []PublicStatus{StatusOperational, StatusOperational}},
+			want: StatusOperational,
+		},
+		{
+			name: "outage and no data",
+			args: args{probeStatuses: []PublicStatus{StatusOutage, StatusNoData}},
+			want: StatusOutage,
+		},
+		{
+			name: "outage and operational",
+			args: args{probeStatuses: []PublicStatus{StatusOutage, StatusOperational}},
+			want: StatusDegraded,
+		},
+		{
+			name: "degraded and operational",
+			args: args{probeStatuses: []PublicStatus{StatusDegraded, StatusOperational}},
+			want: StatusDegraded,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := calculateGroupStatus(tt.args.probeStatuses); got != tt.want {
+				t.Errorf("calculateGroupStatus() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPublicStatus_Compare(t *testing.T) {
 	type args struct {
 		s1 PublicStatus
