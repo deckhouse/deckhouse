@@ -77,7 +77,7 @@ func Register(mgr manager.Manager) error {
 		Watches(
 			&controlplanev1alpha1.ControlPlaneNode{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(controlPlaneNodeResourcePredicate()),
+			builder.WithPredicates(getControlPlaneNodeResourcePredicate()),
 		).
 		Watches(&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(r.mapSecretToControlPlaneNodes),
@@ -85,7 +85,7 @@ func Register(mgr manager.Manager) error {
 		).
 		Watches(&corev1.Node{},
 			handler.EnqueueRequestsFromMapFunc(r.mapNodeToControlPlaneNode),
-			builder.WithPredicates(nodeControlPlaneLabelPredicate()),
+			builder.WithPredicates(getNodeControlPlaneLabelPredicate()),
 		).
 		Complete(r)
 }
@@ -104,8 +104,8 @@ func getSecretPredicate() predicate.Predicate {
 	}
 }
 
-// controlPlaneNodeResourcePredicate triggers on any create/update/delete of ControlPlaneNode CR.
-func controlPlaneNodeResourcePredicate() predicate.Predicate {
+// getControlPlaneNodeResourcePredicate triggers on any create/update/delete of ControlPlaneNode CR.
+func getControlPlaneNodeResourcePredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc:  func(event.CreateEvent) bool { return true },
 		UpdateFunc:  func(event.UpdateEvent) bool { return true },
@@ -114,9 +114,9 @@ func controlPlaneNodeResourcePredicate() predicate.Predicate {
 	}
 }
 
-// nodeControlPlaneLabelPredicate triggers only when Node labels change
+// getNodeControlPlaneLabelPredicate triggers only when Node labels change
 // Ignores updates to status, capacity, etc.
-func nodeControlPlaneLabelPredicate() predicate.Predicate {
+func getNodeControlPlaneLabelPredicate() predicate.Predicate {
 	hasLabel := func(o client.Object) bool {
 		_, has := o.GetLabels()[constants.ControlPlaneNodeLabelKey]
 		return has
