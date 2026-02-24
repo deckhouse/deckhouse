@@ -206,6 +206,7 @@ import:
 shell:
   setup:
   - set -x
+  - echo newrun
   - export SOURCE_REPO={{ $.SOURCE_REPO }}
   - export CONTROLLER_BRANCH="controller-v1.9.5-nginx-v1.29.5"
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
