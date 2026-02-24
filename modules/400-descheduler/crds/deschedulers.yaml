@@ -664,8 +664,7 @@ spec:
                           default: true
                           description: |-
                             If set to `true`, the strategy will consider whether the pods can fit on other nodes
-                            when balancing topology domains. Different from the DefaultEvictor's `nodeFit` which
-                            is used in pre-eviction filtering.
+                            when balancing topology domains.
                   anyOf:
                     - required: ["lowNodeUtilization"]
                     - required: ["highNodeUtilization"]
