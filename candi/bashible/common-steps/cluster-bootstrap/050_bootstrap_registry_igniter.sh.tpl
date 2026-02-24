@@ -239,8 +239,8 @@ echo "Awaiting the startup of the registry storage and Docker registry..."
 max_attempts=30
 docker_registry_started=false
 
-check_and_run "ign_auth" "/opt/deckhouse/bin/ign_auth -logtostderr ${REGISTRY_MODULE_IGNITER_DIR}/auth_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/auth.log"
-check_and_run "ign_registry" "/opt/deckhouse/bin/ign_registry serve ${REGISTRY_MODULE_IGNITER_DIR}/distribution_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/distribution.log"
+check_and_run "ign-auth" "/opt/deckhouse/bin/ign-auth -logtostderr ${REGISTRY_MODULE_IGNITER_DIR}/auth_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/auth.log"
+check_and_run "ign-registry" "/opt/deckhouse/bin/ign-registry serve ${REGISTRY_MODULE_IGNITER_DIR}/distribution_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/distribution.log"
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
     response=\$(d8-curl --cacert "${pki_path}/ca.crt" -s -o /dev/null -w "%{http_code}" https://${discovered_node_ip}:5001)
@@ -278,8 +278,8 @@ stop_service() {
     echo "\$service_name stopped"
 }
 
-stop_service "ign_registry"
-stop_service "ign_auth"
+stop_service "ign-registry"
+stop_service "ign-auth"
 
 echo "All services have been stopped."
 EOF
