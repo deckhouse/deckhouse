@@ -18,7 +18,6 @@ package controller
 
 import (
 	"fmt"
-	"strings"
 
 	capi "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
@@ -117,8 +116,8 @@ func (m *capiMachine) GetNodeName() string {
 func (m *capiMachine) GetStatus() MachineStatus {
 	phase := m.calculatePhase()
 	relevantConditions := m.filterConditions()
-	instanceConditions := m.convertConditions(relevantConditions)
 	statusStr, message := m.calculateMachineStatusAndMessage(relevantConditions)
+	instanceConditions := m.convertConditions(relevantConditions)
 
 	return MachineStatus{
 		Phase:         phase,
@@ -132,9 +131,11 @@ func (m *capiMachine) GetNodeGroup() string {
 	if m.machine.Labels == nil {
 		return ""
 	}
+
 	if ng := m.machine.Labels[capiNodeGroupLabelKey]; ng != "" {
 		return ng
 	}
+
 	return m.machine.Labels[capiFallbackNodeGroupKey]
 }
 
@@ -164,18 +165,13 @@ func (m *capiMachine) calculatePhase() deckhousev1alpha2.InstancePhase {
 func (m *capiMachine) calculateMachineStatusAndMessage(conditions []metav1.Condition) (string, string) {
 	deleting := findCondition(conditions, capi.DeletingCondition)
 	if deleting != nil && deleting.Status == metav1.ConditionTrue {
-		if isDrainBlocked(deleting.Message) {
-			return MachineStatusBlocked, deleting.Message
-		}
 		return MachineStatusProgressing, deleting.Message
 	}
 
 	infra := findCondition(conditions, capi.InfrastructureReadyCondition)
-	if infra != nil {
-		if infra.Status == metav1.ConditionFalse {
-			if infra.Reason != "WaitingForInfrastructure" {
-				return MachineStatusError, conditionMessageOrReason(infra)
-			}
+	if infra != nil && infra.Status == metav1.ConditionFalse {
+		if infra.Reason != "WaitingForInfrastructure" {
+			return MachineStatusError, conditionMessageOrReason(infra)
 		}
 	}
 
@@ -183,14 +179,6 @@ func (m *capiMachine) calculateMachineStatusAndMessage(conditions []metav1.Condi
 	if ready != nil {
 		if ready.Status == metav1.ConditionTrue {
 			return MachineStatusReady, ""
-		}
-
-		if isRebooting(ready.Reason, ready.Message) {
-			return MachineStatusRebooting, ready.Message
-		}
-
-		if isDrainBlockedCondition(*ready) {
-			return MachineStatusBlocked, ready.Message
 		}
 	}
 
@@ -201,6 +189,7 @@ func (m *capiMachine) calculateMachineStatusAndMessage(conditions []metav1.Condi
 	if msg == "" && infra != nil {
 		msg = infra.Message
 	}
+
 	return MachineStatusProgressing, msg
 }
 
@@ -212,6 +201,7 @@ func (m *capiMachine) filterConditions() []metav1.Condition {
 			result = append(result, c)
 		}
 	}
+
 	return result
 }
 
@@ -220,45 +210,8 @@ func (m *capiMachine) convertConditions(conditions []metav1.Condition) []deckhou
 	if c == nil {
 		return nil
 	}
+
 	return []deckhousev1alpha2.InstanceCondition{*c}
-}
-
-func findCondition(conditions []metav1.Condition, condType string) *metav1.Condition {
-	for i := range conditions {
-		if conditions[i].Type == condType {
-			return &conditions[i]
-		}
-	}
-	return nil
-}
-
-func isDrainBlocked(message string) bool {
-	msg := strings.ToLower(message)
-	return strings.Contains(msg, "cannot evict") ||
-		strings.Contains(msg, "disruption budget") ||
-		strings.Contains(msg, "pdb")
-}
-
-func isDrainBlockedCondition(c metav1.Condition) bool {
-	_ = c
-	// TODO
-	return false
-}
-
-func isRebooting(reason, message string) bool {
-	_, _ = reason, message
-	// TODO
-	return false
-}
-
-func conditionMessageOrReason(c *metav1.Condition) string {
-	if c == nil {
-		return ""
-	}
-	if c.Message != "" {
-		return c.Message
-	}
-	return c.Reason
 }
 
 func aggregateMachineReadyCondition(conditions []metav1.Condition) *deckhousev1alpha2.InstanceCondition {
@@ -268,23 +221,28 @@ func aggregateMachineReadyCondition(conditions []metav1.Condition) *deckhousev1a
 			deleting,
 			metav1.ConditionFalse,
 			string(capi.ConditionSeverityWarning),
-			drainMessage(deleting.Message),
+			deleting.Message,
 		)
 	}
 
 	infra := findCondition(conditions, capi.InfrastructureReadyCondition)
-	ready := findCondition(conditions, capi.ReadyCondition)
-
 	if infra != nil && infra.Status == metav1.ConditionFalse && infra.Reason != "WaitingForInfrastructure" {
-		return machineReadyConditionFrom(infra, infra.Status, string(capi.ConditionSeverityWarning), infra.Message)
+		return machineReadyConditionFrom(
+			infra,
+			infra.Status,
+			string(capi.ConditionSeverityWarning),
+			infra.Message,
+		)
 	}
 
+	ready := findCondition(conditions, capi.ReadyCondition)
 	if ready != nil {
-		severity := ""
-		if ready.Status == metav1.ConditionFalse && isDrainBlocked(ready.Message) {
-			severity = string(capi.ConditionSeverityWarning)
-		}
-		return machineReadyConditionFrom(ready, ready.Status, severity, ready.Message)
+		return machineReadyConditionFrom(
+			ready,
+			ready.Status,
+			"",
+			ready.Message,
+		)
 	}
 
 	if infra != nil {
@@ -292,7 +250,13 @@ func aggregateMachineReadyCondition(conditions []metav1.Condition) *deckhousev1a
 		if infra.Status == metav1.ConditionFalse && infra.Reason == "WaitingForInfrastructure" {
 			severity = string(capi.ConditionSeverityInfo)
 		}
-		return machineReadyConditionFrom(infra, infra.Status, severity, infra.Message)
+
+		return machineReadyConditionFrom(
+			infra,
+			infra.Status,
+			severity,
+			infra.Message,
+		)
 	}
 
 	return nil
@@ -319,20 +283,24 @@ func machineReadyConditionFrom(
 	}
 }
 
-func drainMessage(message string) string {
-	if !isDrainBlocked(message) {
-		return message
-	}
-
-	for _, line := range strings.Split(message, "\n") {
-		line = strings.TrimSpace(strings.TrimPrefix(line, "*"))
-		if line == "" {
-			continue
-		}
-		if strings.Contains(strings.ToLower(line), "cannot evict") || strings.Contains(strings.ToLower(line), "disruption budget") {
-			return line
+func findCondition(conditions []metav1.Condition, condType string) *metav1.Condition {
+	for i := range conditions {
+		if conditions[i].Type == condType {
+			return &conditions[i]
 		}
 	}
 
-	return message
+	return nil
+}
+
+func conditionMessageOrReason(c *metav1.Condition) string {
+	if c == nil {
+		return ""
+	}
+
+	if c.Message != "" {
+		return c.Message
+	}
+
+	return c.Reason
 }
