@@ -23,6 +23,7 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -30,10 +31,12 @@ import (
 	"control-plane-manager/internal/constants"
 	controlplaneconfiguration "control-plane-manager/internal/controllers/control-plane-configuration"
 
-	"k8s.io/klog/v2"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/klog/v2/textlogger"
 	"k8s.io/utils/ptr"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -80,6 +83,31 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		PprofBindAddress:        pprofAddr,
 		GracefulShutdownTimeout: ptr.To(10 * time.Second),
+		Cache: cache.Options{
+			ReaderFailOnMissingInformer: false,
+			DefaultTransform:            cache.TransformStripManagedFields(),
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Secret{}: {
+					Namespaces: map[string]cache.Config{
+						constants.KubeSystemNamespace: {},
+					},
+				},
+				&corev1.Node{}: {
+					Transform: func(in any) (any, error) {
+						node, ok := in.(*corev1.Node)
+						if !ok {
+							return in, nil
+						}
+						stripped := &corev1.Node{}
+						stripped.Name = node.Name
+						stripped.ResourceVersion = node.ResourceVersion
+						stripped.UID = node.UID
+						stripped.Labels = node.Labels
+						return stripped, nil
+					},
+				},
+			},
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create controller runtime manager: %w", err)
@@ -105,15 +133,15 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 func (c *Manager) Start(ctx context.Context) error {
 	go func() {
 		if err := c.runtimeManager.Start(ctx); err != nil {
-			klog.Fatalf("failed to start runtime manager: %v", err)
+			log.Fatal("failed to start runtime manager", log.Err(err))
 		}
 	}()
-	klog.Info("Control plane manager started")
+	log.Info("Control plane manager started")
 
 	if ok := c.runtimeManager.GetCache().WaitForCacheSync(ctx); !ok {
 		return fmt.Errorf("wait for cache sync")
 	}
-	klog.Info("Cache synced")
+	log.Info("Cache synced")
 
 	return nil
 }

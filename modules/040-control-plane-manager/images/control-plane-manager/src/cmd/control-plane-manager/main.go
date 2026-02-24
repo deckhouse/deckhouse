@@ -24,7 +24,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"k8s.io/klog/v2"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func main() {
@@ -32,20 +32,20 @@ func main() {
 
 	manager, err := internal.NewManager(ctx, false) // TODO pprof flag
 	if err != nil {
-		klog.Fatalf("Failed to create a manager: %v", err)
+		log.Fatal("Failed to create a manager", log.Err(err))
 	}
 
 	if err = manager.Start(ctx); err != nil {
-		klog.Fatalf("Failed to start the manager: %v", err)
+		log.Fatal("Failed to start the manager", log.Err(err))
 	}
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	for range sigs {
-		klog.Info("Shutdown signal received")
+		log.Info("Shutdown signal received")
 		cancel()
-		klog.Infof("Bye from %s", constants.CpcControllerName)
+		log.Info("Bye from %s", constants.CpcControllerName)
 		break
 	}
 }
