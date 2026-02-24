@@ -69,13 +69,23 @@ func (r *CAPIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	status := machine.GetStatus()
-	nodeGroup := machine.GetNodeGroup()
-
 	instanceName := machine.GetNodeName()
 	if instanceName == "" {
 		instanceName = machine.GetName()
 	}
+
+	if !capiMachine.DeletionTimestamp.IsZero() {
+		deleted, err := r.deleteInstanceIfExists(ctx, instanceName)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(1).Info("linked instance delete handled", "instance", instanceName, "deleted", deleted)
+		return ctrl.Result{}, nil
+	}
+
+	status := machine.GetStatus()
+	nodeGroup := machine.GetNodeGroup()
 
 	instance, err := ensureInstanceExists(ctx, r.Client, instanceName)
 	if err != nil {

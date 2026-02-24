@@ -172,6 +172,9 @@ func (m *capiMachine) calculateMachineStatusAndMessage(conditions []metav1.Condi
 
 	deleting := findCondition(conditions, capi.DeletingCondition)
 	if deleting != nil && deleting.Status == metav1.ConditionTrue {
+		if isDrainBlockedDeletingCondition(deleting) {
+			return MachineStatusBlocked, deleting.Message
+		}
 		return MachineStatusProgressing, conditionMessageOrReason(deleting)
 	}
 
@@ -203,7 +206,7 @@ func (m *capiMachine) filterConditions() []metav1.Condition {
 }
 
 func (m *capiMachine) convertConditions(conditions []metav1.Condition) []deckhousev1alpha2.InstanceCondition {
-	c := aggregateMachineReadyCondition(conditions)
+	c := m.aggregateMachineReadyCondition(conditions)
 	if c == nil {
 		return nil
 	}
@@ -211,7 +214,7 @@ func (m *capiMachine) convertConditions(conditions []metav1.Condition) []deckhou
 	return []deckhousev1alpha2.InstanceCondition{*c}
 }
 
-func aggregateMachineReadyCondition(conditions []metav1.Condition) *deckhousev1alpha2.InstanceCondition {
+func (m *capiMachine) aggregateMachineReadyCondition(conditions []metav1.Condition) *deckhousev1alpha2.InstanceCondition {
 	infra := findCondition(conditions, capi.InfrastructureReadyCondition)
 	if infra != nil && infra.Status == metav1.ConditionFalse {
 		severity := string(capi.ConditionSeverityWarning)
@@ -229,11 +232,17 @@ func aggregateMachineReadyCondition(conditions []metav1.Condition) *deckhousev1a
 
 	deleting := findCondition(conditions, capi.DeletingCondition)
 	if deleting != nil && deleting.Status == metav1.ConditionTrue {
+		severity := ""
+		message := deleting.Message
+		if isDrainBlockedDeletingCondition(deleting) {
+			severity = string(capi.ConditionSeverityWarning)
+		}
+
 		return machineReadyConditionFrom(
 			deleting,
 			metav1.ConditionFalse,
-			"",
-			deleting.Message,
+			severity,
+			message,
 		)
 	}
 
@@ -309,4 +318,20 @@ func conditionMessageOrReason(c *metav1.Condition) string {
 	}
 
 	return c.Reason
+}
+
+func isDrainBlockedDeletingCondition(c *metav1.Condition) bool {
+	if c == nil {
+		return false
+	}
+	if c.Type != capi.DeletingCondition {
+		return false
+	}
+	if c.Status != metav1.ConditionTrue {
+		return false
+	}
+	if c.Reason != capi.MachineDeletingDrainingNodeReason {
+		return false
+	}
+	return c.Message != ""
 }

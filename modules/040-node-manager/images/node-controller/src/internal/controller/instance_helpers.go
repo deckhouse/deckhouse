@@ -58,3 +58,17 @@ func ensureInstanceExists(ctx context.Context, c client.Client, name string) (*d
 
 	return newInstance, nil
 }
+
+func (r *CAPIMachineReconciler) deleteInstanceIfExists(ctx context.Context, name string) (bool, error) {
+	instance := &deckhousev1alpha2.Instance{}
+	instance.Name = name
+
+	if err := r.Delete(ctx, instance); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return false, nil
+		}
+		return false, fmt.Errorf("delete instance %q: %w", name, err)
+	}
+
+	return true, nil
+}
