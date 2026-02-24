@@ -98,6 +98,9 @@ func collectDisabledProbes(_ context.Context, input *go_hook.HookInput) error {
 	}
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	manuallyDisabledProbes := set.NewFromValues(input.Values, "upmeter.disabledProbes")
+	if input.Values.Exists("prometheus.internal.grafana.enabled") && !input.Values.Get("prometheus.internal.grafana.enabled").Bool() {
+		manuallyDisabledProbes.Add("extensions/grafana-v10")
+	}
 
 	// Calculation
 	disabledProbes := calcDisabledProbes(presence, enabledModules, manuallyDisabledProbes)
@@ -156,7 +159,7 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 	}
 
 	if !enabledModules.Has("prometheus") {
-		disabledProbes.Add("extensions/grafana")
+		disabledProbes.Add("extensions/grafana-v10")
 		disabledProbes.Add("extensions/prometheus-longterm")
 	}
 
