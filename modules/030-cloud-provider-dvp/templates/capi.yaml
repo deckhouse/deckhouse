@@ -1,0 +1,10 @@
+{{- $crds_external := .Files.Glob "crds/external/*.yaml" -}}
+{{- $capi := .Files.Glob "capi/*" -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider-capi
+data:
+{{ $crds_external.AsSecrets | indent 2 }}
+{{ $capi.AsSecrets | indent 2 }}
