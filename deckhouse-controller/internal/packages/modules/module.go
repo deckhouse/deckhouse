@@ -21,6 +21,7 @@ import (
 	"os"
 	"slices"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
@@ -52,6 +53,8 @@ import (
 type Module struct {
 	name string // Package name
 	path string // path to the package dir on fs
+
+	version *semver.Version
 
 	definition Definition        // Module definition
 	digests    map[string]string // Package digests
@@ -116,15 +119,21 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.globalValuesGetter = cfg.GlobalValuesGetter
 	m.logger = logger
 
+	parsed, err := semver.NewVersion(m.definition.Version)
+	if err != nil {
+		parsed = semver.MustParse("0.0.0")
+	}
+
+	m.version = parsed
+
 	m.hooks = hooks.NewStorage()
-	if err := m.addHooks(cfg.Hooks...); err != nil {
+	if err = m.addHooks(cfg.Hooks...); err != nil {
 		return nil, fmt.Errorf("add hooks: %v", err)
 	}
 
-	var err error
 	m.values, err = values.NewStorage(m.name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
-		return nil, fmt.Errorf("new values storage: %v", err)
+		return nil, fmt.Errorf("build values storage: %v", err)
 	}
 
 	return m, nil
@@ -193,8 +202,8 @@ func (m *Module) GetName() string {
 }
 
 // GetVersion return the package version
-func (m *Module) GetVersion() string {
-	return m.definition.Version
+func (m *Module) GetVersion() *semver.Version {
+	return m.version
 }
 
 // GetPath returns path to the package dir
@@ -270,9 +279,9 @@ func (m *Module) ApplySettings(settings addonutils.Values) error {
 	return m.values.ApplyConfigValues(settings)
 }
 
-// GetChecks return scheduler checks, their determine if an app should be enabled/disabled
-func (m *Module) GetChecks() schedule.Checks {
-	return m.definition.Requirements.Checks()
+// GetConstraints return scheduler checks, their determine if an app should be enabled/disabled
+func (m *Module) GetConstraints() schedule.Constraints {
+	return m.definition.Requirements.Constraints()
 }
 
 // GetHooks returns all hooks for this module in arbitrary order.

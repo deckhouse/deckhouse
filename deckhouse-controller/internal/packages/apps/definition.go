@@ -18,7 +18,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
 )
 
 // Definition represents application metadata.
@@ -49,22 +48,22 @@ type DisableOptions struct {
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }
 
-func (r *Requirements) Checks() schedule.Checks {
+func (r *Requirements) Constraints() schedule.Constraints {
 	if r == nil {
-		return schedule.Checks{}
+		return schedule.Constraints{}
 	}
 
-	deps := make(map[string]dependency.Dependency)
+	deps := make(map[string]schedule.Dependency)
 	for module, dep := range r.Modules {
-		deps[module] = dependency.Dependency{
+		deps[module] = schedule.Dependency{
 			Constraint: dep.Constraints,
 			Optional:   dep.Optional,
 		}
 	}
 
-	return schedule.Checks{
-		Kubernetes: r.Kubernetes,
-		Deckhouse:  r.Deckhouse,
-		Modules:    deps,
+	return schedule.Constraints{
+		Kubernetes:   r.Kubernetes,
+		Deckhouse:    r.Deckhouse,
+		Dependencies: deps,
 	}
 }

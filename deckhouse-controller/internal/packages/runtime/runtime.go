@@ -183,6 +183,13 @@ func (r *Runtime) registerDebugServer(sockerPath string) error {
 		w.Write(r.queueService.Dump()) //nolint:errcheck
 	})
 
+	r.debugServer.Register(http.MethodGet, "/packages/scheduler/dump", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+
+		w.Write(r.scheduler.Dump()) //nolint:errcheck
+	})
+
 	r.debugServer.Register(http.MethodGet, "/packages/render/{name}", func(w http.ResponseWriter, req *http.Request) {
 		packageName := chi.URLParam(req, "name")
 		if packageName == "" {
@@ -382,11 +389,10 @@ func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
 	}
 
 	r.scheduler = schedule.NewScheduler(
-		r.logger,
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
 		schedule.WithKubeVersionGetter(kubernetesVersionGetter),
-		schedule.WithOnEnable(r.enableApp),
+		schedule.WithOnSchedule(r.enableApp),
 		schedule.WithOnDisable(r.disableApp))
 }
 

@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
@@ -58,6 +59,8 @@ type Application struct {
 	instance  string // Application instance name
 	namespace string // Application instance namespace
 	path      string // path to the package dir on fs
+
+	version *semver.Version
 
 	definition Definition        // Application definition
 	digests    map[string]string // Package digests
@@ -123,15 +126,21 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.kubeEventsManager = cfg.KubeEventsManager
 	a.logger = logger
 
+	parsed, err := semver.NewVersion(a.definition.Version)
+	if err != nil {
+		parsed = semver.MustParse("0.0.0")
+	}
+
+	a.version = parsed
+
 	a.hooks = hooks.NewStorage()
-	if err := a.addHooks(cfg.Hooks...); err != nil {
+	if err = a.addHooks(cfg.Hooks...); err != nil {
 		return nil, fmt.Errorf("add hooks: %v", err)
 	}
 
-	var err error
 	a.values, err = values.NewStorage(a.definition.Name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
-		return nil, fmt.Errorf("new values storage: %v", err)
+		return nil, fmt.Errorf("build values storage: %v", err)
 	}
 
 	return a, nil
@@ -213,8 +222,8 @@ func (a *Application) GetNamespace() string {
 }
 
 // GetVersion return the package version
-func (a *Application) GetVersion() string {
-	return a.definition.Version
+func (a *Application) GetVersion() *semver.Version {
+	return a.version
 }
 
 // GetPath returns path to the package dir
@@ -288,9 +297,9 @@ func (a *Application) ApplySettings(settings addonutils.Values) error {
 	return a.values.ApplyConfigValues(settings)
 }
 
-// GetChecks return scheduler checks, their determine if an app should be enabled/disabled
-func (a *Application) GetChecks() schedule.Checks {
-	return a.definition.Requirements.Checks()
+// GetConstraints return scheduler checks, their determine if an app should be enabled/disabled
+func (a *Application) GetConstraints() schedule.Constraints {
+	return a.definition.Requirements.Constraints()
 }
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules

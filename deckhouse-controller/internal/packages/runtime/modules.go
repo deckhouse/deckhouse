@@ -70,7 +70,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	r.modules.Update(name, version, settingsChecksum, func(ctx context.Context, event int, pkg *modules.Module) {
 		var tasks []queue.Task
 		if event == lifecycle.EventVersionChanged {
-			if err := r.scheduler.Check(module.Definition.Requirements.Checks()); err != nil {
+			if err := r.scheduler.CheckByConstraints(module.Definition.Requirements.Constraints()); err != nil {
 				r.status.HandleError(name, err)
 				return
 			}
@@ -145,9 +145,9 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, settings
 	r.modules.SetPackage(module.GetName(), module)
 	r.mu.Unlock()
 
-	r.scheduler.Register(module)
+	r.scheduler.AddNode(module)
 
-	return module.GetVersion(), nil
+	return module.GetVersion().String(), nil
 }
 
 // RemoveModule removes a module and cancels all its running operations.
@@ -157,7 +157,7 @@ func (r *Runtime) RemoveModule(name string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.scheduler.Remove(name)
+	r.scheduler.RemoveNode(name)
 
 	r.modules.HandleEvent(lifecycle.EventRemove, name, func(ctx context.Context, _ int, pkg *modules.Module) {
 		cleanup := queue.WithOnDone(func() {

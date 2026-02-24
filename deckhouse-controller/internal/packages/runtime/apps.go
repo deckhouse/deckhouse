@@ -104,7 +104,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.apps.Update(name, version, settingsChecksum, func(ctx context.Context, event int, pkg *apps.Application) {
 		var tasks []queue.Task
 		if event == lifecycle.EventVersionChanged {
-			if err := r.scheduler.Check(app.Definition.Requirements.Checks()); err != nil {
+			if err := r.scheduler.CheckByConstraints(app.Definition.Requirements.Constraints()); err != nil {
 				r.status.HandleError(name, err)
 				return
 			}
@@ -181,9 +181,9 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, settings ad
 	r.apps.SetPackage(app.GetName(), app)
 	r.mu.Unlock()
 
-	r.scheduler.Register(app)
+	r.scheduler.AddNode(app)
 
-	return app.GetVersion(), nil
+	return app.GetVersion().String(), nil
 }
 
 // RemoveApp removes an application and cancels all its running operations.
@@ -200,7 +200,7 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	defer r.mu.Unlock()
 
 	name := apps.BuildName(namespace, instance)
-	r.scheduler.Remove(name)
+	r.scheduler.RemoveNode(name)
 
 	r.apps.HandleEvent(lifecycle.EventRemove, name, func(ctx context.Context, _ int, pkg *apps.Application) {
 		cleanup := queue.WithOnDone(func() {
