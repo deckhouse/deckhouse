@@ -1,0 +1,8 @@
+{{- $bashible := .Files.Glob "candi/bashible/*.tpl" -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider-bashible
+data:
+{{ $bashible.AsSecrets | indent 2 }}
