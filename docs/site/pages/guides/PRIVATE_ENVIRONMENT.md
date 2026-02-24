@@ -1214,7 +1214,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   --ask-become-pass
 ```
 
-> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it can be `id_rsa`, and for a key with ED25519 encryption, it can be `id_ed25519`.
+> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
 
 The installation process may take up to 30 minutes depending on the network speed.
 
