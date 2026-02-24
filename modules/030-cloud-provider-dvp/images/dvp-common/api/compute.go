@@ -66,29 +66,11 @@ func (c *ComputeService) CreateVM(ctx context.Context, machine *v1alpha2.Virtual
 		return nil, fmt.Errorf("create VirtualMachine resource: %w", err)
 	}
 
-	err := c.Wait(ctx, machine.Name, machine, func(obj client.Object) (bool, error) {
-		if obj == nil {
-			return false, nil
-		}
-
-		vm, ok := obj.(*v1alpha2.VirtualMachine)
-		if !ok {
-			return false, fmt.Errorf("expected a VirtualMachine but got a %T", obj)
-		}
-
-		expectedPhase := v1alpha2.MachineRunning
-		runPolicy := vm.Spec.RunPolicy
-		if runPolicy == v1alpha2.AlwaysOffPolicy || runPolicy == v1alpha2.ManualPolicy {
-			expectedPhase = v1alpha2.MachineStopped
-		}
-
-		return vm.Status.Phase == expectedPhase, nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("await VirtualMachine creation: %w", err)
-	}
-
 	return machine, nil
+}
+
+func (c *ComputeService) UpdateVM(ctx context.Context, vm *v1alpha2.VirtualMachine) error {
+	return c.client.Update(ctx, vm)
 }
 
 func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha2.VirtualMachine, error) {
@@ -338,6 +320,14 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 				attachmentDiskNameLabel:         diskName,
 				attachmentMachineNameLabel:      vmHostname,
 			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "virtualization.deckhouse.io/v1alpha2",
+					Kind:       "VirtualMachine",
+					Name:       vm.Name,
+					UID:        vm.UID,
+				},
+			},
 		},
 		Spec: v1alpha2.VirtualMachineBlockDeviceAttachmentSpec{
 			VirtualMachineName: vm.Name,
@@ -432,7 +422,7 @@ func (c *ComputeService) listVMBDAByHostname(ctx context.Context, vmHostname str
 	return vmbdas.Items, nil
 }
 
-func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, clusterUUID, vmHostname, name string, userData []byte) error {
+func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, clusterUUID, vmHostname, name string, userData []byte, vmName string, vmUID types.UID) error {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -441,6 +431,14 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 				"deckhouse.io/managed-by":       "deckhouse",
 				"dvp.deckhouse.io/cluster-uuid": clusterUUID,
 				"dvp.deckhouse.io/hostname":     vmHostname,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "virtualization.deckhouse.io/v1alpha2",
+					Kind:       "VirtualMachine",
+					Name:       vmName,
+					UID:        vmUID,
+				},
 			},
 		},
 		Type:       v1alpha2.SecretTypeCloudInit,

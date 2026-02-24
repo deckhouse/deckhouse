@@ -27,6 +27,7 @@ import (
 
 	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -50,6 +51,12 @@ func GetDrainConfirmation(commanderMode bool) func(string) bool {
 }
 
 func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, confirm func(string) bool, opts DrainOptions) error {
+	// todo it is deeper for pass from command root, use app package directly
+	if app.SkipDrainingNodes() {
+		log.InfoF("Skipping draining node %s because draining disabled by env\n", nodeName)
+		return nil
+	}
+
 	err := retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 5, 10*time.Second).
 		RunContext(ctx, func() error {
 			return drainNode(ctx, kubeCl, nodeName, opts)

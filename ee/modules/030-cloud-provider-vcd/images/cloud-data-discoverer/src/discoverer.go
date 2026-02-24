@@ -84,7 +84,7 @@ func parseEnvToConfig() (*Config, error) {
 	}
 
 	if !strings.HasSuffix(href, "api") {
-		href = href + "/api"
+		href += "/api"
 	}
 
 	c.Href = href
@@ -118,7 +118,7 @@ func (c *Config) client() (*govcd.VCDClient, error) {
 func NewDiscoverer(logger *log.Logger) *Discoverer {
 	config, err := parseEnvToConfig()
 	if err != nil {
-		logger.Fatalf("Cannot get opts from env: %v", err)
+		logger.Fatal("Cannot get opts from env", "error", err)
 	}
 
 	return &Discoverer{
@@ -217,13 +217,13 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		Enabled: lbInfo.Enabled,
 	}
 
-	discoveryDataJson, err := json.Marshal(discoveryData)
+	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
 	}
 
-	d.logger.Debugf("discovery data: %v", discoveryDataJson)
-	return discoveryDataJson, nil
+	d.logger.Debug("discovery data", "discovery_data_json", discoveryDataJSON)
+	return discoveryDataJSON, nil
 }
 
 func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, error) {

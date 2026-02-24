@@ -53,6 +53,8 @@ const (
 
 	tofuBin      = "opentofu"
 	terraformBin = "terraform"
+
+	cloudProvidersDir = "/deckhouse/candi/cloud-providers"
 )
 
 var (
@@ -62,13 +64,20 @@ var (
 	gcpPluginsDir = []string{
 		fmt.Sprintf("registry.terraform.io/hashicorp/google/%s/linux_amd64/terraform-provider-google", gcpPluginVersion),
 	}
+
+	cloudProviderModules = map[string]string{
+		"yandex": "/deckhouse/modules/030-cloud-provider-yandex/candi",
+		"gcp":    "/deckhouse/modules/030-cloud-provider-gcp/candi",
+	}
 )
 
-func getTestFSDIParams() *fsprovider.DIParams {
+func getTestFSDIParams(t *testing.T, logger log.Logger) *fsprovider.DIParams {
+	prepareLocalRun(t, logger)
+
 	return &fsprovider.DIParams{
 		InfraVersionsFile: "/deckhouse/candi/terraform_versions.yml",
 		BinariesDir:       "/dhctl-tests/bin",
-		CloudProviderDir:  "/deckhouse/candi/cloud-providers",
+		CloudProviderDir:  cloudProvidersDir,
 		PluginsDir:        "/dhctl-tests/plugins",
 	}
 }
@@ -93,7 +102,7 @@ func getTestCloudProviderGetterParams(t *testing.T, testName string) CloudProvid
 		TmpDir:           tmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           logger,
-		FSDIParams:       getTestFSDIParams(),
+		FSDIParams:       getTestFSDIParams(t, logger),
 		IsDebug:          false,
 		ProvidersCache:   newCloudProvidersMapCache(),
 	}
@@ -941,6 +950,55 @@ func TestTofuApplyWithCreatingWorkerFilesInRoot(t *testing.T) {
 	})
 }
 
+// prepareLocalRun
+// we need to prepare local env because cloud-providers dir migrated to modules
+func prepareLocalRun(t *testing.T, logger log.Logger) {
+	stat, err := os.Stat(cloudProvidersDir)
+	if err == nil {
+		require.True(t, stat.IsDir(), "should be directory %s", cloudProvidersDir)
+		return
+	}
+
+	if !os.IsNotExist(err) {
+		require.NoError(t, err, "Could not stat cloud-provider directory %s", cloudProvidersDir)
+	}
+
+	err = os.MkdirAll(cloudProvidersDir, 0755)
+	require.NoError(t, err, "Could not create cloud-provider directory %s", cloudProvidersDir)
+
+	t.Cleanup(func() {
+		if err := os.RemoveAll(cloudProvidersDir); err != nil {
+			logger.LogErrorF("Could not remove cloud-provider directory %s: %v\n", cloudProvidersDir, err)
+			return
+		}
+
+		logger.LogInfoF("cloud-provider directory %s in local run removed\n", cloudProvidersDir)
+	})
+
+	candiDirs := make([]string, 0, len(cloudProviderModules))
+	for moduleName, moduleDir := range cloudProviderModules {
+		dest := fmt.Sprintf("%s/%s", cloudProvidersDir, moduleName)
+		err := os.Symlink(moduleDir, dest)
+		require.NoError(t, err, "should create symlink %s to %s", moduleDir, dest)
+		candiDirs = append(candiDirs, moduleDir)
+	}
+
+	const schemasPathsEnv = "DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"
+	// local run case
+	oldAdditionalSchemasPaths := os.Getenv(schemasPathsEnv)
+	t.Cleanup(func() {
+		if err := os.Setenv(schemasPathsEnv, oldAdditionalSchemasPaths); err != nil {
+			logger.LogErrorF("Cannot restore %s env\n", schemasPathsEnv)
+			return
+		}
+		logger.LogInfoF("env %s restored to '%s'\n", schemasPathsEnv, oldAdditionalSchemasPaths)
+	})
+
+	schemasPathsEnvVal := strings.Join(candiDirs, ",")
+	err = os.Setenv(schemasPathsEnv, schemasPathsEnvVal)
+	require.NoError(t, err, "not set env %s", schemasPathsEnv)
+}
+
 type assertApplyWithCreatingWorkerFilesInRootParams struct {
 	params                  CloudProviderGetterParams
 	provider, pluginVersion string
@@ -1257,7 +1315,7 @@ func assertDirNotExists(t *testing.T, dirPath, msg string) {
 	t.Helper()
 
 	_, err := os.Stat(dirPath)
-	require.True(t, os.IsNotExist(err), dirPath, msg)
+	require.True(t, os.IsNotExist(err), "dirPath %s: %s", dirPath, msg)
 }
 
 func assertFSDIDirsAndFilesExists(t *testing.T, params CloudProviderGetterParams) {

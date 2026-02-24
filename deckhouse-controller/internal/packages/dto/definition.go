@@ -20,8 +20,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/modules"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 )
 
 const (

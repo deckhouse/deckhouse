@@ -26,118 +26,189 @@ import (
 var _ = Describe("Modules :: kube-proxy :: hooks :: discover_apiserver_endpoints ::", func() {
 	const (
 		stateSingleAddress = `
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
-  name: kubernetes
+  name: kubernetes-one-one
   namespace: default
-subsets:
+  labels:
+    kubernetes.io/service-name: kubernetes
+endpoints:
 - addresses:
-  - ip: 10.0.3.192
-  ports:
-  - name: https
-    port: 6443
-    protocol: TCP
+  - 10.0.1.192
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
 `
 
-		stateMultipleAddresses = `
-apiVersion: v1
-kind: Endpoints
+		stateMultipleAddressesWithOnePort = `
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
-  name: kubernetes
+  name: kubernetes-three-one
   namespace: default
-subsets:
+  labels:
+    kubernetes.io/service-name: kubernetes
+endpoints:
 - addresses:
-  - ip: 10.0.3.192
-  - ip: 10.0.3.193
-  - ip: 10.0.3.194
-  ports:
-  - name: https
-    port: 6443
-    protocol: TCP
+  - 10.0.1.192
+- addresses:
+  - 10.0.1.193
+- addresses:
+  - 10.0.1.194
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
 `
-
-		stateMultupleAddressesWithDifferentPorts = `
-apiVersion: v1
-kind: Endpoints
+		stateMultipleAddressesWithMultiplePorts = `
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
-  name: kubernetes
+  name: kubernetes-two-two
   namespace: default
-subsets:
+  labels:
+    kubernetes.io/service-name: kubernetes
+endpoints:
 - addresses:
-  - ip: 10.0.3.192
-  - ip: 10.0.3.193
-  ports:
-  - name: https
-    port: 6443
-    protocol: TCP
+  - 10.0.1.192
 - addresses:
-  - ip: 10.0.3.194
-  ports:
-  - name: https
-    port: 6444
-    protocol: TCP
+  - 10.0.1.193
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
+- name: https-whatever
+  port: 8443
+  protocol: TCP
+`
+		stateMultipleSlicesWithMultipleAddressesWithMultiplePorts = `
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: kubernetes-slice-one
+  namespace: default
+  labels:
+    kubernetes.io/service-name: kubernetes
+endpoints:
+- addresses:
+  - 10.0.1.192
+  - 10.0.1.192
+- addresses:
+  - 10.0.1.192
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: kubernetes-slice-two
+  namespace: default
+  labels:
+    kubernetes.io/service-name: kubernetes
+endpoints:
+- addresses:
+  - 10.0.1.193
+- addresses:
+  - 10.0.1.194
+ports:
+- name: https
+  port: 8443
+  protocol: TCP
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: kubernetes-slice-three
+  namespace: default
+  labels:
+    kubernetes.io/service-name: kubernetes
+endpoints:
+- addresses:
+  - 10.0.1.195
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
+- name: https-whatever
+  port: 8443
+  protocol: TCP
 `
 	)
 
 	f := HookExecutionConfigInit(`{"kubeProxy":{"internal": {}}}`, `{}`)
 
-	Context("Endpoint default/kubernetes has single address in .subsets[]", func() {
+	Context("Endpoint default/kubernetes has single address in .endpoints[]", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateSingleAddress))
 			f.RunHook()
 		})
 
-		It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.3.192:6443']", func() {
+		It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443"]`))
+			Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443"]`))
 		})
 
-		Context("Someone added additional addresses to .subsets[]", func() {
+		Context("Someone added additional addresses to .endpoints[]", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddresses))
+				f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddressesWithOnePort))
 				f.RunHook()
 			})
 
-			It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6443']", func() {
+			It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443','10.0.1.193:6443','10.0.1.194:6443']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`))
+				Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443","10.0.1.193:6443","10.0.1.194:6443"]`))
 			})
 
-			Context("Someone added address with different port", func() {
+			Context("Someone added another port", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(stateMultupleAddressesWithDifferentPorts))
+					f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddressesWithMultiplePorts))
 					f.RunHook()
 				})
 
-				It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444']", func() {
+				It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443','10.0.1.193:8443','10.0.1.193:6443','10.0.1.193:8443']", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444"]`))
+					Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443","10.0.1.192:8443","10.0.1.193:6443","10.0.1.193:8443"]`))
+				})
+				Context("Someone added another addresses with different ports", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(stateMultipleSlicesWithMultipleAddressesWithMultiplePorts))
+						f.RunHook()
+					})
+
+					It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443','10.0.1.193:6443','10.0.1.193:8443','10.0.1.195:6443','10.0.1.195:8443']", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443","10.0.1.193:8443","10.0.1.194:8443","10.0.1.195:6443","10.0.1.195:8443"]`))
+					})
 				})
 			})
 		})
 	})
 
-	Context("Endpoint default/kubernetes has multiple addresses in .subsets[]", func() {
+	Context("Endpoint default/kubernetes has multiple addresses in .endpoints[]", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddresses))
+			f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddressesWithOnePort))
 			f.RunHook()
 		})
 
-		It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6443']", func() {
+		It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443','10.0.1.193:6443','10.0.1.194:6443']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`))
+			Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443","10.0.1.193:6443","10.0.1.194:6443"]`))
 		})
 
-		Context("Someone set number of addresses in .subsets[] to one", func() {
+		Context("Someone set number of addresses in .endpoints[] to one", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateSingleAddress))
 				f.RunHook()
 			})
 
-			It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.3.192:6443']", func() {
+			It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443"]`))
+				Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443"]`))
 			})
 		})
 	})

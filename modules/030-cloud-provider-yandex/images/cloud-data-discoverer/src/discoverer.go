@@ -55,19 +55,19 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 	saKeyJSONBytes := []byte(saKeyJSON)
 	key, err := iamkey.ReadFromJSONBytes(saKeyJSONBytes)
 	if err != nil {
-		logger.Fatalf("Failed to parse YC_SA_KEY_JSON: %v", err)
+		logger.Fatal("Failed to parse YC_SA_KEY_JSON", "error", err)
 	}
 
 	creds, err := ycsdk.ServiceAccountKey(key)
 	if err != nil {
-		logger.Fatalf("Failed to create credentials for the given IAM Key: %v", err)
+		logger.Fatal("Failed to create credentials for the given IAM Key", "error", err)
 	}
 
 	sdk, err := ycsdk.Build(context.Background(), ycsdk.Config{
 		Credentials: creds,
 	})
 	if err != nil {
-		log.Fatalf("Failed to build YC SDK: %v", err)
+		log.Fatal("Failed to build YC SDK", "error", err)
 	}
 
 	return &Discoverer{

@@ -19,7 +19,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"regexp"
 	"sort"
 	"strconv"
 
@@ -327,6 +329,45 @@ func GetMasterNodeResult(ctx context.Context, r RunnerInterface) (*PipelineOutpu
 	}, nil
 }
 
+// GetMasterNodeResultNoStrict
+// set to empty if any output is not present
+// if state not exists or empty returns empty
+// if incorrect state returns error
+func GetMasterNodeResultNoStrict(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+	res := &PipelineOutputs{}
+	toReceive := map[string]*string{
+		"master_ip_address_for_ssh":   &res.MasterIPForSSH,
+		"node_internal_ip_address":    &res.NodeInternalIP,
+		"kubernetes_data_device_path": &res.KubeDataDevicePath,
+	}
+
+	for k, dest := range toReceive {
+		output, err := getStringOrIntOutput(ctx, r, k)
+		if err != nil {
+			if matchNoOutput(err.Error()) {
+				*dest = ""
+				continue
+			}
+			return nil, err
+		}
+
+		*dest = output
+	}
+
+	tfState, err := r.GetState()
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+
+		tfState = make([]byte, 0)
+	}
+
+	res.InfrastructureState = tfState
+
+	return res, nil
+}
+
 func OnlyState(_ context.Context, r RunnerInterface) (*PipelineOutputs, error) {
 	tfState, err := r.GetState()
 	if err != nil {
@@ -364,4 +405,21 @@ func getStringOrIntOutput(ctx context.Context, r RunnerInterface, name string) (
 	// skip error check here, because infra utility always return valid json
 	_ = json.Unmarshal(outputRaw, &output)
 	return string(output), nil
+}
+
+var noOutputRegexps = []*regexp.Regexp{
+	// tofu
+	regexp.MustCompile(`Output ".+" not found`),
+	// terraform
+	regexp.MustCompile(`The output variable requested could not be found in the state`),
+}
+
+func matchNoOutput(err string) bool {
+	for _, re := range noOutputRegexps {
+		if re.MatchString(err) {
+			return true
+		}
+	}
+
+	return false
 }

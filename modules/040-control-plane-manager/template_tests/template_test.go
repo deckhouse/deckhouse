@@ -97,6 +97,12 @@ type AuthenticationConfigurationV1beta1 struct {
 			Extra    []ExtraClaimMapping       `yaml:"extra"`
 		} `yaml:"claimMappings"`
 	} `yaml:"jwt"`
+	Anonymous struct {
+		Enabled    bool `yaml:"enabled"`
+		Conditions []struct {
+			Path string `yaml:"path"`
+		} `yaml:"conditions"`
+	} `yaml:"anonymous"`
 }
 
 var _ = Describe("Module :: control-plane-manager :: helm template :: arguments secret", func() {
@@ -736,7 +742,7 @@ resources:
 				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1beta1"))
 				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
 				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
-				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
+				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n"))
 			})
 			It("should include extra claim mappings for user-authn.deckhouse.io claims", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
@@ -799,13 +805,21 @@ resources:
 				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcEmpty)
 				f.HelmRender()
 			})
-			It("extra-file-authentication-config.yaml should not be created", func() {
+			It("extra-file-authentication-config.yaml must exist and contain anonymous settings", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
 				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(authConfig).Should(BeEmpty())
+				var config AuthenticationConfigurationV1beta1
+				err = yaml.Unmarshal(authConfig, &config)
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1beta1"))
+				Expect(config.JWT).Should(BeEmpty())
+				Expect(config.Anonymous.Enabled).To(Equal(true))
+				Expect(config.Anonymous.Conditions).To(ContainElements(
+					HaveField("Path", "/livez"),
+					HaveField("Path", "/healthz"),
+				))
 			})
 		})
 	})
@@ -838,25 +852,13 @@ internal:
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(string(kubeadmConfigData)).ToNot(BeEmpty())
 
-				if expectedApiVersion == "v1beta3" {
-					var config ClusterConfigurationV3
-					err = yaml.Unmarshal(kubeadmConfigData, &config)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta3"))
-					Expect(config.Kind).To(Equal("ClusterConfiguration"))
-				} else {
-					var config ClusterConfigurationV4
-					err = yaml.Unmarshal(kubeadmConfigData, &config)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
-					Expect(config.Kind).To(Equal("ClusterConfiguration"))
-				}
+				var config ClusterConfigurationV4
+				err = yaml.Unmarshal(kubeadmConfigData, &config)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
+				Expect(config.Kind).To(Equal("ClusterConfiguration"))
 			})
 		}
-
-		Context("Kubernetes 1.30", func() {
-			testKubeadmVersion("1.30", "v1beta3")
-		})
 
 		Context("Kubernetes 1.31", func() {
 			testKubeadmVersion("1.31", "v1beta4")
@@ -904,9 +906,9 @@ apiserver:
     webhookURL: "https://authz.example.com"
 `
 
-		const v1beta3TestValues = `
+		const webhookTestValuesV1Beta4 = `
 internal:
-  effectiveKubernetesVersion: "1.30"
+  effectiveKubernetesVersion: "1.31"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -987,13 +989,13 @@ apiserver:
 			})
 		})
 
-		Context("v1beta3 uses map syntax for webhook parameters", func() {
+		Context("v1beta4 uses array syntax for webhook parameters", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("controlPlaneManager", v1beta3TestValues)
+				f.ValuesSetFromYaml("controlPlaneManager", webhookTestValuesV1Beta4)
 				f.HelmRender()
 			})
 
-			It("should include webhook parameters using map syntax in v1beta3", func() {
+			It("should include webhook parameters in v1beta4", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
@@ -1015,20 +1017,21 @@ apiserver:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				configYaml := string(kubeadmConfigData)
-				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta3"))
+				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta4"))
 
-				// v1beta3 uses map syntax (key: value) instead of array syntax
-				// Kubernetes >= 1.30 uses structured authorization config.
-				Expect(configYaml).To(ContainSubstring("authorization-config: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
-				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
-				Expect(configYaml).ToNot(ContainSubstring("authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
-				Expect(configYaml).To(ContainSubstring("authentication-token-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml"))
-				Expect(configYaml).To(ContainSubstring("authentication-token-webhook-cache-ttl: \"5m\""))
-				Expect(configYaml).To(ContainSubstring("audit-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml"))
-
-				// v1beta3 should NOT have the array syntax with name/value pairs
+				// v1beta4 uses array syntax (name: value) instead of map syntax
+				Expect(configYaml).To(ContainSubstring("- name: authorization-config"))
+				Expect(configYaml).To(ContainSubstring("value: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
 				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-mode"))
 				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-webhook-config-file"))
+				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-config-file"))
+				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-cache-ttl"))
+				Expect(configYaml).To(ContainSubstring("value: \"5m\""))
+				Expect(configYaml).To(ContainSubstring("- name: audit-webhook-config-file"))
+
+				// v1beta4 should NOT have the map syntax
+				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
+				Expect(configYaml).ToNot(ContainSubstring("authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
 			})
 		})
 

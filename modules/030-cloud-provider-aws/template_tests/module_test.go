@@ -53,7 +53,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -65,7 +65,7 @@ const globalValues = `
       master:
         __ConstantChoices__: "3"
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.30.0
+    kubernetesVersion: 1.31.0
 `
 
 const moduleValues = `

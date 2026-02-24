@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -94,7 +95,7 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 
 		proxyUUID, err := uuid.NewUUID()
 		if err != nil {
-			return outCtx, nil, fmt.Errorf("Cannot create uuid for streaming director: %w", err)
+			return outCtx, nil, fmt.Errorf("creating uuid for streaming director: %w", err)
 		}
 
 		proxyUUIDStr := proxyUUID.String()
@@ -160,8 +161,15 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 
 		conn, err := createDHCTLServerConnRetried(ctx, log, address)
 		if err != nil {
+			sigErr := cmd.Process.Signal(os.Interrupt)
+			if sigErr != nil && !errors.Is(sigErr, os.ErrProcessDone) {
+				log.Error("sending interrupt to dhctl instance", logger.Err(sigErr))
+			}
+
 			return outCtx, nil, fmt.Errorf("creating dhctl server connection: %w", err)
 		}
+
+		log.Debug("dhctl server connection created")
 
 		return outCtx, conn, err
 	}
@@ -232,8 +240,6 @@ func createDHCTLServerConnRetried(ctx context.Context, l *slog.Logger, address s
 
 		return nil
 	})
-
-	l.Debug("dhctl server connection created")
 
 	return dhctlServerConn, err
 }

@@ -20,7 +20,7 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/debug"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 )
 
 var packagesDebugSocket = "/tmp/deckhouse-debug.socket"
