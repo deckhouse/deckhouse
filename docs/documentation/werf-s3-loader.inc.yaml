@@ -17,4 +17,13 @@ import:
   add: /app/_site
   to: /documentation
   before: setup
+# Architecture diagrams
+- image: {{ .ModuleName }}/{{ .ImageName }}/diagrams-static
+  add: /app/diagrams
+  to: /documentation/en/architecture/diagrams
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}/diagrams-static
+  add: /app/diagrams
+  to: /documentation/ru/architecture/diagrams
+  before: setup
 ---

@@ -1,4 +1,21 @@
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}/diagrams-static
+from: structurizr/cli:latest
+final: false
+shell:
+  setup:
+  - |
+    /usr/local/structurizr-cli/structurizr.sh export \
+      -workspace=/src/diagrams/C4/workspace.json \
+      -format=static \
+      -output=/app/diagrams
+git:
+- add: /{{ .ModulePath }}docs/documentation/diagrams
+  to: /src/diagrams
+  stageDependencies:
+    setup:
+    - '**/*'
+---
 image: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
 final: false
@@ -112,6 +129,7 @@ git:
     - documentation/config
     - documentation/search-embedded-modules-*
     - documentation/pages/drafts
+    - documentation/diagrams
 {{ if ne .ModuleName "website-docs" }}
     - site/pages/*.html
     - site/_includes/footer.html
