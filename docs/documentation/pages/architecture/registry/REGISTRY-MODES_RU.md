@@ -17,7 +17,7 @@ Deckhouse Kubernetes Platform поддерживает несколько реж
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
 ![direct](../images/registry-module/direct-ru.png)
 
-Подробнее о режиме `Direct` — в разделе [«Использование внутреннего хранилища образов контейнеров»](../admin/configuration/registry/internal.html).
+Подробнее о режиме `Direct` — в разделе [«Работа с хранилищами образов контейнеров и редакциями»](../admin/configuration/registry/internal.html).
 
 ## Архитектура режима Proxy
 
@@ -36,7 +36,7 @@ Deckhouse Kubernetes Platform поддерживает несколько реж
 <!--- Source: mermaid code from docs/internal/PROXY.md --->
 ![proxy](../images/registry-module/proxy-ru.png)
 
-Подробнее о режиме `Proxy` — в разделе [«Использование внутреннего хранилища образов контейнеров»](../admin/configuration/registry/internal.html).
+Подробнее о режиме `Proxy` — в разделе [«Работа с хранилищами образов контейнеров и редакциями»](../admin/configuration/registry/internal.html).
 
 ## Архитектура режима Local
 
@@ -52,9 +52,9 @@ Deckhouse Kubernetes Platform поддерживает несколько реж
 
 В случае таких компонентов, как `operator-trivy`, `image-availability-exporter`, `deckhouse-controller` и ряда других, обращающихся к хранилищу образов напрямую, запросы будут идти в локальное хранилище.
 
-Локальное хранилище образов наполняется с помощью инструмента [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) (команды `d8 mirror push/pull`).
+Локальное хранилище образов наполняется с помощью инструмента [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) (команды `d8 mirror push/pull`). Подробнее — в разделе [«Модуль registry: примеры использования»](/modules/registry/examples.html).
 
 <!--- Source: mermaid code from docs/internal/LOCAL.md --->
 ![local](../images/registry-module/local-ru.png)
 
-Подробнее о режиме `Local` — в разделе [«Использование внутреннего хранилища образов контейнеров»](../admin/configuration/registry/internal.html).
+Подробнее о режиме `Local` — в разделе [«Работа с хранилищами образов контейнеров и редакциями»](../admin/configuration/registry/internal.html).

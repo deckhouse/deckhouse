@@ -1,16 +1,14 @@
 ---
-title: Managing the internal container image registry
+title: Working with container registry and revisions in a cluster fully managed by DKP
 permalink: en/admin/configuration/registry/internal.html
-description: "Configure internal container image registry in Deckhouse Kubernetes Platform. Image caching, storage optimization, and high availability registry management."
+description: "Configure container image registry in Deckhouse Kubernetes Platform. Image caching, storage optimization, and high availability registry management."
 ---
 
-The ability to use internal registry is implemented by the [`registry`](/modules/registry/) module.
+The ability to use registry is implemented by the [`registry`](/modules/registry/) module.
 
-The internal registry allows for optimizing the downloading and storage of images, as well as helping to ensure availability and fault tolerance for Deckhouse Kubernetes Platform.
+## Modes of operation with the registry
 
-## Modes of operation with the internal registry
-
-DKP implements the following modes of operation with internal registry:
+DKP implements the following modes of operation with registry:
 
 - `Direct`: Provides direct access to an external registry via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address prevents DKP images from being re-downloaded and components from being restarted when registry parameters are changed. Switching between modes and registries is done through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section ["Direct mode Architecture"](../../../architecture/registry-modes.html#direct-mode-architecture).
 
@@ -28,9 +26,9 @@ DKP implements the following modes of operation with internal registry:
 - The `Direct` mode requires using the `Containerd` or `Containerd V2` CRI on all cluster nodes. For CRI setup, refer to the [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
 {% endalert %}
 
-## Restrictions on working with the internal registry
+## Restrictions on working with the registry
 
-Working with internal registry has a number of limitations and peculiarities related to installation, operating conditions, and mode switching.
+Working with registry has a number of limitations and peculiarities related to installation, operating conditions, and mode switching.
 
 Registry configuration via the `deckhouse` moduleConfig during DKP cluster bootstrap is not supported.
 
@@ -43,7 +41,7 @@ The following restrictions apply when installing a cluster:
 
 ### Operating conditions restrictions
 
-To use the internal registry in DKP, the following conditions must be met:
+To use the registry in DKP, the following conditions must be met:
 
 - If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
 - The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
@@ -72,7 +70,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
 The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DKP components.
 {% endalert %}
 
-1. Before switching, perform the [migration to use the `registry` module](#migration-to-the-registry-module).
+1. Before switching, perform the [migration to registry management format using the `registry` module](#migration-to-registry-management-format-using-the-registry-module).
 
 1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
 
@@ -174,7 +172,7 @@ To switch an already running cluster to `Proxy` mode, follow these steps:
 - Switching from `Local` mode to `Proxy` mode is not available. To switch from `Local` mode, you must switch the registry to another available mode (for example: `Direct`).
 {% endalert %}
 
-1. Before switching, perform the [migration to use the `registry` module](#migration-to-the-registry-module).
+1. Before switching, perform the [migration to registry management format using the `registry` module](#migration-to-registry-management-format-using-the-registry-module).
 
 1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
 
@@ -276,7 +274,7 @@ To switch an already running cluster to `Local` mode, follow these steps:
 - Switching from `Proxy` mode to `Local` mode is not available. To switch from `Proxy` mode, you must switch the registry to another available mode (for example: `Direct`).
 {% endalert %}
 
-1. Before switching, perform the [migration to use the `registry` module](#migration-to-the-registry-module).
+1. Before switching, perform the [migration to registry management format using the `registry` module](#migration-to-registry-management-format-using-the-registry-module).
 
 1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
 
@@ -463,7 +461,7 @@ To switch an already running cluster to `Unmanaged` mode, follow these steps:
 Changing the registry in `Unmanaged` mode will result in a full restart of all DKP components.
 {% endalert %}
 
-1. Before switching, perform the [migration to use the `registry` module](#migration-to-the-registry-module).
+1. Before switching, perform the [migration to registry management format using the `registry` module](#migration-to-registry-management-format-using-the-registry-module).
 
 1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
 
@@ -531,13 +529,13 @@ Changing the registry in `Unmanaged` mode will result in a full restart of all D
    target_mode: Unmanaged
    ```
 
-1. If you need to switch back to the old registry management method, refer to the [instruction](#migration-back-from-the-registry-module).
+1. If you need to switch back to the old registry management method, refer to the [instruction](#migration-to-an-deprecated-registry-management-format-without-the-registry-module).
 
 {% alert level="warning" %}
 This is a deprecated format for registry management.
 {% endalert %}
 
-## Migration to the registry module
+## Migration to registry management format using the registry module
 
 During the migration, Containerd v1 will switch to the new registry configuration format.
 Containerd v2 uses the new format by default. For more details, see the section [with a description of configuration methods](/modules/node-manager/latest/faq.html#how-to-add-configuration-for-an-additional-registry).
@@ -772,9 +770,10 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
    The list should not contain the NodeGroupConfiguration to be deleted (for this example, `containerd-additional-config-auth-delete.sh`).
 
-## Migration back from the registry module
+## Migration to an deprecated registry management format (without the registry module)
 
 {% alert level="danger" %}
+
 - This is a deprecated registry management format.
 - During the switch, containerd v1 will be restarted.
 - During the switch, containerd v1 will be migrated to the legacy registry configuration scheme.
