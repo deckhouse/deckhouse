@@ -161,7 +161,9 @@ During synchronization, usernames, email addresses, and account lock status are 
 
 - `sync_name` — if `true`, the username will be updated based on LDAP data.
 
-#### Troubleshooting synchronization issues
+### Troubleshooting synchronization issues
+
+#### Incorrect synchronization process
 
 If a previous sync job was not completed successfully, Redis may retain a lock preventing the next job from starting (the default `concurrency` is set to 1).
 
@@ -174,3 +176,23 @@ To remove the lock:
    keys *ldap*
    del "sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}"
    ```
+   
+### Manual synchronization run
+
+To synchronize groups immediately after they are changed on the LDAP side, follow these steps:
+1. Go to the LDAP synchronization worker page `/admin/sidekiq/cron/namespaces/default/jobs/ldap_sync_worker`.
+2. In the upper-right corner, click the "Enqueue Now" button and confirm in the dialog.
+   ![Ldap sync worker UI](/images/code/ldap_sync_worker_en.png)
+
+To see how the triggered synchronization finished, open the metrics page for the LDAP synchronization task:
+`/admin/sidekiq/metrics?substr=SyncWorker&period=8h`. The chart shows statistics for successful calls, and the table below shows counts of successful and failed LDAP synchronization runs.
+![Ldap sync worker metrics](/images/code/ldap_sync_metrics.png)
+
+To view the full synchronization logs:
+1. On the worker page `/admin/sidekiq/cron/namespaces/default/jobs/ldap_sync_worker`, find the run events table named "History". The first row corresponds to the most recent run. Select the value in the JID (Job ID) column of the first row — you will need this identifier to search the logs.
+   ![Ldap sync history table](/images/code/ldap_sync_history_en.png)
+2. Log in to the virtual machine, then determine the name of the pod to collect logs from using `kubectl -n d8-code -l app.kubernetes.io/component=sidekiq get pod -o NAME`.
+3. Using the synchronization process identifier (JID) and the pod name (POD_NAME), run the log collection command: `kubectl -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`.
+
+> After some time, old logs are removed by rotation, and collecting them becomes impossible.
+> If needed, you can rerun the synchronization process and collect the latest logs.
