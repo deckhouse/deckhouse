@@ -350,8 +350,7 @@ func (s ProxySettings) Merge(other *ProxySettings) ProxySettings {
 		return out
 	}
 
-	out.RegistrySettings = s.
-		RegistrySettings.
+	out.RegistrySettings = out.RegistrySettings.
 		Merge(&other.RegistrySettings)
 
 	if other.TTL != "" {
