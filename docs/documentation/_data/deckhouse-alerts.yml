@@ -1018,17 +1018,17 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        The module update policy for {{ $labels.module_release }} is missing.
+        The module update policy for {{ $labels.moduleRelease }} is missing.
 
         To resolve this issue, remove the label from the module release using the following command:
 
         ```bash
-        d8 k label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-
+        d8 k label mr {{ $labels.moduleRelease }} modules.deckhouse.io/update-policy-
         ```
 
         A new suitable policy will be detected automatically.
       summary: |
-        Module update policy not found for {{ $labels.module_release }}.
+        Module update policy not found for {{ $labels.moduleRelease }}.
       severity: "5"
       markupFormat: markdown
     - name: D8DeckhouseModuleValidationError
@@ -3820,7 +3820,7 @@ alerts:
       description: |
         The '{{ $labels.module }}' Module update has failed.
 
-        Current version: {{ $labels.actual_version }}.
+        Current version: {{ $labels.actualVersion }}.
         Desired version: {{ $labels.version }}.
 
         Attempt to download interim releases failed.
@@ -3828,7 +3828,7 @@ alerts:
         Possible reasons:
          - The necessary versions of the Module image is not available in the registry.
 
-        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' Module image between {{ $labels.actualVersion }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
       summary: |
         Module update has failed. Updating sequence is broken.
       severity: "4"

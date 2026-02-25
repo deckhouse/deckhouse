@@ -41,13 +41,13 @@ const (
 	// ============================================================================
 
 	// LabelModuleRelease is the label key for the module release name.
-	LabelModuleRelease = "module_release"
+	LabelModuleRelease = "moduleRelease"
 
 	// LabelRegistry is the label key for the registry URL.
 	LabelRegistry = "registry"
 
 	// LabelActualVersion is the label key for the currently deployed version.
-	LabelActualVersion = "actual_version"
+	LabelActualVersion = "actualVersion"
 
 	// ============================================================================
 	// Release Controller Label Keys
