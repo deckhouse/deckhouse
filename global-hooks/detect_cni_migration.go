@@ -18,7 +18,7 @@ package hooks
 
 import (
 	"context"
-	"time"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 type CNIMigrationInfo struct {
 	Name        string
-	Created     time.Time
+	Created     int64
 	IsSucceeded bool
 }
 
@@ -63,7 +63,7 @@ func applyCNIMigrationFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 	return CNIMigrationInfo{
 		Name:        obj.GetName(),
-		Created:     obj.GetCreationTimestamp().Time,
+		Created:     obj.GetCreationTimestamp().UnixNano(),
 		IsSucceeded: isSucceeded,
 	}, nil
 }
@@ -72,6 +72,7 @@ func detectCNIMigration(_ context.Context, input *go_hook.HookInput) error {
 	snapshots := input.Snapshots.Get("cni_migrations")
 
 	if len(snapshots) == 0 {
+		input.Logger.Info("No CNIMigration resources found. Clearing values.")
 		input.Values.Remove("global.internal.cniMigrationEnabled")
 		input.Values.Remove("global.internal.cniMigrationName")
 		input.Values.Remove("global.internal.cniMigrationWebhooksDisable")
@@ -85,10 +86,15 @@ func detectCNIMigration(_ context.Context, input *go_hook.HookInput) error {
 	for _, s := range snapshots {
 		var info CNIMigrationInfo
 		if err := s.UnmarshalTo(&info); err != nil {
+			input.Logger.Error(fmt.Sprintf("Failed to unmarshal CNIMigrationInfo: %v", err))
 			continue
 		}
 
-		if !found || info.Created.Before(activeMigration.Created) {
+		isOlder := info.Created < activeMigration.Created
+		isSameTimeButSmallerName := info.Created == activeMigration.Created && info.Name < activeMigration.Name
+
+		// Choose the oldest migration. If creation time is equal, choose by name to be deterministic.
+		if !found || isOlder || isSameTimeButSmallerName {
 			activeMigration = info
 			found = true
 		}
@@ -97,6 +103,12 @@ func detectCNIMigration(_ context.Context, input *go_hook.HookInput) error {
 	if !found {
 		return nil
 	}
+
+	input.Logger.Info(fmt.Sprintf(
+		"Active CNI migration detected: %s (Succeeded: %v)",
+		activeMigration.Name,
+		activeMigration.IsSucceeded,
+	))
 
 	input.Values.Set("global.internal.cniMigrationName", activeMigration.Name)
 	input.Values.Set("global.internal.cniMigrationEnabled", true)

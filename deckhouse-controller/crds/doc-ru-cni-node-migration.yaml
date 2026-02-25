@@ -15,7 +15,7 @@ spec:
               properties:
                 phase:
                   description: |
-                    Текущая фаза миграции на узле (например, Preparing, Cleaning).
+                    Текущая фаза миграции на узле.
                 conditions:
                   description: |
-                    Список условий, отражающих шаги, выполненные на узле (PodsAnnotated, CleanupDone, PodsRestarted).
+                    Список условий, отражающих шаги, выполненные на узле.

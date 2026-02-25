@@ -82,97 +82,116 @@ func run() error {
 	}
 
 	ctx := context.Background()
-
-	// 1. Check if CNIMigration exists. If not, we are not migrating.
-	list, err := dynamicClient.Resource(cniMigrationGVR).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			slog.Info("CNIMigration resource not found (CRD might be missing). Assuming no migration.")
-			return nil
-		}
-		return fmt.Errorf("failed to list CNIMigrations: %w", err)
-	}
-
-	if len(list.Items) == 0 {
-		slog.Info("No CNIMigration resources found. Starting normally.")
-		return nil
-	}
-
-	cniMigration := list.Items[0]
 	localCNIName := os.Getenv("CNI_NAME")
-
-	// Check if we are the CurrentCNI (allow old CNI to run until it is killed)
-	status, found, _ := unstructured.NestedMap(cniMigration.Object, "status")
-	if found {
-		currentCNI, found, _ := unstructured.NestedString(status, "currentCNI")
-		if found && localCNIName != "" {
-			// Check if localCNIName is in the allowed list (comma separated)
-			for c := range strings.SplitSeq(localCNIName, ",") {
-				if strings.TrimSpace(c) == currentCNI {
-					slog.Info("Current CNI matches my CNI. Starting agent.", "current_cni", currentCNI)
-					return nil
-				}
-			}
-		}
-	}
-
-	slog.Info("Migration in progress. Waiting for node cleanup...", "node", nodeName)
 
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
+	// First attempt immediately
+	done, err := checkStatus(ctx, dynamicClient, nodeName, localCNIName)
+	if err != nil {
+		slog.Error("Check failed (will retry)", "error", err)
+	} else if done {
+		return nil
+	}
+
+	// Retry loop
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			// Check global migration again to fail-fast if it is deleted
-			_, err := dynamicClient.Resource(cniMigrationGVR).Get(ctx, cniMigration.GetName(), metav1.GetOptions{})
+			done, err := checkStatus(ctx, dynamicClient, nodeName, localCNIName)
 			if err != nil {
-				if errors.IsNotFound(err) {
-					slog.Info("CNIMigration deleted. Starting.")
-					return nil
-				}
-				slog.Error("Error checking CNIMigration", "error", err)
-			}
-
-			// Check CNINodeMigration
-			obj, err := dynamicClient.Resource(cniNodeMigrationGVR).Get(ctx, nodeName, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					slog.Info("CNINodeMigration not found yet. Waiting...")
-					continue
-				}
-				slog.Error("Error getting CNINodeMigration. Retrying...", "error", err)
+				slog.Error("Check failed (will retry)", "error", err)
 				continue
 			}
-
-			status, found, err := unstructured.NestedMap(obj.Object, "status")
-			if err != nil || !found {
-				continue
+			if done {
+				return nil
 			}
-
-			conditions, found, err := unstructured.NestedSlice(status, "conditions")
-			if err != nil || !found {
-				continue
-			}
-
-			for _, c := range conditions {
-				cond, ok := c.(map[string]any)
-				if !ok {
-					continue
-				}
-				typeStr, _, _ := unstructured.NestedString(cond, "type")
-				statusStr, _, _ := unstructured.NestedString(cond, "status")
-
-				// Check for CleanupDone == True
-				if typeStr == "CleanupDone" && statusStr == "True" {
-					slog.Info("Node cleanup complete. Starting agent.")
-					return nil
-				}
-			}
-
-			slog.Info("Waiting for CleanupDone condition on CNINodeMigration...")
 		}
 	}
+}
+
+// checkStatus checks if the migration is complete for the node or if the agent can start safely.
+func checkStatus(ctx context.Context, client dynamic.Interface, nodeName, localCNIName string) (bool, error) {
+	// Check if migration is active.
+	list, err := client.Resource(cniMigrationGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			slog.Info("CNIMigration resource not found (CRD might be missing). Starting normally.")
+			return true, nil
+		}
+		return false, fmt.Errorf("failed to list CNIMigrations: %w", err)
+	}
+
+	if len(list.Items) == 0 {
+		slog.Info("No CNIMigration resources found. Starting normally.")
+		return true, nil
+	}
+
+	activeMigration := list.Items[0]
+
+	for _, item := range list.Items[1:] {
+		itemCreated := item.GetCreationTimestamp().UnixNano()
+		activeCreated := activeMigration.GetCreationTimestamp().UnixNano()
+
+		isOlder := itemCreated < activeCreated
+		isSameTimeButSmallerName := itemCreated == activeCreated && item.GetName() < activeMigration.GetName()
+
+		if isOlder || isSameTimeButSmallerName {
+			activeMigration = item
+		}
+	}
+
+	// Allow the old CNI to run until it is explicitly disabled.
+	status, found, _ := unstructured.NestedMap(activeMigration.Object, "status")
+	if found {
+		currentCNI, ok, _ := unstructured.NestedString(status, "currentCNI")
+		if ok && localCNIName != "" {
+			for c := range strings.SplitSeq(localCNIName, ",") {
+				if strings.TrimSpace(c) == currentCNI {
+					slog.Info("Current CNI matches my CNI. Starting agent.", "current_cni", currentCNI)
+					return true, nil
+				}
+			}
+		}
+	}
+
+	// Wait for node cleanup confirmation.
+	obj, err := client.Resource(cniNodeMigrationGVR).Get(ctx, nodeName, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			slog.Info("CNINodeMigration not found yet. Waiting", "node", nodeName)
+			return false, nil
+		}
+		return false, fmt.Errorf("error getting CNINodeMigration: %w", err)
+	}
+
+	status, found, err = unstructured.NestedMap(obj.Object, "status")
+	if err != nil || !found {
+		return false, nil // Status not populated yet.
+	}
+
+	conditions, found, err := unstructured.NestedSlice(status, "conditions")
+	if err != nil || !found {
+		return false, nil // Conditions not populated yet.
+	}
+
+	for _, c := range conditions {
+		cond, ok := c.(map[string]any)
+		if !ok {
+			continue
+		}
+		typeStr, _, _ := unstructured.NestedString(cond, "type")
+		statusStr, _, _ := unstructured.NestedString(cond, "status")
+
+		if typeStr == "CleanupDone" && statusStr == "True" {
+			slog.Info("Node cleanup complete. Starting agent.")
+			return true, nil
+		}
+	}
+
+	slog.Info("Waiting for CleanupDone condition on CNINodeMigration")
+	return false, nil
 }

@@ -20,23 +20,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CNINodeMigrationSpec defines the desired state of CNINodeMigration.
-type CNINodeMigrationSpec struct {
-	// The spec can be empty, as all configuration is taken from the parent CNIMigration resource.
-}
-
 const (
 	NodeConditionPodsAnnotated = "PodsAnnotated"
 	NodeConditionCleanupDone   = "CleanupDone"
 	NodeConditionPodsRestarted = "PodsRestarted"
-)
 
-const (
 	NodePhasePreparing  = "PodsAnnotating"
 	NodePhaseCleaning   = "NodeCleaning"
 	NodePhaseRestarting = "RestartingPods"
 	NodePhaseCompleted  = "Completed"
 )
+
+// CNINodeMigrationSpec defines the desired state of CNINodeMigration.
+type CNINodeMigrationSpec struct {
+	// The spec can be empty, as all configuration is taken from the parent CNIMigration resource.
+}
 
 // CNINodeMigrationStatus defines the observed state of CNINodeMigration.
 type CNINodeMigrationStatus struct {

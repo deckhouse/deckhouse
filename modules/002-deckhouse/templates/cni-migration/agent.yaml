@@ -29,22 +29,18 @@ spec:
         args:
         - "--mode=agent"
         - "--migration-name={{ .Values.global.internal.cniMigrationName }}"
-        - "--metrics-bind-address=:42284"
-        - "--health-probe-bind-address=:42281"
-        ports:
-        - name: healthz
-          containerPort: 42281
-          protocol: TCP
         livenessProbe:
-          httpGet:
-            path: /healthz
-            port: healthz
+          exec:
+            command:
+            - /cni-migration-controller
+            - --mode=healthcheck
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
-          httpGet:
-            path: /readyz
-            port: healthz
+          exec:
+            command:
+            - /cni-migration-controller
+            - --mode=healthcheck
           initialDelaySeconds: 5
           periodSeconds: 10
         env:
@@ -61,6 +57,8 @@ spec:
           runAsUser: 0
           runAsGroup: 0
         volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         - name: host-proc
           mountPath: /host/proc
           readOnly: true
@@ -81,7 +79,11 @@ spec:
           readOnly: true
         - name: host-var-lib-cni
           mountPath: /var/lib/cni
+        - name: host-var-lib-cilium
+          mountPath: /var/lib/cilium
       volumes:
+      - name: tmp
+        emptyDir: {}
       - name: host-proc
         hostPath:
           path: /proc
@@ -108,5 +110,9 @@ spec:
       - name: host-var-lib-cni
         hostPath:
           path: /var/lib/cni
+          type: DirectoryOrCreate
+      - name: host-var-lib-cilium
+        hostPath:
+          path: /var/lib/cilium
           type: DirectoryOrCreate
 {{- end }}

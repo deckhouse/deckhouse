@@ -1,4 +1,10 @@
 {{- if .Values.global.internal.cniMigrationEnabled }}
+{{- $webhooks := list
+  "d8-admission-policy-engine-config"
+  "d8-deckhouse-validating-webhook-handler-hooks"
+  "deckhouse-webhook"
+  "cert-manager-webhook"
+  | join "," }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -31,28 +37,30 @@ spec:
         args:
         - "--mode=manager"
         - "--migration-name={{ .Values.global.internal.cniMigrationName }}"
-        - "--wait-for-webhooks=d8-admission-policy-engine-config,d8-deckhouse-validating-webhook-handler-hooks,deckhouse-webhook,cert-manager-webhook"
-        - "--metrics-bind-address=:42285"
-        - "--health-probe-bind-address=:42282"
+        - "--wait-for-webhooks={{ $webhooks }}"
         env:
         - name: KUBERNETES_SERVICE_HOST
           value: "127.0.0.1"
         - name: KUBERNETES_SERVICE_PORT
           value: "6445"
-        ports:
-        - name: healthz
-          containerPort: 42282
-          protocol: TCP
         livenessProbe:
-          httpGet:
-            path: /healthz
-            port: healthz
+          exec:
+            command:
+            - /cni-migration-controller
+            - --mode=healthcheck
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
-          httpGet:
-            path: /readyz
-            port: healthz
+          exec:
+            command:
+            - /cni-migration-controller
+            - --mode=healthcheck
           initialDelaySeconds: 5
           periodSeconds: 10
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir: {}
 {{- end }}

@@ -20,12 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CNIMigrationSpec defines the desired state of CNIMigration.
-type CNIMigrationSpec struct {
-	// TargetCNI is the CNI to switch to (e.g., cilium, flannel).
-	TargetCNI string `json:"targetCNI"`
-}
-
 const (
 	CNINameCilium       = "cilium"
 	CNINameFlannel      = "flannel"
@@ -50,6 +44,12 @@ const (
 	ConditionPodsRestarted             = "PodsRestarted"
 	ConditionSucceeded                 = "Succeeded"
 )
+
+// CNIMigrationSpec defines the desired state of CNIMigration.
+type CNIMigrationSpec struct {
+	// TargetCNI is the CNI to switch to (e.g., cilium, flannel).
+	TargetCNI string `json:"targetCNI"`
+}
 
 // CNIMigrationStatus defines the observed state of CNIMigration.
 type CNIMigrationStatus struct {
