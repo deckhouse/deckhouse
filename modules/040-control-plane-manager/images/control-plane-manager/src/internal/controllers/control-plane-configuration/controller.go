@@ -288,23 +288,23 @@ func (r *Reconciler) applyControlPlaneNode(ctx context.Context, desired *control
 
 // buildDesiredControlPlaneNode builds desired ControlPlaneNode spec from d8-control-plane-manager-config and d8-pki secrets.
 func buildDesiredControlPlaneNode(nodeName string, cmpSecret *corev1.Secret, pkiSecret *corev1.Secret) (*controlplanev1alpha1.ControlPlaneNode, error) {
-	pkiChecksum, err := checksum.CalculatePKIChecksum(pkiSecret)
+	pkiChecksum, err := checksum.PKIChecksum(pkiSecret.Data)
 	if err != nil {
-		return &controlplanev1alpha1.ControlPlaneNode{}, err
+		return nil, err
 	}
 
 	components := []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
 	checksums := make(map[string]string)
 	for _, component := range components {
-		componentChecksum, err := checksum.CalculateComponentChecksum(cmpSecret.Data, component)
+		componentChecksum, err := checksum.ComponentChecksum(cmpSecret.Data, component)
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate checksum for %s: %w", component, err)
 		}
 		checksums[component] = componentChecksum
 	}
-	hotReloadChecksum, err := checksum.BuildHotReloadChecksum(cmpSecret.Data)
+	hotReloadChecksum, err := checksum.HotReloadChecksum(cmpSecret.Data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build hot reload manifest: %w", err)
+		return nil, fmt.Errorf("failed to calculate hot reload checksum: %w", err)
 	}
 	// temporary for testing
 	err = operations.SyncSecretToTmp(cmpSecret, "/tmp/control-plane-manager-config")

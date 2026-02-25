@@ -23,40 +23,40 @@ import (
 // ComponentChecksum holds checksum for a single control plane component
 type ComponentChecksum struct {
 	// +kubebuilder:validation:Required
-	Checksum string `json:"checksum,omitempty"`
+	Checksum string `json:"checksum"`
 }
 
 // ComponentChecksums holds checksums for control plane components
 type ComponentChecksums struct {
 	// +kubebuilder:validation:Required
-	Etcd *ComponentChecksum `json:"etcd,omitempty"`
+	Etcd *ComponentChecksum `json:"etcd"`
 
 	// +kubebuilder:validation:Required
-	KubeAPIServer *ComponentChecksum `json:"kube-apiserver,omitempty"`
+	KubeAPIServer *ComponentChecksum `json:"kube-apiserver"`
 
 	// +kubebuilder:validation:Required
-	KubeControllerManager *ComponentChecksum `json:"kube-controller-manager,omitempty"`
+	KubeControllerManager *ComponentChecksum `json:"kube-controller-manager"`
 
 	// +kubebuilder:validation:Required
-	KubeScheduler *ComponentChecksum `json:"kube-scheduler,omitempty"`
+	KubeScheduler *ComponentChecksum `json:"kube-scheduler"`
 }
 
 type ControlPlaneNodeSpec struct {
 	// ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion of pki secret]"
 	// +kubebuilder:validation:Required
-	ConfigVersion string `json:"configVersion,omitempty"`
+	ConfigVersion string `json:"configVersion"`
 
 	// Checksum of PKI secret
 	// +kubebuilder:validation:Required
-	PKIChecksum string `json:"pkiChecksum,omitempty"`
+	PKIChecksum string `json:"pkiChecksum"`
 
 	// Checksums per component
 	// +kubebuilder:validation:Required
-	Components ComponentChecksums `json:"components,omitempty"`
+	Components ComponentChecksums `json:"components"`
 
 	// For reload mechanisms (e.g. in-place reload)
 	// +kubebuilder:validation:Required
-	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
+	HotReloadChecksum string `json:"hotReloadChecksum"`
 }
 
 type ControlPlaneNodeStatus struct {
