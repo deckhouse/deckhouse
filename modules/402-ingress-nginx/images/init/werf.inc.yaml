@@ -1,7 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2025-09-18"
 import:
 - image: tools/coreutils
   add: /

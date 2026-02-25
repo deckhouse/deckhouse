@@ -33,7 +33,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
-fromCacheVersion: "2025-09-18-1"
 import:
 - image: {{ .ModuleName }}/failover-artifact
   add: /src/failover
