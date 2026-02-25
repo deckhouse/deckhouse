@@ -405,10 +405,6 @@ entries:
                     en: Configuring notifications
                     ru: Настройка уведомлений
                   url: /admin/configuration/update/notifications.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /admin/configuration/update/faq.html
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность

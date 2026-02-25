@@ -8,10 +8,8 @@ lang: en
 To apply a Deckhouse Kubernetes Platform (DKP) update immediately,
 add the annotation `release.deckhouse.io/apply-now: "true"` to the corresponding [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource.
 
-{% alert level="warning" %}
 This will bypass update windows, [canary release settings](../../../user/network/canary-deployment.html), and the [manual cluster update mode](configuration.html#manual-update-approval).
 The update will be applied immediately after the annotation is set.
-{% endalert %}
 
 Example command to set the annotation and skip update windows for version `v1.56.2`:
 
