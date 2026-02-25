@@ -31,6 +31,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }, cb, 60);
   }
 
+  function isSvgUrl(url) {
+    return /\.svg(?:[?#]|$)/i.test(url || '');
+  }
+
   function getActiveImage(container) {
     return container.querySelector('.gslide.current img, .gslide-current img, .gslide img');
   }
@@ -95,6 +99,29 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     clampPan(container);
     applyTransform(container);
+  }
+
+  function fitSvgToViewport(container, sourceImg, url) {
+    if (!isSvgUrl(url)) return;
+    const imgInSlide = getActiveImage(container);
+    if (!imgInSlide) return;
+
+    const sourceWidth = sourceImg && sourceImg.clientWidth ? sourceImg.clientWidth : sourceImg.naturalWidth;
+    const sourceHeight = sourceImg && sourceImg.clientHeight ? sourceImg.clientHeight : sourceImg.naturalHeight;
+    const ratio = sourceWidth > 0 && sourceHeight > 0 ? (sourceWidth / sourceHeight) : (4 / 3);
+    const maxWidth = Math.max(320, Math.floor(window.innerWidth * 0.92));
+    const maxHeight = Math.max(240, Math.floor(window.innerHeight * 0.86));
+
+    let targetWidth = maxWidth;
+    let targetHeight = Math.round(targetWidth / ratio);
+    if (targetHeight > maxHeight) {
+      targetHeight = maxHeight;
+      targetWidth = Math.round(targetHeight * ratio);
+    }
+
+    imgInSlide.classList.add('zoom-image-svg');
+    imgInSlide.style.width = targetWidth + 'px';
+    imgInSlide.style.height = targetHeight + 'px';
   }
 
   function addToolbar(container) {
@@ -288,6 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
           const closeInSlide = container.querySelector('.gclose');
           return imgInSlide && closeInSlide;
         }, function () {
+          fitSvgToViewport(container, img, url);
           addToolbar(container);
           enablePanAndWheelZoom(container);
           applyTransform(container);

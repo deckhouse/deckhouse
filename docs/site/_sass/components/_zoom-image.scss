@@ -1,12 +1,11 @@
 .zoom-image-wrap {
   position: relative;
-  display: inline-block;
 
   &::before {
     content: '';
     position: absolute;
     right: 8px;
-    bottom: 8px;
+    bottom: 16px;
     z-index: 2;
     width: 26px;
     height: 26px;
@@ -98,4 +97,9 @@
     will-change: transform;
     user-select: none;
     touch-action: none;
+}
+
+.glightbox-container .gslide-image img.zoom-image-svg {
+  padding: 12px;
+  background: #fff;
 }
