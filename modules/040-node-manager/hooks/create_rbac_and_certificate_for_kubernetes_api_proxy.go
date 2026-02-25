@@ -69,8 +69,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	const (
-		roleName             = "system:kubernetes-api-proxy-discovery"
-		userName             = "system:kubernetes-api-proxy"
+		roleName             = "node-manager:kubernetes-api-proxy"
+		userName             = "kubernetes-api-proxy"
 		certOutdatedDuration = (24 * time.Hour) * 365 / 2
 	)
 

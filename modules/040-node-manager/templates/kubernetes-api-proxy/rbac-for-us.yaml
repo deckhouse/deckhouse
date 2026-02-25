@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: system:kubernetes-api-proxy-discovery
+  name: node-manager:kubernetes-api-proxy
   namespace: default
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-api-proxy")) | nindent 2 }}
 rules:
@@ -13,13 +13,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: system:kubernetes-api-proxy-discovery
+  name: node-manager:kubernetes-api-proxy
   namespace: default
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-api-proxy")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: system:kubernetes-api-proxy-discovery
+  name: node-manager:kubernetes-api-proxy
 subjects:
   - kind: User
-    name: system:kubernetes-api-proxy
+    name: kubernetes-api-proxy
