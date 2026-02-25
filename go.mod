@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/flant/addon-operator v1.18.7
-	github.com/flant/kube-client v1.5.2
-	github.com/flant/shell-operator v1.13.2
+	github.com/flant/addon-operator v1.19.2
+	github.com/flant/kube-client v1.6.0
+	github.com/flant/shell-operator v1.14.0
 	github.com/go-openapi/spec v0.22.0
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
@@ -33,19 +33,19 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/vmware/govmomi v0.51.0 // indirect
-	go.etcd.io/etcd/api/v3 v3.5.16
-	go.etcd.io/etcd/client/v3 v3.5.16
+	go.etcd.io/etcd/api/v3 v3.5.21
+	go.etcd.io/etcd/client/v3 v3.5.21
 	google.golang.org/grpc v1.71.0
 	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.4
-	k8s.io/api v0.32.10
-	k8s.io/apiextensions-apiserver v0.32.10
-	k8s.io/apimachinery v0.32.10
-	k8s.io/apiserver v0.32.10
-	k8s.io/client-go v0.32.10
+	k8s.io/api v0.33.8
+	k8s.io/apiextensions-apiserver v0.33.8
+	k8s.io/apimachinery v0.33.8
+	k8s.io/apiserver v0.33.8
+	k8s.io/client-go v0.33.8
 	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -57,10 +57,10 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/pkg/log v0.1.0
+	github.com/deckhouse/deckhouse/pkg/log v0.1.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20251128160944-41d73224a0c9
-	github.com/deckhouse/module-sdk v0.6.0
+	github.com/deckhouse/module-sdk v0.9.1
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.0+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
@@ -77,18 +77,18 @@ require (
 	github.com/sylabs/oci-tools v0.16.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0
 	go.opentelemetry.io/otel v1.36.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.27.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.33.0
 	go.opentelemetry.io/otel/sdk v1.36.0
 	go.opentelemetry.io/otel/trace v1.36.0
 	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
 	golang.org/x/mod v0.29.0
 	golang.org/x/text v0.31.0
-	k8s.io/code-generator v0.32.10
-	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
-	k8s.io/kubectl v0.32.10
+	k8s.io/code-generator v0.33.8
+	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
+	k8s.io/kubectl v0.33.8
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3
-	sigs.k8s.io/kustomize/kyaml v0.18.1
+	sigs.k8s.io/kustomize/kyaml v0.19.0
 )
 
 require k8s.io/klog v1.0.0 // indirect
@@ -128,8 +128,10 @@ require (
 	github.com/yannh/kubeconform v0.6.7 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
-	k8s.io/cli-runtime v0.32.10 // indirect
+	k8s.io/cli-runtime v0.33.8 // indirect
+	k8s.io/component-helpers v0.33.8 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
+	sigs.k8s.io/randfill v1.0.0 // indirect
 )
 
 require (
@@ -211,18 +213,17 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/cel-go v0.22.0 // indirect
+	github.com/google/cel-go v0.23.2 // indirect
 	github.com/google/certificate-transparency-go v1.1.7 // indirect
-	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
-	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
-	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
@@ -305,12 +306,12 @@ require (
 	github.com/vmware/go-vcloud-director/v3 v3.0.0-alpha.31 // indirect
 	github.com/wI2L/jsondiff v0.5.0 // indirect
 	github.com/weppos/publicsuffix-go v0.30.3-0.20240510084413-5f1d03393b3d // indirect
-	github.com/werf/3p-helm v0.0.0-20260204140535-11a50c572ad8 // indirect
+	github.com/werf/3p-helm v0.0.0-20260211143448-0b619e3cc3bf // indirect
 	github.com/werf/common-go v0.0.0-20251113140850-a1a98e909e9b // indirect
 	github.com/werf/kubedog v0.13.1-0.20260115171811-304218f24308 // indirect
 	github.com/werf/lockgate v0.1.1 // indirect
 	github.com/werf/logboek v0.6.1 // indirect
-	github.com/werf/nelm v1.21.0
+	github.com/werf/nelm v1.21.1-0.20260211145403-697eed6dd07c
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
@@ -319,12 +320,12 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zmap/zcrypto v0.0.0-20231219022726-a1f61fb1661c // indirect
 	github.com/zmap/zlint/v3 v3.6.0 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.5.16 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.5.21 // indirect
 	go.mongodb.org/mongo-driver v1.17.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.28.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.33.0 // indirect
 	go.opentelemetry.io/otel/metric v1.36.0 // indirect
-	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
+	go.opentelemetry.io/proto/otlp v1.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.45.0
@@ -343,11 +344,11 @@ require (
 	gopkg.in/robfig/cron.v2 v2.0.0-20150107220207-be2e0b0deed5
 	gopkg.in/satori/go.uuid.v1 v1.2.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	k8s.io/component-base v0.32.10 // indirect
-	k8s.io/gengo/v2 v2.0.0-20240911193312-2b36238f13e9 // indirect
+	k8s.io/component-base v0.33.8 // indirect
+	k8s.io/gengo/v2 v2.0.0-20250207200755-1244d31929d7 // indirect
 	oras.land/oras-go v1.2.6 // indirect
-	sigs.k8s.io/kustomize/api v0.18.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
+	sigs.k8s.io/kustomize/api v0.19.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 )
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
