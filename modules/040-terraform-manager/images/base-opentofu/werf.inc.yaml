@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+fromImage: builder/scratch
 import:
 - image: opentofu
   add: /opentofu/opentofu
