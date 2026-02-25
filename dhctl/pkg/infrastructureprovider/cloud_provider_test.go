@@ -45,7 +45,7 @@ const (
 	yandexPluginVersion = "0.174.0"
 
 	gcpTestLayout    = "without-nat"
-	gcpPluginVersion = "3.48.0"
+	gcpPluginVersion = "4.85.0"
 
 	modulesRootDir = "modules"
 	layoutsRootDir = "layouts"
