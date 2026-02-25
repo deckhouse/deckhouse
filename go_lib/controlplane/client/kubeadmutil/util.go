@@ -102,3 +102,11 @@ func ParsePort(port string) (int, error) {
 
 	return 0, errors.New("port must be a valid number between 1 and 65535, inclusive")
 }
+
+// LoadOrDefaultConfigurationOptions holds the common LoadOrDefaultConfiguration options.
+type LoadOrDefaultConfigurationOptions struct {
+	// AllowExperimental indicates whether the experimental / work in progress APIs can be used.
+	AllowExperimental bool
+	// SkipCRIDetect indicates whether to skip the CRI socket detection when no CRI socket is provided.
+	SkipCRIDetect bool
+}
