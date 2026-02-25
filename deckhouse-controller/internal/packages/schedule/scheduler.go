@@ -45,44 +45,17 @@ type Scheduler struct {
 	mu    sync.RWMutex
 	nodes map[string]*node
 
+	eventCh chan Event
+
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
 
 	pause atomic.Bool // When true, no state changes are processed
-
-	onSchedule   Callback
-	onDisable    Callback
-	onGlobalDone func(enabled []string)
 }
-
-// Callback is a function invoked by the scheduler on state transitions.
-type Callback func(name string)
 
 // Option configures a Scheduler during construction.
 type Option func(*Scheduler)
-
-// WithOnSchedule sets the callback fired when a node becomes scheduled.
-func WithOnSchedule(f Callback) Option {
-	return func(s *Scheduler) {
-		s.onSchedule = f
-	}
-}
-
-// WithOnDisable sets the callback fired when a node is cascade-disabled.
-func WithOnDisable(f Callback) Option {
-	return func(s *Scheduler) {
-		s.onDisable = f
-	}
-}
-
-// WithOnGlobalDone sets the callback fired once the global node completes,
-// receiving the list of currently enabled package names.
-func WithOnGlobalDone(f func(enabled []string)) Option {
-	return func(s *Scheduler) {
-		s.onGlobalDone = f
-	}
-}
 
 // WithKubeVersionGetter sets the provider for the current Kubernetes version.
 func WithKubeVersionGetter(kubeVersionGetter version.Getter) Option {
@@ -105,14 +78,13 @@ func WithBootstrapCondition(cond condition.Condition) Option {
 	}
 }
 
-// NewScheduler creates a Scheduler with an empty dependency graph.
-// Use functional options to configure callbacks and version providers.
+// NewScheduler creates a Scheduler with an empty dependency graph and a
+// buffered event channel. Use functional options to configure version
+// providers and conditions. Call [Scheduler.Ch] to consume lifecycle events.
 func NewScheduler(opts ...Option) *Scheduler {
 	s := &Scheduler{
-		nodes:        make(map[string]*node),
-		onSchedule:   func(_ string) {},
-		onDisable:    func(_ string) {},
-		onGlobalDone: func(_ []string) {},
+		nodes:   make(map[string]*node),
+		eventCh: make(chan Event, 100),
 	}
 
 	for _, opt := range opts {
@@ -125,7 +97,6 @@ func NewScheduler(opts ...Option) *Scheduler {
 }
 
 // Pause prevents any state changes from being processed.
-// Packages can still be added/removed, but no callbacks will be invoked.
 func (s *Scheduler) Pause() {
 	s.pause.Store(true)
 }
@@ -208,6 +179,7 @@ func (s *Scheduler) AddNode(pkg Package) {
 	s.addNode(pkg)
 
 	s.reconverge()
+	s.schedule()
 }
 
 // RemoveNode removes a package from the graph, cleans up all dependency
@@ -231,6 +203,7 @@ func (s *Scheduler) RemoveNode(name string) {
 	delete(s.nodes, name)
 
 	s.reconverge()
+	s.schedule()
 }
 
 // Complete marks the named package as active (processing finished) and
@@ -249,10 +222,11 @@ func (s *Scheduler) Complete(completed string) {
 			if n.name == packageGlobal || !n.status.Enabled {
 				continue
 			}
+
 			enabled = append(enabled, n.name)
 		}
 
-		s.onGlobalDone(enabled)
+		s.eventCh <- Event{Kind: EventGlobalDone, Enabled: enabled}
 	}
 
 	s.schedule()
@@ -282,24 +256,12 @@ func (s *Scheduler) trigger(name string) {
 	}
 }
 
-// reconverge marks the global node as scheduled, resets all its direct
-// followers to idle, and runs a full scheduling pass — effectively
+// reconverge resets all nodes to idle
 // forcing the entire graph to re-converge from scratch.
 func (s *Scheduler) reconverge() {
-	n, ok := s.nodes[packageGlobal]
-	if !ok {
-		return
+	for _, n := range s.nodes {
+		n.state = nodeStateIdle
 	}
-
-	n.state = nodeStateIdle
-
-	for follower := range n.followers {
-		if fn, ok := s.nodes[follower]; ok {
-			fn.state = nodeStateIdle
-		}
-	}
-
-	s.schedule()
 }
 
 // Reschedule reverts the named package to idle and runs a full scheduling
@@ -327,12 +289,8 @@ func (s *Scheduler) Schedule() {
 }
 
 // schedule recomputes enabled status and advances idle nodes that are
-// eligible to the scheduled state, firing onSchedule for each.
+// eligible to the scheduled state, emitting an [EventSchedule] for each.
 func (s *Scheduler) schedule() {
-	if s.pause.Load() {
-		return
-	}
-
 	for _, n := range s.compute() {
 		if n.state != nodeStateIdle {
 			continue
@@ -340,15 +298,15 @@ func (s *Scheduler) schedule() {
 
 		if s.canSchedule(n) {
 			n.state = nodeStateScheduled
-			s.onSchedule(n.name)
+			s.eventCh <- Event{Name: n.name, Kind: EventSchedule}
 		}
 	}
 }
 
 // compute recomputes the enabled status for all nodes in topological order,
 // guaranteeing that dependencies are resolved before dependents. Nodes that
-// lose eligibility fire onDisable immediately. If any status changed,
-// reconverge is called to reset the graph from the global node.
+// lose eligibility emit an [EventDisable]. If any status changed, reconverge
+// is called to reset the graph for a fresh scheduling pass.
 func (s *Scheduler) compute() []*node {
 	var changed bool
 	sorted := topoSort(s.nodes)
@@ -359,7 +317,7 @@ func (s *Scheduler) compute() []*node {
 			changed = true
 
 			if !n.status.Enabled {
-				s.onDisable(n.name)
+				s.eventCh <- Event{Name: n.name, Kind: EventDisable}
 			}
 		}
 	}

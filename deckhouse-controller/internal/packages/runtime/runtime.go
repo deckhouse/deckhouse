@@ -22,7 +22,6 @@ import (
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
-
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
@@ -395,9 +394,24 @@ func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
 	r.scheduler = schedule.NewScheduler(
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
-		schedule.WithKubeVersionGetter(kubernetesVersionGetter),
-		schedule.WithOnSchedule(r.schedulePackage),
-		schedule.WithOnDisable(r.disablePackage))
+		schedule.WithKubeVersionGetter(kubernetesVersionGetter))
+}
+
+// Run starts the scheduler event loop in a background goroutine. It listens for
+// schedule and disable events from the scheduler and dispatches them to the
+// appropriate handler, driving the enable/disable lifecycle for all packages.
+func (r *Runtime) Run() {
+	go func() {
+		for event := range r.scheduler.Ch() {
+			switch event.Kind {
+			case schedule.EventSchedule:
+				r.schedulePackage(event.Name)
+			case schedule.EventDisable:
+				r.disablePackage(event.Name)
+			default:
+			}
+		}
+	}()
 }
 
 // schedulePackage is the scheduler's onSchedule callback, invoked when a package's
@@ -407,8 +421,8 @@ func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
 // Note: EventSchedule is shared between enable and disable, so enqueueing here
 // automatically cancels any in-flight disable tasks for the same package.
 func (r *Runtime) schedulePackage(name string) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	onDone := queue.WithOnDone(func() {
 		r.scheduler.Complete(name)
@@ -467,6 +481,9 @@ func (r *Runtime) Stop() {
 	// Stop accepting and processing new tasks
 	r.hookEventHandler.Stop()
 	r.queueService.Stop()
+
+	// Close scheduler event channel
+	r.scheduler.Stop()
 }
 
 // Status returns package status service for external access
