@@ -597,7 +597,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -888,7 +888,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1179,7 +1179,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1458,7 +1458,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1737,7 +1737,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -2016,7 +2016,7 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' }}
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
