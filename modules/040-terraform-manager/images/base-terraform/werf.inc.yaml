@@ -1,0 +1,8 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: terraform
+  add: /terraform/terraform
+  to: /terraform
+  before: setup

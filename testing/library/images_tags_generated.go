@@ -552,6 +552,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller": "imageHash-serviceWithHealthchecks-controller",
 	},
 	"terraformManager": map[string]interface{}{
+		"baseOpentofu":                "imageHash-terraformManager-baseOpentofu",
+		"baseTerraform":               "imageHash-terraformManager-baseTerraform",
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",
 		"terraformManagerAzure":       "imageHash-terraformManager-terraformManagerAzure",
 		"terraformManagerDvp":         "imageHash-terraformManager-terraformManagerDvp",
