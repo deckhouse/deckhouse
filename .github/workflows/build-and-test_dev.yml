@@ -506,6 +506,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -798,6 +799,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1090,6 +1092,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1382,6 +1385,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1674,6 +1678,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1966,6 +1971,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
