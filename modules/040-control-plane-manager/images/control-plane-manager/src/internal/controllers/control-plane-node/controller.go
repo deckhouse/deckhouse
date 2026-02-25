@@ -70,6 +70,11 @@ func Register(mgr manager.Manager) error {
 		}).
 		Named(constants.CpnControllerName).
 		Watches(
+			&controlplanev1alpha1.ControlPlaneOperation{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(nodeLabelPredicate),
+		).
+		Watches(
 			&controlplanev1alpha1.ControlPlaneNode{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(nodeLabelPredicate),
