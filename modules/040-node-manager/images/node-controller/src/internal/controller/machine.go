@@ -18,6 +18,7 @@ package controller
 
 import (
 	"fmt"
+	"strings"
 
 	capi "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
@@ -147,6 +148,7 @@ func (m *capiMachine) GetStatus() MachineStatus {
 		m.machine.Status.Conditions,
 		capi.MachinePhase(m.machine.Status.Phase),
 	)
+
 	return MachineStatus{
 		Phase:         phase,
 		MachineStatus: state.statusString,
@@ -233,7 +235,7 @@ func buildMachineReadyCondition(state machineState) deckhousev1alpha2.InstanceCo
 		Type:               machineReadyConditionType,
 		Status:             state.conditionStatus,
 		Reason:             state.reason,
-		Message:            state.message,
+		Message:            normalizeMessage(state.message),
 		Severity:           state.severity,
 		LastTransitionTime: metav1.Now(),
 	}
@@ -347,4 +349,8 @@ func conditionMessageOrReason(c *metav1.Condition) string {
 
 func isDrainBlockedDeletingCondition(c *metav1.Condition) bool {
 	return c.Reason == capi.MachineDeletingDrainingNodeReason && c.Message != ""
+}
+
+func normalizeMessage(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }
