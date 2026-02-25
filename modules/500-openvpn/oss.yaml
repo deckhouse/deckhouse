@@ -18,5 +18,5 @@
   link: https://github.com/stevegrubb/libcap-ng
   description: Libcap-ng is a library for Linux that makes using posix capabilities easy..
   license: GNU General Public License v2.0
-  id: libcapNg
+  id: libcapng
   version: 0.8.5
