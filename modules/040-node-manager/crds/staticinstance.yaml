@@ -369,8 +369,7 @@ spec:
                 conditions:
                   description: Conditions defines current service state of the StaticInstance.
                   items:
-                    description: Condition contains details for one aspect of the current
-                      state of this API Resource.
+                    description: Condition contains details for one aspect of the current state of this API Resource.
                     properties:
                       lastTransitionTime:
                         description: |-

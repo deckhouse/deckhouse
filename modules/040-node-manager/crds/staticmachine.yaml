@@ -125,8 +125,7 @@ spec:
                         minLength: 1
                         type: string
                       type:
-                        description: type is the machine address type, one of Hostname,
-                          ExternalIP, InternalIP, ExternalDNS or InternalDNS.
+                        description: type is the machine address type, one of Hostname, ExternalIP, InternalIP, ExternalDNS or InternalDNS.
                         enum:
                         - Hostname
                         - ExternalIP
@@ -144,8 +143,7 @@ spec:
                 conditions:
                   description: Conditions defines current service state of the StaticMachine.
                   items:
-                    description: Condition contains details for one aspect of the current
-                      state of this API Resource.
+                    description: Condition contains details for one aspect of the current state of this API Resource.
                     properties:
                       lastTransitionTime:
                         description: |-
