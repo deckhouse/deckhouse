@@ -211,8 +211,8 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles:    opts.ValuesPaths,
-			RuntimeSetJSON: valuesSet,
+			ValuesFiles: opts.ValuesPaths,
+			RootSetJSON: valuesSet,
 		},
 		TrackingOptions: common.TrackingOptions{
 			NoPodLogs: true,

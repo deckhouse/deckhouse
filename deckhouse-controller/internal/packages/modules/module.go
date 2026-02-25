@@ -180,12 +180,11 @@ func (m *Module) GetRuntimeValues() RuntimeValues {
 // GetExtraNelmValues returns runtime values in string format
 func (m *Module) GetExtraNelmValues() string {
 	runtimeValues := m.GetRuntimeValues()
-	packageJSON, _ := json.Marshal(runtimeValues.Package)
+	marshalled, _ := json.Marshal(runtimeValues)
 
-	globalValues := m.globalValuesGetter(false)
-	globalJSON, _ := json.Marshal(globalValues)
+	marshalledGlobal := m.globalValuesGetter(false)
 
-	return fmt.Sprintf("Package=%s,Deckhouse=%s", packageJSON, globalJSON)
+	return fmt.Sprintf("Module=%s,Deckhouse=%s", marshalled, marshalledGlobal)
 }
 
 // GetName returns the full module identifier.
