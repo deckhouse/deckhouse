@@ -20,8 +20,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
-
-	corev1 "k8s.io/api/core/v1"
 )
 
 // componentChecksumDeps sets the dependencies of the component's checksum on the keys of the control_plane_config secret.
@@ -67,76 +65,63 @@ type componentFieldMap struct {
 	checksumDependsOn []string
 }
 
-// CalculateComponentChecksum calculates the checksum of the component according to the control_plane_config secret.
-// Inside, it collects a manifest from componentChecksumDeps[component] keys and hashes it.
-func CalculateComponentChecksum(secretData map[string][]byte, component string) (string, error) {
-	manifest, err := buildComponentManifest(secretData, component)
+// sortedKeysFromMap returns a sorted slice of keys from the map.
+func sortedKeysFromMap(data map[string][]byte) []string {
+	keys := make([]string, 0, len(data))
+	for k := range data {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// sortedKeysFromSlice returns a sorted slice of keys from candidates that exist in data.
+func sortedKeysFromSlice(candidates []string, data map[string][]byte) []string {
+	keys := make([]string, 0, len(candidates))
+	for _, k := range candidates {
+		if _, has := data[k]; has {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// hashKeys returns SHA256 hex of the concatenated values for the given keys.
+func hashKeys(secretData map[string][]byte, keys []string) string {
+	h := sha256.New()
+	for _, k := range keys {
+		h.Write(secretData[k])
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+// ComponentChecksum calculates the checksum of the component according to the d8-control-plane-manager-config secret.
+// Inside, it hashes the data from componentChecksumDeps[component] keys in sorted order.
+func ComponentChecksum(secretData map[string][]byte, component string) (string, error) {
+	keys, err := collectDependencyData(secretData, component)
 	if err != nil {
 		return "", err
 	}
-	h := sha256.New()
-	if _, err := h.Write(manifest); err != nil {
-		return "", fmt.Errorf("failed to hash manifest: %w", err)
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+	return hashKeys(secretData, keys), nil
 }
 
-// buildComponentManifest collects bytes to calculate the component's checksum from the secret data.
-// Takes only keys from componentChecksumDeps[component], sorts and concatenates the values.
+// collectDependencyData returns sorted keys from componentChecksumDeps[component] that exist in secretData.
 // Missing keys are skipped (conditional files may not be present in the secret).
-func buildComponentManifest(secretData map[string][]byte, component string) ([]byte, error) {
+func collectDependencyData(secretData map[string][]byte, component string) ([]string, error) {
 	fieldMap, ok := componentChecksumDeps[component]
 	if !ok {
 		return nil, fmt.Errorf("unknown component %q", component)
 	}
-	keys := make([]string, 0, len(fieldMap.checksumDependsOn))
-	for _, k := range fieldMap.checksumDependsOn {
-		if _, has := secretData[k]; has {
-			keys = append(keys, k)
-		}
-	}
-	sort.Strings(keys)
-	var manifest []byte
-	for _, k := range keys {
-		manifest = append(manifest, secretData[k]...)
-	}
-	return manifest, nil
+	return sortedKeysFromSlice(fieldMap.checksumDependsOn, secretData), nil
 }
 
-// calculatePKIChecksum calculates the total checksum of all the keys of the pki secret.
-func CalculatePKIChecksum(pkiSecret *corev1.Secret) (string, error) {
-	h := sha256.New()
-
-	keys := make([]string, 0, len(pkiSecret.Data))
-	for key := range pkiSecret.Data {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		h.Write([]byte(key))
-		h.Write(pkiSecret.Data[key])
-	}
-
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+// PKIChecksum calculates the total checksum of all the keys of the pki secret based only on the values in the secret.
+// Keys names are ignored for the checksum calculation.
+func PKIChecksum(pkiSecretData map[string][]byte) (string, error) {
+	return hashKeys(pkiSecretData, sortedKeysFromMap(pkiSecretData)), nil
 }
 
-func BuildHotReloadChecksum(secretData map[string][]byte) (string, error) {
-	keys := make([]string, 0, len(hotReloadChecksumDependsOn))
-	for _, k := range hotReloadChecksumDependsOn {
-		if _, has := secretData[k]; has {
-			keys = append(keys, k)
-		}
-	}
-	sort.Strings(keys)
-	var manifest []byte
-	for _, k := range keys {
-		manifest = append(manifest, secretData[k]...)
-	}
-	h := sha256.New()
-	if _, err := h.Write(manifest); err != nil {
-		return "", fmt.Errorf("failed to hash manifest: %w", err)
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+func HotReloadChecksum(secretData map[string][]byte) (string, error) {
+	return hashKeys(secretData, sortedKeysFromSlice(hotReloadChecksumDependsOn, secretData)), nil
 }
