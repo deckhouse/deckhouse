@@ -264,6 +264,7 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache patch make linux-headers autoconf automake libtool bash pkgconfig ninja musl-dev cmake binutils g++
   install:
+  - set -x
   - cp -a /base_images/protobuf/* /usr
   - cp -a /base_images/grpc/* /usr
   - cp -a /base_images/abseil-cpp/* /usr
