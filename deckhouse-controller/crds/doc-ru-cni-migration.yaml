@@ -19,7 +19,7 @@ spec:
               properties:
                 phase:
                   description: |
-                    Текущий этап процесса миграции (например, Preparing, CleaningNodes).
+                    Текущий этап процесса миграции.
                 currentCNI:
                   description: |
                     Обнаруженный CNI, с которого выполняется переключение.

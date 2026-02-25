@@ -51,23 +51,27 @@ func RunCleanup(ctx context.Context, currentCNI string) error {
 func cleanupFlannel(ctx context.Context) error {
 	logger := log.FromContext(ctx).WithName("flannel-cleanup")
 
-	deleteInterfaces(logger, []string{"cni0", "flannel.1"})
+	if err := deleteInterfaces(logger, []string{"cni0", "flannel.1"}); err != nil {
+		return fmt.Errorf("interfaces: %w", err)
+	}
 
-	if err := deleteConfigFiles(logger, "flannel"); err != nil {
-		logger.Error(err, "Failed to delete config files")
+	if err := deleteAllCNIConfigs(logger); err != nil {
+		return fmt.Errorf("configs: %w", err)
 	}
 
 	// Clean up directories
-	removeDirectories(logger, []string{
+	if err := removeDirectories(logger, []string{
 		"/var/lib/cni/flannel",
 		"/var/lib/cni/networks",
 		"/var/lib/cni/results",
-	})
+	}); err != nil {
+		return fmt.Errorf("directories: %w", err)
+	}
 
 	// Remove flannel subnet file
 	subnetFile := "/run/flannel/subnet.env"
 	if err := os.Remove(subnetFile); err != nil && !os.IsNotExist(err) {
-		logger.Error(err, "Failed to delete subnet file", "file", subnetFile)
+		return fmt.Errorf("subnet file %s: %w", subnetFile, err)
 	}
 
 	patterns := []string{
@@ -76,7 +80,7 @@ func cleanupFlannel(ctx context.Context) error {
 		"KUBE-",
 	}
 	if err := cleanIptablesByPatterns(logger, patterns); err != nil {
-		logger.Error(err, "Failed to clean iptables rules for flannel")
+		return fmt.Errorf("iptables: %w", err)
 	}
 
 	logger.Info("Flannel cleanup finished")
@@ -88,25 +92,25 @@ func cleanupCilium(ctx context.Context) error {
 
 	// Use cilium-dbg utility for deep cleanup (eBPF maps, progs, etc.)
 	if err := runCommand(logger, "/sbin/cilium-dbg", "post-uninstall-cleanup", "--force"); err != nil {
-		logger.Error(err, "cilium-dbg post-uninstall-cleanup failed, continuing with manual cleanup")
-	} else {
-		logger.Info("cilium-dbg post-uninstall-cleanup finished successfully")
+		return fmt.Errorf("cilium-dbg post-uninstall-cleanup: %w", err)
 	}
 
-	if err := deleteConfigFiles(logger, "cilium"); err != nil {
-		logger.Error(err, "Failed to delete config files")
+	if err := deleteAllCNIConfigs(logger); err != nil {
+		return fmt.Errorf("configs: %w", err)
 	}
 
 	// Clean up directories
-	removeDirectories(logger, []string{
+	if err := removeDirectories(logger, []string{
 		"/var/lib/cni/networks",
 		"/var/lib/cni/results",
-	})
+	}); err != nil {
+		return fmt.Errorf("directories: %w", err)
+	}
 
 	// Cilium creates a lot of chains, usually prefixed with CILIUM_
 	patterns := []string{"CILIUM"}
 	if err := cleanIptablesByPatterns(logger, patterns); err != nil {
-		logger.Error(err, "Failed to clean iptables rules for Cilium")
+		return fmt.Errorf("iptables: %w", err)
 	}
 
 	logger.Info("Cilium cleanup finished")
@@ -116,24 +120,28 @@ func cleanupCilium(ctx context.Context) error {
 func cleanupSimpleBridge(ctx context.Context) error {
 	logger := log.FromContext(ctx).WithName("simple-bridge-cleanup")
 
-	deleteInterfaces(logger, []string{"cni0"})
+	if err := deleteInterfaces(logger, []string{"cni0"}); err != nil {
+		return fmt.Errorf("interfaces: %w", err)
+	}
 
-	if err := deleteConfigFiles(logger, "simple-bridge"); err != nil {
-		logger.Error(err, "Failed to delete config files")
+	if err := deleteAllCNIConfigs(logger); err != nil {
+		return fmt.Errorf("configs: %w", err)
 	}
 
 	// Clean up directories
-	removeDirectories(logger, []string{
+	if err := removeDirectories(logger, []string{
 		"/var/lib/cni/networks",
 		"/var/lib/cni/results",
-	})
+	}); err != nil {
+		return fmt.Errorf("directories: %w", err)
+	}
 
 	patterns := []string{
 		"CNI-",
 		"KUBE-",
 	}
 	if err := cleanIptablesByPatterns(logger, patterns); err != nil {
-		logger.Error(err, "Failed to clean iptables rules for simple-bridge")
+		return fmt.Errorf("iptables: %w", err)
 	}
 
 	logger.Info("simple-bridge cleanup finished")
@@ -204,7 +212,7 @@ func cleanIptablesByPatterns(logger logr.Logger, patterns []string) error {
 	return nil
 }
 
-func deleteInterfaces(logger logr.Logger, interfaces []string) {
+func deleteInterfaces(logger logr.Logger, interfaces []string) error {
 	for _, iface := range interfaces {
 		cmd := exec.Command("/sbin/ip", "link", "delete", iface)
 		var stderr bytes.Buffer
@@ -215,16 +223,16 @@ func deleteInterfaces(logger logr.Logger, interfaces []string) {
 			// If the interface does not exist, ip command returns "Cannot find device".
 			if strings.Contains(errStr, "Cannot find device") {
 				logger.Info("Interface not found, skipping", "interface", iface)
-			} else {
-				logger.Error(err, "Failed to delete interface", "interface", iface, "stderr", errStr)
+				continue
 			}
-		} else {
-			logger.Info("Successfully deleted interface", "interface", iface)
+			return fmt.Errorf("delete interface %s: %s", iface, errStr)
 		}
+		logger.Info("Successfully deleted interface", "interface", iface)
 	}
+	return nil
 }
 
-func deleteConfigFiles(logger logr.Logger, nameContains string) error {
+func deleteAllCNIConfigs(logger logr.Logger) error {
 	configDir := "/etc/cni/net.d/"
 	files, err := os.ReadDir(configDir)
 	if err != nil {
@@ -235,14 +243,18 @@ func deleteConfigFiles(logger logr.Logger, nameContains string) error {
 	}
 
 	for _, f := range files {
-		if strings.Contains(f.Name(), nameContains) {
-			fullPath := filepath.Join(configDir, f.Name())
-			if err := os.Remove(fullPath); err != nil {
-				logger.Error(err, "Failed to remove CNI config file", "file", fullPath)
-			} else {
-				logger.Info("Removed CNI config file", "file", fullPath)
-			}
+		if f.IsDir() {
+			continue
 		}
+		fullPath := filepath.Join(configDir, f.Name())
+		if err := os.Remove(fullPath); err != nil {
+			// If file disappeared between readdir and remove, it's fine.
+			if os.IsNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("remove config %s: %w", fullPath, err)
+		}
+		logger.Info("Removed CNI config file", "file", fullPath)
 	}
 	return nil
 }
@@ -257,18 +269,23 @@ func runCommand(logger logr.Logger, name string, arg ...string) error {
 	logger.Info("Running command", "command", cmd.String())
 	err := cmd.Run()
 	if err != nil {
-		logger.Error(err, "Command execution failed", "stdout", stdout.String(), "stderr", stderr.String())
-		return fmt.Errorf("command %s failed: %w; stderr: %s", cmd.String(), err, stderr.String())
+		return fmt.Errorf(
+			"command %s failed: %w; stdout: %s; stderr: %s",
+			cmd.String(),
+			err,
+			stdout.String(),
+			stderr.String(),
+		)
 	}
 	return nil
 }
 
-func removeDirectories(logger logr.Logger, dirs []string) {
+func removeDirectories(logger logr.Logger, dirs []string) error {
 	for _, dir := range dirs {
 		if err := os.RemoveAll(dir); err != nil {
-			logger.Error(err, "Failed to delete directory", "dir", dir)
-		} else {
-			logger.Info("Removed directory", "dir", dir)
+			return fmt.Errorf("remove dir %s: %w", dir, err)
 		}
+		logger.Info("Removed directory", "dir", dir)
 	}
+	return nil
 }

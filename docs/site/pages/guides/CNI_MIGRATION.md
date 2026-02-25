@@ -6,7 +6,7 @@ lang: en
 layout: sidebar-guides
 ---
 
-This document describes the procedure for changing the network plugin (CNI) in a Deckhouse Kubernetes Platform cluster. The tool used in Deckhouse allows performing the automated migration (e.g., from Flannel to Cilium) with minimal application downtime and without a full restart of the cluster nodes.
+This document describes the procedure for changing the network plugin (CNI) in a Deckhouse Kubernetes Platform cluster. **This guide is applicable for DKP version 1.76 and above.** The tool used in Deckhouse allows performing the automated migration (e.g., from Flannel to Cilium) with minimal application downtime and without a full restart of the cluster nodes.
 
 {% alert level="danger" %}
 
@@ -22,6 +22,16 @@ This document describes the procedure for changing the network plugin (CNI) in a
 * Before carrying out work, it is necessary to disable external cluster management systems (CI/CD, GitOps, ArgoCD, etc.) that may conflict with the process (e.g., trying to restore deleted pods prematurely or rolling back settings). Also, ensure that the cluster management system does not enable the old CNI module.
 
 {% endalert %}
+
+Supported CNI switching modes:
+
+|                  | simple-bridge | flannel (hostgw) | flannel (vxlan) | cilium (native) | cilium (vxlan) |
+| ---------------- | :-----------: | :--------------: | :-------------: | :-------------: | :------------: |
+| simple-bridge    |      🟫       |        🟩        |       🟩        |       🟩        |       🟩       |
+| flannel (hostgw) |      🟩       |        🟫        |       🟨        |       🟩        |       🟩       |
+| flannel (vxlan)  |      🟩       |        🟨        |       🟫        |       🟩        |       🟩       |
+| cilium (native)  |      🟩       |        🟩        |       🟩        |       🟫        |       🟨       |
+| cilium (vxlan)   |      🟩       |        🟩        |       🟩        |       🟨        |       🟫       |
 
 There are several methods to switch CNI in a DKP cluster.
 

@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -30,7 +31,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -50,16 +50,28 @@ func init() {
 	utilruntime.Must(networkv1alpha1.AddToScheme(scheme))
 }
 
+type healthFileRunner struct{}
+
+func (h *healthFileRunner) Start(ctx context.Context) error {
+	setupLog.Info("Creating health check file", "path", "/tmp/healthz")
+	f, err := os.Create("/tmp/healthz")
+	if err != nil {
+		return err
+	}
+	_ = f.Close()
+
+	<-ctx.Done()
+
+	setupLog.Info("Removing health check file", "path", "/tmp/healthz")
+	return os.Remove("/tmp/healthz")
+}
+
 func main() {
-	var metricsAddr string
-	var probeAddr string
 	var mode string
 	var migrationName string
 	var waitForWebhooks string
 
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metrics endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.StringVar(&mode, "mode", "manager", "Mode to run the application in: 'manager' or 'agent'")
+	flag.StringVar(&mode, "mode", "manager", "Mode to run the application in: 'manager', 'agent' or 'healthcheck'")
 	flag.StringVar(&migrationName, "migration-name", "", "Name of the CNIMigration resource to process")
 	flag.StringVar(&waitForWebhooks, "wait-for-webhooks", "", "Comma-separated list of webhooks to wait for deletion")
 
@@ -71,6 +83,8 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	config := ctrl.GetConfigOrDie()
+	config.QPS = 20.0
+	config.Burst = 100
 	setupLog.Info("Kubernetes connection details", "Host", config.Host)
 
 	if mode == "manager" {
@@ -78,8 +92,8 @@ func main() {
 
 		mgr, err := ctrl.NewManager(config, ctrl.Options{
 			Scheme:                 scheme,
-			Metrics:                metricsserver.Options{BindAddress: metricsAddr},
-			HealthProbeBindAddress: probeAddr,
+			Metrics:                metricsserver.Options{BindAddress: "0"},
+			HealthProbeBindAddress: "0",
 		})
 		if err != nil {
 			setupLog.Error(err, "unable to start manager")
@@ -96,12 +110,9 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-			setupLog.Error(err, "unable to set up health check")
-			os.Exit(1)
-		}
-		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-			setupLog.Error(err, "unable to set up ready check")
+		// Register a Runnable to manage the health file
+		if err := mgr.Add(&healthFileRunner{}); err != nil {
+			setupLog.Error(err, "unable to set up health file")
 			os.Exit(1)
 		}
 
@@ -124,13 +135,16 @@ func main() {
 
 		mgr, err := ctrl.NewManager(config, ctrl.Options{
 			Scheme:                 scheme,
-			Metrics:                metricsserver.Options{BindAddress: metricsAddr},
-			HealthProbeBindAddress: probeAddr,
-			// Filter cache to include only Pods scheduled on this node.
+			Metrics:                metricsserver.Options{BindAddress: "0"},
+			HealthProbeBindAddress: "0",
+			// Filter cache to include only Pods scheduled on this node and the node's CNINodeMigration object.
 			Cache: cache.Options{
 				ByObject: map[client.Object]cache.ByObject{
 					&corev1.Pod{}: {
 						Field: fields.OneTermEqualSelector("spec.nodeName", nodeName),
+					},
+					&networkv1alpha1.CNINodeMigration{}: {
+						Field: fields.OneTermEqualSelector("metadata.name", nodeName),
 					},
 				},
 			},
@@ -149,12 +163,9 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-			setupLog.Error(err, "unable to set up health check")
-			os.Exit(1)
-		}
-		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-			setupLog.Error(err, "unable to set up ready check")
+		// Register a Runnable to manage the health file
+		if err := mgr.Add(&healthFileRunner{}); err != nil {
+			setupLog.Error(err, "unable to set up health file")
 			os.Exit(1)
 		}
 
@@ -166,6 +177,13 @@ func main() {
 		return
 	}
 
-	setupLog.Error(fmt.Errorf("invalid mode: %s", mode), "supported modes: manager, agent")
+	if mode == "healthcheck" {
+		if _, err := os.Stat("/tmp/healthz"); err == nil {
+			os.Exit(0)
+		}
+		os.Exit(1)
+	}
+
+	setupLog.Error(fmt.Errorf("invalid mode: %s", mode), "supported modes: manager, agent, healthcheck")
 	os.Exit(1)
 }
