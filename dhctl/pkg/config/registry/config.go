@@ -34,36 +34,23 @@ type Config struct {
 // - Otherwise, falls back to Unmanaged mode
 // - All parameters are populated with default values for the CE registry
 func (c *Config) UseDefault(criSupported bool) error {
-	var userSettings module_config.DeckhouseSettings
-	var legacyMode bool
+	var settings module_config.DeckhouseSettings
 
 	if criSupported {
-		legacyMode = false
-		userSettings = module_config.DeckhouseSettings{
-			Mode:   constant.ModeDirect,
-			Direct: &module_config.RegistrySettings{},
-		}
+		settings = module_config.New(constant.ModeDirect)
 	} else {
-		legacyMode = true
-		userSettings = module_config.DeckhouseSettings{
-			Mode:      constant.ModeUnmanaged,
-			Unmanaged: &module_config.RegistrySettings{},
-		}
+		settings = module_config.New(constant.ModeUnmanaged)
 	}
-
-	// apply settings
-	var deckhouseSettings module_config.DeckhouseSettings
-	deckhouseSettings.ApplySettings(userSettings)
-
-	return c.Process(deckhouseSettings, legacyMode)
+	return c.Process(settings, !criSupported)
 }
 
 // UseInitConfig configures registry using legacy initConfiguration.
 // Note: This method maintains backward compatibility and only supports Unmanaged legacy mode.
-func (c *Config) UseInitConfig(userInitConfig init_config.Config) error {
+func (c *Config) UseInitConfig(userConfig init_config.Config) error {
 	// Prepare config
-	var initConfig init_config.Config
-	initConfig.ApplyConfig(userInitConfig)
+	initConfig := init_config.
+		New().
+		Merge(&userConfig)
 
 	// Convert to registry settings
 	registrySettings, err := initConfig.ToRegistrySettings()
@@ -71,22 +58,22 @@ func (c *Config) UseInitConfig(userInitConfig init_config.Config) error {
 		return fmt.Errorf("get registry settings: %w", err)
 	}
 
-	userSettings := module_config.DeckhouseSettings{
-		Mode:      constant.ModeUnmanaged,
-		Unmanaged: &registrySettings,
-	}
-
-	// apply settings
-	var deckhouseSettings module_config.DeckhouseSettings
-	deckhouseSettings.ApplySettings(userSettings)
-
-	return c.Process(deckhouseSettings, true)
+	settings := module_config.
+		New(constant.ModeUnmanaged).
+		Merge(&module_config.DeckhouseSettings{
+			Mode:      constant.ModeUnmanaged,
+			Unmanaged: &registrySettings,
+		})
+	return c.Process(settings, true)
 }
 
 // UseDeckhouseSettings configures registry using deckhouse ModuleConfig settings.
 // The operation mode (Direct/Unmanaged) is determined from the user configuration.
-func (c *Config) UseDeckhouseSettings(deckhouseSettings module_config.DeckhouseSettings) error {
-	return c.Process(deckhouseSettings, false)
+func (c *Config) UseDeckhouseSettings(userSettings module_config.DeckhouseSettings) error {
+	settings := module_config.
+		New(userSettings.Mode).
+		Merge(&userSettings)
+	return c.Process(settings, false)
 }
 
 func (c *Config) Process(deckhouseSettings module_config.DeckhouseSettings, legacyMode bool) error {
@@ -105,13 +92,13 @@ func (c *Config) Process(deckhouseSettings module_config.DeckhouseSettings, lega
 	}
 
 	// Prepare mode settings
-	settings, err := newModeSettings(deckhouseSettings)
+	modeSettings, err := newModeSettings(deckhouseSettings)
 	if err != nil {
 		return fmt.Errorf("get registry mode settings: %w", err)
 	}
 
 	*c = Config{
-		Settings:          settings,
+		Settings:          modeSettings,
 		DeckhouseSettings: deckhouseSettings,
 		LegacyMode:        legacyMode,
 	}

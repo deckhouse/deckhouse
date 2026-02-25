@@ -19,7 +19,6 @@ package moduleconfig
 import (
 	"fmt"
 	"regexp"
-	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
@@ -33,7 +32,7 @@ var (
 )
 
 var (
-	imagesRepoRegexp      = regexp.MustCompile(`^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_]+(\/[0-9a-zA-Z\.\-\_]+)*)?$`)
+	imagesRepoRegexp      = regexp.MustCompile(`^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_]+)*$`)
 	errorImagesRepoRegexp = fmt.Errorf("does not match the regexp pattern: `%s`", imagesRepoRegexp.String())
 )
 
@@ -44,78 +43,118 @@ type DeckhouseSettings struct {
 	Proxy     *ProxySettings    `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 }
 
-func (settings DeckhouseSettings) ToMap() map[string]any {
+func New(mode constant.ModeType) DeckhouseSettings {
+	if mode == "" {
+		mode = constant.ModeDirect
+	}
+
+	settings := DeckhouseSettings{
+		Mode: mode,
+	}
+
+	registrySettings := NewRegistrySettings()
+
+	switch settings.Mode {
+	case constant.ModeDirect:
+		settings.Direct = &registrySettings
+
+	case constant.ModeUnmanaged:
+		settings.Unmanaged = &registrySettings
+
+	case constant.ModeProxy:
+		settings.Proxy = &ProxySettings{
+			RegistrySettings: registrySettings,
+		}
+	}
+
+	return settings
+}
+
+func (s DeckhouseSettings) ToMap() map[string]any {
 	result := map[string]any{
-		"mode": string(settings.Mode),
+		"mode": string(s.Mode),
 	}
 
-	if settings.Direct != nil {
-		result["direct"] = settings.Direct.ToMap()
+	if s.Direct != nil {
+		result["direct"] = s.Direct.ToMap()
 	}
 
-	if settings.Unmanaged != nil {
-		result["unmanaged"] = settings.Unmanaged.ToMap()
+	if s.Unmanaged != nil {
+		result["unmanaged"] = s.Unmanaged.ToMap()
 	}
 
-	if settings.Proxy != nil {
-		result["proxy"] = settings.Proxy.ToMap()
+	if s.Proxy != nil {
+		result["proxy"] = s.Proxy.ToMap()
 	}
 
 	return result
 }
 
-func (settings *DeckhouseSettings) ApplySettings(userSettings DeckhouseSettings) {
-	*settings = DeckhouseSettings{
-		Mode: userSettings.Mode,
+func (s DeckhouseSettings) Merge(other *DeckhouseSettings) DeckhouseSettings {
+	out := *s.DeepCopy()
+
+	if other == nil {
+		return out
 	}
 
-	switch settings.Mode {
-	case constant.ModeDirect:
-		var direct RegistrySettings
-		direct.ApplySettings(userSettings.Direct)
+	out.Mode = other.Mode
 
-		settings.Direct = &direct
-
-	case constant.ModeUnmanaged:
-		var unmanaged RegistrySettings
-		unmanaged.ApplySettings(userSettings.Unmanaged)
-
-		settings.Unmanaged = &unmanaged
-
-	case constant.ModeProxy:
-		var proxy ProxySettings
-		proxy.ApplySettings(userSettings.Proxy)
-
-		settings.Proxy = &proxy
+	if other.Direct != nil {
+		if out.Direct == nil {
+			out.Direct = other.Direct.DeepCopy()
+		} else {
+			merged := out.Direct.Merge(other.Direct)
+			out.Direct = &merged
+		}
 	}
+
+	if other.Unmanaged != nil {
+		if out.Unmanaged == nil {
+			out.Unmanaged = other.Unmanaged.DeepCopy()
+		} else {
+			merged := out.Unmanaged.Merge(other.Unmanaged)
+			out.Unmanaged = &merged
+		}
+	}
+
+	if other.Proxy != nil {
+		if out.Proxy == nil {
+			out.Proxy = other.Proxy.DeepCopy()
+		} else {
+			merged := out.Proxy.Merge(other.Proxy)
+			out.Proxy = &merged
+		}
+	}
+
+	return out
 }
 
-func (settings DeckhouseSettings) Validate() error {
-	return validation.ValidateStruct(&settings,
-		validation.Field(&settings.Mode,
+func (s DeckhouseSettings) Validate() error {
+	return validation.ValidateStruct(&s,
+		validation.Field(&s.Mode,
 			validation.Required.
-				Error(fmt.Sprintf("Unknown registry mode: %s", settings.Mode)),
+				Error(fmt.Sprintf("Unknown registry mode: %s", s.Mode)),
 			validation.In(constant.ModeDirect, constant.ModeUnmanaged, constant.ModeProxy, constant.ModeLocal).
-				Error(fmt.Sprintf("Unknown registry mode: %s", settings.Mode)),
+				Error(fmt.Sprintf("Unknown registry mode: %s", s.Mode)),
 		),
-		validation.Field(&settings.Direct,
-			validation.When(settings.Mode == constant.ModeDirect,
+		validation.Field(&s.Direct,
+			validation.When(s.Mode == constant.ModeDirect,
 				validation.NotNil,
 				validation.Required.Error("Section 'direct' is required when mode is 'Direct'"),
 			).Else(
 				validation.Nil.Error("Section 'direct' must be empty when mode is not 'Direct'"),
 			),
 		),
-		validation.Field(&settings.Unmanaged,
-			validation.When(settings.Mode == constant.ModeUnmanaged,
+		validation.Field(&s.Unmanaged,
+			validation.When(s.Mode == constant.ModeUnmanaged,
 				validation.NotNil,
 				validation.Required.Error("Section 'unmanaged' is required when mode is 'Unmanaged'"),
 			).Else(
 				validation.Nil.Error("Section 'unmanaged' must be empty when mode is not 'Unmanaged'"),
 			),
 		),
-		validation.Field(&settings.Proxy,
-			validation.When(settings.Mode == constant.ModeProxy,
+		validation.Field(&s.Proxy,
+			validation.When(s.Mode == constant.ModeProxy,
 				validation.NotNil,
 				validation.Required.Error("Section 'proxy' is required when mode is 'Proxy'"),
 			).Else(
@@ -125,31 +164,31 @@ func (settings DeckhouseSettings) Validate() error {
 	)
 }
 
-func (settings *DeckhouseSettings) DeepCopyInto(out *DeckhouseSettings) {
-	*out = *settings
+func (s *DeckhouseSettings) DeepCopyInto(out *DeckhouseSettings) {
+	*out = *s
 
-	if settings.Direct != nil {
+	if s.Direct != nil {
 		out.Direct = new(RegistrySettings)
-		settings.Direct.DeepCopyInto(out.Direct)
+		s.Direct.DeepCopyInto(out.Direct)
 	}
 
-	if settings.Unmanaged != nil {
+	if s.Unmanaged != nil {
 		out.Unmanaged = new(RegistrySettings)
-		settings.Unmanaged.DeepCopyInto(out.Unmanaged)
+		s.Unmanaged.DeepCopyInto(out.Unmanaged)
 	}
 
-	if settings.Proxy != nil {
+	if s.Proxy != nil {
 		out.Proxy = new(ProxySettings)
-		settings.Proxy.DeepCopyInto(out.Proxy)
+		s.Proxy.DeepCopyInto(out.Proxy)
 	}
 }
 
-func (settings *DeckhouseSettings) DeepCopy() *DeckhouseSettings {
-	if settings == nil {
+func (s *DeckhouseSettings) DeepCopy() *DeckhouseSettings {
+	if s == nil {
 		return nil
 	}
 	out := new(DeckhouseSettings)
-	settings.DeepCopyInto(out)
+	s.DeepCopyInto(out)
 	return out
 }
 
@@ -163,126 +202,129 @@ type RegistrySettings struct {
 	CheckMode  constant.CheckModeType `json:"checkMode,omitempty" yaml:"checkMode,omitempty"`
 }
 
-func (settings RegistrySettings) ToMap() map[string]any {
+func NewRegistrySettings() RegistrySettings {
+	return RegistrySettings{
+		ImagesRepo: constant.DefaultImagesRepo,
+		Scheme:     constant.DefaultScheme,
+	}
+}
+
+func (s RegistrySettings) ToMap() map[string]any {
 	result := map[string]any{
-		"imagesRepo": settings.ImagesRepo,
-		"scheme":     string(settings.Scheme),
+		"imagesRepo": s.ImagesRepo,
+		"scheme":     string(s.Scheme),
 	}
 
-	if settings.CA != "" {
-		result["ca"] = settings.CA
+	if s.CA != "" {
+		result["ca"] = s.CA
 	}
 
-	if settings.Username != "" {
-		result["username"] = settings.Username
+	if s.Username != "" {
+		result["username"] = s.Username
 	}
 
-	if settings.Password != "" {
-		result["password"] = settings.Password
+	if s.Password != "" {
+		result["password"] = s.Password
 	}
 
-	if settings.License != "" {
-		result["license"] = settings.License
+	if s.License != "" {
+		result["license"] = s.License
 	}
 
-	if settings.CheckMode != "" {
-		result["checkMode"] = string(settings.CheckMode)
+	if s.CheckMode != "" {
+		result["checkMode"] = string(s.CheckMode)
 	}
 
 	return result
 }
 
-func (settings *RegistrySettings) ApplySettings(userSettings *RegistrySettings) {
-	// Set default
-	*settings = RegistrySettings{
-		ImagesRepo: constant.DefaultImagesRepo,
-		Scheme:     constant.DefaultScheme,
+func (s RegistrySettings) Merge(other *RegistrySettings) RegistrySettings {
+	out := *s.DeepCopy()
+
+	if other == nil {
+		return out
 	}
 
-	if userSettings == nil {
-		return
+	if other.ImagesRepo != "" {
+		out.ImagesRepo = other.ImagesRepo
 	}
 
-	// Set user settings
-	userSettings.ImagesRepo = strings.TrimRight(strings.TrimSpace(userSettings.ImagesRepo), "/")
-	if userSettings.ImagesRepo != "" {
-		settings.ImagesRepo = userSettings.ImagesRepo
+	if other.Scheme != "" {
+		out.Scheme = other.Scheme
 	}
 
-	if userSettings.Scheme != "" {
-		settings.Scheme = userSettings.Scheme
+	if other.CA != "" {
+		out.CA = other.CA
 	}
 
-	if userSettings.CA != "" {
-		settings.CA = userSettings.CA
+	if other.Username != "" {
+		out.Username = other.Username
 	}
 
-	if userSettings.Username != "" {
-		settings.Username = userSettings.Username
+	if other.Password != "" {
+		out.Password = other.Password
 	}
 
-	if userSettings.Password != "" {
-		settings.Password = userSettings.Password
+	if other.License != "" {
+		out.License = other.License
 	}
 
-	if userSettings.License != "" {
-		settings.License = userSettings.License
+	if other.CheckMode != "" {
+		out.CheckMode = other.CheckMode
 	}
 
-	if userSettings.CheckMode != "" {
-		settings.CheckMode = userSettings.CheckMode
-	}
+	return out
 }
 
-func (settings RegistrySettings) Validate() error {
-	return validation.ValidateStruct(&settings,
-		validation.Field(&settings.CheckMode,
+func (s RegistrySettings) Validate() error {
+	return validation.ValidateStruct(&s,
+		validation.Field(&s.CheckMode,
 			validation.In(constant.CheckModeDefault, constant.CheckModeRelax).
-				Error(fmt.Sprintf("unknown registry check mode: %s", settings.CheckMode)),
+				Error(fmt.Sprintf("unknown registry check mode: %s", s.CheckMode)),
 		),
-		validation.Field(&settings.ImagesRepo,
+		validation.Field(&s.ImagesRepo,
 			validation.Required.Error("Field 'imagesRepo' is required"),
 			validation.Match(imagesRepoRegexp).Error(errorImagesRepoRegexp.Error()),
 		),
-		validation.Field(&settings.Scheme,
+		validation.Field(&s.Scheme,
 			validation.Required.
-				Error(fmt.Sprintf("Invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", settings.Scheme)),
+				Error(fmt.Sprintf("Invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", s.Scheme)),
 			validation.In(constant.SchemeHTTP, constant.SchemeHTTPS).
-				Error(fmt.Sprintf("Invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", settings.Scheme)),
+				Error(fmt.Sprintf("Invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", s.Scheme)),
 		),
-		validation.Field(&settings.Username,
-			validation.When(settings.Password != "",
+		validation.Field(&s.Username,
+			validation.When(s.Password != "",
 				validation.Required.Error("Username is required when password is provided"),
 			),
 		),
-		validation.Field(&settings.Password,
-			validation.When(settings.Username != "",
+		validation.Field(&s.Password,
+			validation.When(s.Username != "",
 				validation.Required.Error("Password is required when username is provided"),
 			),
 		),
-		validation.Field(&settings.License,
-			validation.When(settings.Username != "" || settings.Password != "",
+		validation.Field(&s.License,
+			validation.When(s.Username != "" || s.Password != "",
 				validation.Empty.Error("License field must be empty when using credentials (username/password)"),
 			),
 		),
-		validation.Field(&settings.CA,
-			validation.When(settings.Scheme == constant.SchemeHTTP,
+		validation.Field(&s.CA,
+			validation.When(s.Scheme == constant.SchemeHTTP,
 				validation.Empty.Error("CA is not allowed when scheme is 'HTTP'"),
 			),
 		),
 	)
 }
 
-func (settings *RegistrySettings) DeepCopyInto(out *RegistrySettings) {
-	*out = *settings
+func (s *RegistrySettings) DeepCopyInto(out *RegistrySettings) {
+	*out = *s
 }
 
-func (settings *RegistrySettings) DeepCopy() *RegistrySettings {
-	if settings == nil {
+func (s *RegistrySettings) DeepCopy() *RegistrySettings {
+	if s == nil {
 		return nil
 	}
 	out := new(RegistrySettings)
-	settings.DeepCopyInto(out)
+	s.DeepCopyInto(out)
 	return out
 }
 
@@ -291,37 +333,40 @@ type ProxySettings struct {
 	TTL string `json:"ttl,omitempty" yaml:"ttl,omitempty"`
 }
 
-func (settings ProxySettings) ToMap() map[string]any {
-	ret := settings.RegistrySettings.ToMap()
+func (s ProxySettings) ToMap() map[string]any {
+	ret := s.RegistrySettings.ToMap()
 
-	if settings.TTL != "" {
-		ret["ttl"] = settings.TTL
+	if s.TTL != "" {
+		ret["ttl"] = s.TTL
 	}
 
 	return ret
 }
 
-func (settings *ProxySettings) ApplySettings(userSettings *ProxySettings) {
-	var registrySettings RegistrySettings
-	var ttl string
+func (s ProxySettings) Merge(other *ProxySettings) ProxySettings {
+	out := *s.DeepCopy()
 
-	if userSettings != nil {
-		ttl = userSettings.TTL
-		registrySettings.ApplySettings(&userSettings.RegistrySettings)
-	} else {
-		registrySettings.ApplySettings(nil)
+	if other == nil {
+		return out
 	}
 
-	settings.RegistrySettings = registrySettings
-	settings.TTL = ttl
+	out.RegistrySettings = s.
+		RegistrySettings.
+		Merge(&other.RegistrySettings)
+
+	if other.TTL != "" {
+		out.TTL = other.TTL
+	}
+
+	return out
 }
 
-func (settings ProxySettings) Validate() error {
-	if err := settings.RegistrySettings.Validate(); err != nil {
+func (s ProxySettings) Validate() error {
+	if err := s.RegistrySettings.Validate(); err != nil {
 		return err
 	}
 
-	ttl := settings.TTL
+	ttl := s.TTL
 	if len(ttl) > 0 {
 		if err := validateTTL(ttl); err != nil {
 			return fmt.Errorf("invalid ttl format %q: %w", ttl, err)
@@ -330,16 +375,16 @@ func (settings ProxySettings) Validate() error {
 	return nil
 }
 
-func (settings *ProxySettings) DeepCopyInto(out *ProxySettings) {
-	*out = *settings
-	settings.RegistrySettings.DeepCopyInto(&out.RegistrySettings)
+func (s *ProxySettings) DeepCopyInto(out *ProxySettings) {
+	*out = *s
+	s.RegistrySettings.DeepCopyInto(&out.RegistrySettings)
 }
 
-func (settings *ProxySettings) DeepCopy() *ProxySettings {
-	if settings == nil {
+func (s *ProxySettings) DeepCopy() *ProxySettings {
+	if s == nil {
 		return nil
 	}
 	out := new(ProxySettings)
-	settings.DeepCopyInto(out)
+	s.DeepCopyInto(out)
 	return out
 }

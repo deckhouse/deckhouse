@@ -63,7 +63,7 @@ func proxySettingsBuilder(opts ...proxySettingsOption) *ProxySettings {
 	return &settings
 }
 
-func TestDeckhouseSettings_ApplySettings(t *testing.T) {
+func TestDeckhouseSettings_Merge(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    DeckhouseSettings
@@ -83,6 +83,17 @@ func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 			},
 		},
 		{
+			name: "mode direct no overrides",
+			input: DeckhouseSettings{
+				Mode:   constant.ModeDirect,
+				Direct: registrySettingsBuilder(),
+			},
+			expected: DeckhouseSettings{
+				Mode:   constant.ModeDirect,
+				Direct: registrySettingsBuilder(),
+			},
+		},
+		{
 			name: "mode unmanaged",
 			input: DeckhouseSettings{
 				Mode: constant.ModeUnmanaged,
@@ -93,6 +104,17 @@ func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 					ImagesRepo: constant.DefaultImagesRepo,
 					Scheme:     constant.DefaultScheme,
 				},
+			},
+		},
+		{
+			name: "mode unmanaged no overrides",
+			input: DeckhouseSettings{
+				Mode:      constant.ModeUnmanaged,
+				Unmanaged: registrySettingsBuilder(),
+			},
+			expected: DeckhouseSettings{
+				Mode:      constant.ModeUnmanaged,
+				Unmanaged: registrySettingsBuilder(),
 			},
 		},
 		{
@@ -108,6 +130,17 @@ func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 						Scheme:     constant.DefaultScheme,
 					},
 				},
+			},
+		},
+		{
+			name: "mode proxy no overrides",
+			input: DeckhouseSettings{
+				Mode:  constant.ModeProxy,
+				Proxy: proxySettingsBuilder(),
+			},
+			expected: DeckhouseSettings{
+				Mode:  constant.ModeProxy,
+				Proxy: proxySettingsBuilder(),
 			},
 		},
 		{
@@ -132,14 +165,21 @@ func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			deckhouseSettings := DeckhouseSettings{}
-			deckhouseSettings.ApplySettings(tt.input)
-			require.EqualValues(t, tt.expected, deckhouseSettings)
+			settings := New(tt.input.Mode).
+				Merge(&tt.input)
+
+			require.EqualValues(t, tt.expected, settings)
 		})
 	}
+
+	t.Run("merge with nil other returns copy of base", func(t *testing.T) {
+		base := New(constant.ModeDirect)
+		merged := base.Merge(nil)
+		require.EqualValues(t, base, merged)
+	})
 }
 
-func TestRegistrySettings_ApplySettings(t *testing.T) {
+func TestRegistrySettings_Merge(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *RegistrySettings
@@ -176,17 +216,6 @@ func TestRegistrySettings_ApplySettings(t *testing.T) {
 			},
 		},
 		{
-			name: "trim ImagesRepo",
-			input: &RegistrySettings{
-				ImagesRepo: "registry.example.com/",
-				Scheme:     "HTTPS",
-			},
-			expected: RegistrySettings{
-				ImagesRepo: "registry.example.com",
-				Scheme:     "HTTPS",
-			},
-		},
-		{
 			name:     "full",
 			input:    registrySettingsBuilder(),
 			expected: *registrySettingsBuilder(),
@@ -195,15 +224,21 @@ func TestRegistrySettings_ApplySettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var registrySettings RegistrySettings
-			registrySettings.ApplySettings(tt.input)
+			settings := NewRegistrySettings().
+				Merge(tt.input)
 
-			require.Equal(t, tt.expected, registrySettings)
+			require.Equal(t, tt.expected, settings)
 		})
 	}
+
+	t.Run("merge with nil other returns copy of base", func(t *testing.T) {
+		base := NewRegistrySettings()
+		merged := base.Merge(nil)
+		require.Equal(t, base, merged)
+	})
 }
 
-func TestProxySettings_ApplySettings(t *testing.T) {
+func TestProxySettings_Merge(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *ProxySettings
@@ -250,21 +285,6 @@ func TestProxySettings_ApplySettings(t *testing.T) {
 			},
 		},
 		{
-			name: "trim ImagesRepo",
-			input: &ProxySettings{
-				RegistrySettings: RegistrySettings{
-					ImagesRepo: "registry.example.com/",
-					Scheme:     "HTTPS",
-				},
-			},
-			expected: ProxySettings{
-				RegistrySettings: RegistrySettings{
-					ImagesRepo: "registry.example.com",
-					Scheme:     "HTTPS",
-				},
-			},
-		},
-		{
 			name:     "full",
 			input:    proxySettingsBuilder(),
 			expected: *proxySettingsBuilder(),
@@ -273,12 +293,24 @@ func TestProxySettings_ApplySettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var proxySettings ProxySettings
-			proxySettings.ApplySettings(tt.input)
+			settings := ProxySettings{
+				RegistrySettings: NewRegistrySettings(),
+			}
+			settings = settings.Merge(tt.input)
 
-			require.Equal(t, tt.expected, proxySettings)
+			require.Equal(t, tt.expected, settings)
 		})
 	}
+
+	t.Run("merge with nil other returns copy of base", func(t *testing.T) {
+		base := ProxySettings{
+			RegistrySettings: NewRegistrySettings(),
+			TTL:              "5m",
+		}
+
+		merged := base.Merge(nil)
+		require.Equal(t, base, merged)
+	})
 }
 
 func TestDeckhouseSettings_ToMap(t *testing.T) {

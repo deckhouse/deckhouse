@@ -36,10 +36,7 @@ func ConfigBuilder(opts ...any) Config {
 		mode             = constant.ModeUnmanaged
 		legacyMode       = false
 		ttl              = ""
-		registrySettings = module_config.RegistrySettings{
-			ImagesRepo: constant.DefaultImagesRepo,
-			Scheme:     constant.DefaultScheme,
-		}
+		registrySettings = module_config.NewRegistrySettings()
 	)
 
 	for _, opt := range opts {
@@ -83,11 +80,12 @@ func ConfigBuilder(opts ...any) Config {
 		}
 	}
 
-	var deckhouseSettings module_config.DeckhouseSettings
-	deckhouseSettings.ApplySettings(userSettings)
+	settings := module_config.
+		New(userSettings.Mode).
+		Merge(&userSettings)
 
 	var config Config
-	if err := config.Process(deckhouseSettings, legacyMode); err != nil {
+	if err := config.Process(settings, legacyMode); err != nil {
 		panic(err)
 	}
 
