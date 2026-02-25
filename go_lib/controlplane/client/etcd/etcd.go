@@ -658,7 +658,7 @@ func InitCluster(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint
 	return nil
 }
 
-func JoinCluster(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
+func JoinCluster(kubeClient clientset.Interface, config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
 
 	// data, ok := c.(JoinData)
 
@@ -667,7 +667,6 @@ func JoinCluster(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint
 	// }
 
 	// // gets access to the cluster using the identity defined in admin.conf
-	// client, err := data.Client()
 
 	// cfg, err := data.InitCfg()
 
@@ -681,7 +680,7 @@ func JoinCluster(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint
 	} else {
 		// Creates an etcd client that connects to all the local/stacked etcd members.
 		klog.V(1).Info("creating etcd client that connects to etcd pods")
-		etcdClient, err = NewFromCluster(client, config.CertificatesDir)
+		etcdClient, err = NewFromCluster(kubeClient, config.CertificatesDir)
 		if err != nil {
 			return err
 		}
