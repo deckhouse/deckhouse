@@ -1,5 +1,3 @@
-{{- $gopsVersion := include "get_oss_version_by_id" (list "gops" $ )  -}}
----
 # #####################################################################
 # Build gops binaries
 # Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile (gops-cni-builder stage)
@@ -14,7 +12,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $gopsVersion }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src/gops && rm -rf /src/gops/.git
+  - git clone --depth 1 --branch v{{ include "get_oss_version_by_id" (list "gops" $ ) }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src/gops && rm -rf /src/gops/.git
   - cd /src/gops
 ---
 image: {{ .ModuleName }}/gops-artifact
