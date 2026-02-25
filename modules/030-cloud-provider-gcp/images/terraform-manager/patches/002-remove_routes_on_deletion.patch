@@ -97,6 +97,7 @@ index f3f2efcf7..99ffbc3ee 100644
 +		if err != nil {
 +			return err
 +		}
++
 +		res, err := transport_tpg.SendRequest(
 +			transport_tpg.SendRequestOptions{
 +				Config:    config,
