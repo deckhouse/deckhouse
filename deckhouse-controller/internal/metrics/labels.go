@@ -40,9 +40,6 @@ const (
 	// Module Controller Label Keys
 	// ============================================================================
 
-	// LabelModuleName is the label key for the module name in migration/alert metrics.
-	LabelModuleName = "module_name"
-
 	// LabelModuleRelease is the label key for the module release name.
 	LabelModuleRelease = "module_release"
 
