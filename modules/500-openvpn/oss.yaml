@@ -3,4 +3,20 @@
   description: A secure tunneling daemon.
   logo: /images/logos/openvpn.png
   license: <a target="_blank" href="https://github.com/OpenVPN/openvpn/blob/master/COPYING">Mixed</a>
+  id: openvpn
+  version: 2.6.12
 
+- name: OpenSSL
+  link: https://github.com/openssl/openssl
+  description: TLS/SSL and crypto library.
+  logo: https://raw.githubusercontent.com/openssl/openssl/master/doc/images/openssl.svg
+  license: Apache License 2.0
+  id: openssl
+  version: 3.3.2
+
+- name: Libcap-ng
+  link: https://github.com/stevegrubb/libcap-ng
+  description: Libcap-ng is a library for Linux that makes using posix capabilities easy..
+  license: GNU General Public License v2.0
+  id: libcapNg
+  version: 0.8.5

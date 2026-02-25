@@ -1,6 +1,6 @@
-{{- $openvpnVersion := "2.6.12" }}
-{{- $opensslVersion := "3.3.2" }}
-{{- $libcapNgVersion := "0.8.5" }}
+{{- $openvpnVersion := include "get_oss_version_by_id" (list "openvpn" $ )  -}}
+{{- $opensslVersion := include "get_oss_version_by_id" (list "openssl" $ )  -}}
+{{- $opensslVersion := include "get_oss_version_by_id" (list "libcapNg" $ )  -}}
 {{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so* /bin/mknod" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
