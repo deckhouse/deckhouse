@@ -401,10 +401,18 @@ function main() {
     else
       REBOOT_ANNOTATION=null
   fi
- if [ "$FIRST_BASHIBLE_RUN" != "yes" ] && [[ ! -f $BASHIBLE_INITIALIZED_FILE ]]; then
-    bb-label-node-bashible-first-run-finished
-    touch $BASHIBLE_INITIALIZED_FILE
- fi
+  if [ "$FIRST_BASHIBLE_RUN" != "yes" ] && [[ ! -f $BASHIBLE_INITIALIZED_FILE ]]; then
+     bb-label-node-bashible-first-run-finished
+     touch $BASHIBLE_INITIALIZED_FILE
+  fi
+  if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]] && [[ -f "$BASHIBLE_INITIALIZED_FILE" ]]; then
+    UNINITIALIZED_TAINT="$(bb-kubectl-exec get no "$D8_NODE_HOSTNAME" -o json | jq -r '.spec.taints[]? | select(.key=="node.deckhouse.io/bashible-uninitialized") | .key' 2>/dev/null)"
+    if [[ "$UNINITIALIZED_TAINT" == "node.deckhouse.io/bashible-uninitialized" ]]; then
+      echo "Node is initialized but bashible-uninitialized taint is still present, re-labeling..."
+      bb-label-node-bashible-first-run-finished
+    fi
+  fi
+
   if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
