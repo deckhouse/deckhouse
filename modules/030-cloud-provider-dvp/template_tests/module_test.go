@@ -179,6 +179,11 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(cddDeployment.Exists()).To(BeTrue())
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+
+			capiSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-capi")
+			Expect(capiSecret.Exists()).To(BeTrue())
+			capiSecretData := capiSecret.Field("data").Map()
+			Expect(capiSecretData).To(Not(BeEmpty()))
 		})
 	})
 })
