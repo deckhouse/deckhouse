@@ -1,0 +1,15 @@
+{{/*
+  Escapes < and > to &lt; and &gt; inside <code>...</code> blocks only
+  (in the content between the tags), so that e.g. secret/<secret-name>/<key-name>
+  is displayed correctly and not parsed as HTML tags.
+  Pass the output of markdownify (HTML string).
+*/}}
+{{- $html := default "" . }}
+{{- $codeBlocks := findRE `(?s)<code>.*?</code>` $html }}
+{{- range $codeBlocks }}
+  {{- $inner := replaceRE `(?s)<code>(.*?)</code>` "$1" . }}
+  {{- $escaped := $inner | replaceRE "<" "&lt;" | replaceRE ">" "&gt;" }}
+  {{- $fixed := printf "<code>%s</code>" $escaped }}
+  {{- $html = replace $html . $fixed }}
+{{- end }}
+{{- $html | safeHTML }}
