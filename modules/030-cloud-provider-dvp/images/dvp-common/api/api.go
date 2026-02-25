@@ -76,12 +76,15 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 		namespace: config.Namespace,
 	}
 
+	// Capability detector/cache for ServiceWithHealthchecks.
+	swhcCaps := NewSWHCCapabilities(service)
+
 	return &DVPCloudAPI{
 		Service:             service,
 		ComputeService:      NewComputeService(service),
 		DiskService:         NewDiskService(service),
 		PortalService:       NewPortalService(service),
-		LoadBalancerService: NewLoadBalancerService(service),
+		LoadBalancerService: NewLoadBalancerService(service, swhcCaps),
 	}, nil
 }
 

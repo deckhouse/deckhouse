@@ -24,9 +24,10 @@ func setServiceWithHealthchecksSpec(
 	loadBalancerClass *string,
 	loadBalancerIP string,
 ) {
+	// TCP probe per Service port
 	probes := make([]map[string]any, 0, len(ports))
 	for _, p := range ports {
-		target := int32(0)
+		var target int32
 		if p.TargetPort.Type == intstr.Int {
 			target = p.TargetPort.IntVal
 		} else {
@@ -48,8 +49,8 @@ func setServiceWithHealthchecksSpec(
 		"healthcheck": map[string]any{
 			"initialDelaySeconds": int64(10),
 			"periodSeconds":       int64(10),
-			"probes":              probes,
 			"timeoutSeconds":      int64(1),
+			"probes":              probes,
 		},
 	}
 
@@ -79,7 +80,6 @@ func servicePortsToUnstructured(ports []v1.ServicePort) []any {
 		if p.AppProtocol != nil {
 			m["appProtocol"] = *p.AppProtocol
 		}
-		// targetPort
 		if p.TargetPort.Type == intstr.Int {
 			m["targetPort"] = p.TargetPort.IntVal
 		} else if p.TargetPort.StrVal != "" {
