@@ -63,7 +63,7 @@ func Edit(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	_, err = schemaStore.Validate(&modifiedData)
+	_, err = schemaStore.Validate(&modifiedData, config.ValidateOptionValidateExtensions(true))
 	if err != nil {
 		return nil, err
 	}
