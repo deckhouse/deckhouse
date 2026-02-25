@@ -1,7 +1,7 @@
 ---
-{{- $istioVersion := "1.21.6" }}
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-21" $ ) }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.21.6 -> v1x21x6 */}}
-{{- $kialiVersion := "v1.81.0" }}
+{{- $kialiVersion = printf "v%s" (include "get_oss_version_by_id" (list "kiali-for-istio-1-21" $ )) }}
 ---
 # Based on https://github.com/kiali/kiali/blob/v1.81.0/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
