@@ -63,7 +63,7 @@ mount:
 shell:
   install:
   - go install github.com/onsi/ginkgo/ginkgo@latest
-  - go install github.com/go-delve/delve/cmd/dlv@latest
+  - go install github.com/go-delve/delve/cmd/dlv@v1.25.2
   setup:
     {{- range $_, $edition := $.Editions }}
       {{- if not $edition.skipFixingImports }}
