@@ -55,17 +55,17 @@ func ConfigBuilder(opts ...any) registry.Config {
 		}
 	}
 
-	var deckhouseSettings module_config.DeckhouseSettings
+	var userSettings module_config.DeckhouseSettings
 
 	switch mode {
 	case constant.ModeDirect:
-		deckhouseSettings = module_config.DeckhouseSettings{
+		userSettings = module_config.DeckhouseSettings{
 			Mode:   constant.ModeDirect,
 			Direct: &registrySettings,
 		}
 
 	case constant.ModeProxy:
-		deckhouseSettings = module_config.DeckhouseSettings{
+		userSettings = module_config.DeckhouseSettings{
 			Mode: constant.ModeProxy,
 			Proxy: &module_config.ProxySettings{
 				RegistrySettings: registrySettings,
@@ -74,14 +74,16 @@ func ConfigBuilder(opts ...any) registry.Config {
 		}
 
 	default:
-		deckhouseSettings = module_config.DeckhouseSettings{
+		userSettings = module_config.DeckhouseSettings{
 			Mode:      constant.ModeUnmanaged,
 			Unmanaged: &registrySettings,
 		}
 	}
 
-	var config registry.Config
+	var deckhouseSettings module_config.DeckhouseSettings
+	deckhouseSettings.ApplySettings(userSettings)
 
+	var config registry.Config
 	if err := config.Process(deckhouseSettings, legacyMode); err != nil {
 		panic(err)
 	}

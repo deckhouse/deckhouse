@@ -18,6 +18,7 @@ package moduleconfig
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -29,6 +30,11 @@ var (
 	_ validation.Validatable = DeckhouseSettings{}
 	_ validation.Validatable = RegistrySettings{}
 	_ validation.Validatable = ProxySettings{}
+)
+
+var (
+	imagesRepoRegexp      = regexp.MustCompile(`^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_]+(\/[0-9a-zA-Z\.\-\_]+)*)?$`)
+	errorImagesRepoRegexp = fmt.Errorf("does not match the regexp pattern: `%s`", imagesRepoRegexp.String())
 )
 
 type DeckhouseSettings struct {
@@ -236,6 +242,7 @@ func (settings RegistrySettings) Validate() error {
 		),
 		validation.Field(&settings.ImagesRepo,
 			validation.Required.Error("Field 'imagesRepo' is required"),
+			validation.Match(imagesRepoRegexp).Error(errorImagesRepoRegexp.Error()),
 		),
 		validation.Field(&settings.Scheme,
 			validation.Required.

@@ -34,19 +34,28 @@ type Config struct {
 // - Otherwise, falls back to Unmanaged mode
 // - All parameters are populated with default values for the CE registry
 func (c *Config) UseDefault(criSupported bool) error {
+	var userSettings module_config.DeckhouseSettings
+	var legacyMode bool
+
 	if criSupported {
-		settings := module_config.DeckhouseSettings{
+		legacyMode = false
+		userSettings = module_config.DeckhouseSettings{
 			Mode:   constant.ModeDirect,
 			Direct: &module_config.RegistrySettings{},
 		}
-		return c.Process(settings, false)
+	} else {
+		legacyMode = true
+		userSettings = module_config.DeckhouseSettings{
+			Mode:      constant.ModeUnmanaged,
+			Unmanaged: &module_config.RegistrySettings{},
+		}
 	}
 
-	settings := module_config.DeckhouseSettings{
-		Mode:      constant.ModeUnmanaged,
-		Unmanaged: &module_config.RegistrySettings{},
-	}
-	return c.Process(settings, true)
+	// apply settings
+	var deckhouseSettings module_config.DeckhouseSettings
+	deckhouseSettings.ApplySettings(userSettings)
+
+	return c.Process(deckhouseSettings, legacyMode)
 }
 
 // UseInitConfig configures registry using legacy initConfiguration.
@@ -62,24 +71,25 @@ func (c *Config) UseInitConfig(userInitConfig init_config.Config) error {
 		return fmt.Errorf("get registry settings: %w", err)
 	}
 
-	settings := module_config.DeckhouseSettings{
+	userSettings := module_config.DeckhouseSettings{
 		Mode:      constant.ModeUnmanaged,
 		Unmanaged: &registrySettings,
 	}
-	return c.Process(settings, true)
+
+	// apply settings
+	var deckhouseSettings module_config.DeckhouseSettings
+	deckhouseSettings.ApplySettings(userSettings)
+
+	return c.Process(deckhouseSettings, true)
 }
 
 // UseDeckhouseSettings configures registry using deckhouse ModuleConfig settings.
 // The operation mode (Direct/Unmanaged) is determined from the user configuration.
-func (c *Config) UseDeckhouseSettings(userSettings module_config.DeckhouseSettings) error {
-	return c.Process(userSettings, false)
+func (c *Config) UseDeckhouseSettings(deckhouseSettings module_config.DeckhouseSettings) error {
+	return c.Process(deckhouseSettings, false)
 }
 
-func (c *Config) Process(userSettings module_config.DeckhouseSettings, legacyMode bool) error {
-	// Prepare settings
-	var deckhouseSettings module_config.DeckhouseSettings
-	deckhouseSettings.ApplySettings(userSettings)
-
+func (c *Config) Process(deckhouseSettings module_config.DeckhouseSettings, legacyMode bool) error {
 	// Validate
 	if err := deckhouseSettings.Validate(); err != nil {
 		return fmt.Errorf("validate registry settings: %w", err)

@@ -625,6 +625,15 @@ func TestRegistrySettings_Validate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid settings with full images repo (host:port/path)",
+			input: registrySettingsBuilder(
+				func(s *RegistrySettings) { s.ImagesRepo = "registry-test.io:8080/a/b/c/d" },
+			),
+			output: output{
+				err: false,
+			},
+		},
+		{
 			name: "valid settings without credentials",
 			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Username = "" },
@@ -683,6 +692,36 @@ func TestRegistrySettings_Validate(t *testing.T) {
 			output: output{
 				err:    true,
 				errMsg: "Field 'imagesRepo' is required",
+			},
+		},
+		{
+			name: "images repo with trailing slash after path",
+			input: registrySettingsBuilder(
+				func(s *RegistrySettings) { s.ImagesRepo = "test:80/a/b/c/d/" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
+			},
+		},
+		{
+			name: "images repo with only host, port and trailing slash",
+			input: registrySettingsBuilder(
+				func(s *RegistrySettings) { s.ImagesRepo = "test:80/" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
+			},
+		},
+		{
+			name: "images repo with multiple consecutive slashes",
+			input: registrySettingsBuilder(
+				func(s *RegistrySettings) { s.ImagesRepo = "test:80////a" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
 			},
 		},
 
@@ -827,6 +866,15 @@ func TestProxySettings_Validate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid settings with full images repo (host:port/path)",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.ImagesRepo = "registry-test.io:8080/a/b/c/d" },
+			),
+			output: output{
+				err: false,
+			},
+		},
+		{
 			name: "valid settings without credentials",
 			input: proxySettingsBuilder(
 				func(s *ProxySettings) { s.Username = "" },
@@ -903,6 +951,36 @@ func TestProxySettings_Validate(t *testing.T) {
 			output: output{
 				err:    true,
 				errMsg: "Field 'imagesRepo' is required",
+			},
+		},
+		{
+			name: "images repo with trailing slash after path",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.ImagesRepo = "test:80/a/b/c/d/" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
+			},
+		},
+		{
+			name: "images repo with only host, port and trailing slash",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.ImagesRepo = "test:80/" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
+			},
+		},
+		{
+			name: "images repo with multiple consecutive slashes",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.ImagesRepo = "test:80////a" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
 			},
 		},
 
