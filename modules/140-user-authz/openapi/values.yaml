@@ -6,6 +6,18 @@ properties:
     type: object
     default: {}
     properties:
+      consoleLegacyCompat:
+        type: boolean
+        description: |
+          When true, legacy namespace listing behavior is enabled for compatibility
+          with older Console module versions (< v1.44.0) that require `list namespaces`
+          permission via SelfSubjectAccessReview.
+        default: false
+      consoleVersion:
+        type: string
+        description: |
+          The currently installed Console module version, used to determine if
+          legacy compatibility mode should be enabled.
       customClusterRoles:
         type: object
         properties:
