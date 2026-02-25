@@ -1,6 +1,6 @@
 - name: MetalLB
   link: https://github.com/metallb/metallb
-  description: A network load-balancer implementation for Kubernetes using standard routing protocols.
+  description: A load-balancer implementation for bare metal Kubernetes clusters, using standard routing protocols.
   logo: https://raw.githubusercontent.com/metallb/metallb/master/website/static/images/logo/metallb-blue.svg
   license: Apache License 2.0
   id: metallb
