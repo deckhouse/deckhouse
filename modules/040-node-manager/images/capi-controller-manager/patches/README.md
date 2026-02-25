@@ -4,6 +4,6 @@
 
 Add support for searching nodes using the `node.deckhouse.io/provider-id` annotation
 
-### 003-go-mod.patch
+### 003-use-bootstrap-data-secret-instead-bootstrap-config-ref.patch
 
-Bump libraries versions to resolve CVE
+Mark bootstrap initialization complete with BootstrapDataSecretCreated field when DataSecretName is already present.
