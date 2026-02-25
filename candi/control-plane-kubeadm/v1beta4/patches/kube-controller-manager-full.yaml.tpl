@@ -59,8 +59,8 @@ spec:
         - --use-service-account-credentials=true
         - --profiling=false
         - --terminated-pod-gc-threshold={{ $gcThresholdCount }}
-        - --feature-gates={{ $controllerManagerFeatureGatesStr | quote }}
-        - --node-cidr-mask-size={{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
+        - --feature-gates={{ $controllerManagerFeatureGatesStr }}
+        - --node-cidr-mask-size={{ .clusterConfiguration.podSubnetNodeCIDRPrefix }}
         - --bind-address=127.0.0.1
         {{- if hasKey . "arguments" }}
           {{- if hasKey .arguments "nodeMonitorPeriod" }}

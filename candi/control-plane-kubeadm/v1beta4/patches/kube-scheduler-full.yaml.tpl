@@ -37,7 +37,7 @@ spec:
         - --kubeconfig=/etc/kubernetes/scheduler.conf
         - --leader-elect=true
         - --profiling=false
-        - --feature-gates={{ $schedulerFeatureGatesStr | quote }}
+        - --feature-gates={{ $schedulerFeatureGatesStr }}
         - --bind-address=127.0.0.1
         {{- if ne .runType "ClusterBootstrap" }}
         - --config=/etc/kubernetes/deckhouse/extra-files/scheduler-config.yaml
