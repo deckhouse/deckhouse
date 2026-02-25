@@ -27,6 +27,7 @@ const (
 	PkiSecretName                       = "d8-pki"
 	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"
 	ControlPlaneNodeNameLabelKey        = "control-plane.deckhouse.io/node"
+	ControlPlaneComponentLabelKey       = "control-plane.deckhouse.io/component"
 	NodeNameEnvVar                      = "NODE_NAME"
 	KubernetesConfigPath                = "/etc/kubernetes"
 	ManifestsPath                       = KubernetesConfigPath + "/manifests"

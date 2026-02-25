@@ -1,3 +1,19 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package controlplanenode
 
 import (
@@ -139,15 +155,18 @@ func (r *Reconciler) reconcileComponents(ctx context.Context, cpn *controlplanev
 		operation := &controlplanev1alpha1.ControlPlaneOperation{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: operationName,
+				Labels: map[string]string{
+					constants.ControlPlaneNodeNameLabelKey:  nodeName,
+					constants.ControlPlaneComponentLabelKey: string(check.component),
+				},
 			},
 			Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
-				ConfigVersion:      cpn.Spec.ConfigVersion,
-				NodeName:           nodeName,
-				Component:          check.component,
-				Command:            controlplanev1alpha1.OperationCommandUpdate,
-				DesiredChecksum:    check.specChecksum,
-				DesiredPKIChecksum: cpn.Spec.PKIChecksum,
-				Approved:           false,
+				ConfigVersion:   cpn.Spec.ConfigVersion,
+				NodeName:        nodeName,
+				Component:       check.component,
+				Command:         controlplanev1alpha1.OperationCommandUpdate,
+				DesiredChecksum: check.specChecksum,
+				Approved:        false,
 			},
 		}
 
@@ -208,7 +227,7 @@ func (r *Reconciler) buildComponentChecks(cpn *controlplanev1alpha1.ControlPlane
 }
 
 // operationNameForNode returns a deterministic name for ControlPlaneOperation.
-// Node names may contain dots (e.g. ip-10-0-0-1.ec2.internal); k8s resource names do not allow them.
+// Node names may contain dots (e.g. ip-10-0-0-1.domain.local); k8s resource names do not allow them.
 func operationNameForNode(nodeName string, component controlplanev1alpha1.OperationComponent, specChecksum string) string {
 	sanitized := strings.ReplaceAll(nodeName, ".", "-")
 	if len(specChecksum) > 6 {

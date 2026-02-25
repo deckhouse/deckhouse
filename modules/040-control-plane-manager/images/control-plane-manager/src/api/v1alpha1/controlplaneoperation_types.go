@@ -30,16 +30,16 @@ const (
 )
 
 // OperationComponent identifies a control plane component targeted by the operation.
-// +kubebuilder:validation:Enum=etcd;kube-apiserver;kube-controller-manager;kube-scheduler;hot-reload;pki
+// +kubebuilder:validation:Enum=Etcd;KubeAPIServer;KubeControllerManager;KubeScheduler;HotReload;PKI
 type OperationComponent string
 
 const (
-	OperationComponentEtcd                  OperationComponent = "etcd"
-	OperationComponentKubeAPIServer         OperationComponent = "kube-apiserver"
-	OperationComponentKubeControllerManager OperationComponent = "kube-controller-manager"
-	OperationComponentKubeScheduler         OperationComponent = "kube-scheduler"
-	OperationComponentHotReload             OperationComponent = "hot-reload"
-	OperationComponentPKI                   OperationComponent = "pki"
+	OperationComponentEtcd                  OperationComponent = "Etcd"
+	OperationComponentKubeAPIServer         OperationComponent = "KubeAPIServer"
+	OperationComponentKubeControllerManager OperationComponent = "KubeControllerManager"
+	OperationComponentKubeScheduler         OperationComponent = "KubeScheduler"
+	OperationComponentHotReload             OperationComponent = "HotReload"
+	OperationComponentPKI                   OperationComponent = "PKI"
 )
 
 // ControlPlaneOperationSpec defines the desired state of ControlPlaneOperation.
@@ -62,12 +62,9 @@ type ControlPlaneOperationSpec struct {
 	Command OperationCommand `json:"command"`
 
 	// DesiredChecksum is the expected checksum of the component configuration after the operation.
+	// The component is identified by the Component field (e.g. for HotReload it's hot-reload config checksum, for PKI it's PKI secret checksum).
 	// +kubebuilder:validation:Required
 	DesiredChecksum string `json:"desiredChecksum"`
-
-	// DesiredPKIChecksum is the expected checksum of the PKI secret after the operation.
-	// +kubebuilder:validation:Required
-	DesiredPKIChecksum string `json:"desiredPkiChecksum"`
 
 	// Approved indicates whether this operation is allowed to proceed.
 	// Only one operation per node may be approved at a time.

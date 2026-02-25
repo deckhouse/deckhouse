@@ -1,0 +1,29 @@
+apiVersion: control-plane.deckhouse.io/v1alpha1
+kind: ControlPlaneOperation
+metadata:
+  name: master-1-Etcd-215dfa
+  labels:
+    control-plane.deckhouse.io/node: master-1
+    control-plane.deckhouse.io/component: Etcd
+spec:
+  configVersion: "999.999"
+  nodeName: master-1
+  component: Etcd
+  command: Update
+  desiredChecksum: 215dfa8dd684c54dea814c09d0f2912d640fc870a68bb9542705fafffedd9faf
+  approved: false
+---
+apiVersion: control-plane.deckhouse.io/v1alpha1
+kind: ControlPlaneOperation
+metadata:
+  name: master-1-KubeAPIServer-55803a
+  labels:
+    control-plane.deckhouse.io/node: master-1
+    control-plane.deckhouse.io/component: KubeAPIServer
+spec:
+  configVersion: "999.999"
+  nodeName: master-1
+  component: KubeAPIServer
+  command: Update
+  desiredChecksum: 55803ac67b77816faed0b7b8f6255071826e2774f5e24ec37f3cedd9945b1834
+  approved: false

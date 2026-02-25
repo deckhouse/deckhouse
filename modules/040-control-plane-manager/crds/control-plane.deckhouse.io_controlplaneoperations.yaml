@@ -81,10 +81,12 @@ spec:
                 description: Component is the control plane component this operation
                   targets.
                 enum:
-                - etcd
-                - kube-apiserver
-                - kube-controller-manager
-                - kube-scheduler
+                - Etcd
+                - KubeAPIServer
+                - KubeControllerManager
+                - KubeScheduler
+                - HotReload
+                - PKI
                 type: string
               configVersion:
                 description: |-
@@ -92,12 +94,9 @@ spec:
                   that this operation targets.
                 type: string
               desiredChecksum:
-                description: DesiredChecksum is the expected checksum of the component
-                  configuration after the operation.
-                type: string
-              desiredPkiChecksum:
-                description: DesiredPKIChecksum is the expected checksum of the PKI
-                  secret after the operation.
+                description: |-
+                  DesiredChecksum is the expected checksum of the component configuration after the operation.
+                  The component is identified by the Component field (e.g. for HotReload it's hot-reload config checksum, for PKI it's PKI secret checksum).
                 type: string
               nodeName:
                 description: NodeName is the name of the control-plane node on which
@@ -109,7 +108,6 @@ spec:
             - component
             - configVersion
             - desiredChecksum
-            - desiredPkiChecksum
             - nodeName
             type: object
           status:

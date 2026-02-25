@@ -1,0 +1,14 @@
+apiVersion: control-plane.deckhouse.io/v1alpha1
+kind: ControlPlaneOperation
+metadata:
+  name: master-1-HotReload-c52c86
+  labels:
+    control-plane.deckhouse.io/node: master-1
+    control-plane.deckhouse.io/component: HotReload
+spec:
+  configVersion: "999.999"
+  nodeName: master-1
+  component: HotReload
+  command: Update
+  desiredChecksum: c52c86b6d6f63444de3b3cf5051a3ccf29f0574aade9c41f0ad168d10d82cddb
+  approved: false
