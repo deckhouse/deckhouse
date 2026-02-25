@@ -652,7 +652,7 @@ func CheckDHCTLDependencies(ctx context.Context, nodeInterface node.Interface) e
 					}
 
 					log.InfoF("Checking '%s' dependency\n", dep)
-					if statusCode > 0 {
+					if statusCode == 1 {
 						log.Success(fmt.Sprintf("Dependency '%s' is available\n", dep))
 					} else {
 						log.WarnLn(fmt.Sprintf("Dependency '%s' is missing!\n", dep))
@@ -744,7 +744,6 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
