@@ -76,7 +76,7 @@ Example for OpenStack based installation:
 apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa publicsshkeyhere"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 standard:
   internalNetworkCIDR: 192.168.199.0/24
   internalNetworkDNSServers:

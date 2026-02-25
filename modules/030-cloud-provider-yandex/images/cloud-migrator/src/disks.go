@@ -73,6 +73,9 @@ func (d *DiskMigrator) MigrateDisks(ctx context.Context) error {
 	}
 
 	pvs, err := d.getPVFromCluster(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get PV from cluster: %v", err)
+	}
 
 	pvMap := make(map[string]struct{}, len(pvs))
 	for _, pv := range pvs {

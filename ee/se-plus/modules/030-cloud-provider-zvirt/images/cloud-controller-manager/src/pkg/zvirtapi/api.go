@@ -24,11 +24,12 @@ func NewZvirtCloudAPI(apiURL, username, password string, insecure bool, caBundle
 
 	tls := ovirtclient.TLS()
 
-	if insecure {
+	switch {
+	case insecure:
 		tls.Insecure()
-	} else if caBundle != "" {
+	case caBundle != "":
 		tls.CACertsFromMemory([]byte(caBundle))
-	} else {
+	default:
 		tls.CACertsFromSystem()
 	}
 

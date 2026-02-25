@@ -17,6 +17,7 @@ Switching DKP to CE/BE/SE/SE+/EE can be done in one of the following ways:
 - The guide assumes the use of the public container registry address: `registry.deckhouse.io`. If you are using a different container registry address, modify the commands accordingly or refer to the [guide on switching Deckhouse to use a different registry](./third-party.html).
 - The Deckhouse CE/BE/SE/SE+ editions do not support the cloud providers `dynamix`, `openstack`, `VCD`, and `vSphere` (vSphere is supported in SE+) and a number of modules.
 - All commands are executed on the master node of the existing cluster with `root` user.
+- If, during the switching process, the image of a module did not reload and the module did not reinstall, use the [instructions](../../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
 {% endalert %}
 
 ### Switching using the registry module

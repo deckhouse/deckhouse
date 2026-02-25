@@ -610,6 +610,18 @@ entries:
                      ru: Настройка сетевых политик
                   url: /admin/configuration/network/policy/configuration.html
                 - title:
+                    en: SDN
+                    ru: SDN
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/network/sdn/
+                    - title:
+                        en: Configuring SDN in a DKP cluster
+                        ru: Настройка SDN в кластере DKP
+                      url: /admin/configuration/network/sdn/configure.html
+                - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
                   folders:
@@ -921,6 +933,18 @@ entries:
                     ru: ALB
                   url: /user/network/ingress/alb.html
             - title:
+                en: SDN
+                ru: SDN
+              folders:
+                - title:
+                    en: Additional networks for application pods
+                    ru: Дополнительные сети для прикладных подов
+                  url: /user/network/sdn/dedicated.html
+                - title:
+                    en: Connecting physical network interfaces to DPDK application pods
+                    ru: Подключение физических сетевых интерфейсов к подам DPDK-приложений
+                  url: /user/network/sdn/underlay.html
+            - title:
                 en: Intra-cluster communication
                 ru: Внутрикластерное взаимодействие
               url: /user/network/intra-cluster.html
@@ -1035,6 +1059,10 @@ entries:
                 en: Overview
                 ru: Обзор
               url: /user/monitoring/
+            - title:
+                en: Dashboards
+                ru: Дашборды
+              url: /user/monitoring/dashboards.html
             - title:
                 en: Configuring application monitoring
                 ru: Настройка мониторинга приложений

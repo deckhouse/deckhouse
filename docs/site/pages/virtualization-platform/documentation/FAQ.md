@@ -11,7 +11,8 @@ To do this, download and publish it on any HTTP service accessible from the clus
 
 1. Create an empty disk for OS installation:
 
-    ```yaml
+    ```bash
+    d8 k apply -f -<<EOF
     apiVersion: virtualization.deckhouse.io/v1alpha2
     kind: VirtualDisk
     metadata:
@@ -21,6 +22,7 @@ To do this, download and publish it on any HTTP service accessible from the clus
     persistentVolumeClaim:
     size: 100Gi
     storageClassName: local-path
+    EOF
     ```
 
 1. Create resources with iso-images of Windows OS and virtio drivers:
@@ -312,7 +314,7 @@ d8 k create secret generic sysprep-config --type="provisioning.virtualization.de
 Then you can create a virtual machine that will use an answer file during installation.
 To provide the Windows virtual machine with the answer file,
 you need to specify provisioning with the type SysprepRef.
-You can also specify here other files in base64 format (customize.ps1, id_rsa.pub, ...)
+You can also specify here other files in Base64 format (customize.ps1, id_ed25519.pub, ...)
 that you need to successfully execute scripts inside the answer file.
 
 ```yaml
@@ -346,6 +348,180 @@ spec:
       name: win-11-iso
     - kind: ClusterVirtualImage
       name: win-virtio-iso
+```
+
+## Using cloud-init to configure virtual machines
+
+Cloud-Init is a tool for automatically configuring virtual machines on first boot. The configuration is written in YAML format and must start with the `#cloud-config` header.
+
+### Updating and installing packages
+
+Example configuration for updating the system and installing packages:
+
+```yaml
+#cloud-config
+# Update package lists
+package_update: true
+# Upgrade installed packages to latest versions
+package_upgrade: true
+# List of packages to install
+packages:
+  - nginx
+  - curl
+  - htop
+# Commands to run after package installation
+runcmd:
+  - systemctl enable --now nginx.service
+```
+
+### Creating a user
+
+Example configuration for creating a user with a password and SSH key:
+
+```yaml
+#cloud-config
+# List of users to create
+users:
+  - name: cloud                    # Username
+    passwd: "$6$rounds=4096$saltsalt$..."  # Password hash (SHA-512)
+    lock_passwd: false            # Do not lock the account
+    sudo: ALL=(ALL) NOPASSWD:ALL  # Sudo privileges without password prompt
+    shell: /bin/bash              # Default shell
+    ssh-authorized-keys:          # SSH keys for access
+      - ssh-ed25519 AAAAC3NzaC... your-public-key ...
+# Allow password authentication via SSH
+ssh_pwauth: true
+```
+
+To generate a password hash, use the `mkpasswd --method=SHA-512 --rounds=4096` command.
+
+### Creating a file with required permissions
+
+Example configuration for creating a file with specified access permissions:
+
+```yaml
+#cloud-config
+# List of files to create
+write_files:
+  - path: /opt/scripts/start.sh    # File path
+    content: |                     # File content
+      #!/bin/bash
+      echo "Starting application"
+    owner: cloud:cloud            # File owner (user:group)
+    permissions: '0755'           # Access permissions (octal format)
+```
+
+### Configuring disk and filesystem
+
+Example configuration for disk partitioning, filesystem creation, and mounting:
+
+```yaml
+#cloud-config
+# Disk partitioning setup
+disk_setup:
+  /dev/sdb:                        # Disk device
+    table_type: gpt                # Partition table type (gpt or mbr)
+    layout: true                   # Automatically create partitions
+    overwrite: false               # Do not overwrite existing partitions
+
+# Filesystem setup
+fs_setup:
+  - label: data                    # Filesystem label
+    filesystem: ext4               # Filesystem type
+    device: /dev/sdb1              # Partition device
+    partition: auto                # Automatically detect partition
+
+# Filesystem mounting
+mounts:
+  # [device, mount_point, fs_type, options, dump, pass]
+  - ["/dev/sdb1", "/mnt/data", "ext4", "defaults", "0", "2"]
+```
+
+## How to use Ansible to provision virtual machines?
+
+[Ansible](https://docs.ansible.com/ansible/latest/index.html) is an automation tool that helps you to run tasks on remote servers via SSH. In this example, we will show you how to use Ansible to manage virtual machines in a `demo-app` project.
+
+The following assumptions will be used:
+
+- There is a frontend virtual machine in a `demo-app` project.
+- A `cloud` user is set up on the virtual machine for SSH access.
+- The SSH private key for the `cloud` user is stored in the `/home/user/.ssh/id_rsa` file on the Ansible server.
+
+Ansible `inventory` file example:
+
+```yaml
+---
+all:
+  vars:
+    ansible_ssh_common_args: '-o ProxyCommand="d8 v port-forward --stdio=true %h %h %p"'
+    # Default user for SSH access.
+    ansible_user: cloud
+    # Path to private key.
+    ansible_ssh_private_key_file: /home/user/.ssh/id_rsa
+  hosts:
+    # Host name in the format <VM name>.<project name>.
+    frontend.demo-app:
+```
+
+To check the virtual machine's uptime value, use the following command:
+
+```bash
+ansible -m shell -a "uptime" -i inventory.yaml all
+```
+
+Example output:
+
+```console
+frontend.demo-app | CHANGED | rc=0 >>
+12:01:20 up 2 days, 4:59, 0 users, load average: 0.00, 0.00, 0.00
+```
+
+If you prefer not to use the inventory file, you can specify and pass all the parameters directly in the command line:
+
+```bash
+ansible -m shell -a "uptime" \
+  -i "frontend.demo-app," \
+  -e "ansible_ssh_common_args='-o ProxyCommand=\"d8 v port-forward --stdio=true %h %p %p\"'" \
+  -e "ansible_user=cloud" \
+  -e "ansible_ssh_private_key_file=/home/user/.ssh/id_rsa" \
+  all
+```
+
+## Automatic Ansible inventory generation
+
+{% alert level="warning" %}
+The `d8 v ansible-inventory` command requires `d8` version v0.27.0 or higher.
+{% endalert %}
+
+{% alert level="warning" %}
+The command works only for virtual machines with the main cluster network (Main) connected.
+{% endalert %}
+
+Instead of manually creating an inventory file, you can use the `d8 v ansible-inventory` command, which automatically generates an Ansible inventory from virtual machines in the specified namespace. The command is compatible with the [ansible inventory script](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#inventory-scripts) interface.
+
+The command includes only virtual machines with assigned IP addresses in the `Running` state. Host names are formatted as `<vmname>.<namespace>` (for example, `frontend.demo-app`).
+
+If necessary, configure host variables through annotations (for example, SSH user):
+
+```bash
+d8 k -n demo-app annotate vm frontend provisioning.virtualization.deckhouse.io/ansible_user="cloud"
+```
+
+Use the command directly:
+
+```bash
+ANSIBLE_INVENTORY_ENABLED=yaml ansible -m shell -a "uptime" all -i <(d8 v ansible-inventory -n demo-app -o yaml)
+```
+
+{% alert level="info" %}
+The `<(...)` construct is necessary because Ansible expects a file or script as the source of the host list. Simply specifying the command in quotes will not work — Ansible will try to execute the string as a script. The `<(...)` construct passes the command output as a file that Ansible can read.
+{% endalert %}
+
+Or save the inventory to a file:
+
+```bash
+d8 v ansible-inventory --list -o yaml -n demo-app > inventory.yaml
+ansible -m shell -a "uptime" -i inventory.yaml all
 ```
 
 ## Redirecting traffic to a virtual machine

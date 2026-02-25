@@ -238,12 +238,26 @@ properties:
                   properties:
                     enabled:
                       type: boolean
+                removePodsViolatingTopologySpreadConstraint:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                    constraints:
+                      type: array
+                      items:
+                        type: string
+                        enum: ["DoNotSchedule", "ScheduleAnyway"]
+                      default: ["DoNotSchedule"]
+                    topologyBalanceNodeFit:
+                      type: boolean
               anyOf:
                 - required: ["lowNodeUtilization"]
                 - required: ["highNodeUtilization"]
                 - required: ["removeDuplicates"]
                 - required: ["removePodsViolatingNodeAffinity"]
                 - required: ["removePodsViolatingInterPodAntiAffinity"]
+                - required: ["removePodsViolatingTopologySpreadConstraint"]
           required:
             - name
             - strategies

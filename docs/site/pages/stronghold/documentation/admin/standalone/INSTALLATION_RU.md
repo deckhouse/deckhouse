@@ -110,7 +110,7 @@ Stronghold поддерживает мультисерверный режим д
 1. Сгенерируйте ключ для корневого сертификата:
 
    ```shell
-   openssl genrsa 2048 > stronghold-ca-key.pem
+   openssl ecparam -name prime256v1 -genkey > stronghold-ca-key.pem
    ```
 
 1. Выпустите корневой сертификат:

@@ -63,6 +63,7 @@ shell:
   - patch -p1 < /patches/022-ingress-update-status.patch
   - patch -p1 < /patches/023-use-proxy-real-ip-cidr-v2.patch
   - patch -p1 < /patches/024-cve-03022026-controller.patch
+  - patch -p1 < /patches/026-lua_ingress-use-request-host-for-https-redirect.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
@@ -267,22 +268,27 @@ shell:
   - cp -a /usr/bin/curl /chroot/usr/bin/curl
   - cp -a /lib64/* /chroot/lib64/
   - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
-  - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libgsasl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnfnetlink.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libntlm.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnghttp2.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libpsl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libssh2.so* /chroot/usr/lib64/
+  - |
+    for lib in \
+      /usr/lib64/libcurl* \
+      /usr/lib64/libstdc++* \
+      /usr/lib64/libbrotli* \
+      /usr/lib64/libxml2.so* \
+      /usr/lib64/libyajl.so* \
+      /usr/lib64/libmaxminddb.* \
+      /usr/lib64/libgsasl.so* \
+      /usr/lib64/libnfnetlink.so* \
+      /usr/lib64/libntlm.so* \
+      /usr/lib64/libnetfilter_conntrack.so* \
+      /usr/lib64/libnghttp2.so* \
+      /usr/lib64/libpsl.so* \
+      /usr/lib64/libssh2.so* \
+      /usr/lib64/libgrpc++.so* \
+      /usr/lib64/libpcre.so*; do
+      [ -e "$lib" ] || continue
+      cp -a "$lib" /chroot/usr/lib64/
+    done
   - cp -a /usr/lib64/gconv /chroot/usr/lib64/
-  - cp -a /usr/lib64/libgrpc++.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libpcre.so* /chroot/usr/lib64/
   - cp -a /usr/lib/valgrind /chroot/usr/lib/
   - cp -a /etc/nginx/* /chroot/etc/nginx/
   - cp -a /usr/local/bin /chroot/usr/local/

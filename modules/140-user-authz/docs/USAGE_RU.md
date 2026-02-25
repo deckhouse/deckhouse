@@ -429,7 +429,7 @@ spec:
 1. Сгенерируйте ключ пользователя:
 
     ```shell
-    openssl genrsa -out myuser.key 2048
+    openssl ecparam -name prime256v1 -genkey -out myuser.key
     ```
 
 1. Создайте CSR, указав в нём имя пользователя `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
@@ -484,7 +484,7 @@ EOF
 1. Сгенерируйте ключ пользователя:
 
     ```shell
-    openssl genrsa -out myuser.key 2048
+    openssl ecparam -name prime256v1 -genkey -out myuser.key
     ```
 
 1. Создайте CSR, указав в нём имя пользователя `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
