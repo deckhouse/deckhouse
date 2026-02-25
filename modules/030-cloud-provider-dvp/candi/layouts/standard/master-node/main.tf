@@ -152,7 +152,7 @@ module "master" {
 }
 
 resource "kubernetes_owner_references_v1" "cloudinit-secret" {
-  api_version = "virtualization.deckhouse.io/v1alpha2"
+  api_version = "v1"
   kind        = "Secret"
   metadata {
     name      = module.master.cloudinit_secret_name
