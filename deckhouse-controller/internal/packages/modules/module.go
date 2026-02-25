@@ -160,7 +160,7 @@ func (m *Module) addHooks(found ...hooks.Hook) error {
 // RuntimeValues holds runtime values that are not part of schema.
 // These values are passed to helm templates under .Runtime prefix.
 type RuntimeValues struct {
-	Package addonutils.Values
+	Package addonutils.Values `json:"Package"`
 }
 
 // GetRuntimeValues returns values that are not part of schema.
