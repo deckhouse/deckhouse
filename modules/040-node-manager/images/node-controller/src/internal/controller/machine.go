@@ -209,6 +209,12 @@ func indexMachineConditions(conditions []metav1.Condition) capiConditionRefs {
 func calculateCAPIState(conditions []metav1.Condition, phase capi.MachinePhase) machineState {
 	refs := indexMachineConditions(conditions)
 
+	if refs.infra != nil && refs.infra.Status == metav1.ConditionFalse {
+		return stateFromInfra(phase, refs.infra)
+	}
+	if refs.deleting != nil && refs.deleting.Status == metav1.ConditionTrue {
+		return stateFromDeleting(refs.deleting)
+	}
 	if phase == capi.MachinePhaseRunning {
 		return machineState{
 			statusString:    MachineStatusReady,
@@ -216,14 +222,6 @@ func calculateCAPIState(conditions []metav1.Condition, phase capi.MachinePhase) 
 			reason:          reasonReady,
 		}
 	}
-
-	if refs.infra != nil && refs.infra.Status == metav1.ConditionFalse {
-		return stateFromInfra(phase, refs.infra)
-	}
-	if refs.deleting != nil && refs.deleting.Status == metav1.ConditionTrue {
-		return stateFromDeleting(refs.deleting)
-	}
-
 	if refs.ready != nil {
 		return stateFromReady(refs.ready)
 	}
@@ -232,11 +230,12 @@ func calculateCAPIState(conditions []metav1.Condition, phase capi.MachinePhase) 
 
 func buildMachineReadyCondition(state machineState) deckhousev1alpha2.InstanceCondition {
 	cond := deckhousev1alpha2.InstanceCondition{
-		Type:     machineReadyConditionType,
-		Status:   state.conditionStatus,
-		Reason:   state.reason,
-		Message:  state.message,
-		Severity: state.severity,
+		Type:               machineReadyConditionType,
+		Status:             state.conditionStatus,
+		Reason:             state.reason,
+		Message:            state.message,
+		Severity:           state.severity,
+		LastTransitionTime: metav1.Now(),
 	}
 	if state.sourceCondition != nil {
 		cond.LastTransitionTime = state.sourceCondition.LastTransitionTime
