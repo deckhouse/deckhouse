@@ -1,0 +1,14 @@
+{{/*
+  Escapes < and > to &lt; and &gt; inside <p>...</p> blocks only (content between the tags),
+  so that plain text like 'secret/<secret-name>/<key-name>' in descriptions displays correctly.
+  Pass the output of markdownify (HTML string).
+*/}}
+{{- $html := default "" . }}
+{{- $pBlocks := findRE `(?s)<p>.*?</p>` $html }}
+{{- range $pBlocks }}
+  {{- $inner := replaceRE `(?s)<p>(.*?)</p>` "$1" . }}
+  {{- $escaped := $inner | replaceRE "<" "&lt;" | replaceRE ">" "&gt;" }}
+  {{- $fixed := printf "<p>%s</p>" $escaped }}
+  {{- $html = replace $html . $fixed }}
+{{- end }}
+{{- $html | safeHTML }}

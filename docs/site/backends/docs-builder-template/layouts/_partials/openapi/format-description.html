@@ -1,0 +1,11 @@
+{{/*
+  Renders description HTML: if source contains backticks, use markdownify + escape inside <code> only;
+  otherwise markdownify first, then escape < and > only inside <p>...</p> (so plain text like
+  'secret/<secret-name>/<key-name>' displays correctly without breaking HTML or markdown parsing).
+*/}}
+{{- $desc := default "" . }}
+{{- if in $desc "`" }}
+  {{- partial "openapi/escape-code-blocks" ($desc | markdownify) }}
+{{- else }}
+  {{- partial "openapi/escape-angles-in-paragraphs" ($desc | markdownify) }}
+{{- end }}

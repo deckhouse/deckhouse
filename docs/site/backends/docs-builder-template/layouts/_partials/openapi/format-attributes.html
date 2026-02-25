@@ -13,7 +13,7 @@
   {{- $description =  $attributes.description }}
 {{- end }}
 
-<div class="resources__prop_description">{{ partial "openapi/escape-code-blocks" ($description | markdownify) }}</div>
+<div class="resources__prop_description">{{ partial "openapi/format-description" $description }}</div>
 
 {{- if isset $attributes "x-doc-default" }}
   {{- template "format-default" (index $attributes "x-doc-default") }}
