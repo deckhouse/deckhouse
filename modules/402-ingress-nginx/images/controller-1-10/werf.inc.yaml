@@ -1,5 +1,5 @@
 {{- $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-10" $ ) }}
-{{- $controllerBranch = printf "controller-v%s" $controllerVersion }}
+{{- $controllerBranch := printf "controller-v%s" $controllerVersion }}
 {{- $controllerUser := "deckhouse" }}
 {{- $controllerUID := "64535" }}
 

@@ -1,6 +1,6 @@
 ---
 {{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-21" $ ) }}
-{{- $kialiVersion = printf "v%s" (include "get_oss_version_by_id" (list "kiali-for-istio-1-21" $ )) }}
+{{- $kialiVersion := printf "v%s" (include "get_oss_version_by_id" (list "kiali-for-istio-1-21" $ )) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
