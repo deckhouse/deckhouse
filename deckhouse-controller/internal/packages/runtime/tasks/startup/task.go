@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"sync"
 
-	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -30,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	taskhooksync "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/hooksync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -46,7 +46,7 @@ type packageI interface {
 	GetValuesChecksum() string
 	// InitializeHooks creates hook controllers and binds them to events.
 	InitializeHooks()
-	GetHooksByBinding(binding shtypes.BindingType) []*addonhooks.ModuleHook
+	GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 	RunHookByName(ctx context.Context, hook string, bctx []bctx.BindingContext) error
 	// UnlockKubernetesMonitors allows events to flow after initial sync.
