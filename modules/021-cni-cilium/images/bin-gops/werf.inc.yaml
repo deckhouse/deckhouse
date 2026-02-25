@@ -1,4 +1,4 @@
-{{- $gopsVersion := "v0.3.27" }}
+{{- $gopsVersion := include "get_oss_version_by_id" (list "gops" $ )  -}}
 ---
 # #####################################################################
 # Build gops binaries
@@ -14,7 +14,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $gopsVersion }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src/gops && rm -rf /src/gops/.git
+  - git clone --depth 1 --branch v{{ $gopsVersion }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src/gops && rm -rf /src/gops/.git
   - cd /src/gops
 ---
 image: {{ .ModuleName }}/gops-artifact

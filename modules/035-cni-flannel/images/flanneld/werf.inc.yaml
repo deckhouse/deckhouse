@@ -1,4 +1,4 @@
-{{- $flannel_version := "0.27.4" }}
+{{- $flannel_version := include "get_oss_version_by_id" (list "flannel" $ )  -}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 fromImage: builder/golang-alpine

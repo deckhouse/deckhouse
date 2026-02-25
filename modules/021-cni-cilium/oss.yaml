@@ -3,3 +3,17 @@
   description: Cilium is open source software for providing and transparently securing network connectivity and loadbalancing between application workloads such as application containers or processes.
   logo: /images/logos/cilium.png
   license: Apache License 2.0
+  id: cilium
+  version: 1.17.4
+
+- name: CNI plugins
+  link: https://github.com/containernetworking/plugins
+  description: Some reference and example networking plugins, maintained by the CNI team.
+  id: cni-plugins
+  version: 1.7.1
+
+- name: Gops
+  link: https://github.com/google/gops
+  description: A tool to list and diagnose Go processes currently running on your system.
+  id: gops
+  version: 0.3.27
