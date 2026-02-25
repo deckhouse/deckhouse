@@ -74,7 +74,7 @@ func NewReleaseMetricLabels(release v1alpha1.Release) MetricLabels {
 	labels[FromToName] = "nil"
 
 	if _, ok := release.(*v1alpha1.ModuleRelease); ok {
-		labels["moduleName"] = release.GetModuleName()
+		labels["module"] = release.GetModuleName()
 	}
 
 	return labels

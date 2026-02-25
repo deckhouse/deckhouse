@@ -387,7 +387,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			}
 			// fire alert at Conflict
 			r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{
-				"moduleName": module.Name,
+				"module": module.Name,
 			})
 		}
 	}
