@@ -1,6 +1,6 @@
 module easyrsa-migrator
 
-go 1.23.0
+go 1.25
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241205094820-aab424d5bf6c

@@ -429,7 +429,7 @@ To create a user using a client certificate issued through OpenSSL, follow these
 1. Generate the user key:
 
     ```shell
-    openssl genrsa -out myuser.key 2048
+    openssl ecparam -name prime256v1 -genkey -out myuser.key
     ```
 
 1. Create a CSR file and specify the username in it (`myuser`) and groups to which this user belongs (`mygroup1` and `mygroup2`):
@@ -484,7 +484,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
 1. Generate the user key:
 
     ```shell
-    openssl genrsa -out myuser.key 2048
+    openssl ecparam -name prime256v1 -genkey -out myuser.key
     ```
 
 1. Create a CSR file and specify in it the username (`myuser`) and groups to which this user belongs (`mygroup1` and `mygroup2`):

@@ -109,7 +109,7 @@ For production use, it is strongly recommended to use certificates issued and si
 
 1. Generate a key for the root certificate:
 
-   openssl genrsa 2048 > stronghold-ca-key.pem
+   openssl ecparam -name prime256v1 -genkey > stronghold-ca-key.pem
 
 1. Issue the root certificate:
 

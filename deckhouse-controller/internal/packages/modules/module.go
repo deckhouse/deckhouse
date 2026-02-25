@@ -22,8 +22,7 @@ import (
 	"slices"
 
 	"github.com/flant/addon-operator/pkg"
-	"github.com/flant/addon-operator/pkg/hook/types"
-	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
+	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
@@ -66,6 +65,8 @@ type Module struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
+	globalValuesGetter GlobalValuesGetter
+
 	logger *log.Logger
 }
 
@@ -82,14 +83,18 @@ type Config struct {
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
 
-	Hooks []*addonhooks.ModuleHook // Discovered hooks
+	Hooks []hooks.Hook // Discovered hooks
 
 	SettingsCheck *kind.SettingsCheck
 
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
+
+	GlobalValuesGetter GlobalValuesGetter
 }
+
+type GlobalValuesGetter func(prefix bool) addonutils.Values
 
 // NewModuleByConfig creates a new Module instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -108,6 +113,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
+	m.globalValuesGetter = cfg.GlobalValuesGetter
 	m.logger = logger
 
 	m.hooks = hooks.NewStorage()
@@ -126,7 +132,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 
 // addHooks initializes and adds hooks to the module's hook storage.
 // For each hook, it initializes the configuration and sets up logging/metrics labels.
-func (m *Module) addHooks(found ...*addonhooks.ModuleHook) error {
+func (m *Module) addHooks(found ...hooks.Hook) error {
 	for _, hook := range found {
 		if err := hook.InitializeHookConfig(); err != nil {
 			return fmt.Errorf("initialize hook configuration: %w", err)
@@ -176,7 +182,10 @@ func (m *Module) GetExtraNelmValues() string {
 	runtimeValues := m.GetRuntimeValues()
 	packageJSON, _ := json.Marshal(runtimeValues.Package)
 
-	return fmt.Sprintf("Package=%s", packageJSON)
+	globalValues := m.globalValuesGetter(false)
+	globalJSON, _ := json.Marshal(globalValues)
+
+	return fmt.Sprintf("Package=%s,Deckhouse=%s", packageJSON, globalJSON)
 }
 
 // GetName returns the full module identifier.
@@ -197,14 +206,14 @@ func (m *Module) GetPath() string {
 // GetQueues returns package queues from all hooks
 func (m *Module) GetQueues() []string {
 	var res []string //nolint:prealloc
-	scheduleHooks := m.GetHooksByBinding(shtypes.Schedule)
+	scheduleHooks := m.hooks.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range scheduleHooks {
 		for _, hookBinding := range hook.GetHookConfig().Schedules {
 			res = append(res, hookBinding.Queue)
 		}
 	}
 
-	kubeEventsHooks := m.GetHooksByBinding(shtypes.OnKubernetesEvent)
+	kubeEventsHooks := m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
 	for _, hook := range kubeEventsHooks {
 		for _, hookBinding := range hook.GetHookConfig().OnKubernetesEvents {
 			res = append(res, hookBinding.Queue)
@@ -252,7 +261,9 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 
 // GetValues returns values for rendering
 func (m *Module) GetValues() addonutils.Values {
-	return m.values.GetValues()
+	return addonutils.MergeValues(
+		addonutils.Values{"global": m.globalValuesGetter(false)},
+		m.values.GetValues())
 }
 
 // ApplySettings apply settings values
@@ -266,7 +277,7 @@ func (m *Module) GetChecks() schedule.Checks {
 }
 
 // GetHooks returns all hooks for this module in arbitrary order.
-func (m *Module) GetHooks() []*addonhooks.ModuleHook {
+func (m *Module) GetHooks() []hooks.Hook {
 	return m.hooks.GetHooks()
 }
 
@@ -295,7 +306,7 @@ func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 }
 
 // GetHooksByBinding returns all hooks for the specified binding type, sorted by order.
-func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []*addonhooks.ModuleHook {
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook {
 	return m.hooks.GetHooksByBinding(binding)
 }
 
@@ -312,7 +323,7 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 			Binding: string(binding),
 		}
 		// Update kubernetes snapshots just before execute m hook
-		if binding == types.BeforeHelm || binding == types.AfterHelm || binding == types.AfterDeleteHelm {
+		if binding == addontypes.BeforeHelm || binding == addontypes.AfterHelm || binding == addontypes.AfterDeleteHelm {
 			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
 			bc.Metadata.IncludeAllSnapshots = true
 		}
@@ -356,7 +367,7 @@ func (m *Module) RunHookByName(ctx context.Context, name string, bctx []bctx.Bin
 //  4. Apply values patches to storage
 //
 // Returns error if hook execution or patch fails.
-func (m *Module) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bctx.BindingContext) error {
+func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingContext) error {
 	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "runHook")
 	defer span.End()
 
