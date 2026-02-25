@@ -53,11 +53,12 @@ type PriorityClassThreshold struct {
 type EvictLocalStoragePods bool
 
 type Strategies struct {
-	LowNodeUtilization                      *LowNodeUtilization                      `json:"lowNodeUtilization,omitempty" yaml:"lowNodeUtilization,omitempty"`
-	HighNodeUtilization                     *HighNodeUtilization                     `json:"highNodeUtilization,omitempty" yaml:"highNodeUtilization,omitempty"`
-	RemoveDuplicates                        *RemoveDuplicates                        `json:"removeDuplicates,omitempty" yaml:"removeDuplicates,omitempty"`
-	RemovePodsViolatingNodeAffinity         *RemovePodsViolatingNodeAffinity         `json:"removePodsViolatingNodeAffinity,omitempty" yaml:"removePodsViolatingNodeAffinity,omitempty"`
-	RemovePodsViolatingInterPodAntiAffinity *RemovePodsViolatingInterPodAntiAffinity `json:"removePodsViolatingInterPodAntiAffinity,omitempty" yaml:"removePodsViolatingInterPodAntiAffinity,omitempty"`
+	LowNodeUtilization                          *LowNodeUtilization                          `json:"lowNodeUtilization,omitempty" yaml:"lowNodeUtilization,omitempty"`
+	HighNodeUtilization                         *HighNodeUtilization                         `json:"highNodeUtilization,omitempty" yaml:"highNodeUtilization,omitempty"`
+	RemoveDuplicates                            *RemoveDuplicates                            `json:"removeDuplicates,omitempty" yaml:"removeDuplicates,omitempty"`
+	RemovePodsViolatingNodeAffinity             *RemovePodsViolatingNodeAffinity             `json:"removePodsViolatingNodeAffinity,omitempty" yaml:"removePodsViolatingNodeAffinity,omitempty"`
+	RemovePodsViolatingInterPodAntiAffinity     *RemovePodsViolatingInterPodAntiAffinity     `json:"removePodsViolatingInterPodAntiAffinity,omitempty" yaml:"removePodsViolatingInterPodAntiAffinity,omitempty"`
+	RemovePodsViolatingTopologySpreadConstraint *RemovePodsViolatingTopologySpreadConstraint `json:"removePodsViolatingTopologySpreadConstraint,omitempty" yaml:"removePodsViolatingTopologySpreadConstraint,omitempty"`
 }
 
 // HasValidStrategies returns true if at least one strategy is defined.
@@ -69,7 +70,8 @@ func (s Strategies) HasValidStrategies() bool {
 		s.HighNodeUtilization != nil ||
 		s.RemoveDuplicates != nil ||
 		s.RemovePodsViolatingNodeAffinity != nil ||
-		s.RemovePodsViolatingInterPodAntiAffinity != nil
+		s.RemovePodsViolatingInterPodAntiAffinity != nil ||
+		s.RemovePodsViolatingTopologySpreadConstraint != nil
 }
 
 type LowNodeUtilization struct {
@@ -94,4 +96,10 @@ type RemovePodsViolatingNodeAffinity struct {
 
 type RemovePodsViolatingInterPodAntiAffinity struct {
 	Enabled bool `json:"enabled" yaml:"enabled"`
+}
+
+type RemovePodsViolatingTopologySpreadConstraint struct {
+	Enabled                bool     `json:"enabled" yaml:"enabled"`
+	Constraints            []string `json:"constraints,omitempty" yaml:"constraints,omitempty"`
+	TopologyBalanceNodeFit *bool    `json:"topologyBalanceNodeFit,omitempty" yaml:"topologyBalanceNodeFit,omitempty"`
 }

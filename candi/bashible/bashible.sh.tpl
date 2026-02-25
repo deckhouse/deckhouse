@@ -280,6 +280,47 @@ function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
 
+# curl request to get list of pods with labelSelector
+# $1 namespace
+# $2 labelSelector
+# $3 token
+function get_pods() {
+  local namespace=$1
+  local labelSelector=$2
+  local token=$3
+
+  while true; do
+    for server in {{ .normal.apiserverEndpoints | join " " }}; do
+      url="https://$server/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"
+      if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+      then
+      return 0
+      else
+        >&2 echo "failed to get $resource $name with curl https://$server..."
+      fi
+    done
+    sleep 10
+  done
+}
+
+function get_rpp_address() {
+  if [ -f /var/lib/bashible/bootstrap-token ]; then
+    local token="$(</var/lib/bashible/bootstrap-token)"
+    local namespace="d8-cloud-instance-manager"
+    local labelSelector="app%3Dregistry-packages-proxy"
+
+    rpp_ips=$(get_pods $namespace $labelSelector $token | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
+    port=4219
+    ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
+    echo "$ips_csv"
+  fi
+}
+
+function get_rpp_token() {
+  local rpp_token="$(get_secret "registry-packages-proxy-token" | jq -r '.data.token' |base64 -d)"
+  echo "${rpp_token}"
+}
+
 function main() {
   export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
   export BOOTSTRAP_DIR="/var/lib/bashible"
@@ -302,6 +343,19 @@ function main() {
 
   bb-discover-node-name
   export D8_NODE_HOSTNAME=$(bb-d8-node-name)
+
+{{ if eq .runType "Normal" }}
+  {{- if .packagesProxy }}
+  rpp_addr="$(get_rpp_address)"
+  if [[ -n $rpp_addr ]]; then
+    export PACKAGES_PROXY_ADDRESSES="${rpp_addr}"
+  fi
+  rpp_token="$(get_rpp_token)"
+  if [[ -n $rpp_token ]]; then
+    export PACKAGES_PROXY_TOKEN="${rpp_token}"
+  fi
+  {{- end }}
+{{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     if tmp="$(bb-kubectl-exec get node $(bb-d8-node-name) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then

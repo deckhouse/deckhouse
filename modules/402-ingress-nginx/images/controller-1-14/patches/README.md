@@ -122,6 +122,9 @@ This patch updates lua ingress script to take into account the `proxy-real-ip-ci
 ### 019-removed-deprecated-patches.patch (Already applied in nginx 1.29.5)
 
 This patch is no longer needed because the related changes are already included in nginx `1.29.5`.
+### 020-lua_ingress-use-request-host-for-https-redirect.patch
+
+This patch fixes HTTP-to-HTTPS redirect host selection in `lua_ingress`: when `Host` differs from the actual request host (for example with absolute-form requests), redirect now uses the request host (`$host`) instead of raw `Host` header to prevent redirects to arbitrary domains.
 
 ### cve-03022026.patch (Already exist)
 
