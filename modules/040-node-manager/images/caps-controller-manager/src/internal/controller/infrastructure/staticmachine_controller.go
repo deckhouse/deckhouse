@@ -574,6 +574,10 @@ func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schem
 					continue
 				}
 
+				if machine.Status.Initialization.Provisioned != nil && *machine.Status.Initialization.Provisioned {
+					continue
+				}
+
 				requests = append(requests, reconcile.Request{
 					NamespacedName: k8sClient.ObjectKey{
 						Namespace: machine.Namespace,

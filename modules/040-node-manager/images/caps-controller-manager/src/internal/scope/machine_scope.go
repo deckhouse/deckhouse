@@ -106,12 +106,16 @@ func (m *MachineScope) Patch(ctx context.Context) error {
 
 // SetReady sets the StaticMachine Ready Status.
 func (m *MachineScope) SetReady() {
-	m.StaticMachine.Status.Ready = true
+	machineReady := true
+	m.StaticMachine.Status.Ready = machineReady
+	m.StaticMachine.Status.Initialization.Provisioned = &machineReady
 }
 
 // SetNotReady sets the StaticMachine Ready Status to false.
 func (m *MachineScope) SetNotReady() {
-	m.StaticMachine.Status.Ready = false
+	machineReady := false
+	m.StaticMachine.Status.Ready = machineReady
+	m.StaticMachine.Status.Initialization.Provisioned = &machineReady
 }
 
 // Fail marks the StaticMachine as failed.
