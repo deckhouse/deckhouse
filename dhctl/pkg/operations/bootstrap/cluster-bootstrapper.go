@@ -38,8 +38,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	preflightnew "github.com/deckhouse/deckhouse/dhctl/pkg/preflight_new"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight_new/suites"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -203,6 +203,8 @@ func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *co
 }
 
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
+	var preflightRunner *preflight.Preflight
+
 	restore := b.applyParams()
 	defer restore()
 
@@ -224,7 +226,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
 	preparatorParams.WithPhaseBootstrap()
 	preparatorParams.WithPreflightChecks(infrastructureprovider.PreflightChecks{
-		DVPValidateKubeAPI: !app.PreflightSkipDVPKubeconfigCheck,
+		DVPValidateKubeAPI: true,
 	})
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
@@ -381,11 +383,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			Node:       b.NodeInterface,
 		})
 
-		preflightRunner = preflightnew.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
+		preflightRunner = preflight.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
 		preflightRunner.UseCache(bootstrapState)
 		preflightRunner.SetCacheSalt(configHash)
 		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
-		if err := preflightRunner.Run(ctx, preflightnew.PhasePreInfra); err != nil {
+		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
 			return err
 		}
 
@@ -468,7 +470,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := preflightRunner.Run(ctx, preflightnew.PhasePostInfra); err != nil {
+		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
 	} else {
@@ -477,14 +479,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			Node:       b.NodeInterface,
 			MetaConfig: metaConfig,
 		})
-		preflightRunner = preflightnew.New(globalPreflightSuite, staticPreflightSuite)
+		preflightRunner = preflight.New(globalPreflightSuite, staticPreflightSuite)
 		preflightRunner.UseCache(bootstrapState)
 		preflightRunner.SetCacheSalt(configHash)
 		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
-		if err := preflightRunner.Run(ctx, preflightnew.PhasePreInfra); err != nil {
+		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
 			return err
 		}
-		if err = preflightRunner.Run(ctx, preflightnew.PhasePostInfra); err != nil {
+		if err = preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
 

@@ -8,7 +8,6 @@ var generatedPreflightChecks = []string{
 	"cloud-prefix",
 	"deckhouse-user",
 	"dhctl-edition",
-	"dvp-kubeconfig",
 	"ports-availability",
 	"public-domain-template",
 	"python-modules",
@@ -18,14 +17,13 @@ var generatedPreflightChecks = []string{
 	"resolve-localhost",
 	"static-cidr-intersection",
 	"static-instances-ip-duplication",
+	"static-instances-ssh-credentials",
 	"static-single-ssh-host",
 	"static-ssh-credential",
 	"static-ssh-tunnel",
 	"static-system-requirements",
 	"sudo-allowed",
 	"time-drift",
-	"vcd-cloud-config",
-	"yandex-cloud-config",
 }
 
 func generatedChecks() []string {

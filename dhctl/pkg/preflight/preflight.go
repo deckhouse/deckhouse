@@ -1,10 +1,10 @@
-// Copyright 2023 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,299 +12,166 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package preflight
+package preflightnew
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/cenkalti/backoff/v4"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-type State interface {
-	SetGlobalPreflightchecksWasRan() error
-	GlobalPreflightchecksWasRan() (bool, error)
-	SetCloudPreflightchecksWasRan() error
-	SetPostCloudPreflightchecksWasRan() error
-	CloudPreflightchecksWasRan() (bool, error)
-	PostCloudPreflightchecksWasRan() (bool, error)
-	SetStaticPreflightchecksWasRan() error
-	StaticPreflightchecksWasRan() (bool, error)
+type Preflight struct {
+	suites    []Suite
+	disabled  map[CheckName]struct{}
+	cache     cache
+	cacheSalt string
 }
 
-type Checker struct {
-	nodeInterface           node.Interface
-	metaConfig              *config.MetaConfig
-	installConfig           *config.DeckhouseInstaller
-	bootstrapState          State
-	imageDescriptorProvider imageDescriptorProvider
+type cache interface {
+	Save(string, []byte) error
+	InCache(string) (bool, error)
 }
 
-type checkStep struct {
-	successMessage string
-	skipFlag       string
-	fun            func(ctx context.Context) error
-}
-
-func NewChecker(
-	nodeInterface node.Interface,
-	config *config.DeckhouseInstaller,
-	metaConfig *config.MetaConfig,
-	bootstrapState State,
-) Checker {
-	return Checker{
-		nodeInterface:           nodeInterface,
-		metaConfig:              metaConfig,
-		installConfig:           config,
-		bootstrapState:          bootstrapState,
-		imageDescriptorProvider: remoteDescriptorProvider{},
+func New(suites ...Suite) *Preflight {
+	return &Preflight{
+		suites:   append([]Suite(nil), suites...),
+		disabled: make(map[CheckName]struct{}),
 	}
 }
 
-func (pc *Checker) Static(ctx context.Context) error {
-	ready, err := pc.bootstrapState.StaticPreflightchecksWasRan()
-	if err != nil {
-		return fmt.Errorf("Cannot get state for static preflight checks from cache: %v", err)
-	}
+func (p *Preflight) UseCache(cache cache) {
+	p.cache = cache
+}
 
-	if ready {
-		return nil
-	}
+func (p *Preflight) SetCacheSalt(salt string) {
+	p.cacheSalt = salt
+}
 
-	err = pc.do(ctx, "Preflight checks for static-cluster", []checkStep{
-		{
-			fun:            pc.CheckStaticInstancesIPDuplication,
-			successMessage: "IP of StaticInstances are unique",
-			skipFlag:       app.StaticInstancesIPDuplication,
-		},
-		{
-			fun:            pc.CheckSingleSSHHostForStatic,
-			successMessage: "only one --ssh-host parameter used",
-			skipFlag:       app.OneSSHHostCheckArgName,
-		},
-		{
-			fun:            pc.CheckSSHCredential,
-			successMessage: "ssh credential is correctly",
-			skipFlag:       app.SSHCredentialsCheckArgName,
-		},
-		pc.getCheckSSHTunnelStep(),
-		{
-			fun:            pc.CheckStaticInstancesSSH,
-			successMessage: "SSHCredentials for StaticInstances are correct.",
-			skipFlag:       app.StaticInstancesWithSSHCredentials,
-		},
-		{
-			fun:            pc.CheckDeckhouseUser,
-			successMessage: "deckhouse user and group aren't present on node",
-			skipFlag:       app.DeckhouseUserCheckName,
-		},
-		{
-			fun:            pc.CheckStaticNodeSystemRequirements,
-			successMessage: "that node meets system requirements",
-			skipFlag:       app.SystemRequirementsArgName,
-		},
-		{
-			fun:            pc.CheckPythonAndItsModules,
-			successMessage: "python and required modules are installed",
-			skipFlag:       app.PythonChecksArgName,
-		},
-		{
-			fun:            pc.CheckRegistryAccessThroughProxy,
-			successMessage: "registry access through proxy",
-			skipFlag:       app.RegistryThroughProxyCheckArgName,
-		},
-		{
-			fun:            pc.CheckAvailabilityPorts,
-			successMessage: "required ports availability",
-			skipFlag:       app.PortsAvailabilityArgName,
-		},
-		{
-			fun:            pc.CheckLocalhostDomain,
-			successMessage: "resolve the localhost domain",
-			skipFlag:       app.ResolvingLocalhostArgName,
-		},
-		{
-			fun:            pc.CheckSudoIsAllowedForUser,
-			successMessage: "sudo is allowed for user",
-			skipFlag:       app.SudoAllowedCheckArgName,
-		},
-		{
-			fun:            pc.CheckTimeDrift,
-			successMessage: "server time drift has a acceptable value",
-			skipFlag:       app.TimeDriftArgName,
-		},
-		{
-			fun:            pc.CheckCidrIntersectionStatic,
-			successMessage: "CIDRs are not intersects",
-			skipFlag:       app.CIDRIntersection,
-		},
-	})
+func (p *Preflight) AddSuite(suite Suite) {
+	if suite == nil {
+		return
+	}
+	p.suites = append(p.suites, suite)
+}
+
+func (p *Preflight) DisableCheck(name string) {
+	p.disabled[CheckName(name)] = struct{}{}
+}
+
+func (p *Preflight) DisableChecks(names ...string) {
+	for _, name := range names {
+		p.DisableCheck(name)
+	}
+}
+
+func (p *Preflight) IsDisabled(name string) bool {
+	return p.isDisabled(CheckName(name))
+}
+
+func (p *Preflight) Run(ctx context.Context, phase Phase) error {
+	checks, err := p.prepareChecks(phase)
 	if err != nil {
 		return err
 	}
-
-	return pc.bootstrapState.SetStaticPreflightchecksWasRan()
+	phaseLabel := fmt.Sprintf("(%s)", phase)
+	runFunc := func() error {
+		return p.runChecks(ctx, checks)
+	}
+	return log.Process("preflight", phaseLabel, runFunc)
 }
 
-func (pc *Checker) StaticSudo(ctx context.Context) error {
-	_, err := pc.bootstrapState.StaticPreflightchecksWasRan()
-	if err != nil {
-		return fmt.Errorf("Cannot get state for static sudo preflight checks from cache: %v", err)
+func (p *Preflight) runChecks(ctx context.Context, checks []Check) error {
+	for _, check := range checks {
+		if check.Disabled {
+			log.InfoF("✓ %s: %s (skipped)\n", check.Name, check.Description)
+			continue
+		}
+		if err := p.runCheck(ctx, check); err != nil {
+			return err
+		}
 	}
-
-	err = pc.do(ctx, "Preflight checks for SSH and sudo", []checkStep{
-		{
-			fun:            pc.CheckSSHCredential,
-			successMessage: "ssh credential is correctly",
-			skipFlag:       app.SSHCredentialsCheckArgName,
-		},
-		{
-			fun:            pc.CheckSudoIsAllowedForUser,
-			successMessage: "sudo is allowed for user",
-			skipFlag:       app.SudoAllowedCheckArgName,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func (pc *Checker) Cloud(ctx context.Context) error {
-	ready, err := pc.bootstrapState.CloudPreflightchecksWasRan()
-	if err != nil {
-		return fmt.Errorf("Cannot get state for cloud preflight checks from cache: %v", err)
-	}
-
-	if ready {
-		return nil
-	}
-
-	// todo move to meta config preparator
-	err = pc.do(ctx, "Cloud deployment preflight checks", []checkStep{
-		{
-			fun:            pc.CheckCloudMasterNodeSystemRequirements,
-			successMessage: "cloud master node system requirements are met",
-			skipFlag:       app.SystemRequirementsArgName,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	return pc.bootstrapState.SetCloudPreflightchecksWasRan()
-}
-
-func (pc *Checker) PostCloud(ctx context.Context) error {
-	ready, err := pc.bootstrapState.PostCloudPreflightchecksWasRan()
-	if err != nil {
-		return fmt.Errorf("Cannot get state for post cloud preflight checks from cache: %v", err)
-	}
-
-	if ready {
-		return nil
-	}
-
-	cloudSteps := []checkStep{
-		pc.getCheckSSHTunnelStep(),
-	}
-
-	if needCheckCloudAPI(pc.metaConfig) {
-		// todo move to packet infrastructureprovider.cloud
-		cloudSteps = append(cloudSteps, checkStep{
-			fun:            pc.CheckCloudAPIAccessibility,
-			successMessage: "access to cloud api from master host",
-			skipFlag:       app.CloudAPIAccessibilityArgName,
-		})
-	}
-
-	err = pc.do(ctx, "Cloud deployment preflight checks", cloudSteps)
-	if err != nil {
-		return err
-	}
-
-	return pc.bootstrapState.SetPostCloudPreflightchecksWasRan()
-}
-
-func (pc *Checker) Global(ctx context.Context) error {
-	ready, err := pc.bootstrapState.GlobalPreflightchecksWasRan()
-	if err != nil {
-		return fmt.Errorf("Cannot get state for global preflight checks from cache: %v", err)
-	}
-
-	if ready {
-		return nil
-	}
-
-	// todo implement another function in meta config preparator
-	err = pc.do(ctx, "Global preflight checks", []checkStep{
-		{
-			fun:            pc.CheckPublicDomainTemplate,
-			successMessage: "PublicDomainTemplate is correctly",
-			skipFlag:       app.PublicDomainTemplateCheckArgName,
-		},
-		{
-			fun:            pc.CheckRegistryCredentials,
-			successMessage: "registry credentials are correct",
-			skipFlag:       app.RegistryCredentialsCheckArgName,
-		},
-		{
-			fun:            pc.CheckDhctlEdition,
-			successMessage: "dhctl edition is the same",
-			skipFlag:       app.DeckhouseEditionCheckArgName,
-		},
-		{
-			fun:            pc.CheckCidrIntersection,
-			successMessage: "CIDRs are not intersects",
-			skipFlag:       app.CIDRIntersection,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	return pc.bootstrapState.SetGlobalPreflightchecksWasRan()
-}
-
-func (pc *Checker) do(ctx context.Context, title string, checks []checkStep) error {
-	return log.Process("common", title, func() error {
-		if app.PreflightSkipAll {
-			log.WarnLn("Preflight checks were skipped")
+func (p *Preflight) runCheck(ctx context.Context, check Check) error {
+	if p.cache != nil {
+		key := p.cacheKey(check.Name)
+		if ok, err := p.cache.InCache(key); err == nil && ok {
+			log.InfoF("✓ %s: %s (cached)\n", check.Name, check.Description)
 			return nil
 		}
+	}
 
-		knownSkipFlags := make(map[string]struct{})
-		for _, check := range checks {
-			if _, skipFlagDuplicated := knownSkipFlags[check.skipFlag]; skipFlagDuplicated {
-				panic("duplicated skip flag " + check.skipFlag)
-			}
-			knownSkipFlags[check.skipFlag] = struct{}{}
+	if err := p.retry(ctx, check); err != nil {
+		return fmt.Errorf("preflight check %q failed.\nreason: %w", check.Name, err)
+	}
+	log.InfoF("✓ %s: %s\n", check.Name, check.Description)
 
-			loop := retry.NewLoop(
-				fmt.Sprintf("Checking %s", check.successMessage),
-				1,
-				10*time.Second,
-			)
-			if err := loop.RunContext(ctx, func() error { return check.fun(ctx) }); err != nil {
-				return fmt.Errorf("Installation aborted: %w\n"+
-					`Please fix this problem or skip it if you're sure with %s flag`, err, check.skipFlag)
-			}
+	if p.cache != nil {
+		if err := p.cache.Save(p.cacheKey(check.Name), []byte("yes")); err != nil {
+			log.WarnF("cannot cache result of %s: %v\n", check.Name, err)
 		}
-
-		return nil
-	})
+	}
+	return nil
 }
 
-func (pc *Checker) getCheckSSHTunnelStep() checkStep {
-	return checkStep{
-		fun:            pc.CheckSSHTunnel,
-		successMessage: "ssh tunnel between installer and node is possible",
-		skipFlag:       app.SSHForwardArgName,
+func (p *Preflight) prepareChecks(phase Phase) ([]Check, error) {
+	var checks []Check
+	for _, suite := range p.suites {
+		if suite == nil {
+			continue
+		}
+		for _, check := range suite.Checks() {
+			if err := check.Name.Validate(); err != nil {
+				return nil, err
+			}
+			if check.Phase != phase {
+				continue
+			}
+			if p.isDisabled(check.Name) {
+				check.Disable()
+			}
+			checks = append(checks, check)
+		}
 	}
+	return checks, nil
+}
+
+func (p *Preflight) isDisabled(name CheckName) bool {
+	_, ok := p.disabled[name]
+	return ok
+}
+
+func (p *Preflight) retry(ctx context.Context, check Check) error {
+	attempts := check.Retry.Attempts
+	if attempts <= 0 {
+		attempts = 1
+	}
+	var bo backoff.BackOff = backoff.NewExponentialBackOff(check.Retry.Options...)
+	bo = backoff.WithMaxRetries(bo, uint64(attempts-1))
+	bo = backoff.WithContext(bo, ctx)
+	attempt := 0
+	printedHeader := false
+	return backoff.RetryNotify(
+		func() error { attempt++; return check.Run(ctx) },
+		bo,
+		func(err error, next time.Duration) {
+			if !printedHeader {
+				log.WarnF("%s: %s\n\n", check.Name, check.Description)
+				printedHeader = true
+			}
+			log.InfoF("retry %d/%d in %s\nreason: %v\n", attempt, attempts, next, err)
+		},
+	)
+}
+
+func (p *Preflight) cacheKey(name CheckName) string {
+	if p.cacheSalt == "" {
+		return fmt.Sprintf("preflight-%s", name)
+	}
+	return fmt.Sprintf("preflight-%s-%s", p.cacheSalt, name)
 }

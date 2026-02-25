@@ -1,4 +1,4 @@
-// Copyright 2026 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -214,7 +214,7 @@ func fillTestWithNatInstanceLayout(t *testing.T, cfg *config.MetaConfig, setting
 }
 
 func assertValidation(t *testing.T, validatePrefix bool, cfg *config.MetaConfig, hasError bool) {
-	preparator := NewMetaConfigPreparator(validatePrefix).EnableValidateWithNATLayout(true)
+	preparator := NewMetaConfigPreparator(validatePrefix).EnableValidateWithNATLayout()
 
 	require.True(t, preparator.validateWithNATLayout)
 

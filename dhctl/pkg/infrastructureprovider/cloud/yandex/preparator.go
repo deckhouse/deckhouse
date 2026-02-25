@@ -1,4 +1,4 @@
-// Copyright 2026 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,15 +18,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	yandexpreflight "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	preflightnew "github.com/deckhouse/deckhouse/dhctl/pkg/preflight_new"
 	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
+
+var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
 
 type MetaConfigPreparator struct {
 	validatePrefix bool
@@ -52,19 +53,32 @@ func (p *MetaConfigPreparator) WithLogger(logger log.Logger) *MetaConfigPreparat
 	return p
 }
 
-func (p *MetaConfigPreparator) EnableValidateWithNATLayout(validateWithNATLayout bool) *MetaConfigPreparator {
-	p.validateWithNATLayout = validateWithNATLayout
+func (p *MetaConfigPreparator) EnableValidateWithNATLayout() *MetaConfigPreparator {
+	p.validateWithNATLayout = true
 	return p
 }
 
-func (p *MetaConfigPreparator) Validate(ctx context.Context, metaConfig *config.MetaConfig) error {
-	return preflightnew.RunSuite(ctx, preflightnew.NewSuite(
-		yandexpreflight.ConfigCheck(yandexpreflight.ConfigDeps{
-			MetaConfig:            metaConfig,
-			ValidatePrefix:        p.validatePrefix,
-			ValidateWithNATLayout: p.validateWithNATLayout,
-		}),
-	), preflightnew.PhaseProviderConfigCheck)
+func (p *MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
+	if p.validatePrefix {
+		prefix := metaConfig.ClusterPrefix
+		if !prefixRegex.MatchString(prefix) {
+			return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", prefix, ProviderName, prefixRegex.String())
+		}
+	}
+
+	if err := p.validateMasterNodeGroup(metaConfig); err != nil {
+		return err
+	}
+
+	if err := p.validateNodeGroups(metaConfig); err != nil {
+		return err
+	}
+
+	if err := p.validateWithNATInstanceLayout(metaConfig); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *MetaConfigPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {

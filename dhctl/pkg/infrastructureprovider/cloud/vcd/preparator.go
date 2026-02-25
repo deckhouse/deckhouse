@@ -1,4 +1,4 @@
-// Copyright 2026 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	vcdpreflight "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	preflightnew "github.com/deckhouse/deckhouse/dhctl/pkg/preflight_new"
 )
 
 type clientProvider func(m *config.MetaConfig, l log.Logger) (cloudClient, error)
@@ -50,14 +50,29 @@ func NewMetaConfigPreparator(params MetaConfigPreparatorParams, logger log.Logge
 	}
 }
 
-func (p MetaConfigPreparator) Validate(ctx context.Context, metaConfig *config.MetaConfig) error {
-	return preflightnew.RunSuite(ctx, preflightnew.NewSuite(
-		vcdpreflight.ConfigCheck(vcdpreflight.ConfigDeps{
-			MetaConfig:      metaConfig,
-			ValidatePrefix:  p.params.ValidateClusterPrefix,
-			CheckServerPath: true,
-		}),
-	), preflightnew.PhaseProviderConfigCheck)
+func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
+	if p.params.ValidateClusterPrefix {
+		err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
+		if err != nil {
+			return fmt.Errorf("%v for provider %s", err, ProviderName)
+		}
+	}
+
+	var providerConfiguration providerConfig
+	if err := json.Unmarshal(metaConfig.ProviderClusterConfig["provider"], &providerConfiguration); err != nil {
+		return fmt.Errorf("unable to unmarshal vcd provider configuration: %v", err)
+	}
+
+	server := strings.TrimSpace(providerConfiguration.Server)
+	if server == "" {
+		return nil
+	}
+
+	if strings.HasSuffix(server, "/") {
+		return fmt.Errorf("provider.server must not end with a slash '/'")
+	}
+
+	return nil
 }
 
 func (p MetaConfigPreparator) Prepare(ctx context.Context, metaConfig *config.MetaConfig) error {

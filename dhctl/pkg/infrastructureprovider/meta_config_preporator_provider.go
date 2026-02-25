@@ -1,4 +1,4 @@
-// Copyright 2026 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,8 +41,9 @@ type PreflightChecks struct {
 }
 
 type PreparatorProviderParams struct {
-	logger log.Logger
-	phase  DhctlPhase
+	logger          log.Logger
+	phase           DhctlPhase
+	PreflightChecks PreflightChecks
 }
 
 func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
@@ -51,6 +52,10 @@ func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
 
 func (p *PreparatorProviderParams) WithPhaseBootstrap() {
 	p.WithPhase(DhctlPhaseBootstrap)
+}
+
+func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
+	p.PreflightChecks = checks
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
@@ -80,7 +85,9 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
 			yandexPreparator := yandex.NewMetaConfigPreparator(true).WithLogger(logger)
-			yandexPreparator.EnableValidateWithNATLayout(params.phase == DhctlPhaseBootstrap)
+			if params.phase == DhctlPhaseBootstrap {
+				yandexPreparator.EnableValidateWithNATLayout()
+			}
 			return yandexPreparator
 		case vcd.ProviderName:
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{

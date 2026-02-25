@@ -1,4 +1,4 @@
-// Copyright 2026 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1023,10 +1023,7 @@ func assertApplyWithCreatingWorkerFilesInRoot(t *testing.T, params assertApplyWi
 	getter := CloudProviderGetter(params.params)
 
 	applyProvider, err := getter(context.TODO(), cfgApply)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Printf("applyProvider: %v\n", applyProvider)
+
 	_, cleanup := testPrepareFakeLayoutForApply(t, testPrepareFakeLayoutForApplyParams{
 		provider: applyProvider,
 		step:     applyStep,
