@@ -46,10 +46,6 @@ const (
 	// packageTypeLabel is a label on Docker images that indicates the package type
 	packageTypeLabel = "io.deckhouse.package.type"
 
-	// TODO: unify constant
-	packageTypeApplication = "Application"
-	packageTypeModule      = "Module"
-
 	// cleanupOldOperationsCount is the number of operations to keep for the same repository, older operations will be deleted
 	cleanupOldOperationsCount = 10
 )
@@ -484,7 +480,8 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 		return r.dequeuePackageWithError(ctx, operation, currentPackage.Name, err)
 	}
 
-	// Ensure the appropriate package resource based on detected type
+	// Ensure the appropriate package resource based on detected type.
+	// Skip resource creation for unrecognized packages (e.g. legacy modules without metadata).
 	switch processResult.PackageType {
 	case packageTypeModule:
 		if ensureErr := svc.EnsureModulePackage(ctx, currentPackage.Name); ensureErr != nil {
@@ -492,8 +489,7 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 				slog.String("package", currentPackage.Name),
 				log.Err(ensureErr))
 		}
-	default:
-		// Default to Application for unknown or Application types
+	case packageTypeApplication:
 		if ensureErr := svc.EnsureApplicationPackage(ctx, currentPackage.Name); ensureErr != nil {
 			r.logger.Error("failed to ensure application package resource",
 				slog.String("package", currentPackage.Name),
@@ -539,7 +535,7 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, operation *v1
 
 	operation.Status.Packages.Processed = append(operation.Status.Packages.Processed, v1alpha1.PackageRepositoryOperationStatusPackage{
 		Name: packageName,
-		Type: result.PackageType,
+		Type: string(result.PackageType),
 	})
 
 	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(result.Failed))

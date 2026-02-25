@@ -15,6 +15,7 @@
 package packagerepositoryoperation
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"flag"
@@ -65,31 +66,71 @@ func (c *errorInjectingClient) Create(ctx context.Context, obj client.Object, op
 // fakeImage wraps fake.FakeImage to implement registry.Image interface
 type fakeImage struct {
 	*fake.FakeImage
+	extractFunc func() io.ReadCloser
 }
 
 func (f *fakeImage) Extract() io.ReadCloser {
+	if f.extractFunc != nil {
+		return f.extractFunc()
+	}
 	return io.NopCloser(bytes.NewReader(nil))
 }
 
-// mockRegistryClient is a mock implementation of registry.Client for testing
+// buildTarWithFiles creates a tar archive containing the given files (name -> content)
+func buildTarWithFiles(files map[string]string) io.ReadCloser {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	for name, content := range files {
+		hdr := &tar.Header{
+			Name: name,
+			Mode: 0o600,
+			Size: int64(len(content)),
+		}
+		_ = tw.WriteHeader(hdr)
+		_, _ = tw.Write([]byte(content))
+	}
+	_ = tw.Close()
+	return io.NopCloser(bytes.NewReader(buf.Bytes()))
+}
+
+// packageYAMLTar returns a function that creates a tar containing package.yaml with a valid Application type.
+// This is used as a fallback in detectPackageType step 3 when labels are not found.
+func packageYAMLTar() func() io.ReadCloser {
+	return func() io.ReadCloser {
+		return buildTarWithFiles(map[string]string{
+			"package.yaml": "type: Application\n",
+		})
+	}
+}
+
+// mockRegistryClient is a mock implementation of registry.Client for testing.
+// It tracks segment depth to distinguish between package-level and version-level calls.
 type mockRegistryClient struct {
 	listTagsFunc       func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error)
 	getImageConfigFunc func(ctx context.Context, tag string) (*crv1.ConfigFile, error)
 	getImageFunc       func(ctx context.Context, tag string, opts ...registry.ImageGetOption) (registry.Image, error)
-	segment            string // tracks current segment (package name)
+	versionExtractFunc func() io.ReadCloser // tar content for version image Extract()
+	segments           []string
 }
 
 func (m *mockRegistryClient) WithSegment(segments ...string) registry.Client {
-	// Create a copy with segment set
 	newClient := &mockRegistryClient{
 		listTagsFunc:       m.listTagsFunc,
 		getImageConfigFunc: m.getImageConfigFunc,
 		getImageFunc:       m.getImageFunc,
-	}
-	if len(segments) > 0 {
-		newClient.segment = segments[0]
+		versionExtractFunc: m.versionExtractFunc,
+		segments:           append(append([]string{}, m.segments...), segments...),
 	}
 	return newClient
+}
+
+func (m *mockRegistryClient) isVersionSegment() bool {
+	for _, s := range m.segments {
+		if s == "version" {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *mockRegistryClient) GetRegistry() string {
@@ -105,6 +146,9 @@ func (m *mockRegistryClient) GetManifest(ctx context.Context, tag string) (regis
 }
 
 func (m *mockRegistryClient) GetImageConfig(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
+	if m.isVersionSegment() {
+		return &crv1.ConfigFile{}, nil
+	}
 	if m.getImageConfigFunc != nil {
 		return m.getImageConfigFunc(ctx, tag)
 	}
@@ -119,7 +163,20 @@ func (m *mockRegistryClient) GetImage(ctx context.Context, tag string, opts ...r
 	if m.getImageFunc != nil {
 		return m.getImageFunc(ctx, tag, opts...)
 	}
-	// Return a fake image with configFile from getImageConfigFunc if available
+
+	// Version segment: return image with Extract() (for ReadPackageDefinition) + empty ConfigFile (no type label)
+	if m.isVersionSegment() {
+		return &fakeImage{
+			FakeImage: &fake.FakeImage{
+				ConfigFileStub: func() (*crv1.ConfigFile, error) {
+					return &crv1.ConfigFile{}, nil
+				},
+			},
+			extractFunc: m.versionExtractFunc,
+		}, nil
+	}
+
+	// Package segment: return image with ConfigFile from getImageConfigFunc (release image with labels)
 	if m.getImageConfigFunc != nil {
 		configFile, err := m.getImageConfigFunc(ctx, tag)
 		if err != nil {
@@ -150,12 +207,13 @@ func (m *mockRegistryClient) ListRepositories(ctx context.Context, opts ...regis
 }
 
 // segmentAwareMockClient is a mock that returns different results based on whether
-// it's at root level (listing packages) or package level (listing versions)
+// it's at root level (listing packages) or package level (listing versions).
 type segmentAwareMockClient struct {
 	rootListTags       func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error)
 	packageListTags    func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error)
 	getImageConfigFunc func(ctx context.Context, tag string) (*crv1.ConfigFile, error)
-	segment            string
+	versionExtractFunc func() io.ReadCloser // tar content for version image Extract()
+	segments           []string
 }
 
 func (m *segmentAwareMockClient) WithSegment(segments ...string) registry.Client {
@@ -163,11 +221,19 @@ func (m *segmentAwareMockClient) WithSegment(segments ...string) registry.Client
 		rootListTags:       m.rootListTags,
 		packageListTags:    m.packageListTags,
 		getImageConfigFunc: m.getImageConfigFunc,
-	}
-	if len(segments) > 0 {
-		newClient.segment = segments[0]
+		versionExtractFunc: m.versionExtractFunc,
+		segments:           append(append([]string{}, m.segments...), segments...),
 	}
 	return newClient
+}
+
+func (m *segmentAwareMockClient) isVersionSegment() bool {
+	for _, s := range m.segments {
+		if s == "version" {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *segmentAwareMockClient) GetRegistry() string {
@@ -183,6 +249,9 @@ func (m *segmentAwareMockClient) GetManifest(ctx context.Context, tag string) (r
 }
 
 func (m *segmentAwareMockClient) GetImageConfig(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
+	if m.isVersionSegment() {
+		return &crv1.ConfigFile{}, nil
+	}
 	if m.getImageConfigFunc != nil {
 		return m.getImageConfigFunc(ctx, tag)
 	}
@@ -194,6 +263,19 @@ func (m *segmentAwareMockClient) CheckImageExists(ctx context.Context, tag strin
 }
 
 func (m *segmentAwareMockClient) GetImage(ctx context.Context, tag string, opts ...registry.ImageGetOption) (registry.Image, error) {
+	// Version segment: return image with Extract() (for ReadPackageDefinition) + empty ConfigFile (no type label)
+	if m.isVersionSegment() {
+		return &fakeImage{
+			FakeImage: &fake.FakeImage{
+				ConfigFileStub: func() (*crv1.ConfigFile, error) {
+					return &crv1.ConfigFile{}, nil
+				},
+			},
+			extractFunc: m.versionExtractFunc,
+		}, nil
+	}
+
+	// Package segment: return image with ConfigFile from getImageConfigFunc (release image with labels)
 	if m.getImageConfigFunc != nil {
 		configFile, err := m.getImageConfigFunc(ctx, tag)
 		if err != nil {
@@ -213,8 +295,8 @@ func (m *segmentAwareMockClient) PushImage(ctx context.Context, tag string, img 
 }
 
 func (m *segmentAwareMockClient) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
-	// If segment is set, we're at package level - return versions
-	if m.segment != "" && m.packageListTags != nil {
+	// If we have segments (beyond root), we're at package/version level - return versions
+	if len(m.segments) > 0 && m.packageListTags != nil {
 		return m.packageListTags(ctx, opts...)
 	}
 	// Otherwise we're at root level - return package names
@@ -559,6 +641,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					},
 				}, nil
 			},
+			versionExtractFunc: packageYAMLTar(),
 		}
 		psm := createMockPSM(mockClient)
 
@@ -591,6 +674,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					},
 				}, nil
 			},
+			versionExtractFunc: packageYAMLTar(),
 		}
 		psm := createMockPSM(mockClient)
 
@@ -625,6 +709,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					},
 				}, nil
 			},
+			versionExtractFunc: packageYAMLTar(),
 		}
 		psm := createMockPSM(segmentAwareMock)
 
@@ -662,6 +747,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					},
 				}, nil
 			},
+			versionExtractFunc: packageYAMLTar(),
 		}
 		psm := createMockPSM(segmentAwareMock)
 
@@ -710,6 +796,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					},
 				}, nil
 			},
+			versionExtractFunc: packageYAMLTar(),
 		}
 		psm := createMockPSM(segmentAwareMock)
 
@@ -758,6 +845,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					},
 				}, nil
 			},
+			versionExtractFunc: packageYAMLTar(),
 		}
 		psm := createMockPSM(segmentAwareMock)
 
@@ -769,6 +857,70 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
 			})
 
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("legacy module without metadata", func() {
+		// No labels on any image, no package.yaml in version image → errNoPackageMetadata.
+		// Package should appear in Processed (empty type) AND Failed, no resources created.
+		segmentAwareMock := &segmentAwareMockClient{
+			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"test-package"}, nil
+			},
+			packageListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"v1.0.0"}, nil
+			},
+			// No getImageConfigFunc → release image has no labels (returns nil)
+			// No versionExtractFunc → version image has no package.yaml (empty tar)
+		}
+		psm := createMockPSM(segmentAwareMock)
+
+		suite.setupController("legacy-module.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("invalid package type", func() {
+		// Release image has label with unrecognized type "Garbage" → errPackageTypeInvalid.
+		// Package should appear in Processed (empty type) AND Failed with version, no resources created.
+		segmentAwareMock := &segmentAwareMockClient{
+			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"test-package"}, nil
+			},
+			packageListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"v1.0.0"}, nil
+			},
+			getImageConfigFunc: func(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
+				return &crv1.ConfigFile{
+					Config: crv1.Config{
+						Labels: map[string]string{
+							"io.deckhouse.package.type": "Garbage",
+						},
+					},
+				}, nil
+			},
+			versionExtractFunc: packageYAMLTar(),
+		}
+		psm := createMockPSM(segmentAwareMock)
+
+		suite.setupController("invalid-package-type.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
 			return err
 		})
 

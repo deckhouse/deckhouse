@@ -27,8 +27,14 @@ status:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
-    type: Completed
+    type: Processed
   packages:
+    failed:
+    - errors:
+      - error: 'package has no type labels and no package.yaml, processed as the legacy
+          module (v1alpha1): test-package'
+        version: ""
+      name: test-package
     processed:
     - name: test-package
     processedOverall: 1
