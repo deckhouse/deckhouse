@@ -7,7 +7,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt_vm.go
 --- a/internal/ovirt/resource_ovirt_vm.go	(revision d5006279e05bffe26e78265cd090dba29e371e7c)
-+++ b/internal/ovirt/resource_ovirt_vm.go	(revision 25e9ad78ad389d52dfefc7a95a83ca592fef8593)
++++ b/internal/ovirt/resource_ovirt_vm.go	(date 1772008988380)
 @@ -1,7 +1,9 @@
  package ovirt
 
@@ -30,3 +30,4 @@ diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt
 +		vmInitScript = buf.String()
  		useInit = true
  	}
+
