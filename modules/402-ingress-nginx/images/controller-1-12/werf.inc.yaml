@@ -665,8 +665,6 @@ import:
   to: /tools/setcap
   before: install
 - image: tools/curl-curl-8_18_0
-  add: /usr
-  to: /base_images/curl
   add: /usr/bin/curl-static
   to: /chroot/usr/bin/curl
   owner: "64535"
