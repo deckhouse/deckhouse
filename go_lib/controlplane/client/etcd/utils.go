@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"sync"
 	"time"
 
 	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
@@ -23,45 +22,10 @@ type Member struct {
 	PeerURL string
 }
 
-// Timeouts holds various timeouts that apply to kubeadm commands.
-type Timeouts struct {
-	// ControlPlaneComponentHealthCheck is the amount of time to wait for a control plane
-	// component, such as the API server, to be healthy during "kubeadm init" and "kubeadm join".
-	ControlPlaneComponentHealthCheck *metav1.Duration
-
-	// KubeletHealthCheck is the amount of time to wait for the kubelet to be healthy
-	// during "kubeadm init" and "kubeadm join".
-	KubeletHealthCheck *metav1.Duration
-
-	// KubernetesAPICall is the amount of time to wait for the kubeadm client to complete a request to
-	// the API server. This applies to all types of methods (GET, POST, etc).
-	KubernetesAPICall *metav1.Duration
-
-	// EtcdAPICall is the amount of time to wait for the kubeadm etcd client to complete a request to
-	// the etcd cluster.
-	EtcdAPICall *metav1.Duration
-
-	// TLSBootstrap is the amount of time to wait for the kubelet to complete TLS bootstrap
-	// for a joining node.
-	TLSBootstrap *metav1.Duration
-
-	// Discovery is the amount of time to wait for kubeadm to validate the API server identity
-	// for a joining node.
-	Discovery *metav1.Duration
-
-	// UpgradeManifests is the timeout for upgrading static Pod manifests.
-	UpgradeManifests *metav1.Duration
-}
-
-var (
-	timeoutMutex             = &sync.RWMutex{}
-	activeTimeouts *Timeouts = nil
-)
-
 // getEtcdEndpoints returns the list of etcd endpoints.
 func getEtcdEndpoints(client clientset.Interface) ([]string, error) {
 	return getEtcdEndpointsWithRetry(client,
-		constants.KubernetesAPICallRetryInterval, GetActiveTimeouts().KubernetesAPICall.Duration)
+		constants.KubernetesAPICallRetryInterval, kubeadmapi.GetActiveTimeouts().KubernetesAPICall.Duration)
 }
 
 func getEtcdEndpointsWithRetry(client clientset.Interface, interval, timeout time.Duration) ([]string, error) {
@@ -133,13 +97,6 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 	return etcdEndpoints, len(podList.Items), nil
 }
 
-// GetActiveTimeouts gets the active timeouts structure.
-func GetActiveTimeouts() *Timeouts {
-	timeoutMutex.RLock()
-	defer timeoutMutex.RUnlock()
-	return activeTimeouts
-}
-
 // GetClientURL creates an HTTPS URL that uses the configured advertise
 // address and client port for the API controller
 func GetClientURL(localEndpoint *kubeadmapi.APIEndpoint) string {
@@ -157,3 +114,160 @@ func GetPeerURL(localEndpoint *kubeadmapi.APIEndpoint) string {
 func GetClientURLByIP(ip string) string {
 	return "https://" + net.JoinHostPort(ip, strconv.Itoa(constants.EtcdListenClientPort))
 }
+
+// // LoadInitConfigurationFromFile loads a supported versioned InitConfiguration from a file, converts it into internal config, defaults it and verifies it.
+// func LoadInitConfigurationFromFile(cfgPath string, opts kubeadmutil.LoadOrDefaultConfigurationOptions) (*kubeadmapi.InitConfiguration, error) {
+// 	klog.V(1).Infof("loading configuration from %q", cfgPath)
+
+// 	b, err := os.ReadFile(cfgPath)
+// 	if err != nil {
+// 		return nil, errors.Wrapf(err, "unable to read config from %q ", cfgPath)
+// 	}
+
+// 	return BytesToInitConfiguration(b, opts.SkipCRIDetect)
+// }
+
+// // LoadOrDefaultInitConfiguration takes a path to a config file and a versioned configuration that can serve as the default config
+// // If cfgPath is specified, the versioned configs will always get overridden with the one in the file (specified by cfgPath).
+// // The external, versioned configuration is defaulted and converted to the internal type.
+// // Right thereafter, the configuration is defaulted again with dynamic values (like IP addresses of a machine, etc)
+// // Lastly, the internal config is validated and returned.
+// func LoadOrDefaultInitConfiguration(cfgPath string, versionedInitCfg *kubeadmapiv1.InitConfiguration, versionedClusterCfg *kubeadmapiv1.ClusterConfiguration, opts LoadOrDefaultConfigurationOptions) (*kubeadmapi.InitConfiguration, error) {
+// 	var (
+// 		config *kubeadmapi.InitConfiguration
+// 		err    error
+// 	)
+// 	if cfgPath != "" {
+// 		// Loads configuration from config file, if provided
+// 		config, err = LoadInitConfigurationFromFile(cfgPath, opts)
+// 	} else {
+// 		config, err = DefaultedInitConfiguration(versionedInitCfg, versionedClusterCfg, opts)
+// 	}
+// 	if err == nil {
+// 		prepareStaticVariables(config)
+// 	}
+// 	return config, err
+// }
+
+// // BytesToInitConfiguration converts a byte slice to an internal, defaulted and validated InitConfiguration object.
+// // The map may contain many different YAML/JSON documents. These documents are parsed one-by-one
+// // and well-known ComponentConfig GroupVersionKinds are stored inside of the internal InitConfiguration struct.
+// // The resulting InitConfiguration is then dynamically defaulted and validated prior to return.
+// func BytesToInitConfiguration(b []byte, skipCRIDetect bool) (*kubeadmapi.InitConfiguration, error) {
+// 	// Split the YAML/JSON documents in the file into a DocumentMap
+// 	gvkmap, err := kubeadmutil.SplitConfigDocuments(b)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return documentMapToInitConfiguration(gvkmap, false, false, false, skipCRIDetect)
+// }
+
+// // documentMapToInitConfiguration converts a map of GVKs and YAML/JSON documents to defaulted and validated configuration object.
+// func documentMapToInitConfiguration(gvkmap kubeadmapi.DocumentMap, allowDeprecated, allowExperimental, strictErrors, skipCRIDetect bool) (*kubeadmapi.InitConfiguration, error) {
+// 	var initcfg *kubeadmapi.InitConfiguration
+// 	var clustercfg *kubeadmapi.ClusterConfiguration
+
+// 	// Sort the GVKs deterministically by GVK string.
+// 	// This allows ClusterConfiguration to be decoded first.
+// 	gvks := make([]schema.GroupVersionKind, 0, len(gvkmap))
+// 	for gvk := range gvkmap {
+// 		gvks = append(gvks, gvk)
+// 	}
+// 	sort.Slice(gvks, func(i, j int) bool {
+// 		return gvks[i].String() < gvks[j].String()
+// 	})
+
+// 	for _, gvk := range gvks {
+// 		fileContent := gvkmap[gvk]
+
+// 		// first, check if this GVK is supported and possibly not deprecated
+// 		if err := validateSupportedVersion(gvk, allowDeprecated, allowExperimental); err != nil {
+// 			return nil, err
+// 		}
+
+// 		// verify the validity of the JSON/YAML
+// 		if err := strict.VerifyUnmarshalStrict([]*runtime.Scheme{kubeadmscheme.Scheme, componentconfigs.Scheme}, gvk, fileContent); err != nil {
+// 			if !strictErrors {
+// 				klog.Warning(err.Error())
+// 			} else {
+// 				return nil, err
+// 			}
+// 		}
+
+// 		if kubeadmutil.GroupVersionKindsHasInitConfiguration(gvk) {
+// 			// Set initcfg to an empty struct value the deserializer will populate
+// 			initcfg = &kubeadmapi.InitConfiguration{}
+// 			// Decode the bytes into the internal struct. Under the hood, the bytes will be unmarshalled into the
+// 			// right external version, defaulted, and converted into the internal version.
+// 			if err := runtime.DecodeInto(kubeadmscheme.Codecs.UniversalDecoder(), fileContent, initcfg); err != nil {
+// 				return nil, err
+// 			}
+// 			continue
+// 		}
+// 		if kubeadmutil.GroupVersionKindsHasClusterConfiguration(gvk) {
+// 			// Set clustercfg to an empty struct value the deserializer will populate
+// 			clustercfg = &kubeadmapi.ClusterConfiguration{}
+// 			// Decode the bytes into the internal struct. Under the hood, the bytes will be unmarshalled into the
+// 			// right external version, defaulted, and converted into the internal version.
+// 			if err := runtime.DecodeInto(kubeadmscheme.Codecs.UniversalDecoder(), fileContent, clustercfg); err != nil {
+// 				return nil, err
+// 			}
+// 			continue
+// 		}
+
+// 		// If the group is neither a kubeadm core type or of a supported component config group, we dump a warning about it being ignored
+// 		if !componentconfigs.Scheme.IsGroupRegistered(gvk.Group) {
+// 			klog.Warningf("[config] WARNING: Ignored configuration document with GroupVersionKind %v\n", gvk)
+// 		}
+// 	}
+
+// 	// Enforce that InitConfiguration and/or ClusterConfiguration has to exist among the configuration documents
+// 	if initcfg == nil && clustercfg == nil {
+// 		return nil, errors.New("no InitConfiguration or ClusterConfiguration kind was found in the configuration file")
+// 	}
+
+// 	// If InitConfiguration wasn't given, default it by creating an external struct instance, default it and convert into the internal type
+// 	if initcfg == nil {
+// 		extinitcfg := &kubeadmapiv1.InitConfiguration{}
+// 		kubeadmscheme.Scheme.Default(extinitcfg)
+// 		// Set initcfg to an empty struct value the deserializer will populate
+// 		initcfg = &kubeadmapi.InitConfiguration{}
+// 		if err := kubeadmscheme.Scheme.Convert(extinitcfg, initcfg, nil); err != nil {
+// 			return nil, err
+// 		}
+// 	}
+// 	// If ClusterConfiguration was given, populate it in the InitConfiguration struct
+// 	if clustercfg != nil {
+// 		initcfg.ClusterConfiguration = *clustercfg
+
+// 		// TODO: Workaround for missing v1beta3 ClusterConfiguration timeout conversion. Remove this conversion once the v1beta3 is removed
+// 		if clustercfg.APIServer.TimeoutForControlPlane.Duration != 0 && clustercfg.APIServer.TimeoutForControlPlane.Duration != kubeadmconstants.ControlPlaneComponentHealthCheckTimeout {
+// 			initcfg.Timeouts.ControlPlaneComponentHealthCheck.Duration = clustercfg.APIServer.TimeoutForControlPlane.Duration
+// 		}
+// 	} else {
+// 		// Populate the internal InitConfiguration.ClusterConfiguration with defaults
+// 		extclustercfg := &kubeadmapiv1.ClusterConfiguration{}
+// 		kubeadmscheme.Scheme.Default(extclustercfg)
+// 		if err := kubeadmscheme.Scheme.Convert(extclustercfg, &initcfg.ClusterConfiguration, nil); err != nil {
+// 			return nil, err
+// 		}
+// 	}
+
+// 	// Load any component configs
+// 	if err := componentconfigs.FetchFromDocumentMap(&initcfg.ClusterConfiguration, gvkmap); err != nil {
+// 		return nil, err
+// 	}
+
+// 	// Applies dynamic defaults to settings not provided with flags
+// 	if err := SetInitDynamicDefaults(initcfg, skipCRIDetect); err != nil {
+// 		return nil, err
+// 	}
+
+// 	// Validates cfg (flags/configs + defaults + dynamic defaults)
+// 	if err := validation.ValidateInitConfiguration(initcfg).ToAggregate(); err != nil {
+// 		return nil, err
+// 	}
+
+// 	return initcfg, nil
+// }

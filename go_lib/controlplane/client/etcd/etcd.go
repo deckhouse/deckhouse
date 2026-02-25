@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,6 +20,8 @@ import (
 	kubeadmutil "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmutil"
 	staticpodutil "github.com/deckhouse/deckhouse/go_lib/controlplane/client/staticpod"
 	"github.com/pkg/errors"
+	"go.etcd.io/etcd/api/v3/etcdserverpb"
+	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
@@ -39,6 +42,8 @@ const (
 	etcdHealthyCheckInterval = 5 * time.Second
 	etcdHealthyCheckRetries  = 8
 )
+
+var ErrNoMemberIDForPeerURL = errors.New("no member id found for peer URL")
 
 type etcdClient interface {
 	// Close shuts down the client's etcd connections.
@@ -149,7 +154,7 @@ func (c *Client) Sync() error {
 	// Syncs the list of endpoints
 	var cli etcdClient
 	var lastError error
-	err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, GetActiveTimeouts().EtcdAPICall.Duration,
+	err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, kubeadmapi.GetActiveTimeouts().EtcdAPICall.Duration,
 		true, func(_ context.Context) (bool, error) {
 			var err error
 			cli, err = c.newEtcdClient(c.Endpoints)
@@ -182,7 +187,7 @@ func (c *Client) listMembers(timeout time.Duration) (*clientv3.MemberListRespons
 	var lastError error
 	var resp *clientv3.MemberListResponse
 	if timeout == 0 {
-		timeout = GetActiveTimeouts().EtcdAPICall.Duration
+		timeout = kubeadmapi.GetActiveTimeouts().EtcdAPICall.Duration
 	}
 	err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, timeout,
 		true, func(_ context.Context) (bool, error) {
@@ -209,6 +214,266 @@ func (c *Client) listMembers(timeout time.Duration) (*clientv3.MemberListRespons
 	return resp, nil
 }
 
+// addMember notifies an existing etcd cluster that a new member is joining, and
+// return the updated list of members. If the member has already been added to the
+// cluster, this will return the existing list of etcd members.
+func (c *Client) addMember(name string, peerAddrs string, isLearner bool) ([]Member, error) {
+	// Parse the peer address, required to add the client URL later to the list
+	// of endpoints for this client. Parsing as a first operation to make sure that
+	// if this fails no member addition is performed on the etcd cluster.
+	parsedPeerAddrs, err := url.Parse(peerAddrs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error parsing peer address %s", peerAddrs)
+	}
+
+	cli, err := c.newEtcdClient(c.Endpoints)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cli.Close() }()
+
+	// Adds a new member to the cluster
+	var (
+		lastError   error
+		respMembers []*etcdserverpb.Member
+		resp        *clientv3.MemberAddResponse
+	)
+	err = wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, kubeadmapi.GetActiveTimeouts().EtcdAPICall.Duration,
+		true, func(_ context.Context) (bool, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), etcdTimeout)
+			defer cancel()
+
+			// List members and quickly return if the member already exists.
+			listResp, err := cli.MemberList(ctx)
+			if err != nil {
+				klog.V(5).Infof("Failed to check whether the member %q exists: %v", peerAddrs, err)
+				lastError = err
+				return false, nil
+			}
+			found := false
+			for _, member := range listResp.Members {
+				if member.GetPeerURLs()[0] == peerAddrs {
+					found = true
+					break
+				}
+			}
+			if found {
+				klog.V(5).Infof("The peer URL %q for the added etcd member already exists. Skipping etcd member addition", peerAddrs)
+				respMembers = listResp.Members
+				return true, nil
+			}
+
+			if isLearner {
+				klog.V(1).Infof("[etcd] Adding etcd member %q as learner", peerAddrs)
+				resp, err = cli.MemberAddAsLearner(ctx, []string{peerAddrs})
+			} else {
+				klog.V(1).Infof("[etcd] Adding etcd member %q", peerAddrs)
+				resp, err = cli.MemberAdd(ctx, []string{peerAddrs})
+			}
+			if err == nil {
+				respMembers = resp.Members
+				return true, nil
+			}
+
+			// If the error indicates that the peer already exists, exit early. In this situation, resp is nil, so
+			// call out to MemberList to fetch all the members before returning.
+			if errors.Is(err, rpctypes.ErrPeerURLExist) {
+				klog.V(5).Info("The peer URL for the added etcd member already exists. Fetching the existing etcd members")
+				listResp, err = cli.MemberList(ctx)
+				if err == nil {
+					respMembers = listResp.Members
+					return true, nil
+				}
+			}
+
+			klog.V(5).Infof("Failed to add etcd member: %v", err)
+			lastError = err
+			return false, nil
+		})
+	if err != nil {
+		return nil, lastError
+	}
+
+	// Returns the updated list of etcd members
+	ret := []Member{}
+	for _, m := range respMembers {
+		// If the peer address matches, this is the member we are adding.
+		// Use the name we passed to the function.
+		if peerAddrs == m.PeerURLs[0] {
+			ret = append(ret, Member{Name: name, PeerURL: peerAddrs})
+			continue
+		}
+		// Otherwise, we are processing other existing etcd members returned by AddMembers.
+		memberName := m.Name
+		// In some cases during concurrent join, some members can end up without a name.
+		// Use the member ID as name for those.
+		if len(memberName) == 0 {
+			memberName = strconv.FormatUint(m.ID, 16)
+		}
+		ret = append(ret, Member{Name: memberName, PeerURL: m.PeerURLs[0]})
+	}
+
+	// Add the new member client address to the list of endpoints
+	c.Endpoints = append(c.Endpoints, GetClientURLByIP(parsedPeerAddrs.Hostname()))
+
+	return ret, nil
+}
+
+// AddMember adds a new member into the etcd cluster
+func (c *Client) AddMember(name string, peerAddrs string) ([]Member, error) {
+	return c.addMember(name, peerAddrs, false)
+}
+
+// AddMemberAsLearner adds a new learner member into the etcd cluster.
+func (c *Client) AddMemberAsLearner(name string, peerAddrs string) ([]Member, error) {
+	return c.addMember(name, peerAddrs, true)
+}
+
+// GetMemberID returns the member ID of the given peer URL
+func (c *Client) GetMemberID(peerURL string) (uint64, error) {
+	resp, err := c.listMembersFunc(0)
+	if err != nil {
+		return 0, err
+	}
+
+	for _, member := range resp.Members {
+		if member.GetPeerURLs()[0] == peerURL {
+			return member.GetID(), nil
+		}
+	}
+	return 0, ErrNoMemberIDForPeerURL
+}
+
+// MemberPromote promotes a member as a voting member. If the given member ID is already a voting member this method
+// will return early and do nothing.
+func (c *Client) MemberPromote(learnerID uint64) error {
+	isLearner, err := c.isLearner(learnerID)
+	if err != nil {
+		return err
+	}
+	if !isLearner {
+		klog.V(1).Infof("[etcd] Member %s already promoted.", strconv.FormatUint(learnerID, 16))
+		return nil
+	}
+
+	klog.V(1).Infof("[etcd] Promoting a learner as a voting member: %s", strconv.FormatUint(learnerID, 16))
+	cli, err := c.newEtcdClient(c.Endpoints)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = cli.Close() }()
+
+	// TODO: warning logs from etcd client should be removed.
+	// The warning logs are printed by etcd client code for several reasons, including
+	// 1. can not promote yet(no synced)
+	// 2. context deadline exceeded
+	// 3. peer URLs already exists
+	// Once the client provides a way to check if the etcd learner is ready to promote, the retry logic can be revisited.
+	var (
+		lastError error
+	)
+	err = wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, kubeadmapi.GetActiveTimeouts().EtcdAPICall.Duration,
+		true, func(_ context.Context) (bool, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), etcdTimeout)
+			defer cancel()
+
+			isLearner, err := c.isLearner(learnerID)
+			if err != nil {
+				return false, err
+			}
+			if !isLearner {
+				klog.V(1).Infof("[etcd] Member %s was already promoted.", strconv.FormatUint(learnerID, 16))
+				return true, nil
+			}
+
+			_, err = cli.MemberPromote(ctx, learnerID)
+			if err == nil {
+				klog.V(1).Infof("[etcd] The learner was promoted as a voting member: %s", strconv.FormatUint(learnerID, 16))
+				return true, nil
+			}
+			klog.V(5).Infof("[etcd] Promoting the learner %s failed: %v", strconv.FormatUint(learnerID, 16), err)
+			lastError = err
+			return false, nil
+		})
+	if err != nil {
+		return lastError
+	}
+	return nil
+}
+
+// isLearner returns true if the given member ID is a learner.
+func (c *Client) isLearner(memberID uint64) (bool, error) {
+	resp, err := c.listMembersFunc(0)
+	if err != nil {
+		return false, err
+	}
+
+	for _, member := range resp.Members {
+		if member.ID == memberID && member.IsLearner {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// WaitForClusterAvailable returns true if all endpoints in the cluster are available after retry attempts, an error is returned otherwise
+func (c *Client) WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error) {
+	for i := 0; i < retries; i++ {
+		if i > 0 {
+			klog.V(1).Infof("[etcd] Waiting %v until next retry\n", retryInterval)
+			time.Sleep(retryInterval)
+		}
+		klog.V(2).Infof("[etcd] attempting to see if all cluster endpoints (%s) are available %d/%d", c.Endpoints, i+1, retries)
+		_, err := c.getClusterStatus()
+		if err != nil {
+			switch err {
+			case context.DeadlineExceeded:
+				klog.V(1).Infof("[etcd] Attempt timed out")
+			default:
+				klog.V(1).Infof("[etcd] Attempt failed with error: %v\n", err)
+			}
+			continue
+		}
+		return true, nil
+	}
+	return false, errors.New("timeout waiting for etcd cluster to be available")
+}
+
+// getClusterStatus returns nil for status Up (along with endpoint status response map) or error for status Down
+func (c *Client) getClusterStatus() (map[string]*clientv3.StatusResponse, error) {
+	clusterStatus := make(map[string]*clientv3.StatusResponse)
+	for _, ep := range c.Endpoints {
+		// Gets the member status
+		var lastError error
+		var resp *clientv3.StatusResponse
+		err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, kubeadmapi.GetActiveTimeouts().EtcdAPICall.Duration,
+			true, func(_ context.Context) (bool, error) {
+				cli, err := c.newEtcdClient(c.Endpoints)
+				if err != nil {
+					lastError = err
+					return false, nil
+				}
+				defer func() { _ = cli.Close() }()
+
+				ctx, cancel := context.WithTimeout(context.Background(), etcdTimeout)
+				resp, err = cli.Status(ctx, ep)
+				cancel()
+				if err == nil {
+					return true, nil
+				}
+				klog.V(5).Infof("Failed to get etcd status for %s: %v", ep, err)
+				lastError = err
+				return false, nil
+			})
+		if err != nil {
+			return nil, lastError
+		}
+
+		clusterStatus[ep] = resp
+	}
+	return clusterStatus, nil
+}
+
 // Для реализации используем [go.etcd.io/etcd/client/v3](http://go.etcd.io/etcd/client/v3)
 
 /*
@@ -233,7 +498,7 @@ func GetEtcdPodSpec(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpo
 		etcdVolumeName:  staticpodutil.NewVolume(etcdVolumeName, config.LocalEtcd.DataDir, &pathType),
 		certsVolumeName: staticpodutil.NewVolume(certsVolumeName, config.CertificatesDir+"/etcd", &pathType),
 	}
-	componentHealthCheckTimeout := GetActiveTimeouts().ControlPlaneComponentHealthCheck
+	componentHealthCheckTimeout := kubeadmapi.GetActiveTimeouts().ControlPlaneComponentHealthCheck
 
 	// probeHostname returns the correct localhost IP address family based on the endpoint AdvertiseAddress
 	probeHostname, probePort, probeScheme := staticpodutil.GetEtcdProbeEndpoint(config, utilsnet.IsIPv6String(endpoint.AdvertiseAddress))
@@ -355,18 +620,18 @@ func WriteStaticPodToDisk(componentName, manifestDir string, pod v1.Pod) error {
 	return nil
 }
 
-func prepareAndWriteEtcdStaticPod(manifestDir string, patchesDir string, cfg *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, initialCluster []Member, isDryRun bool) error {
+func prepareAndWriteEtcdStaticPod(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, initialCluster []Member, isDryRun bool) error {
 	// gets etcd StaticPodSpec, actualized for the current ClusterConfiguration and the new list of etcd members
-	spec := GetEtcdPodSpec(cfg, endpoint, nodeName, initialCluster)
+	spec := GetEtcdPodSpec(config, endpoint, nodeName, initialCluster)
 
 	// writes etcd StaticPod to disk
-	if err := WriteStaticPodToDisk(constants.Etcd, manifestDir, spec); err != nil {
+	if err := WriteStaticPodToDisk(constants.Etcd, config.ManifestDir, spec); err != nil {
 		return err
 	}
 
 	// If dry-running, print the static etcd pod manifest file.
 	if isDryRun {
-		realPath := constants.GetStaticPodFilepath(constants.Etcd, manifestDir)
+		realPath := constants.GetStaticPodFilepath(constants.Etcd, config.ManifestDir)
 		outputPath := constants.GetStaticPodFilepath(constants.Etcd, constants.GetStaticPodDirectory())
 		return dryrunutil.PrintDryRunFiles([]dryrunutil.FileToPrint{dryrunutil.NewFileToPrint(realPath, outputPath)}, os.Stdout)
 	}
@@ -382,14 +647,77 @@ func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints
 	return etcdClient, nil
 }
 
-// func (c *EtcdClient) InitCluster(config *EtcdConfig, manifestDir, patchesDir string, nodeName string, cfg *kubeadmapi.ClusterConfiguration, endpoint *kubeadmapi.APIEndpoint) error {
+func InitCluster(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
 
-// 	if err := prepareAndWriteEtcdStaticPod(config, patchesDir, cfg, endpoint, nodeName, []etcdutil.Member{}, isDryRun); err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
+	// data, ok := c.(InitData)
+	// config := data.Cfg()
 
-// func (c *EtcdClient) JoinCluster(memberName string, peerURL string) error {
-// 	return nil
-// }
+	if err := prepareAndWriteEtcdStaticPod(config, endpoint, nodeName, []Member{}, isDryRun); err != nil {
+		return err
+	}
+	return nil
+}
+
+func JoinCluster(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
+
+	// data, ok := c.(JoinData)
+
+	// if !ok || data.Cfg().ControlPlane == nil {
+	// 	return nil
+	// }
+
+	// // gets access to the cluster using the identity defined in admin.conf
+	// client, err := data.Client()
+
+	// cfg, err := data.InitCfg()
+
+	etcdPeerAddress := GetPeerURL(endpoint)
+
+	var cluster []Member
+	var etcdClient *Client
+	var err error
+	if isDryRun {
+		fmt.Printf("[etcd] Would add etcd member: %s\n", etcdPeerAddress)
+	} else {
+		// Creates an etcd client that connects to all the local/stacked etcd members.
+		klog.V(1).Info("creating etcd client that connects to etcd pods")
+		etcdClient, err = NewFromCluster(client, config.CertificatesDir)
+		if err != nil {
+			return err
+		}
+		klog.V(1).Infof("[etcd] Adding etcd member: %s", etcdPeerAddress)
+		cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
+		if err != nil {
+			return err
+		}
+		fmt.Println("[etcd] Announced new etcd member joining to the existing etcd cluster")
+		klog.V(1).Infof("Updated etcd member list: %v", cluster)
+	}
+
+	fmt.Printf("[etcd] Creating static Pod manifest for %q\n", constants.Etcd)
+
+	if err := prepareAndWriteEtcdStaticPod(config, endpoint, nodeName, cluster, isDryRun); err != nil {
+		return err
+	}
+
+	if isDryRun {
+		fmt.Println("[etcd] Would wait for the new etcd member to join the cluster")
+		return nil
+	}
+
+	learnerID, err := etcdClient.GetMemberID(etcdPeerAddress)
+	if err != nil {
+		return err
+	}
+	err = etcdClient.MemberPromote(learnerID)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("[etcd] Waiting for the new etcd member to join the cluster. This can take up to %v\n", etcdHealthyCheckInterval*etcdHealthyCheckRetries)
+	if _, err := etcdClient.WaitForClusterAvailable(etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
+		return err
+	}
+
+	return nil
+}

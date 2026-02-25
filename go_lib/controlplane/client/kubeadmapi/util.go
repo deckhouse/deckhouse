@@ -1,6 +1,45 @@
 package kubeadmapi
 
-import v1 "k8s.io/api/core/v1"
+import (
+	"sync"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+type Timeouts struct {
+	// ControlPlaneComponentHealthCheck is the amount of time to wait for a control plane
+	// component, such as the API server, to be healthy during "kubeadm init" and "kubeadm join".
+	ControlPlaneComponentHealthCheck *metav1.Duration
+
+	// KubeletHealthCheck is the amount of time to wait for the kubelet to be healthy
+	// during "kubeadm init" and "kubeadm join".
+	KubeletHealthCheck *metav1.Duration
+
+	// KubernetesAPICall is the amount of time to wait for the kubeadm client to complete a request to
+	// the API server. This applies to all types of methods (GET, POST, etc).
+	KubernetesAPICall *metav1.Duration
+
+	// EtcdAPICall is the amount of time to wait for the kubeadm etcd client to complete a request to
+	// the etcd cluster.
+	EtcdAPICall *metav1.Duration
+
+	// TLSBootstrap is the amount of time to wait for the kubelet to complete TLS bootstrap
+	// for a joining node.
+	TLSBootstrap *metav1.Duration
+
+	// Discovery is the amount of time to wait for kubeadm to validate the API server identity
+	// for a joining node.
+	Discovery *metav1.Duration
+
+	// UpgradeManifests is the timeout for upgrading static Pod manifests.
+	UpgradeManifests *metav1.Duration
+}
+
+var (
+	timeoutMutex             = &sync.RWMutex{}
+	activeTimeouts *Timeouts = nil
+)
 
 // APIEndpoint struct contains elements of API server instance deployed on a node.
 type APIEndpoint struct {
@@ -66,4 +105,11 @@ func SetArgValues(args []Arg, name, value string, nArgs int) []Arg {
 	}
 	args = append(args, Arg{Name: name, Value: value})
 	return args
+}
+
+// GetActiveTimeouts gets the active timeouts structure.
+func GetActiveTimeouts() *Timeouts {
+	timeoutMutex.RLock()
+	defer timeoutMutex.RUnlock()
+	return activeTimeouts
 }
