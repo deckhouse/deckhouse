@@ -3,6 +3,47 @@
   description: A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
+  id: ingress-nginx-1-10
+  version: 1.10.4
+
+- name: NGINX Ingress Controller
+  link: https://github.com/kubernetes/ingress-nginx
+  description: A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0
+  id: ingress-nginx-1-12
+  version: 1.12.1
+
+- name: NGINX Ingress Controller
+  link: https://github.com/kubernetes/ingress-nginx
+  description: A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0
+  id: ingress-nginx-1-14
+  version: 1.14.3
+
+- name: nlohmannJson
+  link: https://github.com/nlohmann/json
+  description: JSON for Modern C++
+  license: MIT License
+  id: nlohmannjson
+  version: 3.11.3
+
+- name: ModSecurity
+  link: https://github.com/owasp-modsecurity/ModSecurity
+  description: ModSecurity is an open source, cross platform web application firewall (WAF) engine for Apache, IIS and Nginx.
+  logo: https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/others/modsec.png
+  license: Apache License 2.0
+  id: modsecurity
+  version: 3.0.14
+
+- name: OWASP CRS
+  link: https://github.com/coreruleset/coreruleset
+  description: The OWASP CRS is a set of generic attack detection rules for use with ModSecurity or compatible web application firewalls.
+  license: Apache License 2.0
+  id: coreruleset
+  version: 4.10.0
+
 - name: OpenKruise
   link: https://openkruise.io/
   description: OpenKruise is an extended component suite for Kubernetes, which mainly focuses on application automations, such as deployment, upgrade, ops and availability protection.

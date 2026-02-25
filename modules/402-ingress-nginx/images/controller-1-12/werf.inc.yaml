@@ -1,11 +1,13 @@
-{{ $controllerBranch := "controller-v1.12.1" }}
-{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.29.5-modsecurity-v1.0.4" }}
+{{ $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-12" $ ) }}
+{{ $controllerBranch = printf "controller-v%s" $controllerVersion }}
 {{ $nginxVersion := "1.29.5" }}
-{{ $nlohmannJsonBranch := "v3.11.3" }}
+{{ $modsecurityDepsVersion := "1.0.4" }}
+{{ $nginxDepsBranch := (printf "controller-v%s-nginx-v%s-modsecurity-v%s" $controllerVersion $nginxVersion $modsecurityDepsVersion) }}
+{{ $nlohmannJsonBranch = printf "v%s" (include "get_oss_version_by_id" (list "nlohmannjson" $ )) }}
 {{ $ngxBrotliCommit := "63ca02abdcf79c9e788d2eedcc388d2335902e52" }}
-{{ $modSecurityBranch := "v3.0.14" }}
+{{ $modSecurityBranch = printf "v%s" (include "get_oss_version_by_id" (list "modsecurity" $ )) }}
 {{ $opentelemetryCppContribCommit := "8933841f0a7f8737f61404cf0a64acf6b079c8a5" }}
-{{ $coreRulesetBranch := "v4.10.0" }}
+{{ $coreRulesetBranch = printf "v%s" (include "get_oss_version_by_id" (list "coreruleset" $ )) }}
 ---
 {{ $luaProtobufVersion := "0.5.1" }}
 {{ $luaIconvVersion := "7-3" }}

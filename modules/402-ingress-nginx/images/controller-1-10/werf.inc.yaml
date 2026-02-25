@@ -1,4 +1,4 @@
-{{- $controllerBranch := "controller-v1.10.4" }}
+{{- $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-10" $ ) }}
 {{- $controllerUser := "deckhouse" }}
 {{- $controllerUID := "64535" }}
 
@@ -40,7 +40,7 @@ shell:
   - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
   - git clone --branch 0.5.1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
   - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
-  - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
+  - git clone --branch controller-v{{ $controllerVersion }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
   - patch -p1 < /patches/001-go-mod.patch
   - patch -p1 < /patches/002-healthcheck.patch
