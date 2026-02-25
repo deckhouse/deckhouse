@@ -258,8 +258,8 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles:    opts.ValuesPaths,
-			RuntimeSetJSON: valuesSet,
+			ValuesFiles: opts.ValuesPaths,
+			RootSetJSON: valuesSet,
 		},
 		OutputFilePath:         "/dev/null", // No output file, we return the manifest as a string
 		Chart:                  opts.Path,
