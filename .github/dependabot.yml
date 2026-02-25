@@ -502,15 +502,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/038-registry/images/registry-proxy/reloader"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/modules/039-registry-packages-proxy/images/registry-packages-proxy/src"
   labels:
   - "type/dependencies"
@@ -529,7 +520,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-control-plane-manager/images/kube-apiserver-healthcheck"
+  directory: "/modules/040-control-plane-manager/images/kubernetes-api-proxy/reloader"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -575,15 +566,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/fencing-agent/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/kubernetes-api-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

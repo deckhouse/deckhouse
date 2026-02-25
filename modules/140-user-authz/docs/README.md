@@ -239,9 +239,9 @@ write:
 ```text
 read-write:
     - deckhouse.io/clusterauthorizationrules
+    - namespaces
 write:
     - limitranges
-    - namespaces
     - networking.k8s.io/networkpolicies
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles

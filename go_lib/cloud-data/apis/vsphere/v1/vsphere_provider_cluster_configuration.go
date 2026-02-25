@@ -15,7 +15,7 @@
 package v1
 
 import (
-	nm "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type VsphereProviderClusterConfiguration struct {
@@ -73,6 +73,12 @@ type VsphereNodeGroup struct {
 	Name          *string                        `json:"name,omitempty" yaml:"name,omitempty"`
 	Replicas      *int32                         `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	Zones         *[]string                      `json:"zones,omitempty" yaml:"zones,omitempty"`
-	NodeTemplate  *nm.NodeTemplate               `json:"nodeTemplate,omitempty" yaml:"nodeTemplate,omitempty"`
+	NodeTemplate  *VsphereNodeTemplate           `json:"nodeTemplate,omitempty" yaml:"nodeTemplate,omitempty"`
 	InstanceClass *VsphereNodeGroupInstanceClass `json:"instanceClass,omitempty" yaml:"instanceClass,omitempty"`
+}
+
+type VsphereNodeTemplate struct {
+	Annotations map[string]string `json:"annotations,omitempty"`
+	Labels      map[string]string `json:"labels"`
+	Taints      []corev1.Taint    `json:"taints,omitempty"`
 }

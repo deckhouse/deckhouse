@@ -58,13 +58,25 @@ func NewFilteredPackageRepositoryInformer(client versioned.Interface, resyncPeri
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().PackageRepositories().List(context.TODO(), options)
+				return client.DeckhouseV1alpha1().PackageRepositories().List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().PackageRepositories().Watch(context.TODO(), options)
+				return client.DeckhouseV1alpha1().PackageRepositories().Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.DeckhouseV1alpha1().PackageRepositories().List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.DeckhouseV1alpha1().PackageRepositories().Watch(ctx, options)
 			},
 		},
 		&apisdeckhouseiov1alpha1.PackageRepository{},

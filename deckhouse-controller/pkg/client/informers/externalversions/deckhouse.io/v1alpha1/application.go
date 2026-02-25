@@ -59,13 +59,25 @@ func NewFilteredApplicationInformer(client versioned.Interface, namespace string
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().Applications(namespace).List(context.TODO(), options)
+				return client.DeckhouseV1alpha1().Applications(namespace).List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().Applications(namespace).Watch(context.TODO(), options)
+				return client.DeckhouseV1alpha1().Applications(namespace).Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.DeckhouseV1alpha1().Applications(namespace).List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.DeckhouseV1alpha1().Applications(namespace).Watch(ctx, options)
 			},
 		},
 		&apisdeckhouseiov1alpha1.Application{},

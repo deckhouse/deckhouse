@@ -15,11 +15,12 @@
 package app
 
 import (
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func InitClient(logger *log.Logger) *kubernetes.Clientset {

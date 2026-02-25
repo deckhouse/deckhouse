@@ -14,7 +14,7 @@ index f60a260f9..c035b7e49 100755
  set -o pipefail
  
 -export NGINX_VERSION=1.25.5
-+export NGINX_VERSION=1.26.1
++export NGINX_VERSION=1.29.5
  
  # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.3...master
  export NDK_VERSION=v0.3.3
@@ -190,7 +190,7 @@ index f60a260f9..c035b7e49 100755
 -
 -get_src d74f86ada2329016068bc5a243268f1f555edd620b6a7d6ce89295e7d6cf18da \
 -        "https://github.com/microsoft/mimalloc/archive/${MIMALOC_VERSION}.tar.gz" "mimalloc"
-+git clone -b "controller-v1.10.4" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
++git clone -b "controller-v1.10.4-nginx-v1.29.5" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
  
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))

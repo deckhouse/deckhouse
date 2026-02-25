@@ -1,8 +1,6 @@
 module service-with-healthchecks
 
-go 1.23.0
-
-toolchain go1.23.5
+go 1.25
 
 require (
 	github.com/lib/pq v1.10.9

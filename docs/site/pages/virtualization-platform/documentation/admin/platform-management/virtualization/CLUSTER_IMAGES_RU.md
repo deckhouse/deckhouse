@@ -6,61 +6,73 @@ lang: ru
 
 ## Образы
 
-Ресурс [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) используется для загрузки образов виртуальных машин в внутрикластерное хранилище, что позволяет создавать диски для виртуальных машин. Этот ресурс доступен в любом пространстве имен или проекте кластера.
+Ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин.
+
+{% alert level="warning" %}
+Обратите внимание, что [VirtualImage](/modules/virtualization/cr.html#virtualimage) — это проектный ресурс, то есть он доступен только в том проекте или пространстве имен, в котором был создан. Для использования образов на уровне всего кластера предназначен отдельный ресурс — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+{% endalert %}
+
+При подключении к виртуальной машине доступ к образу предоставляется в режиме «только чтение».
 
 Процесс создания образа включает следующие шаги:
 
-1. Пользователь создаёт ресурс [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage).
-1. После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
-1. После завершения загрузки ресурс становится доступным для создания дисков.
+- Пользователь создаёт ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage).
+- После создания образ автоматически загружается из указанного в спецификации источника в хранилище DVCR или PVC в зависимости от типа.
+- После завершения загрузки, ресурс становится доступным для создания дисков.
 
 Существуют различные типы образов:
 
-- **ISO-образ** — установочный образ, используемый для начальной установки операционной системы (ОС). Такие образы выпускаются производителями ОС и используются для установки на физические и виртуальные серверы.
+- **ISO-образ** — установочный образ, используемый для начальной установки операционной системы. Такие образы выпускаются производителями ОС и используются для установки на физические и виртуальные серверы.
 - **Образ диска с предустановленной системой** — содержит уже установленную и настроенную операционную систему, готовую к использованию после создания виртуальной машины. Готовые образы можно получить на ресурсах разработчиков дистрибутива, либо создать самостоятельно.
 
-Примеры ресурсов для получения образов диска виртуальной машины с предустановленной системой:
+Примеры ресурсов для получения образов виртуальной машины:
 
-- Ubuntu:
-  - [24.04 LTS (Noble Numbat)](https://cloud-images.ubuntu.com/noble/current/);
-  - [22.04 LTS (Jammy Jellyfish)](https://cloud-images.ubuntu.com/jammy/current/);
-  - [20.04 LTS (Focal Fossa)](https://cloud-images.ubuntu.com/focal/current/);
-  - [Minimal images](https://cloud-images.ubuntu.com/minimal/releases/);
-- Debian:
-  - [12 bookworm](https://cdimage.debian.org/images/cloud/bookworm/latest/);
-  - [11 bullseye](https://cdimage.debian.org/images/cloud/bullseye/latest/);
-- AlmaLinux:
-  - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/);
-  - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/);
-- RockyLinux:
-  - [9.5](https://dl.rockylinux.org/vault/rocky/9.5/images/x86_64/);
-  - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/);
-- CentOS:
-  - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/);
-  - [9 Stream](https://cloud.centos.org/centos/9-stream/x86_64/images/);
-  - [8 Stream](https://cloud.centos.org/centos/8-stream/x86_64/);
-  - [8](https://cloud.centos.org/centos/8/x86_64/images/);
-- Alt Linux:
-  - [p10](https://ftp.altlinux.ru/pub/distributions/ALTLinux/p10/images/cloud/x86_64/);
-  - [p9](https://ftp.altlinux.ru/pub/distributions/ALTLinux/p9/images/cloud/x86_64/);
-- [Astra Linux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit).
+<a id="image-resources-table"></a>
+
+| Дистрибутив                                                                       | Пользователь по умолчанию |
+| --------------------------------------------------------------------------------- | ------------------------- |
+| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
+| [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
+| [AltLinux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/)                   | `altlinux`                |
+| [AstraLinux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit/) | `astra`                   |
+| [CentOS](https://cloud.centos.org/centos/)                                        | `cloud-user`              |
+| [Debian](https://cdimage.debian.org/images/cloud/)                                | `debian`                  |
+| [Rocky](https://rockylinux.org/download/)                                         | `rocky`                   |
+| [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`                  |
 
 Поддерживаются следующие форматы образов с предустановленной системой:
 
-- `qcow2`;
-- `raw`;
-- `vmdk`;
-- `vdi`.
+- qcow2
+- raw
+- vmdk
+- vdi
 
-Образы могут быть сжаты одним из следующих алгоритмов сжатия: `gz`, `xz`.
+Также файлы образов могут быть сжаты одним из следующих алгоритмов сжатия: gz, xz.
 
-После создания ресурса ClusterVirtualImage тип и размер образа определяются автоматически, и эта информация отражается в статусе ресурса.
+После создания ресурса, тип и размер образа определяются автоматически и эта информация отражается в статусе ресурса.
 
-Образы могут быть загружены из различных источников, таких как HTTP-серверы, где расположены файлы образов, или контейнерные реестры. Также доступна возможность загрузки образов напрямую из командной строки с использованием утилиты `curl`.
+В статусе образа отображаются два размера:
 
-Образы могут быть созданы на основе других образов и дисков виртуальных машин.
+- STOREDSIZE (размер в хранилище) — объём, который образ фактически занимает в хранилище (DVCR или PVC). Для образов, загруженных в сжатом виде (например, `.gz`, `.xz`), это значение меньше распакованного размера.
+- UNPACKEDSIZE (распакованный размер) — размер образа после распаковки. Он используется при создании диска из образа и задаёт минимальный размер диска, который можно создать.
 
-С полным описанием параметров конфигурации ресурса `ClusterVirtualImage` можно ознакомиться [в документации](/modules/virtualization/cr.html#clustervirtualimage).
+{% alert level="info" %}
+При создании диска из образа укажите размер диска не меньше значения `UNPACKEDSIZE`.  
+Если размер не задан, диск будет создан с размером, соответствующим распакованному размеру образа.
+{% endalert %}
+
+Образы могут быть загружены из различных источников, таких как HTTP-серверы, где расположены файлы образов, или контейнерные реестры. Также доступна возможность загрузки образов напрямую из командной строки с использованием утилиты curl.
+
+Образы могут быть созданы из других образов и дисков виртуальных машин.
+
+Проектный образ поддерживает два варианта хранения:
+
+- `ContainerRegistry` - тип по умолчанию, при котором образ хранится в `DVCR`.
+- `PersistentVolumeClaim` - тип, при котором в качестве хранилища для образа используется `PVC`. Этот вариант предпочтителен, если используется хранилище с поддержкой быстрого клонирования `PVC`, что позволяет быстрее создавать диски из образов.
+
+{% alert level="warning" %}
+Использование образа с параметром `storage: PersistentVolumeClaim` поддерживается только для создания дисков в том же классе хранения (StorageClass).
+{% endalert %}
 
 ## Увеличение размера DVCR
 
@@ -115,6 +127,207 @@ lang: ru
     NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
     dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
     ```
+
+## Создание golden image для Linux
+
+Golden image — это предварительно настроенный образ виртуальной машины, который можно использовать для быстрого создания новых ВМ с уже установленным программным обеспечением и настройками.
+
+1. Создайте виртуальную машину, установите на неё необходимое программное обеспечение и выполните все требуемые настройки.
+
+1. Установите и настройте qemu-guest-agent (рекомендуется):
+
+   - Для RHEL/CentOS:
+
+   ```bash
+   yum install -y qemu-guest-agent
+   ```
+
+   - Для Debian/Ubuntu:
+
+   ```bash
+   apt-get update
+   apt-get install -y qemu-guest-agent
+   ```
+
+1. Включите и запустите сервис:
+
+   ```bash
+   systemctl enable qemu-guest-agent
+   systemctl start qemu-guest-agent
+   ```
+
+1. Установите политику запуска ВМ [runPolicy: AlwaysOnUnlessStoppedManually](/modules/virtualization/stable/cr.html#virtualmachine-v1alpha2-spec-runpolicy) — это потребуется, чтобы ВМ можно было выключить.
+
+1. Подготовьте образ. Очистите неиспользуемые блоки файловой системы:
+
+   ```bash
+   fstrim -v /
+   fstrim -v /boot
+   ```
+
+1. Очистите сетевые настройки:
+
+   - Для RHEL:
+
+   ```bash
+   nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
+   rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
+   ```
+
+   - Для Debian/Ubuntu:
+
+   ```bash
+   rm -f /etc/network/interfaces.d/*
+   ```
+
+1. Очистите системные идентификаторы:
+
+   ```bash
+   echo -n > /etc/machine-id
+   rm -f /var/lib/dbus/machine-id
+   ln -s /etc/machine-id /var/lib/dbus/machine-id
+   ```
+
+1. Удалите SSH host keys:
+
+   ```bash
+   rm -f /etc/ssh/ssh_host_*
+   ```
+
+1. Очистите systemd journal:
+
+   ```bash
+   journalctl --vacuum-size=100M --vacuum-time=7d
+   ```
+
+1. Очистите кеш пакетных менеджеров:
+
+   - Для RHEL:
+
+   ```bash
+   yum clean all
+   ```
+
+   - Для Debian/Ubuntu:
+
+   ```bash
+   apt-get clean
+   ```
+
+1. Очистите временные файлы:
+
+   ```bash
+   rm -rf /tmp/*
+   rm -rf /var/tmp/*
+   ```
+
+1. Очистите логи:
+
+   ```bash
+   find /var/log -name "*.log" -type f -exec truncate -s 0 {} \;
+   ```
+
+1. Очистите историю команд:
+
+   ```bash
+   history -c
+   ```
+
+   Для RHEL: выполните сброс и восстановление контекстов SELinux (выберите один из вариантов):
+
+   - Вариант 1: Проверка и восстановление контекстов сразу:
+
+     ```bash
+     restorecon -R /
+     ```
+
+   - Вариант 2: Запланировать relabel при следующей загрузке:
+
+     ```bash
+     touch /.autorelabel
+     ```
+
+1. Убедитесь, что в `/etc/fstab` используются UUID или LABEL вместо имён устройств (например, `/dev/sdX`). Для проверки выполните:
+
+   ```bash
+   blkid
+   cat /etc/fstab
+   ```
+
+1. Очистите состояние cloud-init, логи и seed (рекомендуемый способ):
+
+   ```bash
+   cloud-init clean --logs --seed
+   ```
+
+1. Выполните финальную синхронизацию и очистку буферов:
+
+   ```bash
+   sync
+   echo 3 > /proc/sys/vm/drop_caches
+   ```
+
+1. Выключите виртуальную машину:
+
+   ```bash
+   poweroff
+   ```
+
+1. Создайте ресурс `VirtualImage` из диска подготовленной ВМ:
+
+   ```bash
+   d8 k apply -f -<<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualImage
+   metadata:
+     name: <image-name>
+     namespace: <namespace>
+   spec:
+     dataSource:
+       type: ObjectRef
+       objectRef:
+         kind: VirtualDisk
+         name: <source-disk-name>
+   EOF
+   ```
+
+   Альтернативно, создайте `ClusterVirtualImage`, чтобы образ был доступен на уровне кластера для всех проектов:
+
+    ```bash
+    d8 k apply -f -<<EOF
+    apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: ClusterVirtualImage
+    metadata:
+      name: <image-name>
+    spec:
+      dataSource:
+        type: ObjectRef
+        objectRef:
+          kind: VirtualDisk
+          name: <source-disk-name>
+          namespace: <namespace>
+    EOF
+    ```
+
+1. Создайте диск ВМ из созданного образа:
+
+   ```bash
+   d8 k apply -f -<<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualDisk
+   metadata:
+     name: <vm-disk-name>
+     namespace: <namespace>
+   spec:
+     dataSource:
+       type: ObjectRef
+       objectRef:
+         kind: VirtualImage
+         name: <image-name>
+   EOF
+   ```
+
+После выполнения этих шагов у вас будет golden image, который можно использовать для быстрого создания новых виртуальных машин с предустановленным программным обеспечением и настройками.
 
 ### Создание образа с HTTP-сервера
 

@@ -152,3 +152,24 @@ rules:
       - selfsubjectreviews
     verbs:
       - create
+{{- $consoleLegacyCompat := $.Values.userAuthz.internal.consoleLegacyCompat | default false -}}
+{{- $useAccessibleNamespaces := and (ne $.Values.global.deckhouseEdition "CE") ($.Values.userAuthz.enableMultiTenancy | default false) (not $consoleLegacyCompat) -}}
+{{- if $useAccessibleNamespaces }}
+  - apiGroups:
+      - authorization.deckhouse.io
+    resources:
+      - accessiblenamespaces
+    verbs:
+      - get
+      - list
+      - watch
+{{- else }}
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}

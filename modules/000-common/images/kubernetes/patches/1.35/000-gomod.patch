@@ -17,8 +17,8 @@ index 587606b0e1f..0e6f7fa9b8b 100644
  github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab h1:UKkYhof1njT1/xq4SEg5z+VpTgjmNeHwPGRQl7takDI=
  github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab/go.mod h1:3VYc5hodBMJ5+l/7J4xAyMeuM2PNuepvHlGs8yilUCA=
  github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
-@@ -21,42 +18,22 @@ github.com/Microsoft/hnslib v0.1.1 h1:JsZy681SnvSOUAfCZVAxkX4LgQGp+CZZwPbLV0/pdF
- github.com/Microsoft/hnslib v0.1.1/go.mod h1:DRQR4IjLae6WHYVhW7uqe44hmFUiNhmaWA+jwMbz5tM=
+@@ -21,42 +18,22 @@ github.com/Microsoft/hnslib v0.1.2 h1:CshjwTQsNx1o7BIA1XO8HtgDsiCqn+b6kGjL/tIxXQQ=
+ github.com/Microsoft/hnslib v0.1.2/go.mod h1:5vTyBey4N/VI2ZTNh2gdWhkPMefSbCFYjpvVwye+qtI=
  github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
  github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 -github.com/alecthomas/kingpin/v2 v2.4.0/go.mod h1:0gyi0zQnjuFk8xrkNKamJoyUo382HRL7ATRpFZCw6tE=

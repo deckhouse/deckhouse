@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
