@@ -132,16 +132,12 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			})
 		})
 
-		Context("with grafana enabled flag", func() {
+		Context("with grafana-v10 deployment", func() {
 			f := HookExecutionConfigInit(initValues, `{}`)
 
-			BeforeEach(func() {
+			It("extensions/grafana-v10 probe is disabled when deployment is absent", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
-			})
-
-			It("extensions/grafana-v10 probe is disabled when prometheus.internal.grafana.enabled is false", func() {
-				f.ValuesSet("prometheus.internal.grafana.enabled", false)
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -150,8 +146,12 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(disabledProbes).To(ContainElement("extensions/grafana-v10"))
 			})
 
-			It("extensions/grafana-v10 probe is enabled when prometheus.internal.grafana.enabled is true", func() {
-				f.ValuesSet("prometheus.internal.grafana.enabled", true)
+			It("extensions/grafana-v10 probe is enabled when deployment exists", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+					deploymentInMonitoring("grafana-v10"),
+					1,
+				))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -204,6 +204,18 @@ func statefulsetInMonitoring(name string) string {
 ---
 apiVersion: apps/v1
 kind: StatefulSet
+metadata:
+  name: %s
+  namespace: d8-monitoring
+`
+	return fmt.Sprintf(format, name)
+}
+
+func deploymentInMonitoring(name string) string {
+	const format = `
+---
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: %s
   namespace: d8-monitoring
@@ -268,12 +280,30 @@ func Test_calcDisabledProbes(t *testing.T) {
 			),
 		},
 		{
-			name: "MAA group and Grafana probe are on with Prometheus",
+			name: "MAA group is on with Prometheus",
 			args: args{
 				enabledModules: set.New("prometheus"),
 			},
 			expectNotDisabled: set.New(
 				"monitoring-and-autoscaling/",
+			),
+		},
+		{
+			name: "Grafana probe is off with Prometheus when Grafana deployment is absent",
+			args: args{
+				enabledModules: set.New("prometheus"),
+			},
+			expectDisabled: set.New(
+				"extensions/grafana-v10",
+			),
+		},
+		{
+			name: "Grafana probe is on with Prometheus when Grafana deployment exists",
+			args: args{
+				presence:       appPresence{grafanaV10: true},
+				enabledModules: set.New("prometheus"),
+			},
+			expectNotDisabled: set.New(
 				"extensions/grafana-v10",
 			),
 		},
