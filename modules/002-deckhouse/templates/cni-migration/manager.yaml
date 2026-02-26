@@ -25,6 +25,7 @@ spec:
         app: cni-migration-manager
     spec:
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical
       nodeSelector:
         node-role.kubernetes.io/control-plane: ""

@@ -17,6 +17,7 @@ spec:
     spec:
       serviceAccountName: cni-migration-agent
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       hostPID: true
       hostIPC: true
       terminationGracePeriodSeconds: 5
@@ -81,6 +82,12 @@ spec:
           mountPath: /var/lib/cni
         - name: host-var-lib-cilium
           mountPath: /var/lib/cilium
+        - name: host-var-log-cilium-hubble
+          mountPath: /var/log/cilium/hubble
+        - name: host-var-run-cilium
+          mountPath: /var/run/cilium
+        - name: host-var-run-netns
+          mountPath: /var/run/netns
       volumes:
       - name: tmp
         emptyDir: {}
@@ -114,5 +121,17 @@ spec:
       - name: host-var-lib-cilium
         hostPath:
           path: /var/lib/cilium
+          type: DirectoryOrCreate
+      - name: host-var-log-cilium-hubble
+        hostPath:
+          path: /var/log/cilium/hubble
+          type: DirectoryOrCreate
+      - name: host-var-run-cilium
+        hostPath:
+          path: /var/run/cilium
+          type: DirectoryOrCreate
+      - name: host-var-run-netns
+        hostPath:
+          path: /var/run/netns
           type: DirectoryOrCreate
 {{- end }}

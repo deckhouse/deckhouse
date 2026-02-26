@@ -20,8 +20,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,9 +33,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	deckhouselog "github.com/deckhouse/deckhouse/pkg/log"
 	networkv1alpha1 "deckhouse.io/cni-migration/api/v1alpha1"
 	"deckhouse.io/cni-migration/internal/agent"
 	"deckhouse.io/cni-migration/internal/manager"
@@ -75,12 +77,17 @@ func main() {
 	flag.StringVar(&migrationName, "migration-name", "", "Name of the CNIMigration resource to process")
 	flag.StringVar(&waitForWebhooks, "wait-for-webhooks", "", "Comma-separated list of webhooks to wait for deletion")
 
-	opts := zap.Options{
-		Development: false,
-	}
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	// Configure Deckhouse structured logger
+	logger := deckhouselog.NewLogger(
+		deckhouselog.WithLevel(slog.LevelInfo),
+		deckhouselog.WithHandlerType(deckhouselog.JSONHandlerType),
+	)
+	deckhouselog.SetDefault(logger)
+
+	// Set logger for controller-runtime
+	ctrl.SetLogger(logr.FromSlogHandler(logger.Handler()))
 
 	config := ctrl.GetConfigOrDie()
 	config.QPS = 20.0
