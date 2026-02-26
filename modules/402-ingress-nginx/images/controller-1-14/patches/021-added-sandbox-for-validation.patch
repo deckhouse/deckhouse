@@ -1,0 +1,49 @@
+diff --git a/internal/ingress/controller/util.go b/internal/ingress/controller/util.go
+index 776440658..cfc5eca40 100644
+--- a/internal/ingress/controller/util.go
++++ b/internal/ingress/controller/util.go
+@@ -98,9 +98,10 @@ func rlimitMaxNumFiles() int {
+ }
+ 
+ const (
+-	defBinary  = "/usr/bin/nginx"
+-	cfgPath    = "/etc/nginx/nginx.conf"
+-	luaCfgPath = "/etc/nginx/lua/cfg.json"
++	defBinary        = "/usr/bin/nginx"
++	defSandboxBinary = "/usr/bin/sandbox"
++	cfgPath          = "/etc/nginx/nginx.conf"
++	luaCfgPath       = "/etc/nginx/lua/cfg.json"
+ )
+ 
+ // NginxExecTester defines the interface to execute
+@@ -112,14 +113,16 @@ type NginxExecTester interface {
+ 
+ // NginxCommand stores context around a given nginx executable path
+ type NginxCommand struct {
+-	Binary string
++	Binary        string
++	SandboxBinary string
+ }
+ 
+ // NewNginxCommand returns a new NginxCommand from which path
+ // has been detected from environment variable NGINX_BINARY or default
+ func NewNginxCommand() NginxCommand {
+ 	command := NginxCommand{
+-		Binary: defBinary,
++		Binary:        defBinary,
++		SandboxBinary: defSandboxBinary,
+ 	}
+ 
+ 	binary := os.Getenv("NGINX_BINARY")
+@@ -142,8 +145,10 @@ func (nc NginxCommand) ExecCommand(args ...string) *exec.Cmd {
+ 
+ // Test checks if config file is a syntax valid nginx configuration
+ func (nc NginxCommand) Test(cfg string) ([]byte, error) {
++	cmdArgs := []string{"-c", cfg, "-t", "-e", "/dev/null"}
++	sandboxArgs := append([]string{"--", nc.Binary}, cmdArgs...)
+ 	//nolint:gosec // Ignore G204 error
+-	return exec.Command(nc.Binary, "-c", cfg, "-t", "-e", "/dev/null").CombinedOutput()
++	return exec.Command(nc.SandboxBinary, sandboxArgs...).CombinedOutput()
+ }
+ 
+ // getSysctl returns the value for the specified sysctl setting

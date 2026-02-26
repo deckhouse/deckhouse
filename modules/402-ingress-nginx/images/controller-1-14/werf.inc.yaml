@@ -129,6 +129,9 @@ shell:
   - rm -rf /src/ModSecurity/others/mbedtls/framework/.git
   - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/.git
   - rm -rf /src/owasp-modsecurity-crs/.git
+  # sanbox src
+  - git clone --branch v0.12.2 --depth=1 https://github.com/criyle/go-sandbox.git /src/sandbox
+  - rm -rf /src/sandbox/.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
@@ -931,6 +934,10 @@ import:
   to: /wait-shutdown
   owner: "64535"
   group: "64535"
+  before: install
+- image: {{ $.ModuleName }}/sandbox-artifact
+  add: /sandbox
+  to: /usr/bin/sandbox
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/curl-chroot-wrapper.sh
