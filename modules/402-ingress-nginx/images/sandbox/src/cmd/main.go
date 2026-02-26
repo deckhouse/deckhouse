@@ -27,26 +27,33 @@ import (
 
 	runprogconf "github.com/criyle/go-sandbox/cmd/runprog/config"
 	sbseccomp "github.com/criyle/go-sandbox/pkg/seccomp/libseccomp"
+	"github.com/criyle/go-sandbox/runner"
 	"github.com/criyle/go-sandbox/runner/ptrace"
 )
 
 func main() {
-	argv := os.Args[1:]
+	os.Exit(run(os.Args[1:]))
+}
+
+func run(argv []string) int {
 	if len(argv) > 0 && argv[0] == "--" {
 		argv = argv[1:]
 	}
 	if len(argv) == 0 {
-		log.Fatal("not enough arguments after --")
+		log.Print("not enough arguments after --")
+		return 1
 	}
 
 	nginxConfigPath := getNginxConfByArg("-c", argv)
 	if nginxConfigPath == "" {
-		log.Fatal("nginx config not found in args")
+		log.Print("nginx config not found in args")
+		return 1
 	}
 
 	realPathNginxConf, err := filepath.EvalSymlinks(nginxConfigPath)
 	if err != nil {
-		log.Fatal("can't eval real config path for nginx config: %w", err)
+		log.Printf("can't eval real config path for nginx config: %v", err)
+		return 1
 	}
 
 	extraRead := []string{
@@ -57,7 +64,8 @@ func main() {
 
 	workDir, err := os.Getwd()
 	if err != nil {
-		log.Fatal("Failed get pwd", err)
+		log.Printf("failed get pwd: %v", err)
+		return 1
 	}
 	extraWrite := []string{"/dev/null", "/tmp/"}
 	args, allow, trace, handler := runprogconf.GetConf("default", workDir, argv, extraRead, extraWrite, false) // :contentReference[oaicite:4]{index=4}
@@ -75,7 +83,7 @@ func main() {
 	execF, err := os.Open(args[0])
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "open exec:", err)
-		os.Exit(1)
+		return 1
 	}
 	defer execF.Close()
 
@@ -95,9 +103,20 @@ func main() {
 
 	res := r.Run(ctx)
 
-	if res.Error != "" || res.ExitStatus != 0 {
-		log.Printf("error run: %v", res.Error)
+	if res.Status == runner.StatusNormal && res.ExitStatus == 0 && res.Error == "" {
+		return 0
 	}
+
+	log.Printf("sandbox run failed: status=%s exit_status=%d error=%q", res.Status, res.ExitStatus, res.Error)
+
+	if res.Status == runner.StatusSignalled && res.ExitStatus > 0 && res.ExitStatus <= 127 {
+		return 128 + res.ExitStatus
+	}
+	if res.ExitStatus != 0 {
+		return res.ExitStatus
+	}
+
+	return 1
 }
 
 // getNginxConfByArg return parametr args of nginx, as sample for `-c` flag return path config
