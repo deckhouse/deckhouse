@@ -175,60 +175,6 @@ func testManifestsRendering(t *testing.T) {
 	})
 }
 
-func testFeatureGatesFull(t *testing.T) {
-	tests := []struct {
-		name             string
-		k8sVersion       string
-		expectedFeatures []string
-	}{
-		{
-			name:       "Kubernetes 1.31 should not include legacy feature gates",
-			k8sVersion: "1.31",
-			expectedFeatures: []string{
-				"TopologyAwareHints=true",
-				"RotateKubeletServerCertificate=true",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			data := getBaseTemplateData(tt.k8sVersion)
-			result, err := renderKubeadmConfig(data)
-			if err != nil {
-				t.Fatalf("Failed to render kubeadm config: %v", err)
-			}
-
-			featureGatesRegex := regexp.MustCompile(`- name: feature-gates\s+value:\s*"([^"]+)"`)
-
-			matches := featureGatesRegex.FindStringSubmatch(result)
-			if len(matches) < 2 {
-				t.Fatalf("Could not find feature-gates in result")
-			}
-
-			featureGates := matches[1]
-			for _, expected := range tt.expectedFeatures {
-				if !strings.Contains(featureGates, expected) {
-					t.Errorf("Expected feature gate %s not found in: %s", expected, featureGates)
-				}
-			}
-
-			if tt.k8sVersion >= "1.30" {
-				unexpectedFeatures := []string{
-					"ValidatingAdmissionPolicy=true",
-					"AdmissionWebhookMatchConditions=true",
-					"StructuredAuthenticationConfiguration=true",
-				}
-				for _, unexpected := range unexpectedFeatures {
-					if strings.Contains(featureGates, unexpected) {
-						t.Errorf("Unexpected feature gate %s found in: %s", unexpected, featureGates)
-					}
-				}
-			}
-		})
-	}
-}
-
 func testFeatureGates(t *testing.T) {
 	tests := []struct {
 		name             string
