@@ -18,7 +18,7 @@ mkdir -p /etc/kubernetes/manifests
 
 bb-set-proxy
 
-{{- $registry_proxy_image := printf "%s@%s" .registry.imagesBase ( index .images.registry "registry-proxy" ) }}
+{{- $registry_proxy_image := printf "%s@%s" .registry.imagesBase ( index .images.registry "registryProxy" ) }}
 
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
   {{- $registry_proxy_image = "deckhouse.local/images:registry-proxy" }}
@@ -108,4 +108,8 @@ EOF
 
 bb-unset-proxy
 
+{{- else }}
+# Remove static pod manifest and configs
+rm -f /etc/kubernetes/manifests/registry-proxy.yaml
+rm -rf /etc/kubernetes/registry-proxy
 {{- end }}
