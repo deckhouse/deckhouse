@@ -38,6 +38,7 @@ var _ = sdk.RegisterFunc(
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{MatchNames: []string{
 						"d8-cloud-instance-manager",
+						"d8-monitoring",
 						// CCM
 						"d8-cloud-provider-aws",
 						"d8-cloud-provider-azure",
@@ -52,6 +53,7 @@ var _ = sdk.RegisterFunc(
 					"cluster-autoscaler",
 					"machine-controller-manager",
 					"cloud-controller-manager",
+					"grafana-v10",
 				}},
 				FilterFunc: filterName,
 			},
@@ -77,6 +79,7 @@ var _ = sdk.RegisterFunc(
 type appPresence struct {
 	ccm, mcm, bashible, autoscaler bool
 	smokeMini                      bool
+	grafanaV10                     bool
 	prometheusLongterm             bool
 }
 
@@ -94,13 +97,11 @@ func collectDisabledProbes(_ context.Context, input *go_hook.HookInput) error {
 		bashible:           deplyments.Has("bashible-apiserver"),
 		autoscaler:         deplyments.Has("cluster-autoscaler"),
 		smokeMini:          !input.Values.Get("upmeter.smokeMiniDisabled").Bool(),
+		grafanaV10:         deplyments.Has("grafana-v10"),
 		prometheusLongterm: statefulsets.Has("prometheus-longterm"),
 	}
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	manuallyDisabledProbes := set.NewFromValues(input.Values, "upmeter.disabledProbes")
-	if input.Values.Exists("prometheus.internal.grafana.enabled") && !input.Values.Get("prometheus.internal.grafana.enabled").Bool() {
-		manuallyDisabledProbes.Add("extensions/grafana-v10")
-	}
 
 	// Calculation
 	disabledProbes := calcDisabledProbes(presence, enabledModules, manuallyDisabledProbes)
@@ -161,6 +162,10 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 	if !enabledModules.Has("prometheus") {
 		disabledProbes.Add("extensions/grafana-v10")
 		disabledProbes.Add("extensions/prometheus-longterm")
+	}
+
+	if !presence.grafanaV10 {
+		disabledProbes.Add("extensions/grafana-v10")
 	}
 
 	if !presence.prometheusLongterm {
