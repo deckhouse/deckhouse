@@ -139,7 +139,7 @@
         ```
 
   - alert: ModuleReleaseIsWaitingManualApproval
-    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true"} * on(moduleName) group_left sum by (moduleName) (deckhouse_mm_module_info{enabled="true"}))
+    expr: sum by (name, module) (d8_module_release_info{manualApproval="true"} * on(module) group_left sum by (module) (deckhouse_mm_module_info{enabled="true"}))
     labels:
       severity_level: "6"
     annotations:
@@ -158,7 +158,7 @@
         ```
 
   - alert: ModuleReleaseIsOutdated
-    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true", releaseQueueDepth="1"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    expr: sum by (name, module) (d8_module_release_info{manualApproval="true", releaseQueueDepth="1"} * on(module) group_left deckhouse_mm_module_info{enabled="true"})
     labels:
       severity_level: "9"
       d8_module: deckhouse
@@ -181,7 +181,7 @@
         ```
 
   - alert: ModuleReleaseIsOutdated
-    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true", releaseQueueDepth="2"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    expr: sum by (name, module) (d8_module_release_info{manualApproval="true", releaseQueueDepth="2"} * on(module) group_left deckhouse_mm_module_info{enabled="true"})
     labels:
       severity_level: "7"
       d8_module: deckhouse
@@ -204,9 +204,9 @@
         ```
 
   - alert: ModuleReleaseIsOutdated
-    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
-      and on(name, moduleName) sum by (name, moduleName) (d8_module_release_info{releaseQueueDepth!="nil"})
-      and on(name, moduleName) sum by (name, moduleName) (d8_module_release_info{releaseQueueDepth!="1", releaseQueueDepth!="2"})
+    expr: sum by (name, module) (d8_module_release_info{manualApproval="true"} * on(module) group_left deckhouse_mm_module_info{enabled="true"})
+      and on(name, module) sum by (name, module) (d8_module_release_info{releaseQueueDepth!="nil"})
+      and on(name, module) sum by (name, module) (d8_module_release_info{releaseQueueDepth!="1", releaseQueueDepth!="2"})
     labels:
       severity_level: "5"
       d8_module: deckhouse
@@ -229,7 +229,7 @@
         ```
 
   - alert: ModuleIsInMaintenanceMode
-    expr: sum(deckhouse_mm_module_maintenance{state="NoResourceReconciliation"}) by (moduleName) > 0
+    expr: sum(deckhouse_mm_module_maintenance{state="NoResourceReconciliation"}) by (module) > 0
     labels:
       severity_level: "6"
     annotations:
@@ -269,7 +269,7 @@
         ```
 
   - alert: ModuleReleaseIsBlockedByRequirements
-    expr: sum by (name, moduleName) (d8_module_release_info{requirementsNotMet="true"} * on(moduleName) group_left sum by (moduleName) (deckhouse_mm_module_info{enabled="true"}))
+    expr: sum by (name, module) (d8_module_release_info{requirementsNotMet="true"} * on(module) group_left sum by (module) (deckhouse_mm_module_info{enabled="true"}))
     labels:
       severity_level: "6"
     annotations:
@@ -314,7 +314,7 @@
         ```
 
   - alert: ModuleAtConflict
-    expr: max by (moduleName) (d8_module_at_conflict) >= 1
+    expr: max by (module) (d8_module_at_conflict) >= 1
     labels:
       severity_level: "4"
     annotations:
@@ -342,7 +342,7 @@
         To resolve this issue, update ModuleConfig `{{ $labels.name }}` to the latest version.
 
   - alert: ModuleHasDeprecatedUpdatePolicy
-    expr: max by (moduleName, updatePolicy) (d8_deprecated_update_policy) >= 1
+    expr: max by (module, updatePolicy) (d8_deprecated_update_policy) >= 1
     labels:
       severity_level: "4"
     annotations:
@@ -389,7 +389,7 @@
         Deckhouse memory usage is too high.
 
   - alert: D8ModuleOutdatedByMajorVersion
-    expr: sum by (name, moduleName, majorReleaseName, fromToName) (d8_module_release_info{majorReleaseDepth!~"(nil|0)", majorReleaseName!="nil"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    expr: sum by (name, module, majorReleaseName, fromToName) (d8_module_release_info{majorReleaseDepth!~"(nil|0)", majorReleaseName!="nil"} * on(module) group_left deckhouse_mm_module_info{enabled="true"})
     labels:
       severity_level: "9"
       d8_module: deckhouse
