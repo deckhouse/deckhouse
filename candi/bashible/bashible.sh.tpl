@@ -92,10 +92,32 @@ bb-label-node-bashible-first-run-finished() {
   exit 1
 }
 
+bb-node-has-bashible-uninitialized-taint() {
+  local max_attempts=5
+  local attempt=1
+
+  while [[ $attempt -le $max_attempts ]]; do
+    if node_json="$(bb-kubectl-exec get no "$(bb-d8-node-name)" -o json 2>/dev/null)"; then
+      if echo "$node_json" | jq -e '.spec.taints[]? | select(.key == "node.deckhouse.io/bashible-uninitialized")' >/dev/null 2>&1; then
+        return 0
+      else
+        return 1
+      fi
+    fi
+    echo "[$attempt/$max_attempts] Failed to get node $(bb-d8-node-name), retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+
+  echo "ERROR: Timed out after $max_attempts attempts. Could not check taint node.deckhouse.io/bashible-uninitialized on node $(bb-d8-node-name)." >&2
+  return 1
+}
+
 # make the function available in $step
 export -f bb-kubectl-exec
 export -f bb-kube-apiserver-healthy
 export -f bb-label-node-bashible-first-run-finished
+export -f bb-node-has-bashible-uninitialized-taint
 
 bb-indent-text() {
     local indent="$1"
@@ -401,10 +423,16 @@ function main() {
     else
       REBOOT_ANNOTATION=null
   fi
- if [ "$FIRST_BASHIBLE_RUN" != "yes" ] && [[ ! -f $BASHIBLE_INITIALIZED_FILE ]]; then
-    bb-label-node-bashible-first-run-finished
-    touch $BASHIBLE_INITIALIZED_FILE
- fi
+  if [ "$FIRST_BASHIBLE_RUN" != "yes" ] && [[ ! -f $BASHIBLE_INITIALIZED_FILE ]]; then
+     bb-label-node-bashible-first-run-finished
+     touch $BASHIBLE_INITIALIZED_FILE
+  fi
+  if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]] && [[ -f "$BASHIBLE_INITIALIZED_FILE" ]] && type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf; then
+    if bb-node-has-bashible-uninitialized-taint; then
+      echo "WARNING: Node is initialized but bashible-uninitialized taint is still present. Re-applying first-run-finished label..."
+      bb-label-node-bashible-first-run-finished
+    fi
+  fi
   if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
