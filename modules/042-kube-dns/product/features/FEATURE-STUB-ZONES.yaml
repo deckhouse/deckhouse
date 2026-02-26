@@ -1,0 +1,51 @@
+title-en: Stub zones
+title-ru: Stub зоны
+description-en: |
+  Ability to redirect one or more domains to another DNS server for all workloads in the cluster.
+  Each stub zone can have its own upstream nameservers, cache TTL, and transport protocol mode.
+description-ru: |
+  Возможность перенаправить один или несколько доменов на другой DNS-сервер для всей нагрузки в кластере.
+  Каждая stub зона может иметь свои upstream nameservers, cache TTL и режим транспортного протокола.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Stub зоны используются для интеграции с внешними DNS системами (Consul, etcd, внутренние DNS)
+  - Каждая stub зона требует обязательного указания zone и upstreamNameservers
+  - По умолчанию cacheTTLSeconds = 30 секунд, можно настроить от 1 до 3600 секунд
+  - Можно настроить отдельный transportProtocolMode для каждой stub зоны
+  - Пример использования: интеграция с Consul service discovery (zone: consul.local)
+user-notes-en: |
+  **Important for users:**
+  - Stub zones are used to integrate with external DNS systems (Consul, etcd, internal DNS)
+  - Each stub zone requires mandatory zone and upstreamNameservers parameters
+  - Default cacheTTLSeconds = 30 seconds, can be configured from 1 to 3600 seconds
+  - You can configure separate transportProtocolMode for each stub zone
+  - Example use case: integration with Consul service discovery (zone: consul.local)
+configuration-example: |
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      stubZones:
+      - zone: consul.local
+        upstreamNameservers:
+        - 10.150.0.1
+        cacheTTLSeconds: 3600
+        transportProtocolMode: PreferUDP
+      - zone: internal.company.local
+        upstreamNameservers:
+        - 192.168.1.10
+        - 192.168.1.11
+        transportProtocolMode: ForceTCP
+  ```
+related-features: []
+user-stories:
+  - en: I need to redirect specific domains to different DNS servers for integration with external DNS systems or internal corporate DNS.
+    ru: Мне нужно перенаправить конкретные домены на другие DNS серверы для интеграции с внешними DNS системами или внутренним корпоративным DNS.
+    scope: System
+  - en: I want my application pods to automatically resolve domains from external service discovery systems without modifying DNS settings in each deployment.
+    ru: Я хочу, чтобы мои поды приложения автоматически разрешали домены из внешних систем service discovery без изменения настроек DNS в каждом деплойменте.
+    scope: Payload
+

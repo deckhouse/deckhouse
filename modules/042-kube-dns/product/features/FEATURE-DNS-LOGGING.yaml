@@ -1,0 +1,41 @@
+title-en: DNS query logging
+title-ru: Логирование DNS запросов
+description-en: |
+  Ability to enable CoreDNS logging for debugging and monitoring DNS queries.
+  When enabled, CoreDNS will log all DNS queries it processes.
+description-ru: |
+  Возможность включить логирование CoreDNS для отладки и мониторинга DNS запросов.
+  При включении CoreDNS будет логировать все обрабатываемые DNS запросы.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Логирование по умолчанию отключено для снижения нагрузки
+  - Включайте только при необходимости отладки DNS проблем
+  - Логи могут быть очень объемными в продакшене
+  - Логи доступны через `kubectl logs` для подов CoreDNS
+  - Рекомендуется использовать для диагностики проблем с разрешением доменов
+user-notes-en: |
+  **Important for users:**
+  - Logging is disabled by default to reduce load
+  - Enable only when debugging DNS issues
+  - Logs can be very verbose in production
+  - Logs are available via `kubectl logs` for CoreDNS pods
+  - Recommended for diagnosing domain resolution issues
+configuration-example: |
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      enableLogs: true
+  ```
+related-features: []
+user-stories:
+  - en: I need to enable DNS query logging to troubleshoot DNS resolution issues and understand which domains are being queried.
+    ru: Мне нужно включить логирование DNS запросов для диагностики проблем с DNS разрешением и понимания, какие домены запрашиваются.
+    scope: System
+  - en: I want to see DNS query logs when debugging application connectivity issues to identify whether problems are related to DNS resolution.
+    ru: Я хочу видеть логи DNS запросов при отладке проблем с подключением приложения, чтобы определить, связаны ли проблемы с DNS разрешением.
+    scope: Payload
+

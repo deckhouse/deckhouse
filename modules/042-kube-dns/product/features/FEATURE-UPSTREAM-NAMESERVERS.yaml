@@ -1,0 +1,44 @@
+title-en: Upstream DNS servers configuration
+title-ru: Настройка upstream DNS серверов
+description-en: |
+  Ability to configure a list of recursive DNS servers that CoreDNS will use to resolve external domains.
+  By default, the `/etc/resolv.conf` list is used.
+description-ru: |
+  Возможность настроить список рекурсивных DNS серверов, которые CoreDNS будет использовать для разрешения внешних доменов.
+  По умолчанию используется список из `/etc/resolv.conf`.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Если не указаны upstreamNameservers, CoreDNS использует DNS серверы из `/etc/resolv.conf` узлов кластера
+  - Рекомендуется указывать несколько DNS серверов для отказоустойчивости (например, 8.8.8.8 и 8.8.4.4)
+  - Для корпоративных кластеров обычно указывают внутренние корпоративные DNS серверы
+  - Можно указать порт для DNS сервера: `8.8.8.8:53`
+user-notes-en: |
+  **Important for users:**
+  - If upstreamNameservers are not specified, CoreDNS uses DNS servers from `/etc/resolv.conf` of cluster nodes
+  - It's recommended to specify multiple DNS servers for high availability (e.g., 8.8.8.8 and 8.8.4.4)
+  - For corporate clusters, internal corporate DNS servers are usually specified
+  - You can specify a port for DNS server: `8.8.8.8:53`
+configuration-example: |
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      upstreamNameservers:
+      - 8.8.8.8
+      - 8.8.4.4
+      # Или корпоративные DNS:
+      # - 192.168.1.10:53
+      # - 192.168.1.11:53
+  ```
+related-features: []
+user-stories:
+  - en: I need to configure specific DNS servers for external domain resolution to ensure consistent and reliable name resolution across all cluster workloads.
+    ru: Мне нужно настроить конкретные DNS серверы для разрешения внешних доменов, чтобы обеспечить согласованное и надежное разрешение имен для всей нагрузки кластера.
+    scope: System
+  - en: I must route all DNS queries through our internal DNS infrastructure to comply with corporate security policies and ensure filtering, logging, and access control rules are applied.
+    ru: Я должен направлять все DNS запросы через нашу внутреннюю DNS инфраструктуру для соответствия корпоративным политикам безопасности и обеспечения применения правил фильтрации, логирования и контроля доступа.
+    scope: System
+

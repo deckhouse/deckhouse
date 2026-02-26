@@ -1,0 +1,48 @@
+title-en: Cluster domain aliases
+title-ru: Алиасы домена кластера
+description-en: |
+  Ability to configure additional cluster domain aliases that are resolved on par with the main cluster domain.
+  These aliases work the same way as the main cluster domain for service discovery within the cluster.
+  Includes automatic webhook-based injection of aliases into `/etc/hosts` for StatefulSet pods to support services that need to resolve pod FQDNs before becoming Ready.
+description-ru: |
+  Возможность настроить дополнительные алиасы домена кластера, которые разрешаются наравне с основным доменом кластера.
+  Эти алиасы работают так же, как основной домен кластера для обнаружения сервисов внутри кластера.
+  Включает автоматическую инъекцию алиасов в `/etc/hosts` для подов StatefulSet через webhook для поддержки сервисов, которым нужно разрешать FQDN подов до того, как они станут Ready.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Используется для миграции кластера на новый домен без простоев (см. FAQ модуля)
+  - Алиас НЕ должен совпадать с доменом из publicDomainTemplate
+  - Webhook автоматически добавляет алиасы в /etc/hosts для StatefulSet подов
+  - Критично для сервисов, которые требуют раннего DNS разрешения
+  - При удалении алиаса из конфигурации необходимо пересоздать все поды кластера
+  - После смены clusterDomain требуется рестарт всех подов Istio (если используется)
+user-notes-en: |
+  **Important for users:**
+  - Used for cluster domain migration without downtime (see module FAQ)
+  - Alias MUST NOT match the domain from publicDomainTemplate
+  - Webhook automatically adds aliases to /etc/hosts for StatefulSet pods
+  - Critical for services that require early DNS resolution
+  - When removing alias from configuration, all cluster pods must be recreated
+  - After changing clusterDomain, all Istio pods must be restarted (if Istio is used)
+configuration-example: |
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      clusterDomainAliases:
+      - foo.bar
+      - baz.qux
+  ```
+related-features:
+  - FEATURE-STS-HOSTS-WEBHOOK
+user-stories:
+  - en: I need to migrate from an old cluster domain to a new one while keeping legacy applications working. Cluster domain aliases allow both old and new domain names to resolve correctly during migration.
+    ru: Мне нужно мигрировать со старого домена кластера на новый, сохраняя работоспособность legacy приложений. Алиасы домена кластера позволяют обоим старым и новым доменным именам разрешаться корректно во время миграции.
+    scope: System
+  - en: I want to configure additional cluster domain aliases that work the same as the main cluster domain for service discovery, enabling compatibility with applications that require alternative domain names.
+    ru: Я хочу настроить дополнительные алиасы домена кластера, которые работают так же, как основной домен кластера для service discovery, обеспечивая совместимость с приложениями, требующими альтернативные доменные имена.
+    scope: System
+
