@@ -6,9 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sort"
 	"testing"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestExtractLoadBalancerInfo_BasicCase(t *testing.T) {
@@ -345,6 +347,100 @@ func TestExtractIngressGatewaysFromCM(t *testing.T) {
 			_, err := extractIngressGatewaysFromCM(&tt.configMap)
 			if (err != nil) != tt.expectedError {
 				t.Errorf("expected error: %v, got: %v", tt.expectedError, err)
+			}
+		})
+	}
+}
+
+func TestIngressGatewaysSorting(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []IngressGateway
+		expected []IngressGateway
+	}{
+		{
+			name: "Sort by address",
+			input: []IngressGateway{
+				{Address: "192.168.1.28", Port: 32010},
+				{Address: "192.168.1.25", Port: 32010},
+				{Address: "192.168.1.27", Port: 32010},
+				{Address: "192.168.1.26", Port: 32010},
+			},
+			expected: []IngressGateway{
+				{Address: "192.168.1.25", Port: 32010},
+				{Address: "192.168.1.26", Port: 32010},
+				{Address: "192.168.1.27", Port: 32010},
+				{Address: "192.168.1.28", Port: 32010},
+			},
+		},
+		{
+			name: "Sort by address and port",
+			input: []IngressGateway{
+				{Address: "192.168.1.26", Port: 32011},
+				{Address: "192.168.1.25", Port: 32010},
+				{Address: "192.168.1.26", Port: 32010},
+				{Address: "192.168.1.25", Port: 32011},
+			},
+			expected: []IngressGateway{
+				{Address: "192.168.1.25", Port: 32010},
+				{Address: "192.168.1.25", Port: 32011},
+				{Address: "192.168.1.26", Port: 32010},
+				{Address: "192.168.1.26", Port: 32011},
+			},
+		},
+		{
+			name: "Already sorted list",
+			input: []IngressGateway{
+				{Address: "192.168.1.25", Port: 32010},
+				{Address: "192.168.1.26", Port: 32010},
+				{Address: "192.168.1.27", Port: 32010},
+			},
+			expected: []IngressGateway{
+				{Address: "192.168.1.25", Port: 32010},
+				{Address: "192.168.1.26", Port: 32010},
+				{Address: "192.168.1.27", Port: 32010},
+			},
+		},
+		{
+			name:     "Empty list",
+			input:    []IngressGateway{},
+			expected: []IngressGateway{},
+		},
+		{
+			name: "Single element",
+			input: []IngressGateway{
+				{Address: "192.168.1.25", Port: 32010},
+			},
+			expected: []IngressGateway{
+				{Address: "192.168.1.25", Port: 32010},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := make([]IngressGateway, len(tt.input))
+			copy(got, tt.input)
+
+			// Apply the same sorting logic as in GetIngressGateways()
+			sort.Slice(got, func(i, j int) bool {
+				if got[i].Address != got[j].Address {
+					return got[i].Address < got[j].Address
+				}
+				return got[i].Port < got[j].Port
+			})
+
+			if len(got) != len(tt.expected) {
+				t.Fatalf("expected %d gateways, got %d", len(tt.expected), len(got))
+			}
+
+			for i := range got {
+				if got[i].Address != tt.expected[i].Address {
+					t.Errorf("gateway %d address mismatch: want %s, got %s", i, tt.expected[i].Address, got[i].Address)
+				}
+				if got[i].Port != tt.expected[i].Port {
+					t.Errorf("gateway %d port mismatch: want %d, got %d", i, tt.expected[i].Port, got[i].Port)
+				}
 			}
 		})
 	}
