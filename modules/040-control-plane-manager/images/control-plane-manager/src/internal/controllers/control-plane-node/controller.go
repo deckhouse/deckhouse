@@ -18,6 +18,7 @@ package controlplanenode
 
 import (
 	"context"
+	"reflect"
 	"strings"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -50,19 +51,6 @@ const (
 	requeueInterval         = 5 * time.Minute
 )
 
-// enqueueOperationByNodeLabel extracts node name from ControlPlaneNodeNameLabelKey and enqueues reconcile for that node.
-func enqueueOperationByNodeLabel(ctx context.Context, obj client.Object) []reconcile.Request {
-	op, ok := obj.(*controlplanev1alpha1.ControlPlaneOperation)
-	if !ok {
-		return nil
-	}
-	nodeName := op.Labels[constants.ControlPlaneNodeNameLabelKey]
-	if nodeName == "" {
-		return nil
-	}
-	return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: nodeName}}}
-}
-
 type Reconciler struct {
 	client client.Client
 }
@@ -86,15 +74,21 @@ func Register(mgr manager.Manager) error {
 		return fmt.Errorf("create node label predicate: %w", err)
 	}
 
-	// Ignore Create (we create operations ourselves; ControlPlaneNode watch covers that case).
-	// Ignore status-only Update (Generation changes only on spec updates).
-	// React to Delete (operation may need to be recreated) and Update with spec change.
+	// Ignore Create, Delete.
+	// React only to Update when Status changed (ignore spec-only updates).
 	operationPredicate := predicate.And(
 		nodeLabelPredicate,
 		predicate.Funcs{
-			CreateFunc:  func(event.CreateEvent) bool { return false },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration() },
-			DeleteFunc:  func(event.DeleteEvent) bool { return true },
+			CreateFunc: func(event.CreateEvent) bool { return false },
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				oldOp, okOld := e.ObjectOld.(*controlplanev1alpha1.ControlPlaneOperation)
+				newOp, okNew := e.ObjectNew.(*controlplanev1alpha1.ControlPlaneOperation)
+				if !okOld || !okNew {
+					return false
+				}
+				return !reflect.DeepEqual(oldOp.Status, newOp.Status)
+			},
+			DeleteFunc:  func(event.DeleteEvent) bool { return false },
 			GenericFunc: func(event.GenericEvent) bool { return false },
 		},
 	)
@@ -114,7 +108,7 @@ func Register(mgr manager.Manager) error {
 		Named(constants.CpnControllerName).
 		Watches(
 			&controlplanev1alpha1.ControlPlaneOperation{},
-			handler.EnqueueRequestsFromMapFunc(enqueueOperationByNodeLabel),
+			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &controlplanev1alpha1.ControlPlaneNode{}, handler.OnlyControllerOwner()),
 			builder.WithPredicates(operationPredicate),
 		).
 		Watches(
@@ -185,6 +179,16 @@ func (r *Reconciler) reconcileComponents(ctx context.Context, cpn *controlplanev
 				Labels: map[string]string{
 					constants.ControlPlaneNodeNameLabelKey:  nodeName,
 					constants.ControlPlaneComponentLabelKey: string(check.component),
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion:         controlplanev1alpha1.GroupVersion.String(),
+						Kind:               "ControlPlaneNode",
+						Name:               cpn.Name,
+						UID:                cpn.UID,
+						Controller:         ptr.To(true),
+						BlockOwnerDeletion: ptr.To(false),
+					},
 				},
 			},
 			Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
