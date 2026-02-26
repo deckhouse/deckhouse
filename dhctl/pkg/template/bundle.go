@@ -139,16 +139,23 @@ func GetKubeadmVersion(kubernetesVersion string) (string, error) {
 	return kubeadmV1Beta4, nil
 }
 
-func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}) error {
+func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}) error {
+	cc := templateData["clusterConfiguration"].(map[string]interface{})
+	k8sVer := cc["kubernetesVersion"].(string)
+	kubeadmVersion, err := GetKubeadmVersion(k8sVer)
+	if err != nil {
+		return err
+	}
+
 	saveInfo := []saveFromTo{
 		{
-			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmV1Beta4),
-			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmV1Beta4),
+			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmVersion),
+			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmVersion),
 			data: templateData,
 		},
 		{
-			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmV1Beta4, "patches"),
-			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmV1Beta4, "patches"),
+			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmVersion, "patches"),
+			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmVersion, "patches"),
 			data: templateData,
 		},
 	}
@@ -157,6 +164,19 @@ func PrepareControlPlaneManifests(templateController *Controller, templateData m
 		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, nil); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}) error {
+	saveInfo := saveFromTo{
+		from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmV1Beta4, "patches"),
+		to:   filepath.Join(bashibleDir, "kubeadm", kubeadmV1Beta4, "patches"),
+		data: templateData,
+	}
+	log.InfoF("From %q to %q\n", saveInfo.from, saveInfo.to)
+	if err := templateController.RenderAndSaveTemplates(saveInfo.from, saveInfo.to, saveInfo.data, nil); err != nil {
+		return err
 	}
 	return nil
 }

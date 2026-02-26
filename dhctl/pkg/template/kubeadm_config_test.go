@@ -29,6 +29,7 @@ func TestKubeadmConfigRendering(t *testing.T) {
 	InitGlobalVars("/deckhouse")
 
 	t.Run("Version Selection", testVersionSelection)
+	t.Run("Version Selection Full", testVersionSelectionFull)
 	t.Run("Feature Gates", testFeatureGates)
 	t.Run("API Server Configuration", testAPIServerConfiguration)
 	t.Run("Cluster Types", testClusterTypes)
@@ -39,6 +40,7 @@ func TestKubeadmConfigRendering(t *testing.T) {
 	t.Run("Patches Rendering", testPatchesRendering)
 	t.Run("Edge Cases", testEdgeCases)
 	t.Run("Missing Coverage", testMissingCoverage)
+	t.Run("Full Manifests Rendering", testManifestsRendering)
 }
 
 func testVersionSelection(t *testing.T) {
@@ -77,6 +79,49 @@ func testVersionSelection(t *testing.T) {
 			if !strings.Contains(result, tt.expectedConfig) {
 				t.Errorf("Expected config kind %s not found in result", tt.expectedConfig)
 			}
+		})
+	}
+}
+
+func testVersionSelectionFull(t *testing.T) {
+	tests := []struct {
+		name         string
+		k8sVersion   string
+		expectedAPI  string
+		expectedKind string
+	}{
+		{
+			name:         "Kubernetes 1.31 should use v1beta4",
+			k8sVersion:   "1.31",
+			expectedAPI:  "apiVersion: v1",
+			expectedKind: "kind: Pod",
+		},
+		{
+			name:         "Kubernetes 1.32 should use v1beta4",
+			k8sVersion:   "1.32",
+			expectedAPI:  "apiVersion: v1",
+			expectedKind: "kind: Pod",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := getBaseTemplateData(tt.k8sVersion)
+			manifests, err := renderFullManifests(data)
+			if err != nil {
+				t.Fatalf("Failed to render pod manifests: %v", err)
+			}
+
+			for name, manifest := range manifests {
+				if !strings.Contains(manifest, tt.expectedAPI) {
+					t.Errorf("Expected API version %s not found in manifest %s", tt.expectedAPI, name)
+				}
+
+				if !strings.Contains(manifest, tt.expectedKind) {
+					t.Errorf("Expected kind %s not found in manifest %s", tt.expectedKind, name)
+				}
+			}
+
 		})
 	}
 }
@@ -1020,6 +1065,36 @@ func renderKubeadmPatches(data map[string]interface{}) (map[string]string, error
 	return patches, nil
 }
 
+func renderFullManifests(data map[string]interface{}) (map[string]string, error) {
+	templatesPath := filepath.Join("/deckhouse/candi/control-plane-kubeadm", kubeadmV1Beta4, "patches")
+
+	manifests := make(map[string]string)
+	templateFiles := []string{
+		"etcd-full.yaml.tpl",
+		"kube-apiserver-full.yaml.tpl",
+		"kube-controller-manager-full.yaml.tpl",
+		"kube-scheduler-full.yaml.tpl",
+	}
+
+	for _, templateFile := range templateFiles {
+		templatePath := filepath.Join(templatesPath, templateFile)
+
+		tplContent, err := os.ReadFile(templatePath)
+		if err != nil {
+			return nil, err
+		}
+
+		templateResult, err := RenderTemplate(templateFile, tplContent, data)
+		if err != nil {
+			return nil, err
+		}
+
+		manifests[strings.TrimSuffix(templateFile, ".tpl")] = templateResult.Content.String()
+	}
+
+	return manifests, nil
+}
+
 func testMissingCoverage(t *testing.T) {
 	versions := []string{"1.31", "1.32"}
 
@@ -1200,4 +1275,53 @@ func testMissingCoverage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testManifestsRendering(t *testing.T) {
+	t.Run("All Control Plane Pod Manifests Render Successfully", func(t *testing.T) {
+		versions := []string{"1.31", "1.32"}
+
+		for _, version := range versions {
+			t.Run("Version "+version, func(t *testing.T) {
+				data := getBaseTemplateData(version)
+				data["apiserver"] = map[string]interface{}{
+					"webhookURL":        "https://webhook.example.com",
+					"oidcIssuerURL":     "https://oidc.example.com",
+					"oidcIssuerAddress": "192.168.1.100",
+				}
+				data["images"] = map[string]interface{}{
+					"controlPlaneManager": map[string]interface{}{
+						"kubeApiserverHealthcheck": "sha256:abcd1234",
+						"kubeApiserver131":         "sha256:efgh5678",
+						"kubeApiserver130":         "sha256:ijkl9012",
+						"kubeApiserver129":         "sha256:mnop3456",
+					},
+				}
+				data["registry"] = map[string]interface{}{
+					"address": "registry.example.com",
+					"path":    "/deckhouse",
+				}
+				data["resourcesRequestsMilliCpuControlPlane"] = 1000
+				data["resourcesRequestsMemoryControlPlane"] = 1073741824
+
+				manifests, err := renderFullManifests(data)
+				if err != nil {
+					t.Fatalf("Failed to render control plane pod manifests: %v", err)
+				}
+
+				expectedManifests := []string{
+					"etcd-full.yaml",
+					"kube-apiserver-full.yaml",
+					"kube-controller-manager-full.yaml",
+					"kube-scheduler-full.yaml",
+				}
+
+				for _, manifestName := range expectedManifests {
+					if _, exists := manifests[manifestName]; !exists {
+						t.Errorf("Expected pod manifest %s not found in rendered manifests", manifestName)
+					}
+				}
+			})
+		}
+	})
 }
