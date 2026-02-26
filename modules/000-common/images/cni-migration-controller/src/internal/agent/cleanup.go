@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/vishvananda/netlink"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	cnimigrationv1alpha1 "deckhouse.io/cni-migration/api/v1alpha1"
@@ -214,18 +215,17 @@ func cleanIptablesByPatterns(logger logr.Logger, patterns []string) error {
 
 func deleteInterfaces(logger logr.Logger, interfaces []string) error {
 	for _, iface := range interfaces {
-		cmd := exec.Command("/sbin/ip", "link", "delete", iface)
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
-
-		if err := cmd.Run(); err != nil {
-			errStr := stderr.String()
-			// If the interface does not exist, ip command returns "Cannot find device".
-			if strings.Contains(errStr, "Cannot find device") {
+		link, err := netlink.LinkByName(iface)
+		if err != nil {
+			if _, ok := err.(netlink.LinkNotFoundError); ok {
 				logger.Info("Interface not found, skipping", "interface", iface)
 				continue
 			}
-			return fmt.Errorf("delete interface %s: %s", iface, errStr)
+			return fmt.Errorf("get interface %s: %w", iface, err)
+		}
+
+		if err := netlink.LinkDel(link); err != nil {
+			return fmt.Errorf("delete interface %s: %w", iface, err)
 		}
 		logger.Info("Successfully deleted interface", "interface", iface)
 	}

@@ -33,10 +33,6 @@ import:
     add: /iptables-wrapper
     to: /relocate/sbin/iptables-wrapper
     before: install
-  - image: tools/iproute2
-    add: /sbin/ip
-    to: /relocate/sbin/ip
-    before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:

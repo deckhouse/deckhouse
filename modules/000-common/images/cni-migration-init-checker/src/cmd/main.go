@@ -31,6 +31,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	deckhouselog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var cniMigrationGVR = schema.GroupVersionResource{
@@ -46,11 +48,15 @@ var cniNodeMigrationGVR = schema.GroupVersionResource{
 }
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
+	logger := deckhouselog.NewLogger(
+		deckhouselog.WithLevel(slog.LevelInfo),
+		deckhouselog.WithHandlerType(deckhouselog.JSONHandlerType),
+	)
+	deckhouselog.SetDefault(logger)
+	slog.SetDefault(slog.New(logger.Handler()))
 
 	if err := run(); err != nil {
-		slog.Error("Error executing run", "error", err)
+		deckhouselog.Error("Error executing run", deckhouselog.Err(err))
 		os.Exit(1)
 	}
 }
