@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const description = {
     ru: {
       search: 'Поиск',
+      values: 'знач.',
+      allSelected: 'Выбраны все',
       experimental: 'Экспериментальная версия. Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется.',
       preview: 'Предварительная версия. Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребоваться миграция.',
       generalAvailability: 'Общедоступная версия. Модуль готов к использованию в production-средах.',
@@ -25,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     en: {
       search: "Search",
+      values: 'values',
+      allSelected: 'All selected',
       experimental: "Experimental version. The module's functionality may change significantly. Compatibility with future versions is not guaranteed.",
       preview: "Preliminary version. The module's functionality may change, but the core features remain. Compatibility with future versions is ensured, but migration may be required.",
       generalAvailability: 'General availability. The module is ready for use in production environments.',
@@ -53,13 +57,44 @@ document.addEventListener('DOMContentLoaded', () => {
     'deprecated': 'Deprecated'
   };
 
+  function isSectionSelectAllCheckbox(checkbox) {
+    return checkbox?.dataset?.selectAll === 'true';
+  }
+
+  function getFilterContainerCheckboxes(container) {
+    return Array.from(container.querySelectorAll('input[type="checkbox"]'))
+      .filter(checkbox => !isSectionSelectAllCheckbox(checkbox));
+  }
+
+  function getSectionSelectAllCheckbox(container) {
+    return container.querySelector('input[type="checkbox"][data-select-all="true"]');
+  }
+
+  function syncSectionSelectAllState(container) {
+    const selectAllCheckbox = getSectionSelectAllCheckbox(container);
+    if (!selectAllCheckbox) return;
+
+    const sectionCheckboxes = getFilterContainerCheckboxes(container);
+    const checkedCount = sectionCheckboxes.filter(checkbox => checkbox.checked).length;
+
+    selectAllCheckbox.checked = sectionCheckboxes.length > 0 && checkedCount === sectionCheckboxes.length;
+    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < sectionCheckboxes.length;
+  }
+
+  function setSectionCheckboxesState(container, checked) {
+    const sectionCheckboxes = getFilterContainerCheckboxes(container);
+    sectionCheckboxes.forEach(checkbox => {
+      checkbox.checked = checked;
+    });
+  }
+
   function updateContainerTitleState(container) {
     if (!container) return null;
     const title = container.querySelector('.filter__container--title');
     if (!title) return;
 
-    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-    const checkedCount = Array.from(checkboxes).filter(checkbox => checkbox.checked).length;
+    const checkboxes = getFilterContainerCheckboxes(container);
+    const checkedCount = checkboxes.filter(checkbox => checkbox.checked).length;
 
     title.classList.toggle('filter-selected', checkedCount > 0);
     if (checkedCount > 0) {
@@ -99,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.querySelectorAll('.filter__container input[type="checkbox"]').forEach(checkbox => {
+      if (isSectionSelectAllCheckbox(checkbox)) return;
 
       const label = checkbox.nextElementSibling ? checkbox.nextElementSibling : document.querySelector(`label[for="${checkbox.id}"]`);
 
@@ -134,6 +170,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function createSelectedFilterElement(text, onRemove) {
+    const selectedElementContainer = document.createElement('div');
+    selectedElementContainer.classList.add('selected__filter--container');
+
     const selectedElement = document.createElement('div');
     selectedElement.classList.add('selected__filter');
     selectedElement.textContent = text;
@@ -142,8 +181,9 @@ document.addEventListener('DOMContentLoaded', () => {
     removeButton.classList.add('remove__filter');
     removeButton.addEventListener('click', onRemove);
 
-    selectedElement.appendChild(removeButton);
-    return selectedElement;
+    selectedElementContainer.appendChild(selectedElement);
+    selectedElementContainer.appendChild(removeButton);
+    return selectedElementContainer;
   }
 
   function getTags() {
@@ -208,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedFiltersList.innerHTML = '';
     }
 
-    const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked');
+    const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked:not([data-select-all="true"])');
     const query = filterSearch ? filterSearch.value.trim() : '';
 
     if (selectedFiltersList) {
@@ -229,18 +269,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const filterContainer = entry.checkboxes[0]?.closest('.filter__container');
         const isEditionsFilter = filterContainer?.classList.contains('filter__container--editions');
         const isStagesFilter = filterContainer?.classList.contains('filter__container--stages');
+        const totalSectionCheckboxes = filterContainer ? getFilterContainerCheckboxes(filterContainer).length : 0;
+        const selectedCount = entry.values.size;
 
         let valuesText;
-        if (isEditionsFilter) {
-          // Convert edition codes to titles
-          valuesText = Array.from(entry.values)
-            .map(code => editionTitles[code] || code)
-            .join(', ');
+        if (totalSectionCheckboxes > 0 && selectedCount === totalSectionCheckboxes) {
+          valuesText = texts.allSelected;
+        } else if (selectedCount > 3) {
+          valuesText = `${selectedCount} ${texts.values}`;
+        } else if (isEditionsFilter) {
+          valuesText = Array.from(entry.values).map(code => editionTitles[code] || code).join(', ');
         } else if (isStagesFilter) {
-          // Convert stage codes to titles
-          valuesText = Array.from(entry.values)
-            .map(code => stageTitles[code] || code)
-            .join(', ');
+          valuesText = Array.from(entry.values).map(code => stageTitles[code] || code).join(', ');
         } else {
           valuesText = Array.from(entry.values).join(', ');
         }
@@ -279,13 +319,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const checkboxesEditionlChecked = document.querySelectorAll('.filter__container--editions input[type="checkbox"]:checked');
+    const checkboxesEditionlChecked = document.querySelectorAll('.filter__container--editions input[type="checkbox"]:checked:not([data-select-all="true"])');
     const selectedEditions = Array.from(checkboxesEditionlChecked).map(checkbox => checkbox.value);
 
-    const checkboxesStagesChecked = document.querySelectorAll('.filter__container--stages input[type="checkbox"]:checked');
+    const checkboxesStagesChecked = document.querySelectorAll('.filter__container--stages input[type="checkbox"]:checked:not([data-select-all="true"])');
     const selectedStages = Array.from(checkboxesStagesChecked).map(checkbox => checkbox.value);
 
-    const checkboxesTagsChecked = document.querySelectorAll('.filter__container--tags input[type="checkbox"]:checked');
+    const checkboxesTagsChecked = document.querySelectorAll('.filter__container--tags input[type="checkbox"]:checked:not([data-select-all="true"])');
     const selectedTags = Array.from(checkboxesTagsChecked).map(checkbox => checkbox.value);
 
     const filtered = Array.from(articles).filter(article => {
@@ -312,10 +352,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if(selectedStages.length > 0) {
-        const hasAllStages = selectedStages.every(stage => {
+        const hasAnyStage = selectedStages.some(stage => {
           return article.querySelector(`.button-tile__stage-${stage}`) !== null;
         });
-        if(!hasAllStages) {
+        if(!hasAnyStage) {
           return false;
         }
       }
@@ -336,6 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeArticleFilter(filtered);
     document.querySelectorAll('.filter__container').forEach(container => {
       updateContainerTitleState(container);
+      syncSectionSelectAllState(container);
     });
   }
 
@@ -355,24 +396,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.querySelectorAll('.filter__container').forEach(container => {
-    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-    const title = container.querySelector('.filter__container--title');
+    const sectionCheckboxes = getFilterContainerCheckboxes(container);
+    const selectAllCheckbox = getSectionSelectAllCheckbox(container);
 
-    checkboxes.forEach(checkbox => {
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', function() {
+        setSectionCheckboxesState(container, selectAllCheckbox.checked);
+        syncSectionSelectAllState(container);
+        filterArticles();
+      });
+    }
+
+    sectionCheckboxes.forEach(checkbox => {
       checkbox.addEventListener('change', function() {
-        const checkedCount = Array.from(checkboxes).filter(checkbox => checkbox.checked).length;
-        title.classList.toggle('filter-selected', checkedCount > 0);
-        if (checkedCount > 0) {
-          title.dataset.selectedCount = String(checkedCount);
-        } else {
-          delete title.dataset.selectedCount;
-        }
-      })
-    })
-
+        updateContainerTitleState(container);
+        syncSectionSelectAllState(container);
+      });
+    });
   })
 
-  const checkboxes = document.querySelectorAll('.filter__container input[type="checkbox"]');
+  const checkboxes = document.querySelectorAll('.filter__container input[type="checkbox"]:not([data-select-all="true"])');
   checkboxes.forEach(checkbox => {
     checkbox.addEventListener('change', filterArticles);
   });
@@ -380,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeArticleFilter(Array.from(articles));
   document.querySelectorAll('.filter__container').forEach(container => {
     updateContainerTitleState(container);
+    syncSectionSelectAllState(container);
   });
   markEmptyCheckboxes();
 
