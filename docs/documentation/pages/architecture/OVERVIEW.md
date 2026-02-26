@@ -1,32 +1,71 @@
 ---
 title: Architecture
 permalink: en/architecture/
+search: Deckhouse architecture, DKP architecture
+description: Overview of the Deckhouse Kubernetes Platform architecture.
 ---
 
-Deckhouse makes it possible to run the Kubernetes cluster on **any supported infrastructure** and in the **same manner**:
+This section describes the architecture of Deckhouse Kubernetes Platform (DKP).
 
-- on clouds (for more info, see the section for the specific cloud provider);
-- on virtual or bare metal machines (including on-premises);
-- on a hybrid infrastructure.
+The section consists of the following subsections:
 
-Deckhouse Kubernetes Platform automatically configures and manages both the [cluster nodes](/modules/node-manager/) and the  [control plane](/modules/control-plane-manager/) components, keeping their configuration up-to-date (using Terraform tools).
+* [C4 model](c4-model/): Overview of the C4 model used to visualize the platform architecture,
+  as well as a description of the DKP architecture at levels 1 and 2 of the C4 model.
+* [Modules](module-development/): Description of the DKP module architecture.
+* [Disaster resilience](disaster-resilience/): Description of the disaster resilience approaches implemented in DKP.
+* [Updating](updating.html): Description of the DKP update mechanisms.
+* Description of platform component architecture divided in the following subsystems:
+  * [Deckhouse subsystem](deckhouse/)
+  * [Kubernetes & Scheduling subsystem](kubernetes-and-scheduling/)
+  * [Cluster & Infrastructure subsystem](cluster-and-infrastructure/)
+  * [IAM subsystem](iam/)
+  * [Security subsystem](security/)
+  * [Network subsystem](network/)
+  * [Observability subsystem](observability/)
 
-Deckhouse facilitates non-trivial operations with control-plane and cluster nodes, such as:
+{% alert level="info" %}
+This section does not yet cover all DKP subsystems and modules.  
+Documentation for the remaining components will be added as it becomes available.
+{% endalert %}
 
-- migrating between single-master and multi-master schemes;
-- scaling master nodes;
-- updating versions of the components.
+## DKP architecture
 
-All these tasks are based on smart and safe algorithms (the user can monitor/manage the ongoing processes).
+DKP is a platform for managing Kubernetes clusters in various infrastructures — from isolated server environments to public clouds.
+The platform includes:
 
-Also, Deckhouse configures kubelet and takes care of the certificates used when working with the control plane. It automatically issues certificates and renews them.
+* A Kubernetes cluster.
+* The Deckhouse controller and the modules it manages.
+* [Bashible](cluster-and-infrastructure/bashible/),
+  an agent running as a service on cluster nodes that executes bash scripts to manage nodes.
 
-Deckhouse replaces `kubeadm`'s `kube-proxy` resources (DaemonSets, ConfigMaps, RBAC) by their tailor-made analogs.
+Modules are grouped into subsystems according to their functional purpose.
+The Deckhouse controller is also implemented as a module and is the only mandatory module required for the platform to function.
 
-A high level of integration between Deckhouse modules ensures effective monitoring and provides an acceptable level of security. For example, you can safely access the cluster's API server from a public IP address and use an external authentication provider.
+The DKP architecture at the subsystem and module level is described in the [C4 model](c4-model/) subsection.
 
-Images of all Deckhouse components (including `control plane`) are stored in a highly available and geo-distributed container registry. The latter is accessible from a limited set of IP addresses (to ease access from isolated environments).
+## Modules
 
-From an architectural perspective, Deckhouse consists of the Deckhouse operator and modules. A module is a bundle of Helm chart, [Addon-operator](https://github.com/flant/addon-operator/) hooks, commands for building module components (Deckhouse components) and other files.
+A module is a set of resources and applications designed to extend DKP functionality.
 
-Deckhouse uses [addon-operator](https://github.com/flant/addon-operator/) when working with modules. Please refer to its documentation to learn how Deckhouse works with [modules](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [module hooks](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) and [module parameters](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). We would appreciate it if you *star* the project.
+Key modules:
+
+* [`deckhouse`](/modules/deckhouse/): The Deckhouse controller.
+* [`control-plane-manager`](kubernetes-and-scheduling/control-plane-management/): Manages cluster control plane components.
+* [`node-manager`](cluster-and-infrastructure/node-manager/): Manages cluster nodes.
+
+{% alert level="info" %}
+The [`control-plane-manager`](/modules/control-plane-manager/) and [`node-manager`](/modules/node-manager/) modules
+are not present when the platform is installed into an existing Managed Kubernetes cluster.
+{% endalert %}
+
+A module includes:
+
+* Helm charts
+* [Addon-operator](https://github.com/flant/addon-operator/) hooks
+* Build rules for module components (Deckhouse components)
+* Other related files
+
+DKP uses the [addon-operator](https://github.com/flant/addon-operator/) project to manage modules.
+Refer to its documentation to learn how DKP works with [modules](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [module hooks](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md), and [module parameters](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md).
+
+For more information about module architecture and developing custom modules, refer to [Modules](module-development/).
