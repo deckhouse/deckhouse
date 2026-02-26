@@ -485,11 +485,6 @@ func (c *Client) getClusterStatus() (map[string]*clientv3.StatusResponse, error)
 
 */
 
-// EnvVar represents an environment variable present in a Container.
-type EnvVar struct {
-	v1.EnvVar
-}
-
 // GetEtcdPodSpec returns the etcd static Pod actualized to the context of the current configuration
 // NB. GetEtcdPodSpec methods holds the information about how kubeadm creates etcd static pod manifests.
 func GetEtcdPodSpec(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, initialCluster []Member) v1.Pod {
@@ -647,10 +642,16 @@ func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints
 	return etcdClient, nil
 }
 
-func InitCluster(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
+func InitCluster(cfgPath string, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
 
 	// data, ok := c.(InitData)
 	// config := data.Cfg()
+	// config, err := kubeadmutil.LoadOrDefaultInitConfiguration(cfgPath, &kubeadmapiv1.InitConfiguration{}, &kubeadmapiv1.ClusterConfiguration{}, kubeadmutil.LoadOrDefaultConfigurationOptions{})
+	// if err != nil {
+	// 	return err
+	// }
+
+	config := &etcdconfig.EtcdConfig{}
 
 	if err := prepareAndWriteEtcdStaticPod(config, endpoint, nodeName, []Member{}, isDryRun); err != nil {
 		return err

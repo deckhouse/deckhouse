@@ -58,6 +58,7 @@ type EtcdConfig struct {
 
 	KubernetesVersion string
 
+	Timeouts *kubeadmapi.Timeouts
 	// Таймаут ожидания готовности etcd после размещения манифеста
 	StartupTimeout time.Duration
 }

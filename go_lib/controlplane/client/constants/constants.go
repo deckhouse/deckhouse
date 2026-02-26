@@ -89,6 +89,12 @@ const (
 
 	// ControlPlaneComponentHealthCheckTimeout specifies the default control plane component health check timeout
 	ControlPlaneComponentHealthCheckTimeout = 4 * time.Minute
+
+	// AllowExperimentalAPI flag can be used to allow experimental / work in progress APIs
+	AllowExperimentalAPI = "allow-experimental-api"
+
+	// InitConfigurationKind is the string kind value for the InitConfiguration struct
+	InitConfigurationKind = "InitConfiguration"
 )
 
 // SupportedEtcdVersion lists officially supported etcd versions with corresponding Kubernetes releases
