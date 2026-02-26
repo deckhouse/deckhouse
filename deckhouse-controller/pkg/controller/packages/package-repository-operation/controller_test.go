@@ -29,6 +29,7 @@ import (
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -209,20 +210,22 @@ func (m *mockRegistryClient) ListRepositories(ctx context.Context, opts ...regis
 // segmentAwareMockClient is a mock that returns different results based on whether
 // it's at root level (listing packages) or package level (listing versions).
 type segmentAwareMockClient struct {
-	rootListTags       func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error)
-	packageListTags    func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error)
-	getImageConfigFunc func(ctx context.Context, tag string) (*crv1.ConfigFile, error)
-	versionExtractFunc func() io.ReadCloser // tar content for version image Extract()
-	segments           []string
+	rootListTags          func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error)
+	packageListTags       func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error)
+	packageDirectListTags func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) // for <package> path without /version
+	getImageConfigFunc    func(ctx context.Context, tag string) (*crv1.ConfigFile, error)
+	versionExtractFunc    func() io.ReadCloser // tar content for version image Extract()
+	segments              []string
 }
 
 func (m *segmentAwareMockClient) WithSegment(segments ...string) registry.Client {
 	newClient := &segmentAwareMockClient{
-		rootListTags:       m.rootListTags,
-		packageListTags:    m.packageListTags,
-		getImageConfigFunc: m.getImageConfigFunc,
-		versionExtractFunc: m.versionExtractFunc,
-		segments:           append(append([]string{}, m.segments...), segments...),
+		rootListTags:          m.rootListTags,
+		packageListTags:       m.packageListTags,
+		packageDirectListTags: m.packageDirectListTags,
+		getImageConfigFunc:    m.getImageConfigFunc,
+		versionExtractFunc:    m.versionExtractFunc,
+		segments:              append(append([]string{}, m.segments...), segments...),
 	}
 	return newClient
 }
@@ -295,11 +298,21 @@ func (m *segmentAwareMockClient) PushImage(ctx context.Context, tag string, img 
 }
 
 func (m *segmentAwareMockClient) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
-	// If we have segments (beyond root), we're at package/version level - return versions
-	if len(m.segments) > 0 && m.packageListTags != nil {
-		return m.packageListTags(ctx, opts...)
+	if len(m.segments) > 0 {
+		// Version segment (e.g. <package>/version): use packageListTags
+		if m.isVersionSegment() && m.packageListTags != nil {
+			return m.packageListTags(ctx, opts...)
+		}
+		// Package segment without /version (e.g. <package>): use packageDirectListTags if available
+		if !m.isVersionSegment() && m.packageDirectListTags != nil {
+			return m.packageDirectListTags(ctx, opts...)
+		}
+		// Fallback for backward compatibility: use packageListTags for any non-root segment
+		if m.packageListTags != nil {
+			return m.packageListTags(ctx, opts...)
+		}
 	}
-	// Otherwise we're at root level - return package names
+	// Root level - return package names
 	if m.rootListTags != nil {
 		return m.rootListTags(ctx, opts...)
 	}
@@ -879,6 +892,45 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		psm := createMockPSM(segmentAwareMock)
 
 		suite.setupController("legacy-module.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("legacy module from old registry", func() {
+		// The /version path doesn't exist in old registries → NAME_UNKNOWN from ListTags on version segment.
+		// Fallback: list tags on <package> directly, check release image → no type label → legacy module.
+		// Package should appear in Processed (empty type) AND Failed with legacy message, no resources created.
+		segmentAwareMock := &segmentAwareMockClient{
+			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"test-package"}, nil
+			},
+			packageListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				// /version segment → NAME_UNKNOWN (path doesn't exist in old registry)
+				return nil, &transport.Error{
+					Errors: []transport.Diagnostic{{
+						Code:    transport.NameUnknownErrorCode,
+						Message: "repository name not known to registry",
+					}},
+					StatusCode: http.StatusNotFound,
+				}
+			},
+			packageDirectListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				// Direct <package> tags → hash-timestamp format (legacy module format)
+				return []string{"abc123-1770638740449"}, nil
+			},
+			// No getImageConfigFunc → no type label on release image → legacy module
+		}
+		psm := createMockPSM(segmentAwareMock)
+
+		suite.setupController("legacy-module-old-registry.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

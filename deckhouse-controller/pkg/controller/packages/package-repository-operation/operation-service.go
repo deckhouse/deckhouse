@@ -20,9 +20,11 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	transport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -52,6 +54,13 @@ var errNoPackageMetadata = errors.New("package has no type labels and no package
 // errPackageTypeInvalid is returned by detectPackageType when a package has manifest files
 // (labels or package.yaml) but the type value is empty or not recognized.
 var errPackageTypeInvalid = errors.New("package type could not be determined")
+
+// isRepoNotFoundError checks if the error chain contains a registry NAME_UNKNOWN error,
+// which means the repository path does not exist in the registry.
+// This is consistent with the pattern used in deckhouse-controller/pkg/registry/module.go.
+func isRepoNotFoundError(err error) bool {
+	return strings.Contains(err.Error(), string(transport.NameUnknownErrorCode))
+}
 
 // packageType represents the type of a package as detected from Docker labels or package.yaml.
 type packageType string
@@ -315,6 +324,12 @@ func latestVersionString(versions []*semver.Version) string {
 func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*PackageProcessResult, error) {
 	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
 	if err != nil {
+		// NAME_UNKNOWN means <package>/version path doesn't exist in the registry.
+		// This could be a legacy v1alpha1 module (old registry format) or a broken new package.
+		// Try to detect the type by checking the release image at <package>:<tag> directly.
+		if isRepoNotFoundError(err) {
+			return s.handleMissingVersionPath(ctx, packageName)
+		}
 		return nil, fmt.Errorf("get found tags to process: %w", err)
 	}
 
@@ -386,6 +401,74 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		PackageType: pkgType,
 		Done:        foundTags,
 		Failed:      failedVersions,
+	}, nil
+}
+
+// handleMissingVersionPath handles the case when <package>/version path doesn't exist.
+// It tries to detect the package type via the release image to distinguish between:
+// - A broken new package (has type label on release image) → record as failed with informative error
+// - A legacy v1alpha1 module (no type metadata at all) → record as legacy module
+func (s *OperationService) handleMissingVersionPath(ctx context.Context, packageName string) (*PackageProcessResult, error) {
+	pkg := s.svc.Package(packageName)
+
+	// Get tags from the package path directly (without /version segment)
+	tags, err := pkg.ListTags(ctx)
+	if err != nil {
+		// Can't list tags on <package> either — real connectivity/auth problem
+		return nil, fmt.Errorf("list package tags for legacy detection: %w", err)
+	}
+
+	if len(tags) == 0 {
+		// Package path exists but has no tags — treat as legacy module with no content
+		s.logger.Info(
+			"package has no version path and no tags, treating as legacy module (v1alpha1)",
+			slog.String("package", packageName),
+		)
+		return &PackageProcessResult{
+			Failed: []failedVersion{{
+				Error: fmt.Sprintf("%s: %s", errNoPackageMetadata.Error(), packageName),
+			}},
+		}, nil
+	}
+
+	// Try to detect type from release image label using the first available tag
+	sampleTag := tags[0]
+	releaseConfig, err := pkg.GetImageConfig(ctx, sampleTag)
+	if err != nil {
+		s.logger.Warn(
+			"failed to get release image config for legacy detection",
+			slog.String("package", packageName),
+			slog.String("tag", sampleTag),
+			log.Err(err),
+		)
+		releaseConfig = nil
+	}
+
+	if releaseConfig != nil && releaseConfig.Config.Labels != nil {
+		if rawType := releaseConfig.Config.Labels[packageTypeLabel]; rawType != "" {
+			// Package HAS a type label but is missing /version path — broken new package (CI issue)
+			s.logger.Warn(
+				"package has type label but missing /version path",
+				slog.String("package", packageName),
+				slog.String("type", rawType),
+			)
+			return &PackageProcessResult{
+				Failed: []failedVersion{{
+					Error: fmt.Sprintf("package %q has type label %q but /version path does not exist in registry", packageName, rawType),
+				}},
+			}, nil
+		}
+	}
+
+	// No type label on release image → legacy v1alpha1 module
+	s.logger.Info(
+		"package has no version path and no type label, treating as legacy module (v1alpha1)",
+		slog.String("package", packageName),
+	)
+	return &PackageProcessResult{
+		Failed: []failedVersion{{
+			Error: fmt.Sprintf("%s: %s", errNoPackageMetadata.Error(), packageName),
+		}},
 	}, nil
 }
 
