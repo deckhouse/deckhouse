@@ -28,8 +28,8 @@ const (
 	ModuleResource = "modules"
 	ModuleKind     = "Module"
 
-	// ModuleConditionTypeProcessed changes only by module controller
-	ModuleConditionTypeProcessed                = "Processed"
+	// ModuleConditionTypeCompleted changes only by module controller
+	ModuleConditionTypeCompleted                = "Completed"
 	ModuleConditionReasonVersionNotFound        = "VersionNotFound"
 	ModuleConditionReasonModulePackageNotFound  = "ModulePackageNotFound"
 	ModuleConditionReasonVersionIsDraft         = "VersionIsDraft"
