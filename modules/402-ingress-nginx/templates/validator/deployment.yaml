@@ -7,6 +7,7 @@
 {{- $checksum := toJson $crd | sha256sum }}
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $resourcesManagement := $crd.spec.resourcesManagement | default dict }}
+{{- $fullValidation := eq $controllerVersion "1.14" }}
 {{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 }}
 
 {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -165,7 +166,9 @@ spec:
           - --validating-webhook=:8443
           - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
           - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
+          {{- if not $fullValidation }}
           - --watch-namespace=d8-ingress-nginx
+          {{- end }}
           - --update-status=false
           - --update-status-on-shutdown=false
         lifecycle:

@@ -1,0 +1,1 @@
+This image provides `/usr/bin/sandbox` for isolated `nginx -t` execution, where `SANDBOX_DEBUG=true` enables syscall/path tracing and `SANDBOX_DEBUG_CRASH_ON_DENY=true` additionally converts any deny into immediate sandbox termination.
