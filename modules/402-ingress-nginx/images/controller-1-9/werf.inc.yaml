@@ -66,8 +66,8 @@ shell:
   - patch -p1 < /patches/ingress-nginx/007-geoip.patch
   - patch -p1 < /patches/ingress-nginx/008-new-metrics.patch
   - patch -p1 < /patches/ingress-nginx/009-default-backend-fix.patch
-  - patch -p1 < /patches/ingress-nginx/010-cve-22122025.patch
-  - patch -p1 < /patches/ingress-nginx/011-nginx-build.patch
+  - patch -p1 < /patches/ingress-nginx/010-cve-22122025-01.patch
+  - patch -p1 < /patches/ingress-nginx/011-nginx-build-07.patch
   - patch -p1 < /patches/ingress-nginx/012-validation-mode.patch
   - patch -p1 < /patches/ingress-nginx/013-verbose-maxmind-logs.patch
   - patch -p1 < /patches/ingress-nginx/014-fix-success-reload-metric.patch
@@ -76,6 +76,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/017-geoip-ver-metric.patch
   - patch -p1 < /patches/ingress-nginx/018-skip-tls-verification-maxmind.patch
   - patch -p1 < /patches/ingress-nginx/021-cve-03022026.patch
+  - patch -p1 < /patches/ingress-nginx/022-remove-patch-01.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
@@ -90,7 +91,7 @@ shell:
 ---
 # dumb-init
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -107,7 +108,7 @@ shell:
 ---
 # luarocks
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -131,7 +132,7 @@ shell:
 ---
 # opentelemetry
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentelemetry-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -141,8 +142,9 @@ import:
 shell:
   install:
   - apt-get -y update
-  - apt-get -y install libpcre2-devel libcurl-devel libgnutls-openssl-devel libcares-devel ninja-build libgtest-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins
+  - apt-get install -y libgnutls-openssl-devel liblua5.3-devel lua5.3 libgtest-devel libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libgrpc++-devel libgrpc++ libre2-devel libre2 libgrpc libgrpc-devel libssl-devel libmaxminddb libmaxminddb-devel libpcre-devel libpcre16 git cmake ninja-build libabseil-cpp-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
   setup:
+  - set -x
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - export SOURCE_REPO={{ $.SOURCE_REPO }}
   - export NINJA_STATUS="[%p/%f/%t] "
@@ -154,7 +156,7 @@ shell:
 ---
 # Controller artifact
 image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/golang-alpine-1.25.7
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -187,7 +189,7 @@ shell:
 ---
 # NGINX PCRE
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -204,8 +206,11 @@ import:
   before: install
 shell:
   setup:
+  - set -x
+  - apt-get install -y liblua5.3-devel lua5.3 libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libgrpc++-devel libgrpc++ libre2-devel libre2 libgrpc libgrpc-devel libssl-devel libmaxminddb libmaxminddb-devel libpcre-devel libpcre16 git cmake ninja-build libabseil-cpp-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel libstdc++-devel libstdc++-devel-static gcc-c++ libGeoIP-devel
+  - apt-get remove libpcre2-devel -y
   - export SOURCE_REPO={{ $.SOURCE_REPO }}
-  - export CONTROLLER_BRANCH={{ $controllerBranch }}
+  - export CONTROLLER_BRANCH="controller-v1.9.5-nginx-v1.29.5"
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - cd /pcre
   - ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit
@@ -219,7 +224,7 @@ shell:
 ---
 # chroot
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -291,7 +296,7 @@ import:
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel libpcre-devel
+  - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel libpcre-devel gsasl libGeoIP-devel libnfnetlink libnfnetlink-devel libnetfilter_conntrack libnetfilter_conntrack-devel libnghttp2-devel libpsl-devel libssh2-devel
   setup:
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
@@ -379,7 +384,7 @@ shell:
 # Final image
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11
+fromImage: common/alt-p11-artifact-2026-02-07
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
