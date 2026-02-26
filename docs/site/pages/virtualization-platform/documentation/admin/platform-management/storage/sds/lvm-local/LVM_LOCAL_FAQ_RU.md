@@ -100,7 +100,7 @@ d8 k label node %node-name% %label-from-selector%-
 d8 k -n d8-sds-local-volume get po -owide
 ```
 
-Если под остаётся после удаления метки, убедитесь, что метки из конфигурации `d8-sds-local-volume-controller-config` действительно удалены. Это можно проверить с помощью следующей команды:
+Если под остаётся после удаления лейбла, убедитесь, что метки из конфигурации `d8-sds-local-volume-controller-config` действительно удалены. Это можно проверить с помощью следующей команды:
 
 ```shell
 d8 k get node %node-name% --show-labels

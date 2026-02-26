@@ -26,20 +26,20 @@ spec:
                     Подробнее про выражения можно узнать [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                   properties:
                     matchLabels:
-                      description: Список меток, которые должен иметь под, чтобы подпадать под условие фильтра.
+                      description: Список лейблов, которые должен иметь под, чтобы подпадать под условие фильтра.
                     matchExpressions:
-                      description: Список выражений для меток, которые должен иметь под, чтобы подпадать под условие фильтра.
+                      description: Список выражений для лейблов, которые должен иметь под, чтобы подпадать под условие фильтра.
                       items:
                         properties:
                           key:
-                            description: Имя метки.
+                            description: Имя лейбла.
                           operator:
                             description: Оператор сравнения.
                           values:
-                            description: Значение метки.
+                            description: Значение лейбла.
                 labelFilter:
                   description: |
-                    Список правил для фильтрации логов по их [меткам метаданных](./#метаданные).
+                    Список правил для фильтрации логов по их [лейблам метаданных](./#метаданные).
                   items:
                     properties:
                       field:

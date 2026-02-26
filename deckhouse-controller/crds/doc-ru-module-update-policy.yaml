@@ -61,7 +61,7 @@ spec:
                   properties:
                     labelSelector:
                       description: |
-                        Определяет фильтр на основе меток, указанных у целевых модулей
+                        Определяет фильтр на основе лейблов, указанных у целевых модулей
 
                         Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (AND).
                       type: object
@@ -73,19 +73,19 @@ spec:
                             type: object
                             properties:
                               key:
-                                description: Имя метки.
+                                description: Имя лейбла.
                                 type: string
                               operator:
                                 description: Оператор сравнения.
                                 type: string
                               values:
                                 type: array
-                                description: Значение метки.
+                                description: Значение лейбла.
                                 items:
                                   type: string
                         matchLabels:
                           type: object
-                          description: Фильтр на основе совпадения меток.
+                          description: Фильтр на основе совпадения лейблов.
                           additionalProperties:
                             type: string
             status:
