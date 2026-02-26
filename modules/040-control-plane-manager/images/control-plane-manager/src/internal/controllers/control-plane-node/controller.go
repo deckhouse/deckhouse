@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -48,6 +49,19 @@ const (
 	cacheSyncTimeout        = 3 * time.Minute
 	requeueInterval         = 5 * time.Minute
 )
+
+// enqueueOperationByNodeLabel extracts node name from ControlPlaneNodeNameLabelKey and enqueues reconcile for that node.
+func enqueueOperationByNodeLabel(ctx context.Context, obj client.Object) []reconcile.Request {
+	op, ok := obj.(*controlplanev1alpha1.ControlPlaneOperation)
+	if !ok {
+		return nil
+	}
+	nodeName := op.Labels[constants.ControlPlaneNodeNameLabelKey]
+	if nodeName == "" {
+		return nil
+	}
+	return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: nodeName}}}
+}
 
 type Reconciler struct {
 	client client.Client
@@ -72,6 +86,19 @@ func Register(mgr manager.Manager) error {
 		return fmt.Errorf("create node label predicate: %w", err)
 	}
 
+	// Ignore Create (we create operations ourselves; ControlPlaneNode watch covers that case).
+	// Ignore status-only Update (Generation changes only on spec updates).
+	// React to Delete (operation may need to be recreated) and Update with spec change.
+	operationPredicate := predicate.And(
+		nodeLabelPredicate,
+		predicate.Funcs{
+			CreateFunc:  func(event.CreateEvent) bool { return false },
+			UpdateFunc:  func(e event.UpdateEvent) bool { return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration() },
+			DeleteFunc:  func(event.DeleteEvent) bool { return true },
+			GenericFunc: func(event.GenericEvent) bool { return false },
+		},
+	)
+
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.TypedOptions[reconcile.Request]{
 			MaxConcurrentReconciles: maxConcurrentReconciles,
@@ -87,8 +114,8 @@ func Register(mgr manager.Manager) error {
 		Named(constants.CpnControllerName).
 		Watches(
 			&controlplanev1alpha1.ControlPlaneOperation{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(nodeLabelPredicate),
+			handler.EnqueueRequestsFromMapFunc(enqueueOperationByNodeLabel),
+			builder.WithPredicates(operationPredicate),
 		).
 		Watches(
 			&controlplanev1alpha1.ControlPlaneNode{},
@@ -226,9 +253,7 @@ func (r *Reconciler) buildComponentChecks(cpn *controlplanev1alpha1.ControlPlane
 	}
 }
 
-// operationNameForNode returns a deterministic name for ControlPlaneOperation.
-// Node names may contain dots (e.g. ip-10-0-0-1.domain.local); k8s resource names do not allow them.
-// Component is lowercased because RFC 1123 requires resource names to be lowercase.
+// operationNameForNode returns a deterministic k8s like resource name for ControlPlaneOperation <node-name>-<component>-<checksum>.
 func operationNameForNode(nodeName string, component controlplanev1alpha1.OperationComponent, specChecksum string) string {
 	sanitized := strings.ReplaceAll(nodeName, ".", "-")
 	if len(specChecksum) > 6 {
