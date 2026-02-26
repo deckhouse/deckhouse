@@ -541,7 +541,11 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 		}
 		// override if label istio.io/rev with specific revision exists
 		if istioPod.SpecificRevision != "" {
-			desiredRevision = istioPod.SpecificRevision
+			if istioPod.SpecificRevision == "global" {
+				desiredRevision = globalRevision
+			} else {
+				desiredRevision = istioPod.SpecificRevision
+			}
 		}
 
 		// we don't need metrics for pod without desired revision and without istio sidecar
