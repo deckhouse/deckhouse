@@ -97,7 +97,9 @@ func (s DeckhouseSettings) Merge(other *DeckhouseSettings) DeckhouseSettings {
 		return out
 	}
 
-	out.Mode = other.Mode
+	if other.Mode != "" {
+		out.Mode = other.Mode
+	}
 
 	if other.Direct != nil {
 		if out.Direct == nil {
