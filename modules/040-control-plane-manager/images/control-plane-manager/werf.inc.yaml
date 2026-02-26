@@ -35,6 +35,22 @@ import:
   add: /src
   to: /src
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go_lib
+  to: /go_lib
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /pkg
+  to: /pkg
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go.mod
+  to: /go.mod
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go.sum
+  to: /go.sum
+  before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
@@ -52,6 +68,26 @@ final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
   to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}go_lib/controlplane/client
+  to: /go_lib/controlplane/client
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}pkg/log
+  to: /pkg/log
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}go.mod
+  to: /go.mod
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}go.sum
+  to: /go.sum
   stageDependencies:
     install:
     - '**/*'
