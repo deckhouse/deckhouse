@@ -938,6 +938,14 @@ import:
 - image: {{ $.ModuleName }}/sandbox-artifact
   add: /sandbox
   to: /usr/bin/sandbox
+  owner: "64535"
+  group: "64535"
+  before: install
+- image: {{ $.ModuleName }}/sandbox-artifact
+  add: /sandbox
+  to: /chroot/usr/bin/sandbox
+  owner: "64535"
+  group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/curl-chroot-wrapper.sh
