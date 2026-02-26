@@ -91,13 +91,13 @@ func testVersionSelectionFull(t *testing.T) {
 		expectedKind string
 	}{
 		{
-			name:         "Kubernetes 1.31 should use v1beta4",
+			name:         "Kubernetes 1.31 should generate pod manifests",
 			k8sVersion:   "1.31",
 			expectedAPI:  "apiVersion: v1",
 			expectedKind: "kind: Pod",
 		},
 		{
-			name:         "Kubernetes 1.32 should use v1beta4",
+			name:         "Kubernetes 1.32 should generate pod manifests",
 			k8sVersion:   "1.32",
 			expectedAPI:  "apiVersion: v1",
 			expectedKind: "kind: Pod",
@@ -122,6 +122,109 @@ func testVersionSelectionFull(t *testing.T) {
 				}
 			}
 
+		})
+	}
+}
+
+func testManifestsRendering(t *testing.T) {
+	t.Run("All Control Plane Pod Manifests Render Successfully", func(t *testing.T) {
+		versions := []string{"1.31", "1.32"}
+
+		for _, version := range versions {
+			t.Run("Version "+version, func(t *testing.T) {
+				data := getBaseTemplateData(version)
+				data["apiserver"] = map[string]interface{}{
+					"webhookURL":        "https://webhook.example.com",
+					"oidcIssuerURL":     "https://oidc.example.com",
+					"oidcIssuerAddress": "192.168.1.100",
+				}
+				data["images"] = map[string]interface{}{
+					"controlPlaneManager": map[string]interface{}{
+						"kubeApiserverHealthcheck": "sha256:abcd1234",
+						"kubeApiserver131":         "sha256:efgh5678",
+						"kubeApiserver130":         "sha256:ijkl9012",
+						"kubeApiserver129":         "sha256:mnop3456",
+					},
+				}
+				data["registry"] = map[string]interface{}{
+					"address": "registry.example.com",
+					"path":    "/deckhouse",
+				}
+				data["resourcesRequestsMilliCpuControlPlane"] = 1000
+				data["resourcesRequestsMemoryControlPlane"] = 1073741824
+
+				manifests, err := renderFullManifests(data)
+				if err != nil {
+					t.Fatalf("Failed to render control plane pod manifests: %v", err)
+				}
+
+				expectedManifests := []string{
+					"etcd-full.yaml",
+					"kube-apiserver-full.yaml",
+					"kube-controller-manager-full.yaml",
+					"kube-scheduler-full.yaml",
+				}
+
+				for _, manifestName := range expectedManifests {
+					if _, exists := manifests[manifestName]; !exists {
+						t.Errorf("Expected pod manifest %s not found in rendered manifests", manifestName)
+					}
+				}
+			})
+		}
+	})
+}
+
+func testFeatureGatesFull(t *testing.T) {
+	tests := []struct {
+		name             string
+		k8sVersion       string
+		expectedFeatures []string
+	}{
+		{
+			name:       "Kubernetes 1.31 should not include legacy feature gates",
+			k8sVersion: "1.31",
+			expectedFeatures: []string{
+				"TopologyAwareHints=true",
+				"RotateKubeletServerCertificate=true",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := getBaseTemplateData(tt.k8sVersion)
+			result, err := renderKubeadmConfig(data)
+			if err != nil {
+				t.Fatalf("Failed to render kubeadm config: %v", err)
+			}
+
+			featureGatesRegex := regexp.MustCompile(`- name: feature-gates\s+value:\s*"([^"]+)"`)
+
+			matches := featureGatesRegex.FindStringSubmatch(result)
+			if len(matches) < 2 {
+				t.Fatalf("Could not find feature-gates in result")
+			}
+
+			featureGates := matches[1]
+			for _, expected := range tt.expectedFeatures {
+				if !strings.Contains(featureGates, expected) {
+					t.Errorf("Expected feature gate %s not found in: %s", expected, featureGates)
+				}
+			}
+
+			if tt.k8sVersion >= "1.30" {
+				unexpectedFeatures := []string{
+					"ValidatingAdmissionPolicy=true",
+					"AdmissionWebhookMatchConditions=true",
+					"StructuredAuthenticationConfiguration=true",
+				}
+				for _, unexpected := range unexpectedFeatures {
+					if strings.Contains(featureGates, unexpected) {
+						t.Errorf("Unexpected feature gate %s found in: %s", unexpected, featureGates)
+					}
+				}
+			}
 		})
 	}
 }
@@ -1275,53 +1378,4 @@ func testMissingCoverage(t *testing.T) {
 			}
 		})
 	}
-}
-
-func testManifestsRendering(t *testing.T) {
-	t.Run("All Control Plane Pod Manifests Render Successfully", func(t *testing.T) {
-		versions := []string{"1.31", "1.32"}
-
-		for _, version := range versions {
-			t.Run("Version "+version, func(t *testing.T) {
-				data := getBaseTemplateData(version)
-				data["apiserver"] = map[string]interface{}{
-					"webhookURL":        "https://webhook.example.com",
-					"oidcIssuerURL":     "https://oidc.example.com",
-					"oidcIssuerAddress": "192.168.1.100",
-				}
-				data["images"] = map[string]interface{}{
-					"controlPlaneManager": map[string]interface{}{
-						"kubeApiserverHealthcheck": "sha256:abcd1234",
-						"kubeApiserver131":         "sha256:efgh5678",
-						"kubeApiserver130":         "sha256:ijkl9012",
-						"kubeApiserver129":         "sha256:mnop3456",
-					},
-				}
-				data["registry"] = map[string]interface{}{
-					"address": "registry.example.com",
-					"path":    "/deckhouse",
-				}
-				data["resourcesRequestsMilliCpuControlPlane"] = 1000
-				data["resourcesRequestsMemoryControlPlane"] = 1073741824
-
-				manifests, err := renderFullManifests(data)
-				if err != nil {
-					t.Fatalf("Failed to render control plane pod manifests: %v", err)
-				}
-
-				expectedManifests := []string{
-					"etcd-full.yaml",
-					"kube-apiserver-full.yaml",
-					"kube-controller-manager-full.yaml",
-					"kube-scheduler-full.yaml",
-				}
-
-				for _, manifestName := range expectedManifests {
-					if _, exists := manifests[manifestName]; !exists {
-						t.Errorf("Expected pod manifest %s not found in rendered manifests", manifestName)
-					}
-				}
-			})
-		}
-	})
 }
