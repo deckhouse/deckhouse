@@ -108,7 +108,7 @@ func getSecretPredicate() predicate.Predicate {
 func getControlPlaneNodeResourcePredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc:  func(event.CreateEvent) bool { return true },
-		UpdateFunc:  func(event.UpdateEvent) bool { return true },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration() },
 		DeleteFunc:  func(event.DeleteEvent) bool { return true },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
@@ -218,7 +218,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	cmpSecret, err := r.getSecret(ctx, constants.ControlPlaneManagerConfigSecretName)
+	cpmSecret, err := r.getSecret(ctx, constants.ControlPlaneManagerConfigSecretName)
 	if err != nil {
 		log.Error("Error occurred while getting secret",
 			slog.String("secret", constants.ControlPlaneManagerConfigSecretName),
@@ -237,7 +237,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	desiredCPN, err := buildDesiredControlPlaneNode(nodeName, cmpSecret, pkiSecret)
+	desiredCPN, err := buildDesiredControlPlaneNode(nodeName, cpmSecret, pkiSecret)
 	if err != nil {
 		log.Error("Error occurred while building desired ControlPlaneNode", slog.String("node", nodeName), log.Err(err))
 		return reconcile.Result{}, err
@@ -287,7 +287,7 @@ func (r *Reconciler) applyControlPlaneNode(ctx context.Context, desired *control
 }
 
 // buildDesiredControlPlaneNode builds desired ControlPlaneNode spec from d8-control-plane-manager-config and d8-pki secrets.
-func buildDesiredControlPlaneNode(nodeName string, cmpSecret *corev1.Secret, pkiSecret *corev1.Secret) (*controlplanev1alpha1.ControlPlaneNode, error) {
+func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pkiSecret *corev1.Secret) (*controlplanev1alpha1.ControlPlaneNode, error) {
 	pkiChecksum, err := checksum.PKIChecksum(pkiSecret.Data)
 	if err != nil {
 		return nil, err
@@ -296,18 +296,18 @@ func buildDesiredControlPlaneNode(nodeName string, cmpSecret *corev1.Secret, pki
 	components := []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
 	checksums := make(map[string]string)
 	for _, component := range components {
-		componentChecksum, err := checksum.ComponentChecksum(cmpSecret.Data, component)
+		componentChecksum, err := checksum.ComponentChecksum(cpmSecret.Data, component)
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate checksum for %s: %w", component, err)
 		}
 		checksums[component] = componentChecksum
 	}
-	hotReloadChecksum, err := checksum.HotReloadChecksum(cmpSecret.Data)
+	hotReloadChecksum, err := checksum.HotReloadChecksum(cpmSecret.Data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate hot reload checksum: %w", err)
 	}
 	// temporary for testing
-	err = operations.SyncSecretToTmp(cmpSecret, "/tmp/control-plane-manager-config")
+	err = operations.SyncSecretToTmp(cpmSecret, "/tmp/control-plane-manager-config")
 	if err != nil {
 		return nil, fmt.Errorf("failed to sync secret to tmp: %w", err)
 	}
@@ -321,7 +321,7 @@ func buildDesiredControlPlaneNode(nodeName string, cmpSecret *corev1.Secret, pki
 		},
 		Spec: controlplanev1alpha1.ControlPlaneNodeSpec{
 			PKIChecksum:       pkiChecksum,
-			ConfigVersion:     fmt.Sprintf("%s.%s", cmpSecret.ResourceVersion, pkiSecret.ResourceVersion),
+			ConfigVersion:     fmt.Sprintf("%s.%s", cpmSecret.ResourceVersion, pkiSecret.ResourceVersion),
 			HotReloadChecksum: hotReloadChecksum,
 			Components: controlplanev1alpha1.ComponentChecksums{
 				Etcd:                  &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["etcd"]},
