@@ -15,7 +15,10 @@
         </div>
         <div class="filter__container filter__container--tags">
             <h3 class="filter__container--title closing-title">Категории</h3>
-            <div class="filter__checkboxes filter__checkboxes--tags"></div>
+            <div class="filter__checkboxes filter__checkboxes--tags">
+                <input type="checkbox" id="stagesSelectAll" data-select-all="true">
+                <label class="filter__checkboxes--all" for="stagesSelectAll">Все категории</label>
+            </div>
             <button class="reset-check">Сбросить фильтры</button>
         </div>
     {%- else %}
@@ -32,7 +35,10 @@
         </div>
         <div class="filter__container filter__container--tags">
             <h3 class="filter__container--title closing-title">Categories</h3>
-            <div class="filter__checkboxes filter__checkboxes--tags"></div>
+            <div class="filter__checkboxes filter__checkboxes--tags">
+                <input type="checkbox" id="stagesSelectAll" data-select-all="true">
+                <label class="filter__checkboxes--all" for="stagesSelectAll">All categories</label>
+            </div>
             <button class="reset-check reset-check__en">Reset filters</button>
         </div>
     {%- endif %}

@@ -15,6 +15,8 @@
     <div class="filter__container filter__container--editions">
         <h3 class="filter__container--title closing-title">{{ T "editions_filter" | humanize }}</h3>
         <div class="filter__checkboxes filter__checkboxes--editions">
+            <input type="checkbox" id="editionsSelectAll" data-select-all="true">
+            <label class="filter__checkboxes--all" for="editionsSelectAll">{{ T "editions_filter_all_selected" | humanize }}</label>
             <input type="checkbox" id="editionCE" value="ce">
             <label for="editionCE">Community Edition</label>
             <input type="checkbox" id="editionBE" value="be">
@@ -34,6 +36,8 @@
     <div class="filter__container filter__container--stages">
         <h3 class="filter__container--title closing-title">{{ T "statuses_filter" | humanize }}</h3>
         <div class="filter__checkboxes filter__checkboxes--stages">
+            <input type="checkbox" id="stagesSelectAll" data-select-all="true">
+            <label class="filter__checkboxes--all" for="stagesSelectAll">{{ T "statuses_filter_all_selected" | humanize }}</label>
             <input type="checkbox" id="experimental" value="experimental">
             <label for="experimental">
                 Experimental
@@ -58,7 +62,10 @@
     </div>
     <div class="filter__container filter__container--tags">
         <h3 class="filter__container--title closing-title">{{ T "tags_filter" | humanize }}</h3>
-        <div class="filter__checkboxes filter__checkboxes--tags"></div>
+        <div class="filter__checkboxes filter__checkboxes--tags">
+            <input type="checkbox" id="tagsSelectAll" data-select-all="true">
+            <label class="filter__checkboxes--all" for="tagsSelectAll">{{ T "tags_filter_all_selected" | humanize }}</label>
+        </div>
          <!-- <button class="reset-check reset-check__{{ .Language.Lang }}">{{ T "reset_filter" | humanize }}</button> -->
     </div>
 </div>

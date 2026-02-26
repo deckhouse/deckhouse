@@ -105,8 +105,11 @@ filters: Фильтры
 search_filter: Поиск по названию модуля
 search_placeholder_text_filter: Поиск
 editions_filter: Редакция
+editions_filter_all_selected: Все редакции
 statuses_filter: Статус
+statuses_filter_all_selected: Все статусы
 tags_filter: Тег
+tags_filter_all_selected: Все теги
 core: ядро
 community_edition_en: community edition
 commercial_editions_en: commercial editions

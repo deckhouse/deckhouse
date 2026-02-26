@@ -510,7 +510,6 @@
               font-weight: 600;
               line-height: 24px;
               letter-spacing: 0.3px;
-              text-transform: capitalize;
           }
 
           &__descr {
@@ -530,21 +529,27 @@
           flex-wrap: wrap;
           gap: 12px;
 
-          .selected__filter {
+          .selected__filter--container {
             display: flex;
+            max-width: calc(100% - 80px);
             padding: 6px 12px;
             align-items: center;
             gap: 8px;
             border-radius: 14px;
-            border: 1px solid var(--Neutral-60, #B2B8D9);
-            background: var(--Neutral-90, #F5F5FB);
+            border: 1px solid #B2B8D9;
+            background: #F5F5FB;
             color: #2B313B;
             font-size: 14px;
             font-style: normal;
             font-weight: 400;
             line-height: 24px;
             letter-spacing: 0.3px;
-            text-transform: capitalize;
+
+            .selected__filter {
+              overflow: hidden;
+              white-space: nowrap;
+              text-overflow: ellipsis;
+            }
 
             .remove__filter {
               width: 16px;
@@ -567,7 +572,7 @@
           align-items: center;
           gap: 8px;
           border-radius: 14px;
-          background: var(--Primary-50, #0064FF);
+          background: #0064FF;
           background-image: url(/images/full-reset.svg);
           background-position: center;
           background-repeat: no-repeat;
@@ -600,8 +605,6 @@
     text-decoration: none;
     position: relative;
     display: block;
-    //display: inline-flex;
-    //align-items: center;
     padding-left: 15px;
 }
 
@@ -625,7 +628,6 @@
     width: 10px;
     height: 10px;
     background: url('../../images/icons/dropdown.svg') no-repeat;
-    //background-repeat: no-repeat;
     background-size: contain;
     margin-left: -15px;
     flex-shrink: 0;
