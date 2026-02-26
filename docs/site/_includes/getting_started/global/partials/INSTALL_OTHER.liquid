@@ -28,7 +28,7 @@ echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.d
 Run a container with the installer:
 
 {% alert level="info" %}
-If, with VPN enabled, the container with the installer cannot access the network stack of the computer from which the cluster bootstrap is running, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
+If, with VPN enabled, the container with the installer cannot access the network of the computer from which the cluster bootstrap is running, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
 {% endalert %}
 
 ```shell
@@ -70,7 +70,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <!-- Linux or macOS install, CE -->
 
 {% alert level="info" %}
-If, with VPN enabled, the container with the installer cannot access the network stack of the computer from which the cluster bootstrap is running, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
+If, with VPN enabled, the container with the installer cannot access the network of the computer from which the cluster bootstrap is running, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
 {% endalert %}
 
 ```shell
