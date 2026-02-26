@@ -14,7 +14,7 @@ Installation on virtual machines is allowed for demonstration purposes only, but
 The platform supports the following configuration:
 
 - Maximum number of nodes: 1000.
-- Maximum number of virtual machines: 50 000.
+- Maximum number of virtual machines: 50 000.
 
 ## Minimum platform requirements
 
