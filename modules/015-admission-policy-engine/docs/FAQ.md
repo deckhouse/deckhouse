@@ -13,7 +13,7 @@ For DKP to work correctly, extended privileges are required to run and operate s
 > Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restricted` or `security.deckhouse.io/pod-policy: baseline` label.
 
 To extend the Pod Security Standards policy by adding your checks to existing checks, you need to:
-- Create a constraint template for the check (a `ConstraintTemplate` resource).
+- Create a constraint template for the check (`ConstraintTemplate`).
 - Bind it to the `restricted` or `baseline` policy.
 
 Example of the `ConstraintTemplate` for checking a  repository URL of a container image:
@@ -87,8 +87,8 @@ Find more examples of checks for policy extension in the [Gatekeeper Library](ht
 To apply only the required security policies without turning off the entire built-in set:
 
 1. Add the `security.deckhouse.io/pod-policy: privileged` label to your namespace in order to disable built-in policies.
-1. Create a SecurityPolicy resource that matches the [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) or [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted) policy while also editing the list of `policies` elements as you see fit.
-1. Add a label to your namespace that matches the `namespaceSelector` in the SecurityPolicy resource. In the examples below, the label is `security-policy.deckhouse.io/baseline-enabled: "true"` or `security-policy.deckhouse.io/restricted-enabled: "true"`.
+1. Create a SecurityPolicy that matches the [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) or [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted) policy while also editing the list of `policies` elements as you see fit.
+1. Add a label to your namespace that matches the `namespaceSelector` in the SecurityPolicy. In the examples below, the label is `security-policy.deckhouse.io/baseline-enabled: "true"` or `security-policy.deckhouse.io/restricted-enabled: "true"`.
 
 SecurityPolicy that matches baseline standard:
 
@@ -279,73 +279,13 @@ Then, in order to fulfill the requirements of the above security policies, the f
 
 ## Verification of image signatures
 
-{% alert level="warning" %}This feature is available in the following editions: SE+, EE.{% endalert %}
-
-The module implements a function for checking the signatures of container images signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Checking the signatures of container images allows you to ensure their integrity (that the image has not been modified since its creation) and authenticity (that the image was created by a trusted source). You can enable container image signature verification in the cluster using the [policies.verifyImageSignatures](cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter of the SecurityPolicy resource.
-
-DKP supports container image signature verification using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).
-Verification ensures the integrity and authenticity of images.  
-
-Images are signed by creating a special tag in the container registry that contains the image signature.  
-The signature is generated for the digest (hash) of your image.  
-If your image is `my-repo/app:latest` with the hash `sha256:abc123EXAMPLE`, the tag `my-repo/app:sha256-abc123EXAMPLE.sig` will appear in the image store.
-
-Therefore, the image signing process consists of calculating and publishing an additional tag to the container registry, without modifying the existing image.  
-After signing the image, there is no need to push it to the image store again. You only need to log in to the container registry with write access.
-
-{% offtopic title="How to sign an image..." %}
-Steps to sign an image:
-- Make sure the cosign version is among the supported ones: `cosign generate-key-pair`
-- Generate keys: `cosign generate-key-pair`
-- Sign the image: `cosign sign --key <key> <image>`
-
-For more information on working with Cosign, you can check the [documentation](https://docs.sigstore.dev/cosign/key_management).
-
 {% alert level="warning" %}
+Available in the following DKP editions: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
 
-{% endofftopic %}
-
-Example of SecurityPolicy for configuring the signature verification of container images:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: SecurityPolicy
-metadata:
-  name: verify-image-signatures
-spec:
-  match:
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: default
-  policies:
-    verifyImageSignatures:
-      - reference: docker.io/myrepo/*
-        publicKeys:
-        - |-
-          -----BEGIN PUBLIC KEY-----
-          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
-          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
-          -----END PUBLIC KEY-----
-      - reference: company.registry.com/*
-        dockerCfg: zxc==
-        publicKeys:
-        - |-
-          -----BEGIN PUBLIC KEY-----
-          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
-          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
-          -----END PUBLIC KEY-----
-```
-
-Policies do not affect the creation of pods whose container image addresses do not match those described in the `reference` parameter. If the address of any Pod container image matches those described in the `reference` policies, and the image is not signed or the signature does not correspond to the keys specified in the policy, the creation of the pod will be prohibited.
-
-Example of an error output when creating a Pod with a container image that has not passed the signature verification:
-
-```console
-[verify-image-signatures] Image signature verification failed: nginx:1.17.2
-```
+The module implements a function for verifying signatures of container images signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). For more details on signing and verifying container images, see the [DKP documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/security/policies.html#image-signature-verification).
 
 ## How to block deleting a node without a label
 
