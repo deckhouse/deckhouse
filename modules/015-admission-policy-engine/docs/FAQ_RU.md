@@ -303,7 +303,9 @@ spec:
 
 Подробнее о работе с Cosign можно узнать в [документации](https://docs.sigstore.dev/cosign/key_management).
 
-> **Внимание.** Поддерживается Cosign не выше v2. Версии v3 и выше не поддерживаются.
+{% alert level="warning" %}
+Поддерживается Cosign не выше v2. Версии v3 и выше не поддерживаются.
+{% endalert %}
 
 {% endofftopic %}
 

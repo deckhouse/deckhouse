@@ -301,7 +301,9 @@ Steps to sign an image:
 
 For more information on working with Cosign, you can check the [documentation](https://docs.sigstore.dev/cosign/key_management).
 
-> **Warning.** Cosign versions up to v2 are supported. Versions v3 and above are not supported.
+{% alert level="warning" %}
+Cosign versions up to v2 are supported. Versions v3 and above are not supported.
+{% endalert %}
 
 {% endofftopic %}
 
