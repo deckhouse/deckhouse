@@ -470,7 +470,7 @@ To sign an image with Cosign, do the following:
    ```
 
    Here:
-   - <REGISTRY_IMAGE_PATH> is the path to the image that needs to be specified at startup, for example: registry.private.com/labs/application/image:latest.
+   - `<REGISTRY_IMAGE_PATH>` is the path to the image that needs to be specified at startup, for example: registry.private.com/labs/application/image:latest.
 
 To enable container image signature verification in a DVP cluster:
 

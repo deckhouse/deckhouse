@@ -643,7 +643,7 @@ DKP поддерживает проверку подписей образов к
    ```
 
    Здесь:
-   - <REGISTRY_IMAGE_PATH> — путь к образу, который нужно указать при запуске, например: registry.private.ru/labs/application/image:latest.
+   - `<REGISTRY_IMAGE_PATH>` — путь к образу, который нужно указать при запуске, например: `registry.private.ru/labs/application/image:latest`.
 
 Чтобы включить проверку подписи образов контейнеров в кластере DKP:
 
