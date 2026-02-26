@@ -23,7 +23,10 @@ import (
 	"strings"
 	"time"
 
+	dvpapi "dvp-common/api"
+
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +50,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
-	dvpapi "dvp-common/api"
 )
 
 const ProviderIDPrefix = "dvp://"
@@ -334,6 +336,8 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	if err != nil {
 		if errors.Is(err, cloudprovider.InstanceNotFound) {
 			logger.Error(err, "Corresponding VirtualMachine resource was not found, will consider this VM as properly deleted")
+
+			controllerutil.RemoveFinalizer(dvpMachine, infrastructurev1a1.MachineFinalizer)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("cannot get VirtualMachine: %w", err)
@@ -357,8 +361,9 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	// Try to delete VM with timeout
 	vmDeletionFailed := false
 	if err = r.DVP.ComputeService.DeleteVM(ctx, dvpMachine.Name); err != nil {
-		// Check if it's a timeout error - in this case, proceed with cleanup
-		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") {
+		if errors.Is(err, cloudprovider.InstanceNotFound) {
+			logger.Info("VirtualMachine already deleted during DeleteVM call, continuing")
+		} else if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") { // Check if it's a timeout error - in this case, proceed with cleanup
 			logger.Error(err, "VM deletion timed out, VM may still be terminating in parent DVP cluster. Proceeding with cleanup to unblock DeckhouseMachine deletion.",
 				"vm_name", dvpMachine.Name,
 			)
