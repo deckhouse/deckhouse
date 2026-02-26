@@ -285,6 +285,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -762,7 +763,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:e694827623f7a8bf932c3b9462546095ddb404c9d094ae6a3240596d7c395e53"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:38ad74c3c7830c587e549a76edd0d5e23edfb741e1a602f93e0c8b8b91056394"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

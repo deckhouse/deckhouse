@@ -576,6 +576,64 @@ status:
         coresPerSocket: 1
 ```
 
+### OS type and bootloader configuration
+
+The `osType` parameter determines the operating system type and applies an optimal set of virtual devices and parameters for correct VM operation.
+
+Supported values:
+
+- `Generic` (default): For Linux and other operating systems. Uses standard virtual device configuration.
+- `Windows`: For Microsoft Windows family operating systems. Automatically enables Hyper-V features, TPM device, and other settings optimized for Windows.
+
+{% alert level="warning" %}
+The TPM device provided to the virtual machine is not persistent (TPM emulation in memory). This means that when the VM is rebooted or migrated, the TPM state is reset. It is recommended to consider this limitation when planning to use Windows security features that depend on TPM.
+{% endalert %}
+
+The `bootloader` parameter determines the bootloader type for the virtual machine:
+
+- `BIOS` (default): Use legacy BIOS.
+- `EFI`: Use Unified Extensible Firmware Interface (UEFI/EFI).
+- `EFIWithSecureBoot`: Use UEFI/EFI with Secure Boot support.
+
+Example configuration for a Windows virtual machine:
+
+```yaml
+spec:
+  osType: Windows
+  bootloader: EFI
+  # other parameters...
+```
+
+Example configuration for a Linux virtual machine (default values can be omitted):
+
+```yaml
+spec:
+  osType: Generic
+  bootloader: BIOS
+  # other parameters...
+```
+
+{% alert level="info" %}
+For most modern Linux distributions, it is recommended to use `bootloader: EFI`. For Windows, `bootloader: EFI` or `bootloader: EFIWithSecureBoot` is usually required.
+{% endalert %}
+
+The `enableParavirtualization` parameter controls the use of the `virtio` bus for connecting virtual devices of the VM:
+
+- `true` (default) — uses the `virtio` bus for disks, network interfaces, and other devices, providing better performance.
+- `false` — uses standard device emulation (SATA for disks, e1000e for network interfaces), which may be necessary for compatibility with older operating systems.
+
+{% alert level="info" %}
+To use paravirtualization mode (`virtio`), some operating systems require installing the corresponding drivers. If drivers are not installed, the VM may fail to boot or devices may not work correctly.
+{% endalert %}
+
+Example configuration with paravirtualization disabled:
+
+```yaml
+spec:
+  enableParavirtualization: false
+  # other parameters...
+```
+
 ### Initialization scripts
 
 Initialization scripts are used for the initial configuration of a virtual machine when it is started.
@@ -607,7 +665,7 @@ The main capabilities of Cloud-Init include:
    ```yaml
    #cloud-config
    ssh_authorized_keys:
-     - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
+     - ssh-ed25519 AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
    ```
 
 1. Creating a user with a password and SSH key:
@@ -621,7 +679,7 @@ The main capabilities of Cloud-Init include:
        sudo: ALL=(ALL) NOPASSWD:ALL
        shell: /bin/bash
        ssh-authorized-keys:
-         - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
+         - ssh-ed25519 AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
    ssh_pwauth: True
    ```
 
@@ -806,6 +864,18 @@ Password: cloud
 ```
 
 Press `Ctrl+]` to finalize the serial console.
+
+{% alert level="info" %}
+The serial console does not support automatic terminal resizing. If full-screen applications or text editors are displayed incorrectly, run the following command after you log in:
+
+```bash
+stty rows <number_of_rows> cols <number_of_columns>
+```
+
+For example: `stty rows 50 cols 200`
+
+If the `xterm` package is installed on the system, you can also use the `resize` command.
+{% endalert %}
 
 Example command for connecting via VNC:
 
@@ -1062,15 +1132,7 @@ All of the above parameters (including the `.spec.nodeSelector` parameter from V
 - Use combinations of labels instead of single restrictions. For example, instead of required for a single label (e.g. env=prod), use several preferred conditions.
 - Consider the order in which interdependent VMs are launched. When using Affinity between VMs (for example, the backend depends on the database), launch the VMs referenced by the rules first to avoid lockouts.
 - Plan backup nodes for critical workloads. For VMs with strict requirements (e.g., AntiAffinity), provide backup nodes to avoid downtime in case of failure or maintenance.
-- Consider existing `taints` on nodes. If necessary, you can add appropriate `tolerations` to the VM. An example of using `tolerations` to allow scheduling on nodes with the `node.deckhouse.io/group=:NoSchedule` taint is provided below.
-
-```yaml
-spec:
-  tolerations:
-    - key: "node.deckhouse.io/group"
-      operator: "Exists"
-      effect: "NoSchedule"
-```
+- Consider existing `taints` on nodes. If necessary, you can add appropriate `tolerations` to the VM.
 
 {% alert level="info" %}
 When changing placement parameters:
@@ -1080,7 +1142,7 @@ When changing placement parameters:
 
   - In commercial editions: The VM is automatically moved to a suitable node using live migration.
   - In the CE edition: The VM will require a reboot to apply.
-    {% endalert %}
+{% endalert %}
 
 How to manage VM placement parameters by nodes in the web interface:
 
@@ -1088,6 +1150,38 @@ How to manage VM placement parameters by nodes in the web interface:
 - Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Placement" section.
+
+#### Tolerance to node restrictions
+
+`tolerations` allow VMs to be scheduled onto nodes with `taints` that would otherwise block placement. This is useful when you need to run VMs on special nodes (for example, test nodes) or nodes with specific characteristics.
+
+Example of using `tolerations` to allow scheduling on nodes with the `node.deckhouse.io/group=:NoSchedule` taint:
+
+```yaml
+spec:
+  tolerations:
+    - key: "node.deckhouse.io/group"
+      operator: "Exists"
+      effect: "NoSchedule"
+```
+
+Each entry in `tolerations` must match a node `taint` for the VM to be scheduled onto that node.
+
+{% alert level="warning" %}
+Viewing node information (including `taints`) requires an appropriate role with access to cluster-level resources.
+{% endalert %}
+
+To view `taints` on cluster nodes, run:
+
+```bash
+d8 k get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints
+```
+
+For more details:
+
+```bash
+d8 k describe node <node-name>
+```
 
 #### Simple label binding (nodeSelector)
 
@@ -1161,7 +1255,9 @@ spec:
 
 In this example, the virtual machine will be placed, if possible (since preferred is used) only on hosts that have a virtual machine with the server label and database value.
 
-How to set "preferences" and "mandatories" for placing virtual machines in the web interface in the [Placement section](#placement-of-vms-by-nodes):
+To place VMs across availability zones instead of specific nodes, set `topologyKey` to `topology.kubernetes.io/zone` (see [Placing VMs by availability zones](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placing-vms-by-availability-zones)).
+
+How to set "preferences" and "mandatories" for placing virtual machines in the web interface in the [Placement section](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placement-of-vms-by-nodes):
 
 - Click "Add" in the "Run VM near other VMs" block.
 - In the pop-up window, you can set the "Key" and "Value" of the key that corresponds to the `spec.affinity.virtualMachineAndPodAffinity` settings.
@@ -1200,7 +1296,9 @@ spec:
 
 In this example, the virtual machine being created will not be placed on the same host as the virtual machine labeled server: database.
 
-How to configure VM AntiAffinity on nodes in the web interface in the [Placement section](#placement-of-vms-by-nodes):
+To place VMs across availability zones instead of specific nodes, set `topologyKey` to `topology.kubernetes.io/zone` (see [Placing VMs by availability zones](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placing-vms-by-availability-zones)).
+
+How to configure VM AntiAffinity on nodes in the web interface in the [Placement section](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placement-of-vms-by-nodes):
 
 - Click "Add" in the "Identify similar VMs by labels" -> "Select labels" block.
 - In the pop-up window, you can set the "Key" and "Value" of the key that corresponds to the `spec.affinity.virtualMachineAndPodAntiAffinity` settings.
@@ -1208,6 +1306,24 @@ How to configure VM AntiAffinity on nodes in the web interface in the [Placement
 - Check the boxes next to the labels you want to use in the placement settings.
 - Select one of the options in the "Select options" section.
 - Click the "Save" button that appears.
+
+#### Placing VMs by availability zones
+
+{% alert level="warning" %}
+Availability zones must be pre-configured on cluster nodes. For this, nodes must have the `topology.kubernetes.io/zone` label set with the availability zone specified.
+{% endalert %}
+
+In the examples above, `topologyKey: "kubernetes.io/hostname"` is used, which places VMs on the same node. For placing VMs by availability zones instead of nodes, use `topologyKey: "topology.kubernetes.io/zone"`.
+
+When using `Affinity` with `topologyKey: "topology.kubernetes.io/zone"`, VMs will be placed in the same availability zone where a virtual machine with the specified labels is present.
+
+When using `AntiAffinity` with `topologyKey: "topology.kubernetes.io/zone"`, VMs will not be placed in the same availability zone as the virtual machine with the specified labels. This is useful for ensuring fault tolerance when distributing VMs across different availability zones.
+
+To view availability zones on cluster nodes (if these zones are configured), run the following command:
+
+```bash
+d8 k get nodes -o custom-columns=NAME:.metadata.name,ZONE:.metadata.labels.topology\.kubernetes\.io/zone
+```
 
 ### Attaching block devices (disks and images)
 
@@ -1336,6 +1452,42 @@ How to work with additional block devices in the web interface:
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
 - You can add, extract, delete, and resize additional block devices in the "Additional Disks" section.
+
+#### Disk naming in guest OS
+
+{% alert level="warning" %}
+Block device names (`/dev/sda`, `/dev/sdb`, `/dev/sdc`, etc.) are assigned by the Linux kernel in the order devices are discovered during boot. This order may change between reboots, so device names can change even if SCSI addresses remain the same.
+
+Using `/dev/sdX` in configuration files (for example, `/etc/fstab`) or scripts may cause the wrong disk to be mounted or the VM to behave incorrectly after a reboot.
+{% endalert %}
+
+**Example:**
+
+After the first VM boot:
+
+```console
+$ lsscsi
+[0:0:0:1]  disk    QEMU     QEMU HARDDISK   /dev/sda
+[0:0:0:2]  disk    QEMU     QEMU HARDDISK   /dev/sdb
+```
+
+After VM reboot:
+
+```console
+$ lsscsi
+[0:0:0:1]  disk    QEMU     QEMU HARDDISK   /dev/sdb
+[0:0:0:2]  disk    QEMU     QEMU HARDDISK   /dev/sda
+```
+
+SCSI addresses (`0:0:0:1`, `0:0:0:2`) remain unchanged, but device names (`/dev/sda`, `/dev/sdb`) are swapped.
+
+Use stable identifiers instead of `/dev/sdX`:
+
+- **`/dev/disk/by-uuid/`** — by partition UUID (preferred for `/etc/fstab`)
+- **`/dev/disk/by-path/`** — by SCSI connection path
+- **`/dev/disk/by-id/`** — by SCSI device ID
+
+In configuration files and scripts, use partition UUIDs or symlinks from `/dev/disk/by-*` instead of `/dev/sdX` names.
 
 ### Organizing interaction with virtual machines
 
@@ -1805,6 +1957,46 @@ spec:
 
 Now the current node (groups green) does not match the new conditions. The system will automatically create a `VirtualMachineOperations` object of type Evict, which will initiate a live migration of the VM to an available node in group blue .
 
+### Collecting debug information
+
+{% alert level="warning" %}
+The `collect-debug-info` command requires `d8` version v0.27.0 or higher.
+{% endalert %}
+
+Use `collect-debug-info` to gather diagnostic data about a virtual machine and all related resources into a single compressed archive.
+
+The command collects the following information:
+
+- Virtual machine configuration
+- Virtual machine operations
+- Migration information
+- Block devices
+- Related PVCs and PVs
+- Pods associated with the VM, including their logs (last 10000 lines)
+- Events for all related resources
+- VM domain XML configuration
+
+The command output is written to a compressed archive (tar.gz) that is output to stdout. To save the archive, you must redirect the output to a file.
+
+Usage example:
+
+```bash
+# Collect debug information for virtual machine 'linux-vm'
+d8 v collect-debug-info linux-vm > debug-info.tar.gz
+
+# Collect debug information for VM with namespace specified
+d8 v collect-debug-info linux-vm -n mynamespace > debug-info.tar.gz
+
+# Collect debug information for VM with full name specified (name.namespace)
+d8 v collect-debug-info linux-vm.mynamespace > debug-info.tar.gz
+```
+
+{% alert level="warning" %}
+The command cannot output data directly to the terminal. You must redirect the output to a file, otherwise the command will fail with an error.
+{% endalert %}
+
+After executing the command, you will receive a `debug-info.tar.gz` archive that contains all collected data in YAML format (for resources) and text files (for logs). This archive can be sent to technical support for problem analysis.
+
 ## Network configuration
 
 ### IP addresses of virtual machines
@@ -1937,6 +2129,12 @@ Virtual machines can be connected to additional networks: project networks (`Net
 
 To do this, specify the desired networks in the configuration section `.spec.networks`. If this block is not specified (which is the default behavior), the VM will use only the main cluster network.
 
+{% alert level="info" %}
+Specifying the main cluster network (`type: Main`) in `.spec.networks` is optional. If you do not need connectivity to the main cluster network, you can use only additional networks (`Network` or `ClusterNetwork`).
+
+If you specify the main network, it must be the first entry in the `.spec.networks` list.
+{% endalert %}
+
 Important considerations when working with additional network interfaces:
 
 - The order of listing networks in `.spec.networks` determines the order in which interfaces are connected inside the virtual machine.
@@ -1945,26 +2143,37 @@ Important considerations when working with additional network interfaces:
 - Network security policies (NetworkPolicy) do not apply to additional network interfaces.
 - Network parameters (IP addresses, gateways, DNS, etc.) for additional networks are configured manually from within the guest OS (for example, using Cloud-Init).
 
-Example of connecting a VM to the project network `user-net`:
+Example of connecting a VM to the main cluster network and the project network `user-net`:
 
 ```yaml
 spec:
   networks:
-    - type: Main # Must always be specified first
+    - type: Main # If specified, must be first
     - type: Network # Network type (Network \ ClusterNetwork)
       name: user-net # Network name
 ```
 
-Example of connecting to the cluster network `corp-net`:
+Example of connecting to multiple networks, including the cluster network `corp-net`:
 
 ```yaml
 spec:
   networks:
-    - type: Main # Must always be specified first
+    - type: Main # If specified, must be first
     - type: Network
       name: user-net
     - type: ClusterNetwork
       name: corp-net # Network name
+```
+
+Example of connecting a VM only to additional networks (without the main cluster network):
+
+```yaml
+spec:
+  networks:
+    - type: Network
+      name: isolated-net
+    - type: ClusterNetwork
+      name: corp-net
 ```
 
 You can view information about connected networks and their MAC addresses in the VM status:

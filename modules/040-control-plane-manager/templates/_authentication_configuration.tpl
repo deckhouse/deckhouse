@@ -1,16 +1,17 @@
 {{- define "authenticationConfiguration" }}
 apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthenticationConfiguration
+{{- if .apiserver.oidcIssuerURL }}
 jwt:
 - issuer:
-    url: {{ .apiserver.oidcIssuerURL }} 
+    url: {{ .apiserver.oidcIssuerURL }}
     {{- if semverCompare ">= 1.30" .clusterConfiguration.kubernetesVersion }}
     discoveryURL: https://dex.d8-user-authn.svc.{{.clusterConfiguration.clusterDomain }}/.well-known/openid-configuration
     {{- end }}
     {{- if .apiserver.oidcCA }}
     certificateAuthority: |
-      {{- .apiserver.oidcCA | nindent 6 }} 
-    {{- end }}    
+      {{- .apiserver.oidcCA | nindent 6 }}
+    {{- end }}
     audiences:
     - kubernetes
   claimMappings:
@@ -31,5 +32,12 @@ jwt:
   - expression: "!user.username.startsWith('system:')"
     message: 'username cannot used reserved system: prefix'
   - expression: "user.groups.all(group, !group.startsWith('system:'))"
-    message: 'groups cannot used reserved system: prefix'          
+    message: 'groups cannot used reserved system: prefix'
+{{- end }}
+anonymous:
+  enabled: true
+  conditions:
+  - path: /livez
+  - path: /readyz
+  - path: /healthz
 {{- end }}

@@ -226,23 +226,34 @@
     - ConcurrentWatchObjectDecode
     - ContainerStopSignals
     - MemoryQoS
+    - MutablePVNodeAffinity
     - MutatingAdmissionPolicy
+    - NodeDeclaredFeatures
     - PodLogsQuerySplitStreams
     - ResourceHealthStatus
+    - RestartAllContainersOnContainerExits
     - SELinuxMount
   apiserver:
     - AllowUnsafeMalformedObjectDeletion
     - ComponentFlagz
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
+    - ConstrainedImpersonation
     - ContainerStopSignals
+    - CRDObservedGenerationTracking
     - CrossNamespaceVolumeDataSource
     - HPAScaleToZero
+    - MutablePodResourcesForSuspendedJobs
+    - MutablePVNodeAffinity
+    - MutableSchedulingDirectivesForSuspendedJobs
     - MutatingAdmissionPolicy
+    - NodeDeclaredFeatures
     - PodLogsQuerySplitStreams
     - ResourceHealthStatus
+    - RestartAllContainersOnContainerExits
     - SELinuxMount
     - StrictIPCIDRValidation
+    - TaintTolerationComparisonOperators
   kubeControllerManager:
     - ComponentFlagz
     - ComponentStatusz
@@ -253,3 +264,5 @@
     - ComponentFlagz
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
+    - NodeDeclaredFeatures
+    - TaintTolerationComparisonOperators

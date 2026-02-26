@@ -73,13 +73,15 @@ func (c *CloudConfig) client(logger *log.Logger) (ovirtclient.ClientWithLegacySu
 
 	tls := ovirtclient.TLS()
 
-	if c.Insecure {
+	switch {
+	case c.Insecure:
 		tls.Insecure()
-	} else if c.CaBundle != "" {
+	case c.CaBundle != "":
 		tls.CACertsFromMemory([]byte(c.CaBundle))
-	} else {
+	default:
 		tls.CACertsFromSystem()
 	}
+
 	client, err := ovirtclient.New(
 		c.APIURL,
 		c.Username,
@@ -97,7 +99,7 @@ func (c *CloudConfig) client(logger *log.Logger) (ovirtclient.ClientWithLegacySu
 func NewDiscoverer(logger *log.Logger) *Discoverer {
 	config, err := newCloudConfig()
 	if err != nil {
-		logger.Fatalf("Cannot get opts from env: %v", err)
+		logger.Fatal("Cannot get opts from env", "error", err)
 	}
 
 	return &Discoverer{
@@ -134,13 +136,13 @@ func (d *Discoverer) DiscoveryData(
 
 	discoveryData.StorageDomains = mergeStorageDomains(discoveryData.StorageDomains, sd)
 
-	discoveryDataJson, err := json.Marshal(discoveryData)
+	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
 	}
 
-	d.logger.Debugf("discovery data: %v", discoveryDataJson)
-	return discoveryDataJson, nil
+	d.logger.Debug("discovery data", "discovery_data_json", discoveryDataJSON)
+	return discoveryDataJSON, nil
 }
 
 func (d *Discoverer) getStorageDomains(

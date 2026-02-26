@@ -20,7 +20,7 @@ Example configuration:
 apiVersion: deckhouse.io/v1
 kind: HuaweiCloudClusterConfiguration
 layout: Standard
-sshPublicKey: "<Public SSH key>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 standard:
   internalNetworkDNSServers:
     - 8.8.8.8
@@ -59,7 +59,7 @@ Example configuration:
 apiVersion: deckhouse.io/v1
 kind: HuaweiCloudClusterConfiguration
 layout: VpcPeering
-sshPublicKey: "<Public SSH key>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 vpcPeering:
   internalNetworkDNSServers:
     - 8.8.8.8

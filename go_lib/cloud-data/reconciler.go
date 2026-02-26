@@ -17,6 +17,7 @@ package clouddata
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -27,16 +28,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
@@ -102,7 +104,7 @@ func (c *Reconciler) Start() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		c.logger.Infof("Signal received: %v. Exiting.\n", <-signalChan)
+		c.logger.Info("Signal received. Exiting.\n", "signal", <-signalChan)
 		cancel()
 		c.logger.Info("Waiting for stop reconcile loop...")
 		<-doneCh
@@ -114,7 +116,7 @@ func (c *Reconciler) Start() {
 
 		err := httpServer.Shutdown(ctx)
 		if err != nil {
-			c.logger.Fatalf("Error occurred while closing the server: %v\n", err)
+			c.logger.Fatal("Error occurred while closing the server\n", "error", err)
 		}
 		os.Exit(0)
 	}()
@@ -122,7 +124,7 @@ func (c *Reconciler) Start() {
 	go c.reconcileLoop(rootCtx, doneCh)
 
 	err := httpServer.ListenAndServe()
-	if err != http.ErrServerClosed {
+	if !errors.Is(err, http.ErrServerClosed) {
 		c.logger.Error("http server error", err)
 	}
 }
@@ -169,7 +171,7 @@ func (c *Reconciler) registerMetrics() {
 	prometheus.MustRegister(c.cloudConditionsErrorMetric)
 }
 
-func (c *Reconciler) setProbe(probe bool) {
+func (c *Reconciler) setProbe(probe bool) { // nolint:unparam
 	c.probeLock.Lock()
 	defer c.probeLock.Unlock()
 	c.probe = probe
@@ -237,26 +239,26 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 
 	conditions, err := c.discoverer.CheckCloudConditions(ctx)
 	if err != nil {
-		c.logger.Errorf("Error occurred while checking cloud conditions: %v", err)
+		c.logger.Error("Error occurred while checking cloud conditions", "error", err)
 		return
 	}
 
 	c.cloudConditionsErrorMetric.Reset()
 	for i := range conditions {
-		c.logger.Infof("Condition (%s) message: %s, ok: %t\n", conditions[i].Name, conditions[i].Message, conditions[i].Ok)
+		c.logger.Info("Condition", "name", conditions[i].Name, "message", conditions[i].Message, "ok", conditions[i].Ok)
 		if !conditions[i].Ok {
 			c.cloudConditionsErrorMetric.WithLabelValues(conditions[i].Name, conditions[i].Message).Set(1.0)
 		}
 	}
 
 	if len(conditions) == 0 {
-		c.logger.Infof("Got 0 conditions")
+		c.logger.Info("Got 0 conditions")
 
 		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		_, err = c.k8sClient.CoreV1().ConfigMaps("kube-system").Get(cctx, "d8-cloud-provider-conditions", metav1.GetOptions{})
 		cancel()
 
-		if errors.IsNotFound(err) {
+		if kerrors.IsNotFound(err) {
 			// don't create empty configmap if we don't have an existing one
 			return
 		}
@@ -264,7 +266,7 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 
 	jsonConditions, err := json.Marshal(conditions)
 	if err != nil {
-		c.logger.Errorf("failed to marshal conditions: %v", err)
+		c.logger.Error("failed to marshal conditions", "error", err)
 		return
 	}
 
@@ -272,7 +274,9 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		configMap, err1 := c.k8sClient.CoreV1().ConfigMaps("kube-system").Get(cctx, "d8-cloud-provider-conditions", metav1.GetOptions{})
 		cancel()
-		if errors.IsNotFound(err1) {
+
+		switch {
+		case kerrors.IsNotFound(err1):
 			configMap = &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "d8-cloud-provider-conditions",
@@ -292,9 +296,9 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 			if err1 != nil {
 				return fmt.Errorf("Cannot create d8-cloud-provider-conditions configMap: %v", err)
 			}
-		} else if err1 != nil {
+		case err1 != nil:
 			return fmt.Errorf("Cannot check d8-cloud-provider-conditions configMap before creating it: %v", err1)
-		} else {
+		default:
 			configMap.Data["conditions"] = string(jsonConditions)
 
 			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
@@ -319,7 +323,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 
 	instanceTypes, err := c.discoverer.InstanceTypes(ctx)
 	if err != nil {
-		c.logger.Errorf("Getting instance types error: %v\n", err)
+		c.logger.Error("Getting instance types error", "error", err)
 		c.cloudRequestErrorMetric.WithLabelValues("instance_types").Set(1.0)
 		return
 	}
@@ -339,7 +343,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 		data, errGetting := c.k8sDynamicClient.Resource(v1alpha1.GVR).Get(cctx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
 		cancel()
 
-		if errors.IsNotFound(errGetting) {
+		if kerrors.IsNotFound(errGetting) {
 			o, err := c.instanceTypesCloudDiscoveryUnstructured(nil, instanceTypes)
 			if err != nil {
 				// return because we have error in conversion
@@ -399,7 +403,7 @@ func (c *Reconciler) instanceTypesCloudDiscoveryUnstructured(o *unstructured.Uns
 	if o != nil {
 		err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &data)
 		if err != nil {
-			c.logger.Errorf("Failed to convert unstructured to data. Error: %v\n", err)
+			c.logger.Error("Failed to convert unstructured to data", "error", err)
 			c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
 			return nil, err
 		}
@@ -409,7 +413,7 @@ func (c *Reconciler) instanceTypesCloudDiscoveryUnstructured(o *unstructured.Uns
 
 	content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&data)
 	if err != nil {
-		c.logger.Errorf("Failed to convert data to unstructured. Error: %v\n", err)
+		c.logger.Error("Failed to convert data to unstructured", "error", err)
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
 		return nil, err
 	}
@@ -431,7 +435,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 	err := retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
 		secret, err := c.k8sClient.CoreV1().Secrets("kube-system").Get(cctx, "d8-provider-cluster-configuration", metav1.GetOptions{})
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if kerrors.IsNotFound(err) {
 				// d8-provider-cluster-configuration can not be exist in hybrid clusters
 				return nil
 			}
@@ -449,7 +453,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 
 	discoveryData, err := c.discoverer.DiscoveryData(ctx, cloudDiscoveryData)
 	if err != nil {
-		c.logger.Errorf("Getting discovery data error: %v\n", err)
+		c.logger.Error("Getting discovery data error", "error", err)
 		c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(1.0)
 		return
 	}
@@ -465,7 +469,8 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 		secret, errGetting := c.k8sClient.CoreV1().Secrets("kube-system").Get(cctx, "d8-cloud-provider-discovery-data", metav1.GetOptions{})
 		cancel()
 
-		if errors.IsNotFound(errGetting) {
+		switch {
+		case kerrors.IsNotFound(errGetting):
 			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
 			_, err = c.k8sClient.CoreV1().Secrets("kube-system").Create(cctx, c.createSecretWithDiscoveryData(discoveryData), metav1.CreateOptions{})
 			cancel()
@@ -475,10 +480,9 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 			}
 			c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
 			return nil
-
-		} else if errGetting != nil {
+		case errGetting != nil:
 			return fmt.Errorf("Cannot check d8-cloud-provider-discovery-data secret before creating it: %v", errGetting)
-		} else {
+		default:
 			secret.Data = map[string][]byte{
 				"discovery-data.json": discoveryData,
 			}
@@ -594,7 +598,7 @@ type retryable func() error
 
 var errMaxRetriesReached = fmt.Errorf("exceeded retry limit")
 
-func retryFunc(attempts int, initialSleep time.Duration, maxSleep time.Duration, logger *log.Logger, fn retryable) error {
+func retryFunc(attempts int, initialSleep time.Duration, maxSleep time.Duration, logger *log.Logger, fn retryable) error { // nolint:unparam
 	var err error
 	sleep := initialSleep
 
@@ -604,13 +608,13 @@ func retryFunc(attempts int, initialSleep time.Duration, maxSleep time.Duration,
 			return nil
 		}
 
-		logger.Errorf("Attempt %d of %d. %v", i+1, attempts, err)
+		logger.Error("Failed attempt", "current_attempt", i+1, "attempt_count", attempts, "error", err)
 
 		if i < attempts-1 {
 			jitter := time.Duration(rand.Int63n(int64(sleep / 2)))
 			sleepTime := sleep + jitter
 
-			logger.Infof("Waiting %v before next attempt", sleepTime)
+			logger.Info("Waiting for next attempt", "timeout", sleepTime)
 			time.Sleep(sleepTime)
 			sleep *= 2
 			if sleep > maxSleep {

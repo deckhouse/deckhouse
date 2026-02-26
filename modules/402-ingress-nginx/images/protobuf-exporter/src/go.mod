@@ -1,6 +1,6 @@
 module github.com/flant/protobuf_exporter
 
-go 1.23.0
+go 1.25
 
 require (
 	github.com/fsnotify/fsnotify v1.5.4

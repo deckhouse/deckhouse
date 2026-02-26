@@ -26,7 +26,7 @@ Configuration example:
 apiVersion: deckhouse.io/v1
 kind: ZvirtClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa AAAABBBB"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 clusterID: "b46372e7-0d52-40c7-9bbf-fda31e187088"
 provider:
   server: "<SERVER>"
