@@ -179,8 +179,24 @@ func (h *PublicStatusHandler) calcStatuses(rng ranges.StepRange, lister entity.R
 	groups := h.ProbeLister.Groups()
 	groupStatuses := make([]GroupStatus, 0, len(groups))
 	for _, group := range groups {
+		// The group overall status
+		groupRef := check.ProbeRef{
+			Group: group,
+			Probe: dao.GroupAggregation,
+		}
+
+		filter := &statusFilter{
+			stepRange:         rng,
+			probeRef:          groupRef,
+			muteDowntimeTypes: muteTypes,
+		}
+
+		groupSummaryList, err := h.getProbeSummaryList(lister, filter)
+		if err != nil {
+			return nil, fmt.Errorf("getting summary for group %s: %v", group, err)
+		}
+
 		// Uptime per probe
-		probeStatuses := make([]PublicStatus, 0)
 		probeAvails := make([]ProbeAvailability, 0)
 		for _, probeRef := range h.ProbeLister.Probes() {
 			if probeRef.Group != group {
@@ -196,16 +212,14 @@ func (h *PublicStatusHandler) calcStatuses(rng ranges.StepRange, lister entity.R
 
 			probeSummaryList, err := h.getProbeSummaryList(lister, filter)
 			if err != nil {
-				return nil, fmt.Errorf("getting summary for probe %s/%s: %v", group, probeRef.Probe, err)
+				return nil, fmt.Errorf("getting summary for probe %s/%s: %v", group, groupRef.Probe, err)
 			}
-
-			status := calculateStatus(probeSummaryList)
-			probeStatuses = append(probeStatuses, status)
 
 			av := calculateAvailability(probeSummaryList)
 			if av < 0 {
 				continue
 			}
+			status := calculateStatus(probeSummaryList)
 			probeAvails = append(probeAvails, ProbeAvailability{
 				Probe:        probeRef.Probe,
 				Availability: av,
@@ -213,8 +227,8 @@ func (h *PublicStatusHandler) calcStatuses(rng ranges.StepRange, lister entity.R
 				Status:       status.String(),
 			})
 		}
-		groupStatus := calculateGroupStatus(probeStatuses)
 
+		groupStatus := calculateStatus(groupSummaryList)
 		gs := GroupStatus{
 			status: groupStatus,
 			Status: groupStatus.String(),
@@ -318,14 +332,6 @@ func episodeStatus(episode entity.EpisodeSummary) PublicStatus {
 	default:
 		return StatusNoData
 	}
-}
-
-func calculateGroupStatus(probeStatuses []PublicStatus) PublicStatus {
-	status := StatusNoData
-	for _, probeStatus := range probeStatuses {
-		status = status.Compare(probeStatus)
-	}
-	return status
 }
 
 // calculateTotalStatus returns total cluster status.
