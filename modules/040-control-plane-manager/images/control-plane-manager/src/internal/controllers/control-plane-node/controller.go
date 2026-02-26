@@ -228,10 +228,11 @@ func (r *Reconciler) buildComponentChecks(cpn *controlplanev1alpha1.ControlPlane
 
 // operationNameForNode returns a deterministic name for ControlPlaneOperation.
 // Node names may contain dots (e.g. ip-10-0-0-1.domain.local); k8s resource names do not allow them.
+// Component is lowercased because RFC 1123 requires resource names to be lowercase.
 func operationNameForNode(nodeName string, component controlplanev1alpha1.OperationComponent, specChecksum string) string {
 	sanitized := strings.ReplaceAll(nodeName, ".", "-")
 	if len(specChecksum) > 6 {
 		specChecksum = specChecksum[:6]
 	}
-	return fmt.Sprintf("%s-%s-%s", sanitized, component, specChecksum)
+	return fmt.Sprintf("%s-%s-%s", sanitized, strings.ToLower(string(component)), specChecksum)
 }

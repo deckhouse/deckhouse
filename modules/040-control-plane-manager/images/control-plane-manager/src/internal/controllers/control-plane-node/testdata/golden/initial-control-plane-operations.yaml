@@ -1,7 +1,7 @@
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: ControlPlaneOperation
 metadata:
-  name: master-1-Etcd-215dfa
+  name: master-1-etcd-215dfa
   labels:
     control-plane.deckhouse.io/node: master-1
     control-plane.deckhouse.io/component: Etcd
@@ -16,7 +16,7 @@ spec:
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: ControlPlaneOperation
 metadata:
-  name: master-1-KubeAPIServer-55803a
+  name: master-1-kubeapiserver-55803a
   labels:
     control-plane.deckhouse.io/node: master-1
     control-plane.deckhouse.io/component: KubeAPIServer
@@ -31,7 +31,7 @@ spec:
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: ControlPlaneOperation
 metadata:
-  name: master-1-KubeControllerManager-814a2f
+  name: master-1-kubecontrollermanager-814a2f
   labels:
     control-plane.deckhouse.io/node: master-1
     control-plane.deckhouse.io/component: KubeControllerManager
@@ -46,7 +46,7 @@ spec:
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: ControlPlaneOperation
 metadata:
-  name: master-1-KubeScheduler-32be06
+  name: master-1-kubescheduler-32be06
   labels:
     control-plane.deckhouse.io/node: master-1
     control-plane.deckhouse.io/component: KubeScheduler
@@ -61,7 +61,7 @@ spec:
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: ControlPlaneOperation
 metadata:
-  name: master-1-HotReload-c52c86
+  name: master-1-hotreload-c52c86
   labels:
     control-plane.deckhouse.io/node: master-1
     control-plane.deckhouse.io/component: HotReload
@@ -76,7 +76,7 @@ spec:
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: ControlPlaneOperation
 metadata:
-  name: master-1-PKI-b69a6e
+  name: master-1-pki-b69a6e
   labels:
     control-plane.deckhouse.io/node: master-1
     control-plane.deckhouse.io/component: PKI

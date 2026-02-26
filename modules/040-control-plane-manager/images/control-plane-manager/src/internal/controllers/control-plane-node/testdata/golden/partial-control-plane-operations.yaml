@@ -1,7 +1,7 @@
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: ControlPlaneOperation
 metadata:
-  name: master-1-Etcd-215dfa
+  name: master-1-etcd-215dfa
   labels:
     control-plane.deckhouse.io/node: master-1
     control-plane.deckhouse.io/component: Etcd
@@ -16,7 +16,7 @@ spec:
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: ControlPlaneOperation
 metadata:
-  name: master-1-KubeAPIServer-55803a
+  name: master-1-kubeapiserver-55803a
   labels:
     control-plane.deckhouse.io/node: master-1
     control-plane.deckhouse.io/component: KubeAPIServer

@@ -1,7 +1,7 @@
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: ControlPlaneOperation
 metadata:
-  name: master-1-HotReload-c52c86
+  name: master-1-hotreload-c52c86
   labels:
     control-plane.deckhouse.io/node: master-1
     control-plane.deckhouse.io/component: HotReload
