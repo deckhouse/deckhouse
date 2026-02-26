@@ -37,6 +37,22 @@ import:
   add: /src/deckhouse
   to: /deckhouse
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go_lib
+  to: /go_lib
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /pkg
+  to: /pkg
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go.mod
+  to: /go.mod
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go.sum
+  to: /go.sum
+  before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
