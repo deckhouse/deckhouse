@@ -4,5 +4,5 @@ subsystems:
 - observability
 namespace: d8-operator-prometheus
 descriptions:
-  en: Installs the Prometheus Operator, which automates the deployment and management of Prometheus installations.
-  ru: Устанавливает Prometheus Operator, который автоматизирует развёртывание и управление инсталляциями Prometheus.
+  en: Manages the lifecycle of the monitoring system in the cluster.
+  ru: Управляет жизненным циклом системы мониторинга в кластере.

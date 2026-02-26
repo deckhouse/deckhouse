@@ -7,6 +7,16 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
+{{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion -}}
+  {{- /*
+  Enable DRA multi-allocations by activating required feature gates:
+  DRADeviceBindingConditions and DRAResourceClaimDeviceStatus (for BindsToNode)
+  DRAConsumableCapacity (for AllowMultipleAllocations)
+  */ -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAResourceClaimDeviceStatus=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
+{{- end }}
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
