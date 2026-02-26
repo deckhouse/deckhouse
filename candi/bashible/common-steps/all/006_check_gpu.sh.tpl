@@ -60,13 +60,21 @@ is_valid_greater_than() {
 version=$(egrep -E -o "[0-9]{3,4}[.][0-9]{1,3}[.][0-9]{1,3}" /proc/driver/nvidia/version)
 compare $version $required_version
 
-got_capability=$(nvidia-smi --query-gpu="compute_cap" --format=csv,noheader)
-if is_valid_greater_than "$got_capability" "6.0"; then
-    echo "compute_cap ${got_capability} is valid"
-else
-    echo "compute_cap ${got_capability} is invalid"
+
+got_capabilities=$(nvidia-smi --query-gpu="compute_cap" --format=csv,noheader | tr -d ' ' | sed '/^$/d')
+if [[ -z "$got_capabilities" ]]; then
+    echo "compute_cap is empty"
     exit 1
 fi
+
+while IFS= read -r got_capability; do
+    if is_valid_greater_than "$got_capability" "6.0"; then
+        echo "compute_cap ${got_capability} is valid"
+    else
+        echo "compute_cap ${got_capability} is invalid"
+        exit 1
+    fi
+done <<< "$got_capabilities"
 
 
   {{- end }}
