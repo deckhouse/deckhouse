@@ -4,8 +4,8 @@ subsystems:
   - observability
 namespace: d8-monitoring
 descriptions:
-  en: Deploys monitoring stack with preset configuration for platform and applications. Includes ready-made alerts and dashboards.
-  ru: Разворачивает стек мониторинга с предустановленной конфигурацией для платформы и приложений. Включает готовые алерты и дашборды.
+  en: Provides ready-made alerts, dashboards, and the ability to customize monitoring system components, including data storage and visualization.
+  ru: Предоставляет готовые алерты и дашборды, а также возможность настройки компонентов системы мониторинга, включая хранение и визуализацию данных.
 requirements:
   modules:
     operator-prometheus: ">= 0.0.0"
