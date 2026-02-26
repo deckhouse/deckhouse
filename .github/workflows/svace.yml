@@ -140,7 +140,7 @@ jobs:
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
     # <template: build_template>
-    runs-on: [self-hosted, large]
+    runs-on: [self-hosted, dkp-build]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:

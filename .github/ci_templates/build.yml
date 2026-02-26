@@ -31,7 +31,7 @@ check_changelog:
 {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
 runs-on: [self-hosted, stage]
 {!{- else }!}
-runs-on: [self-hosted, large]
+runs-on: [self-hosted, dkp-build]
 {!{- end }!}
 outputs:
   tests_image_name: ${{ steps.build.outputs.tests_image_name }}
