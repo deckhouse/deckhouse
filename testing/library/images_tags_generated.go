@@ -169,6 +169,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"simpleBridge":        "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
+		"candi":                          "imageHash-common-candi",
 		"checkKernelVersion":             "imageHash-common-checkKernelVersion",
 		"coredns":                        "imageHash-common-coredns",
 		"csiExternalAttacher131":         "imageHash-common-csiExternalAttacher131",

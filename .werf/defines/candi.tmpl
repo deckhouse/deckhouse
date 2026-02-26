@@ -11,10 +11,6 @@
   - modules/*/openapi/config-values.yaml
   - global-hooks/openapi/config-values.yaml
   after: setup
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/candi/images_digests.json
-  before: setup
 - image: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml

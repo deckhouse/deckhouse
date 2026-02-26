@@ -1,5 +1,5 @@
 ---
-image: dev/candi
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: builder/scratch
 git:
 - add: /
