@@ -142,6 +142,11 @@ func GetKubeadmVersion(kubernetesVersion string) (string, error) {
 func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}) error {
 	saveInfo := []saveFromTo{
 		{
+			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmV1Beta4),
+			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmV1Beta4),
+			data: templateData,
+		},
+		{
 			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmV1Beta4, "patches"),
 			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmV1Beta4, "patches"),
 			data: templateData,
