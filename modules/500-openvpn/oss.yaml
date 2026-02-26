@@ -9,7 +9,7 @@
 - name: OpenSSL
   link: https://github.com/openssl/openssl
   description: TLS/SSL and crypto library.
-  logo: https://raw.githubusercontent.com/openssl/openssl/master/doc/images/openssl.svg
+  logo: /images/logos/openssl.svg
   license: Apache License 2.0
   id: openssl
   version: 3.3.2

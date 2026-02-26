@@ -32,7 +32,7 @@
 - name: ModSecurity
   link: https://github.com/owasp-modsecurity/ModSecurity
   description: ModSecurity is an open source, cross platform web application firewall (WAF) engine for Apache, IIS and Nginx.
-  logo: https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/others/modsec.png
+  logo: /images/logos/modsec.png
   license: Apache License 2.0
   id: modsecurity
   version: 3.0.14

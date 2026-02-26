@@ -1,6 +1,7 @@
 - name: Hubble UI
   link: https://github.com/cilium/hubble-ui
   description: Hubble UI is an open-source user interface for Cilium Hubble.
+  logo: /images/logos/cilium-hubble.png
   license: Apache License 2.0
   id: cilium-hubble-ui
   version: 0.13.2
