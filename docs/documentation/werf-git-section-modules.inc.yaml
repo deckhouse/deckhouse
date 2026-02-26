@@ -9,16 +9,7 @@
   - '*/openapi/values.yaml'
   - '*/openapi/*-tests.yaml'
   - '*/docs/internal/'
-  - '040-node-manager/crds/deckhousecontrolplane.yaml'
-  - '040-node-manager/crds/mcm.yaml'
-  - '040-node-manager/crds/cluster.yaml'
-  - '040-node-manager/crds/extension-config.yaml'
-  - '040-node-manager/crds/machine.yaml'
-  - '040-node-manager/crds/machine-*.yaml'
-  - '040-node-manager/crds/staticcluster.yaml'
-  - '040-node-manager/crds/staticcontrolplane.yaml'
-  - '040-node-manager/crds/staticmachine*.yaml'
-  - '040-node-manager/crds/nfd-api-*.yaml'
+  - '040-node-manager/crds/external/*.yaml'
   - '110-istio/crds/istio'
   includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
 {{- if or (eq .Edition "BE") (eq .Edition "SE-plus") (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
