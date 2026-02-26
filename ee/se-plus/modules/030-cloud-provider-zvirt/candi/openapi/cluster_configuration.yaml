@@ -159,7 +159,7 @@ apiVersions:
                     type: string
                     description: |
                       List of DNS servers.
-                    example: 8.8.8.8,8.8.4.4
+                    example: "8.8.8.8 8.8.4.4"
       nodeGroups:
         type: array
         description: |

@@ -23,7 +23,7 @@ resource "ovirt_vm" "master_vm" {
   vm_type = local.master_vm_type
 
   initialization_custom_script = local.master_cloud_init_script
-  initialization_dns = custom_network_dns
+  initialization_dns = local.custom_network_dns
 
   dynamic "initialization_nic" {
     for_each = local.custom_network_config
