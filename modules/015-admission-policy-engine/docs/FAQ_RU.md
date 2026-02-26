@@ -90,9 +90,9 @@ spec:
 
 Чтобы применить только нужные политики безопасности, не отключая весь предустановленный набор:
 
-1. Добавьте в нужное пространство имён метку: `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
+1. Добавьте в нужное пространство имён лейбл: `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
 1. Создайте ресурс SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
-1. Добавьте в пространство имён дополнительную метку, которая будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`
+1. Добавьте в пространство имён дополнительную лейбл, которая будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`
 
 SecurityPolicy, соответствующая baseline:
 
@@ -336,7 +336,7 @@ spec:
 [verify-image-signatures] Image signature verification failed: nginx:1.17.2
 ```
 
-## Как запретить удаление узла без метки
+## Как запретить удаление узла без лейбла
 
 > Примечание. Операции DELETE обрабатываются Gatekeeper по умолчанию.
 
@@ -379,7 +379,7 @@ spec:
           is_delete
           is_node
           not has_required_label
-          msg := sprintf("Удаление Node запрещено. Добавьте метку %q=%q.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
+          msg := sprintf("Удаление Node запрещено. Добавьте лейбл %q=%q.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
         }
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1

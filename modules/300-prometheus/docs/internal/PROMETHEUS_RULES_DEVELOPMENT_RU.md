@@ -82,7 +82,7 @@ Prometheus rules — программируемая логика. Helm Chart tem
 
 ## Alerting rules severity
 
-Для указания критичности у alerting-правила используйте метку `severity_level` либо пару лейблов `impact` и `likelihood`. Например:
+Для указания критичности у alerting-правила используйте лейбл `severity_level` либо пару лейблов `impact` и `likelihood`. Например:
 
 ```yaml
 spec:
