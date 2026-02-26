@@ -214,6 +214,35 @@ func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1
 				return fmt.Errorf("%s Can't get current lease %v", prefix, err)
 			}
 
+			// If lease is expired, delete it and create a new one
+			if !l.isStillLocked(lease) {
+				log.Warn("Lease expired, deleting expired lease and creating new one",
+					slog.String("identity", l.config.Identity),
+					slog.String("holder", *lease.Spec.HolderIdentity),
+					slog.String("renew_time", lease.Spec.RenewTime.Time.String()))
+
+				// Try to delete expired lease
+				deleteErr := l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Delete(ctx, lease.Name, metav1.DeleteOptions{})
+				if deleteErr != nil && !errors.IsNotFound(deleteErr) {
+					log.Warn("Failed to delete expired lease, will try to create anyway", slog.String("error", deleteErr.Error()))
+				}
+
+				// Try to create new lease
+				lease, err = l.createLease(ctx)
+				if err == nil {
+					return nil
+				}
+				// If creation failed (e.g., another process created it), continue to tryRenew logic
+				if !errors.IsAlreadyExists(err) {
+					return err
+				}
+				// Get the lease again in case it was recreated
+				lease, err = l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
+				if err != nil {
+					return fmt.Errorf("%s Can't get current lease after deletion attempt %v", prefix, err)
+				}
+			}
+
 			lease, err = l.tryRenew(ctx, lease, force)
 			if err != nil {
 				return fmt.Errorf("%s \n%v", prefix, err)
