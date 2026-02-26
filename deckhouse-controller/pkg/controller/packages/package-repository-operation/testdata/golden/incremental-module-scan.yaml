@@ -26,7 +26,7 @@ status:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
-    type: Processed
+    type: Completed
   packages:
     processed:
     - name: test-package
