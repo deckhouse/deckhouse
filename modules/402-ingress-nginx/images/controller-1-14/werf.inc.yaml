@@ -933,6 +933,12 @@ import:
   owner: "64535"
   group: "64535"
   before: install
+- image: {{ $.ModuleName }}/sandbox-artifact
+  add: /sandbox
+  to: /usr/bin/sandbox
+  owner: "64535"
+  group: "64535"
+  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/curl-chroot-wrapper.sh
   to: /usr/bin/curl
@@ -1009,4 +1015,4 @@ imageSpec:
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]
-    env: { "PATH": "$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin", "LUA_PATH": "/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;", "LUA_CPATH": "/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;" }
+    env: { "PATH": "/bin:/usr/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin:/usr/local/luajit/bin", "LUA_PATH": "/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;", "LUA_CPATH": "/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;" }

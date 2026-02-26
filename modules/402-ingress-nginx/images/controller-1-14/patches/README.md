@@ -75,9 +75,9 @@ Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. A
 
 <https://github.com/kubernetes/ingress-nginx/pull/8213>
 
-### 011-restore-validation.patch (BWRAP!!!)
+### 011-restore-validation.patch (sandbox)
 
-Re-enables configuration validation with sandboxed (by bwrap) for the ingress-nginx controller, which was previously disabled as a mitigation for the security vulnerabilities described in CVE-2025-1097, CVE-2025-1098, CVE-2025-1974, CVE-2025-24513, and CVE-2025-24514.
+Re-enables configuration validation with sandboxed (by sandbox) for the ingress-nginx controller, which was previously disabled as a mitigation for the security vulnerabilities described in CVE-2025-1097, CVE-2025-1098, CVE-2025-1974, CVE-2025-24513, and CVE-2025-24514.
 
 ### 012-validation-mode.patch
 
@@ -125,6 +125,10 @@ This patch is no longer needed because the related changes are already included 
 ### 020-lua_ingress-use-request-host-for-https-redirect.patch
 
 This patch fixes HTTP-to-HTTPS redirect host selection in `lua_ingress`: when `Host` differs from the actual request host (for example with absolute-form requests), redirect now uses the request host (`$host`) instead of raw `Host` header to prevent redirects to arbitrary domains.
+
+### 021-added-sandbox-for-validation.patch
+
+This patch runs `nginx -t` via `/usr/bin/sandbox` and executes validation in `unshare`/`chroot` context to keep configuration checks isolated.
 
 ### cve-03022026.patch (Already exist)
 
