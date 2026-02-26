@@ -52,7 +52,6 @@ func (TimeDriftCheck) RetryPolicy() preflight.RetryPolicy {
 func (c TimeDriftCheck) Run(ctx context.Context) error {
 	remote, err := getRemoteTimeStamp(ctx, c.Node)
 	if err != nil {
-		// keep behaviour: log and skip failure
 		return nil
 	}
 	local := time.Now().Unix()

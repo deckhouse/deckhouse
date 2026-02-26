@@ -31,10 +31,7 @@ var legacyPreflightSkipAliases = map[string]string{
 
 func ApplyPreflightSkips(skipsList []string) {
 	for _, skip := range skipsList {
-		if mapped, ok := legacyPreflightSkipAliases[skip]; ok {
-			skip = mapped
-		}
-		PreflightSkipChecks = append(PreflightSkipChecks, skip)
+		PreflightSkipChecks = append(PreflightSkipChecks, mapLegacyPreflightSkipAlias(skip))
 	}
 }
 
@@ -67,4 +64,34 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("PREFLIGHT_SKIP_CHECKS")).
 		PlaceHolder("name").
 		StringsVar(&PreflightSkipChecks)
+
+	cmd.PreAction(func(_ *kingpin.ParseContext) error {
+		return validatePreflightSkipChecks()
+	})
+}
+
+func mapLegacyPreflightSkipAlias(name string) string {
+	if mapped, ok := legacyPreflightSkipAliases[name]; ok {
+		return mapped
+	}
+	return name
+}
+
+func validatePreflightSkipChecks() error {
+	if len(PreflightSkipChecks) == 0 {
+		return nil
+	}
+
+	known := make(map[string]struct{}, len(generatedPreflightChecks))
+	for _, name := range generatedPreflightChecks {
+		known[name] = struct{}{}
+	}
+
+	for _, name := range PreflightSkipChecks {
+		if _, ok := known[name]; !ok {
+			return fmt.Errorf("unknown preflight check name: %s", name)
+		}
+	}
+
+	return nil
 }
