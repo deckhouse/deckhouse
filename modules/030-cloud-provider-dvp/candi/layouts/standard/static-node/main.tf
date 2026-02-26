@@ -107,8 +107,8 @@ resource "kubernetes_owner_references_v1" "additional-disk" {
   owner_references {
     api_version = "virtualization.deckhouse.io/v1alpha2"
     kind        = "VirtualMachine"
-    name        = module.master.name
-    uid         = module.master.uid
+    name        = module.static-node.name
+    uid         = module.static-node.uid
   }
 }
 
