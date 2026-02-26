@@ -49,3 +49,5 @@
   description: OpenKruise is an extended component suite for Kubernetes, which mainly focuses on application automations, such as deployment, upgrade, ops and availability protection.
   logo: https://openkruise.io/img/openkruise.ico
   license: Apache License 2.0
+  id: open-kruise
+  version: 898dc482a0cbf4fa0db214f952319aa5e1229152

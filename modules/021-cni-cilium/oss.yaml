@@ -9,11 +9,13 @@
 - name: CNI plugins
   link: https://github.com/containernetworking/plugins
   description: Some reference and example networking plugins, maintained by the CNI team.
+  license: Apache License 2.0
   id: cni-plugins
   version: 1.7.1
 
 - name: Gops
   link: https://github.com/google/gops
   description: A tool to list and diagnose Go processes currently running on your system.
+  license: BSD 3-Clause License
   id: gops
   version: 0.3.27
