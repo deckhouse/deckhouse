@@ -489,7 +489,7 @@ proxy:
 # only can enable one trace provider(jaeger or otel) at the same time,
 # and when using jaeger as provider, can only enable it with agent mode or collector mode.
 # if using jaeger collector mode, uncomment endpoint and uncomment username, password if needed
-# if using jaeger agetn mode uncomment agent_host and agent_port
+# if using jaeger agent mode uncomment agent_host and agent_port
 # trace:
 #   enabled: true
 #   # set sample_rate to 1 if you wanna sampling 100% of trace data; set 0.5 if you wanna sampling 50% of trace data, and so forth
@@ -660,7 +660,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_new_project_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Создайте [robot-account](https://goharbor.io/docs/1.10/working-with-projects/project-configuration/create-robot-accounts/) для этого проекта. Это специальный типа аккаунта, привязанного к проекту, для выполнения автоматических операций. Он не имеет доступа в веб-интерфейс и может быть использован только с Helm CLI или Docker.
+Создайте [robot-account](https://goharbor.io/docs/1.10/working-with-projects/project-configuration/create-robot-accounts/) для этого проекта. Это специальный тип аккаунта, привязанного к проекту, для выполнения автоматических операций. Он не имеет доступа в веб-интерфейс и может быть использован только с Helm CLI или Docker.
 
 Перейдите в созданный проект и откройте вкладку «Аккаунты роботов». Нажмите кнопку «Создать новый аккаунт робота»:
 
@@ -668,7 +668,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_robot_account_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Укажите имя аккаунта, краткое описание (если нужно) и срок жизни (можно выбрать в днях или поставить бесспрочный):
+Укажите имя аккаунта, краткое описание (если нужно) и срок жизни (можно выбрать в днях или поставить бессрочный):
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_create_robot_account_ru.png" alt="Главная страница Harbor...">
@@ -756,7 +756,7 @@ d8 mirror pull \
 - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Kubernetes Platform;
 - `/home/ubuntu/d8-bundle` — директория, в которой будут расположены пакеты образов. Будет создана, если не существует.
 
-Если загрузка образов будет прервана, повторный вызов команды продолжит загрузку, если с момента ее остановки прошло не более суток.
+Если загрузка образов будет прервана, повторный вызов команды продолжит загрузку, если с момента её остановки прошло не более суток.
 
 В зависимости от скорости интернет-соединения процесс может занять от 30 до 40 минут.
 
@@ -1594,7 +1594,7 @@ sudo -i d8 k create -f $PWD/user.yml
 
 ## Настройка DNS-записей
 
-Для доступа к веб-интерфейсам кластера настройте соответствие следующих доменных имён внутреннему IP-адресу master-узла (используйте DNS имена, в соответствии с шаблоном DNS-имен, указанным в параметре [publicDomainTemplate](../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)). Например, можно прописать их в `/etc/hosts` на локальной машине для шаблона DNS-имён `%s.test.local`. Перед выполнением замените плейсхолдер `<MASTER_IP>` на внутренний IP-адрес master-узла:
+Для доступа к веб-интерфейсам кластера настройте соответствие следующих доменных имён внутреннему IP-адресу master-узла (используйте DNS-имена в соответствии с шаблоном DNS-имён, указанным в параметре [publicDomainTemplate](../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)). Например, можно прописать их в `/etc/hosts` на локальной машине для шаблона DNS-имён `%s.test.local`. Перед выполнением замените плейсхолдер `<MASTER_IP>` на внутренний IP-адрес master-узла:
 
 ```text
 export PUBLIC_IP="<MASTER_IP>"
@@ -1628,16 +1628,16 @@ EOF
 * **Веб-интерфейс Deckhouse** — управление кластером и основными компонентами. Адрес: **console.test.local**.
 * **Документация** — документация по установленной в кластере версии Deckhouse. Адрес: **documentation.test.local**.
 * **Мониторинг** — дэшборды Grafana, поставляемые с Deckhouse. Адрес: **grafana.test.local** (путь к Prometheus: **/prometheus/**).
-  Подробнее [в документаци](/products/kubernetes-platform/documentation/v1/admin/configuration/monitoring/).
+  Подробнее [в документации](/products/kubernetes-platform/documentation/v1/admin/configuration/monitoring/).
 * **Status page** — общий статус Deckhouse и его компонентов. Адрес: **status.test.local**.
 * **Upmeter** — контроль соблюдения SLA с детализацией по компонентам и периодам. Адрес: **upmeter.test.local**.
-* **Подготовка к production** — проверьте готовность кластера к приёму трафика по [инструкции для поготовки к продакшену](/products/kubernetes-platform/guides/production.html).
+* **Подготовка к production** — проверьте готовность кластера к приёму трафика по [инструкции для подготовки к продакшену](/products/kubernetes-platform/guides/production.html).
 
 ### Деплой первого приложения
 
 * **Настройка CI/CD** — создайте ServiceAccount для деплоя в кластер и выдайте ему права. В результате получите `kubeconfig` для использования в системах деплоя в Kubernetes. Адрес: **kubeconfig.test.local**.
 * **Направление трафика на приложение** — создайте `Service` и `Ingress` для приложения. Подробнее о возможностях [сетевого взаимодействия](/products/kubernetes-platform/documentation/v1/user/network/ingress/).
-* **Мониторинг приложения** — добавьте к созданному Service аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"`. Подробнее о [настройки мониторинга приложений](/products/kubernetes-platform/documentation/v1/user/monitoring/).
+* **Мониторинг приложения** — добавьте к созданному Service аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"`. Подробнее о [настройке мониторинга приложений](/products/kubernetes-platform/documentation/v1/user/monitoring/).
 
 ### Что дальше?
 
