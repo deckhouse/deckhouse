@@ -24,8 +24,11 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/controller/machine"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 type CAPIMachineReconciler struct {
@@ -59,6 +62,7 @@ func (r *CAPIMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("capi-machine-controller").
 		For(&capiv1beta2.Machine{}).
+		Watches(&deckhousev1alpha2.Instance{}, handler.EnqueueRequestsFromMapFunc(mapInstanceToCAPIMachine())).
 		Complete(r)
 }
 
@@ -108,4 +112,29 @@ func (r *CAPIMachineReconciler) buildReconcileData(capiMachine *capiv1beta2.Mach
 		machineStatus: machine.GetStatus(),
 		nodeGroup:     machine.GetNodeGroup(),
 	}, nil
+}
+
+func mapInstanceToCAPIMachine() handler.MapFunc {
+	return func(_ context.Context, obj client.Object) []reconcile.Request {
+		instance, ok := obj.(*deckhousev1alpha2.Instance)
+		if !ok {
+			return nil
+		}
+
+		ref := instance.Spec.MachineRef
+		if ref == nil || ref.Name == "" {
+			return nil
+		}
+		namespace := ref.Namespace
+		if namespace == "" {
+			namespace = machine.MachineNamespace
+		}
+
+		return []reconcile.Request{{
+			NamespacedName: types.NamespacedName{
+				Namespace: namespace,
+				Name:      ref.Name,
+			},
+		}}
+	}
 }

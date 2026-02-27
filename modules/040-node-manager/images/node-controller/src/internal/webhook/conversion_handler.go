@@ -88,7 +88,7 @@ func (h *ConversionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conversionLog.Info("received conversion request",
+	conversionLog.V(1).Info("received conversion request",
 		"uid", review.Request.UID,
 		"desiredVersion", review.Request.DesiredAPIVersion,
 		"objectCount", len(review.Request.Objects),
