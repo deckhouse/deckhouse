@@ -16,30 +16,15 @@
 export LANG=C LC_NUMERIC=C
 set -Eeo pipefail
 
-{{- $lib := .Files.Get "deckhouse/candi/bashible/lib.sh.tpl" -}}
+{{- $candi := "candi/bashible/lib.sh.tpl" -}}
+{{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
+{{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
+
 {{- tpl $lib . }}
 {{ template "bb-d8-node-name" . }}
+{{ template "bb-d8-node-ip" . }}
+{{ template "bb-discover-node-name" . }}
 {{ template "bb-status" . }}
-
-bb-discover-node-name() {
-  local discovered_name_file="/var/lib/bashible/discovered-node-name"
-  local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
-
-  if [ ! -s "$discovered_name_file" ]; then
-    if [[ -s "$kubelet_crt" ]]; then
-      openssl x509 -in "$kubelet_crt" \
-        -noout -subject -nameopt multiline |
-      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$discovered_name_file"
-    else
-    {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
-      if [[ "$(hostname)" != "$(hostname -s)" ]]; then
-        hostnamectl set-hostname "$(hostname -s)"
-      fi
-    {{- end }}
-      hostname > "$discovered_name_file"
-    fi
-  fi
-}
 
 bb-kube-apiserver-healthy() {
   local kubeconfig="$1"

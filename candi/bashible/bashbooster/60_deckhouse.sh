@@ -12,9 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $lib := .Files.Get "deckhouse/candi/bashible/lib.sh.tpl" -}}
+{{- $candi := "candi/bashible/lib.sh.tpl" -}}
+{{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
+{{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
+
 {{- tpl $lib . }}
 {{ template "bb-d8-node-name" . }}
+{{ template "bb-d8-node-ip" . }}
+{{ template "bb-discover-node-name" . }}
 {{ template "bb-status" . }}
 
 bb-kubectl() {
