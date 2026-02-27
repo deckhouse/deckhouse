@@ -12,7 +12,7 @@ weight: 45
 
 Deckhouse Code supports OmniAuth configuration in accordance with the [GitLab official documentation](https://docs.gitlab.com/integration/omniauth/). Additionally, it provides extended functionality described below.
 
-### OpenID connect (OIDC)
+### OpenID Connect (OIDC)
 
 The following parameters are available for integrating with OIDC providers:
 
@@ -170,13 +170,13 @@ If a previous sync job was not completed successfully, Redis may retain a lock p
 To remove the lock:
 
 1. Connect to Redis using the databases specified in `config/redis.shared_state.yml` and `config/redis.queues.yml`.
-1. Delete the key `sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}` using the following commands:
+2. Delete the key `sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}` using the following commands:
 
    ```console
    keys *ldap*
    del "sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}"
    ```
-   
+
 ### Manual synchronization run
 
 To synchronize groups immediately after they are changed on the LDAP side, follow these steps:
@@ -185,14 +185,20 @@ To synchronize groups immediately after they are changed on the LDAP side, follo
    ![Ldap sync worker UI](/images/code/ldap_sync_worker_en.png)
 
 To see how the triggered synchronization finished, open the metrics page for the LDAP synchronization task:
-`/admin/sidekiq/metrics?substr=SyncWorker&period=8h`. The chart shows statistics for successful calls, and the table below shows counts of successful and failed LDAP synchronization runs.
+`/admin/sidekiq/metrics?substr=SyncWorker&period=8h`. The chart displays call statistics; the table below shows the number of successful and failed LDAP synchronization runs.
+
 ![Ldap sync worker metrics](/images/code/ldap_sync_metrics.png)
 
 To view the full synchronization logs:
-1. On the worker page `/admin/sidekiq/cron/namespaces/default/jobs/ldap_sync_worker`, find the run events table named "History". The first row corresponds to the most recent run. Select the value in the JID (Job ID) column of the first row — you will need this identifier to search the logs.
-   ![Ldap sync history table](/images/code/ldap_sync_history_en.png)
-2. Log in to the virtual machine, then determine the name of the pod to collect logs from using `kubectl -n d8-code -l app.kubernetes.io/component=sidekiq get pod -o NAME`.
-3. Using the synchronization process identifier (JID) and the pod name (POD_NAME), run the log collection command: `kubectl -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`.
 
-> After some time, old logs are removed by rotation, and collecting them becomes impossible.
-> If needed, you can rerun the synchronization process and collect the latest logs.
+1. On the worker page `/admin/sidekiq/cron/namespaces/default/jobs/ldap_sync_worker`, find the run events table named "History". The first row corresponds to the most recent run. Copy the value in the JID (Job ID) column — you will need it to search the logs.
+
+   ![Ldap sync history table](/images/code/ldap_sync_history_en.png)
+
+2. Connect to the cluster and determine the Sidekiq pod name:
+   `kubectl -n d8-code -l app.kubernetes.io/component=sidekiq get pod -o NAME`
+
+3. Run the log collection command, substituting the copied JID and pod name (POD_NAME):
+   `kubectl -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`
+
+> Old logs are removed by rotation over time, so they may become unavailable. If needed, rerun the synchronization and collect the latest logs.
