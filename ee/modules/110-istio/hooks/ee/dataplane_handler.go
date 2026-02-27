@@ -201,6 +201,9 @@ func (p *IstioDrivenPod) injectLabel() bool {
 
 func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 	if specificPodRevision, ok := p.Labels["istio.io/rev"]; ok {
+		if specificPodRevision == "default" {
+			specificPodRevision = "global"
+		}
 		return specificPodRevision
 	}
 	return ""
@@ -266,7 +269,11 @@ func applyIstioDrivenNamespaceFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	}
 
 	if revision, ok := obj.GetLabels()["istio.io/rev"]; ok {
-		namespaceInfo.RevisionRaw = revision
+		if revision == "default" {
+			namespaceInfo.RevisionRaw = "global"
+		} else {
+			namespaceInfo.RevisionRaw = revision
+		}
 	} else {
 		namespaceInfo.RevisionRaw = "global"
 	}
@@ -534,12 +541,21 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 		}
 		// override if label istio.io/rev with specific revision exists
 		if istioPod.SpecificRevision != "" {
-			desiredRevision = istioPod.SpecificRevision
+			if istioPod.SpecificRevision == "global" {
+				desiredRevision = globalRevision
+			} else {
+				desiredRevision = istioPod.SpecificRevision
+			}
 		}
 
 		// we don't need metrics for pod without desired revision and without istio sidecar
 		if desiredRevision == istioRevsionAbsent && istioPod.Revision == istioRevsionAbsent {
 			continue
+		}
+
+		// istioPod.Revision normalized for pod in getIstioCurrentRevision
+		if desiredRevision == istioRevsionAbsent && istioPod.Revision == "global" {
+			desiredRevision = globalRevision
 		}
 
 		desiredFullVersion := versionMap.GetFullVersionByRevision(desiredRevision)
