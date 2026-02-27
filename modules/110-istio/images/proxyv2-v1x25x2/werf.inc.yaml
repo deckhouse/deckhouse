@@ -19,7 +19,7 @@
 # Based on https://github.com/istio/istio/blob/1.25.2/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.25.2/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
@@ -38,6 +38,18 @@ import:
   to: /usr/local/bin/envoy
   owner: 1337
   group: 1337
+  after: setup
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  after: setup
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  after: setup
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
@@ -60,16 +72,6 @@ import:
   before: setup
 git:
 {{- include "image mount points" . }}
-shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y ca-certificates
-  - update-ca-trust
-  - apt-get clean
-  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
-  install:
-  - useradd -m --uid 1337 istio-proxy
-  - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
 imageSpec:
   config:
     user: "1337:1337"
