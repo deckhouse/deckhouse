@@ -15,70 +15,31 @@
 mkdir -p /etc/kubernetes/kubernetes-api-proxy
 # Read previously discovered IP
 
-bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf - << EOF
-user deckhouse;
-
-error_log stderr notice;
-
-pid /tmp/kubernetes-api-proxy.pid;
-
-worker_processes 2;
-worker_rlimit_nofile 130048;
-worker_shutdown_timeout 10s;
-
-events {
-  multi_accept on;
-  use epoll;
-  worker_connections 16384;
-}
-
-stream {
-  upstream kubernetes {
-    least_conn;
+bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
+{{- $list := list }}
 {{- if eq .runType "Normal" }}
-  {{- range $key,$value := .normal.apiserverEndpoints }}
-    server {{ $value }};
+  {{- range $key, $value := .normal.apiserverEndpoints }}
+    {{- $list = append $list $value }}
   {{- end }}
 {{- else if eq .runType "ClusterBootstrap" }}
-    server $(bb-d8-node-ip):6443;
+    {{- $list = append $list "$(bb-d8-node-ip):6443" }}
 {{- end }}
-  }
-
-{{- with .registry.proxyEndpoints }}
-  upstream registry {
-    least_conn;
-    {{- range $proxy_endpoint := . }}
-    server {{ $proxy_endpoint }};
-    {{- end }}
-  }
-{{- end }}
-
-
-  server {
-    listen 127.0.0.1:6445;
-    proxy_pass kubernetes;
-    # Configurator uses 24h proxy_timeout in case of long running jobs like kubectl exec or kubectl logs
-    # After time out, nginx will force a client to reconnect
-    proxy_timeout 24h;
-    proxy_connect_timeout 1s;
-  }
-
-{{- with .registry.proxyEndpoints }}
-  server {
-    listen 127.0.0.1:5001;
-    proxy_pass registry;
-    # 1h timeout for very log pull/push operations
-    proxy_timeout 1h;
-    proxy_connect_timeout 1s;
-  }
-{{- end }}
-
-}
+{{ toJson $list }}
 EOF
 
-if [[ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ]]; then
-  cp /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
-fi
+{{ if eq .runType "Normal" }}
+bb-sync-file /etc/kubernetes/kubernetes-api-proxy/ca.crt - << EOF
+{{ .normal.kubernetesCA }}
+EOF
+
+bb-sync-file /etc/kubernetes/kubernetes-api-proxy/cl.crt - << EOF
+{{ .normal.apiserverProxyCerts.crt }}
+EOF
+
+bb-sync-file /etc/kubernetes/kubernetes-api-proxy/cl.key - << EOF
+{{ .normal.apiserverProxyCerts.key }}
+EOF
+{{- end }}
 
 chown -R 0:64535 /etc/kubernetes/kubernetes-api-proxy
 chmod g+s /etc/kubernetes/kubernetes-api-proxy

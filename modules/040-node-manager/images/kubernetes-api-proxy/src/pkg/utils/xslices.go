@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package utils
 
-import (
-	"kubernetes-api-proxy-reloader/src"
-)
+func Map[T, U any](s []T, f func(T) U) []U {
+	result := make([]U, len(s))
 
-func main() {
-	src.WatchNginxConf()
+	for i, v := range s {
+		result[i] = f(v)
+	}
+
+	return result
 }

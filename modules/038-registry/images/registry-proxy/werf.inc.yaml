@@ -3,8 +3,8 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/nginx-static
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/kubernetes-api-proxy-reloader
-  to: /kubernetes-api-proxy-reloader
+  add: /src/registry-proxy-reloader
+  to: /registry-proxy-reloader
   before: install
 git:
 {{- include "image mount points" . }}
@@ -28,15 +28,15 @@ secrets:
 shell:
   install:
     - cd /src
-    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o kubernetes-api-proxy-reloader cmd/main.go
-    - chown 64535:64535 kubernetes-api-proxy-reloader
-    - chmod 0700 kubernetes-api-proxy-reloader
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o registry-proxy-reloader cmd/main.go
+    - chown 64535:64535 registry-proxy-reloader
+    - chmod 0700 registry-proxy-reloader
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/reloader
+  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/reloader
     to: /src
     stageDependencies:
       install:
