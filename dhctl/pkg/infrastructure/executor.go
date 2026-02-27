@@ -57,10 +57,23 @@ type PlanOpts struct {
 	OutPath          string
 	DetailedExitCode bool
 	NoOutput         bool
+	// only use for debug purposes
+	Target string
+}
+
+type OutputOpts struct {
+	StatePath     string
+	OutFields     []string
+	ShowSensitive bool
+}
+
+type ShowOpts struct {
+	PlanPath      string
+	ShowSensitive bool
 }
 
 type OutputExecutor interface {
-	Output(ctx context.Context, statePath string, outFields ...string) (result []byte, err error)
+	Output(ctx context.Context, opts OutputOpts) (result []byte, err error)
 }
 
 type Executor interface {
@@ -70,7 +83,7 @@ type Executor interface {
 	Apply(ctx context.Context, opts ApplyOpts) error
 	Plan(ctx context.Context, opts PlanOpts) (exitCode int, err error)
 	Destroy(ctx context.Context, opts DestroyOpts) error
-	Show(ctx context.Context, statePath string) (result []byte, err error)
+	Show(ctx context.Context, opts ShowOpts) (result []byte, err error)
 	GetActions(ctx context.Context, planPath string) (action []string, err error)
 
 	// TODO need refactoring getting plan changes. I do not have more time for deep refactoring
@@ -127,7 +140,7 @@ func (e *fakeExecutor) Plan(ctx context.Context, opts PlanOpts) (int, error) {
 	return e.planResp.code, e.planResp.err
 }
 
-func (e *fakeExecutor) Output(ctx context.Context, statePath string, outFields ...string) ([]byte, error) {
+func (e *fakeExecutor) Output(ctx context.Context, opts OutputOpts) ([]byte, error) {
 	return e.outputResp.resp, e.outputResp.err
 }
 
@@ -135,7 +148,7 @@ func (e *fakeExecutor) Destroy(ctx context.Context, opts DestroyOpts) error {
 	return e.destroyResp.err
 }
 
-func (e *fakeExecutor) Show(ctx context.Context, planPath string) ([]byte, error) {
+func (e *fakeExecutor) Show(ctx context.Context, opts ShowOpts) ([]byte, error) {
 	return e.showResp.resp, e.showResp.err
 }
 
@@ -192,7 +205,7 @@ func (e *DummyExecutor) Plan(ctx context.Context, opts PlanOpts) (int, error) {
 	return 0, nil
 }
 
-func (e *DummyExecutor) Output(ctx context.Context, statePath string, outFields ...string) ([]byte, error) {
+func (e *DummyExecutor) Output(ctx context.Context, opts OutputOpts) ([]byte, error) {
 	e.logger.LogWarnLn("Call Output on dummy executor")
 
 	return nil, nil
@@ -204,7 +217,7 @@ func (e *DummyExecutor) Destroy(ctx context.Context, opts DestroyOpts) error {
 	return nil
 }
 
-func (e *DummyExecutor) Show(ctx context.Context, planPath string) ([]byte, error) {
+func (e *DummyExecutor) Show(ctx context.Context, opts ShowOpts) ([]byte, error) {
 	e.logger.LogWarnLn("Call Show on dummy executor")
 
 	return nil, nil
@@ -234,7 +247,7 @@ func NewDummyOutputExecutor(logger log.Logger) *DummyOutputExecutor {
 	}
 }
 
-func (e *DummyOutputExecutor) Output(ctx context.Context, statePath string, outFields ...string) ([]byte, error) {
+func (e *DummyOutputExecutor) Output(ctx context.Context, opts OutputOpts) ([]byte, error) {
 	e.logger.LogWarnLn("Call Output on dummy output executor")
 
 	return nil, nil
