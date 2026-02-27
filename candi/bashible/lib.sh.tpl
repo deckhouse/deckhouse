@@ -13,8 +13,6 @@ function bb-patch-instance-condition() {
   now="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   local nodeName
   nodeName="$(bb-d8-node-name)"
-
-  # Используем server-side apply для корректного обновления одного элемента массива conditions
   bb-kubectl-exec apply --server-side --field-manager=bashible \
     --subresource=status -f - <<EOF || true
 apiVersion: deckhouse.io/v1alpha2
