@@ -1,0 +1,70 @@
+admission-policy-engine:
+  fixes:
+    - summary: added mount-points in ratify
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17925
+    - summary: deny_vulnerable_images webhook must use module status instead of moduleconfig
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17450
+candi:
+  fixes:
+    - summary: Updated pwru tool to v1.0.11 to fix CVE-2025-68121.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17975
+    - summary: Updated pwru tool to v1.0.11 to fix CVE-2025-68121.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17952
+chrony:
+  fixes:
+    - summary: mitigate CVE-2025-58181
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17958
+control-plane-manager:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17413
+dashboard:
+  fixes:
+    - summary: Fixed CVE-2025-22868, CVE-2025-22870, CVE-2025-22872, CVE-2025-47914, CVE-2025-58181
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17243
+documentation:
+  fixes:
+    - summary: Fixed HTTP/404 error when opening modules documentation from the Web interface.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17480
+extended-monitoring:
+  fixes:
+    - summary: Fixed CVE-2025-47914, CVE-2025-58181
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17576
+ingress-nginx:
+  fixes:
+    - summary: The CVE-2026-1580, CVE-2026-24512, CVE-2026-24513, CVE-2026-24514 CVEs fixes are backported.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17808
+      impact: The ingress nginx controllers' pods will be restated.
+loki:
+  fixes:
+    - summary: Fixed CVE-2025-47914, CVE-2025-58181
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17555
+monitoring-kubernetes:
+  fixes:
+    - summary: Fixed CVE-2025-47914, CVE-2025-58181
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17571
+node-local-dns:
+  fixes:
+    - summary: Fixed CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17471
+operator-prometheus:
+  fixes:
+    - summary: Fixed CVE-2025-47914, CVE-2025-58181
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17601
+prometheus:
+  fixes:
+    - summary: Fixed CVE-2025-47914, CVE-2025-58181, CVE-2025-65637
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17597
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Fixed CVE-2025-47914, CVE-2025-58181
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17570
+prometheus-pushgateway:
+  fixes:
+    - summary: Fixed CVE-2025-47914, CVE-2025-58181, CVE-2025-22872, CVE-2025-22868
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17556
+upmeter:
+  fixes:
+    - summary: Fixed CVE-2025-47914, CVE-2025-58181, CVE-2025-65637
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17557
+
