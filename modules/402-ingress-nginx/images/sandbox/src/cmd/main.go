@@ -76,7 +76,8 @@ func run(argv []string) int {
 		return 1
 	}
 	extraWrite := []string{"/dev/null", "/tmp/"}
-	args, allow, trace, handler := runprogconf.GetConf("default", workDir, argv, extraRead, extraWrite, false) // :contentReference[oaicite:4]{index=4}
+	// Wrapper chain (`/usr/bin/nginx` shell script -> `unshare` -> nginx binary) needs fork/exec syscalls.
+	args, allow, trace, handler := runprogconf.GetConf("default", workDir, argv, extraRead, extraWrite, true) // :contentReference[oaicite:4]{index=4}
 
 	limit := runner.Limit{
 		TimeLimit:   sandboxCPUTimeLimit,
@@ -122,7 +123,7 @@ func runWithPtrace(
 	limit runner.Limit,
 	debug bool,
 ) (runner.Result, error) {
-	filter, err := buildFilter(allow, trace)
+	filter, err := buildFilter(allow, trace, debug)
 	if err != nil {
 		return runner.Result{}, err
 	}
@@ -153,7 +154,7 @@ func runWithUnshare(
 ) (runner.Result, error) {
 	// In unshare mode there is no ptrace handler, so traced syscalls must be explicitly allowed.
 	allowAll := append(append([]string{}, allow...), trace...)
-	filter, err := buildFilter(allowAll, nil)
+	filter, err := buildFilter(allowAll, nil, debug)
 	if err != nil {
 		return runner.Result{}, err
 	}
@@ -175,11 +176,17 @@ func runWithUnshare(
 	return r.Run(ctx), nil
 }
 
-func buildFilter(allow, trace []string) (seccomp.Filter, error) {
+func buildFilter(allow, trace []string, debug bool) (seccomp.Filter, error) {
+	defaultAction := sbseccomp.ActionKill
+	if debug {
+		// In debug mode trace unknown syscalls to print their names instead of immediate SIGSYS.
+		defaultAction = sbseccomp.ActionTrace
+	}
+
 	return (&sbseccomp.Builder{
 		Allow:   allow,
 		Trace:   trace,
-		Default: sbseccomp.ActionKill,
+		Default: defaultAction,
 	}).Build()
 }
 
