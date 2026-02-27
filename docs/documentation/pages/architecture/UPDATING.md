@@ -23,19 +23,33 @@ Each new DKP version is first published to the **Alpha** channel and then gradua
 Updates in less stable channels are made available to a limited number of users,
 which allows to detect and resolve potential issues before they affect production environments.
 
-- **Rock Solid**: The most stable release channel.
-  Ideal for clusters requiring maximum reliability.
-  Updates are published at least 30 days after the release.
-- **Stable**: A stable channel suitable for production clusters.
-  Updates are published at least 14 days after the release.
-- **Early Access**: The recommended release channel if you’re unsure which one to choose.
-  Suitable for actively evolving clusters (for example, those launching or refining new applications).
-  Updates are published at least 7 days after the release.
-- **Beta**: Intended for development clusters, similar to the Alpha channel.
-  Receives versions that have already been tested in Alpha.
-- **Alpha**: The least stable channel with the most frequent updates.
-  Targeted at development clusters with a small number of developers.
-  Versions appear immediately after release.
+<div class="channel__list">
+   <ul class="channel__container channel__container--title">
+      <li class="channel__item channel__item--title" data-index="1">Alpha</li>
+      <li class="channel__item channel__item--title" data-index="2">Beta</li>
+      <li class="channel__item channel__item--title" data-index="3">Early Access</li>
+      <li class="channel__item channel__item--title" data-index="4">Stable</li>
+      <li class="channel__item channel__item--title" data-index="5">Rock Solid</li>
+   </ul>
+
+   <ul class="channel__container channel__container--descr">
+    <li class="channel__item channel__item--descr" data-index="1">
+      The least stable channel with the most frequent updates. Targeted at development clusters with a small number of developers. Versions appear immediately after release.
+    </li>
+    <li class="channel__item channel__item--descr" data-index="2">
+      Intended for development clusters, similar to the Alpha channel. Receives versions that have already been tested in Alpha.
+    </li>
+    <li class="channel__item channel__item--descr" data-index="3">
+      The recommended release channel if you’re unsure which one to choose. Suitable for actively evolving clusters (for example, those launching or refining new applications). Updates are published at least 7 days after the release.
+    </li>
+    <li class="channel__item channel__item--descr" data-index="4">
+      A stable channel suitable for production clusters. Updates are published at least 14 days after the release.
+    </li>
+    <li class="channel__item channel__item--descr" data-index="5">
+      The most stable release channel. Ideal for clusters requiring maximum reliability. Updates are published at least 30 days after the release.
+    </li>
+  </ul>
+</div>
 
 ### Switching to a more stable channel
 
