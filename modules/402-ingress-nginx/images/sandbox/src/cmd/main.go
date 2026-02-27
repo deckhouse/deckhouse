@@ -49,6 +49,12 @@ var sandboxExtraAllowSyscalls = []string{
 	"gettid",
 	"prlimit64",
 	"getrandom",
+	"getuid",
+	"getgid",
+	"geteuid",
+	"getegid",
+	"getppid",
+	"uname",
 }
 
 func main() {
@@ -78,6 +84,11 @@ func run(argv []string) int {
 
 	extraRead := []string{
 		"/etc/nginx/",
+		"/etc/passwd",
+		"/etc/group",
+		"/etc/nsswitch.conf",
+		"/etc/hosts",
+		"/etc/resolv.conf",
 		"/usr/share/nginx/",
 		"/chroot/",
 		"/usr/bin/unshare",
