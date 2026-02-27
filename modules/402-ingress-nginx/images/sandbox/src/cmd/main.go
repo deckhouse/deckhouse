@@ -39,6 +39,18 @@ const (
 	sandboxMemoryLimit   = runner.Size(256 << 20) // 256 MiB
 )
 
+var sandboxExtraAllowSyscalls = []string{
+	// Required by dynamically linked binaries and util-linux tools during startup.
+	"set_tid_address",
+	"set_robust_list",
+	"futex",
+	"rseq",
+	"getpid",
+	"gettid",
+	"prlimit64",
+	"getrandom",
+}
+
 func main() {
 	os.Exit(run(os.Args[1:]))
 }
@@ -67,6 +79,10 @@ func run(argv []string) int {
 	extraRead := []string{
 		"/etc/nginx/",
 		"/usr/share/nginx/",
+		"/chroot/",
+		"/usr/bin/unshare",
+		"/usr/local/nginx/sbin/nginx",
+		"/chroot/usr/local/nginx/sbin/nginx",
 		realPathNginxConf,
 	}
 
@@ -75,9 +91,15 @@ func run(argv []string) int {
 		log.Printf("failed get pwd: %v", err)
 		return 1
 	}
-	extraWrite := []string{"/dev/null", "/tmp/"}
+	extraWrite := []string{
+		"/dev/null",
+		"/tmp/",
+		"/dev/tty",
+		"/chroot/etc/resolv.conf",
+	}
 	// Wrapper chain (`/usr/bin/nginx` shell script -> `unshare` -> nginx binary) needs fork/exec syscalls.
 	args, allow, trace, handler := runprogconf.GetConf("default", workDir, argv, extraRead, extraWrite, true) // :contentReference[oaicite:4]{index=4}
+	allow = appendUnique(allow, sandboxExtraAllowSyscalls...)
 
 	limit := runner.Limit{
 		TimeLimit:   sandboxCPUTimeLimit,
@@ -208,4 +230,19 @@ func isDebug() bool {
 		return false // Default value if unset or invalid
 	}
 	return debug
+}
+
+func appendUnique(dst []string, values ...string) []string {
+	seen := make(map[string]struct{}, len(dst))
+	for _, v := range dst {
+		seen[v] = struct{}{}
+	}
+	for _, v := range values {
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		dst = append(dst, v)
+		seen[v] = struct{}{}
+	}
+	return dst
 }
