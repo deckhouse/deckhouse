@@ -58,6 +58,36 @@ apiVersions:
                 type: string
                 description: |
                   ID домена хранения.
+              customNetworkConfig:
+                type: object
+                additionalProperties: false
+                description: |
+                  Включает пользовательскую статическую настройку сети для группы узлов (NodeGroup).
+                  
+                  Если заполнено, необходимо задать `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` и `networkInterfaceNetmask`.
+                properties:
+                  networkInterfaceName:
+                    type: string
+                    description: |
+                      Имя сетевого интерфейса, для которого будет применена статическая настройка.
+                  networkInterfaceAddress:
+                    type: array
+                    items:
+                      type: string
+                    description: |
+                      Список IP-адресов, которые нужно назначить интерфейсу.
+                  networkInterfaceNetmask:
+                    type: string
+                    description: |
+                      Маска подсети для интерфейса.
+                  networkInterfaceGateway:
+                    type: string
+                    description: |
+                      Шлюз по умолчанию.
+                  dnsServers:
+                    type: string
+                    description: |
+                      Список DNS-серверов.
       nodeGroups:
         description: |
           Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
@@ -131,4 +161,3 @@ apiVersions:
             type: boolean
             description:  Установите значение `true`, если Zvirt имеет самоподписанный сертификат.
             x-doc-default: false
-
