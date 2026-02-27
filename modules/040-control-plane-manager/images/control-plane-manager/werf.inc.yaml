@@ -55,3 +55,8 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /go_lib/controlplane
+    to: /src/deckhouse/go_lib/controlplane
+    stageDependencies:
+      install:
+        - '**/*'
