@@ -221,7 +221,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: app-tls-secert
+  name: app-tls-secret
   namespace: d8-ingress-istio # note the namespace isn't app-ns
 type: kubernetes.io/tls
 data:
@@ -258,7 +258,7 @@ spec:
         mode: SIMPLE
         # a secret with a certificate and a key, which must be created in the d8-ingress-istio namespace
         # supported secret formats can be found at https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats
-        credentialName: app-tls-secrets
+        credentialName: app-tls-secret
       hosts:
         - app.example.com
 ```
@@ -643,23 +643,23 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
-  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x21` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
+  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
-* Upgrade algorithm (i.e. from `1.19` to `1.21`):
-  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.21"]`).
-  * Wait for the corresponding pod `istiod-v1x21-xxx-yyy` to appear in `d8-istio` namespace.
+* Upgrade algorithm (i.e. from `1.21` to `1.25`):
+  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.25"]`).
+  * Wait for the corresponding pod `istiod-v1x25-xxx-yyy` to appear in `d8-istio` namespace.
   * For every application Namespase with istio enabled:
-    * Change `istio-injection: enabled` label to `istio.io/rev: v1x21`.
+    * Change `istio-injection: enabled` label to `istio.io/rev: v1x25`.
     * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
-  * Reconfigure `globalVersion` to `1.21` and remove the `additionalVersions` configuration.
+  * Reconfigure `globalVersion` to `1.25` and remove the `additionalVersions` configuration.
   * Make sure, the old `istiod` Pod has gone.
   * Change application namespace labels to `istio-injection: enabled`.
 
-To find all Pods with old Istio revision (in the example — version 19), execute the command:
+To find all Pods with old Istio revision (in the example — version 21), execute the command:
 
 ```shell
-d8 k get pods -A -o json | jq --arg revision "v1x19" \
+d8 k get pods -A -o json | jq --arg revision "v1x21" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```

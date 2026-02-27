@@ -25,7 +25,7 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-vsphere
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
     storageClass:

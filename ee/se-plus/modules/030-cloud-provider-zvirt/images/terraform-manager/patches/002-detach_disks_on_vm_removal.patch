@@ -6,10 +6,10 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt_vm.go
---- a/internal/ovirt/resource_ovirt_vm.go	(revision eb82784548e140d2948a9600ac0b52c938151ba6)
-+++ b/internal/ovirt/resource_ovirt_vm.go	(date 1711713686988)
-@@ -748,7 +748,56 @@
- 
+--- a/internal/ovirt/resource_ovirt_vm.go	(revision 25e9ad78ad389d52dfefc7a95a83ca592fef8593)
++++ b/internal/ovirt/resource_ovirt_vm.go	(revision df9c6c5545dad05a9e24212dc4472f5f0d5cd2b7)
+@@ -1005,7 +1005,56 @@
+
  func (p *provider) vmDelete(ctx context.Context, data *schema.ResourceData, _ interface{}) diag.Diagnostics {
  	client := p.client.WithContext(ctx)
 -	if err := client.RemoveVM(ovirtclient.VMID(data.Id())); err != nil {

@@ -100,7 +100,7 @@ d8 k label node %node-name% %label-from-selector%-
 d8 k -n d8-sds-local-volume get po -owide
 ```
 
-Если под остаётся после удаления метки, убедитесь, что метки из конфигурации `d8-sds-local-volume-controller-config` действительно удалены. Это можно проверить с помощью следующей команды:
+Если под остаётся после удаления лейбла, убедитесь, что лейблы из конфигурации `d8-sds-local-volume-controller-config` действительно удалены. Это можно проверить с помощью следующей команды:
 
 ```shell
 d8 k get node %node-name% --show-labels
@@ -224,7 +224,7 @@ d8 k get node %node-name% --show-labels
 d8 k label node %node-name% my-custom-label-key=my-custom-label-value
 ```
 
-Если метки присутствуют, проверьте наличие лейбла `storage.deckhouse.io/sds-local-volume-node=` на узле. Если лейбл отсутствует, убедитесь, что работает `sds-local-volume-controller`, и ознакомьтесь с его логами:
+Если лейблы присутствуют, проверьте наличие лейбла `storage.deckhouse.io/sds-local-volume-node=` на узле. Если лейбл отсутствует, убедитесь, что работает `sds-local-volume-controller`, и ознакомьтесь с его логами:
 
 ```shell
 d8 k -n d8-sds-local-volume get po -l app=sds-local-volume-controller

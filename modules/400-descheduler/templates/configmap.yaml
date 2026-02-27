@@ -60,6 +60,12 @@ data:
       {{- if dig "strategies" "removeDuplicates" "enabled" false $d }}
       - name: "RemoveDuplicates"
       {{- end }}
+      {{- if dig "strategies" "removePodsViolatingTopologySpreadConstraint" "enabled" false $d }}
+      - name: "RemovePodsViolatingTopologySpreadConstraint"
+        args:
+          {{- $s := unset ($d.strategies.removePodsViolatingTopologySpreadConstraint | deepCopy) "enabled" }}
+          {{- $s | toYaml | nindent 10 }}
+      {{- end }}
       plugins:
         # DefaultEvictor is enabled for both `filter` and `preEvictionFilter`
         filter:
@@ -78,7 +84,7 @@ data:
           - "RemovePodsViolatingInterPodAntiAffinity"
           {{- end }}
         {{- end }}
-        {{- if or (or (dig "strategies" "highNodeUtilization" "enabled" false $d) (dig "strategies" "lowNodeUtilization" "enabled" false $d)) (dig "strategies" "removeDuplicates" "enabled" false $d) }}
+        {{- if or (or (or (dig "strategies" "highNodeUtilization" "enabled" false $d) (dig "strategies" "lowNodeUtilization" "enabled" false $d)) (dig "strategies" "removeDuplicates" "enabled" false $d)) (dig "strategies" "removePodsViolatingTopologySpreadConstraint" "enabled" false $d) }}
         balance:
           enabled:
           {{- if dig "strategies" "highNodeUtilization" "enabled" false $d }}
@@ -89,6 +95,9 @@ data:
           {{- end }}
           {{- if dig "strategies" "removeDuplicates" "enabled" false $d }}
           - "RemoveDuplicates"
+          {{- end }}
+          {{- if dig "strategies" "removePodsViolatingTopologySpreadConstraint" "enabled" false $d }}
+          - "RemovePodsViolatingTopologySpreadConstraint"
           {{- end }}
         {{- end }}
     {{- end }}

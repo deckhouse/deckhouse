@@ -491,7 +491,9 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterCon
 	}
 
 	if match := regexp.MustCompile(`podSubnetNodeCIDRPrefix:\s*"?(\d+)"?`).FindSubmatch(configYAML); match != nil {
-		fmt.Sscanf(string(match[1]), "%d", &config.PodSubnetNodeCIDRPrefix)
+		if _, err := fmt.Sscanf(string(match[1]), "%d", &config.PodSubnetNodeCIDRPrefix); err != nil {
+			return nil, fmt.Errorf("failed to parse podSubnetNodeCIDRPrefix: %w", err)
+		}
 	}
 
 	return config, nil

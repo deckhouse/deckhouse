@@ -291,6 +291,40 @@
           "rel": ""
         },
         {
+          "id": 8398,
+          "parent_id": 5349,
+          "title": "Сценарии использования",
+          "url": "/products/kubernetes-platform/solutions/",
+          "target": "",
+          "rel": "",
+          "items": [
+            {
+              "id": 8451,
+              "parent_id": 8398,
+              "title": "Безопасность",
+              "url": "/products/kubernetes-platform/solutions/security/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 9043,
+              "parent_id": 8398,
+              "title": "Данные",
+              "url": "/products/kubernetes-platform/solutions/deckhouse-data-orchestration/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 8450,
+              "parent_id": 8398,
+              "title": "Kubernetes для организаций",
+              "url": "/products/kubernetes-platform/solutions/kubernetes-standard-for-orgs/",
+              "target": "",
+              "rel": ""
+            }
+          ]
+        },
+        {
           "id": 5393,
           "parent_id": 5349,
           "title": "Быстрый старт",

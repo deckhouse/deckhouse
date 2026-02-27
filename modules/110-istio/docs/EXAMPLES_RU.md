@@ -201,7 +201,7 @@ kind: IngressIstioController
 metadata:
  name: main
 spec:
-  # ingressGatewayClass содержит значение селектора меток, используемое при создании ресурса Gateway.
+  # ingressGatewayClass содержит значение селектора лейблов, используемое при создании ресурса Gateway.
   ingressGatewayClass: istio-hp
   inlet: HostPort
   hostPort:
@@ -222,7 +222,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: app-tls-secert
+  name: app-tls-secret
   namespace: d8-ingress-istio # Обратите внимание, пространство имён не является app-ns.
 type: kubernetes.io/tls
 data:
@@ -240,7 +240,7 @@ metadata:
   namespace: app-ns
 spec:
   selector:
-    # Селектор меток для использования Istio Ingress Gateway main-hp.
+    # Селектор лейблов для использования Istio Ingress Gateway main-hp.
     istio.deckhouse.io/ingress-gateway-class: istio-hp
   servers:
     - port:
@@ -259,7 +259,7 @@ spec:
         mode: SIMPLE
         # Ресурс Secret с сертификатом и ключом, который должен быть создан в пространстве имён d8-ingress-istio.
         # Поддерживаемые форматы ресурсов Secret можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
-        credentialName: app-tls-secrets
+        credentialName: app-tls-secret
       hosts:
         - app.example.com
 ```
@@ -649,20 +649,20 @@ annotations:
   * Остальные — дополнительные, обслуживают пространства имён или поды с явным указанием версии (лейбл у пространства имён или пода `istio.io/rev: v1x21`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
-* Алгоритм обновления (для примера, с версии `1.19` на версию `1.21`):
-  * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.21"]`).
-  * Дождаться появления соответствующего пода `istiod-v1x21-xxx-yyy` в пространства имён `d8-istio`.
+* Алгоритм обновления (для примера, с версии `1.21` на версию `1.25`):
+  * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.25"]`).
+  * Дождаться появления соответствующего пода `istiod-v1x25-xxx-yyy` в пространства имён `d8-istio`.
   * Для каждого прикладного пространства имён, где включен istio:
-    * поменять лейбл `istio-injection: enabled` на `istio.io/rev: v1x21`;
+    * поменять лейбл `istio-injection: enabled` на `istio.io/rev: v1x25`;
     * по очереди пересоздать поды в пространстве имён, параллельно контролируя работоспособность приложения.
-  * Поменять настройку `globalVersion` на `1.21` и удалить `additionalVersions`.
+  * Поменять настройку `globalVersion` на `1.25` и удалить `additionalVersions`.
   * Убедиться, что старый под `istiod` удалился.
   * Поменять лейблы прикладных пространств имён на `istio-injection: enabled`.
 
-Чтобы найти все поды под управлением старой ревизии Istio (в примере — версия 19), выполните команду:
+Чтобы найти все поды под управлением старой ревизии Istio (в примере — версия 21), выполните команду:
 
 ```shell
-d8 k get pods -A -o json | jq --arg revision "v1x19" \
+d8 k get pods -A -o json | jq --arg revision "v1x21" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```

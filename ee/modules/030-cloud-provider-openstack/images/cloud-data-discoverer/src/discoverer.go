@@ -43,12 +43,12 @@ type Discoverer struct {
 func NewDiscoverer(logger *log.Logger) *Discoverer {
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
-		logger.Fatalf("Cannot get opts from env: %v", err)
+		logger.Fatal("Cannot get opts from env", "error", err)
 	}
 
 	region := os.Getenv("OS_REGION")
 	if region == "" {
-		logger.Fatalf("Cannot get OS_REGION env")
+		logger.Fatal("Cannot get OS_REGION env")
 	}
 
 	clusterUUID := os.Getenv("CLUSTER_UUID")
@@ -146,7 +146,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		return nil, fmt.Errorf("failed to get volume types: %v", err)
 	}
 
-	discoveryDataJson, err := json.Marshal(v1alpha1.OpenStackCloudProviderDiscoveryData{
+	discoveryDataJSON, err := json.Marshal(v1alpha1.OpenStackCloudProviderDiscoveryData{
 		APIVersion:               "deckhouse.io/v1alpha1",
 		Kind:                     "OpenStackCloudProviderDiscoveryData",
 		Flavors:                  flavorNames,
@@ -162,7 +162,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
 	}
 
-	return discoveryDataJson, nil
+	return discoveryDataJSON, nil
 }
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
@@ -418,7 +418,7 @@ func RetryFunc(logger *log.Logger) gophercloud.RetryFunc {
 		select {
 		case <-time.After(3 * time.Second):
 		case <-ctx.Done():
-			logger.Errorf("Sleeping aborted: %v", ctx.Err())
+			logger.Error("Sleeping aborted", "error", ctx.Err())
 
 			return err
 		}
@@ -445,12 +445,12 @@ func RetryBackoffFunc(logger *log.Logger) gophercloud.RetryBackoffFunc {
 			return err
 		}
 
-		logger.Warnf("Received StatusTooManyRequests response code sleeping for %s", sleep)
+		logger.Warn("Received StatusTooManyRequests response code, sleeping", "timeout", sleep)
 
 		select {
 		case <-time.After(sleep):
 		case <-ctx.Done():
-			logger.Errorf("Sleeping aborted: %v", ctx.Err())
+			logger.Error("Sleeping aborted", "error", ctx.Err())
 
 			return err
 		}

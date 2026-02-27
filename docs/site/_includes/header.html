@@ -165,6 +165,24 @@
                       <p>Open Source monitoring system</p>
                     </a>
                   </li>
+                  <li>
+                    <a href="/products/code/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg?v2#code-icon"></use>
+                      </svg>
+                      <span>Code</span>
+                      <p>Continuous development and software lifecycle management</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/development-platform/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg?v2#development-platform-icon"></use>
+                      </svg>
+                      <span>Development Platform</span>
+                      <p>Centralized development workflow management</p>
+                    </a>
+                  </li>
                 </ul>
               </div>
             {%- endif %}
@@ -172,7 +190,9 @@
           {%- endunless %}
           {% for entry in topnav %}
             {% for item in entry.items %}
-              {%- if site.mode == 'module' and item.ee_only and site.d8Revision != 'EE' %}{% continue %}{% endif %}
+              {%- if site.mode == 'module' and item.editions.size > 0  %}
+                {% unless item.editions contains site.d8Revision %}{% continue %}{% endunless %}
+              {% endif %}
               {%- if item.title == site.data.i18n.common.products[page.lang] %}{% continue %}{% endif %}
               {%- assign page_url_without_lang = page.url | regex_replace: '^(/)?(ru/|en/)', '\1'-%}
               {%- assign item_url_parts = item.url | split: '/' -%}

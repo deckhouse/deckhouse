@@ -18,10 +18,10 @@ spec:
     - jsonPath: .status.packages.total
       name: Count
       type: integer
-    - jsonPath: .status.conditions[?(@.type=='Processed')].status
-      name: Processed
+    - jsonPath: .status.conditions[?(@.type=='Completed')].status
+      name: Completed
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Processed')].message
+    - jsonPath: .status.conditions[?(@.type=='Completed')].message
       name: MSG
       type: string
     name: v1alpha1

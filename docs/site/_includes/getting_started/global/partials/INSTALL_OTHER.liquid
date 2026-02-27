@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Use a container image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` from the personal computer of the user performing the installation is used){% endif %}.
+Use a container image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/<SSH_PRIVATE_KEY_FILE>` from the personal computer of the user performing the installation is used){% endif %}.
 {% if page.platform_code == 'bm-private' %}
 Log in on the **personal computer** to the container image registry you specified in the previous step.
 {%- endif %}
@@ -47,7 +47,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/" -v "%cd%\dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
 ```
 </div>
 {% else %}
@@ -84,7 +84,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/" -v "%cd%\dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
 ```
 {%- if page.platform_code == "bm-private" %}
 > If you are installing the Deckhouse Kubernetes Platform in a private environment with access to the public Deckhouse registry via a proxy server, specify the proxy server access parameters in the container launch command. Example (for DKP SE+):
@@ -107,11 +107,11 @@ Now, to initiate the process of installation, you need to execute inside the con
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %}
 dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --config=/config.yml
 {%- elsif page.platform_type == "baremetal" %}
-dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
   --config=/config.yml \
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
-dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml{%- if page.platform_code == "vcd" %}  # If the edgeGateway.externalPort parameter is set to a port other than 22, add the --ssh-bastion-port option to the command with the same port (for example, 10022).{% endif %}
+dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml{%- if page.platform_code == "vcd" %}  # If the edgeGateway.externalPort parameter is set to a port other than 22, add the --ssh-bastion-port option to the command with the same port (for example, 10022).{% endif %}
 {%- endif %}
 ```
 
@@ -133,7 +133,7 @@ The `--ssh-user` parameter here refers to the default user for the relevant VM i
 > If the installation failed, and you need to delete the resources created in the cloud, run the following command:
 >
 > ```shell
-  dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
+  dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
   ```
 {%- endofftopic %}
 {%- endif %}

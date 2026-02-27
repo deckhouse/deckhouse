@@ -40,7 +40,10 @@
 {{- end -}}
 
 {{- define "user_authz_common_rules" }}
-  {{- $role := . -}}
+  {{- $context := index . 0 -}}
+  {{- $role := index . 1 -}}
+  {{- $consoleLegacyCompat := $context.Values.userAuthz.internal.consoleLegacyCompat | default false -}}
+  {{- $useAccessibleNamespaces := and (ne $context.Values.global.deckhouseEdition "CE") ($context.Values.userAuthz.enableMultiTenancy | default false) (not $consoleLegacyCompat) -}}
   {{- $mode := "" }}
   {{- if or (eq $role "User") (eq $role "PrivilegedUser") }}
     {{- $mode = "r" }}
@@ -74,11 +77,25 @@
 - apiGroups:
   - ""
   resources:
-  - namespaces
   - limitranges
   - resourcequotas
   verbs:
   {{- include "user_authz_verbs" "r" }}
+{{- if $useAccessibleNamespaces }}
+- apiGroups:
+  - authorization.deckhouse.io
+  resources:
+  - accessiblenamespaces
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+{{- else }}
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+{{- end }}
 - apiGroups:
   - apps
   - extensions
@@ -298,8 +315,13 @@
 - apiGroups:
   - ""
   resources:
-  - resourcequotas
   - namespaces
+  verbs:
+  {{- include "user_authz_verbs" "rw" }}
+- apiGroups:
+  - ""
+  resources:
+  - resourcequotas
   - limitranges
   verbs:
   {{- include "user_authz_verbs" "w" }}
@@ -334,7 +356,7 @@ metadata:
   name: user-authz:user
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "User" }}
+{{- include "user_authz_common_rules" (list $ "User") }}
 {{- include "user_authz_user_rules" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -343,7 +365,7 @@ metadata:
   name: user-authz:privileged-user
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "PrivilegedUser" }}
+{{- include "user_authz_common_rules" (list $ "PrivilegedUser") }}
 {{- include "user_authz_user_rules" . }}
 {{- include "user_authz_privileged_user_rules" . }}
 ---
@@ -353,7 +375,7 @@ metadata:
   name: user-authz:editor
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "Editor" }}
+{{- include "user_authz_common_rules" (list $ "Editor") }}
 {{- include "user_authz_user_rules" . }}
 {{- include "user_authz_privileged_user_rules" . }}
 {{- include "user_authz_editor_rules" . }}
@@ -364,7 +386,7 @@ metadata:
   name: user-authz:admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "Admin" }}
+{{- include "user_authz_common_rules" (list $ "Admin") }}
 {{- include "user_authz_user_rules" . }}
 {{- include "user_authz_privileged_user_rules" . }}
 {{- include "user_authz_editor_rules" . }}
@@ -376,7 +398,7 @@ metadata:
   name: user-authz:cluster-editor
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "ClusterAdmin" }}
+{{- include "user_authz_common_rules" (list $ "ClusterAdmin") }}
 {{- include "user_authz_user_rules" . }}
 {{- include "user_authz_privileged_user_rules" . }}
 {{- include "user_authz_editor_rules" . }}
@@ -388,7 +410,7 @@ metadata:
   name: user-authz:cluster-admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "ClusterAdmin" }}
+{{- include "user_authz_common_rules" (list $ "ClusterAdmin") }}
 {{- include "user_authz_user_rules" . }}
 {{- include "user_authz_privileged_user_rules" . }}
 {{- include "user_authz_editor_rules" . }}
@@ -403,3 +425,4 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 {{- include "user_authz_super_admin_rules" . }}
+

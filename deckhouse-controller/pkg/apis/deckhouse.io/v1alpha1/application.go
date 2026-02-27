@@ -27,7 +27,8 @@ const (
 	ApplicationKind     = "Application"
 
 	// ApplicationConditionTypeProcessed changes only by application controller
-	ApplicationConditionTypeProcessed                    = "Processed"
+	ApplicationConditionTypeInstalled                    = "Installed"
+	ApplicationConditionTypeReady                        = "Ready"
 	ApplicationConditionReasonReconciled                 = "Reconciled"
 	ApplicationConditionReasonVersionNotFound            = "VersionNotFound"
 	ApplicationConditionReasonApplicationPackageNotFound = "ApplicationPackageNotFound"

@@ -7,5 +7,5 @@ requirements:
   modules:
     prometheus: ">= 0.0.0"
 descriptions:
-  en: Installs Prometheus Pushgateway into the cluster, designed to receive metrics from an application and pushes them to Prometheus.
-  ru: Устанавливает в кластер Prometheus Pushgateway, предназначенный для приема метрик от приложения и отдачи их Prometheus.
+  en: Receives metrics from applications and transmits them to the monitoring system, providing centralized data collection.
+  ru: Принимает метрики от приложений и передаёт их в систему мониторинга, обеспечивая централизованный сбор данных.

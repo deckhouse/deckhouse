@@ -102,7 +102,7 @@ metadata:
 1. `yandex.cpi.flant.com/loadbalancer-external` — включает создание внешнего (external) LB для данного Service (используйте, если нужно явно создать внешний балансировщик). Переопределяет поведение по умолчанию.
 1. `yandex.cpi.flant.com/target-group-name-prefix` — задаёт префикс имени Target Group в формате `<значение аннотации><Yandex cluster name><NetworkID>` (для Service). Аналогичную аннотацию можно выставить на узле, чтобы включать узел в нестандартную Target Group (будут созданы TG с именами `<значение аннотации><Yandex cluster name><network id интерфейсов инстанса>`).
 
-Если для управляющего слоя (control plane) или master-узлов создаются отдельные Target Group, добавьте на master-узлы метку `node.kubernetes.io/exclude-from-external-load-balancers: ""`. Это предотвратит попытки контроллера автоматически добавлять master-узлы в новые Target Group для балансировщиков.
+Если для управляющего слоя (control plane) или master-узлов создаются отдельные Target Group, добавьте на master-узлы лейбл `node.kubernetes.io/exclude-from-external-load-balancers: ""`. Это предотвратит попытки контроллера автоматически добавлять master-узлы в новые Target Group для балансировщиков.
 Если вы создаёте собственный балансировщик для master-узлов и хотите, чтобы YCC также мог размещать свои балансировщики на master-узлах, заранее создайте Target Group с именем по маске `${CLUSTER-NAME}${VPC.ID}`.
 
 #### Проверки состояния Target Group
