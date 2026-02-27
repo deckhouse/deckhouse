@@ -21,9 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
-	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,13 +34,19 @@ import (
 // Machine and Node status flows are handled by dedicated controllers.
 type InstanceReconciler struct {
 	client.Client
+	machineFactory        MachineFactory
+	bashibleStatusFactory BashibleStatusFactory
 }
 
 const instanceControllerFinalizer = "node-manager.hooks.deckhouse.io/instance-controller"
 
+const instanceRequeueInterval = time.Minute
+
 func SetupInstanceController(mgr ctrl.Manager) error {
 	if err := (&InstanceReconciler{
-		Client: mgr.GetClient(),
+		Client:                mgr.GetClient(),
+		machineFactory:        NewMachineFactory(),
+		bashibleStatusFactory: NewBashibleStatusFactory(),
 	}).
 		SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to setup instance reconciler: %w", err)
@@ -51,6 +56,13 @@ func SetupInstanceController(mgr ctrl.Manager) error {
 }
 
 func (r *InstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if r.machineFactory == nil {
+		return fmt.Errorf("machineFactory is required")
+	}
+	if r.bashibleStatusFactory == nil {
+		return fmt.Errorf("bashibleStatusFactory is required")
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("instance").
 		For(&deckhousev1alpha2.Instance{}).
@@ -77,7 +89,7 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	log.V(1).Info("instance reconciled")
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: instanceRequeueInterval}, nil
 }
 
 func (r *InstanceReconciler) reconcileInstance(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
@@ -86,7 +98,20 @@ func (r *InstanceReconciler) reconcileInstance(ctx context.Context, instance *de
 		return r.reconcileInstanceDeletion(ctx, instance)
 	}
 
-	return false, r.ensureInstanceFinalizer(ctx, instance)
+	if err := r.ensureInstanceFinalizer(ctx, instance); err != nil {
+		return false, err
+	}
+
+	deleted, err := r.reconcileLinkedSourceExistence(ctx, instance)
+	if err != nil || deleted {
+		return false, err
+	}
+
+	if err := r.reconcileBashibleStatus(ctx, instance); err != nil {
+		return false, err
+	}
+
+	return false, nil
 }
 
 func (r *InstanceReconciler) reconcileInstanceDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
@@ -141,63 +166,81 @@ func (r *InstanceReconciler) reconcileLinkedMachineDeletion(ctx context.Context,
 		return true, nil
 	}
 
-	namespace := ref.Namespace
-	if namespace == "" {
-		namespace = MachineNamespace
+	machine, err := r.machineFactory.NewMachineFromRef(ctx, r.Client, ref)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
 	}
 
-	switch ref.APIVersion {
-	case "", capiv1beta2.GroupVersion.String():
-		return r.ensureCAPIMachineDeleted(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name})
-	case mcmv1alpha1.SchemeGroupVersion.String():
-		return r.ensureMCMMachineDeleted(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name})
+	return machine.EnsureDeleted(ctx, r.Client)
+}
+
+func (r *InstanceReconciler) reconcileLinkedSourceExistence(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
+	var err error
+	var exists bool
+	source := getInstanceSource(instance)
+
+	switch source.Type {
+	case instanceSourceMachine:
+		machine, machineErr := r.machineFactory.NewMachineFromRef(ctx, r.Client, source.MachineRef)
+		if machineErr != nil {
+			if apierrors.IsNotFound(machineErr) {
+				exists = false
+				break
+			}
+			return false, machineErr
+		}
+		exists, err = machine.Exists(ctx, r.Client)
+	case instanceSourceNode:
+		exists, err = r.linkedNodeExists(ctx, source.NodeName)
 	default:
-		return true, nil
-	}
-}
-
-func (r *InstanceReconciler) ensureCAPIMachineDeleted(ctx context.Context, key types.NamespacedName) (bool, error) {
-	machine := &capiv1beta2.Machine{}
-	if err := r.Get(ctx, key, machine); err != nil {
-		if apierrors.IsNotFound(err) {
-			return true, nil
-		}
-		return false, fmt.Errorf("get capi machine %q: %w", key.String(), err)
-	}
-
-	if !machine.DeletionTimestamp.IsZero() {
 		return false, nil
 	}
 
-	if err := r.Delete(ctx, machine); err != nil {
-		if apierrors.IsNotFound(err) {
-			return true, nil
-		}
-		return false, fmt.Errorf("delete capi machine %q: %w", key.String(), err)
+	if err != nil {
+		return false, err
 	}
-
-	return false, nil
-}
-
-func (r *InstanceReconciler) ensureMCMMachineDeleted(ctx context.Context, key types.NamespacedName) (bool, error) {
-	machine := &mcmv1alpha1.Machine{}
-	if err := r.Get(ctx, key, machine); err != nil {
-		if apierrors.IsNotFound(err) {
-			return true, nil
-		}
-		return false, fmt.Errorf("get mcm machine %q: %w", key.String(), err)
-	}
-
-	if !machine.DeletionTimestamp.IsZero() {
+	if exists {
 		return false, nil
 	}
 
-	if err := r.Delete(ctx, machine); err != nil {
-		if apierrors.IsNotFound(err) {
-			return true, nil
-		}
-		return false, fmt.Errorf("delete mcm machine %q: %w", key.String(), err)
+	if err := r.Delete(ctx, instance); err != nil && !apierrors.IsNotFound(err) {
+		return false, fmt.Errorf("delete instance %q with missing source: %w", instance.Name, err)
 	}
 
-	return false, nil
+	return true, nil
+}
+
+func (r *InstanceReconciler) reconcileBashibleStatus(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
+	desiredStatus := r.bashibleStatusFactory.FromConditions(instance.Status.Conditions)
+	if instance.Status.BashibleStatus == desiredStatus {
+		return nil
+	}
+
+	updated := instance.DeepCopy()
+	updated.Status.BashibleStatus = desiredStatus
+	if err := r.Status().Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
+		return fmt.Errorf("patch instance %q bashible status: %w", instance.Name, err)
+	}
+
+	*instance = *updated
+	return nil
+}
+
+func (r *InstanceReconciler) linkedNodeExists(ctx context.Context, nodeName string) (bool, error) {
+	node := &corev1.Node{}
+	if err := r.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get node %q: %w", nodeName, err)
+	}
+
+	if !isStaticNode(node) {
+		return false, nil
+	}
+
+	return true, nil
 }

@@ -17,13 +17,16 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	capi "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -38,7 +41,6 @@ const (
 )
 
 const (
-	machineReadyConditionType       = "MachineReady"
 	waitingForInfrastructureMessage = "Waiting for infrastructure"
 	reasonWaitingForInfra           = "WaitingForInfrastructure"
 	reasonNotReady                  = "NotReady"
@@ -47,6 +49,7 @@ const (
 
 type MachineFactory interface {
 	NewMachine(obj client.Object) (Machine, error)
+	NewMachineFromRef(ctx context.Context, c client.Client, ref *deckhousev1alpha2.MachineRef) (Machine, error)
 }
 
 type Machine interface {
@@ -55,6 +58,8 @@ type Machine interface {
 	GetNodeGroup() string
 	GetMachineRef() *deckhousev1alpha2.MachineRef
 	GetStatus() MachineStatus
+	Exists(ctx context.Context, c client.Client) (bool, error)
+	EnsureDeleted(ctx context.Context, c client.Client) (bool, error)
 }
 
 type MachineStatus struct {
@@ -80,12 +85,56 @@ func (f *machineFactory) NewMachine(obj client.Object) (Machine, error) {
 	}
 }
 
+func (f *machineFactory) NewMachineFromRef(
+	ctx context.Context,
+	c client.Client,
+	ref *deckhousev1alpha2.MachineRef,
+) (Machine, error) {
+	if ref == nil {
+		return nil, fmt.Errorf("machine ref is nil")
+	}
+	if ref.Name == "" {
+		return nil, fmt.Errorf("machine ref name is empty")
+	}
+
+	key := machineRefKey(ref)
+
+	switch ref.APIVersion {
+	case capi.GroupVersion.String():
+		obj := &capi.Machine{}
+		if err := c.Get(ctx, key, obj); err != nil {
+			return nil, err
+		}
+		return f.NewMachine(obj)
+	case mcmv1alpha1.SchemeGroupVersion.String():
+		obj := &mcmv1alpha1.Machine{}
+		if err := c.Get(ctx, key, obj); err != nil {
+			return nil, err
+		}
+		return f.NewMachine(obj)
+	default:
+		return nil, fmt.Errorf("unsupported machine apiVersion: %q", ref.APIVersion)
+	}
+}
+
 func newMachineRef(apiVersion, name string) *deckhousev1alpha2.MachineRef {
 	return &deckhousev1alpha2.MachineRef{
 		Kind:       "Machine",
 		APIVersion: apiVersion,
 		Name:       name,
 		Namespace:  MachineNamespace,
+	}
+}
+
+func machineRefKey(ref *deckhousev1alpha2.MachineRef) types.NamespacedName {
+	namespace := ref.Namespace
+	if namespace == "" {
+		namespace = MachineNamespace
+	}
+
+	return types.NamespacedName{
+		Namespace: namespace,
+		Name:      ref.Name,
 	}
 }
 
@@ -114,6 +163,25 @@ func (m *mcmMachine) GetStatus() MachineStatus {
 		Phase:         deckhousev1alpha2.InstancePhaseUnknown,
 		MachineStatus: MachineStatusProgressing,
 	}
+}
+
+func (m *mcmMachine) Exists(ctx context.Context, c client.Client) (bool, error) {
+	return true, nil
+}
+
+func (m *mcmMachine) EnsureDeleted(ctx context.Context, c client.Client) (bool, error) {
+	if !m.machine.DeletionTimestamp.IsZero() {
+		return false, nil
+	}
+
+	if err := c.Delete(ctx, m.machine); err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("delete mcm machine %q: %w", m.machine.Name, err)
+	}
+
+	return false, nil
 }
 
 type capiMachine struct {
@@ -151,6 +219,25 @@ func (m *capiMachine) GetStatus() MachineStatus {
 		MachineStatus: state.statusString,
 		Conditions:    []deckhousev1alpha2.InstanceCondition{buildMachineReadyCondition(state)},
 	}
+}
+
+func (m *capiMachine) Exists(ctx context.Context, c client.Client) (bool, error) {
+	return true, nil
+}
+
+func (m *capiMachine) EnsureDeleted(ctx context.Context, c client.Client) (bool, error) {
+	if !m.machine.DeletionTimestamp.IsZero() {
+		return false, nil
+	}
+
+	if err := c.Delete(ctx, m.machine); err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("delete capi machine %q: %w", m.machine.Name, err)
+	}
+
+	return false, nil
 }
 
 func (m *capiMachine) calculatePhase() deckhousev1alpha2.InstancePhase {
@@ -228,7 +315,7 @@ func calculateCAPIState(conditions []metav1.Condition, phase capi.MachinePhase) 
 
 func buildMachineReadyCondition(state machineState) deckhousev1alpha2.InstanceCondition {
 	cond := deckhousev1alpha2.InstanceCondition{
-		Type:               machineReadyConditionType,
+		Type:               deckhousev1alpha2.InstanceConditionTypeMachineReady,
 		Status:             state.conditionStatus,
 		Reason:             state.reason,
 		Message:            normalizeMessage(state.message),

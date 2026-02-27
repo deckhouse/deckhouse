@@ -115,7 +115,7 @@ func (r *CAPIMachineReconciler) buildReconcileData(capiMachine *capiv1beta2.Mach
 func (r *CAPIMachineReconciler) reconcileLinkedInstance(ctx context.Context, data capiMachineReconcileData) error {
 	log := ctrl.LoggerFrom(ctx)
 
-	instance, err := r.ensureInstanceExists(ctx, data.instanceName)
+	instance, err := r.ensureInstanceExists(ctx, data.instanceName, data.machineRef)
 	if err != nil {
 		return err
 	}
@@ -145,8 +145,20 @@ func (r *CAPIMachineReconciler) reconcileLinkedInstance(ctx context.Context, dat
 	return nil
 }
 
-func (r *CAPIMachineReconciler) ensureInstanceExists(ctx context.Context, name string) (*deckhousev1alpha2.Instance, error) {
-	return ensureInstanceExists(ctx, r.Client, name)
+func (r *CAPIMachineReconciler) ensureInstanceExists(
+	ctx context.Context,
+	name string,
+	machineRef *deckhousev1alpha2.MachineRef,
+) (*deckhousev1alpha2.Instance, error) {
+	spec := deckhousev1alpha2.InstanceSpec{
+		NodeRef: deckhousev1alpha2.NodeRef{Name: name},
+	}
+	if machineRef != nil {
+		refCopy := *machineRef
+		spec.MachineRef = &refCopy
+	}
+
+	return ensureInstanceExists(ctx, r.Client, name, spec)
 }
 
 func (r *CAPIMachineReconciler) syncInstanceSpec(

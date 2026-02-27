@@ -29,9 +29,36 @@ import (
 
 var MachineNamespace = "d8-cloud-instance-manager"
 
-// ensureInstanceExists creates a cluster-scoped Instance with the same name
-// if it does not exist yet.
-func ensureInstanceExists(ctx context.Context, c client.Client, name string) (*deckhousev1alpha2.Instance, error) {
+type instanceSourceType string
+
+const (
+	instanceSourceNone    instanceSourceType = ""
+	instanceSourceMachine instanceSourceType = "machine"
+	instanceSourceNode    instanceSourceType = "node"
+)
+
+type instanceSource struct {
+	Type       instanceSourceType
+	MachineRef *deckhousev1alpha2.MachineRef
+	NodeName   string
+}
+
+type BashibleStatusFactory interface {
+	FromConditions(conditions []deckhousev1alpha2.InstanceCondition) deckhousev1alpha2.BashibleStatus
+}
+
+type bashibleStatusFactory struct{}
+
+func NewBashibleStatusFactory() BashibleStatusFactory {
+	return &bashibleStatusFactory{}
+}
+
+func ensureInstanceExists(
+	ctx context.Context,
+	c client.Client,
+	name string,
+	spec deckhousev1alpha2.InstanceSpec,
+) (*deckhousev1alpha2.Instance, error) {
 	instance := &deckhousev1alpha2.Instance{}
 	if err := c.Get(ctx, types.NamespacedName{Name: name}, instance); err == nil {
 		return instance, nil
@@ -43,6 +70,7 @@ func ensureInstanceExists(ctx context.Context, c client.Client, name string) (*d
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
+		Spec: spec,
 	}
 
 	if err := c.Create(ctx, newInstance); err != nil {
@@ -57,6 +85,66 @@ func ensureInstanceExists(ctx context.Context, c client.Client, name string) (*d
 	}
 
 	return newInstance, nil
+}
+
+func getInstanceSource(instance *deckhousev1alpha2.Instance) instanceSource {
+	if instance.Spec.MachineRef != nil && instance.Spec.MachineRef.Name != "" {
+		return instanceSource{
+			Type:       instanceSourceMachine,
+			MachineRef: instance.Spec.MachineRef,
+		}
+	}
+
+	nodeName := instance.Spec.NodeRef.Name
+	if nodeName == "" {
+		return instanceSource{Type: instanceSourceNone}
+	}
+
+	return instanceSource{
+		Type:     instanceSourceNode,
+		NodeName: nodeName,
+	}
+}
+
+func (f *bashibleStatusFactory) FromConditions(
+	conditions []deckhousev1alpha2.InstanceCondition,
+) deckhousev1alpha2.BashibleStatus {
+	var bashibleReady *deckhousev1alpha2.InstanceCondition
+	var waitingApproval *deckhousev1alpha2.InstanceCondition
+	var waitingDisruptionApproval *deckhousev1alpha2.InstanceCondition
+
+	for i := range conditions {
+		condition := &conditions[i]
+		switch condition.Type {
+		case deckhousev1alpha2.InstanceConditionTypeBashibleReady:
+			bashibleReady = condition
+		case deckhousev1alpha2.InstanceConditionTypeWaitingApproval:
+			waitingApproval = condition
+		case deckhousev1alpha2.InstanceConditionTypeWaitingDisruptionApproval:
+			waitingDisruptionApproval = condition
+		}
+	}
+
+	if isConditionTrue(waitingApproval) || isConditionTrue(waitingDisruptionApproval) {
+		return deckhousev1alpha2.BashibleStatusWaitingApproval
+	}
+
+	if bashibleReady == nil {
+		return deckhousev1alpha2.BashibleStatusUnknown
+	}
+
+	switch bashibleReady.Status {
+	case metav1.ConditionTrue:
+		return deckhousev1alpha2.BashibleStatusReady
+	case metav1.ConditionFalse:
+		return deckhousev1alpha2.BashibleStatusError
+	default:
+		return deckhousev1alpha2.BashibleStatusUnknown
+	}
+}
+
+func isConditionTrue(condition *deckhousev1alpha2.InstanceCondition) bool {
+	return condition != nil && condition.Status == metav1.ConditionTrue
 }
 
 func (r *CAPIMachineReconciler) deleteInstanceIfExists(ctx context.Context, name string) (bool, error) {

@@ -86,6 +86,13 @@ const (
 	BashibleStatusWaitingApproval BashibleStatus = "WaitingApproval"
 )
 
+const (
+	InstanceConditionTypeMachineReady              = "MachineReady"
+	InstanceConditionTypeBashibleReady             = "BashibleReady"
+	InstanceConditionTypeWaitingApproval           = "WaitingApproval"
+	InstanceConditionTypeWaitingDisruptionApproval = "WaitingDisruptionApproval"
+)
+
 // InstanceCondition describes one raw condition entry.
 type InstanceCondition struct {
 	Type               string                 `json:"type"`

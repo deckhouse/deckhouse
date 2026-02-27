@@ -20,8 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,7 +55,7 @@ func SetupNodeController(mgr ctrl.Manager) error {
 func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("node-controller").
-		For(&corev1.Node{}, builder.WithPredicates(staticNodePredicate())).
+		For(&corev1.Node{}, builder.WithPredicates(nodePredicate())).
 		Complete(r)
 }
 
@@ -62,31 +64,45 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	node := &corev1.Node{}
 	if err := r.Get(ctx, req.NamespacedName, node); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+		if client.IgnoreNotFound(err) != nil {
+			return ctrl.Result{}, err
+		}
 
-	if !isStaticNode(node) {
+		deleted, err := r.deleteStaticInstanceIfExists(ctx, req.Name)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(1).Info("node not found, static instance delete handled", "instance", req.Name, "deleted", deleted)
 		return ctrl.Result{}, nil
 	}
 
-	if _, err := ensureInstanceExists(ctx, r.Client, node.Name); err != nil {
-		return ctrl.Result{}, err
+	if isStaticNode(node) {
+		_, err := ensureInstanceExists(ctx, r.Client, node.Name, deckhousev1alpha2.InstanceSpec{
+			NodeRef: deckhousev1alpha2.NodeRef{Name: node.Name},
+		})
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(1).Info("instance ensured for static node")
+		return ctrl.Result{}, nil
 	}
 
-	log.V(1).Info("instance ensured for static node")
+	log.V(1).Info("node is not static, skipping")
 	return ctrl.Result{}, nil
 }
 
-func staticNodePredicate() predicate.Predicate {
+func nodePredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			return isStaticNodeObject(e.Object)
+			return true
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return isStaticNodeObject(e.Object)
+			return true
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			return isStaticNodeObject(e.Object)
+			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldNode, oldOK := e.ObjectOld.(*corev1.Node)
@@ -95,12 +111,7 @@ func staticNodePredicate() predicate.Predicate {
 				return false
 			}
 
-			labelsChanged := !apiequality.Semantic.DeepEqual(oldNode.Labels, newNode.Labels)
-			if !labelsChanged {
-				return false
-			}
-
-			return isStaticNode(oldNode) || isStaticNode(newNode)
+			return !apiequality.Semantic.DeepEqual(oldNode.Labels, newNode.Labels)
 		},
 	}
 }
@@ -110,11 +121,25 @@ func isStaticNode(node *corev1.Node) bool {
 	return nodeType == staticNodeTypeValue || nodeType == cloudPermanentNodeTypeValue
 }
 
-func isStaticNodeObject(obj client.Object) bool {
-	node, ok := obj.(*corev1.Node)
-	if !ok {
-		return false
+func (r *NodeReconciler) deleteStaticInstanceIfExists(ctx context.Context, name string) (bool, error) {
+	instance := &deckhousev1alpha2.Instance{}
+	if err := r.Get(ctx, types.NamespacedName{Name: name}, instance); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return false, nil
+		}
+		return false, fmt.Errorf("get instance %q: %w", name, err)
 	}
 
-	return isStaticNode(node)
+	if instance.Spec.MachineRef != nil {
+		return false, nil
+	}
+
+	if err := r.Delete(ctx, instance); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return false, nil
+		}
+		return false, fmt.Errorf("delete static instance %q: %w", name, err)
+	}
+
+	return true, nil
 }
