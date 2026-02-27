@@ -20,7 +20,6 @@
 
 {{ template "bb-d8-node-name" . }}
 {{ template "bb-d8-node-ip" . }}
-{{ template "bb-discover-node-name" . }}
 {{ template "bb-status" . }}
 ` $lib) . }}
 
