@@ -12,7 +12,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/flant/addon-operator v1.17.9
+	github.com/flant/addon-operator v1.17.12
 	github.com/flant/kube-client v1.5.0
 	github.com/flant/shell-operator v1.12.3
 	github.com/go-openapi/spec v0.22.0
@@ -61,7 +61,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.1.0
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
-	github.com/deckhouse/module-sdk v0.5.0
+	github.com/deckhouse/module-sdk v0.6.0
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.0+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
@@ -85,11 +85,11 @@ require (
 	golang.org/x/mod v0.29.0
 	golang.org/x/text v0.31.0
 	k8s.io/code-generator v0.32.10
-	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
+	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7
 	k8s.io/kubectl v0.32.10
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3
-	sigs.k8s.io/kustomize/kyaml v0.18.1
+	sigs.k8s.io/kustomize/kyaml v0.19.0
 )
 
 require k8s.io/klog v1.0.0 // indirect
@@ -100,8 +100,14 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/deckhouse/lib-gossh v0.0.0-20251020135121-5001bcb43ae8 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/go-openapi/analysis v0.24.0 // indirect
+	github.com/go-openapi/errors v0.22.3 // indirect
+	github.com/go-openapi/jsonpointer v0.22.1 // indirect
+	github.com/go-openapi/jsonreference v0.21.2 // indirect
+	github.com/go-openapi/loads v0.23.1 // indirect
+	github.com/go-openapi/runtime v0.19.16 // indirect
+	github.com/go-openapi/strfmt v0.24.0 // indirect
 	github.com/go-openapi/swag/conv v0.25.1 // indirect
-	github.com/go-openapi/swag/fileutils v0.25.1 // indirect
 	github.com/go-openapi/swag/jsonname v0.25.1 // indirect
 	github.com/go-openapi/swag/jsonutils v0.25.1 // indirect
 	github.com/go-openapi/swag/loading v0.25.1 // indirect
@@ -109,6 +115,7 @@ require (
 	github.com/go-openapi/swag/stringutils v0.25.1 // indirect
 	github.com/go-openapi/swag/typeutils v0.25.1 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.1 // indirect
+	github.com/go-openapi/validate v0.25.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hashicorp/vault/api v1.20.0 // indirect
@@ -189,13 +196,6 @@ require (
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-openapi/analysis v0.24.0 // indirect
-	github.com/go-openapi/errors v0.22.3 // indirect
-	github.com/go-openapi/jsonpointer v0.22.1 // indirect
-	github.com/go-openapi/jsonreference v0.21.2 // indirect
-	github.com/go-openapi/loads v0.23.1 // indirect
-	github.com/go-openapi/strfmt v0.24.0 // indirect
-	github.com/go-openapi/validate v0.25.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-graphviz v0.2.9 // indirect
 	github.com/goccy/go-yaml v1.15.23 // indirect
@@ -205,7 +205,7 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/cel-go v0.22.0 // indirect
 	github.com/google/certificate-transparency-go v1.1.7 // indirect
-	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
+	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gookit/color v1.5.4 // indirect
@@ -298,12 +298,12 @@ require (
 	github.com/vmware/go-vcloud-director/v3 v3.0.0-alpha.31 // indirect
 	github.com/wI2L/jsondiff v0.5.0 // indirect
 	github.com/weppos/publicsuffix-go v0.30.3-0.20240510084413-5f1d03393b3d // indirect
-	github.com/werf/3p-helm v0.0.0-20251113141050-17dd24e6c20b // indirect
+	github.com/werf/3p-helm v0.0.0-20251223091030-77130d200f5c // indirect
 	github.com/werf/common-go v0.0.0-20251113140850-a1a98e909e9b // indirect
-	github.com/werf/kubedog v0.13.1-0.20251110132552-6ffc5a117ada // indirect
+	github.com/werf/kubedog v0.13.1-0.20251224155629-4ae22b4494ba // indirect
 	github.com/werf/lockgate v0.1.1 // indirect
 	github.com/werf/logboek v0.6.1 // indirect
-	github.com/werf/nelm v1.18.1-0.20251201095604-c3dd3788de56
+	github.com/werf/nelm v1.20.1-0.20251224161218-99a823a50307
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
@@ -361,3 +361,6 @@ replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ./go_lib/d
 replace github.com/deckhouse/deckhouse/go_lib/dependency/vsphere => ./go_lib/dependency/vsphere
 
 replace github.com/deckhouse/deckhouse/go_lib/registry => ./go_lib/registry
+
+// Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
+replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.1
