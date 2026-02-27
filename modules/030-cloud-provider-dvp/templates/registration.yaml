@@ -12,7 +12,12 @@ data:
   # DVP does not contain meaning regions and zones
   # but out machinery use them. we use default as region and as one zone
   region: {{ b64enc "default" | quote }}
-  zones: {{ .Values.cloudProviderDvp.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+  {{- $zones := .Values.cloudProviderDvp.internal.providerDiscoveryData.zones }}
+  {{- if $zones }}
+  zones: {{ $zones | toJson | b64enc | quote }}
+  {{- else }}
+  zones: {{ list "default" | toJson | b64enc | quote }}
+  {{- end }}
   instanceClassKind: {{ b64enc "DVPInstanceClass" | quote }}
   machineClassKind: {{ b64enc "" | quote }}
   capiClusterKind: {{ b64enc "DeckhouseCluster" | quote }}
@@ -20,7 +25,9 @@ data:
   capiClusterName: {{ b64enc "dvp" | quote }}
   capiMachineTemplateKind: {{ b64enc "DeckhouseMachineTemplate" | quote }}
   capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
-  sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
+  {{- with $providerClusterConfiguration.sshPublicKey }}
+  sshPublicKey: {{ . | b64enc | quote }}
+  {{- end }}
 
   {{- $dvpValues := dict }}
   dvp: {{ $dvpValues | toJson | b64enc | quote }}

@@ -1,1 +1,22 @@
+type: object
 properties:
+  provider:
+    description: |
+      Параметры подключения к API Deckhouse Kubernetes Platform.
+    properties:
+      kubeconfigDataBase64:
+        description: |
+          Kubeconfig для подключения к API Deckhouse Kubernetes Platform, закодированный в Base64.
+      namespace:
+        description: |
+          Неймспейс, в котором будут создаваться ресурсы кластера DKP.
+          
+          > Внимание! Если значение явно не указано, будет использован неймспейс по умолчанию из kubeconfig.
+  zones:
+    description: |
+      Набор зон, в которых могут создаваться узлы.
+      
+      Для использования этой настройки на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
+      Подробнее о топологических метках можно прочитать [в документации Kubernetes](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion).
+      
+      > О том, как задать необходимую метку для узла DVP, можно прочитать [в документации по NodeGroup](/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
