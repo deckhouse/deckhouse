@@ -5,7 +5,7 @@ subsystems:
 lang: en
 ---
 
-- Ensure the [correct release channel](../../../architecture/updating.html#release-channels) is configured.
+- Ensure the [correct release channel](../admin/configuration/update/configuration.html#checking-the-current-update-mode) is configured.
 - Check that DNS resolution for the Deckhouse image registry is working correctly.
   
   Get and compare the IP addresses of `registry.deckhouse.io` from both a node and the `deckhouse` Pod.
@@ -43,7 +43,7 @@ lang: en
   If the `search` parameter in `/etc/resolv.conf` file specifies a domain with wildcard DNS resolution configured,
   this may lead to incorrect IP address resolution for the Deckhouse image registry (see example below).
 
-{% offtopic title="Example DNS settings that may cause issues resolving the Deckhouse image registry IP address…" %}
+#### Example DNS settings that may cause issues resolving the DKP image registry IP address
 
 Below is an example of how DNS settings may result in different resolution behavior on the node and in a Kubernetes Pod:
 
@@ -71,4 +71,3 @@ This name will resolve to the IP address `10.0.0.100` because,
 according to the `company.my` DNS zone's wildcard configuration,
 `*.company.my` is resolved to `10.0.0.100`.
 As a result, the Pod will fail to connect to the `registry.deckhouse.io` host and will be unable to download information about available Deckhouse updates.
-{% endofftopic %}
