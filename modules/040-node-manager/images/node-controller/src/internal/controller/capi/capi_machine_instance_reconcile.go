@@ -111,7 +111,7 @@ func (r *CAPIMachineReconciler) syncInstanceStatus(
 	updated := instance.DeepCopy()
 	updated.Status.Phase = machineStatus.Phase
 	updated.Status.MachineStatus = machineStatus.MachineStatus
-	updated.Status.Conditions = machineStatus.Conditions
+	updated.Status.Conditions = mergeMachineConditions(instance.Status.Conditions, machineStatus.Conditions)
 
 	if apiequality.Semantic.DeepEqual(instance.Status, updated.Status) {
 		return false, nil
@@ -121,6 +121,26 @@ func (r *CAPIMachineReconciler) syncInstanceStatus(
 		return false, fmt.Errorf("patch instance %q status: %w", instance.Name, err)
 	}
 	return true, nil
+}
+
+func mergeMachineConditions(
+	existing []deckhousev1alpha2.InstanceCondition,
+	machineConditions []deckhousev1alpha2.InstanceCondition,
+) []deckhousev1alpha2.InstanceCondition {
+	if len(machineConditions) == 0 {
+		return existing
+	}
+
+	merged := make([]deckhousev1alpha2.InstanceCondition, 0, len(existing)+len(machineConditions))
+	for i := range existing {
+		if existing[i].Type == deckhousev1alpha2.InstanceConditionTypeMachineReady {
+			continue
+		}
+		merged = append(merged, existing[i])
+	}
+	merged = append(merged, machineConditions...)
+
+	return merged
 }
 
 func (r *CAPIMachineReconciler) ensureMachineDeletionForDeletingInstance(

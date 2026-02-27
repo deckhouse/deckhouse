@@ -13,7 +13,9 @@ function bb-patch-instance-condition() {
   now="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   local nodeName
   nodeName="$(bb-d8-node-name)"
-  bb-kubectl-exec apply --server-side --field-manager=bashible \
+  local fieldManager
+  fieldManager="$(echo "bashible-${type}" | tr '[:upper:]' '[:lower:]'"
+  bb-kubectl-exec apply --server-side --force-conflicts --field-manager="${fieldManager}" \
     --subresource=status -f - <<EOF || true
 apiVersion: deckhouse.io/v1alpha2
 kind: Instance
