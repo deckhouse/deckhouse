@@ -13,8 +13,6 @@ function bb-patch-instance-condition() {
   escaped_message="${escaped_message//\"/\\\"}"
   escaped_message="${escaped_message//$'\n'/\\n}"
   escaped_message="${escaped_message//$'\r'/\\r}"
-  printf 'DEBUG bb-patch-instance-condition: type=%q status=%q reason=%q message=%q\n' \
-    "$type" "$status" "$reason" "$message" >&2
 
   if ! type kubectl >/dev/null 2>&1 || ! test -f /etc/kubernetes/kubelet.conf ; then
     return 0

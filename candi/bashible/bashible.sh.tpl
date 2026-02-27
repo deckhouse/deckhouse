@@ -38,11 +38,6 @@ bb-kube-apiserver-healthy() {
 bb-kubectl-exec() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
   local args=""
-  local started_at="${SECONDS}"
-  local errexit_enabled=0
-  if [[ $- == *e* ]]; then
-    errexit_enabled=1
-  fi
 {{ if eq .runType "Normal" }}
   local kube_server
   kube_server=$(kubectl --kubeconfig="$kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
@@ -61,15 +56,7 @@ bb-kubectl-exec() {
     fi
   fi
 {{ end }}
-  set +e
   kubectl --request-timeout 60s --kubeconfig=$kubeconfig $args ${@}
-  local rc=$?
-  if [[ $errexit_enabled -eq 1 ]]; then
-    set -e
-  fi
-  local elapsed_s=$((SECONDS - started_at))
-  printf 'DEBUG bb-kubectl-exec: exit=%d elapsed_s=%d args=%q\n' "$rc" "$elapsed_s" "$*" >&2
-  return "$rc"
 }
 
 bb-label-node-bashible-first-run-finished() {
