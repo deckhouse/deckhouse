@@ -181,7 +181,7 @@ Deckhouse Code поддерживает следующие атрибуты дл
 ### Ручной запуск синхронизации
 
 Чтобы синхронизировать группы сразу после их изменения на стороне LDAP, выполните следующие шаги:
-1. Зайдите на страницу воркера синхронизации LDAP `/admin/sidekiq/cron/namespaces/default/jobs/ldap_sync_worker`.
+1. Зайдите на страницу worker'а синхронизации LDAP `/admin/sidekiq/cron/namespaces/default/jobs/ldap_sync_worker`.
 2. В верхнем правом углу нажмите кнопку «Запустить» и подтвердите в диалоговом окне.
   ![Ldap sync worker UI](/images/code/ldap_sync_worker_ru.png)
 
@@ -192,7 +192,7 @@ Deckhouse Code поддерживает следующие атрибуты дл
 
 Чтобы посмотреть полные логи процесса синхронизации:
 
-1. На странице воркера `/admin/sidekiq/cron/namespaces/default/jobs/ldap_sync_worker` найдите таблицу событий запусков «История». Первая строка соответствует последнему запуску. Скопируйте значение в колонке JID (Job ID) — оно понадобится для поиска по логам.
+1. На странице worker'а `/admin/sidekiq/cron/namespaces/default/jobs/ldap_sync_worker` найдите таблицу событий запусков «История». Первая строка соответствует последнему запуску. Скопируйте значение в колонке JID (Job ID) — оно понадобится для поиска по логам.
 
    ![Ldap sync history table](/images/code/ldap_sync_history_ru.png)
 
