@@ -34,6 +34,12 @@ export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
 
 bb-package-install() {
+  local rpp_token_state="empty"
+  if [[ -n "${PACKAGES_PROXY_TOKEN:-}" ]]; then
+    rpp_token_state="set"
+  fi
+  echo "[rpp] bb-package-install start: addresses='${PACKAGES_PROXY_ADDRESSES:-}', token=${rpp_token_state}"
+
   local PACKAGE_WITH_DIGEST
   for PACKAGE_WITH_DIGEST in "$@"; do
     local PACKAGE=""

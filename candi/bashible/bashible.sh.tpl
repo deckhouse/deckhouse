@@ -370,10 +370,16 @@ function main() {
   rpp_addr="$(get_rpp_address)"
   if [[ -n $rpp_addr ]]; then
     export PACKAGES_PROXY_ADDRESSES="${rpp_addr}"
+    echo "[rpp] runtime proxy address was loaded from cluster secret"
+  else
+    echo "[rpp] runtime proxy address is empty, using rendered value"
   fi
   rpp_token="$(get_rpp_token)"
   if [[ -n $rpp_token ]]; then
     export PACKAGES_PROXY_TOKEN="${rpp_token}"
+    echo "[rpp] runtime proxy token was loaded from cluster secret"
+  else
+    echo "[rpp] runtime proxy token is empty, using rendered value"
   fi
   {{- end }}
 {{- end }}
