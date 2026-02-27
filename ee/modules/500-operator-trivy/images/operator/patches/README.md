@@ -63,4 +63,3 @@ Updated some operator dependencies.
 Fixes CVEs:
 - CVE-2025-52881
 - CVE-2024-25621
-
