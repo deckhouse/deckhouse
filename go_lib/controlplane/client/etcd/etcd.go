@@ -495,7 +495,12 @@ func GetEtcdPodSpec(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpo
 		etcdVolumeName:  staticpodutil.NewVolume(etcdVolumeName, config.LocalEtcd.DataDir, &pathType),
 		certsVolumeName: staticpodutil.NewVolume(certsVolumeName, config.CertificatesDir+"/etcd", &pathType),
 	}
-	componentHealthCheckTimeout := kubeadmapi.GetActiveTimeouts().ControlPlaneComponentHealthCheck
+	componentHealthCheckTimeout := &metav1.Duration{Duration: 4 * time.Minute}
+	if config.Timeouts != nil && config.Timeouts.ControlPlaneComponentHealthCheck != nil {
+		componentHealthCheckTimeout = config.Timeouts.ControlPlaneComponentHealthCheck
+	} else if activeTimeouts := kubeadmapi.GetActiveTimeouts(); activeTimeouts != nil && activeTimeouts.ControlPlaneComponentHealthCheck != nil {
+		componentHealthCheckTimeout = activeTimeouts.ControlPlaneComponentHealthCheck
+	}
 
 	// probeHostname returns the correct localhost IP address family based on the endpoint AdvertiseAddress
 	probeHostname, probePort, probeScheme := staticpodutil.GetEtcdProbeEndpoint(config, utilsnet.IsIPv6String(endpoint.AdvertiseAddress))
