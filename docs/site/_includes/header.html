@@ -264,6 +264,11 @@
         {%- endif %}
           </a>
       </div>
+      <div class="hamburger hamburger--collapse header__hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
     </div>
     {%- unless site.mode == "module" %}
     <!-- Start L2 Menu -->
@@ -280,4 +285,5 @@
     {%- endunless %}
   </header>
 </div>
+{% include header-l2-menu_mobile.liquid %}
 <!--/noindex-->
