@@ -253,6 +253,7 @@ func allModules() set.Set {
 		"metallb",
 		"monitoring-kubernetes",
 		"node-manager",
+		"observability",
 		"prometheus",
 		"prometheus-metrics-adapter",
 		"vertical-pod-autoscaler",
@@ -387,6 +388,20 @@ func Test_calcDisabledProbes(t *testing.T) {
 				"monitoring-and-autoscaling/metrics-sources",
 				"monitoring-and-autoscaling/key-metrics-present",
 			),
+		},
+		{
+			name: "MAA/alertmanager off",
+			args: args{
+				enabledModules: set.New("prometheus"),
+			},
+			expectDisabled: set.New("monitoring-and-autoscaling/alertmanager"),
+		},
+		{
+			name: "MAA/alertmanager on",
+			args: args{
+				enabledModules: set.New("prometheus", "observability"),
+			},
+			expectNotDisabled: set.New("monitoring-and-autoscaling/alertmanager"),
 		},
 		// Metallb -> load-balancing/metallb
 		{
@@ -525,6 +540,31 @@ func Test_calcDisabledProbes(t *testing.T) {
 				enabledModules: set.New("user-authn"),
 			},
 			expectNotDisabled: set.New("extensions/dex"),
+		},
+
+		// observability -> observability extension probes
+		{
+			name: "extensions/observability probes off",
+			expectDisabled: set.New(
+				"extensions/alert-kube-api",
+				"extensions/observability-controller",
+				"extensions/grafana",
+				"extensions/label-proxy",
+				"extensions/observability-webhook",
+			),
+		},
+		{
+			name: "extensions/observability probes on",
+			args: args{
+				enabledModules: set.New("observability"),
+			},
+			expectNotDisabled: set.New(
+				"extensions/alert-kube-api",
+				"extensions/observability-controller",
+				"extensions/grafana",
+				"extensions/label-proxy",
+				"extensions/observability-webhook",
+			),
 		},
 
 		// prometheus-longterm -> extensions/prometheus-longterm
