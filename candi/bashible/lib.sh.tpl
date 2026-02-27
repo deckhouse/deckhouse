@@ -4,6 +4,15 @@ function bb-patch-instance-condition() {
   local status="$2"
   local reason="$3"
   local message="${4:-}"
+  local max_condition_message_len=32768
+  if [ "${#message}" -gt "${max_condition_message_len}" ]; then
+    message="${message:0:${max_condition_message_len}}"
+  fi
+  local escaped_message
+  escaped_message="${message//\\/\\\\}"
+  escaped_message="${escaped_message//\"/\\\"}"
+  escaped_message="${escaped_message//$'\n'/\\n}"
+  escaped_message="${escaped_message//$'\r'/\\r}"
   printf 'DEBUG bb-patch-instance-condition: type=%q status=%q reason=%q message=%q\n' \
     "$type" "$status" "$reason" "$message" >&2
 
@@ -28,7 +37,7 @@ status:
   - type: ${type}
     status: "${status}"
     reason: ${reason}
-    message: "${message}"
+    message: "${escaped_message}"
     lastTransitionTime: "${now}"
 EOF
 }
@@ -43,6 +52,18 @@ function bb-bashible-ready-steps-completed() {
 function bb-bashible-ready-steps-failed() {
   local step="$1"
   local log_excerpt="${2:-}"
+
+  if [ -z "$log_excerpt" ]; then
+    local step_log="/var/lib/bashible/step.log"
+    if [[ -f "${step_log}" ]]; then
+      log_excerpt="$(tail -c 500 "${step_log}")"
+      log_excerpt="${log_excerpt//$'\n'/ }"
+      log_excerpt="${log_excerpt//$'\r'/ }"
+    else
+      log_excerpt="bashible step log is not available."
+    fi
+  fi
+
   local message="${step}${log_excerpt:+: ${log_excerpt}}"
   bb-patch-instance-condition "BashibleReady" "False" "StepsFailed" "${message}"
 }
