@@ -17,7 +17,7 @@ function bb-patch-instance-condition() {
     --subresource=status -f - <<EOF || true
 apiVersion: deckhouse.io/v1alpha2
 kind: Instance
-metadata
+metadata:
   name: ${nodeName}
 status:
   conditions:
@@ -117,7 +117,7 @@ function bb-event-create() {
     --namespace=default -f - <<EOF || true
 apiVersion: events.k8s.io/v1
 kind: Event
-metadata
+metadata:
   name: ${eventName}
   namespace: default
   labels:
@@ -192,4 +192,3 @@ bb-discover-node-name() {
   fi
 }
 {{- end }}
-

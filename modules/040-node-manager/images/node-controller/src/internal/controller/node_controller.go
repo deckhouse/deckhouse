@@ -30,8 +30,9 @@ import (
 )
 
 const (
-	nodeTypeLabelKey    = "node.deckhouse.io/type"
-	staticNodeTypeValue = "Static"
+	nodeTypeLabelKey            = "node.deckhouse.io/type"
+	staticNodeTypeValue         = "Static"
+	cloudPermanentNodeTypeValue = "CloudPermanent"
 )
 
 type NodeReconciler struct {
@@ -105,7 +106,8 @@ func staticNodePredicate() predicate.Predicate {
 }
 
 func isStaticNode(node *corev1.Node) bool {
-	return node.Labels[nodeTypeLabelKey] == staticNodeTypeValue
+	nodeType := node.Labels[nodeTypeLabelKey]
+	return nodeType == staticNodeTypeValue || nodeType == cloudPermanentNodeTypeValue
 }
 
 func isStaticNodeObject(obj client.Object) bool {

@@ -19,14 +19,15 @@ set -Eeo pipefail
 {{- $candi := "candi/bashible/lib.sh.tpl" -}}
 {{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
 {{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
+{{- $ctx := . -}}
 {{- tpl (printf `
 %s
 
-{{ template "bb-d8-node-name" . }}
-{{ template "bb-d8-node-ip" . }}
-{{ template "bb-discover-node-name" . }}
-{{ template "bb-status" . }}
-` $lib) . }}
+{{ template "bb-d8-node-name" $ }}
+{{ template "bb-d8-node-ip" $ }}
+{{ template "bb-discover-node-name" $ }}
+{{ template "bb-status" $ }}
+` $lib) $ctx }}
 
 bb-kube-apiserver-healthy() {
   local kubeconfig="$1"

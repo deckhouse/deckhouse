@@ -180,7 +180,6 @@ func (r *CAPIMachineReconciler) syncInstanceStatus(
 	updated := instance.DeepCopy()
 	updated.Status.Phase = machineStatus.Phase
 	updated.Status.MachineStatus = machineStatus.MachineStatus
-	updated.Status.Message = machineStatus.Message
 	updated.Status.Conditions = machineStatus.Conditions
 
 	if apiequality.Semantic.DeepEqual(instance.Status, updated.Status) {

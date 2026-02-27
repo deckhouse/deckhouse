@@ -34,8 +34,7 @@ const (
 )
 
 const (
-	mcmNodeGroupLabelKey            = "node.deckhouse.io/group"
-	mcmAdapterNotImplementedMessage = "MCM machine adapter is not implemented yet"
+	mcmNodeGroupLabelKey = "node.deckhouse.io/group"
 )
 
 const (
@@ -61,7 +60,6 @@ type Machine interface {
 type MachineStatus struct {
 	Phase         deckhousev1alpha2.InstancePhase
 	MachineStatus string
-	Message       string
 	Conditions    []deckhousev1alpha2.InstanceCondition
 }
 
@@ -115,7 +113,6 @@ func (m *mcmMachine) GetStatus() MachineStatus {
 	return MachineStatus{
 		Phase:         deckhousev1alpha2.InstancePhaseUnknown,
 		MachineStatus: MachineStatusProgressing,
-		Message:       mcmAdapterNotImplementedMessage,
 	}
 }
 
@@ -152,7 +149,6 @@ func (m *capiMachine) GetStatus() MachineStatus {
 	return MachineStatus{
 		Phase:         phase,
 		MachineStatus: state.statusString,
-		Message:       state.message,
 		Conditions:    []deckhousev1alpha2.InstanceCondition{buildMachineReadyCondition(state)},
 	}
 }
