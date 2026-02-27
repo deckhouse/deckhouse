@@ -68,7 +68,7 @@ type ControlPlaneNodeStatus struct {
 	PKIChecksum string `json:"pkiChecksum"`
 
 	// +optional
-	Components ComponentChecksums `json:"components,omitempty"`
+	Components ComponentChecksums `json:"components"`
 
 	// +optional
 	HotReloadChecksum string `json:"hotReloadChecksum"`
