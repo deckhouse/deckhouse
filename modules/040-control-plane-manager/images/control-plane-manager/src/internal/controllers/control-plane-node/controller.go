@@ -136,6 +136,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	log.Info("ControlPlaneNode found", slog.String("node", nodeName))
 
+	// Initialize status.Components with empty checksums on first reconcile when they are nil
+	r.ensureStatusComponentsInitialized(controlPlaneNode)
+
 	if err := r.reconcileComponents(ctx, controlPlaneNode); err != nil {
 		return reconcile.Result{RequeueAfter: requeueInterval}, err
 	}
@@ -145,6 +148,31 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
+}
+
+// ensureStatusComponentsInitialized sets empty checksums for nil status.Components on first reconcile.
+func (r *Reconciler) ensureStatusComponentsInitialized(cpn *controlplanev1alpha1.ControlPlaneNode) {
+	empty := func() *controlplanev1alpha1.ComponentChecksum {
+		return &controlplanev1alpha1.ComponentChecksum{Checksum: ""}
+	}
+	if cpn.Status.Components.Etcd == nil {
+		cpn.Status.Components.Etcd = empty()
+	}
+	if cpn.Status.Components.KubeAPIServer == nil {
+		cpn.Status.Components.KubeAPIServer = empty()
+	}
+	if cpn.Status.Components.KubeControllerManager == nil {
+		cpn.Status.Components.KubeControllerManager = empty()
+	}
+	if cpn.Status.Components.KubeScheduler == nil {
+		cpn.Status.Components.KubeScheduler = empty()
+	}
+	if cpn.Status.HotReloadChecksum == "" {
+		cpn.Status.HotReloadChecksum = ""
+	}
+	if cpn.Status.PKIChecksum == "" {
+		cpn.Status.PKIChecksum = ""
+	}
 }
 
 // componentCheck holds spec and status checksums for a single component.
