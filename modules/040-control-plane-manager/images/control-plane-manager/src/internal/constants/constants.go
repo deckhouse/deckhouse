@@ -26,6 +26,9 @@ const (
 	ControlPlaneManagerConfigSecretName = "d8-control-plane-manager-config"
 	PkiSecretName                       = "d8-pki"
 	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"
+	ControlPlaneNodeNameLabelKey        = "control-plane.deckhouse.io/node"
+	ControlPlaneComponentLabelKey       = "control-plane.deckhouse.io/component"
+	NodeNameEnvVar                      = "NODE_NAME"
 	KubernetesConfigPath                = "/etc/kubernetes"
 	ManifestsPath                       = KubernetesConfigPath + "/manifests"
 	DeckhousePath                       = KubernetesConfigPath + "/deckhouse"
@@ -34,6 +37,21 @@ const (
 	ExtraFilesPath                      = DeckhousePath + "/extra-files"
 	ConfigPath                          = "/config" // Mounted secret for d8-control-plane-manager-config
 	PkiPath                             = "/pki"    // Mounted secret for d8-pki
+
+	// ControlPlaneNode Conditions
+	ConditionEtcdReady              = "EtcdReady"
+	ConditionAPIServerReady         = "APIServerReady"
+	ConditionControllerManagerReady = "ControllerManagerReady"
+	ConditionSchedulerReady         = "SchedulerReady"
+	ConditionPKISynced              = "PKISynced"
+	ConditionsHotReloadSynced       = "HotReloadSynced"
+
+	ReasonSynced        = "Synced"
+	ReasonOutOfSync     = "OutOfSync"
+	ReasonUpdating      = "Updating"
+	ReasonPendingUpdate = "PendingUpdate"
+	ReasonUpdateFailed  = "UpdateFailed"
+	ReasonUnknown       = "Unknown"
 )
 
 // ToRelativePath returns path without leading slash for using in tmp directory sync
