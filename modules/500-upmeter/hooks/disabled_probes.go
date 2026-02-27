@@ -38,6 +38,7 @@ var _ = sdk.RegisterFunc(
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{MatchNames: []string{
 						"d8-cloud-instance-manager",
+						"d8-monitoring",
 						// CCM
 						"d8-cloud-provider-aws",
 						"d8-cloud-provider-azure",
@@ -52,6 +53,7 @@ var _ = sdk.RegisterFunc(
 					"cluster-autoscaler",
 					"machine-controller-manager",
 					"cloud-controller-manager",
+					"grafana-v10",
 				}},
 				FilterFunc: filterName,
 			},
@@ -77,6 +79,7 @@ var _ = sdk.RegisterFunc(
 type appPresence struct {
 	ccm, mcm, bashible, autoscaler bool
 	smokeMini                      bool
+	grafanaV10                     bool
 	prometheusLongterm             bool
 }
 
@@ -94,6 +97,7 @@ func collectDisabledProbes(_ context.Context, input *go_hook.HookInput) error {
 		bashible:           deplyments.Has("bashible-apiserver"),
 		autoscaler:         deplyments.Has("cluster-autoscaler"),
 		smokeMini:          !input.Values.Get("upmeter.smokeMiniDisabled").Bool(),
+		grafanaV10:         deplyments.Has("grafana-v10"),
 		prometheusLongterm: statefulsets.Has("prometheus-longterm"),
 	}
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
@@ -156,8 +160,12 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 	}
 
 	if !enabledModules.Has("prometheus") {
-		disabledProbes.Add("extensions/grafana")
+		disabledProbes.Add("extensions/grafana-v10")
 		disabledProbes.Add("extensions/prometheus-longterm")
+	}
+
+	if !presence.grafanaV10 {
+		disabledProbes.Add("extensions/grafana-v10")
 	}
 
 	if !presence.prometheusLongterm {
@@ -174,6 +182,14 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 
 	if !enabledModules.Has("user-authn") {
 		disabledProbes.Add("extensions/dex")
+	}
+
+	if !enabledModules.Has("observability") {
+		disabledProbes.Add("extensions/alert-kube-api")
+		disabledProbes.Add("extensions/observability-controller")
+		disabledProbes.Add("extensions/grafana")
+		disabledProbes.Add("extensions/label-proxy")
+		disabledProbes.Add("extensions/observability-webhook")
 	}
 }
 
@@ -193,6 +209,9 @@ func disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes set.Se
 	if !enabledModules.Has("monitoring-kubernetes") {
 		disabledProbes.Add("monitoring-and-autoscaling/metrics-sources")
 		disabledProbes.Add("monitoring-and-autoscaling/key-metrics-present")
+	}
+	if !enabledModules.Has("observability") {
+		disabledProbes.Add("monitoring-and-autoscaling/alertmanager")
 	}
 }
 

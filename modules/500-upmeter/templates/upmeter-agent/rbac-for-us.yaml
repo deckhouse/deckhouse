@@ -39,6 +39,14 @@ rules:
   - apiGroups: ["deckhouse.io"]
     resources: ["upmeterhookprobes" , "nodegroups"]
     verbs: ["*"]
+  # Observability check: rules groups and silences lifecycle
+  - apiGroups: ["observability.deckhouse.io"]
+    resources: ["observabilitymetricsrulesgroups", "observabilitynotificationsilences"]
+    verbs: ["create", "delete", "get", "list", "watch"]
+  # Observability check: wait for child PrometheusRule creation/removal
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["prometheusrules"]
+    verbs: ["delete", "get", "list", "watch"]
   # Metrics Adapter API
   - apiGroups: ["custom.metrics.k8s.io"]
     resources: ["metrics"]

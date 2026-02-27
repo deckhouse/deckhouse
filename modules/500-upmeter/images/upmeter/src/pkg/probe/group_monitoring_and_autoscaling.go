@@ -22,6 +22,7 @@ import (
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/monitor/node"
 	"d8.io/upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
 func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.Lister, preflight checker.Doer) []runnerConfig {
@@ -54,6 +55,28 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 				Access:   access,
 				Timeout:  5 * time.Second,
 				Endpoint: "https://prometheus.d8-monitoring:9090/api/v1/query?query=vector(1)",
+			},
+		}, {
+			group:  groupMonitoringAndAutoscaling,
+			probe:  "prometheus",
+			check:  "observability-rules-group-recording",
+			period: time.Minute,
+			config: checker.ObservabilityRulesGroupRecordingLifecycle{
+				Access:           access,
+				PreflightChecker: controlPlanePinger,
+				AgentID:          run.ID(),
+				Namespace:        run.StaticIdentifier("upmeter-obsv-recording"),
+				RulesGroupName:   "recording-rules",
+
+				RecordingMetric:    "upmeter_obsv_recording_" + run.ID(),
+				PrometheusEndpoint: "https://prometheus.d8-monitoring:9090/api/v1/query",
+
+				RequestTimeout:                   5 * time.Second,
+				WaitPrometheusRuleCreatedTimeout: 90 * time.Second,
+				WaitMetricPresentTimeout:         90 * time.Second,
+				WaitPrometheusRuleDeletedTimeout: 90 * time.Second,
+				WaitNamespaceDeletedTimeout:      90 * time.Second,
+				Timeout:                          5 * time.Minute,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
@@ -134,6 +157,53 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 				Namespace:        "kube-system",
 				LabelSelector:    "app=vpa-admission-controller",
 				PreflightChecker: controlPlanePinger,
+			},
+		}, {
+			group:  groupMonitoringAndAutoscaling,
+			probe:  "alertmanager",
+			check:  "pod",
+			period: 10 * time.Second,
+			config: checker.AtLeastOnePodReady{
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-observability",
+				LabelSelector:    "app=alertmanager",
+				PreflightChecker: controlPlanePinger,
+			},
+		}, {
+			group:  groupMonitoringAndAutoscaling,
+			probe:  "alertmanager",
+			check:  "health",
+			period: 10 * time.Second,
+			config: checker.HTTPEndpointAvailable{
+				Access:   access,
+				Timeout:  5 * time.Second,
+				Endpoint: "https://alertmanager.d8-observability:8443/health",
+			},
+		}, {
+			group:  groupMonitoringAndAutoscaling,
+			probe:  "alertmanager",
+			check:  "observability-rules-group-alert",
+			period: time.Minute,
+			config: checker.ObservabilityRulesGroupAlertLifecycle{
+				Access:           access,
+				PreflightChecker: controlPlanePinger,
+				AgentID:          run.ID(),
+				Namespace:        run.StaticIdentifier("upmeter-obsv-alert"),
+				RulesGroupName:   "alert-rules",
+				SilenceName:      "alert-rules-silence",
+
+				AlertName:            "UpmeterObservabilityMiniE2EAlert",
+				AlertLabelKey:        "upmeter_alert_id",
+				AlertLabelValue:      run.StaticIdentifier("obsv-alert"),
+				AlertmanagerEndpoint: "https://alertmanager.d8-observability:8443/api/v2/alerts",
+
+				RequestTimeout:                   5 * time.Second,
+				WaitPrometheusRuleCreatedTimeout: 90 * time.Second,
+				WaitAlertPresentTimeout:          90 * time.Second,
+				WaitPrometheusRuleDeletedTimeout: 90 * time.Second,
+				WaitNamespaceDeletedTimeout:      90 * time.Second,
+				Timeout:                          5 * time.Minute,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
