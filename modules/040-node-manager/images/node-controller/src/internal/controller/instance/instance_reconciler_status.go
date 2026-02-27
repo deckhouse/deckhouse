@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const instanceStatusFieldOwner = "node-controller-instancestatus"
+const instanceBashibleStatusFieldOwner = "node-controller-instance-bashible-status"
 
 func (r *InstanceReconciler) reconcileBashibleStatus(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
 	desiredStatus := r.bashibleStatusFactory.FromConditions(instance.Status.Conditions)
@@ -52,7 +52,7 @@ func (r *InstanceReconciler) reconcileBashibleStatus(ctx context.Context, instan
 		ctx,
 		applyObj,
 		client.Apply,
-		client.FieldOwner(instanceStatusFieldOwner),
+		client.FieldOwner(instanceBashibleStatusFieldOwner),
 		client.ForceOwnership,
 	); err != nil {
 		return fmt.Errorf("apply instance %q bashible status/message: %w", instance.Name, err)
