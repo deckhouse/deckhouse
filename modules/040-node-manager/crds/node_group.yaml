@@ -2385,7 +2385,7 @@ spec:
                         - `Watchdog`: uses the kernel watchdog module to automatically reboot nodes that have lost connectivity to the cluster.
                         - `Dryrun`: runs the fencing-agent but does not activate the watchdog (validation mode, no reboots).
 
-                        When `fencing` is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin=<timeout>` and `soft_panic=1` parameters.
+                        When fencing is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin=<timeout>` and `soft_panic=1` parameters.
 
                         How the fencing-agent works:
                         - Opens `/dev/watchdog` and sets the `node-manager.deckhouse.io/fencing-enabled` label on the node.

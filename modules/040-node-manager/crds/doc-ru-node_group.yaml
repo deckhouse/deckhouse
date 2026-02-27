@@ -941,7 +941,7 @@ spec:
                           - `Watchdog` — использует модуль ядра watchdog для автоматической перезагрузки узлов, потерявших связь с кластером.
                           - `Dryrun` — запускает fencing-агент, но не активирует watchdog (режим проверки, без перезагрузок).
 
-                        При включении `fencing` скрипт NodeGroupConfiguration загружает модуль ядра softdog с параметрами `soft_margin=<timeout>` и `soft_panic=1`.
+                        При включении fencing скрипт NodeGroupConfiguration загружает модуль ядра softdog с параметрами `soft_margin=<timeout>` и `soft_panic=1`.
 
                         Как работает fencing-агент:
                           - Открывает устройство `/dev/watchdog` и устанавливает на узле лейбл `node-manager.deckhouse.io/fencing-enabled`.
