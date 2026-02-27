@@ -69,10 +69,13 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	if IsStaticNode(node) {
-		_, err := common.EnsureInstanceExists(ctx, r.Client, node.Name, deckhousev1alpha2.InstanceSpec{
+		instance, err := common.EnsureInstanceExists(ctx, r.Client, node.Name, deckhousev1alpha2.InstanceSpec{
 			NodeRef: deckhousev1alpha2.NodeRef{Name: node.Name},
 		})
 		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if err := r.setInstancePhase(ctx, instance, deckhousev1alpha2.InstancePhaseRunning); err != nil {
 			return ctrl.Result{}, err
 		}
 

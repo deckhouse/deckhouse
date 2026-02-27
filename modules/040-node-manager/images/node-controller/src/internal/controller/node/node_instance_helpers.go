@@ -47,3 +47,21 @@ func (r *NodeReconciler) deleteStaticInstanceIfExists(ctx context.Context, name 
 
 	return true, nil
 }
+
+func (r *NodeReconciler) setInstancePhase(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+	phase deckhousev1alpha2.InstancePhase,
+) error {
+	if instance.Status.Phase == phase {
+		return nil
+	}
+
+	updated := instance.DeepCopy()
+	updated.Status.Phase = phase
+	if err := r.Status().Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
+		return fmt.Errorf("patch instance %q phase to %q: %w", instance.Name, phase, err)
+	}
+
+	return nil
+}

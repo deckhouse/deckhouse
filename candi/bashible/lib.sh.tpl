@@ -14,7 +14,7 @@ function bb-patch-instance-condition() {
   local nodeName
   nodeName="$(bb-d8-node-name)"
   local fieldManager
-  fieldManager="$(echo "bashible-${type}" | tr '[:upper:]' '[:lower:]'"
+  fieldManager="$(echo "bashible-${type}" | tr '[:upper:]' '[:lower:]')"
   bb-kubectl-exec apply --server-side --force-conflicts --field-manager="${fieldManager}" \
     --subresource=status -f - <<EOF || true
 apiVersion: deckhouse.io/v1alpha2
