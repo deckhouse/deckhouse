@@ -18,17 +18,19 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	runprogconf "github.com/criyle/go-sandbox/cmd/runprog/config"
+	"github.com/criyle/go-sandbox/pkg/seccomp"
 	sbseccomp "github.com/criyle/go-sandbox/pkg/seccomp/libseccomp"
 	"github.com/criyle/go-sandbox/runner"
 	"github.com/criyle/go-sandbox/runner/ptrace"
+	"github.com/criyle/go-sandbox/runner/unshare"
 )
 
 const (
@@ -76,42 +78,26 @@ func run(argv []string) int {
 	extraWrite := []string{"/dev/null", "/tmp/"}
 	args, allow, trace, handler := runprogconf.GetConf("default", workDir, argv, extraRead, extraWrite, false) // :contentReference[oaicite:4]{index=4}
 
-	filter, err := (&sbseccomp.Builder{
-		Allow:   allow,
-		Trace:   trace,
-		Default: sbseccomp.ActionKill,
-	}).Build()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "seccomp build:", err)
+	limit := runner.Limit{
+		TimeLimit:   sandboxCPUTimeLimit,
+		MemoryLimit: sandboxMemoryLimit,
 	}
 
-	// ExecFile need runner (fexecve)
-	execF, err := os.Open(args[0])
+	res, err := runWithPtrace(args, allow, trace, workDir, handler, limit, isDebug())
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "open exec:", err)
+		log.Printf("seccomp build (ptrace): %v", err)
 		return 1
 	}
-	defer execF.Close()
 
-	r := &ptrace.Runner{
-		Args:     args,
-		Env:      os.Environ(),
-		WorkDir:  workDir,
-		ExecFile: execF.Fd(),
-		Files:    []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
-		Limit: runner.Limit{
-			TimeLimit:   sandboxCPUTimeLimit,
-			MemoryLimit: sandboxMemoryLimit,
-		},
-		Seccomp:     filter,
-		Handler:     handler,
-		ShowDetails: isDebug(), // Debug
-	} // :contentReference[oaicite:5]{index=5}
+	if res.Status == runner.StatusRunnerError && strings.Contains(res.Error, "before execve") {
+		log.Print("ptrace runner exited before execve; retrying with unshare runner")
 
-	ctx, cancel := context.WithTimeout(context.Background(), sandboxWallTimeLimit)
-	defer cancel()
-
-	res := r.Run(ctx)
+		res, err = runWithUnshare(args, allow, trace, workDir, limit, isDebug())
+		if err != nil {
+			log.Printf("seccomp build (unshare): %v", err)
+			return 1
+		}
+	}
 
 	if res.Status == runner.StatusNormal && res.ExitStatus == 0 && res.Error == "" {
 		return 0
@@ -127,6 +113,74 @@ func run(argv []string) int {
 	}
 
 	return 1
+}
+
+func runWithPtrace(
+	args, allow, trace []string,
+	workDir string,
+	handler ptrace.Handler,
+	limit runner.Limit,
+	debug bool,
+) (runner.Result, error) {
+	filter, err := buildFilter(allow, trace)
+	if err != nil {
+		return runner.Result{}, err
+	}
+
+	r := &ptrace.Runner{
+		Args:    args,
+		Env:     os.Environ(),
+		WorkDir: workDir,
+		Files:   []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+		Limit:   limit,
+		Seccomp: filter,
+		Handler: handler,
+		// Debug
+		ShowDetails: debug,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), sandboxWallTimeLimit)
+	defer cancel()
+
+	return r.Run(ctx), nil
+}
+
+func runWithUnshare(
+	args, allow, trace []string,
+	workDir string,
+	limit runner.Limit,
+	debug bool,
+) (runner.Result, error) {
+	// In unshare mode there is no ptrace handler, so traced syscalls must be explicitly allowed.
+	allowAll := append(append([]string{}, allow...), trace...)
+	filter, err := buildFilter(allowAll, nil)
+	if err != nil {
+		return runner.Result{}, err
+	}
+
+	r := &unshare.Runner{
+		Args:    args,
+		Env:     os.Environ(),
+		WorkDir: workDir,
+		Files:   []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+		Limit:   limit,
+		Seccomp: filter,
+		// Debug
+		ShowDetails: debug,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), sandboxWallTimeLimit)
+	defer cancel()
+
+	return r.Run(ctx), nil
+}
+
+func buildFilter(allow, trace []string) (seccomp.Filter, error) {
+	return (&sbseccomp.Builder{
+		Allow:   allow,
+		Trace:   trace,
+		Default: sbseccomp.ActionKill,
+	}).Build()
 }
 
 // getNginxConfByArg return parametr args of nginx, as sample for `-c` flag return path config
