@@ -196,7 +196,9 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		var config init_secret.Config
 
 		if err = yaml.Unmarshal(initSecret.Config, &config); err != nil {
-			err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
+			err = fmt.Errorf("cannot unmarhsal init secret YAML: %w", err)
+		} else if err = config.Validate(); err != nil {
+			err = fmt.Errorf("init secret validation error: %w", err)
 		} else {
 			inputs.InitSecret = config
 		}

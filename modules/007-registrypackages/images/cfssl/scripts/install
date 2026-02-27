@@ -1,12 +1,11 @@
 #!/bin/bash
-
-# Copyright 2025 Flant JSC
+# Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# 	 http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,4 +14,10 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /opt/deckhouse/bin/ign-registry
+mkdir -p /opt/deckhouse/bin
+cp -f cfssl /opt/deckhouse/bin
+cp -f cfssl-bundle /opt/deckhouse/bin
+cp -f cfssl-certinfo /opt/deckhouse/bin
+cp -f cfssl-newkey /opt/deckhouse/bin
+cp -f cfssl-scan /opt/deckhouse/bin
+cp -f cfssljson /opt/deckhouse/bin

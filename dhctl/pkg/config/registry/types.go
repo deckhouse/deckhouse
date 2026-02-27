@@ -35,6 +35,7 @@ type (
 	// PKI:
 	PKI         = init_secret.Config
 	PKICertKey  = init_secret.CertKey
+	PKIUser     = init_secret.User
 	PKIProvider func() (PKI, error)
 )
 

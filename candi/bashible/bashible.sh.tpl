@@ -356,6 +356,7 @@ function main() {
   export TMPDIR="/opt/deckhouse/tmp"
   export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
   export REGISTRY_MODULE_ADDRESS="registry.d8-system.svc:5001" # Deprecated
+  export REGISTRY_MODULE_IGNITER_DIR="$TMPDIR/registry_module_igniter"
 {{- if .packagesProxy }}
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"

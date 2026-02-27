@@ -15,6 +15,11 @@
 rm -rf /var/lib/bashible/kubeadm
 bb-package-remove kubeadm
 
+{{- if has (.registry).mode (list "Proxy" "Local") }}
+bb-package-remove module-registry-auth module-registry-distribution cfssl
+rm -rf $REGISTRY_MODULE_IGNITER_DIR
+{{- end }}
+
 rm -f /tmp/bootstrap.sh
 rm -rf /tmp/candi-bundle*
 rm -f /tmp/bundle*.tar

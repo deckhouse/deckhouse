@@ -175,17 +175,28 @@ func (m *MetaConfig) prepareRegistry() error {
 			)
 		}
 
-		// Check bootstrap mode
+		// Check Local and Proxy modes
 		switch deckhouseSettings.Mode {
-		case registry_const.ModeLocal, registry_const.ModeProxy:
+		case registry_const.ModeLocal:
 			return fmt.Errorf(
 				"bootstrap is not supported with registry mode '%s'. "+
-					"Please use one of the supported bootstrap modes: %v. ",
+					"Please use one of the supported bootstrap modes: %v",
 				deckhouseSettings.Mode,
 				[]registry_const.ModeType{
 					registry_const.ModeUnmanaged, registry_const.ModeDirect,
 				},
 			)
+		case registry_const.ModeProxy:
+			if !m.IsStatic() {
+				return fmt.Errorf(
+					"bootstrap with registry mode '%s' is supported only in static cluster. "+
+						"Please use one of the supported bootstrap modes for non-static cluster: %v",
+					deckhouseSettings.Mode,
+					[]registry_const.ModeType{
+						registry_const.ModeUnmanaged, registry_const.ModeDirect,
+					},
+				)
+			}
 		}
 
 		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings); err != nil {

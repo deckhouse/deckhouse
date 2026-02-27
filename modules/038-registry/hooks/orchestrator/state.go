@@ -106,16 +106,36 @@ func (state *State) clearConditions() {
 
 func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 	// Process PKI
-	if inputs.InitSecret.CA != nil {
-		state.PKI.CA = &pki.CertModel{
-			Cert: inputs.InitSecret.CA.Cert,
-			Key:  inputs.InitSecret.CA.Key,
-		}
+	state.PKI.CA = &pki.CertModel{
+		Cert: inputs.InitSecret.CA.Cert,
+		Key:  inputs.InitSecret.CA.Key,
 	}
 
-	_, err := state.PKI.Process(log)
+	pkiResult, err := state.PKI.Process(log)
 	if err != nil {
 		return fmt.Errorf("cannot process PKI: %w", err)
+	}
+
+	// Process Users
+	ro := inputs.InitSecret.ROUser
+	state.Users.RO = &users.User{
+		UserName:       ro.Name,
+		HashedPassword: ro.PasswordHash,
+		Password:       ro.Password,
+	}
+
+	rw := inputs.InitSecret.RWUser
+	state.Users.RW = &users.User{
+		UserName:       rw.Name,
+		HashedPassword: rw.PasswordHash,
+		Password:       rw.Password,
+	}
+
+	usersParams := state.Users.GetParams()
+	usersParams.RO = true
+	usersParams.RW = true
+	if err := state.Users.Process(usersParams, inputs.Users); err != nil {
+		return fmt.Errorf("cannot process Users: %w", err)
 	}
 
 	// Set Bashible ActualParams
@@ -133,6 +153,23 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 				CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
 				Username:   inputs.Params.UserName,
 				Password:   inputs.Params.Password,
+			},
+		}
+
+		bashibleUnmanagedParams = &bashible.UnmanagedModeParams{
+			ImagesRepo: inputs.Params.ImagesRepo,
+			Scheme:     inputs.Params.Scheme,
+			CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+			Username:   inputs.Params.UserName,
+			Password:   inputs.Params.Password,
+		}
+
+	case registry_const.ModeProxy:
+		bashibleActualParams = &bashible.ModeParams{
+			Proxy: &bashible.ProxyLocalModeParams{
+				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
+				Username: state.Users.RO.UserName,
+				Password: state.Users.RO.Password,
 			},
 		}
 
