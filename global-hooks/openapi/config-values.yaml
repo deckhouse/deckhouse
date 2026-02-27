@@ -44,7 +44,7 @@ properties:
     default: {}
     type: object
     properties:
-      gatewayAPIdefaultGateway:
+      gatewayAPIDefaultGateway:
         type: object
         default:
           name: deckhouse-gateway
@@ -54,10 +54,10 @@ properties:
             type: string
           namespace:
             type: string
-        requied:
+        required:
           - name
           - namespace
-        Description: |
+        description: |
           The name of the default Gateway used for Deckhouse modules if Gateway API is used.
       ingressClass:
         type: string

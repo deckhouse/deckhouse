@@ -30,7 +30,7 @@ properties:
     description: |
       Общие параметры модулей Deckhouse.
     properties:
-      gatewayAPIdefaultGateway:
+      gatewayAPIDefaultGateway:
         description: |
           Имя Gateway по-умолчанию, используемого для модулей Deckhouse, если включен Gateway API.
       ingressClass:
