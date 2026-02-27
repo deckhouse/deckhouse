@@ -54,6 +54,7 @@ var sandboxExtraAllowSyscalls = []string{
 	"geteuid",
 	"getegid",
 	"getppid",
+	"getpgid",
 	"uname",
 }
 
@@ -91,6 +92,12 @@ func run(argv []string) int {
 		"/etc/resolv.conf",
 		"/usr/share/nginx/",
 		"/chroot/",
+		"/usr/local/sbin/",
+		"/usr/local/bin/",
+		"/usr/sbin/",
+		"/usr/bin/",
+		"/sbin/",
+		"/bin/",
 		"/usr/bin/unshare",
 		"/usr/local/nginx/sbin/nginx",
 		"/chroot/usr/local/nginx/sbin/nginx",
