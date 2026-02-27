@@ -15,6 +15,11 @@ Fix use expfmt library in pilot-agent. This library used for format metrics.
 > [!WARNING]
 > **After update istio to version 1.22.X and above need delete this patch!**
 
+## 004-istio-operator_clusterrole_disable.patch
+
+Fix clusterrole request from operator
+
 ## 001-kiali-go-mod.patch
 
 Fix CVE
+

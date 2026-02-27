@@ -1,0 +1,85 @@
+diff --git a/manifests/charts/istio-operator/templates/clusterrole_binding.yaml b/manifests/charts/istio-operator/templates/clusterrole_binding.yaml
+index a3df073aba..3fd075f08f 100644
+--- a/manifests/charts/istio-operator/templates/clusterrole_binding.yaml
++++ b/manifests/charts/istio-operator/templates/clusterrole_binding.yaml
+@@ -1,3 +1,5 @@
++{{- $createCRB := index .Values "createClusterRoleBinding" | default (index (index .Values "defaults") "createClusterRoleBinding") | default true }}
++{{- if ne $createCRB false }}
+ kind: ClusterRoleBinding
+ apiVersion: rbac.authorization.k8s.io/v1
+ metadata:
+@@ -10,4 +12,4 @@ roleRef:
+   kind: ClusterRole
+   name: istio-operator{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
+   apiGroup: rbac.authorization.k8s.io
+----
++{{- end }}
+diff --git a/manifests/charts/istio-operator/values.yaml b/manifests/charts/istio-operator/values.yaml
+index 0f42b56866..cd281b5b69 100644
+--- a/manifests/charts/istio-operator/values.yaml
++++ b/manifests/charts/istio-operator/values.yaml
+@@ -2,6 +2,9 @@ defaults:
+   hub: gcr.io/istio-testing
+   tag: latest
+ 
++  # When false, ClusterRoleBinding for the operator is not created (e.g. when the installer lacks cluster-scoped RBAC permissions).
++  createClusterRoleBinding: true
++
+   # ImagePullSecrets for operator ServiceAccount, list of secrets in the same namespace
+   # used to pull operator image. Must be set for any cluster configured with private docker registry.
+   imagePullSecrets: []
+diff --git a/manifests/charts/istiod-remote/templates/clusterrolebinding.yaml b/manifests/charts/istiod-remote/templates/clusterrolebinding.yaml
+index 932cdce028..3441d66f9b 100644
+--- a/manifests/charts/istiod-remote/templates/clusterrolebinding.yaml
++++ b/manifests/charts/istiod-remote/templates/clusterrolebinding.yaml
+@@ -1,4 +1,5 @@
+-{{- if .Values.global.configCluster }}
++{{- $createCRB := not (eq (index (index .Values "global") "createClusterRoleBinding") false) }}
++{{- if and .Values.global.configCluster $createCRB }}
+ apiVersion: rbac.authorization.k8s.io/v1
+ kind: ClusterRoleBinding
+ metadata:
+diff --git a/manifests/charts/istiod-remote/templates/reader-clusterrolebinding.yaml b/manifests/charts/istiod-remote/templates/reader-clusterrolebinding.yaml
+index 4f9925c9d5..001688c8eb 100644
+--- a/manifests/charts/istiod-remote/templates/reader-clusterrolebinding.yaml
++++ b/manifests/charts/istiod-remote/templates/reader-clusterrolebinding.yaml
+@@ -1,3 +1,5 @@
++{{- $createCRB := not (eq (index (index .Values "global") "createClusterRoleBinding") false) }}
++{{- if $createCRB }}
+ apiVersion: rbac.authorization.k8s.io/v1
+ kind: ClusterRoleBinding
+ metadata:
+@@ -13,3 +15,4 @@ subjects:
+   - kind: ServiceAccount
+     name: istio-reader-service-account
+     namespace: {{ .Values.global.istioNamespace }}
++{{- end }}
+diff --git a/manifests/charts/istiod-remote/values.yaml b/manifests/charts/istiod-remote/values.yaml
+index d7b86b87e1..e1fd54c6db 100644
+--- a/manifests/charts/istiod-remote/values.yaml
++++ b/manifests/charts/istiod-remote/values.yaml
+@@ -317,6 +317,8 @@ defaults:
+     externalIstiod: true
+     # Configure a remote cluster as the config cluster for an external istiod.
+     configCluster: false
++    # When false, ClusterRoleBinding resources are not created (e.g. when the installer lacks cluster-scoped RBAC permissions).
++    createClusterRoleBinding: true
+     # Configure the policy for validating JWT.
+     # Currently, two options are supported: "third-party-jwt" and "first-party-jwt".
+     jwtPolicy: "third-party-jwt"
+diff --git a/operator/pkg/apis/istio/v1alpha1/values_types.proto b/operator/pkg/apis/istio/v1alpha1/values_types.proto
+index e103996bde..f94623ae93 100644
+--- a/operator/pkg/apis/istio/v1alpha1/values_types.proto
++++ b/operator/pkg/apis/istio/v1alpha1/values_types.proto
+@@ -482,7 +482,10 @@ message GlobalConfig {
+   repeated string ipFamilies = 70;
+  
+   string ipFamilyPolicy = 71;
+-  // The next available key is 72
++
++  // When false, ClusterRoleBinding resources are not created (e.g. when the installer lacks cluster-scoped RBAC permissions).
++  google.protobuf.BoolValue createClusterRoleBinding = 72;
++  // The next available key is 73
+ }
+ 
+ // Configuration for Security Token Service (STS) server.
