@@ -90,7 +90,7 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 		allowExperimentalModules = 1.
 	}
 
-	c.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModulesAreAllowedMetricName), allowExperimentalModules, map[string]string{"module": "deckhouse-controller"})
+	c.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModulesAreAllowedMetricName), allowExperimentalModules, map[string]string{metrics.LabelModule: "deckhouse-controller"})
 }
 
 func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {

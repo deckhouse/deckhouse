@@ -17,6 +17,7 @@ limitations under the License.
 package releaseupdater
 
 import (
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -47,34 +48,23 @@ func (mu *MetricsUpdater) PurgeReleaseMetric(name string) {
 
 type MetricLabels map[string]string
 
-const (
-	ManualApprovalRequired     = "manualApproval"
-	DisruptionApprovalRequired = "disruptionApproval"
-	RequirementsNotMet         = "requirementsNotMet"
-	ReleaseQueueDepth          = "releaseQueueDepth"
-	MajorReleaseDepth          = "majorReleaseDepth"
-	MajorReleaseName           = "majorReleaseName"
-	FromToName                 = "fromToName"
-	NotificationNotSent        = "notificationNotSent"
-)
-
 func NewReleaseMetricLabels(release v1alpha1.Release) MetricLabels {
 	labels := make(MetricLabels, 9)
 
-	labels["name"] = release.GetName()
+	labels[metrics.LabelName] = release.GetName()
 
-	labels.SetFalse(ManualApprovalRequired)
-	labels.SetFalse(DisruptionApprovalRequired)
-	labels.SetFalse(RequirementsNotMet)
-	labels.SetFalse(NotificationNotSent)
+	labels.SetFalse(metrics.LabelManualApprovalRequired)
+	labels.SetFalse(metrics.LabelDisruptionApprovalRequired)
+	labels.SetFalse(metrics.LabelRequirementsNotMet)
+	labels.SetFalse(metrics.LabelNotificationNotSent)
 
-	labels[ReleaseQueueDepth] = "nil"
-	labels[MajorReleaseDepth] = "nil"
-	labels[MajorReleaseName] = "nil"
-	labels[FromToName] = "nil"
+	labels[metrics.LabelReleaseQueueDepth] = "nil"
+	labels[metrics.LabelMajorReleaseDepth] = "nil"
+	labels[metrics.LabelMajorReleaseName] = "nil"
+	labels[metrics.LabelFromToName] = "nil"
 
 	if _, ok := release.(*v1alpha1.ModuleRelease); ok {
-		labels["moduleName"] = release.GetModuleName()
+		labels[metrics.LabelModule] = release.GetModuleName()
 	}
 
 	return labels
