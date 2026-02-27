@@ -15,4 +15,4 @@
 # limitations under the License.
 
 printf '%s\n' "$(< /etc/resolv.conf)" > /chroot/etc/resolv.conf
-unshare -S 64535 -R /chroot /usr/local/nginx/sbin/nginx "$@"
+/usr/bin/unshare -S 64535 -R /chroot /usr/local/nginx/sbin/nginx "$@"
