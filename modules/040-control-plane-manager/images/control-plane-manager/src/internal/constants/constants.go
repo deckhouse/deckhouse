@@ -37,6 +37,21 @@ const (
 	ExtraFilesPath                      = DeckhousePath + "/extra-files"
 	ConfigPath                          = "/config" // Mounted secret for d8-control-plane-manager-config
 	PkiPath                             = "/pki"    // Mounted secret for d8-pki
+
+	// CPN Conditions
+	ConditionEtcdReady              = "EtcdReady"
+	ConditionAPIServerReady         = "APIServerReady"
+	ConditionControllerManagerReady = "ControllerManagerReady"
+	ConditionSchedulerReady         = "SchedulerReady"
+	ConditionPKISynced              = "PKISynced"
+	ConditionsHotReloadSynced       = "HotReloadSynced"
+
+	ReasonSynced        = "Synced"
+	ReasonOutOfSync     = "OutOfSync"
+	ReasonUpdating      = "Updating"
+	ReasonPendingUpdate = "PendingUpdate"
+	ReasonUpdateFailed  = "UpdateFailed"
+	ReasonUnknown       = "Unknown"
 )
 
 // ToRelativePath returns path without leading slash for using in tmp directory sync

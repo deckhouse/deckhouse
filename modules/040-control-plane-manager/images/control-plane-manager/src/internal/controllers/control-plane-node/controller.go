@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/time/rate"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
@@ -139,7 +140,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, err
 	}
 
-	return reconcile.Result{}, nil
+	if err := r.reconcileConditions(ctx, controlPlaneNode); err != nil {
+		return reconcile.Result{RequeueAfter: requeueInterval}, err
+	}
+
+	return reconcile.Result{RequeueAfter: requeueInterval}, nil
 }
 
 // componentCheck holds spec and status checksums for a single component.
@@ -216,13 +221,6 @@ func (r *Reconciler) buildComponentChecks(cpn *controlplanev1alpha1.ControlPlane
 	spec := &cpn.Spec.Components
 	status := &cpn.Status.Components
 
-	getChecksum := func(c *controlplanev1alpha1.ComponentChecksum) string {
-		if c == nil {
-			return ""
-		}
-		return c.Checksum
-	}
-
 	return []componentCheck{
 		{
 			component:      controlplanev1alpha1.OperationComponentEtcd,
@@ -257,6 +255,13 @@ func (r *Reconciler) buildComponentChecks(cpn *controlplanev1alpha1.ControlPlane
 	}
 }
 
+func getChecksum(c *controlplanev1alpha1.ComponentChecksum) string {
+	if c == nil {
+		return ""
+	}
+	return c.Checksum
+}
+
 // operationNameForNode returns a deterministic k8s like resource name for ControlPlaneOperation <node-name>-<component>-<checksum>.
 func operationNameForNode(nodeName string, component controlplanev1alpha1.OperationComponent, specChecksum string) string {
 	sanitized := strings.ReplaceAll(nodeName, ".", "-")
@@ -264,4 +269,44 @@ func operationNameForNode(nodeName string, component controlplanev1alpha1.Operat
 		specChecksum = specChecksum[:6]
 	}
 	return fmt.Sprintf("%s-%s-%s", sanitized, strings.ToLower(string(component)), specChecksum)
+}
+
+func buildCondition(condType string, specChecksum, statusChecksum string, generation int64) metav1.Condition {
+	if specChecksum == statusChecksum {
+		return metav1.Condition{
+			Type:               condType,
+			Status:             metav1.ConditionTrue,
+			Reason:             constants.ReasonSynced,
+			ObservedGeneration: generation,
+		}
+	}
+	return metav1.Condition{
+		Type:               condType,
+		Status:             metav1.ConditionFalse,
+		Reason:             constants.ReasonPendingUpdate,
+		ObservedGeneration: generation,
+	}
+}
+
+func (r *Reconciler) reconcileConditions(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode) error {
+	patch := client.MergeFrom(cpn.DeepCopy())
+
+	checks := []struct {
+		condType string
+		spec     string
+		status   string
+	}{
+		{constants.ConditionEtcdReady, getChecksum(cpn.Spec.Components.Etcd), getChecksum(cpn.Status.Components.Etcd)},
+		{constants.ConditionAPIServerReady, getChecksum(cpn.Spec.Components.KubeAPIServer), getChecksum(cpn.Status.Components.KubeAPIServer)},
+		{constants.ConditionControllerManagerReady, getChecksum(cpn.Spec.Components.KubeControllerManager), getChecksum(cpn.Status.Components.KubeControllerManager)},
+		{constants.ConditionSchedulerReady, getChecksum(cpn.Spec.Components.KubeScheduler), getChecksum(cpn.Status.Components.KubeScheduler)},
+		{constants.ConditionPKISynced, cpn.Spec.PKIChecksum, cpn.Status.PKIChecksum},
+		{constants.ConditionsHotReloadSynced, cpn.Spec.HotReloadChecksum, cpn.Status.HotReloadChecksum},
+	}
+
+	for _, check := range checks {
+		cond := buildCondition(check.condType, check.spec, check.status, cpn.Generation)
+		meta.SetStatusCondition(&cpn.Status.Conditions, cond)
+	}
+	return r.client.Status().Patch(ctx, cpn, patch)
 }

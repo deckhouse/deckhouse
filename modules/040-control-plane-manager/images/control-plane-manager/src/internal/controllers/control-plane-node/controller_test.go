@@ -69,6 +69,7 @@ func (suite *ControllerTestSuite) setupController(objs []client.Object) {
 	suite.client = fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(objs...).
+		WithStatusSubresource(&controlplanev1alpha1.ControlPlaneNode{}).
 		Build()
 
 	suite.controller = &Reconciler{
