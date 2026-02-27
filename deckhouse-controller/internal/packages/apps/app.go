@@ -167,8 +167,8 @@ func (a *Application) addHooks(found ...hooks.Hook) error {
 // RuntimeValues holds runtime values that are not part of schema.
 // These values are passed to helm templates under .Runtime prefix.
 type RuntimeValues struct {
-	Instance addonutils.Values
-	Package  addonutils.Values
+	Instance addonutils.Values `json:"Instance"`
+	Package  addonutils.Values `json:"Package"`
 }
 
 // GetRuntimeValues returns values that are not part of schema.
@@ -192,10 +192,9 @@ func (a *Application) GetRuntimeValues() RuntimeValues {
 // GetExtraNelmValues returns runtime values in string format
 func (a *Application) GetExtraNelmValues() string {
 	runtimeValues := a.GetRuntimeValues()
-	instanceJSON, _ := json.Marshal(runtimeValues.Instance)
-	packageJSON, _ := json.Marshal(runtimeValues.Package)
+	marshalled, _ := json.Marshal(runtimeValues)
 
-	return fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON)
+	return fmt.Sprintf("Application=%s", marshalled)
 }
 
 // GetName returns the full application identifier in format "namespace.name".
