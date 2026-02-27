@@ -136,13 +136,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	log.Info("ControlPlaneNode found", slog.String("node", nodeName))
 
+	// Save original before modifications so MergeFrom includes components in the patch
+	originalForPatch := controlPlaneNode.DeepCopy()
 	r.ensureStatusComponentsInitialized(controlPlaneNode)
 
 	if err := r.reconcileComponents(ctx, controlPlaneNode); err != nil {
 		return reconcile.Result{RequeueAfter: requeueInterval}, err
 	}
 
-	if err := r.reconcileConditions(ctx, controlPlaneNode); err != nil {
+	if err := r.reconcileConditions(ctx, controlPlaneNode, originalForPatch); err != nil {
 		return reconcile.Result{RequeueAfter: requeueInterval}, err
 	}
 
@@ -165,12 +167,6 @@ func (r *Reconciler) ensureStatusComponentsInitialized(cpn *controlplanev1alpha1
 	}
 	if cpn.Status.Components.KubeScheduler == nil {
 		cpn.Status.Components.KubeScheduler = empty()
-	}
-	if cpn.Status.HotReloadChecksum == "" {
-		cpn.Status.HotReloadChecksum = ""
-	}
-	if cpn.Status.PKIChecksum == "" {
-		cpn.Status.PKIChecksum = ""
 	}
 }
 
@@ -317,8 +313,8 @@ func buildCondition(condType string, specChecksum, statusChecksum string, genera
 	}
 }
 
-func (r *Reconciler) reconcileConditions(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode) error {
-	patch := client.MergeFrom(cpn.DeepCopy())
+func (r *Reconciler) reconcileConditions(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, originalForPatch *controlplanev1alpha1.ControlPlaneNode) error {
+	patch := client.MergeFrom(originalForPatch)
 
 	checks := []struct {
 		condType string
