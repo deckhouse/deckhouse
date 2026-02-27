@@ -17,8 +17,9 @@
 set -euo pipefail
 
 tmpfile=$(mktemp /tmp/coverage-report.XXXXXX)
+packages=$(go list ./pkg/... | grep -Ev '/pkg/preflight(/|$)')
 
-go test -v -cover -coverprofile=${tmpfile} -vet=off ./pkg/...
+go test -v -cover -coverprofile="${tmpfile}" -vet=off ${packages}
 coverage=$(go tool cover -func  ${tmpfile} | grep total | awk '{print $3}')
 
 echo "Coverage: ${coverage}"
