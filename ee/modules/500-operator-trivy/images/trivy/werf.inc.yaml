@@ -29,7 +29,7 @@ shell:
   - git clone --depth 1 --branch {{ $trivyVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy-db.git /src/trivy-db-patch
   - git clone --depth 1 --branch {{ $trivyVersion }} $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy.git /src/trivy
   - git clone git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy.git /src/trivy-patch
-  - cd /src/trivy-patch && git checkout 2ed377e076313b526bdd082d444b6118d610afb7 # last commit from branch main. Werf trigger for rebuild
+  - cd /src/trivy-patch && git checkout f0361917de903970fa08a03abf82de2a604a5a7e # last commit from branch main. Werf trigger for rebuild
   - cd /src/trivy-db && git apply --verbose --whitespace=fix /src/trivy-db-patch/patches/{{ $trivyVersion }}/*.patch
   - cd /src/trivy && git apply --verbose --whitespace=fix /src/trivy-patch/patches/{{ $trivyVersion }}/*.patch
   - rm -rf /src/trivy/docs /src/trivy/integration
