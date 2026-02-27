@@ -7,7 +7,16 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/go.mod b/go.mod
 --- a/go.mod	(revision df9c6c5545dad05a9e24212dc4472f5f0d5cd2b7)
-+++ b/go.mod	(revision 2f73e2de4019043764a9abfcb74ce53d97a5036e)
++++ b/go.mod	(date 1772190461014)
+@@ -24,7 +24,7 @@
+ 	github.com/armon/go-radix v1.0.0 // indirect
+ 	github.com/bgentry/speakeasy v0.1.0 // indirect
+ 	github.com/bmatcuk/doublestar/v4 v4.8.1 // indirect
+-	github.com/cloudflare/circl v1.6.1 // indirect
++	github.com/cloudflare/circl v1.6.3 // indirect
+ 	github.com/fatih/color v1.16.0 // indirect
+ 	github.com/golang/protobuf v1.5.4 // indirect
+ 	github.com/google/go-cmp v0.7.0 // indirect
 @@ -69,14 +69,14 @@
  	github.com/yuin/goldmark-meta v1.1.0 // indirect
  	github.com/zclconf/go-cty v1.16.3 // indirect
@@ -43,7 +52,18 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/go.sum b/go.sum
 --- a/go.sum	(revision df9c6c5545dad05a9e24212dc4472f5f0d5cd2b7)
-+++ b/go.sum	(revision 2f73e2de4019043764a9abfcb74ce53d97a5036e)
++++ b/go.sum	(date 1772190466513)
+@@ -34,8 +34,8 @@
+ github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
+ github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
+ github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
+-github.com/cloudflare/circl v1.6.1 h1:zqIqSPIndyBh1bjLVVDHMPpVKqp8Su/V+6MeDzzQBQ0=
+-github.com/cloudflare/circl v1.6.1/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
++github.com/cloudflare/circl v1.6.3 h1:9GPOhQGF9MCYUeXyMYlqTR6a5gTrgR/fBLXvUgtVcg8=
++github.com/cloudflare/circl v1.6.3/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
+ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
+ github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
+ github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4/go.mod h1:6pvJx4me5XPnfI9Z40ddWsdw2W/uZgQLFXToKeRcDiI=
 @@ -58,6 +58,8 @@
  github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
  github.com/fatih/color v1.16.0 h1:zmkK9Ngbjj+K0yRhTVONQh1p/HknKYSlNT+vZCzyokM=
