@@ -38,10 +38,10 @@ resource "kubernetes_manifest" "ipv4_address" {
 resource "kubernetes_resource_ready_v1" "ipv4_address" {
   count = var.ipv4_address != "" ? 1 : 0
 
-  api_version = kubernetes_manifest.ipv4_address.object.apiVersion
-  kind = kubernetes_manifest.ipv4_address.object.kind
-  name = kubernetes_manifest.ipv4_address.object.metadata.name
-  namespace = kubernetes_manifest.ipv4_address.object.metadata.namespace
+  api_version = kubernetes_manifest.ipv4_address[0].object.apiVersion
+  kind = kubernetes_manifest.ipv4_address[0].object.kind
+  name = kubernetes_manifest.ipv4_address[0].object.metadata.name
+  namespace = kubernetes_manifest.ipv4_address[0].object.metadata.namespace
 
   wait_timeout = var.timeouts.create
   # todo this attribute used on migration to resource ready resource
