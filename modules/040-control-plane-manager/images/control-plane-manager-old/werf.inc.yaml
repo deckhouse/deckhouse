@@ -14,14 +14,14 @@ import:
   - kubeadm
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /control-plane-manager
-  to: /control-plane-manager
+  add: /src/controller
+  to: /controller
   before: install
 git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:
-    entrypoint: ["/control-plane-manager"]
+    entrypoint: ["/controller"]
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
 {{- end }}
@@ -42,15 +42,15 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-    - cd /src/cmd/control-plane-manager
-    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /control-plane-manager .
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go etcd.go
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2025-07-25-3"
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
   to: /src
   stageDependencies:
     install:
