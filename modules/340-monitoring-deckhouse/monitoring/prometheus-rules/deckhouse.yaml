@@ -579,7 +579,7 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_labels_as_annotations: "module_name"
+      plk_labels_as_annotations: "module"
       summary: Migrated module {{ $labels.module }} not found in registry.
       description: |
         Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to external source and not found in any available ModuleSource registry. DeckhouseRelease will be lock until found module in any available ModuleSource.
