@@ -514,7 +514,7 @@ spec:
                         customConfigs:
                           description: |
                             Кастомное разбиение MIG по индексам GPU.
-                            
+
                             Используется только при значении `partedConfig: custom`.
 
                             Представляет собой массив устройств (map по `index`), где каждый элемент указывает на GPU по его индексу и описывает создаваемые срезы.
@@ -897,19 +897,19 @@ spec:
                         swapBehavior:
                           description: |
                             Определяет, как используется swap-память на узле:
-                            
+
                             * `NoSwap` — swap отключен. Это традиционное поведение Kubernetes.
                             * `LimitedSwap` — kubelet может использовать swap-память в пределах, заданных в `limitedSwap.size`.
-                            
+
                             Подробнее об использовании swap-памяти на узлах можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/concepts/cluster-administration/swap-memory-management/).
                         swappiness:
                           description: |
                             Определяет склонность ядра к использованию swap.
-                            
+
                             * `0` — минимальное использование (только для предотвращения OOM).
                             * `60` — сбалансированное поведение по умолчанию.
                             * `100` — агрессивное использование.
-                            
+
                             Значение устанавливается через параметр sysctl `vm.swappiness`.
                         limitedSwap:
                           description: |
@@ -926,20 +926,39 @@ spec:
 
                         Можно указать число узлов или процент от общего количества узлов в данной группе.
                 fencing:
+                  type: object
                   description: |
-                    Включить fencing для этой группы.
+                    Включить контроллер ограждения для этой группы.
+                  required: [ mode ]
                   properties:
                     mode:
+                      type: string
+                      enum:
+                        - "Watchdog"
+                        - "Dryrun"
                       description: |
-                        Fencing поддерживает единственный режим работы: `Watchdog`. В этом режиме используется модуль ядра watchdog (сторожевой таймер).
+                        Fencing mode:
+                          - `Watchdog` — использует модуль ядра watchdog для автоматической перезагрузки узлов, потерявших связь с кластером.
+                          - `Dryrun` — запускает fencing-agent без активации watchdog.
 
-                        Реализация Watchdog включает в себя следующие компоненты:
+                          Скрипт `NodeGroupConfiguration` загружает модуль ядра `softdog` с параметрами `soft_margin=<timeout>` и `soft_panic=1`.
 
-                        - Fencing-agent — DaemonSet, который разворачивается на определенной группе узлов (NodeGroup).
-
-                          После запуска агент активирует Watchdog и устанавливает специальную метку `node-manager.deckhouse.io/fencing-enabled` на узле, где он функционирует. Агент регулярно проверяет доступность Kubernetes API. Если API доступен, агент отправляет сигнал в Watchdog, что сбрасывает сторожевой таймер. Также агент отслеживает специальные метки обслуживания на узле и, в зависимости от их наличия, включает или отключает Watchdog.
-
-                          В качестве Watchdog используется модуль ядра softdog с параметрами `soft_margin=60` и `soft_panic=1`. Это означает, что время таймаута сторожевого таймера составляет 60 секунд. По истечении этого времени происходит kernel-panic, и узел остается в этом состоянии до тех пор, пока пользователь не выполнит его перезагрузку.
-
-                        - Fencing-controller — контроллер, который отслеживает все узлы с установленной меткой `node-manager.deckhouse.io/fencing-enabled`. Если какой-либо из узлов становится недоступным на протяжении более 60 секунд, контроллер удаляет все поды с этого узла и затем удаляет сам узел.
-
+                        Fencing-agent — DaemonSet, развёрнутый на каждом узле в NodeGroup:
+                          - Открывает устройство `/dev/watchdog` и устанавливает на узле метку `node-manager.deckhouse.io/fencing-enabled`.
+                          - Участвует в gossip-кластере (memberlist) с другими fencing-agent'ами в той же NodeGroup.
+                          - Периодически проверяет кворум (доступность большинства узлов); если кворум не достигнут (quorum=false), выполняется резервная проверка доступности Kubernetes API.
+                          - Если кворум поддерживается ИЛИ Kubernetes API доступен, агент «кормит» watchdog (сбрасывает таймер).
+                          - Если ни одно из условий не выполнено, таймер watchdog истекает, что вызывает kernel panic и перезагрузку узла.
+                          - Отслеживает аннотации обслуживания (`node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, `update.node.deckhouse.io/disruption-approved`) для временного отключения watchdog на время планового обслуживания.
+                    watchdog:
+                      type: object
+                      properties:
+                        timeout:
+                          type: string
+                          pattern: "^[0-9]+[smh]{1}$"
+                          default: 60s
+                          description: |
+                            Длительность таймаута watchdog. Указывается в секундах, минутах или часах.
+                          x-doc-default: 60s
+                      required:
+                        - timeout

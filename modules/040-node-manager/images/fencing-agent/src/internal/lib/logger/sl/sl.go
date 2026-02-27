@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,11 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package watchdog
+package sl
 
-type WatchDog interface {
-	Start() error
-	Feed() error
-	Stop() error
-	IsArmed() bool
+import (
+	"log/slog"
+)
+
+func Err(err error) slog.Attr {
+	return slog.Attr{
+		Key:   "error",
+		Value: slog.StringValue(err.Error()),
+	}
 }
