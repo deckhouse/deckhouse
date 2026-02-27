@@ -32,6 +32,7 @@ type InstanceReconciler struct {
 	client.Client
 	machineFactory        machine.MachineFactory
 	bashibleStatusFactory BashibleStatusFactory
+	messageFactory        MessageFactory
 }
 
 const instanceControllerFinalizer = "node-manager.hooks.deckhouse.io/instance-controller"
@@ -42,6 +43,7 @@ func SetupInstanceController(mgr ctrl.Manager) error {
 		Client:                mgr.GetClient(),
 		machineFactory:        machine.NewMachineFactory(),
 		bashibleStatusFactory: NewBashibleStatusFactory(),
+		messageFactory:        NewMessageFactory(),
 	}).
 		SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to setup instance reconciler: %w", err)
@@ -56,6 +58,9 @@ func (r *InstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	if r.bashibleStatusFactory == nil {
 		return fmt.Errorf("bashibleStatusFactory is required")
+	}
+	if r.messageFactory == nil {
+		return fmt.Errorf("messageFactory is required")
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).

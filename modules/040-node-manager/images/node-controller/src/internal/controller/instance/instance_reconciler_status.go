@@ -21,21 +21,44 @@ import (
 	"fmt"
 
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const instanceStatusFieldOwner = "node-controller-instancestatus"
+
 func (r *InstanceReconciler) reconcileBashibleStatus(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
 	desiredStatus := r.bashibleStatusFactory.FromConditions(instance.Status.Conditions)
-	if instance.Status.BashibleStatus == desiredStatus {
+	desiredMessage := r.messageFactory.FromConditions(instance.Status.Conditions)
+	if instance.Status.BashibleStatus == desiredStatus && instance.Status.Message == desiredMessage {
 		return nil
 	}
 
-	updated := instance.DeepCopy()
-	updated.Status.BashibleStatus = desiredStatus
-	if err := r.Status().Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
-		return fmt.Errorf("patch instance %q bashible status: %w", instance.Name, err)
+	applyObj := &deckhousev1alpha2.Instance{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: deckhousev1alpha2.GroupVersion.String(),
+			Kind:       "Instance",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: instance.Name,
+		},
+		Status: deckhousev1alpha2.InstanceStatus{
+			BashibleStatus: desiredStatus,
+			Message:        desiredMessage,
+		},
 	}
 
-	*instance = *updated
+	if err := r.Status().Patch(
+		ctx,
+		applyObj,
+		client.Apply,
+		client.FieldOwner(instanceStatusFieldOwner),
+		client.ForceOwnership,
+	); err != nil {
+		return fmt.Errorf("apply instance %q bashible status/message: %w", instance.Name, err)
+	}
+
+	instance.Status.BashibleStatus = desiredStatus
+	instance.Status.Message = desiredMessage
 	return nil
 }
