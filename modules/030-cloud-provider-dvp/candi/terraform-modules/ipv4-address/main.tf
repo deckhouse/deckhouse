@@ -27,15 +27,31 @@ resource "kubernetes_manifest" "ipv4_address" {
       "type"     = local.ipv4_address_type
     }
   }
-  wait {
-    fields = {
-      "status.phase" = "Bound"
-    }
-  }
+
   timeouts {
     create = var.timeouts.create
     update = var.timeouts.update
     delete = var.timeouts.delete
+  }
+}
+
+resource "kubernetes_resource_ready_v1" "ipv4_address" {
+  count = var.ipv4_address != "" ? 1 : 0
+
+  api_version = kubernetes_manifest.ipv4_address.object.apiVersion
+  kind = kubernetes_manifest.ipv4_address.object.kind
+  name = kubernetes_manifest.ipv4_address.object.metadata.name
+  namespace = kubernetes_manifest.ipv4_address.object.metadata.namespace
+
+  wait_timeout = var.timeouts.create
+  # todo this attribute used on migration to resource ready resource
+  # and not check ready when converge
+  # it can safe delete in future because any change this attribute not produce new plan
+  # 120h = 5 days
+  skip_check_on_create_with_resource_live_time = "120h"
+
+  fields = {
+    "status.phase" = "Bound"
   }
 }
 
@@ -47,6 +63,8 @@ data "kubernetes_resource" "ipv4_address" {
     namespace = var.namespace
   }
   depends_on = [
+    # wait to address is ready
+    kubernetes_resource_ready_v1.ipv4_address,
     kubernetes_manifest.ipv4_address
   ]
 }
