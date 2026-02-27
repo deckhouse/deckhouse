@@ -369,6 +369,10 @@ Deckhouse Kubernetes Platform с набором модулей `Minimal` без 
 
 ### Особенности автоматики, зависящие от типа модуля
 
+{% alert level="info" %}
+Ниже описана базовая (общая) логика автоматического выбора узлов для размещения компонентов модулей, когда в настройках модуля не заданы явные значения `nodeSelector` и `tolerations`. Некоторые модули могут дополнять или изменять эту логику (например, использовать механизмы Kubernetes, такие как [affinity/anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity), [`topologySpreadConstraints`](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#topologyspreadconstraints-field), или собственные правила выбора узлов). Подробности см. в документации соответствующего модуля.
+{% endalert %}
+
 {% raw %}
 * Модули *monitoring* ([`operator-prometheus`](/modules/operator-prometheus/), [`prometheus`](/modules/prometheus/) и [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/)):
   * Порядок поиска узлов (для определения [`nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector)):
