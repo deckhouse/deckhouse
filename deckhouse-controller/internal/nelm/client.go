@@ -27,6 +27,7 @@ import (
 
 	"github.com/werf/nelm/pkg/action"
 	"github.com/werf/nelm/pkg/common"
+	"github.com/werf/nelm/pkg/legacy/progrep"
 	nelmlog "github.com/werf/nelm/pkg/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -189,6 +190,8 @@ type InstallOptions struct {
 	ExtraValues string   // Extra values in json format
 
 	ReleaseLabels map[string]string // Labels to apply to the release
+
+	ReportCh chan<- progrep.ProgressReport
 }
 
 // Install installs a Helm chart as a release
@@ -207,6 +210,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	}
 
 	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
+		LegacyProgressReportCh: opts.ReportCh,
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},
