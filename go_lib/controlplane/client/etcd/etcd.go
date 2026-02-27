@@ -603,9 +603,9 @@ func getEtcdCommand(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpo
 func WriteStaticPodToDisk(podManifest []byte, componentName, manifestDir string, pod v1.Pod) error {
 
 	// creates target folder if not already exists
-	// if err := os.MkdirAll(manifestDir, 0700); err != nil {
-	// 	return errors.Wrapf(err, "failed to create directory %q", manifestDir)
-	// }
+	if err := os.MkdirAll(manifestDir, 0700); err != nil {
+		return errors.Wrapf(err, "failed to create directory %q", manifestDir)
+	}
 
 	// // writes the pod to disk
 	// serialized, err := kubeadmutil.MarshalToYaml(&pod, v1.SchemeGroupVersion)
