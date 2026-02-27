@@ -18,3 +18,19 @@ Also, this patch contains huge testing for new resource. For testing, we can use
 - unfortunately  parallel tests cannot work with panic in testing framework internal. 
   It is uncomfortable with running tests in IDE's
 - script contains some initialization for run tests with `kind` cluster.
+
+# 004-node-taint-resource-test-fix.patch
+This patch uses for improve developer experience and not affect provider logic. 
+Fix `kubernetes/resource_kubernetes_node_taint_test.go` file.
+This test uses `k8s.io/kubernetes` (and only one in tests).
+When we try to run `go list -json -m -u -mod=readonly` command it fails with errors:
+```
+...
+go: k8s.io/cloud-provider@v0.0.0: invalid version: unknown revision v0.0.0
+go: k8s.io/cluster-bootstrap@v0.0.0: invalid version: unknown revision v0.0.0
+go: k8s.io/controller-manager@v0.0.0: invalid version: unknown revision v0.0.0
+...
+```
+
+because `k8s.io/kubernetes` cannot be used as module. For example, IDE's cannot
+resolve dependencies and fail.
