@@ -32,8 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
-
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -47,9 +45,6 @@ const (
 
 	// packageTypeLabel is a label on Docker images that indicates the package type
 	packageTypeLabel = "io.deckhouse.package.type"
-
-	// TODO: unify constant
-	packageTypeApplication = "Application"
 
 	// cleanupOldOperationsCount is the number of operations to keep for the same repository, older operations will be deleted
 	cleanupOldOperationsCount = 10
@@ -473,49 +468,86 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	r.logger.Info("processing package",
 		slog.String("package", currentPackage.Name))
 
-	// Create or update ApplicationPackage or ClusterApplicationPackage
-	err := svc.EnsureApplicationPackage(ctx, currentPackage.Name)
-	if err != nil {
-		r.logger.Error("failed to ensure package resource",
-			slog.String("package", currentPackage.Name),
-			log.Err(err))
-	}
-
 	processResult, err := svc.ProcessPackageVersions(ctx, currentPackage.Name, operation)
 	if err != nil {
 		r.logger.Error("failed to process package versions",
 			slog.String("package", currentPackage.Name),
 			log.Err(err))
-		// Continue with next package even if this one fails
 	}
 
-	// Remove processed package from queue
+	// Processing failed entirely — record error and move to next package
+	if processResult == nil {
+		return r.dequeuePackageWithError(ctx, operation, currentPackage.Name, err)
+	}
+
+	// Ensure the appropriate package resource based on detected type.
+	// Skip resource creation for unrecognized packages (e.g. legacy modules without metadata).
+	switch processResult.PackageType {
+	case packageTypeModule:
+		if ensureErr := svc.EnsureModulePackage(ctx, currentPackage.Name); ensureErr != nil {
+			r.logger.Error("failed to ensure module package resource",
+				slog.String("package", currentPackage.Name),
+				log.Err(ensureErr))
+		}
+	case packageTypeApplication:
+		if ensureErr := svc.EnsureApplicationPackage(ctx, currentPackage.Name); ensureErr != nil {
+			r.logger.Error("failed to ensure application package resource",
+				slog.String("package", currentPackage.Name),
+				log.Err(ensureErr))
+		}
+	}
+
+	return r.dequeuePackageWithResult(ctx, operation, currentPackage.Name, processResult)
+}
+
+func (r *reconciler) dequeuePackageWithError(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, packageName string, processErr error) (ctrl.Result, error) {
 	original := operation.DeepCopy()
+
 	if len(operation.Status.Packages.Discovered) > 0 {
 		operation.Status.Packages.Discovered = operation.Status.Packages.Discovered[1:]
 	}
+	if operation.Status.Packages != nil {
+		operation.Status.Packages.ProcessedOverall++
+	}
 
+	operation.Status.Packages.Failed = append(operation.Status.Packages.Failed, v1alpha1.PackageRepositoryOperationStatusFailedPackage{
+		Name: packageName,
+		Errors: []v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
+			{Error: processErr.Error()},
+		},
+	})
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+	}
+	return ctrl.Result{Requeue: true}, nil
+}
+
+func (r *reconciler) dequeuePackageWithResult(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, packageName string, result *PackageProcessResult) (ctrl.Result, error) {
+	original := operation.DeepCopy()
+
+	if len(operation.Status.Packages.Discovered) > 0 {
+		operation.Status.Packages.Discovered = operation.Status.Packages.Discovered[1:]
+	}
 	if operation.Status.Packages != nil {
 		operation.Status.Packages.ProcessedOverall++
 	}
 
 	operation.Status.Packages.Processed = append(operation.Status.Packages.Processed, v1alpha1.PackageRepositoryOperationStatusPackage{
-		Name: currentPackage.Name,
-		Type: processResult.PackageType,
+		Name: packageName,
+		Type: string(result.PackageType),
 	})
 
-	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(processResult.Failed))
-	for _, failedVersion := range processResult.Failed {
+	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(result.Failed))
+	for _, fv := range result.Failed {
 		failedList = append(failedList, v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
-			Version: failedVersion.Name,
-			Error:   failedVersion.Error,
+			Version: fv.Name,
+			Error:   fv.Error,
 		})
 	}
-
-	// Only add to Failed list if there were actual failures
 	if len(failedList) > 0 {
 		operation.Status.Packages.Failed = append(operation.Status.Packages.Failed, v1alpha1.PackageRepositoryOperationStatusFailedPackage{
-			Name:   currentPackage.Name,
+			Name:   packageName,
 			Errors: failedList,
 		})
 	}
@@ -523,8 +555,6 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
-
-	// Requeue to process next package
 	return ctrl.Result{Requeue: true}, nil
 }
 
@@ -639,43 +669,6 @@ func (r *reconciler) SetConditionFalse(operation *v1alpha1.PackageRepositoryOper
 	})
 
 	return operation
-}
-
-func (r *reconciler) setOperationFailed(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, condType, reason, message string) error {
-	original := operation.DeepCopy()
-
-	operation.Status.CompletionTime = ptr.To(metav1.Now())
-
-	r.SetConditionFalse(
-		operation,
-		condType,
-		reason,
-		message,
-	)
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *reconciler) setOperationTruePhase(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, phase string) error {
-	original := operation.DeepCopy()
-
-	operation.Status.Phase = phase
-	operation.Status.CompletionTime = ptr.To(metav1.Now())
-
-	r.SetConditionTrue(
-		operation,
-		v1alpha1.PackageRepositoryOperationConditionCompleted,
-	)
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoName string, success bool, reason, message string) error {

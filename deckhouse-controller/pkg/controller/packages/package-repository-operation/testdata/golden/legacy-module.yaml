@@ -31,43 +31,16 @@ status:
   packages:
     failed:
     - errors:
-      - error: 'ensure package version: create application package version: simulated
-          create error for v1.1.0'
-        version: v1.1.0
-      - error: 'ensure package version: create application package version: simulated
-          create error for v1.2.0'
-        version: v1.2.0
+      - error: 'package has no type labels and no package.yaml, processed as the legacy
+          module (v1alpha1): test-package'
+        version: ""
       name: test-package
     processed:
     - name: test-package
-      type: Application
     processedOverall: 1
     total: 1
   phase: Completed
   startTime: "2025-10-31T12:00:00Z"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ApplicationPackageVersion
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-    packages.deckhouse.io/draft: "true"
-    packages.deckhouse.io/package: test-package
-    packages.deckhouse.io/repository: deckhouse
-  name: deckhouse-test-package-v1.0.0
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: PackageRepository
-    name: deckhouse
-    uid: ""
-  resourceVersion: "1"
-spec:
-  packageName: test-package
-  packageRepositoryName: deckhouse
-  packageVersion: v1.0.0
-status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
@@ -85,9 +58,5 @@ status:
     reason: ""
     status: "True"
     type: LastOperationScanFinished
-  packages:
-  - name: test-package
-    type: Application
-  packagesCount: 1
   phase: Active
   syncTime: "2025-10-31T12:00:00Z"

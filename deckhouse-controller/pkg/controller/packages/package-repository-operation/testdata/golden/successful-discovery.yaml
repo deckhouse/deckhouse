@@ -52,9 +52,5 @@ status:
     reason: ""
     status: "True"
     type: LastOperationScanFinished
-  packages:
-  - name: test-package
-    type: Application
-  packagesCount: 1
   phase: Active
   syncTime: "2025-10-31T12:00:00Z"

@@ -77,7 +77,9 @@ type PackageRepository struct {
 }
 
 type PackageRepositorySpec struct {
-	// Interval for registry scan. Minimum is 3 minutes.
+	// Interval for registry scan.
+	//
+	// Defines the frequency of checking the container registry for new packages.
 	// +optional
 	ScanInterval *metav1.Duration `json:"scanInterval,omitempty"`
 	// Configuration for the package registry.

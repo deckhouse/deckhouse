@@ -63,7 +63,7 @@ var _ runtime.Object = (*ModulePackageVersion)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=mpv
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
-// +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepository
+// +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName
 // +kubebuilder:printcolumn:name="TransitionTime",type="date",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime"
 // +kubebuilder:printcolumn:name="MetadataLoaded",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].status"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].message"
