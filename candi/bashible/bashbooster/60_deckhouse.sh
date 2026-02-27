@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- $lib := .Files.Get "deckhouse/candi/bashible/lib.sh.tpl" -}}
+{{- tpl $lib . }}
+{{ template "bb-d8-node-name" . }}
+{{ template "bb-status" . }}
+
 bb-kubectl() {
   kubectl --request-timeout 60s ${@}
 }

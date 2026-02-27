@@ -16,15 +16,10 @@
 export LANG=C LC_NUMERIC=C
 set -Eeo pipefail
 
-{{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
-{{- tpl $bbnn . }}
-
-{{- $bbnn := .Files.Get "deckhouse/candi/bashible/lib.sh.tpl" -}}
-{{- tpl $bbnn . }}
-
-bb-d8-node-name() {
-  echo $(</var/lib/bashible/discovered-node-name)
-}
+{{- $lib := .Files.Get "deckhouse/candi/bashible/lib.sh.tpl" -}}
+{{- tpl $lib . }}
+{{ template "bb-d8-node-name" . }}
+{{ template "bb-status" . }}
 
 bb-discover-node-name() {
   local discovered_name_file="/var/lib/bashible/discovered-node-name"
