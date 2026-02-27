@@ -16,6 +16,7 @@ package nelm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -245,7 +246,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 
 	go func() {
 		for report := range reportCh {
-			s.logger.Info(fmt.Sprintf("report %s", report))
+			marshalled, _ := json.Marshal(report)
+			s.logger.Info(fmt.Sprintf("report %s", marshalled))
 		}
 	}()
 
