@@ -25,6 +25,9 @@ bb-deckhouse-get-disruptive-update-approval() {
       return 0
     fi
 
+    local disruption_approval_step="${BASH_SOURCE[1]##*/}"
+    local disruption_approval_message="${disruption_approval_step:-current step} requires disruption approval"
+
     attempt=0
     until
         node_data="$(
@@ -60,11 +63,16 @@ bb-deckhouse-get-disruptive-update-approval() {
 
     bb-log-info "Disruption required, waiting for approval"
 
+    local disruption_waiting_status_set="no"
     attempt=0
     until
       bb-kubectl-exec get node $(bb-d8-node-name) -o json | \
       jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")' >/dev/null
     do
+        if [ "$disruption_waiting_status_set" != "yes" ]; then
+            bb-disruption-approval-required "$disruption_approval_message"
+            disruption_waiting_status_set="yes"
+        fi
         attempt=$(( attempt + 1 ))
         if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
             bb-log-error "ERROR: Failed to get annotation 'update.node.deckhouse.io/disruption-approved' from Node."
@@ -77,5 +85,6 @@ bb-deckhouse-get-disruptive-update-approval() {
     done
 
     bb-log-info "Disruption approved!"
+    bb-disruption-approval-not-required
     bb-flag-set disruption
 }
