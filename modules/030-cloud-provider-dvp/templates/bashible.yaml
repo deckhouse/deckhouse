@@ -1,0 +1,10 @@
+{{- $bashible := .Files.Glob "candi/bashible/*.tpl" -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider-dvp-bashible
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+{{ $bashible.AsSecrets | indent 2 }}

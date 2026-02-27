@@ -1,4 +1,23 @@
 {{- $providerClusterConfiguration := .Values.cloudProviderDvp.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+{{- define "registration_data" }}
+{{- $context := index . 0 }}
+{{- $providerClusterConfiguration := index . 1 }}
+type: {{ b64enc "dvp" | quote }}
+# DVP does not contain meaning regions and zones
+# but out machinery use them. we use default as region and as one zone
+region: {{ b64enc "default" | quote }}
+zones: {{ $context.Values.cloudProviderDvp.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+instanceClassKind: {{ b64enc "DVPInstanceClass" | quote }}
+machineClassKind: {{ b64enc "" | quote }}
+capiClusterKind: {{ b64enc "DeckhouseCluster" | quote }}
+capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+capiClusterName: {{ b64enc "dvp" | quote }}
+capiMachineTemplateKind: {{ b64enc "DeckhouseMachineTemplate" | quote }}
+capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
+{{- $dvpValues := dict }}
+dvp: {{ $dvpValues | toJson | b64enc | quote }}
+{{- end }}
 ---
 apiVersion: v1
 kind: Secret
@@ -7,20 +26,14 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: Opaque
-data:
-  type: {{ b64enc "dvp" | quote }}
-  # DVP does not contain meaning regions and zones
-  # but out machinery use them. we use default as region and as one zone
-  region: {{ b64enc "default" | quote }}
-  zones: {{ .Values.cloudProviderDvp.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
-  instanceClassKind: {{ b64enc "DVPInstanceClass" | quote }}
-  machineClassKind: {{ b64enc "" | quote }}
-  capiClusterKind: {{ b64enc "DeckhouseCluster" | quote }}
-  capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
-  capiClusterName: {{ b64enc "dvp" | quote }}
-  capiMachineTemplateKind: {{ b64enc "DeckhouseMachineTemplate" | quote }}
-  capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
-  sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
+data: {{- include "registration_data" (list . $providerClusterConfiguration) | nindent 2 }}
 
-  {{- $dvpValues := dict }}
-  dvp: {{ $dvpValues | toJson | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider-dvp
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data: {{- include "registration_data" (list . $providerClusterConfiguration) | nindent 2 }}
