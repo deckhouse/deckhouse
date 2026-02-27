@@ -165,7 +165,18 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 
 			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(regSecret.Exists()).To(BeTrue())
-			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dvp"))))
+			regSecretData := regSecret.Field("data").Map()
+			Expect(regSecretData).To(Not(BeEmpty()))
+			Expect(regSecretData["capiClusterName"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dvp"))))
+			Expect(regSecretData["sshPublicKey"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("ssh-rsa AAAAB3N"))))
+
+			regSecretProviderSpecific := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-dvp")
+			Expect(regSecretProviderSpecific.Exists()).To(BeTrue())
+			regSecretProviderSpecificData := regSecretProviderSpecific.Field("data").Map()
+			Expect(regSecretProviderSpecificData).To(Not(BeEmpty()))
+			Expect(regSecretProviderSpecificData["capiClusterName"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dvp"))))
+			Expect(regSecretProviderSpecificData["sshPublicKey"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("ssh-rsa AAAAB3N"))))
+
 
 			csiController := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 			Expect(csiController.Exists()).To(BeTrue())
@@ -180,10 +191,12 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 
-			capiSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-capi")
+			capiSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-dvp-capi")
 			Expect(capiSecret.Exists()).To(BeTrue())
 			capiSecretData := capiSecret.Field("data").Map()
 			Expect(capiSecretData).To(Not(BeEmpty()))
+			Expect(len(capiSecretData["deckhouseclusters.yaml"].String())).To(BeNumerically(">", 0))
+			Expect(len(capiSecretData["instance-class.checksum"].String())).To(BeNumerically(">", 0))
 		})
 	})
 })
