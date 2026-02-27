@@ -36,7 +36,7 @@ done
 
 ## Изменение CRI для NodeGroup
 
-> **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type)).
+> **Внимание.** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type)).
 
 Установить параметр [cri.type](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) в `Containerd` или в `NotManaged`.
 
@@ -67,7 +67,7 @@ spec:
   d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
-> **Внимание!** При смене `cri.type` для NodeGroup, созданных с помощью `dhctl`, нужно менять ее в `dhctl config edit provider-cluster-configuration` и настройках объекта NodeGroup.
+> **Внимание.** При смене `cri.type` для NodeGroup, созданных с помощью `dhctl`, нужно менять ее в `dhctl config edit provider-cluster-configuration` и настройках объекта NodeGroup.
 
 После настройки нового CRI для NodeGroup модуль `node-manager` по одному drain'ит узлы и устанавливает на них новый CRI. Обновление узла
 сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup модуль `node-manager` либо автоматически разрешает обновление
@@ -75,7 +75,7 @@ spec:
 
 ## Изменение CRI для всего кластера
 
-> **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type)).
+> **Внимание.** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type)).
 
 Необходимо с помощью утилиты `dhctl` отредактировать параметр `defaultCRI` в конфиге `cluster-configuration`.
 
@@ -97,7 +97,7 @@ spec:
 Если необходимо какую-то NodeGroup оставить на другом CRI, перед изменением `defaultCRI` необходимо установить CRI для этой NodeGroup,
 как описано [здесь](#как-изменить-cri-для-nodegroup).
 
-> **Внимание!** Изменение `defaultCRI` влечет за собой изменение CRI на всех узлах, включая master-узлы.
+> **Внимание.** Изменение `defaultCRI` влечет за собой изменение CRI на всех узлах, включая master-узлы.
 > Если master-узел один, данная операция является опасной и может привести к полной неработоспособности кластера!
 > Предпочтительный вариант — сделать multimaster и поменять тип CRI!
 

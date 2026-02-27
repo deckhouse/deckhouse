@@ -352,7 +352,7 @@ spec:
 d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o jsonpath='{ .spec.clusterIP }'
 ```
 
-Допустим наш адрес `34.85.243.109`, тогда модуль-конфиг kube-dns будет выглядеть так
+Допустим наш адрес `34.85.243.109`, тогда модуль конфигурации kube-dns будет выглядеть так
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

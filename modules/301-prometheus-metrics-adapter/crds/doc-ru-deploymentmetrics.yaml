@@ -25,7 +25,7 @@ spec:
               properties:
                 query:
                   description: |
-                    PromQL-запрос должен возвращать однозначное значение для вашей метрики. Используйте операторы группировки, такие как sum() by(), max() by() и другие. Также применяйте ключевые слова: <<.LabelMatchers>> — для выбора меток (укажите их через запятую); <<.GroupBy>> — для группировки по меткам. Пример: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>).
+                    PromQL-запрос должен возвращать однозначное значение для вашей метрики. Используйте операторы группировки, такие как sum() by(), max() by() и другие. Также применяйте ключевые слова: <<.LabelMatchers>> — для выбора лейблов (укажите их через запятую); <<.GroupBy>> — для группировки по лейблам. Пример: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>).
     - name: v1beta1
       served: true
       storage: false

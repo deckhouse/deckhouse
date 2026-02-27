@@ -95,13 +95,13 @@ spec:
                           items:
                             properties:
                               user:
-                                description: Метка пользователя SELinux.
+                                description: Лейбл пользователя SELinux.
                               role:
-                                description: Метка роли SELinux.
+                                description: Лейбл роли SELinux.
                               type:
-                                description: Метка типа SELinux.
+                                description: Лейбл типа SELinux.
                               level:
-                                description: Метка уровня SELinux.
+                                description: Лейбл уровня SELinux.
                         metadata:
                           description: Метаданные, связанные с исключением.
                     privileged:

@@ -485,7 +485,7 @@ spec:
           is_delete
           is_node
           not has_required_label
-          msg := sprintf("Удаление Node запрещено. Добавьте метку %q=%q.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
+          msg := sprintf("Удаление Node запрещено. Добавьте лейбл %q=%q.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
         }
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1

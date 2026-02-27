@@ -38,7 +38,7 @@ spec:
                           description: |
                             Заголовок `X-Auth-Token`, указывающий токен аутентификации.
                 additionalLabels:
-                  description: Дополнительные метки для добавления ко всем метрикам.
+                  description: Дополнительные лейблы для добавления ко всем метрикам.
                 intervalSeconds:
                   description: Временной интервал между точками (в секундах).
     - name: v1
