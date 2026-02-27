@@ -32,7 +32,7 @@ layout: sidebar-guides
 <img src="/images/gs/private-env-schema-RU.png" alt="Схема развертывания Deckhouse Kubernetes Platform в закрытом окружении">
 
 {% alert level="info" %}
-На схеме также показан внутренний репозиторий пакетов ОС. Он требуется для установки `curl` на узлах будущего кластера, если доступ к официальным репозиториям невозможен даже через прокси-сервер.
+На схеме также показан внутренний репозиторий пакетов ОС — он используется для установки пакетов на узлы (например, `curl`), если доступ к официальным репозиториям невозможен даже через прокси. Во многих закрытых контурах у заказчиков уже настроены собственные репозитории пакетов ОС, и установка выполняется из них — в таком случае прокси-сервер для доступа к пакетам не нужен. Прокси-сервер требуется для другого трафика: загрузка образов контейнеров с публичного registry DKP на bastion-хост, обращение компонентов Deckhouse и узлов к внешним ресурсам (если такие обращения разрешены политикой), а также при необходимости — доступ приложений в подах к внешним сервисам.
 {% endalert %}
 
 ## Выбор инфраструктуры
@@ -911,7 +911,9 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 
 ## Установка прокси-сервера
 
-Чтобы серверы будущих узлов кластера, находящиеся в закрытом окружении, могли получить доступ к внешним репозиториям пакетов (для установки необходимых для работы DKP пакетов), разверните на сервере Bastion прокси-сервер, через который будет осуществляться этот доступ.
+Прокси-сервер на bastion-хосте нужен для доступа к внешним ресурсам из закрытого контура: загрузка образов контейнеров с публичного registry DKP на bastion, обращение компонентов Deckhouse и узлов кластера к внешним URL (если это допускается политикой). Установка пакетов ОС на узлы при этом может выполняться из внутренних репозиториев — в таком случае прокси для пакетов не используется.
+
+Разверните на сервере Bastion прокси-сервер, через который будет осуществляться доступ к внешним ресурсам (если такой доступ в вашем контуре предусмотрен).
 
 Можно использовать любой прокси-сервер, соответствующий вашим требованиям. В качестве примера воспользуемся [Squid](https://www.squid-cache.org/).
 
@@ -1081,11 +1083,61 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 
 Если вход выполнен успешно, пользователь создан корректно.
 
+### Создание пользователя для worker-узла
+
+Сгенерируйте **на master-узле** SSH-ключ с пустой парольной фразой. Для этого выполните на master-узле следующую команду:
+
+```bash
+ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+```
+
+На подготовленном сервере для worker-узла создайте пользователя `caps`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
+
+```console
+# Укажите публичную часть SSH-ключа пользователя.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG sudo caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+
+{% offtopic title="Если у вас CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС или МОС ОС..." %}
+В операционных системах на базе RHEL (Red Hat Enterprise Linux) добавьте пользователя `caps` в группу `wheel`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
+
+```console
+# Укажите публичную часть SSH-ключа пользователя.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG wheel caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+
+{% endofftopic %}
+
+{% offtopic title="Если у вас ОС из семейства Astra Linux..." %}
+В операционных системах семейства Astra Linux, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
+
+```bash
+pdpl-user -i 63 caps
+```
+
+{% endofftopic %}
+
 ## Подготовка конфигурационного файла
 
 Конфигурационный файл для установки в закрытом окружении отличается от конфигурации для установки [на bare-metal](../gs/bm/step2.html) несколькими параметрами. Возьмите файл `config.yml` [из четвёртого шага](../gs/bm/step4.html) руководства по установке на bare-metal и внесите следующие изменения:
 
-* В секции `deckhouse` блока `ClusterConfiguration` измените параметры используемого container registry с публичного registry Deckhouse Kubernetes Platform на приватный:
+* В блоке `ClusterConfiguration` укажите настройки proxy-сервера (если в контуре используется прокси для доступа к внешним ресурсам):
 
   ```yaml
   # Настройки proxy-сервера.
@@ -1106,7 +1158,7 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
     # Адрес Docker registry с образами Deckhouse (укажите редакцию DKP).
     imagesRepo: harbor.example/deckhouse/<РЕДАКЦИЯ_DKP>
     # Строка с ключом для доступа к Docker registry в формате Base64.
-    # Получить их можно командой `cat .docker/config.json | base64`.
+    # Получить её можно командой `cat .docker/config.json | base64`.
     registryDockerCfg: <DOCKER_CFG_BASE64>
     # Протокол доступа к registry (HTTP или HTTPS).
     registryScheme: HTTPS
@@ -1397,12 +1449,6 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   EOF
   ```
 
-* Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на master-узле следующую команду:
-
-  ```bash
-  ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
-  ```
-
 * Создайте в кластере ресурс [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials). Для этого выполните на master-узле следующую команду:
 
   ```console
@@ -1422,48 +1468,6 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   ```console
   cat /dev/shm/caps-id.pub
   ```
-
-* На подготовленном сервере для worker-узла создайте пользователя `caps`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
-
-  ```console
-  # Укажите публичную часть SSH-ключа пользователя.
-  export KEY='<SSH-PUBLIC-KEY>'
-  useradd -m -s /bin/bash caps
-  usermod -aG sudo caps
-  echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-  mkdir /home/caps/.ssh
-  echo $KEY >> /home/caps/.ssh/authorized_keys
-  chown -R caps:caps /home/caps
-  chmod 700 /home/caps/.ssh
-  chmod 600 /home/caps/.ssh/authorized_keys
-  ```
-
-{% offtopic title="Если у вас CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС или МОС ОС..." %}
-В операционных системах на базе RHEL (Red Hat Enterprise Linux) добавьте пользователя `caps` в группу `wheel`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
-
-```console
-# Укажите публичную часть SSH-ключа пользователя.
-export KEY='<SSH-PUBLIC-KEY>'
-useradd -m -s /bin/bash caps
-usermod -aG wheel caps
-echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-mkdir /home/caps/.ssh
-echo $KEY >> /home/caps/.ssh/authorized_keys
-chown -R caps:caps /home/caps
-chmod 700 /home/caps/.ssh
-chmod 600 /home/caps/.ssh/authorized_keys
-```
-
-{% endofftopic %}
-
-{% offtopic title="Если у вас ОС из семейства Astra Linux..." %}
-В операционных системах семейства Astra Linux, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
-
-```bash
-pdpl-user -i 63 caps
-```
-
-{% endofftopic %}
 
 * Создайте [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на master-узле следующую команду, указав IP-адрес добавляемого узла:
 
