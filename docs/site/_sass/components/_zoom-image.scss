@@ -1,0 +1,105 @@
+.zoom-image-wrap {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    right: 8px;
+    bottom: 16px;
+    z-index: 2;
+    width: 26px;
+    height: 26px;
+    background: url('/images/zooming.svg') center center / 26px 26px no-repeat;
+    pointer-events: none;
+  }
+}
+
+.glightbox-container {
+  background: rgba(0, 0, 0, 0.9) !important;
+}
+
+.zoom-image-toolbar {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.zoom-image-toolbar .gclose {
+  position: static;
+  top: auto;
+  right: auto;
+}
+
+.glightbox-clean .gclose,
+.glightbox-container .gclose {
+  top: 12px !important;
+  right: 12px !important;
+  width: 40px !important;
+  height: 40px !important;
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  font-size: 28px !important;
+  line-height: 1 !important;
+  border-radius: 4px !important;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.35) !important;
+  }
+}
+
+.zoom-image-zoom-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(20, 20, 20, 0.55);
+  color: #fff;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(2px);
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+
+  &:hover {
+    background: rgba(30, 30, 30, 0.62);
+    border-color: rgba(255, 255, 255, 0.52);
+    box-shadow: 0 3px 11px rgba(0, 0, 0, 0.38), inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  }
+
+  svg {
+    display: block;
+  }
+
+  img {
+    display: block;
+    width: 22px;
+    height: 22px;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.65));
+  }
+}
+
+.glightbox-container .gnext,
+.glightbox-container .gprev {
+  display: none !important;
+}
+
+.gslide-image img.zoomable {
+    transform-origin: center center;
+    will-change: transform;
+    user-select: none;
+    touch-action: none;
+}
+
+.glightbox-container .gslide-image img.zoom-image-svg {
+  padding: 12px;
+  background: #fff;
+}
