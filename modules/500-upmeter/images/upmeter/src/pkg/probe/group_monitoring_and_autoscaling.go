@@ -137,6 +137,28 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
+			probe:  "alertmanager",
+			check:  "pod",
+			period: 10 * time.Second,
+			config: checker.AtLeastOnePodReady{
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-observability",
+				LabelSelector:    "app=alertmanager",
+				PreflightChecker: controlPlanePinger,
+			},
+		}, {
+			group:  groupMonitoringAndAutoscaling,
+			probe:  "alertmanager",
+			check:  "health",
+			period: 10 * time.Second,
+			config: checker.HTTPEndpointAvailable{
+				Access:   access,
+				Timeout:  5 * time.Second,
+				Endpoint: "https://alertmanager.d8-observability:8443/health",
+			},
+		}, {
+			group:  groupMonitoringAndAutoscaling,
 			probe:  "metrics-sources",
 			check:  "node-exporter",
 			period: 10 * time.Second,

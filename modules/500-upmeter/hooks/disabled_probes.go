@@ -183,6 +183,14 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 	if !enabledModules.Has("user-authn") {
 		disabledProbes.Add("extensions/dex")
 	}
+
+	if !enabledModules.Has("observability") {
+		disabledProbes.Add("extensions/alert-kube-api")
+		disabledProbes.Add("extensions/observability-controller")
+		disabledProbes.Add("extensions/grafana")
+		disabledProbes.Add("extensions/label-proxy")
+		disabledProbes.Add("extensions/observability-webhook")
+	}
 }
 
 func disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes set.Set) {
@@ -201,6 +209,9 @@ func disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes set.Se
 	if !enabledModules.Has("monitoring-kubernetes") {
 		disabledProbes.Add("monitoring-and-autoscaling/metrics-sources")
 		disabledProbes.Add("monitoring-and-autoscaling/key-metrics-present")
+	}
+	if !enabledModules.Has("observability") {
+		disabledProbes.Add("monitoring-and-autoscaling/alertmanager")
 	}
 }
 
