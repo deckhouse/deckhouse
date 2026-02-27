@@ -69,6 +69,28 @@ type hookLoadResult struct {
 	hooks         []hooks.Hook
 }
 
+// loadEmbeddedHooks returns hooks compiled directly into the binary for the given package.
+// It looks up the package by name in the addon-sdk registry and wraps each registered hook
+// as a ModuleHook.
+func loadEmbeddedHooks(ctx context.Context, name string, logger *log.Logger) ([]hooks.Hook, error) {
+	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loadEmbeddedHooks")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("name", name))
+
+	logger.Debug("load hooks")
+
+	// find embedded hooks in go hooks registry
+	var res []hooks.Hook //nolint:prealloc
+	for _, h := range addonsdk.Registry().GetModuleHooks(name) {
+		res = append(res, addonhooks.NewModuleHook(h))
+	}
+
+	logger.Info("found hooks", slog.Int("count", len(res)))
+
+	return res, nil
+}
+
 // loadAppHooks discovers and loads all application hooks from the given package directory.
 // It searches for batch hook executables in the "hooks" subdirectory and returns
 // the loaded hooks along with an optional settings check handler.
