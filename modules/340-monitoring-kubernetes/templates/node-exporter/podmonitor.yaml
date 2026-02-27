@@ -7,6 +7,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-exporter" "prometheus" "main")) | nindent 2 }}
 spec:
   jobLabel: app
+  attachMetadata:
+    node: true
   selector:
     matchLabels:
       app: node-exporter
@@ -27,5 +29,7 @@ spec:
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_node_name]
       targetLabel: node
+    - sourceLabels: [__meta_kubernetes_node_label_node_deckhouse_io_group]
+      targetLabel: node_group
     - targetLabel: tier
       replacement: cluster
