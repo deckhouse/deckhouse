@@ -1,9 +1,13 @@
 package kubeconfig
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
@@ -15,7 +19,7 @@ import (
 	"k8s.io/client-go/util/keyutil"
 )
 
-type FileSpec struct {
+type fileSpec struct {
 	ClusterName             string
 	APIServer               string
 	ClientName              string
@@ -26,12 +30,12 @@ type FileSpec struct {
 	EncryptionAlgorithm     constants.EncryptionAlgorithmType
 }
 
-func CreateControlPlaneKubeConfigFiles(options ...Option) error {
+func CreateControlPlaneKubeConfigFiles(options ...option) error {
 	log.Info("creating kubeconfig files for control-plane")
 
-	opt, err := buildOptions(options...)
+	opt, err := prepareCoreOptions(options...)
 	if err != nil {
-		return fmt.Errorf("failed to build Options: %w", err)
+		return fmt.Errorf("failed to prepare Options: %w", err)
 	}
 
 	files := []File{
@@ -44,7 +48,7 @@ func CreateControlPlaneKubeConfigFiles(options ...Option) error {
 	return createKubeConfigFiles(opt, files...)
 }
 
-func createKubeConfigFiles(opt *Options, files ...File) error {
+func createKubeConfigFiles(opt *options, files ...File) error {
 	for _, file := range files {
 		fileSpec, err := getFileSpec(file, opt)
 		if err != nil {
@@ -56,18 +60,20 @@ func createKubeConfigFiles(opt *Options, files ...File) error {
 			return fmt.Errorf("failed to build kube config for %s: %w", file, err)
 		}
 
-		if err = clientcmd.WriteToFile(*config, "filename"); err != nil {
-			
+		kubeConfigFilePath := filepath.Join(opt.OutDir, string(file))
+
+		if err := writeKubeConfigFileIfNeeded(kubeConfigFilePath, config); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func getFileSpec(kind File, opt *Options) (*FileSpec, error) {
+func getFileSpec(kind File, opt *options) (*fileSpec, error) {
 	switch kind {
 	case Admin:
-		return &FileSpec{
+		return &fileSpec{
 			ClusterName:             opt.ClusterName,
 			APIServer:               opt.ControlPlaneEndpoint,
 			ClientName:              "kubernetes-admin",
@@ -78,7 +84,7 @@ func getFileSpec(kind File, opt *Options) (*FileSpec, error) {
 			EncryptionAlgorithm:     opt.EncryptionAlgorithm,
 		}, nil
 	case SuperAdmin:
-		return &FileSpec{
+		return &fileSpec{
 			ClusterName:             opt.ClusterName,
 			APIServer:               opt.ControlPlaneEndpoint,
 			ClientName:              "kubernetes-super-admin",
@@ -89,7 +95,7 @@ func getFileSpec(kind File, opt *Options) (*FileSpec, error) {
 			EncryptionAlgorithm:     opt.EncryptionAlgorithm,
 		}, nil
 	case ControllerManager:
-		return &FileSpec{
+		return &fileSpec{
 			ClusterName:         opt.ClusterName,
 			APIServer:           opt.LocalAPIEndpoint,
 			ClientName:          "system:kube-controller-manager",
@@ -99,7 +105,7 @@ func getFileSpec(kind File, opt *Options) (*FileSpec, error) {
 			EncryptionAlgorithm: opt.EncryptionAlgorithm,
 		}, nil
 	case Scheduler:
-		return &FileSpec{
+		return &fileSpec{
 			ClusterName:         opt.ClusterName,
 			APIServer:           opt.LocalAPIEndpoint,
 			ClientName:          "system:kube-scheduler",
@@ -109,9 +115,8 @@ func getFileSpec(kind File, opt *Options) (*FileSpec, error) {
 			EncryptionAlgorithm: opt.EncryptionAlgorithm,
 		}, nil
 	case Kubelet:
-		nodeName := ""
-		return &FileSpec{
-			ClusterName:             fmt.Sprintf("%s%s", "system:node:", nodeName),
+		return &fileSpec{
+			ClusterName:             fmt.Sprintf("%s%s", "system:node:", opt.NodeName),
 			APIServer:               opt.ControlPlaneEndpoint,
 			ClientName:              "kubernetes-super-admin",
 			ClientCertOrganizations: []string{"system:masters"},
@@ -125,7 +130,7 @@ func getFileSpec(kind File, opt *Options) (*FileSpec, error) {
 	}
 }
 
-func buildConfig(spec *FileSpec) (*clientcmdapi.Config, error) {
+func buildConfig(spec *fileSpec) (*clientcmdapi.Config, error) {
 	clientCertConfig := newClientCertConfig(spec)
 
 	clientCert, clientKey, err := pki.NewCertAndKey(spec.CACert, spec.CAKey, &clientCertConfig)
@@ -163,7 +168,7 @@ func buildConfig(spec *FileSpec) (*clientcmdapi.Config, error) {
 	return config, nil
 }
 
-func newClientCertConfig(spec *FileSpec) pki.CertConfig {
+func newClientCertConfig(spec *fileSpec) pki.CertConfig {
 	return pki.CertConfig{
 		Config: certutil.Config{
 			CommonName:   spec.ClientName,
@@ -173,4 +178,82 @@ func newClientCertConfig(spec *FileSpec) pki.CertConfig {
 		NotAfter:            spec.ClientCertNotAfter,
 		EncryptionAlgorithm: spec.EncryptionAlgorithm,
 	}
+}
+
+func writeKubeConfigFileIfNeeded(kubeConfigFilePath string, config *clientcmdapi.Config) error {
+	err := validateCurrentKubeConfig(kubeConfigFilePath, config)
+	if err == nil {
+		log.Info("Using existing kubeconfig file: %q", kubeConfigFilePath)
+		return nil
+	}
+
+	log.Info("Writing new %q kubeconfig file, because current is not valid: %v", kubeConfigFilePath, err)
+
+	if err := clientcmd.WriteToFile(*config, kubeConfigFilePath); err != nil {
+		return fmt.Errorf("failed to write kubeconfig %s: %w", kubeConfigFilePath, err)
+	}
+
+	return nil
+}
+
+func validateCurrentKubeConfig(kubeConfigFilePath string, desiredConfig *clientcmdapi.Config) error {
+	if _, err := os.Stat(kubeConfigFilePath); err != nil {
+		return fmt.Errorf("kubeconfig file not found: %w", err)
+	}
+
+	currentConfig, err := clientcmd.LoadFromFile(kubeConfigFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to load kubeconfig file: %w", err)
+	}
+
+	currentCtx, ok := currentConfig.Contexts[currentConfig.CurrentContext]
+	if !ok {
+		return fmt.Errorf("current context %q not found", currentConfig.CurrentContext)
+	}
+
+	currentCluster, ok := currentConfig.Clusters[currentCtx.Cluster]
+	if !ok {
+		return fmt.Errorf("cluster %q not found", currentCtx.Cluster)
+	}
+
+	desiredCtx := desiredConfig.Contexts[desiredConfig.CurrentContext]
+	desiredCluster := desiredConfig.Clusters[desiredCtx.Cluster]
+
+	if currentCluster.Server != desiredCluster.Server {
+		return fmt.Errorf("kubeconfig address field changed: expected %s, got %s", desiredCluster.Server, currentCluster.Server)
+	}
+
+	if !bytes.Equal(bytes.TrimSpace(currentCluster.CertificateAuthorityData), bytes.TrimSpace(desiredCluster.CertificateAuthorityData)) {
+		return fmt.Errorf("CA certificate changed")
+	}
+
+	currentAuth, ok := currentConfig.AuthInfos[currentCtx.AuthInfo]
+	if !ok {
+		return fmt.Errorf("auth info %q not found", currentCtx.AuthInfo)
+	}
+
+	certData := currentAuth.ClientCertificateData
+	if len(certData) == 0 {
+		return fmt.Errorf("client-certificate-data field is empty")
+	}
+
+	block, _ := pem.Decode(certData)
+	if block == nil || len(block.Bytes) == 0 {
+		return fmt.Errorf("cannot PEM decode client-certificate-data")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("cannot parse certificate from client-certificate-data: %w", err)
+	}
+
+	if certificateExpiresSoon(cert, 30*24*time.Hour) {
+		return fmt.Errorf("client certificate is expiring in less than 30 days")
+	}
+
+	return nil
+}
+
+func certificateExpiresSoon(cert *x509.Certificate, threshold time.Duration) bool {
+	return time.Now().Add(threshold).After(cert.NotAfter)
 }
