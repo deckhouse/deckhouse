@@ -1,5 +1,21 @@
 # Changelog v1.69
 
+## [MALFORMED]
+
+
+ - #11929 unknown section "operator-trivy"
+ - #12185 unknown section "runtime-audit-engine"
+ - #12318 unknown section "static-routing-manager"
+ - #12387 unknown section "operator-trivy"
+ - #12486 unknown section "runtime-audit-engine"
+ - #12510 unknown section "static-routing-manager"
+ - #12723 unknown section "ceph-csi"
+ - #12991 unknown section "runtime-audit-engine"
+ - #13036 unknown section "operator-trivy"
+ - #13174 unknown section "ceph-csi"
+ - #13409 unknown section "ceph-csi"
+ - #14162 unknown section "operator-trivy"
+
 ## Know before update
 
 
@@ -157,16 +173,11 @@
  - **[node-manager]** Fixed kubeconfig generation for `CAPI`. [#12554](https://github.com/deckhouse/deckhouse/pull/12554)
  - **[node-manager]** Improved `handleDraining` hook to ignore timeout errors during node draining. [#12542](https://github.com/deckhouse/deckhouse/pull/12542)
  - **[node-manager]** Added validation of `instanceClass` deletion for being used by a NodeGroup. [#11830](https://github.com/deckhouse/deckhouse/pull/11830)
- - **[operator-trivy]** Add proxy env variables support to the trivy server. [#13036](https://github.com/deckhouse/deckhouse/pull/13036)
  - **[prometheus]** enable WAL for the grafana SQLite database to prevent locking errors, thus fixing in-dashboard alerting. [#13063](https://github.com/deckhouse/deckhouse/pull/13063)
     the grafana deployment will be rollout restarted
  - **[prometheus]** Fixed security vulnerabilities in Grafana. [#12062](https://github.com/deckhouse/deckhouse/pull/12062)
  - **[prometheus]** Fixed security vulnerabilities in `mimir` and `promxy`. [#11978](https://github.com/deckhouse/deckhouse/pull/11978)
- - **[runtime-audit-engine]** Fixed built-in rules for `runtime-audit-engine`. [#12486](https://github.com/deckhouse/deckhouse/pull/12486)
- - **[runtime-audit-engine]** Added support for customization of a built-in rule list of the `runtime-audit-engine` module. [#12185](https://github.com/deckhouse/deckhouse/pull/12185)
  - **[service-with-healthchecks]** Removed unnecessary text data from the executable binary file. [#12492](https://github.com/deckhouse/deckhouse/pull/12492)
- - **[static-routing-manager]** Fixed regular expression to allow empty string in `nodeSelector` field. [#12510](https://github.com/deckhouse/deckhouse/pull/12510)
- - **[static-routing-manager]** Fixed `nodeSelector` parameter validation. [#12318](https://github.com/deckhouse/deckhouse/pull/12318)
  - **[upmeter]** upmeter sa token rotation [#13201](https://github.com/deckhouse/deckhouse/pull/13201)
  - **[user-authn]** Add separate ServiceAccount to basic-auth-proxy. [#13214](https://github.com/deckhouse/deckhouse/pull/13214)
  - **[user-authn]** Fix secret generation on empty data field in the dex client app secret. [#13092](https://github.com/deckhouse/deckhouse/pull/13092)
@@ -180,8 +191,6 @@
  - **[candi]** Fixed the priority for `kubernetes_api_proxy`. [#12678](https://github.com/deckhouse/deckhouse/pull/12678)
  - **[candi]** Bumped patch versions of Kubernetes images: `v1.29.14`, `v1.30.1`, `v1.31.6`, `v1.32.2`. [#12080](https://github.com/deckhouse/deckhouse/pull/12080)
     Kubernetes control plane components and kubelet will restart.
- - **[ceph-csi]** Add "Deprecated" status to module [#13174](https://github.com/deckhouse/deckhouse/pull/13174)
-    low
  - **[cloud-provider-aws]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-azure]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-dynamix]** Fixed vulnerabilities and some critical bugs for cloud-provider-zvirt and cloud-provider-dynamix [#13883](https://github.com/deckhouse/deckhouse/pull/13883)
