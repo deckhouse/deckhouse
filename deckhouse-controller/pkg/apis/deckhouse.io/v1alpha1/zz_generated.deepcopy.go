@@ -386,6 +386,10 @@ func (in *ApplicationStatus) DeepCopyInto(out *ApplicationStatus) {
 		*out = new(ApplicationStatusVersion)
 		**out = **in
 	}
+	if in.Tracking != nil {
+		in, out := &in.Tracking, &out.Tracking
+		*out = (*in).DeepCopy()
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))

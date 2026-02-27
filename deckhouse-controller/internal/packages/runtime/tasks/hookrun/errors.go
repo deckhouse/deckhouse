@@ -37,12 +37,6 @@ func newEventHookErr(err error) error {
 				Reason:  ConditionReasonEventHookFailed,
 				Message: err.Error(),
 			},
-			{
-				Type:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonEventHookFailed,
-				Message: err.Error(),
-			},
 		},
 	}
 }

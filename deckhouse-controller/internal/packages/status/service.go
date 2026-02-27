@@ -19,6 +19,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/werf/nelm/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -68,16 +69,17 @@ type Service struct {
 
 // Status represents the current state of a package
 type Status struct {
-	Version    string      `json:"version"`
-	Conditions []Condition `json:"conditions" yaml:"conditions"`
+	Version    string                 `json:"version"`
+	Conditions []Condition            `json:"conditions"`
+	Tracking   progrep.ProgressReport `json:"tracking,omitempty"`
 }
 
 // Condition represents a single status condition for a package
 type Condition struct {
-	Type    ConditionType          `json:"type" yaml:"type"`
-	Status  metav1.ConditionStatus `json:"status" yaml:"status"` // true = condition met, false = condition failed
-	Reason  ConditionReason        `json:"reason,omitempty" yaml:"reason,omitempty"`
-	Message string                 `json:"message,omitempty" yaml:"message,omitempty"`
+	Type    ConditionType          `json:"type"`
+	Status  metav1.ConditionStatus `json:"status"` // true = condition met, false = condition failed
+	Reason  ConditionReason        `json:"reason,omitempty"`
+	Message string                 `json:"message,omitempty"`
 }
 
 func NewService() *Service {
@@ -166,6 +168,21 @@ func (s *Service) SetConditionTrue(name string, condition ConditionType) {
 	}
 }
 
+// UpdateTracking updates the nelm progress report for a package and notifies listeners.
+// If the package is not tracked by the service, the update is silently ignored.
+func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	status, ok := s.statuses[name]
+	if !ok {
+		return
+	}
+
+	status.Tracking = report
+	s.ch <- name
+}
+
 // ClearRuntimeConditions sets runtime conditions to unknown
 func (s *Service) ClearRuntimeConditions(name string) {
 	s.mu.Lock()
@@ -181,6 +198,7 @@ func (s *Service) ClearRuntimeConditions(name string) {
 		ConditionHooksProcessed,
 		ConditionReadyInCluster,
 		ConditionReadyInRuntime,
+		ConditionWaitConverge,
 	}
 
 	for idx, condition := range s.statuses[name].Conditions {
