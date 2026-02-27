@@ -23,6 +23,7 @@ builder/alpine-svace-3.21: "sha256:b7f50a14486279e2b0c268c6c4ed92c51f85db9a17566
 builder/alpine-svace-3.22: "sha256:09aff870a059300fe9567c525bd087cb0f9c7250033cf5200f5d8e8a123413a2" # from: builder/alpine-3.22
 builder/alpine-svace: "sha256:09aff870a059300fe9567c525bd087cb0f9c7250033cf5200f5d8e8a123413a2" # from: builder/alpine-3.22
 builder/alt-2025-11-02: "sha256:f1b131ab710bd9ea9654a4efb9873cfda1955400ed85fe0de7d7f99416beb0f7" # from: registry.altlinux.org/p11/alt:20250625
+builder/alt-2026-02-07: "sha256:7791565e23a6945aea87cec65d4dec288ba5853cf0b0089b09081bc82951dbe3" # from: registry.altlinux.org/p11/alt:20260207
 builder/alt: "sha256:f1b131ab710bd9ea9654a4efb9873cfda1955400ed85fe0de7d7f99416beb0f7" # from: registry.altlinux.org/p11/alt:20250625
 builder/debian-12.11-slim: "sha256:12427020b18306124815a1edbcd2a774068b82f21e558d8271b7f457ce6f53f5" # from: debian:12.11-slim
 builder/debian: "sha256:0ed78087f23de3d6a9e3bb75bc6df7e2d17373cf7f4d45568a8d265cfd0ca0e2" # from: debian:trixie-slim
@@ -32,6 +33,7 @@ builder/debian-svace-trixie-slim: "sha256:0c5894549f90c788b84b1ef9daddd7daca4f90
 builder/debian-trixie-slim: "sha256:0ed78087f23de3d6a9e3bb75bc6df7e2d17373cf7f4d45568a8d265cfd0ca0e2" # from: debian:trixie-slim
 builder/golang-alpine-1.24: "sha256:1933072207e65616e911539f38f501a430b20eb42868116f51faaf08c2b91d5a" # from: builder/alpine
 builder/golang-alpine-1.25: "sha256:bdaa629660ac8580a89bb32d84f1279c02df2253c668e0ca6fdcc7bbb7dbd79b" # from: builder/alpine
+builder/golang-alpine-1.25.7: "sha256:8942c65fbf29a0fd44d032cb58e98382bea3055bd19bb5517282d38d37c66ad2" # from: builder/alpine
 builder/golang-alpine: "sha256:bdaa629660ac8580a89bb32d84f1279c02df2253c668e0ca6fdcc7bbb7dbd79b" # from: builder/alpine
 builder/golang-alpine-svace-1.24: "sha256:5fb6cc5324d5fab4ab00b81a0cd2f0abd430ab796b640eca0b4f684975b0bbc4" # from: builder/golang-alpine-1.24
 builder/golang-alpine-svace-1.25: "sha256:074247873daac4f607fcc3b15b8b997e6d50139fb25de56619f7fa5e56ded8ab" # from: builder/golang-alpine-1.25
@@ -215,6 +217,7 @@ tools/cryptsetup: "sha256:1fa1ee8217e119e4bb523e5c0f9791b7370c9309c4813438e038e8
 tools/cryptsetup-v2.7.5: "sha256:1fa1ee8217e119e4bb523e5c0f9791b7370c9309c4813438e038e8ae2d55fd78" # from: builder/scratch
 tools/curl-curl-8_12_1: "sha256:39df16251335ea255f29cd099f400cca8db0c8e74d4110129d269ef926aa1672" # from: builder/scratch
 tools/curl: "sha256:39df16251335ea255f29cd099f400cca8db0c8e74d4110129d269ef926aa1672" # from: builder/scratch
+tools/curl-curl-8_18_0: "sha256:978f8e040d2f6892bf807d0c7ce3880fb7150b11caebc1161e554960494a40bd" # from: builder/scratch
 tools/diffutils: "sha256:a89e57ca13f1918c9cb8c254e39572ca1ca55a0a238c7ca9924b82417728eeb6" # from: builder/scratch
 tools/diffutils-v3.12: "sha256:a89e57ca13f1918c9cb8c254e39572ca1ca55a0a238c7ca9924b82417728eeb6" # from: builder/scratch
 tools/dumb-init: "sha256:0e9bea110f3f10f1206a6dc12bf9625671a73c273a6221bc1fff74f9500a4c0e" # from: builder/scratch

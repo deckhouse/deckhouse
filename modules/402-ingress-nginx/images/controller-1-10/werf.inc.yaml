@@ -49,7 +49,7 @@ shell:
   - patch -p1 < /patches/006-metrics-SetSSLExpireTime.patch
   - patch -p1 < /patches/008-util.patch
   - patch -p1 < /patches/009-fix-cleanup.patch
-  - patch -p1 < /patches/010-nginx-build.patch
+  - patch -p1 < /patches/010-nginx-build-01.patch
   - patch -p1 < /patches/011-add-http3.patch
   - patch -p1 < /patches/012-new-metrics.patch
   - patch -p1 < /patches/013-default-backend-fix.patch
@@ -77,7 +77,7 @@ shell:
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -93,7 +93,7 @@ shell:
   - cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -116,7 +116,7 @@ shell:
   - luarocks-5.1 install lua-iconv-7-3.src.rock
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/golang-alpine-1.25.7
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -144,7 +144,7 @@ shell:
     make GO111MODULE=on USE_DOCKER=false build
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 mount:
 - from: tmp_dir
@@ -175,7 +175,7 @@ shell:
   - /build.sh
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact-2026-02-07
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -217,7 +217,7 @@ import:
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel valgrind mount
+  - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel valgrind mount gsasl
   setup:
   - cp -R /usr/lib64/* /chroot/usr/lib64/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
@@ -297,7 +297,7 @@ shell:
   - rm -rf /src/rootfs/etc
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact-2026-02-07
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot

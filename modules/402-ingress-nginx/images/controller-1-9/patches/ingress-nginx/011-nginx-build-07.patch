@@ -1,8 +1,8 @@
 diff --git a/images/nginx/rootfs/build.sh b/images/nginx/rootfs/build.sh
-index 8bf372f21..921c90728 100755
+index 8bf372f21..5c71d3b50 100755
 --- a/images/nginx/rootfs/build.sh
 +++ b/images/nginx/rootfs/build.sh
-@@ -14,6 +14,9 @@
+@@ -14,11 +14,14 @@
  # See the License for the specific language governing permissions and
  # limitations under the License.
  
@@ -12,6 +12,88 @@ index 8bf372f21..921c90728 100755
  set -o errexit
  set -o nounset
  set -o pipefail
+ 
+-export NGINX_VERSION=1.21.6
++export NGINX_VERSION=1.29.5
+ 
+ # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.2...master
+ export NDK_VERSION=0.3.2
+@@ -66,58 +69,58 @@ export MODSECURITY_LIB_VERSION=e9a7ba4a60be48f761e0328c6dfcc668d70e35a0
+ export OWASP_MODSECURITY_CRS_VERSION=v3.3.5
+ 
+ # Check for recent changes: https://github.com/openresty/lua-nginx-module/compare/v0.10.25...master
+-export LUA_NGX_VERSION=0.10.25
++export LUA_NGX_VERSION=0.10.26
+ 
+ # Check for recent changes: https://github.com/openresty/stream-lua-nginx-module/compare/v0.0.13...master
+-export LUA_STREAM_NGX_VERSION=0.0.13
++export LUA_STREAM_NGX_VERSION=bea8a0c0de94cede71554f53818ac0267d675d63
+ 
+ # Check for recent changes: https://github.com/openresty/lua-upstream-nginx-module/compare/8aa93ead98ba2060d4efd594ae33a35d153589bf...master
+-export LUA_UPSTREAM_VERSION=8aa93ead98ba2060d4efd594ae33a35d153589bf
++export LUA_UPSTREAM_VERSION=542be0893543a4e42d89f6dd85372972f5ff2a36
+ 
+ # Check for recent changes: https://github.com/openresty/lua-cjson/compare/2.1.0.11...openresty:master
+-export LUA_CJSON_VERSION=2.1.0.11
++export LUA_CJSON_VERSION=2.1.0.13
+ 
+ # Check for recent changes: https://github.com/leev/ngx_http_geoip2_module/compare/3.4...master
+ export GEOIP2_VERSION=a607a41a8115fecfc05b5c283c81532a3d605425
+ 
+ # Check for recent changes: https://github.com/openresty/luajit2/compare/v2.1-20230410...v2.1-agentzh
+-export LUAJIT_VERSION=2.1-20230410
++export LUAJIT_VERSION=2.1-20240314
+ 
+ # Check for recent changes: https://github.com/openresty/lua-resty-balancer/compare/v0.04...master
+-export LUA_RESTY_BALANCER=0.04
++export LUA_RESTY_BALANCER=1cd4363c0a239afe4765ec607dcfbbb4e5900eea
+ 
+ # Check for recent changes: https://github.com/openresty/lua-resty-lrucache/compare/v0.13...master
+-export LUA_RESTY_CACHE=0.13
++export LUA_RESTY_CACHE=99e7578465b40f36f596d099b82eab404f2b42ed
+ 
+ # Check for recent changes: https://github.com/openresty/lua-resty-core/compare/v0.1.27...master
+-export LUA_RESTY_CORE=0.1.27
++export LUA_RESTY_CORE=0.1.28
+ 
+ # Check for recent changes: https://github.com/utix/lua-resty-cookie/compare/9533f47...master
+-export LUA_RESTY_COOKIE_VERSION=9533f479371663107b515590fc9daf00d61ebf11
++export LUA_RESTY_COOKIE_VERSION=f418d77082eaef48331302e84330488fdc810ef4
+ 
+ # Check for recent changes: https://github.com/openresty/lua-resty-dns/compare/v0.22...master
+-export LUA_RESTY_DNS=0.22
++export LUA_RESTY_DNS=8bb53516e2933e61c317db740a9b7c2048847c2f
+ 
+ # Check for recent changes: https://github.com/ledgetech/lua-resty-http/compare/v0.16.1...master
+-export LUA_RESTY_HTTP=0ce55d6d15da140ecc5966fa848204c6fd9074e8
++export LUA_RESTY_HTTP=0.17.1
+ 
+ # Check for recent changes: https://github.com/openresty/lua-resty-lock/compare/v0.09...master
+-export LUA_RESTY_LOCK=0.09
++export LUA_RESTY_LOCK=405d0bf4cbfa74d742c6ed3158d442221e6212a9
+ 
+ # Check for recent changes: https://github.com/openresty/lua-resty-upload/compare/v0.11...master
+-export LUA_RESTY_UPLOAD_VERSION=0.11
++export LUA_RESTY_UPLOAD_VERSION=979372cce011f3176af3c9aff53fd0e992c4bfd3
+ 
+ # Check for recent changes: https://github.com/openresty/lua-resty-string/compare/v0.15...master
+-export LUA_RESTY_STRING_VERSION=0.15
++export LUA_RESTY_STRING_VERSION=6f1bc21d86daef804df3cc34d6427ef68da26844
+ 
+ # Check for recent changes: https://github.com/openresty/lua-resty-memcached/compare/v0.17...master
+-export LUA_RESTY_MEMCACHED_VERSION=0.17
++export LUA_RESTY_MEMCACHED_VERSION=2f02b68bf65fa2332cce070674a93a69a6c7239b
+ 
+ # Check for recent changes: https://github.com/openresty/lua-resty-redis/compare/v0.30...master
+-export LUA_RESTY_REDIS_VERSION=0.30
++export LUA_RESTY_REDIS_VERSION=8641b9f1b6f75cca50c90cf8ca5c502ad8950aa8
+ 
+ # Check for recent changes: https://github.com/api7/lua-resty-ipmatcher/compare/v0.6.1...master
+-export LUA_RESTY_IPMATCHER_VERSION=0.6.1
++export LUA_RESTY_IPMATCHER_VERSION=3e93c53eb8c9884efe939ef070486a0e507cc5be
+ 
+ # Check for recent changes: https://github.com/ElvinEfendi/lua-resty-global-throttle/compare/v0.2.0...main
+ export LUA_RESTY_GLOBAL_THROTTLE_VERSION=0.2.0
 @@ -126,6 +129,7 @@ export LUA_RESTY_GLOBAL_THROTTLE_VERSION=0.2.0
  export MIMALOC_VERSION=1.7.6
  
@@ -192,7 +274,15 @@ index 8bf372f21..921c90728 100755
  
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
-@@ -465,15 +311,16 @@ make install
+@@ -443,6 +289,7 @@ cd .build
+ cmake -DCMAKE_BUILD_TYPE=Release \
+       -DBUILD_SHARED_LIBS=OFF \
+       -DMSGPACK_BUILD_EXAMPLES=OFF \
++      -DCMAKE_CXX_STANDARD=11 -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+       -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=true \
+       ..
+ 
+@@ -465,15 +312,16 @@ make install
  
  # Get Brotli source and deps
  cd "$BUILD_PATH"
@@ -211,7 +301,7 @@ index 8bf372f21..921c90728 100755
  cd ssdeep/
  
  ./bootstrap
-@@ -484,10 +331,13 @@ make install
+@@ -484,10 +332,13 @@ make install
  
  # build modsecurity library
  cd "$BUILD_PATH"
@@ -226,7 +316,7 @@ index 8bf372f21..921c90728 100755
  git submodule update
  
  sh build.sh
-@@ -517,7 +367,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
+@@ -517,7 +368,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
  # Download owasp modsecurity crs
  cd /etc/nginx/
  
@@ -235,7 +325,15 @@ index 8bf372f21..921c90728 100755
  mv coreruleset owasp-modsecurity-crs
  cd owasp-modsecurity-crs
  
-@@ -582,6 +432,7 @@ WITH_FLAGS="--with-debug \
+@@ -576,12 +427,15 @@ done
+ 
+ WITH_FLAGS="--with-debug \
+   --with-compat \
++  --with-pcre \
+   --with-pcre-jit \
++  --with-cc-opt="-I/usr/include/pcre" \
+   --with-http_ssl_module \
+   --with-http_stub_status_module \
    --with-http_realip_module \
    --with-http_auth_request_module \
    --with-http_addition_module \
@@ -243,7 +341,7 @@ index 8bf372f21..921c90728 100755
    --with-http_gzip_static_module \
    --with-http_sub_module \
    --with-http_v2_module \
-@@ -652,8 +503,8 @@ WITH_MODULES=" \
+@@ -652,8 +506,8 @@ WITH_MODULES=" \
    --without-http_scgi_module \
    --with-cc-opt="${CC_OPT}" \
    --with-ld-opt="${LD_OPT}" \
@@ -254,7 +352,7 @@ index 8bf372f21..921c90728 100755
    ${WITH_MODULES}
  
  make
-@@ -729,11 +580,11 @@ writeDirs=( \
+@@ -729,11 +583,11 @@ writeDirs=( \
    /var/log/nginx \
  );
  
