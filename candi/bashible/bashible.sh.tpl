@@ -298,8 +298,6 @@ function main() {
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
     current_uptime > $UPTIME_FILE
-    bb-waiting-approval-not-required
-    bb-disruption-approval-not-required
     bb-bashible-ready-steps-completed "noop" "Configuration is in sync, nothing to do."
     exit 0
   fi
@@ -363,12 +361,8 @@ function main() {
     done
 
     last_successful_step="${step##*/}"
-    bb-waiting-approval-not-required
-    bb-disruption-approval-not-required
   done
 
-  bb-waiting-approval-not-required
-  bb-disruption-approval-not-required
   if [ -n "$last_successful_step" ]; then
     bb-bashible-ready-steps-completed "$last_successful_step"
   else

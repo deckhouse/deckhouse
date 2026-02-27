@@ -187,7 +187,7 @@ func (h *ConversionHandler) convertObject(raw []byte, desiredVersion string, pro
 	srcVersion := meta.APIVersion
 	name := meta.Metadata.Name
 
-	conversionLog.Info("converting object",
+	conversionLog.V(1).Info("converting object",
 		"name", name,
 		"from", srcVersion,
 		"to", desiredVersion,
