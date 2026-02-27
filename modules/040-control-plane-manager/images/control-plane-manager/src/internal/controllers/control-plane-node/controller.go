@@ -152,7 +152,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 }
 
 // ensureStatusComponentsInitialized sets empty checksums for nil status.Components on first reconcile.
-// Other status checksums are initialized as empty strings.
+// Other status checksums are initialized as empty strings on reconcileConditions func call.
 func (r *Reconciler) ensureStatusComponentsInitialized(cpn *controlplanev1alpha1.ControlPlaneNode) {
 	empty := func() *controlplanev1alpha1.ComponentChecksum {
 		return &controlplanev1alpha1.ComponentChecksum{Checksum: ""}
@@ -314,8 +314,6 @@ func buildCondition(condType string, specChecksum, statusChecksum string, genera
 }
 
 func (r *Reconciler) reconcileConditions(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, originalForPatch *controlplanev1alpha1.ControlPlaneNode) error {
-	patch := client.MergeFrom(originalForPatch)
-
 	checks := []struct {
 		condType string
 		spec     string
@@ -333,5 +331,13 @@ func (r *Reconciler) reconcileConditions(ctx context.Context, cpn *controlplanev
 		cond := buildCondition(check.condType, check.spec, check.status, cpn.Generation)
 		meta.SetStatusCondition(&cpn.Status.Conditions, cond)
 	}
-	return r.client.Status().Patch(ctx, cpn, patch)
+
+	// On the very first reconcile (no conditions have been set yet), use Update instead of Patch
+	// That all status fields including empty-string checksums (PKIChecksum, ConfigVersion, etc.) are explicitly persisted.
+	// MergeFrom patch silently drop them because "" == "" produces no diff.
+	if len(originalForPatch.Status.Conditions) == 0 {
+		return r.client.Status().Update(ctx, cpn)
+	}
+
+	return r.client.Status().Patch(ctx, cpn, client.MergeFrom(originalForPatch))
 }
