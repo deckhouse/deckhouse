@@ -1,3 +1,67 @@
+{{/*
+This file is covered by tests in `testing/werf_defines/oss-yaml`.
+Run: `go test ./testing/werf_defines/oss-yaml`.
+*/}}
+
+{{/*
+Internal helpers.
+
+werf template function set differs between versions/contexts (e.g. `werf config render` in CI).
+Avoid using Helm-only helpers like `toYaml` here.
+*/}}
+{{- define "oss_yaml_render_condition" -}}
+  {{- $cond := index . 0 -}}
+  {{- $indent := (index . 1) | default "" -}}
+
+  {{- if not $cond -}}
+    {{- /* nothing */ -}}
+  {{- else -}}
+    {{- /* fromYaml returns map[interface{}]interface{}; normalize to map[string]interface{} for deterministic key sorting */ -}}
+    {{- $condStr := dict -}}
+    {{- range $k, $v := $cond -}}
+      {{- $_ := set $condStr (printf "%v" $k) $v -}}
+    {{- end -}}
+
+    {{- $keys := keys $condStr | sortAlpha -}}
+    {{- range $keys -}}
+      {{- $k := . -}}
+      {{- $val := index $condStr $k -}}
+
+      {{- if kindIs "slice" $val -}}
+        {{- printf "%s%s:\n" $indent ($k | quote) -}}
+        {{- range $val -}}
+          {{- printf "%s  - %s\n" $indent ((printf "%v" .) | quote) -}}
+        {{- end -}}
+      {{- else -}}
+        {{- printf "%s%s: %s\n" $indent ($k | quote) ((printf "%v" $val) | quote) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- define "oss_yaml_render_version_struct" -}}
+  {{- $v := index . 0 -}}
+  {{- $indent := (index . 1) | default "" -}}
+
+  {{- $ver := (index $v "version") | default "" -}}
+  {{- if eq $ver "" -}}
+    {{- fail "\n[ERROR] Version struct has empty .version" -}}
+  {{- end -}}
+
+  {{- printf "%sversion: %s\n" $indent ($ver | quote) -}}
+
+  {{- $name := (index $v "name") | default "" -}}
+  {{- if ne $name "" -}}
+    {{- printf "%sname: %s\n" $indent ($name | quote) -}}
+  {{- end -}}
+
+  {{- $cond := index $v "condition" -}}
+  {{- if $cond -}}
+    {{- printf "%scondition:\n" $indent -}}
+    {{- include "oss_yaml_render_condition" (list $cond (printf "%s  " $indent)) -}}
+  {{- end -}}
+{{- end -}}
+
 {{- define "get_oss_version_by_id" -}}
   {{- $id := index . 0 -}}
   {{- $ctx := index . 1 -}}
@@ -8,11 +72,32 @@
   {{- end -}}
 
   {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
+
+  {{- $item := dict -}}
   {{- range $raw.data -}}
     {{- if eq .id $id -}}
-      {{- $version = .version | default "" -}}
+      {{- $item = . -}}
       {{- break -}}
     {{- end -}}
+  {{- end -}}
+
+  {{- if eq (len $item) 0 -}}
+    {{- fail (printf "\n[ERROR] ID '%s' not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $versions := index $item "versions" -}}
+  {{- if not $versions -}}
+    {{- $versions = list -}}
+  {{- end -}}
+
+  {{- if gt (len $versions) 0 -}}
+    {{- if eq (len $versions) 1 -}}
+      {{- $version = (index (index $versions 0) "version") | default "" -}}
+    {{- else -}}
+      {{- fail (printf "\n[ERROR] Multiple versions are defined for ID '%s' in file: %s. Use helper 'get_oss_version_by_id_and_condition'." $id $ctx.OssYamlPath) -}}
+    {{- end -}}
+  {{- else -}}
+    {{- $version = (index $item "version") | default "" -}}
   {{- end -}}
 
   {{- if eq $version "" -}}
@@ -20,4 +105,575 @@
   {{- end -}}
 
   {{- $version -}}
+{{- end -}}
+
+{{/*
+  Returns YAML of a single version structure for a given id.
+
+  Input: (list <id:string> <ctx:werf_context>)
+
+  Behaviour:
+    - if `versions` exists and has exactly 1 item: returns that item
+    - if `versions` has >1 items: fails (ambiguous), use get_oss_version_by_id_and_condition or get_oss_versions_by_id
+    - if scalar `version` exists: returns pseudo-structure: {version: "<value>"}
+
+  Typical usage:
+    {{- $v := include "get_oss_version_struct_by_id" (list "example-service" $) | fromYaml -}}
+*/}}
+{{- define "get_oss_version_struct_by_id" -}}
+  {{- $id := index . 0 -}}
+  {{- $ctx := index . 1 -}}
+
+  {{- if not ($ctx.Files.Exists $ctx.OssYamlPath) -}}
+    {{- fail (printf "\n[ERROR] OSS file not found at path: %s" $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
+
+  {{- $item := dict -}}
+  {{- range $raw.data -}}
+    {{- if eq .id $id -}}
+      {{- $item = . -}}
+      {{- break -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if eq (len $item) 0 -}}
+    {{- fail (printf "\n[ERROR] ID '%s' not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $versions := index $item "versions" -}}
+  {{- if not $versions -}}
+    {{- $versions = list -}}
+  {{- end -}}
+
+  {{- if gt (len $versions) 0 -}}
+    {{- if eq (len $versions) 1 -}}
+      {{- include "oss_yaml_render_version_struct" (list (index $versions 0) "") | trim -}}
+    {{- else -}}
+      {{- fail (printf "\n[ERROR] Multiple versions are defined for ID '%s' in file: %s. Use helper 'get_oss_version_by_id_and_condition' or 'get_oss_versions_by_id'." $id $ctx.OssYamlPath) -}}
+    {{- end -}}
+  {{- else -}}
+    {{- $version := (index $item "version") | default "" -}}
+    {{- if eq $version "" -}}
+      {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
+    {{- end -}}
+    {{- include "oss_yaml_render_version_struct" (list (dict "version" $version) "") | trim -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+  Returns concrete version string for a given id and condition.
+
+  Input: (list <id:string> <condition:map> <ctx:werf_context>)
+
+  Behaviour:
+    - if `versions` is present: finds first item where `.condition` matches provided map and returns `.version`
+      Matching rules per key:
+        - scalar in oss.yaml matches scalar in query by equality
+        - array in oss.yaml matches scalar in query by membership
+        - if query value is an array: all query values must be contained in oss.yaml value(s)
+    - if only scalar `version` is present: returns it (condition is ignored)
+
+  Typical usage:
+    {{- $ver := include "get_oss_version_by_id_and_condition" (list "example-service" (dict "k8s" "1.31") $) -}}
+*/}}
+{{- define "get_oss_version_by_id_and_condition" -}}
+  {{- $id := index . 0 -}}
+  {{- $condition := index . 1 -}}
+  {{- $ctx := index . 2 -}}
+  {{- $version := "" -}}
+
+  {{- if not ($ctx.Files.Exists $ctx.OssYamlPath) -}}
+    {{- fail (printf "\n[ERROR] OSS file not found at path: %s" $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
+
+  {{- $item := dict -}}
+  {{- range $raw.data -}}
+    {{- if eq .id $id -}}
+      {{- $item = . -}}
+      {{- break -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if eq (len $item) 0 -}}
+    {{- fail (printf "\n[ERROR] ID '%s' not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $versions := index $item "versions" -}}
+  {{- if not $versions -}}
+    {{- $versions = list -}}
+  {{- end -}}
+
+  {{- if gt (len $versions) 0 -}}
+    {{- range $versions -}}
+      {{- $vCond := index . "condition" -}}
+      {{- if not $vCond -}}
+        {{- $vCond = dict -}}
+      {{- end -}}
+
+      {{- $match := true -}}
+
+      {{- range $k, $qVal := $condition -}}
+        {{- $cVal := index $vCond $k -}}
+        {{- if eq $cVal nil -}}
+          {{- $match = false -}}
+          {{- break -}}
+        {{- end -}}
+
+        {{- $cand := list -}}
+        {{- if kindIs "slice" $cVal -}}
+          {{- range $cVal -}}
+            {{- $cand = append $cand (printf "%v" .) -}}
+          {{- end -}}
+        {{- else -}}
+          {{- $cand = append $cand (printf "%v" $cVal) -}}
+        {{- end -}}
+
+        {{- $query := list -}}
+        {{- if kindIs "slice" $qVal -}}
+          {{- range $qVal -}}
+            {{- $query = append $query (printf "%v" .) -}}
+          {{- end -}}
+        {{- else -}}
+          {{- $query = append $query (printf "%v" $qVal) -}}
+        {{- end -}}
+
+        {{- range $query -}}
+          {{- $q := . -}}
+          {{- $found := false -}}
+          {{- range $cand -}}
+            {{- if eq . $q -}}
+              {{- $found = true -}}
+              {{- break -}}
+            {{- end -}}
+          {{- end -}}
+          {{- if not $found -}}
+            {{- $match = false -}}
+            {{- break -}}
+          {{- end -}}
+        {{- end -}}
+
+        {{- if not $match -}}
+          {{- break -}}
+        {{- end -}}
+      {{- end -}}
+
+      {{- if $match -}}
+        {{- $version = (index . "version") | default "" -}}
+        {{- break -}}
+      {{- end -}}
+    {{- end -}}
+
+    {{- if eq $version "" -}}
+      {{- $available := list -}}
+      {{- range $versions -}}
+        {{- $c := index . "condition" -}}
+        {{- if not $c -}}
+          {{- $c = dict -}}
+        {{- end -}}
+        {{- $available = append $available ((toJson $c) | default "{}") -}}
+      {{- end -}}
+      {{- fail (printf "\n[ERROR] Version for ID '%s' not found for condition %s in file: %s. Available conditions: %s" $id (toJson $condition) $ctx.OssYamlPath (join "; " $available)) -}}
+    {{- end -}}
+  {{- else -}}
+    {{- $version = (index $item "version") | default "" -}}
+  {{- end -}}
+
+  {{- if eq $version "" -}}
+    {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $version -}}
+{{- end -}}
+
+{{/*
+  Returns YAML array of version structures for a given id.
+
+  Input: (list <id:string> <ctx:werf_context>)
+
+  Behaviour:
+    - if `versions` exists: returns it as YAML
+    - else if scalar `version` exists: returns a single-item list: [{version: "<value>"}]
+
+  Note:
+    - `versions[].condition` is optional.
+
+  Typical usage:
+    {{- $versions := include "get_oss_versions_by_id" (list "example-service" $) | fromYaml -}}
+    {{- range $versions }}...{{- end -}}
+*/}}
+{{- define "get_oss_versions_by_id" -}}
+  {{- $id := index . 0 -}}
+  {{- $ctx := index . 1 -}}
+
+  {{- if not ($ctx.Files.Exists $ctx.OssYamlPath) -}}
+    {{- fail (printf "\n[ERROR] OSS file not found at path: %s" $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
+
+  {{- $item := dict -}}
+  {{- range $raw.data -}}
+    {{- if eq .id $id -}}
+      {{- $item = . -}}
+      {{- break -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if eq (len $item) 0 -}}
+    {{- fail (printf "\n[ERROR] ID '%s' not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $versions := index $item "versions" -}}
+  {{- if not $versions -}}
+    {{- $versions = list -}}
+  {{- end -}}
+
+  {{- if gt (len $versions) 0 -}}
+    {{- range $versions -}}
+      {{- $v := . -}}
+      {{- $ver := (index $v "version") | default "" -}}
+      {{- if eq $ver "" -}}
+        {{- fail (printf "\n[ERROR] Empty version in versions[] for ID '%s' in file: %s" $id $ctx.OssYamlPath) -}}
+      {{- end -}}
+
+      {{- printf "- version: %s\n" ($ver | quote) -}}
+
+      {{- $name := (index $v "name") | default "" -}}
+      {{- if ne $name "" -}}
+        {{- printf "  name: %s\n" ($name | quote) -}}
+      {{- end -}}
+
+      {{- $cond := index $v "condition" -}}
+      {{- if $cond -}}
+        {{- printf "  condition:\n" -}}
+        {{- include "oss_yaml_render_condition" (list $cond "    ") -}}
+      {{- end -}}
+    {{- end -}}
+  {{- else -}}
+    {{- $version := (index $item "version") | default "" -}}
+    {{- if eq $version "" -}}
+      {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
+    {{- end -}}
+    {{- printf "- version: %s\n" ($version | quote) -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+  Returns YAML array of version strings for a given id.
+
+  Input: (list <id:string> <ctx:werf_context>)
+
+  Behaviour:
+    - if `versions` exists: returns list of `.version` values
+    - else if scalar `version` exists: returns single-item list
+
+  Intended for cases where `versions[]` items have no `condition` and you need all versions.
+
+  Typical usage:
+    {{- $raw := printf "data:\n%s" (include "get_oss_version_strings_by_id" (list "example-service" $)) | fromYaml -}}
+    {{- $versions := index $raw "data" -}}
+*/}}
+{{- define "get_oss_version_strings_by_id" -}}
+  {{- $id := index . 0 -}}
+  {{- $ctx := index . 1 -}}
+
+  {{- if not ($ctx.Files.Exists $ctx.OssYamlPath) -}}
+    {{- fail (printf "\n[ERROR] OSS file not found at path: %s" $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
+
+  {{- $item := dict -}}
+  {{- range $raw.data -}}
+    {{- if eq .id $id -}}
+      {{- $item = . -}}
+      {{- break -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if eq (len $item) 0 -}}
+    {{- fail (printf "\n[ERROR] ID '%s' not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $versions := index $item "versions" -}}
+  {{- if not $versions -}}
+    {{- $versions = list -}}
+  {{- end -}}
+
+  {{- if gt (len $versions) 0 -}}
+    {{- range $versions -}}
+      {{- $ver := (index . "version") | default "" -}}
+      {{- if eq $ver "" -}}
+        {{- fail (printf "\n[ERROR] Empty version in versions[] for ID '%s' in file: %s" $id $ctx.OssYamlPath) -}}
+      {{- end -}}
+      {{- printf "- %s\n" ($ver | quote) -}}
+    {{- end -}}
+  {{- else -}}
+    {{- $version := (index $item "version") | default "" -}}
+    {{- if eq $version "" -}}
+      {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
+    {{- end -}}
+    {{- printf "- %s\n" ($version | quote) -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+  Returns mapping <condition[key] value> -> <version> for a given id.
+
+  Input: (list <id:string> <conditionKey:string> <ctx:werf_context>)
+
+  Notes:
+    - supports scalar and array values in `condition.<key>`.
+    - if any condition values intersect between different versions (duplicate mapping key) -> fails.
+
+  Example oss.yaml:
+    - id: example-service
+      versions:
+        - condition: {k8s: ["1.31", "1.32"]}
+          version: 1.2.1
+        - condition: {k8s: ["1.33"]}
+          version: 1.2.2
+
+  Typical usage:
+    {{- $m := include "get_oss_version_map_by_id_and_condition_key" (list "example-service" "k8s" $) -}}
+*/}}
+{{- define "get_oss_version_map_by_id_and_condition_key" -}}
+  {{- $id := index . 0 -}}
+  {{- $key := index . 1 -}}
+  {{- $ctx := index . 2 -}}
+
+  {{- if not ($ctx.Files.Exists $ctx.OssYamlPath) -}}
+    {{- fail (printf "\n[ERROR] OSS file not found at path: %s" $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
+
+  {{- $item := dict -}}
+  {{- range $raw.data -}}
+    {{- if eq .id $id -}}
+      {{- $item = . -}}
+      {{- break -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if eq (len $item) 0 -}}
+    {{- fail (printf "\n[ERROR] ID '%s' not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $versions := index $item "versions" -}}
+  {{- if not $versions -}}
+    {{- $versions = list -}}
+  {{- end -}}
+
+  {{- if eq (len $versions) 0 -}}
+    {{- fail (printf "\n[ERROR] No 'versions' array is defined for ID '%s' in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $out := dict -}}
+
+  {{- range $versions -}}
+    {{- $cond := index . "condition" -}}
+    {{- if not $cond -}}
+      {{- $cond = dict -}}
+    {{- end -}}
+
+    {{- $val := index $cond $key -}}
+    {{- if eq $val nil -}}
+      {{- fail (printf "\n[ERROR] Condition key '%s' is not defined for ID '%s' in file: %s. Condition: %s" $key $id $ctx.OssYamlPath (toJson $cond)) -}}
+    {{- end -}}
+
+    {{- $ver := (index . "version") | default "" -}}
+    {{- if eq $ver "" -}}
+      {{- fail (printf "\n[ERROR] Empty version in versions[] for ID '%s' in file: %s" $id $ctx.OssYamlPath) -}}
+    {{- end -}}
+
+    {{- $vals := list -}}
+    {{- if kindIs "slice" $val -}}
+      {{- range $val -}}
+        {{- $vals = append $vals (printf "%v" .) -}}
+      {{- end -}}
+    {{- else -}}
+      {{- $vals = append $vals (printf "%v" $val) -}}
+    {{- end -}}
+
+    {{- range $vals -}}
+      {{- $k := . -}}
+      {{- if ne (index $out $k) nil -}}
+        {{- fail (printf "\n[ERROR] Overlapping conditions for ID '%s' and key '%s': value '%s' is defined more than once in file: %s" $id $key $k $ctx.OssYamlPath) -}}
+      {{- end -}}
+      {{- $_ := set $out $k $ver -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- $keys := keys $out | sortAlpha -}}
+  {{- range $i, $k := $keys -}}
+    {{- printf "%s: %s\n" ($k | quote) ((index $out $k) | quote) -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+  Returns mapping <k8s_version_in_range> -> <version> by evaluating semver constraints in `condition.<key>`.
+
+  Input: (list <id:string> <conditionKey:string> <rangeSpec:list> <ctx:werf_context>)
+
+  rangeSpec is a list of alternating key/value, e.g.:
+    (list "start" "1.32" "end" "1.35")
+
+  Notes:
+    - This helper expands the minor-version range [start..end] into discrete values: 1.32, 1.33, ...
+      (major must match in start/end).
+    - `condition.<key>` items may be:
+        - exact version: "1.35"
+        - semver constraint: "<=1.34", ">=1.32 <1.35", etc.
+      Constraints are evaluated via `semverCompare`.
+    - If multiple version entries match the same expanded version -> fails (overlap).
+    - If no version entry matches some expanded version -> fails (gap).
+
+  Typical usage:
+    {{- $m := include "get_oss_version_map_by_id_and_condition_key_semver" (list "example-service" "k8s" (list "start" "1.32" "end" "1.35") $) -}}
+*/}}
+{{- define "get_oss_version_map_by_id_and_condition_key_semver" -}}
+  {{- $id := index . 0 -}}
+  {{- $key := index . 1 -}}
+  {{- $rangeSpec := index . 2 -}}
+  {{- $ctx := index . 3 -}}
+
+  {{- if not ($ctx.Files.Exists $ctx.OssYamlPath) -}}
+    {{- fail (printf "\n[ERROR] OSS file not found at path: %s" $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- if not (kindIs "slice" $rangeSpec) -}}
+    {{- fail (printf "\n[ERROR] rangeSpec must be a list, got: %s" (kindOf $rangeSpec)) -}}
+  {{- end -}}
+
+  {{- if ne (mod (len $rangeSpec) 2) 0 -}}
+    {{- fail (printf "\n[ERROR] rangeSpec must contain even number of elements (key/value pairs), got len=%d" (len $rangeSpec)) -}}
+  {{- end -}}
+
+  {{- $range := dict -}}
+  {{- range $i, $_ := $rangeSpec -}}
+    {{- if eq (mod $i 2) 0 -}}
+      {{- $k := printf "%v" (index $rangeSpec $i) -}}
+      {{- $v := printf "%v" (index $rangeSpec (add $i 1)) -}}
+      {{- $_ := set $range $k $v -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- $start := (index $range "start") | default "" -}}
+  {{- $end := (index $range "end") | default "" -}}
+  {{- if or (eq $start "") (eq $end "") -}}
+    {{- fail (printf "\n[ERROR] rangeSpec must include 'start' and 'end'. Got: %s" (toJson $range)) -}}
+  {{- end -}}
+
+  {{- $sParts := splitList "." $start -}}
+  {{- $eParts := splitList "." $end -}}
+  {{- if or (ne (len $sParts) 2) (ne (len $eParts) 2) -}}
+    {{- fail (printf "\n[ERROR] start/end must look like '<major>.<minor>' (e.g. 1.32). Got start=%s end=%s" $start $end) -}}
+  {{- end -}}
+
+  {{- $major := (atoi (index $sParts 0)) | int -}}
+  {{- $sMinor := (atoi (index $sParts 1)) | int -}}
+  {{- $eMajor := (atoi (index $eParts 0)) | int -}}
+  {{- $eMinor := (atoi (index $eParts 1)) | int -}}
+  {{- if ne $major $eMajor -}}
+    {{- fail (printf "\n[ERROR] start/end major version mismatch: start=%s end=%s" $start $end) -}}
+  {{- end -}}
+  {{- if gt $sMinor $eMinor -}}
+    {{- fail (printf "\n[ERROR] start minor must be <= end minor: start=%s end=%s" $start $end) -}}
+  {{- end -}}
+
+  {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
+
+  {{- $item := dict -}}
+  {{- range $raw.data -}}
+    {{- if eq .id $id -}}
+      {{- $item = . -}}
+      {{- break -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if eq (len $item) 0 -}}
+    {{- fail (printf "\n[ERROR] ID '%s' not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $versions := index $item "versions" -}}
+  {{- if not $versions -}}
+    {{- $versions = list -}}
+  {{- end -}}
+
+  {{- if eq (len $versions) 0 -}}
+    {{- fail (printf "\n[ERROR] No 'versions' array is defined for ID '%s' in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- range $minor := untilStep $sMinor (add $eMinor 1 | int) 1 -}}
+    {{- $target := printf "%d.%d" $major $minor -}}
+
+    {{- $matchedVersion := "" -}}
+    {{- $matchedCount := 0 -}}
+
+    {{- range $versions -}}
+      {{- $cond := index . "condition" -}}
+      {{- if not $cond -}}
+        {{- $cond = dict -}}
+      {{- end -}}
+
+      {{- $val := index $cond $key -}}
+      {{- if eq $val nil -}}
+        {{- fail (printf "\n[ERROR] Condition key '%s' is not defined for ID '%s' in file: %s. Condition: %s" $key $id $ctx.OssYamlPath (toJson $cond)) -}}
+      {{- end -}}
+
+      {{- $ver := (index . "version") | default "" -}}
+      {{- if eq $ver "" -}}
+        {{- fail (printf "\n[ERROR] Empty version in versions[] for ID '%s' in file: %s" $id $ctx.OssYamlPath) -}}
+      {{- end -}}
+
+      {{- $constraints := list -}}
+      {{- if kindIs "slice" $val -}}
+        {{- range $val -}}
+          {{- $constraints = append $constraints (printf "%v" .) -}}
+        {{- end -}}
+      {{- else -}}
+        {{- $constraints = append $constraints (printf "%v" $val) -}}
+      {{- end -}}
+
+      {{- $entryMatches := false -}}
+      {{- range $constraints -}}
+        {{- $c := . -}}
+        {{- $cNorm := $c -}}
+
+        {{- /* exact version '1.35' -> '= 1.35' */ -}}
+        {{- if regexMatch "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$" $cNorm -}}
+          {{- $cNorm = printf "= %s" $cNorm -}}
+        {{- else -}}
+          {{- /* normalize operator without whitespace: '<=1.34' -> '<= 1.34' */ -}}
+          {{- $cNorm = regexReplaceAll "^(<=|>=|<|>|=|!=)\\s*" $cNorm "${1} " -}}
+        {{- end -}}
+
+        {{- if semverCompare $cNorm $target -}}
+          {{- $entryMatches = true -}}
+          {{- break -}}
+        {{- end -}}
+      {{- end -}}
+
+      {{- if $entryMatches -}}
+        {{- $matchedCount = add $matchedCount 1 -}}
+        {{- if eq $matchedCount 1 -}}
+          {{- $matchedVersion = $ver -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+
+    {{- if eq $matchedCount 0 -}}
+      {{- fail (printf "\n[ERROR] No version matched for ID '%s' key '%s' at %s in file: %s" $id $key $target $ctx.OssYamlPath) -}}
+    {{- end -}}
+    {{- if gt $matchedCount 1 -}}
+      {{- fail (printf "\n[ERROR] Overlapping semver conditions for ID '%s' key '%s' at %s in file: %s" $id $key $target $ctx.OssYamlPath) -}}
+    {{- end -}}
+
+    {{- printf "%s: %s\n" ($target | quote) ($matchedVersion | quote) -}}
+  {{- end -}}
 {{- end -}}
