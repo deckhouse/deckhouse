@@ -25,6 +25,8 @@ import (
 const (
 	conditionReasonDisruptionApprovalNotRequired = "DisruptionApprovalNotRequired"
 	emptyMessage                                 = ""
+	machineMessagePrefix                         = "machine: "
+	bashibleMessagePrefix                        = "bashible: "
 )
 
 type MessageFactory interface {
@@ -55,9 +57,12 @@ func NewMessageFactory() MessageFactory {
 }
 
 func (f *messageFactory) FromConditions(conditions []deckhousev1alpha2.InstanceCondition) string {
-	for _, match := range messagePriorityMatchers {
+	if message, ok := findConditionMessage(conditions, messagePriorityMatchers[0]); ok {
+		return machineMessagePrefix + message
+	}
+	for _, match := range messagePriorityMatchers[1:] {
 		if message, ok := findConditionMessage(conditions, match); ok {
-			return message
+			return bashibleMessagePrefix + message
 		}
 	}
 

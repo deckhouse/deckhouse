@@ -38,7 +38,7 @@ func TestMessageFactory_FromConditions(t *testing.T) {
 				{Type: deckhousev1alpha2.InstanceConditionTypeBashibleReady, Message: "bashible"},
 				{Type: deckhousev1alpha2.InstanceConditionTypeMachineReady, Message: "machine"},
 			},
-			expected: "machine",
+			expected: "machine: machine",
 		},
 		{
 			name: "bashible ready is second priority",
@@ -46,7 +46,7 @@ func TestMessageFactory_FromConditions(t *testing.T) {
 				{Type: deckhousev1alpha2.InstanceConditionTypeMachineReady, Message: ""},
 				{Type: deckhousev1alpha2.InstanceConditionTypeBashibleReady, Message: "bashible"},
 			},
-			expected: "bashible",
+			expected: "bashible: bashible",
 		},
 		{
 			name: "disruption approval not required reason is third priority",
@@ -54,14 +54,14 @@ func TestMessageFactory_FromConditions(t *testing.T) {
 				{Type: deckhousev1alpha2.InstanceConditionTypeWaitingApproval, Message: "waiting approval"},
 				{Type: deckhousev1alpha2.InstanceConditionTypeWaitingDisruptionApproval, Reason: conditionReasonDisruptionApprovalNotRequired, Message: "no disruption approval"},
 			},
-			expected: "no disruption approval",
+			expected: "bashible: no disruption approval",
 		},
 		{
 			name: "waiting approval is fourth priority",
 			conditions: []deckhousev1alpha2.InstanceCondition{
 				{Type: deckhousev1alpha2.InstanceConditionTypeWaitingApproval, Message: "waiting approval"},
 			},
-			expected: "waiting approval",
+			expected: "bashible: waiting approval",
 		},
 		{
 			name: "empty messages return empty result",
