@@ -36,6 +36,7 @@ runs-on: [self-hosted, large]
 outputs:
   tests_image_name: ${{ steps.build.outputs.tests_image_name }}
 steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
 {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
 {!{ end }!}
