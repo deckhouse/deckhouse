@@ -1,0 +1,49 @@
+candi:
+  fixes:
+    - summary: fix CVE in cloud-provider-azure
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18067
+ci:
+  features:
+    - summary: Added the ability to use a .trivyignore file when checking DKP components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17793
+  fixes:
+    - summary: Increase e2e bootstrap timeouts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17942
+    - summary: >-
+        Convert Docker authorization configuration parsing to the jq utility to avoid relying on
+        quotes and spaces.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17912
+    - summary: wait for bastion SSH before provisioning
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17818
+cloud-provider-azure:
+  fixes:
+    - summary: fix CVE in cloud-provider-azure
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18067
+cloud-provider-huaweicloud:
+  features:
+    - summary: migrate CAPI provider to cluster-api v1beta2 contract
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17989
+  fixes:
+    - summary: fix CVEs in cloud-provider-huaweicloud
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18096
+cloud-provider-openstack:
+  fixes:
+    - summary: fix CVE in cloud-provider-openstack module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18099
+cloud-provider-zvirt:
+  fixes:
+    - summary: fix CVE in cloud-provider-zvirt module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18115
+cni-cilium:
+  features:
+    - summary: new import/export conntrack http endpoints
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17429
+docs:
+  fixes:
+    - summary: Updated "Requirements" section in Deckhouse Virtualization Platform.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18094
+node-manager:
+  fixes:
+    - summary: fix go lint errors in node-controller
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18187
+
