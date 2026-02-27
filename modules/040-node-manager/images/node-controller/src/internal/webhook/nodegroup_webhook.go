@@ -78,8 +78,8 @@ func SetupWithManager(mgr ctrl.Manager) error {
 		},
 	})
 
-	// Conversion webhook with cluster state access
-	hookServer.Register("/convert", &NodeGroupConversionHandler{
+	// Unified conversion webhook (NodeGroup + Instance) with cluster state access.
+	hookServer.Register("/convert", &ConversionHandler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	})

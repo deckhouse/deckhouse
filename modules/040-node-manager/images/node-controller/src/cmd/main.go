@@ -29,12 +29,18 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
+	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+
+	"github.com/deckhouse/node-controller/internal/controller"
 	"github.com/deckhouse/node-controller/internal/webhook"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -45,10 +51,16 @@ var (
 )
 
 func init() {
+	// core
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	// deckhosue
 	utilruntime.Must(deckhousev1.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1alpha2.AddToScheme(scheme))
+	// capi
+	utilruntime.Must(capiv1beta2.AddToScheme(scheme))
+	// mcm
+	utilruntime.Must(mcmv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -73,6 +85,13 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{
+				controller.MachineNamespace: {},
+				"kube-system":               {},
+				"default":                   {},
+			},
+		},
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
 		},
@@ -88,6 +107,26 @@ func main() {
 
 	if err = webhook.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "NodeGroup")
+		os.Exit(1)
+	}
+
+	if err = controller.SetupInstanceController(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Instance")
+		os.Exit(1)
+	}
+
+	if err = controller.SetupMCMMachineController(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "MCMMachine")
+		os.Exit(1)
+	}
+
+	if err = controller.SetupCAPIMachineController(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CAPIMachine")
+		os.Exit(1)
+	}
+
+	if err = controller.SetupNodeController(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Node")
 		os.Exit(1)
 	}
 

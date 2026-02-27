@@ -39,11 +39,16 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   done
 
   >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
+  waiting_approval_status_set="no"
   attempt=0
   until
     bb-kubectl-exec get node $(bb-d8-node-name) -o json | \
     jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
   do
+    if [ "$waiting_approval_status_set" != "yes" ]; then
+      bb-waiting-approval-required "001_waiting_approval_annotations.sh requires approval"
+      waiting_approval_status_set="yes"
+    fi
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
       >&2 echo "ERROR: Can't get annotation 'update.node.deckhouse.io/approved' from our Node."
@@ -55,5 +60,6 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
     echo "Retry in 10sec..."
     sleep 10
   done
+  bb-waiting-approval-not-required
 fi
 {{ end }}

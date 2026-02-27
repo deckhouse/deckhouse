@@ -12,6 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- $candi := "candi/bashible/lib.sh.tpl" -}}
+{{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
+{{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
+{{- $ctx := . -}}
+{{- tpl (printf `
+%s
+
+{{ template "bb-d8-node-name" $ }}
+{{ template "bb-d8-node-ip" $ }}
+{{ template "bb-status" $ }}
+` $lib) $ctx }}
+
 bb-kubectl() {
   kubectl --request-timeout 60s ${@}
 }
@@ -24,6 +36,9 @@ bb-deckhouse-get-disruptive-update-approval() {
     if bb-flag? disruption; then
       return 0
     fi
+
+    local disruption_approval_step="${BASH_SOURCE[1]##*/}"
+    local disruption_approval_message="${disruption_approval_step:-current step} requires disruption approval"
 
     attempt=0
     until
@@ -60,11 +75,16 @@ bb-deckhouse-get-disruptive-update-approval() {
 
     bb-log-info "Disruption required, waiting for approval"
 
+    local disruption_waiting_status_set="no"
     attempt=0
     until
       bb-kubectl-exec get node $(bb-d8-node-name) -o json | \
       jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")' >/dev/null
     do
+        if [ "$disruption_waiting_status_set" != "yes" ]; then
+            bb-disruption-approval-required "$disruption_approval_message"
+            disruption_waiting_status_set="yes"
+        fi
         attempt=$(( attempt + 1 ))
         if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
             bb-log-error "ERROR: Failed to get annotation 'update.node.deckhouse.io/disruption-approved' from Node."
@@ -77,5 +97,6 @@ bb-deckhouse-get-disruptive-update-approval() {
     done
 
     bb-log-info "Disruption approved!"
+    bb-disruption-approval-not-required
     bb-flag-set disruption
 }

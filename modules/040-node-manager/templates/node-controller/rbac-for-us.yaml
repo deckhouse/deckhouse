@@ -72,7 +72,7 @@ rules:
   - get
   - list
   - watch
-# CAPI Machine and MachineDeployment - read for status calculation
+# CAPI Machine
 - apiGroups:
   - cluster.x-k8s.io
   resources:
@@ -82,6 +82,37 @@ rules:
   - get
   - list
   - watch
+  - update
+  - patch
+  - delete
+# MCM Machine
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machines/status
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines/status
+  verbs:
+  - get
+  - list
+  - watch
+# Instance full access
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instances
+  - instances/status
+  verbs:
+  - "*"
 # ModuleConfig - read for validation (customTolerationKeys)
 - apiGroups:
   - deckhouse.io

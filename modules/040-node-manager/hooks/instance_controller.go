@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:       "instances",
 			Kind:       "Instance",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "deckhouse.io/v1alpha2",
 			FilterFunc: instanceFilter,
 		},
 		{
@@ -85,6 +85,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, instanceController)
 
 func instanceMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return nil, nil
 	var machine mcmv1alpha1.Machine
 
 	err := sdk.FromUnstructured(obj, &machine)
@@ -105,6 +106,7 @@ func instanceMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 func instanceClusterAPIMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return nil, nil
 	var machine clusterapi.Machine
 
 	err := sdk.FromUnstructured(obj, &machine)
@@ -138,13 +140,11 @@ func instanceClusterAPIMachineFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	}, nil
 }
 
-var (
-	deleteFinalizersPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"finalizers": nil,
-		},
-	}
-)
+var deleteFinalizersPatch = map[string]interface{}{
+	"metadata": map[string]interface{}{
+		"finalizers": nil,
+	},
+}
 
 func newDrainingAnnotationPatch() map[string]interface{} {
 	return map[string]interface{}{
@@ -157,6 +157,7 @@ func newDrainingAnnotationPatch() map[string]interface{} {
 }
 
 func instanceNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return nil, nil
 	var ng d8v1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
@@ -172,6 +173,7 @@ func instanceNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func instanceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return nil, nil
 	var ic d8v1alpha1.Instance
 
 	err := sdk.FromUnstructured(obj, &ic)
@@ -187,6 +189,9 @@ func instanceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 }
 
 func instanceController(_ context.Context, input *go_hook.HookInput) error {
+	// Disable
+	return nil
+
 	instances := make(map[string]*instance, len(input.Snapshots.Get("instances")))
 	machines := make(map[string]*machineForInstance, len(input.Snapshots.Get("machines")))
 	clusterAPIMachines := make(map[string]*machineForInstance, len(input.Snapshots.Get("cluster_api_machines")))
