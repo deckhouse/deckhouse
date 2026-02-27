@@ -294,7 +294,7 @@ status:
 
 Для решений данной задачи существуют два механизма:
 
-1. Установка меток в NodeGroup `spec.nodeTemplate.labels` для последующего использования их в [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity). Указывает, какие именно узлы будут выбраны планировщиком для запуска целевого приложения.
+1. Установка лейблов в NodeGroup `spec.nodeTemplate.labels` для последующего использования их в [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity). Указывает, какие именно узлы будут выбраны планировщиком для запуска целевого приложения.
 1. Установка ограничений в NodeGroup `spec.nodeTemplate.taints` с дальнейшим снятием их в [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Запрещает исполнение не разрешенных явно приложений на этих узлах.
 
 > Deckhouse по умолчанию допускает использование taint с ключом `dedicated`. Поэтому рекомендуется применять именно этот ключ с любым значением для taint на выделенных узлах.

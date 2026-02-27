@@ -147,7 +147,7 @@ vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Re
 
 ##### Настройка модуля sds-local-volume (одинаковые диски, «Полное зеркало»)
 
-Чтобы сконфигурировать [`sds-local-volume`](/modules/sds-local-volume/) в режиме «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) и укажите в нём все обнаруженные [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Это гарантирует, что VG с меткой `main` будет доступен на каждом узле в модуле:
+Чтобы сконфигурировать [`sds-local-volume`](/modules/sds-local-volume/) в режиме «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) и укажите в нём все обнаруженные [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Это гарантирует, что VG с лейблом `main` будет доступен на каждом узле в модуле:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -202,7 +202,7 @@ EOF
      storagePool: data
      replication: None
      reclaimPolicy: Delete
-     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone).
+     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с лейблами topology.kubernetes.io/zone).
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass
@@ -375,7 +375,7 @@ EOF
      storagePool: data-safe # Обратите внимание, что из-за replication: None для этого ресурса используется data-safe; следовательно, репликация данных для постоянных томов (PV), созданных с этим StorageClass, проводиться не будет.
      replication: None
      reclaimPolicy: Delete
-     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone).
+     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с лейблами topology.kubernetes.io/zone).
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass
@@ -550,7 +550,7 @@ EOF
      storagePool: <replicated-storage-pool-name>
      replication: None
      reclaimPolicy: Delete
-     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone).
+     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с лейблами topology.kubernetes.io/zone).
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass
@@ -747,7 +747,7 @@ EOF
      storagePool: data-<vg-name>-safe # Обратите внимание, что из-за replication: None для этого ресурса используется data-<vg-name>-safe; следовательно, репликация данных для PV, созданных с этим StorageClass, проводиться не будет.
      replication: None
      reclaimPolicy: Delete
-     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с метками topology.kubernetes.io/zone).
+     topology: Ignored # Если указать данную топологию, в кластере не должно быть зон (узлов с лейблами topology.kubernetes.io/zone).
    ---
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass

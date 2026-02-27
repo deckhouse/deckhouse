@@ -17,7 +17,9 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"context"
 	"encoding/base64"
+	"fmt"
 
 	"golang.org/x/crypto/ssh"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,31 +36,44 @@ var sshcredentialslog = logf.Log.WithName("sshcredentials-resource")
 func (r *SSHCredentials) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithDefaulter(&SSHCredentialsCustomDefaulter{}).
+		WithValidator(&SSHCredentialsCustomValidator{}).
 		Complete()
 }
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+type SSHCredentialsCustomDefaulter struct{}
 
-///+kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha2-sshcredentials,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha2,name=msshcredentials.deckhouse.io,admissionReviewVersions=v1
-
-var _ webhook.Defaulter = &SSHCredentials{}
+// +kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha2-sshcredentials,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha2,name=msshcredentials.deckhouse.io,admissionReviewVersions=v1
+var _ webhook.CustomDefaulter = &SSHCredentialsCustomDefaulter{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *SSHCredentials) Default() {
-	sshcredentialslog.Info("default", "name", r.Name)
+func (r *SSHCredentialsCustomDefaulter) Default(_ context.Context, obj runtime.Object) error {
+	sshCredentials, ok := obj.(*SSHCredentials)
+	if !ok {
+		return fmt.Errorf("expected an SSHCredentials object but got %T", obj)
+	}
+	sshcredentialslog.Info("default", "name", sshCredentials.GetName())
+
+	return nil
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha2-sshcredentials,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha2,name=vsshcredentials.deckhouse.io,admissionReviewVersions=v1
+type SSHCredentialsCustomValidator struct{}
 
-var _ webhook.Validator = &SSHCredentials{}
+// +kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha2-sshcredentials,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha2,name=vsshcredentials.deckhouse.io,admissionReviewVersions=v1
+var _ webhook.CustomValidator = &SSHCredentialsCustomValidator{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
-	sshcredentialslog.Info("validate create", "name", r.Name)
+func (r *SSHCredentialsCustomValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	sshCredentials, ok := obj.(*SSHCredentials)
+	if !ok {
+		return nil, fmt.Errorf("expected an SSHCredentials object but got %T", obj)
+	}
+	sshcredentialslog.Info("validate create", "name", sshCredentials.GetName())
 
-	if len(r.Spec.PrivateSSHKey) > 0 {
-		privateSSHKey, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKey)
+	if len(sshCredentials.Spec.PrivateSSHKey) > 0 {
+		privateSSHKey, err := base64.StdEncoding.DecodeString(sshCredentials.Spec.PrivateSSHKey)
 		if err != nil {
 			return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid base64 encoded string")
 		}
@@ -69,8 +84,8 @@ func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
 		}
 	}
 
-	if r.Spec.SudoPasswordEncoded != "" {
-		_, err := base64.StdEncoding.DecodeString(r.Spec.SudoPasswordEncoded)
+	if sshCredentials.Spec.SudoPasswordEncoded != "" {
+		_, err := base64.StdEncoding.DecodeString(sshCredentials.Spec.SudoPasswordEncoded)
 		if err != nil {
 			return nil, field.Invalid(field.NewPath("spec", "SudoPasswordEncoded"), "******", "SudoPasswordEncoded must be a valid base64 encoded string")
 		}
@@ -80,11 +95,15 @@ func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *SSHCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	sshcredentialslog.Info("validate update", "name", r.Name)
+func (r *SSHCredentialsCustomValidator) ValidateUpdate(_ context.Context, old, new runtime.Object) (admission.Warnings, error) {
+	sshCredentials, ok := new.(*SSHCredentials)
+	if !ok {
+		return nil, fmt.Errorf("expected an SSHCredentials object but got %T", new)
+	}
+	sshcredentialslog.Info("validate update", "name", sshCredentials.GetName())
 
-	if len(r.Spec.PrivateSSHKey) > 0 {
-		privateSSHKey, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKey)
+	if len(sshCredentials.Spec.PrivateSSHKey) > 0 {
+		privateSSHKey, err := base64.StdEncoding.DecodeString(sshCredentials.Spec.PrivateSSHKey)
 		if err != nil {
 			return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid base64 encoded string")
 		}
@@ -95,8 +114,8 @@ func (r *SSHCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings,
 		}
 	}
 
-	if r.Spec.SudoPasswordEncoded != "" {
-		_, err := base64.StdEncoding.DecodeString(r.Spec.SudoPasswordEncoded)
+	if sshCredentials.Spec.SudoPasswordEncoded != "" {
+		_, err := base64.StdEncoding.DecodeString(sshCredentials.Spec.SudoPasswordEncoded)
 		if err != nil {
 			return nil, field.Invalid(field.NewPath("spec", "SudoPasswordEncoded"), "******", "SudoPasswordEncoded must be a valid base64 encoded string")
 		}
@@ -106,8 +125,12 @@ func (r *SSHCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings,
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *SSHCredentials) ValidateDelete() (admission.Warnings, error) {
-	sshcredentialslog.Info("validate delete", "name", r.Name)
+func (r *SSHCredentialsCustomValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	sshCredentials, ok := obj.(*SSHCredentials)
+	if !ok {
+		return nil, fmt.Errorf("expected an SSHCredentials object but got %T", obj)
+	}
+	sshcredentialslog.Info("validate delete", "name", sshCredentials.GetName())
 
 	return nil, nil
 }

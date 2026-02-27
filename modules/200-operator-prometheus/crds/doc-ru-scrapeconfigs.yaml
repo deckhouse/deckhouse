@@ -413,7 +413,7 @@ spec:
                 additionalProperties:
                 description: Необязательные параметры URL HTTP
               relabelings:
-                description: 'RelabelConfigs определяют, как переписывать лейблы целей перед их сбором. Оператор Prometheus автоматически добавляет переименования для некоторых стандартных полей Kubernetes. Имя изначальной задачи сбора доступно через метку `__tmp_prometheus_job_name`. Более подробно: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config'
+                description: 'RelabelConfigs определяют, как переписывать лейблы целей перед их сбором. Оператор Prometheus автоматически добавляет переименования для некоторых стандартных полей Kubernetes. Имя изначальной задачи сбора доступно через лейбл `__tmp_prometheus_job_name`. Более подробно: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config'
                 items:
                   description: "RelabelConfig позволяет динамически переписывать набор лейблов для целей, оповещений, собранных выборок и выборок удаленной записи. \n Более подробно: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config"
                   properties:
