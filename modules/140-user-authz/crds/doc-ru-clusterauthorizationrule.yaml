@@ -114,7 +114,7 @@ spec:
                   description: |
                     Определяет доступные пространства имен на основе значений, указанных в параметре `namespaceSelector.labelSelector`.
 
-                    Если параметр `namespaceSelector` указан, значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все пространства имен с метками, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные пространства имен), либо все пространства имен (включая системные), если указан параметр `namespaceSelector.matchAny`.
+                    Если параметр `namespaceSelector` указан, значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все пространства имен с лейблами, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные пространства имен), либо все пространства имен (включая системные), если указан параметр `namespaceSelector.matchAny`.
 
                     Если параметр `namespaceSelector` не указан, набор доступных пространств имен определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, будут доступны все пространства имен, за исключением системных (`kube-*`, `d8-*`, `loghouse`, `default`).
 
@@ -129,7 +129,7 @@ spec:
                         Так как с помощью параметра `labelSelector` можно предоставить доступ только к определенному перечню пространств имен, параметр `matchAny` необходим в случаях, когда нужно предоставить доступ ко всем пространствам имен.
                     labelSelector:
                       description: |
-                        Фильтр по меткам пространств имен.
+                        Фильтр по лейблам пространств имен.
 
                         Не может использоваться совместно с параметром `matchAny`.
 
@@ -140,13 +140,13 @@ spec:
                           items:
                             properties:
                               key:
-                                description: Имя метки.
+                                description: Имя лейбла.
                               operator:
                                 description: Оператор сравнения.
                               values:
-                                description: Значение метки.
+                                description: Значение лейбла.
                         matchLabels:
-                          description: Фильтр на основе совпадения/несовпадения меток.
+                          description: Фильтр на основе совпадения/несовпадения лейблов.
                 limitNamespaces:
                   description: |
                     Список разрешенных namespace в формате регулярных выражений.

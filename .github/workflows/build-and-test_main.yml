@@ -160,6 +160,15 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -285,6 +294,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}

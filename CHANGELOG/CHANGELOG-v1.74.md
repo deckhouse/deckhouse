@@ -71,8 +71,12 @@
 ## Fixes
 
 
+ - **[admission-policy-engine]** Prevent unintended Gatekeeper constraints from being rendered for SecurityPolicy when boolean fields are omitted. [#18197](https://github.com/deckhouse/deckhouse/pull/18197)
+    Workload Pods are no longer denied by unrelated SecurityPolicy checks (e.g. hostNetwork/hostPort) when corresponding policy fields are not explicitly set.
  - **[admission-policy-engine]** Refactor constraint templates [#17882](https://github.com/deckhouse/deckhouse/pull/17882)
  - **[admission-policy-engine]** Allow DELETE operations, add containerPorts check in case of hostNetwork [#17084](https://github.com/deckhouse/deckhouse/pull/17084)
+ - **[candi]** Bashible script fix to handle multiple GPUs [#18158](https://github.com/deckhouse/deckhouse/pull/18158)
+ - **[candi]** fix if node has bashible-uninitialized taint in race condition. [#18133](https://github.com/deckhouse/deckhouse/pull/18133)
  - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#16625](https://github.com/deckhouse/deckhouse/pull/16625)
  - **[candi]** Remove duplicate `additional_disks_hashes` definition in static-node Terraform module. [#17441](https://github.com/deckhouse/deckhouse/pull/17441)
  - **[candi]** Updated the bashible step to include Linux kernel versions that address CVE-2025-37999 [#17300](https://github.com/deckhouse/deckhouse/pull/17300)
@@ -91,6 +95,7 @@
  - **[cloud-provider-aws]** fix cve [#16843](https://github.com/deckhouse/deckhouse/pull/16843)
  - **[cloud-provider-azure]** fixed patch in azure [#17696](https://github.com/deckhouse/deckhouse/pull/17696)
  - **[cloud-provider-azure]** fixed cve [#16839](https://github.com/deckhouse/deckhouse/pull/16839)
+ - **[cloud-provider-dvp]** added fixes an infinite deletion state of DeckhouseMachine. [#18163](https://github.com/deckhouse/deckhouse/pull/18163)
  - **[cloud-provider-dvp]** Fixed VM deletion timeout and improved memory validation error reporting [#17587](https://github.com/deckhouse/deckhouse/pull/17587)
  - **[cloud-provider-dvp]** Cleanup orphaned resources when VM creation fails [#17533](https://github.com/deckhouse/deckhouse/pull/17533)
  - **[cloud-provider-dvp]** this PR gives a lot more informational errors and messages to user [#17165](https://github.com/deckhouse/deckhouse/pull/17165)
@@ -152,6 +157,7 @@
  - **[ingress-nginx]** Latest CVEs are fixed. [#17222](https://github.com/deckhouse/deckhouse/pull/17222)
     All pods running kube-rbac-proxy will be restarted.
  - **[ingress-nginx]** Improved stability of geoproxy service startup. [#17140](https://github.com/deckhouse/deckhouse/pull/17140)
+ - **[istio]** Fixing the list of requests from istiod to gateway API [#18056](https://github.com/deckhouse/deckhouse/pull/18056)
  - **[istio]** Correction of an useless error in the Istio CNI workflow [#17787](https://github.com/deckhouse/deckhouse/pull/17787)
  - **[istio]** Correction  in Kiali of an insignificant error [#16880](https://github.com/deckhouse/deckhouse/pull/16880)
  - **[istio]** Fixed false-positive alert `D8IstioRemoteClusterNotSynced` and improved its description. [#15826](https://github.com/deckhouse/deckhouse/pull/15826)

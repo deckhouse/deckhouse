@@ -347,5 +347,7 @@ func (h *NodeGroupConversionHandler) writeError(w http.ResponseWriter, uid strin
 			},
 		},
 	}
-	json.NewEncoder(w).Encode(review)
+	if err := json.NewEncoder(w).Encode(review); err != nil {
+		conversionLog.Error(err, "failed to encode error response")
+	}
 }
