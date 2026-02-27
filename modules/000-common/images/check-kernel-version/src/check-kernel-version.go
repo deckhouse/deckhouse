@@ -36,7 +36,9 @@ func main() {
 	}
 
 	utsname := unix.Utsname{}
-	unix.Uname(&utsname)
+	if err := unix.Uname(&utsname); err != nil {
+		log.Fatalf("failed to get kernel version: %v", err)
+	}
 	kernelVersion := string(utsname.Release[:])
 	/* Kernel version should be splitted to parts because versions `5.15.0-52-generic`
 	parses by semver as prerelease version. Prerelease versions by default come before stable versions
