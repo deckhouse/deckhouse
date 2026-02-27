@@ -131,7 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			log.Info("ControlPlaneNode not found, skipping", slog.String("node", nodeName))
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{RequeueAfter: requeueInterval}, err
+		return reconcile.Result{}, err
 	}
 
 	log.Info("ControlPlaneNode found", slog.String("node", nodeName))
@@ -141,17 +141,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	r.ensureStatusComponentsInitialized(controlPlaneNode)
 
 	if err := r.reconcileComponents(ctx, controlPlaneNode); err != nil {
-		return reconcile.Result{RequeueAfter: requeueInterval}, err
+		return reconcile.Result{}, err
 	}
 
 	if err := r.reconcileConditions(ctx, controlPlaneNode, originalForPatch); err != nil {
-		return reconcile.Result{RequeueAfter: requeueInterval}, err
+		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
 }
 
 // ensureStatusComponentsInitialized sets empty checksums for nil status.Components on first reconcile.
+// Other status checksums are initialized as empty strings.
 func (r *Reconciler) ensureStatusComponentsInitialized(cpn *controlplanev1alpha1.ControlPlaneNode) {
 	empty := func() *controlplanev1alpha1.ComponentChecksum {
 		return &controlplanev1alpha1.ComponentChecksum{Checksum: ""}
@@ -177,8 +178,7 @@ type componentCheck struct {
 	statusChecksum string
 }
 
-// reconcileComponents compares spec vs status checksums and creates ControlPlaneOperation
-// for each component where they differ.
+// reconcileComponents compares spec vs status checksums and creates ControlPlaneOperation for each component where they differ.
 func (r *Reconciler) reconcileComponents(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode) error {
 	nodeName := cpn.Name
 	checks := r.buildComponentChecks(cpn)

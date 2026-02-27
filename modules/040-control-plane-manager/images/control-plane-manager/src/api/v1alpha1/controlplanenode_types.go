@@ -62,16 +62,16 @@ type ControlPlaneNodeSpec struct {
 type ControlPlaneNodeStatus struct {
 	// ConfigVersion that is actually applied / running on the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"
 	// +optional
-	ConfigVersion string `json:"configVersion,omitempty"`
+	ConfigVersion string `json:"configVersion"`
 
 	// +optional
-	PKIChecksum string `json:"pkiChecksum,omitempty"`
+	PKIChecksum string `json:"pkiChecksum"`
 
 	// +optional
 	Components ComponentChecksums `json:"components,omitempty"`
 
 	// +optional
-	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
+	HotReloadChecksum string `json:"hotReloadChecksum"`
 
 	// +optional
 	// +listMapKey=type
