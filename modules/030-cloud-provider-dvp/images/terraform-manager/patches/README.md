@@ -19,7 +19,7 @@ Also, this patch contains huge testing for new resource. For testing, we can use
   It is uncomfortable with running tests in IDE's
 - script contains some initialization for run tests with `kind` cluster.
 
-# 004-node-taint-resource-test-fix.patch
+# 099-node-taint-resource-test-fix.patch
 This patch uses for improve developer experience and not affect provider logic. 
 Fix `kubernetes/resource_kubernetes_node_taint_test.go` file.
 This test uses `k8s.io/kubernetes` (and only one in tests).
