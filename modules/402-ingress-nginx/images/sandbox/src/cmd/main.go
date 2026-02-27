@@ -56,6 +56,8 @@ var sandboxExtraAllowSyscalls = []string{
 	"getppid",
 	"getpgid",
 	"uname",
+	"wait4",
+	"waitid",
 }
 
 func main() {
