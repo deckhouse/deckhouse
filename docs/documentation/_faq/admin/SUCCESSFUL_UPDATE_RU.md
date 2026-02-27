@@ -5,7 +5,7 @@ subsystems:
 lang: ru
 ---
 
-Если [алерт `DeckhouseUpdating`](../../../reference/alerts.html#monitoring-deckhouse-deckhouseupdating) перестал отображаться, это означает, что обновление завершено.
+Если [алерт `DeckhouseUpdating`](../reference/alerts.html#monitoring-deckhouse-deckhouseupdating) перестал отображаться, это означает, что обновление завершено.
 
 Также вы можете проверить состояние релизов DKP в кластере, используя следующую команду:
 
@@ -51,4 +51,3 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   ```
 
 - Соберите отладочную информацию и свяжитесь с [технической поддержкой DKP](/tech-support/).
-- Попросите помощи у [сообщества](/community/).

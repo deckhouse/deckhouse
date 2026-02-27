@@ -5,7 +5,7 @@ subsystems:
 lang: en
 ---
 
-If the [`DeckhouseUpdating`](../../../reference/alerts.html#monitoring-deckhouse-deckhouseupdating) alert is gone, the update has finished.
+If the [`DeckhouseUpdating`](../reference/alerts.html#monitoring-deckhouse-deckhouseupdating) alert is gone, the update has finished.
 
 You can also check the status of DKP releases in the cluster with the following command:
 
@@ -53,4 +53,3 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   ```
 
 - Collect debug information and contact [DKP technical support](/tech-support/).
-- Ask for help from the [community](/community/).
