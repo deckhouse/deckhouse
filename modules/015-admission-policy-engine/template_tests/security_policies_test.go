@@ -92,6 +92,50 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security p
 			Expect(f.KubernetesGlobalResource("D8AllowRbacWildcards", testPolicyName).Exists()).To(BeTrue())
 		})
 
+		It("Minimal security policy must not render unrelated constraints", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// allowPrivileged and allowPrivilegeEscalation have documented default "false",
+			// so their constraints must be created even when fields are omitted.
+			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", "minpolicy").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8AllowPrivilegeEscalation", "minpolicy").Exists()).To(BeTrue())
+
+			// All other constraints must NOT be created when their fields are not specified.
+			Expect(f.KubernetesGlobalResource("D8HostNetwork", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8HostProcesses", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AutomountServiceAccountTokenPod", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8ReadOnlyRootFilesystem", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowedCapabilities", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowedFlexVolumes", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowedHostPaths", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowedVolumeTypes", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowedSysctls", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowedUsers", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8SeLinux", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowedProcMount", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AppArmor", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowedSeccompProfiles", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowedClusterRoles", "minpolicy").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("D8AllowRbacWildcards", "minpolicy").Exists()).To(BeFalse())
+		})
+
+		It("Policy with only allowedHostPorts must create D8HostNetwork with allowHostNetwork=true", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			hostNet := f.KubernetesGlobalResource("D8HostNetwork", "hostportspolicy")
+			Expect(hostNet.Exists()).To(BeTrue())
+			Expect(hostNet.Field("spec.parameters.allowHostNetwork").Bool()).To(BeTrue())
+		})
+
+		It("Policy with only allowHostPID must create D8HostProcesses with allowHostIPC=true", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			hostProc := f.KubernetesGlobalResource("D8HostProcesses", "pidpolicy")
+			Expect(hostProc.Exists()).To(BeTrue())
+			Expect(hostProc.Field("spec.parameters.allowHostPID").Bool()).To(BeFalse())
+			Expect(hostProc.Field("spec.parameters.allowHostIPC").Bool()).To(BeTrue())
+		})
+
 		It("All security policy constraints must have valid YAML", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
