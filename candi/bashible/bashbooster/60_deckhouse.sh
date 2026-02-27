@@ -15,12 +15,14 @@
 {{- $candi := "candi/bashible/lib.sh.tpl" -}}
 {{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
 {{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
+{{- tpl (printf `
+%s
 
-{{- tpl $lib . }}
 {{ template "bb-d8-node-name" . }}
 {{ template "bb-d8-node-ip" . }}
 {{ template "bb-discover-node-name" . }}
 {{ template "bb-status" . }}
+` $lib) . }}
 
 bb-kubectl() {
   kubectl --request-timeout 60s ${@}
