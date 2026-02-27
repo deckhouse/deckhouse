@@ -403,3 +403,18 @@ type LoadOrDefaultConfigurationOptions struct {
 // func GroupVersionKindsHasInitConfiguration(gvks ...schema.GroupVersionKind) bool {
 // 	return GroupVersionKindsHasKind(gvks, constants.InitConfigurationKind)
 // }
+
+// ToClientSet converts a KubeConfig object to a client
+// func ToClientSet(config *clientcmdapi.Config) (clientset.Interface, error) {
+// 	overrides := clientcmd.ConfigOverrides{Timeout: "10s"}
+// 	clientConfig, err := clientcmd.NewDefaultClientConfig(*config, &overrides).ClientConfig()
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "failed to create API client configuration from kubeconfig")
+// 	}
+
+// 	client, err := clientset.NewForConfig(clientConfig)
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "failed to create API client")
+// 	}
+// 	return client, nil
+// }

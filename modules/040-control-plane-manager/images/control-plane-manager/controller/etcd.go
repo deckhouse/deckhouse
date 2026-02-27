@@ -36,6 +36,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/etcd"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/etcdconfig"
+	kubeadmapi "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapi"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -134,6 +137,124 @@ func EtcdJoinConverge() error {
 		slog.String("kubernetes_version", config.KubernetesVersion),
 		slog.Any("args", args),
 	)
+
+	etcdManifest := `apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    control-plane-manager.deckhouse.io/checksum: f46ba03abdacb1acb00b769ecbf07a8a61988b5c4812f6141b70b70f3a42c4e3
+    kubeadm.kubernetes.io/etcd.advertise-client-urls: https://10.12.1.32:2379
+  creationTimestamp: null
+  labels:
+    component: etcd
+    tier: control-plane
+  name: etcd
+  namespace: kube-system
+spec:
+  containers:
+  - command:
+    - etcd
+    - --advertise-client-urls=https://10.12.1.32:2379
+    - --cert-file=/etc/kubernetes/pki/etcd/server.crt
+    - --client-cert-auth=true
+    - --data-dir=/var/lib/etcd
+    - --experimental-initial-corrupt-check=true
+    - --experimental-watch-progress-notify-interval=5s
+    - --initial-advertise-peer-urls=https://10.12.1.32:2380
+    - --initial-cluster=dkp-borovets-master-0=https://10.12.1.32:2380
+    - --initial-cluster-state=existing
+    - --key-file=/etc/kubernetes/pki/etcd/server.key
+    - --listen-client-urls=https://127.0.0.1:2379,https://10.12.1.32:2379
+    - --listen-metrics-urls=http://127.0.0.1:2381
+    - --listen-peer-urls=https://10.12.1.32:2380
+    - --metrics=extensive
+    - --name=dkp-borovets-master-0
+    - --peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt
+    - --peer-client-cert-auth=true
+    - --peer-key-file=/etc/kubernetes/pki/etcd/peer.key
+    - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+    - --quota-backend-bytes=2147483648
+    - --snapshot-count=10000
+    - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+    image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:b4bcee9498f54dcf0ee4377e5dcf9f98788517f7de1ccf10eeaba61a9a5f7337
+    imagePullPolicy: IfNotPresent
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: 127.0.0.1
+        path: /livez
+        port: 2381
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
+    name: etcd
+    readinessProbe:
+      failureThreshold: 3
+      httpGet:
+        host: 127.0.0.1
+        path: /health
+        port: 2381
+        scheme: HTTP
+      periodSeconds: 1
+      timeoutSeconds: 15
+    resources:
+      requests:
+        cpu: 518m
+        memory: "1127428915"
+    securityContext:
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+      runAsGroup: 0
+      runAsNonRoot: false
+      runAsUser: 0
+      seccompProfile:
+        type: RuntimeDefault
+    startupProbe:
+      failureThreshold: 24
+      httpGet:
+        host: 127.0.0.1
+        path: /readyz?exclude=non_learner
+        port: 2381
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
+    volumeMounts:
+    - mountPath: /var/lib/etcd
+      name: etcd-data
+    - mountPath: /etc/kubernetes/pki/etcd
+      name: etcd-certs
+  dnsPolicy: ClusterFirstWithHostNet
+  hostNetwork: true
+  priority: 2000001000
+  priorityClassName: system-node-critical
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  volumes:
+  - hostPath:
+      path: /etc/kubernetes/pki/etcd
+      type: DirectoryOrCreate
+    name: etcd-certs
+  - hostPath:
+      path: /var/lib/etcd
+      type: DirectoryOrCreate
+    name: etcd-data
+status: {}`
+
+	advertiseAddress := "10.12.1.32"
+	nodeName := "dkp-borovets-master-0"
+
+	config := &etcdconfig.EtcdConfig{}
+
+	// var kubeClient clientset.Interface
+
+	if err := etcd.JoinCluster([]byte(etcdManifest) /*kubeClient,*/, nil, config, &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName, false); err != nil {
+		log.Error("failed to test etcd library JoinCluster", log.Err(err))
+	}
 
 	cli := exec.Command(kubeadmPath, args...)
 	out, err := cli.CombinedOutput()
