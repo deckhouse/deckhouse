@@ -31,6 +31,12 @@ import (
 	"github.com/criyle/go-sandbox/runner/ptrace"
 )
 
+const (
+	sandboxCPUTimeLimit  = 2 * time.Second
+	sandboxWallTimeLimit = 3 * time.Second
+	sandboxMemoryLimit   = runner.Size(256 << 20) // 256 MiB
+)
+
 func main() {
 	os.Exit(run(os.Args[1:]))
 }
@@ -88,17 +94,21 @@ func run(argv []string) int {
 	defer execF.Close()
 
 	r := &ptrace.Runner{
-		Args:        args,
-		Env:         os.Environ(),
-		WorkDir:     workDir,
-		ExecFile:    execF.Fd(),
-		Files:       []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+		Args:     args,
+		Env:      os.Environ(),
+		WorkDir:  workDir,
+		ExecFile: execF.Fd(),
+		Files:    []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+		Limit: runner.Limit{
+			TimeLimit:   sandboxCPUTimeLimit,
+			MemoryLimit: sandboxMemoryLimit,
+		},
 		Seccomp:     filter,
 		Handler:     handler,
 		ShowDetails: isDebug(), // Debug
 	} // :contentReference[oaicite:5]{index=5}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), sandboxWallTimeLimit)
 	defer cancel()
 
 	res := r.Run(ctx)
