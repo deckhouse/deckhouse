@@ -79,6 +79,10 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 		return err
 	}
 
+	if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
+		return err
+	}
+
 	if err := PrepareControlPlaneManifests(templateController, kubeadmData); err != nil {
 		return err
 	}
