@@ -25,10 +25,10 @@ import (
 
 var conversionlog = logf.Log.WithName("nodegroup-conversion")
 
-// Convert_v1alpha1_NodeGroupSpec_To_v1_NodeGroupSpec handles nodeType mapping
+// ConvertV1alpha1NodeGroupSpecToV1NodeGroupSpec handles nodeType mapping
 // v1alpha1: Cloud, Static, Hybrid
 // v1: CloudEphemeral, CloudPermanent, CloudStatic, Static
-func Convert_v1alpha1_NodeGroupSpec_To_v1_NodeGroupSpec(in *NodeGroupSpec, out *v1.NodeGroupSpec, s conversion.Scope) error {
+func ConvertV1alpha1NodeGroupSpecToV1NodeGroupSpec(in *NodeGroupSpec, out *v1.NodeGroupSpec, s conversion.Scope) error {
 	conversionlog.V(1).Info("converting NodeGroupSpec from v1alpha1 to v1", "nodeType", in.NodeType)
 
 	// Map nodeType
@@ -70,11 +70,11 @@ func Convert_v1alpha1_NodeGroupSpec_To_v1_NodeGroupSpec(in *NodeGroupSpec, out *
 	}
 
 	// Call auto-generated conversion for remaining fields
-	return autoConvert_v1alpha1_NodeGroupSpec_To_v1_NodeGroupSpec(in, out, s)
+	return autoConvertV1alpha1NodeGroupSpecToV1NodeGroupSpec(in, out, s)
 }
 
-// Convert_v1_NodeGroupSpec_To_v1alpha1_NodeGroupSpec handles nodeType mapping (reverse)
-func Convert_v1_NodeGroupSpec_To_v1alpha1_NodeGroupSpec(in *v1.NodeGroupSpec, out *NodeGroupSpec, s conversion.Scope) error {
+// ConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec handles nodeType mapping (reverse)
+func ConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(in *v1.NodeGroupSpec, out *NodeGroupSpec, s conversion.Scope) error {
 	conversionlog.V(1).Info("converting NodeGroupSpec from v1 to v1alpha1", "nodeType", in.NodeType)
 
 	// Map nodeType (reverse)
@@ -125,13 +125,13 @@ func Convert_v1_NodeGroupSpec_To_v1alpha1_NodeGroupSpec(in *v1.NodeGroupSpec, ou
 	}
 
 	// Call auto-generated conversion for remaining fields
-	return autoConvert_v1_NodeGroupSpec_To_v1alpha1_NodeGroupSpec(in, out, s)
+	return autoConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(in, out, s)
 }
 
 // Stub functions that will be replaced by auto-generated ones
 // These are needed for compilation before running conversion-gen
 
-func autoConvert_v1alpha1_NodeGroupSpec_To_v1_NodeGroupSpec(in *NodeGroupSpec, out *v1.NodeGroupSpec, s conversion.Scope) error {
+func autoConvertV1alpha1NodeGroupSpecToV1NodeGroupSpec(in *NodeGroupSpec, out *v1.NodeGroupSpec, s conversion.Scope) error {
 	// CloudInstances
 	if in.CloudInstances != nil {
 		out.CloudInstances = &v1.CloudInstancesSpec{
@@ -220,7 +220,7 @@ func autoConvert_v1alpha1_NodeGroupSpec_To_v1_NodeGroupSpec(in *NodeGroupSpec, o
 	return nil
 }
 
-func autoConvert_v1_NodeGroupSpec_To_v1alpha1_NodeGroupSpec(in *v1.NodeGroupSpec, out *NodeGroupSpec, s conversion.Scope) error {
+func autoConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(in *v1.NodeGroupSpec, out *NodeGroupSpec, s conversion.Scope) error {
 	// CloudInstances
 	if in.CloudInstances != nil {
 		out.CloudInstances = &CloudInstancesSpec{
