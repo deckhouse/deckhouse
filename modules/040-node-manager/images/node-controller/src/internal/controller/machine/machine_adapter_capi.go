@@ -59,7 +59,10 @@ func (m *capiMachine) GetStatus() MachineStatus {
 	return MachineStatus{
 		Phase:         phase,
 		MachineStatus: state.statusString,
-		Conditions:    []deckhousev1alpha2.InstanceCondition{buildMachineReadyCondition(state)},
+		MachineReadyCondition: func() *deckhousev1alpha2.InstanceCondition {
+			condition := buildMachineReadyCondition(state)
+			return &condition
+		}(),
 	}
 }
 

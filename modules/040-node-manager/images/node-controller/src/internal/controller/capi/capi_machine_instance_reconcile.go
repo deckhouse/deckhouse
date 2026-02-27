@@ -31,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+const instanceStatusFieldOwner = "node-controller-instancestatus"
+
 func (r *CAPIMachineReconciler) reconcileLinkedInstance(ctx context.Context, data capiMachineReconcileData) error {
 	logger := log.FromContext(ctx)
 
@@ -49,8 +51,7 @@ func (r *CAPIMachineReconciler) reconcileLinkedInstance(ctx context.Context, dat
 		return err
 	}
 
-	statusUpdated, err := r.syncInstanceStatus(ctx, instance, data.machineStatus)
-	if err != nil {
+	if err := r.syncInstanceStatus(ctx, instance, data.machineStatus); err != nil {
 		return err
 	}
 
@@ -58,7 +59,6 @@ func (r *CAPIMachineReconciler) reconcileLinkedInstance(ctx context.Context, dat
 		"linked instance reconciled",
 		"instance", instance.Name,
 		"specUpdated", specUpdated,
-		"statusUpdated", statusUpdated,
 		"machineDeleteRequested", machineDeleteRequested,
 	)
 	return nil
@@ -107,40 +107,77 @@ func (r *CAPIMachineReconciler) syncInstanceStatus(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,
 	machineStatus machine.MachineStatus,
-) (bool, error) {
-	updated := instance.DeepCopy()
-	updated.Status.Phase = machineStatus.Phase
-	updated.Status.MachineStatus = machineStatus.MachineStatus
-	updated.Status.Conditions = mergeMachineConditions(instance.Status.Conditions, machineStatus.Conditions)
-
-	if apiequality.Semantic.DeepEqual(instance.Status, updated.Status) {
-		return false, nil
+) error {
+	if machineStatus.MachineReadyCondition == nil {
+		return fmt.Errorf("build desired MachineReady condition for instance %q: condition is nil", instance.Name)
 	}
 
-	if err := r.Status().Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
-		return false, fmt.Errorf("patch instance %q status: %w", instance.Name, err)
+	currentCondition, hasCurrent := getConditionByType(instance.Status.Conditions, deckhousev1alpha2.InstanceConditionTypeMachineReady)
+	conditionChanged := !hasCurrent || !apiequality.Semantic.DeepEqual(currentCondition, *machineStatus.MachineReadyCondition)
+
+	fieldsChanged := instance.Status.Phase != machineStatus.Phase || instance.Status.MachineStatus != machineStatus.MachineStatus
+
+	if !fieldsChanged && !conditionChanged {
+		return nil
 	}
-	return true, nil
+
+	return r.applyInstanceStatus(
+		ctx,
+		instance.Name,
+		machineStatus.Phase,
+		machineStatus.MachineStatus,
+		*machineStatus.MachineReadyCondition,
+	)
 }
 
-func mergeMachineConditions(
-	existing []deckhousev1alpha2.InstanceCondition,
-	machineConditions []deckhousev1alpha2.InstanceCondition,
-) []deckhousev1alpha2.InstanceCondition {
-	if len(machineConditions) == 0 {
-		return existing
+func (r *CAPIMachineReconciler) applyInstanceStatus(
+	ctx context.Context,
+	instanceName string,
+	phase deckhousev1alpha2.InstancePhase,
+	machineStatus string,
+	machineReadyCondition deckhousev1alpha2.InstanceCondition,
+) error {
+	applyObj := instanceApplyObject(instanceName)
+	applyObj.Status = deckhousev1alpha2.InstanceStatus{
+		Phase:         phase,
+		MachineStatus: machineStatus,
+		Conditions:    []deckhousev1alpha2.InstanceCondition{machineReadyCondition},
 	}
 
-	merged := make([]deckhousev1alpha2.InstanceCondition, 0, len(existing)+len(machineConditions))
-	for i := range existing {
-		if existing[i].Type == deckhousev1alpha2.InstanceConditionTypeMachineReady {
-			continue
+	if err := r.Status().Patch(
+		ctx,
+		applyObj,
+		client.Apply,
+		client.FieldOwner(instanceStatusFieldOwner),
+		client.ForceOwnership,
+	); err != nil {
+		return fmt.Errorf("apply instance status for %q: %w", instanceName, err)
+	}
+
+	return nil
+}
+
+func instanceApplyObject(name string) *deckhousev1alpha2.Instance {
+	return &deckhousev1alpha2.Instance{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: deckhousev1alpha2.GroupVersion.String(),
+			Kind:       "Instance",
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+	}
+}
+
+func getConditionByType(
+	conditions []deckhousev1alpha2.InstanceCondition,
+	conditionType string,
+) (deckhousev1alpha2.InstanceCondition, bool) {
+	for i := range conditions {
+		if conditions[i].Type == conditionType {
+			return conditions[i], true
 		}
-		merged = append(merged, existing[i])
 	}
-	merged = append(merged, machineConditions...)
 
-	return merged
+	return deckhousev1alpha2.InstanceCondition{}, false
 }
 
 func (r *CAPIMachineReconciler) ensureMachineDeletionForDeletingInstance(

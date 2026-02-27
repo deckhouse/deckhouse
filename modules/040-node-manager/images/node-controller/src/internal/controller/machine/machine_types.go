@@ -47,7 +47,7 @@ type Machine interface {
 }
 
 type MachineStatus struct {
-	Phase         deckhousev1alpha2.InstancePhase
-	MachineStatus string
-	Conditions    []deckhousev1alpha2.InstanceCondition
+	Phase                 deckhousev1alpha2.InstancePhase
+	MachineStatus         string
+	MachineReadyCondition *deckhousev1alpha2.InstanceCondition
 }

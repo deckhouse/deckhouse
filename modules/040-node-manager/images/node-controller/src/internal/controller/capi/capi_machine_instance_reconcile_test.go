@@ -23,10 +23,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestMergeMachineConditions(t *testing.T) {
+func TestGetConditionByType(t *testing.T) {
 	t.Parallel()
 
-	existing := []deckhousev1alpha2.InstanceCondition{
+	conditions := []deckhousev1alpha2.InstanceCondition{
 		{
 			Type:   deckhousev1alpha2.InstanceConditionTypeBashibleReady,
 			Status: metav1.ConditionTrue,
@@ -39,26 +39,11 @@ func TestMergeMachineConditions(t *testing.T) {
 		},
 	}
 
-	overrides := []deckhousev1alpha2.InstanceCondition{
-		{
-			Type:   deckhousev1alpha2.InstanceConditionTypeMachineReady,
-			Status: metav1.ConditionTrue,
-			Reason: "Ready",
-		},
+	condition, ok := getConditionByType(conditions, deckhousev1alpha2.InstanceConditionTypeMachineReady)
+	if !ok {
+		t.Fatalf("expected to find %q condition", deckhousev1alpha2.InstanceConditionTypeMachineReady)
 	}
-
-	merged := mergeMachineConditions(existing, overrides)
-	if len(merged) != 2 {
-		t.Fatalf("expected 2 conditions, got %d", len(merged))
-	}
-
-	if merged[0].Type != deckhousev1alpha2.InstanceConditionTypeBashibleReady {
-		t.Fatalf("expected first condition to be %q, got %q", deckhousev1alpha2.InstanceConditionTypeBashibleReady, merged[0].Type)
-	}
-	if merged[1].Type != deckhousev1alpha2.InstanceConditionTypeMachineReady {
-		t.Fatalf("expected second condition to be %q, got %q", deckhousev1alpha2.InstanceConditionTypeMachineReady, merged[1].Type)
-	}
-	if merged[1].Reason != "Ready" {
-		t.Fatalf("expected machine condition to be overridden, got reason %q", merged[1].Reason)
+	if condition.Reason != "OldReason" {
+		t.Fatalf("unexpected machine condition reason: %q", condition.Reason)
 	}
 }
