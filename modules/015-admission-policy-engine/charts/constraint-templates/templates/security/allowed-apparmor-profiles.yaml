@@ -104,12 +104,12 @@ spec:
 
               build_apparmor_message(pod_name, container_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
-                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v.\n%v\n%v\n%v", [pod_name, container_name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v. | %v | %v | %v", [pod_name, container_name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_apparmor_message(pod_name, container_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed == ""
-                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v.\n%v\n%v", [pod_name, container_name, actual_value, allowed_by_policy])
+                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v. | %v | %v", [pod_name, container_name, actual_value, allowed_by_policy])
               }
 
               allowed_by_any(pod, container) if {

@@ -84,6 +84,7 @@ steps:
   - name: Build and push deckhouse images
     id: build
     env:
+      WERF_PARALLEL_TASKS_LIMIT: 3
 {!{- if eq $buildType "dev" }!}
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}

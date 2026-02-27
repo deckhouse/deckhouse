@@ -34,11 +34,12 @@ spec:
   enabled: true
   version: 1
   settings:
+    ingressClass: nginx # опциональный параметр
     dvcr:
       storage:
         persistentVolumeClaim:
           size: 50G
-          storageClassName: sds-replicated-thin-r1
+          storageClassName: rv-thin-r1
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
       - 10.66.10.0/24
@@ -105,7 +106,7 @@ d8 k edit mc virtualization
 Блок `.spec.settings.dvcr.storage` настраивает постоянный том для хранения образов:
 
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.size` — размер тома (например, `50G`). Для расширения хранилища увеличьте значение параметра;
-- `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `sds-replicated-thin-r1`).
+- `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `rv-thin-r1`).
 
 {% alert level="warning" %}
 Перенос образов при изменении значения параметра `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` не поддерживается.
@@ -133,6 +134,39 @@ d8 k edit mc virtualization
 Хранилище, обслуживающее данный класс хранения `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`, должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
 {% endalert %}
 
+### Настройки Ingress
+
+Параметр `.spec.settings.ingressClass` определяет класс Ingress-контроллера, который будет использоваться для загрузки образов виртуальных машин через веб-интерфейс или CLI.
+
+- Если параметр не указан, используется глобальное значение из конфигурации DVP.
+- Параметр является опциональным и указывается только при необходимости использовать Ingress-контроллер, отличный от глобального.
+
+Пример:
+
+```yaml
+spec:
+  settings:
+    ingressClass: nginx
+```
+
+{% alert level="info" %}
+
+При загрузке больших образов виртуальных машин (особенно при слабых каналах связи) рекомендуется увеличить таймаут завершения работы воркеров Ingress-контроллера. Это предотвратит прерывание загрузки при перезапуске или обновлении Ingress-контроллера.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  config:
+    worker-shutdown-timeout: 1800s  # 30 минут или более при необходимости
+```
+
+{% endalert %}
+
 ### Сетевые настройки
 
 В блоке `.spec.settings.virtualMachineCIDRs` указываются подсети в формате CIDR (например, `10.66.10.0/24`). IP-адреса для виртуальных машин распределяются из этих - диапазонов автоматически или по запросу.
@@ -148,7 +182,7 @@ spec:
       - 10.77.20.0/16
 ```
 
-Первый и последний адреса подсети зарезервированы и недоступны для использования.
+Для каждой подсети первый и последний IP-адреса зарезервированы системой и не могут быть назначены виртуальным машинам. Например, для подсети `10.66.10.0/24` адреса `10.66.10.0` и `10.66.10.255` недоступны для использования ВМ.
 
 {% alert level="warning" %}
 Подсети блока `.spec.settings.virtualMachineCIDRs` не должны пересекаться с подсетями узлов кластера, подсетью сервисов или подсетью подов (`podCIDR`).

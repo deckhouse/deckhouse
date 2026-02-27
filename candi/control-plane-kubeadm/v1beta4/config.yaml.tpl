@@ -7,8 +7,21 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
+{{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion -}}
+  {{- /*
+  Enable DRA multi-allocations by activating required feature gates:
+  DRADeviceBindingConditions and DRAResourceClaimDeviceStatus (for BindsToNode)
+  DRAConsumableCapacity (for AllowMultipleAllocations)
+  */ -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAResourceClaimDeviceStatus=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
+{{- end }}
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
+{{- end }}
+{{- if semverCompare "<=1.31" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "AnonymousAuthConfigurableEndpoints=true" -}}
 {{- end }}
 {{- $apiserverFeatureGates := $baseFeatureGates -}}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
@@ -105,8 +118,6 @@ apiServer:
     {{- end }}
     {{- end }}
   extraArgs:
-    - name: anonymous-auth
-      value: "false"
     - name: api-audiences
       value: {{ $audiences | join "," }}
     - name: service-account-issuer
@@ -191,10 +202,8 @@ apiServer:
       value: 60s
     - name: tls-cipher-suites
       value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
-    {{- if .apiserver.oidcIssuerURL }}
     - name: authentication-config
       value: /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml
-    {{- end }}
     {{- if hasKey .apiserver "certSANs" }}
   certSANs:
     {{- range $san := .apiserver.certSANs }}

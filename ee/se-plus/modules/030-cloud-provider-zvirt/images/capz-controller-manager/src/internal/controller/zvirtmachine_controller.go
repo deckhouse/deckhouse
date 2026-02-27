@@ -52,7 +52,7 @@ type ZvirtMachineReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
-func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
+func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) { // nolint:nonamedreturns
 	logger := ctrl.LoggerFrom(ctx)
 
 	zvMachine := &infrastructurev1.ZvirtMachine{}
@@ -518,7 +518,7 @@ func (r *ZvirtMachineReconciler) reconcileDelete(
 	logger logr.Logger,
 	machine *clusterv1.Machine,
 	zvMachine *infrastructurev1.ZvirtMachine,
-) (ctrl.Result, error) {
+) (ctrl.Result, error) { // nolint:unparam
 	logger.Info("Reconciling Machine delete")
 	zVirtClient := r.Zvirt.WithContext(ctx)
 

@@ -29,6 +29,7 @@ import (
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	v1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -132,18 +133,18 @@ func validateDefaultCRI(defaultCRI string, cli client.Client) (*kwhvalidating.Va
 }
 
 func getKubernetesEndpointsCount(ctx context.Context, cli client.Client) (int, error) {
-	endpoints := &v1.Endpoints{}
+	endpointslice := &discoveryv1.EndpointSlice{}
 	err := cli.Get(ctx, client.ObjectKey{
 		Namespace: "default",
 		Name:      "kubernetes",
-	}, endpoints)
+	}, endpointslice)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get kubernetes endpoints: %w", err)
+		return 0, fmt.Errorf("failed to get kubernetes endpointslice: %w", err)
 	}
 
 	count := 0
-	for _, subset := range endpoints.Subsets {
-		count += len(subset.Addresses)
+	for _, endpoints := range endpointslice.Endpoints {
+		count += len(endpoints.Addresses)
 	}
 	return count, nil
 }

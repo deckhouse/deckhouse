@@ -40,7 +40,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: app-tls-secert
+  name: app-tls-secret
   namespace: d8-ingress-istio # Note that the namespace is not app-ns.
 type: kubernetes.io/tls
 data:
@@ -76,7 +76,7 @@ spec:
       tls:
         mode: SIMPLE
         # A Secret resource with a certificate and a key, which must be created in the d8-ingress-istio namespace.
-        credentialName: app-tls-secrets
+        credentialName: app-tls-secret
       hosts:
         - app.example.com
 ```

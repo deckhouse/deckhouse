@@ -86,6 +86,38 @@ admissionPolicyEngine:
 		})
 	})
 
+	It("All ConstraintTemplates rego sources must use strictly single-line violation messages", func() {
+		// We validate source templates, not Helm-rendered manifests, because Helm rendering may require
+		// additional global.discovery data unrelated to gatekeeper constraint templates.
+		// Requirement: any violation msg must be strictly single-line, so we forbid '\\n' and '\\r' escapes.
+		// inside Rego sources (due kubectl requirements for warning messages).
+		constraintTemplatesDir := filepath.Join("..", "charts", "constraint-templates", "templates")
+		contentByPath := map[string]string{}
+		for _, pattern := range []string{
+			filepath.Join(constraintTemplatesDir, "security", "*.yaml"),
+			filepath.Join(constraintTemplatesDir, "operation", "*.yaml"),
+		} {
+			matches, err := filepath.Glob(pattern)
+			Expect(err).ShouldNot(HaveOccurred())
+			for _, p := range matches {
+				b, err := os.ReadFile(p)
+				Expect(err).ShouldNot(HaveOccurred(), "failed reading %s", p)
+				contentByPath[p] = string(b)
+			}
+		}
+
+		Expect(contentByPath).NotTo(BeEmpty(), "Expected constraint template YAML files")
+
+		for filename, content := range contentByPath {
+			if !strings.Contains(content, "kind: ConstraintTemplate") {
+				continue
+			}
+			if strings.Contains(content, "\\n") || strings.Contains(content, "\\r") {
+				Fail(fmt.Sprintf("Found multiline escape (\\n or \\r) in ConstraintTemplate source: %s", filename))
+			}
+		}
+	})
+
 	// Test helper function to validate constraints for given configuration
 	validateConstraintsForConfig := func(defaultPolicy, enforcementAction string, enforcementActions []string, constraintNamePattern string) {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
@@ -355,7 +387,7 @@ func findTemplatePath(relativePath string) string {
 	// Get the directory where this test file is located
 	_, testFile, _, _ := runtime.Caller(0)
 	testDir := filepath.Dir(testFile)
-	
+
 	// Try different possible paths
 	possiblePaths := []string{
 		// Relative to test file (when running from module root)

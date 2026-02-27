@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package dvpcsidriver
 
 import (
 	"errors"
-	"sync"
 
 	dvpapi "dvp-common/api"
+
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	"dvp-csi-driver/internal/config"
@@ -31,7 +32,6 @@ type csiDriver struct {
 	csi.UnimplementedGroupControllerServer
 
 	config *config.CSIConfig
-	mutex  sync.Mutex
 	client *dvpapi.DVPCloudAPI
 }
 

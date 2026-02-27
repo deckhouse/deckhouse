@@ -96,7 +96,11 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 }
 
 func (c *resourceReadinessChecker) Name() string {
-	return fmt.Sprintf("Waiting for the resource %s to become ready.", c.resourceName)
+	return c.resourceName
+}
+
+func (c *resourceReadinessChecker) ReadyMsg() string {
+	return fmt.Sprintf("Resource %s is ready.", c.resourceName)
 }
 
 func (c *resourceReadinessChecker) Single() bool {
