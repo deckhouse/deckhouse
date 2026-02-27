@@ -83,6 +83,10 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 		return err
 	}
 
+	if err := PrepareControlPlaneManifests(templateController, kubeadmData); err != nil {
+		return err
+	}
+
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
 	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
@@ -164,6 +168,19 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, nil); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}) error {
+	saveInfo := saveFromTo{
+		from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmV1Beta4, "patches"),
+		to:   filepath.Join(bashibleDir, "kubeadm", kubeadmV1Beta4, "patches"),
+		data: templateData,
+	}
+	log.InfoF("From %q to %q\n", saveInfo.from, saveInfo.to)
+	if err := templateController.RenderAndSaveTemplates(saveInfo.from, saveInfo.to, saveInfo.data, nil); err != nil {
+		return err
 	}
 	return nil
 }
