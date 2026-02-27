@@ -1,0 +1,193 @@
+{
+  "ce": {
+    "name": "CE",
+    "versionMapFile": "candi/version_map.yml",
+    "modulesDir": "modules",
+    "terraformProviders": [
+      "aws",
+      "azure",
+      "gcp",
+      "yandex",
+      "kubernetes"
+    ],
+    "skipFixingImports": true,
+    "buildIncludes": {
+      "skipCandi": true,
+      "skipModules": true
+    },
+    "title": "Community Edition"
+  },
+  "be": {
+    "name": "BE",
+    "modulesDir": "ee/be/modules",
+    "excludeModules": [
+      "csi-ceph",
+      "csi-nfs",
+      "openvpn",
+      "sds-local-volume",
+      "sds-node-configurator",
+      "sds-replicated-volume",
+      "virtualization"
+    ],
+    "title": "Basic Edition"
+  },
+  "se": {
+    "name": "SE",
+    "modulesDir": "ee/se/modules",
+    "excludeModules": [
+      "dashboard"
+    ],
+    "title": "Standard Edition"
+  },
+  "se-plus": {
+    "name": "SE+",
+    "modulesDir": "ee/se-plus/modules",
+    "terraformProviders": [
+      "vsphere",
+      "ovirt"
+    ],
+    "excludeModules": [
+      "cloud-provider-dynamix",
+      "cloud-provider-openstack",
+      "cloud-provider-vcd",
+      "dashboard",
+      "keepalived",
+      "network-gateway",
+      "operator-trivy",
+      "runtime-audit-engine",
+      "static-routing-manager"
+    ],
+    "title": "Standard Edition+",
+    "includeModules": [
+      "cloud-provider-vsphere",
+      "cloud-provider-zvirt"
+    ]
+  },
+  "ee": {
+    "name": "EE",
+    "versionMapFile": "ee/candi/version_map.yml",
+    "modulesDir": "ee/modules",
+    "terraformProviders": [
+      "openstack",
+      "vcd",
+      "decort",
+      "huaweicloud"
+    ],
+    "title": "Enterprise Edition"
+  },
+  "fe": {
+    "name": "FE",
+    "modulesDir": "ee/fe/modules"
+  },
+  "cse-lite": {
+    "name": "CSE Lite",
+    "name_version": "CSE Lite (1.67)",
+    "title": "Certified Security Edition Lite (1.67)",
+    "title_version": "Certified Security Edition Lite",
+    "languages": [
+      "ru"
+    ],
+    "includeModules": [
+      "admission-policy-engine",
+      "cert-manager",
+      "chrony",
+      "cni-cilium",
+      "control-plane-manager",
+      "console",
+      "deckhouse",
+      "descheduler",
+      "deckhouse-tools",
+      "documentation",
+      "extended-monitoring",
+      "flow-schema",
+      "ingress-nginx",
+      "istio",
+      "kube-dns",
+      "local-path-provisioner",
+      "log-shipper",
+      "loki",
+      "monitoring-custom",
+      "monitoring-deckhouse",
+      "monitoring-kubernetes",
+      "monitoring-kubernetes-control-plane",
+      "monitoring-ping",
+      "multitenancy-manager",
+      "node-manager",
+      "node-local-dns",
+      "operator-prometheus",
+      "operator-prometheus-crd",
+      "operator-trivy",
+      "prometheus",
+      "prometheus-crd",
+      "prometheus-metrics-adapter",
+      "registry-packages-proxy",
+      "runtime-audit-engine",
+      "vertical-pod-autoscaler",
+      "secrets-store-integration",
+      "secret-copier",
+      "stronghold",
+      "user-authn",
+      "user-authn-crd",
+      "user-authz"
+    ]
+  },
+  "cse-pro": {
+    "name": "CSE Pro",
+    "name_version": "CSE Pro (1.67)",
+    "title": "Certified Security Edition Pro",
+    "title_version": "Certified Security Edition Pro (1.67)",
+    "languages": [
+      "ru"
+    ],
+    "includeModules": [
+      "admission-policy-engine",
+      "cert-manager",
+      "cilium-hubble",
+      "chrony",
+      "cni-cilium",
+      "control-plane-manager",
+      "console",
+      "deckhouse",
+      "deckhouse-tools",
+      "descheduler",
+      "documentation",
+      "extended-monitoring",
+      "flow-schema",
+      "ingress-nginx",
+      "istio",
+      "kube-dns",
+      "local-path-provisioner",
+      "log-shipper",
+      "loki",
+      "metallb",
+      "monitoring-custom",
+      "monitoring-deckhouse",
+      "monitoring-kubernetes",
+      "monitoring-kubernetes-control-plane",
+      "monitoring-ping",
+      "multitenancy-manager",
+      "namespace-configurator",
+      "node-local-dns",
+      "node-manager",
+      "operator-prometheus",
+      "operator-prometheus-crd",
+      "operator-trivy",
+      "prometheus",
+      "prometheus-crd",
+      "prometheus-metrics-adapter",
+      "registry-packages-proxy",
+      "runtime-audit-engine",
+      "sds-node-configurator",
+      "sds-local-volume",
+      "secret-copier",
+      "secrets-store-integration",
+      "stronghold",
+      "vertical-pod-autoscaler",
+      "user-authn",
+      "user-authn-crd",
+      "user-authz",
+      "csi-ceph",
+      "csi-nfs"
+    ]
+  }
+}

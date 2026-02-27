@@ -1,17 +1,45 @@
 {%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <script type="text/javascript" src='/assets/js/filter.js?v={{ assetHash }}'></script>
-<div class="filter__container">
+<div class="filter">
     {%- if page.lang == "ru" %}
-        <h2 class="filter__container--title">Категория</h2>
+        <h2 class="filter--title">Фильтры</h2>
+        <div class="filter__container filter__container--search">
+            <h3 class="filter__container--title">Поиск по&nbsp;названию руководства</h3>
+            <div class="filter__search">
+                <div class="filter__search--container">
+                    <div class="input-wrapper">
+                        <input type="text" id="search-filter" placeholder="{{ site.data.i18n.common.search_placeholder_text_filter[page.lang] }}" class="input">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="filter__container filter__container--tags">
+            <h3 class="filter__container--title closing-title">Категории</h3>
+            <div class="filter__checkboxes filter__checkboxes--tags">
+                <input type="checkbox" id="stagesSelectAll" data-select-all="true">
+                <label class="filter__checkboxes--all" for="stagesSelectAll">Все категории</label>
+            </div>
+            <button class="reset-check">Сбросить фильтры</button>
+        </div>
     {%- else %}
-        <h2 class="filter__container--title">Category</h2>
-    {%- endif %}
-
-    <div class="filter__checkboxes"></div>
-
-    {%- if page.lang == "ru" %}
-        <button class="reset-check">Сбросить фильтры</button>
-    {%- else %}
-        <button class="reset-check reset-check__en">Reset filters</button>
+        <h2 class="filter--title">Filters</h2>
+        <div class="filter__container filter__container--search">
+            <h3 class="filter__container--title">Search by&nbsp;manual title</h3>
+                <div class="filter__search">
+                    <div class="filter__search--container">
+                        <div class="input-wrapper">
+                            <input type="text" id="search-filter" placeholder="{{ site.data.i18n.common.search_placeholder_text_filter[page.lang] }}" class="input">
+                        </div>
+                    </div>
+                </div>
+        </div>
+        <div class="filter__container filter__container--tags">
+            <h3 class="filter__container--title closing-title">Categories</h3>
+            <div class="filter__checkboxes filter__checkboxes--tags">
+                <input type="checkbox" id="stagesSelectAll" data-select-all="true">
+                <label class="filter__checkboxes--all" for="stagesSelectAll">All categories</label>
+            </div>
+            <button class="reset-check reset-check__en">Reset filters</button>
+        </div>
     {%- endif %}
 </div>

@@ -42,17 +42,20 @@
     {{- partial "sidebar-filter" . }}
   </div>
   <div class="layout-sidebar__content layout-sidebar__content--tile">
-
+    <div class="selected__filters">
+      <div class="selected__filters--list"></div>
+    </div>
     <h1 class="tile__title">{{ .Title }}</h1>
 
     {{.Content}}
 
 {{- $lang := .Site.Language.Lang }}
+{{- $editionsSortedList := sort .Site.Data.helpers.editions "weight" }}
 {{- $modulesChannelsData := .Site.Data.modules.channels }}
 {{- $channelsInfo := .Site.Data.channels.info }}
 {{- $modulesList := slice }}
 {{- $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries }}
-{{- $embeddedModulesMetadata := .Site.Data.dkp.embedded_modules_metadata.modules }}
+{{- $embeddedModulesEditionsGlobal := .Site.Data.dkp.editions }}
 {{- $modulesEditions := .Site.Data.modules_all }}
 {{- $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
 {{- $ctx := $ }}
@@ -105,6 +108,7 @@
 {{- end}}
 
 {{- warnf "Found %d modules from sources." ($modulesList | len) }}
+
 {{- if $embeddedModulesList }}
   {{- warnf "Found %d embedded modules." ( $embeddedModulesList | len) }}
   {{- $filteredEmbeddedModules := slice }}
@@ -123,9 +127,8 @@
 
       <div class="block__tile">
       {{- range (sort $modulesList "module" "asc") }}
-        <a class="button-tile" href="{{ .url }}">
-        <h2 class="button-tile__title">{{ .module }}</h2>
         {{- $moduleStage := "" }}
+        {{- $moduleName := .module }}
         {{- $moduleDescription := default "" .description }}
 
         {{- if .metadata }}
@@ -138,56 +141,81 @@
           {{- end }}
         {{- end }}
 
-        {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
-          <span>
-            <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
-              {{- $moduleStage }}
-            </span>
+        {{- $tags := .tags }}
+
+        {{- $moduleEditionsData := slice }}
+        {{- $moduleEditionsString := "" }}
+
+        {{- if .embedded }}
+          {{/* make edition list for an embedded module */}}
+          {{- $embeddedModuleMetadata := index (where $embeddedModulesList "module" .module ) 0 }}
+
+          {{- if index $embeddedModuleMetadata "editionMinimumAvailable" }}
+            {{- $moduleEditionMinimumAvailable := index $embeddedModuleMetadata "editionMinimumAvailable" }}
+            {{- $moduleEditionMinimumAvailableWeight := default 100 (index (where $editionsSortedList "id" $moduleEditionMinimumAvailable | first 1) 0 "weight") }}
+            {{- range $editionsSortedList }}
+              {{- if and (ge .weight $moduleEditionMinimumAvailableWeight) (ne .id "cse-lite") (ne .id "cse-pro") }}
+                {{- $moduleEditionsData = $moduleEditionsData | append .id }}
+              {{- end }}
+            {{- end }}
+          {{- else if index $embeddedModuleMetadata "editions" }}
+            {{- $moduleEditionsData = index $embeddedModuleMetadata "editions" }}
+          {{ end }}
+
+          {{/* remove or add edition if the embedded module is in the excludeModules in the $embeddedModulesEditionsGlobal list */}}
+          {{ range $key, $val := $embeddedModulesEditionsGlobal }}
+            {{ if and $val.excludeModules (in $val.excludeModules $moduleName) }}
+                {{ $filtered := slice }}
+
+                {{ range $moduleEditionsData }}
+                  {{ if ne . $key }}
+                    {{ $filtered = $filtered | append . }}
+                  {{ end }}
+                {{ end }}
+                {{ $moduleEditionsData = $filtered }}
+
+            {{ end }}
+            {{ if and $val.includeModules (in $val.includeModules $moduleName) }}
+                {{ if not (in $moduleEditionsData $key) }}
+                  {{ $moduleEditionsData = $moduleEditionsData | append $key }}
+                {{ end }}
+            {{ end }}
+          {{ end }}
+
+          {{- $moduleEditionsString = delimit $moduleEditionsData "," }}
+
+        {{- else if isset $modulesEditions .module }}
+          {{/* make edition list for a module from source */}}
+          {{- $moduleEditionsData = index $modulesEditions .module }}
+          {{- $_editions := default slice (index $moduleEditionsData "editions") | append (index $moduleEditionsData "editionsWithRestrictions") |uniq }}
+          {{- $moduleEditionsString = delimit $_editions "," }}
+        {{- end }}
+
+        <a class="button-tile" data-editions="{{ $moduleEditionsString }}" href="{{ .url }}">
+
+        {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
+          {{- $stageKey := lower $moduleStage }}
+          {{- $stageIcon := $stageKey }}
+          {{- if eq $moduleStage "General Availability" }}
+            {{- $stageKey = "generalAvailability" }}
+            {{- $stageIcon = "general_availability" }}
+          {{- end }}
+          <span class='button-tile__stage button-tile__stage-{{ $stageKey }}'>
+            <img src="/images/{{ $stageIcon }}.svg" alt="{{- $moduleStage }}">
           </span>
         {{- end }}
+        <h2 class="button-tile__title">{{ .module }}</h2>
+
           <p class="button-tile__descr">
             {{ $moduleDescription }}
           </p>
           <div class="button-tile__bottom">
             <div class="button-tile__tags">
 
-              {{/* add commercial or community edition tag */}}
-              {{- $tags := .tags }}
-
-              {{/* Maybe we need to set community editions by default instead of not setting any edition tag */}}
-              {{- $editionTagTitle := "" }}
-
-              {{- $moduleEditionsData := slice }}
-
-              {{- if gt (where $embeddedModulesList "module" .module | len ) 0 }}
-                {{- $moduleEditionsData = index (where $embeddedModulesList "module" .module ) 0 }}
-                {{- if or
-                   (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
-                   (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
-                   (in (index $moduleEditionsData "editions") "ce")
-                }}
-                  {{- $editionTagTitle = T "community_edition_en" }}
-                {{- else }}
-                  {{- $editionTagTitle = T "commercial_editions_en" }}
-                {{- end }}
-              {{- else if isset $modulesEditions .module }}
-                {{- $moduleEditionsData := index $modulesEditions .module }}
-                {{- if or
-                     (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
-                     (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
-                     (in (index $moduleEditionsData "editions") "ce")
-                }}
-                  {{- $editionTagTitle = T "community_edition_en" }}
-                {{- else }}
-                  {{- $editionTagTitle = T "commercial_editions_en" }}
-                {{- end }}
-              {{- end }}
-
-              {{- if gt ($editionTagTitle | len ) 0 }}
-                {{- $tags = $tags | append $editionTagTitle }}
-              {{- end }}
-
               {{- range $tags }}
+                {{ if eq . "embedded" }}
+                  {{ continue }}
+                {{ end }}
                 <span class="sidebar__badge--container"><span class="sidebar__badge_v2">{{ . }}</span></span>
               {{- end }}
 

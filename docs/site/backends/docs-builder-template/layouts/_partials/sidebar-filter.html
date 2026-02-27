@@ -1,8 +1,71 @@
 <script type="text/javascript" src='/assets/js/filter.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
 
-<div class="filter__container">
-    <h2 class="filter__container--title">{{ T "category" | humanize }}</h2>
-
-    <div class="filter__checkboxes"></div>
-    <button class="reset-check reset-check__{{ .Language.Lang }}">{{ T "reset_filter" | humanize }}</button>
+<div class="filter">
+    <h2 class="filter--title">{{ T "filters" | humanize }}</h2>
+    <div class="filter__container filter__container--search">
+        <h3 class="filter__container--title">{{ T "search_filter" | humanize }}</h3>
+        <div class="filter__search">
+            <div class="filter__search--container">
+                <div class="input-wrapper">
+                    <input type="text" id="search-filter" placeholder='{{ T "search_placeholder_text_filter" }}' class="input">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="filter__container filter__container--editions">
+        <h3 class="filter__container--title closing-title">{{ T "editions_filter" | humanize }}</h3>
+        <div class="filter__checkboxes filter__checkboxes--editions">
+            <input type="checkbox" id="editionsSelectAll" data-select-all="true">
+            <label class="filter__checkboxes--all" for="editionsSelectAll">{{ T "editions_filter_all_selected" | humanize }}</label>
+            <input type="checkbox" id="editionCE" value="ce">
+            <label for="editionCE">Community Edition</label>
+            <input type="checkbox" id="editionBE" value="be">
+            <label for="editionBE">Basic Edition</label>
+            <input type="checkbox" id="editionSE" value="se">
+            <label for="editionSE">Standard Edition</label>
+            <input type="checkbox" id="editionSEPlus" value="se-plus">
+            <label for="editionSEPlus">Standard Edition+</label>
+            <input type="checkbox" id="editionEE" value="ee">
+            <label for="editionEE">Enterprise Edition</label>
+            <input type="checkbox" id="editionCSELite" value="cse-lite">
+            <label for="editionCSELite">CSE Lite</label>
+            <input type="checkbox" id="editionCSEPro" value="cse-pro">
+            <label for="editionCSEPro">CSE Pro</label>
+        </div>
+    </div>
+    <div class="filter__container filter__container--stages">
+        <h3 class="filter__container--title closing-title">{{ T "statuses_filter" | humanize }}</h3>
+        <div class="filter__checkboxes filter__checkboxes--stages">
+            <input type="checkbox" id="stagesSelectAll" data-select-all="true">
+            <label class="filter__checkboxes--all" for="stagesSelectAll">{{ T "statuses_filter_all_selected" | humanize }}</label>
+            <input type="checkbox" id="experimental" value="experimental">
+            <label for="experimental">
+                Experimental
+                <img src="/images/experimental.svg">
+            </label>
+            <input type="checkbox" id="preview" value="preview">
+            <label for="preview">
+                Preview
+                <img src="/images/preview.svg">
+            </label>
+            <input type="checkbox" id="generalAvailability" value="generalAvailability">
+            <label for="generalAvailability">
+                General Availability (GA)
+                <img src="/images/general_availability.svg">
+            </label>
+            <input type="checkbox" id="deprecated" value="deprecated">
+            <label for="deprecated">
+                Deprecated
+                <img src="/images/deprecated.svg">
+            </label>
+        </div>
+    </div>
+    <div class="filter__container filter__container--tags">
+        <h3 class="filter__container--title closing-title">{{ T "tags_filter" | humanize }}</h3>
+        <div class="filter__checkboxes filter__checkboxes--tags">
+            <input type="checkbox" id="tagsSelectAll" data-select-all="true">
+            <label class="filter__checkboxes--all" for="tagsSelectAll">{{ T "tags_filter_all_selected" | humanize }}</label>
+        </div>
+         <!-- <button class="reset-check reset-check__{{ .Language.Lang }}">{{ T "reset_filter" | humanize }}</button> -->
+    </div>
 </div>
