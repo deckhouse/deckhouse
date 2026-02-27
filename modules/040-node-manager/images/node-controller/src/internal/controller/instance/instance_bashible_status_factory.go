@@ -50,7 +50,7 @@ func (f *bashibleStatusFactory) FromConditions(
 		}
 	}
 
-	if isConditionTrue(waitingApproval) || isConditionTrue(waitingDisruptionApproval) {
+	if isConditionTrue(waitingDisruptionApproval) {
 		return deckhousev1alpha2.BashibleStatusWaitingApproval
 	}
 
