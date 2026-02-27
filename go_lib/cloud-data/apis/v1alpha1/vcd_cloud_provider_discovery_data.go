@@ -23,7 +23,7 @@ type VCDCloudProviderDiscoveryData struct {
 	StorageProfiles        []VCDStorageProfile `json:"storageProfiles,omitempty"`
 	VCDAPIVersion          string              `json:"vcdAPIVersion,omitempty"`
 	VCDInstallationVersion string              `json:"vcdInstallationVersion,omitempty"`
-	LoadBalancer           *VCDLoadBalancer `json:"loadBalancer,omitempty"`
+	LoadBalancer           *VCDLoadBalancer    `json:"loadBalancer,omitempty"`
 }
 
 type VCDStorageProfile struct {
@@ -33,5 +33,5 @@ type VCDStorageProfile struct {
 }
 
 type VCDLoadBalancer struct {
-	Enabled       bool   `json:"enabled"`
+	Enabled bool `json:"enabled"`
 }

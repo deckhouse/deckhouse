@@ -129,12 +129,12 @@ spec:
 
               build_hostnetwork_message(pod_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
-                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v.\n%v\n%v\n%v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v. | %v | %v | %v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_hostnetwork_message(pod_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed == ""
-                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v.\n%v\n%v", [pod_name, actual_value, allowed_by_policy])
+                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v. | %v | %v", [pod_name, actual_value, allowed_by_policy])
               }
               allowed_by_any(obj) if {
                 allowed_by_securitypolicyexeption(obj)

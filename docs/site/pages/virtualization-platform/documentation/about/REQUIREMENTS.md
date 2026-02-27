@@ -14,7 +14,7 @@ Installation on virtual machines is allowed for demonstration purposes only, but
 The platform supports the following configuration:
 
 - Maximum number of nodes: 1000.
-- Maximum number of virtual machines: 50000.
+- Maximum number of virtual machines: 50 000.
 
 ## Minimum platform requirements
 
@@ -30,17 +30,15 @@ Depending on the architecture, the following minimum resources are required for 
 
 The choice of platform architecture is described in detail in the [Architecture options](/products/virtualization-platform/documentation/about/architecture-options.html) section.
 
-## Hardware Requirements
-
-Deckhouse Virtualization Platform has no additional restrictions and is compatible with any hardware supported by the operating systems on which it can be installed.
-
 ## Hardware and software requirements
 
-Hardware requirements for the Deckhouse Virtualization Platform match the requirements for the [Deckhouse Kubernetes Platform](/products/kubernetes-platform/guides/production.html#resource-requirements), with an additional requirement: CPU virtualization support on the hosts where virtual machines will be launched.
+The hardware requirements of Deckhouse Virtualization Platform match those of [Deckhouse Kubernetes Platform](/products/kubernetes-platform/guides/production.html#resource-requirements). Additionally, hardware CPU virtualization must be supported on hosts intended to run virtual machines.
+
+Supported operating systems for cluster nodes are listed in the [Supported K8s & OS versions](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux) section.
 
 ### Additional requirements for virtualization support
 
-On all cluster nodes where virtual machines are planned to be launched, hardware virtualization support must be provided:
+On all cluster nodes intended to run virtual machines, hardware virtualization support must be provided:
 
 - CPU: Support for Intel-VT (VMX) or AMD-V (SVM) instructions.
 - BIOS/UEFI: Hardware virtualization support enabled in the BIOS/UEFI settings.
@@ -48,7 +46,7 @@ On all cluster nodes where virtual machines are planned to be launched, hardware
 {% alert level="warning" %}
 Ensuring the stable operation of live migration mechanisms requires using the same Linux kernel version on all cluster nodes.
 
-Differences between kernel versions can lead to incompatible interfaces, system calls, and resource handling, which can disrupt the virtual machine migration process.
+Differences between kernel versions can lead to incompatibilities in interfaces, system calls, and resource handling, which can disrupt the virtual machine migration process.
 {% endalert %}
 
 ## Supported guest operating systems
@@ -63,7 +61,7 @@ Successful startup of the operating system is determined by the following criter
 
 For Linux family operating systems, it is recommended to use guest OS images with `cloud-init` support, which allows initializing virtual machines after their creation.
 
-For Windows family operating systems, the platform supports initialization with [autounattend](https://learn.microsoft.com/ru-ru/windows-hardware/manufacture/desktop/windows-setup-automation-overview) installation.
+Supported automated installation is available for Windows-family operating systems using an [autounattend](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview) file.
 
 ## Supported virtual machine configurations
 

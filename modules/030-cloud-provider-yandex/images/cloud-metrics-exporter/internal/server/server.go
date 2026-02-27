@@ -30,7 +30,7 @@ import (
 )
 
 type Server struct {
-	api             *yandex.CloudApi
+	api             *yandex.CloudAPI
 	servicesForBach []string
 	logger          *log.Entry
 
@@ -43,7 +43,7 @@ type serviceResult struct {
 	err     error
 }
 
-func New(logger *log.Entry, api *yandex.CloudApi, servicesForBach []string) *Server {
+func New(logger *log.Entry, api *yandex.CloudAPI, servicesForBach []string) *Server {
 	metricsSet := map[string]struct{}{}
 	servicesList := make([]string, 0)
 	for _, s := range servicesForBach {

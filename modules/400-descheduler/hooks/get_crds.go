@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -104,6 +105,12 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		}
 		if item.Spec.EvictLocalStoragePods != nil {
 			ds.EvictLocalStoragePods = item.Spec.EvictLocalStoragePods
+		}
+
+		if !item.Spec.Strategies.HasValidStrategies() {
+			input.Logger.Warn("Descheduler CR has no valid v1alpha2 strategies, skipping",
+				slog.String("name", item.Name))
+			continue
 		}
 
 		internalValues = append(internalValues, *ds)

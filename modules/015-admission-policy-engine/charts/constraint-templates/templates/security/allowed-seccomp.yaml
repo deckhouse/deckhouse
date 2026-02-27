@@ -199,12 +199,12 @@ spec:
 
               build_seccomp_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 exception_allowed != ""
-                msg := sprintf("Seccomp profile is not allowed for container '%v'.\n%v\n%v\n%v", [name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("Seccomp profile is not allowed for container '%v'. | %v | %v | %v", [name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_seccomp_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 exception_allowed == ""
-                msg := sprintf("Seccomp profile is not allowed for container '%v'.\n%v\n%v", [name, actual_value, allowed_by_policy])
+                msg := sprintf("Seccomp profile is not allowed for container '%v'. | %v | %v", [name, actual_value, allowed_by_policy])
               }
 
               input_wildcard_allowed_profiles if {

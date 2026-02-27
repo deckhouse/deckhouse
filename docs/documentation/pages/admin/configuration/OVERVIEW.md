@@ -302,6 +302,11 @@ user-authn   false     1         12h
 
 Depending on the [bundle used](/modules/deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
+{% alert level="warning" %}
+The table below describes module bundles only for built-in modules of Deckhouse Kubernetes Platform.  
+Modules from sources are not included in this table.
+{% endalert %}
+
 <table>
 <thead>
 <tr><th>Bundle name</th><th>List of modules, enabled by default</th></tr></thead>
@@ -327,10 +332,10 @@ Depending on the [bundle used](/modules/deckhouse/configuration.html#parameters-
 {% alert level="warning" %}
 **Note** that several basic modules are not included in the `Minimal` set of modules (for example, the CNI module).
 
-Deckhouse with the `Minimal` module set and no basic modules included will only be able to operate in an already deployed cluster.
+Deckhouse Kubernetes Platform with the `Minimal` module set and no basic modules included will only be able to operate in an already deployed cluster.
 {% endalert %}
 
-To install Deckhouse with the `Minimal` module set, enable at least the following modules by specifying them in the installer configuration file:
+To install DKP with the `Minimal` module set, enable at least the following modules by specifying them in the installer configuration file:
 
 * cloud provider module (for example, [`cloud-provider-aws`](/modules/cloud-provider-aws/) for AWS), in a case of deploying a cloud cluster;
 * [`cni-cilium`](/modules/cni-cilium/) or another CNI control module (if necessary);

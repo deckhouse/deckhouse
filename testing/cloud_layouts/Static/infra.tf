@@ -16,15 +16,15 @@ terraform {
 }
 
 variable "az_zone" {
-  default = "ru-3a"
+  default = "ru-1c"
 }
 
 variable "region" {
-  default = "ru-3"
+  default = "ru-1"
 }
 
 variable "volume_type" {
-  default = "fast.ru-3a"
+  default = "fast.ru-1c"
 }
 
 variable "flavor_name_large" {

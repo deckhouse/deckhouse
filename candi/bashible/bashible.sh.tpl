@@ -92,10 +92,32 @@ bb-label-node-bashible-first-run-finished() {
   exit 1
 }
 
+bb-node-has-bashible-uninitialized-taint() {
+  local max_attempts=5
+  local attempt=1
+
+  while [[ $attempt -le $max_attempts ]]; do
+    if node_json="$(bb-kubectl-exec get no "$(bb-d8-node-name)" -o json 2>/dev/null)"; then
+      if echo "$node_json" | jq -e '.spec.taints[]? | select(.key == "node.deckhouse.io/bashible-uninitialized")' >/dev/null 2>&1; then
+        return 0
+      else
+        return 1
+      fi
+    fi
+    echo "[$attempt/$max_attempts] Failed to get node $(bb-d8-node-name), retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+
+  echo "ERROR: Timed out after $max_attempts attempts. Could not check taint node.deckhouse.io/bashible-uninitialized on node $(bb-d8-node-name)." >&2
+  return 1
+}
+
 # make the function available in $step
 export -f bb-kubectl-exec
 export -f bb-kube-apiserver-healthy
 export -f bb-label-node-bashible-first-run-finished
+export -f bb-node-has-bashible-uninitialized-taint
 
 bb-indent-text() {
     local indent="$1"
@@ -280,6 +302,47 @@ function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
 
+# curl request to get list of pods with labelSelector
+# $1 namespace
+# $2 labelSelector
+# $3 token
+function get_pods() {
+  local namespace=$1
+  local labelSelector=$2
+  local token=$3
+
+  while true; do
+    for server in {{ .normal.apiserverEndpoints | join " " }}; do
+      url="https://$server/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"
+      if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+      then
+      return 0
+      else
+        >&2 echo "failed to get $resource $name with curl https://$server..."
+      fi
+    done
+    sleep 10
+  done
+}
+
+function get_rpp_address() {
+  if [ -f /var/lib/bashible/bootstrap-token ]; then
+    local token="$(</var/lib/bashible/bootstrap-token)"
+    local namespace="d8-cloud-instance-manager"
+    local labelSelector="app%3Dregistry-packages-proxy"
+
+    rpp_ips=$(get_pods $namespace $labelSelector $token | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
+    port=4219
+    ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
+    echo "$ips_csv"
+  fi
+}
+
+function get_rpp_token() {
+  local rpp_token="$(get_secret "registry-packages-proxy-token" | jq -r '.data.token' |base64 -d)"
+  echo "${rpp_token}"
+}
+
 function main() {
   export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
   export BOOTSTRAP_DIR="/var/lib/bashible"
@@ -301,6 +364,19 @@ function main() {
 
   bb-discover-node-name
   export D8_NODE_HOSTNAME=$(bb-d8-node-name)
+
+{{ if eq .runType "Normal" }}
+  {{- if .packagesProxy }}
+  rpp_addr="$(get_rpp_address)"
+  if [[ -n $rpp_addr ]]; then
+    export PACKAGES_PROXY_ADDRESSES="${rpp_addr}"
+  fi
+  rpp_token="$(get_rpp_token)"
+  if [[ -n $rpp_token ]]; then
+    export PACKAGES_PROXY_TOKEN="${rpp_token}"
+  fi
+  {{- end }}
+{{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     if tmp="$(bb-kubectl-exec get node $(bb-d8-node-name) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
@@ -347,10 +423,16 @@ function main() {
     else
       REBOOT_ANNOTATION=null
   fi
- if [ "$FIRST_BASHIBLE_RUN" != "yes" ] && [[ ! -f $BASHIBLE_INITIALIZED_FILE ]]; then
-    bb-label-node-bashible-first-run-finished
-    touch $BASHIBLE_INITIALIZED_FILE
- fi
+  if [ "$FIRST_BASHIBLE_RUN" != "yes" ] && [[ ! -f $BASHIBLE_INITIALIZED_FILE ]]; then
+     bb-label-node-bashible-first-run-finished
+     touch $BASHIBLE_INITIALIZED_FILE
+  fi
+  if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]] && [[ -f "$BASHIBLE_INITIALIZED_FILE" ]] && type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf; then
+    if bb-node-has-bashible-uninitialized-taint; then
+      echo "WARNING: Node is initialized but bashible-uninitialized taint is still present. Re-applying first-run-finished label..."
+      bb-label-node-bashible-first-run-finished
+    fi
+  fi
   if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}

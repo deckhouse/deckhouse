@@ -23,7 +23,7 @@ the Service will receive three incoming connections.
 
 ## DestinationRule resource
 
-For more details on DestinationRule, refer to the [Istio documentation](https://istio.io/v1.19/docs/reference/config/networking/destination-rule/).
+For more details on DestinationRule, refer to the [Istio documentation](https://istio.io/v1.21/docs/reference/config/networking/destination-rule/).
 Use this resource to:
 
 - Define a traffic load balancing strategy between service endpoints:

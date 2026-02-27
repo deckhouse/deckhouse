@@ -10681,8 +10681,8 @@ Set the SSH private key used for signing certificates.
 | Parameter | Type | Required | Description |
 |----------|-----|--------------|----------|
 | `generate_signing_key` | boolean (default: True) | no | Generate SSH key pair internally rather than use the private_key and public_key fields. |
-| `key_bits` | integer (default: 0) | no | Specifies the desired key bits when generating variable-length keys (such as when key_type="ssh-rsa") or which NIST P-curve to use when key_type="ec" (256, 384, or 521). |
-| `key_type` | string (default: ssh-rsa) | no | Specifies the desired key type when generating; could be a OpenSSH key type identifier (ssh-rsa, ecdsa-sha2-nistp256, ecdsa-sha2-nistp384, ecdsa-sha2-nistp521, or ssh-ed25519) or an algorithm (rsa, ec, ed25519). |
+| `key_bits` | integer (default: 0) | no | Specifies the desired key bits when generating variable-length keys (such as when key_type="ssh-ed25519") or which NIST P-curve to use when key_type="ec" (256, 384, or 521). |
+| `key_type` | string (default: ssh-ed25519) | no | Specifies the desired key type when generating; could be a OpenSSH key type identifier (ssh-ed25519, ecdsa-sha2-nistp256, ecdsa-sha2-nistp384, ecdsa-sha2-nistp521, or ssh-ed25519) or an algorithm (rsa, ec, ed25519). |
 | `private_key` | string | no | Private half of the SSH key that will be used to sign certificates. |
 | `public_key` | string | no | Public half of the SSH key that will be used to sign certificates. |
 
@@ -10905,7 +10905,7 @@ Manage the 'roles' that can be created with this backend.
 
 | Parameter | Type | Required | Description |
 |----------|-----|--------------|----------|
-| `algorithm_signer` | string (, default, ssh-rsa, rsa-sha2-256, rsa-sha2-512) | no | [Not applicable for OTP type] [Optional for CA type] When supplied, this value specifies a signing algorithm for the key. Possible values: ssh-rsa, rsa-sha2-256, rsa-sha2-512, default, or the empty string. |
+| `algorithm_signer` | string (, default, ssh-ed25519, rsa-sha2-256, rsa-sha2-512) | no | [Not applicable for OTP type] [Optional for CA type] When supplied, this value specifies a signing algorithm for the key. Possible values: ssh-ed25519, rsa-sha2-256, rsa-sha2-512, default, or the empty string. |
 | `allow_bare_domains` | boolean | no | [Not applicable for OTP type] [Optional for CA type] If set, host certificates that are requested are allowed to use the base domains listed in "allowed_domains", e.g. "example.com". This is a separate option as in some cases this can be considered a security threat. |
 | `allow_host_certificates` | boolean (default: False) | no | [Not applicable for OTP type] [Optional for CA type] If set, certificates are allowed to be signed for use as a 'host'. |
 | `allow_subdomains` | boolean | no | [Not applicable for OTP type] [Optional for CA type] If set, host certificates that are requested are allowed to use subdomains of those listed in "allowed_domains". |
