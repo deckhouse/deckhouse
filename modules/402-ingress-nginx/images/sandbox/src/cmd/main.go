@@ -60,6 +60,15 @@ var sandboxExtraAllowSyscalls = []string{
 	"waitid",
 	"poll",
 	"ppoll",
+	// Required by `unshare -S ... -R /chroot ...` in nginx wrapper.
+	"unshare",
+	"chroot",
+	"chdir",
+	"setgroups",
+	"setuid",
+	"setgid",
+	"setresuid",
+	"setresgid",
 }
 
 func main() {
