@@ -136,7 +136,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	log.Info("ControlPlaneNode found", slog.String("node", nodeName))
 
-	// Initialize status.Components with empty checksums on first reconcile when they are nil
 	r.ensureStatusComponentsInitialized(controlPlaneNode)
 
 	if err := r.reconcileComponents(ctx, controlPlaneNode); err != nil {
@@ -283,6 +282,7 @@ func (r *Reconciler) buildComponentChecks(cpn *controlplanev1alpha1.ControlPlane
 	}
 }
 
+// getChecksum safely returns the checksum of a component checksum
 func getChecksum(c *controlplanev1alpha1.ComponentChecksum) string {
 	if c == nil {
 		return ""
@@ -299,6 +299,7 @@ func operationNameForNode(nodeName string, component controlplanev1alpha1.Operat
 	return fmt.Sprintf("%s-%s-%s", sanitized, strings.ToLower(string(component)), specChecksum)
 }
 
+// TODO: Add controlPlaneOperation based conditions logic.
 func buildCondition(condType string, specChecksum, statusChecksum string, generation int64) metav1.Condition {
 	if specChecksum == statusChecksum {
 		return metav1.Condition{

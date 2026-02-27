@@ -38,7 +38,7 @@ const (
 	ConfigPath                          = "/config" // Mounted secret for d8-control-plane-manager-config
 	PkiPath                             = "/pki"    // Mounted secret for d8-pki
 
-	// CPN Conditions
+	// ControlPlaneNode Conditions
 	ConditionEtcdReady              = "EtcdReady"
 	ConditionAPIServerReady         = "APIServerReady"
 	ConditionControllerManagerReady = "ControllerManagerReady"
