@@ -1,0 +1,9 @@
+cloud-provider-zvirt:
+  features:
+    - summary: add customNetworkConfig
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17879
+docs:
+  fixes:
+    - summary: Changing the term metka to label in Russian-language documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18164
+
