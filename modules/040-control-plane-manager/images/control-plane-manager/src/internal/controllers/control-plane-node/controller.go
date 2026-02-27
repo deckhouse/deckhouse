@@ -138,7 +138,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// Save original before modifications so MergeFrom includes components in the patch
 	originalForPatch := controlPlaneNode.DeepCopy()
-	r.ensureStatusComponentsInitialized(controlPlaneNode)
 
 	if err := r.reconcileComponents(ctx, controlPlaneNode); err != nil {
 		return reconcile.Result{}, err
@@ -149,26 +148,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
-}
-
-// ensureStatusComponentsInitialized sets empty checksums for nil status.Components on first reconcile.
-// Other status checksums are initialized as empty strings on reconcileConditions func call.
-func (r *Reconciler) ensureStatusComponentsInitialized(cpn *controlplanev1alpha1.ControlPlaneNode) {
-	empty := func() *controlplanev1alpha1.ComponentChecksum {
-		return &controlplanev1alpha1.ComponentChecksum{Checksum: ""}
-	}
-	if cpn.Status.Components.Etcd == nil {
-		cpn.Status.Components.Etcd = empty()
-	}
-	if cpn.Status.Components.KubeAPIServer == nil {
-		cpn.Status.Components.KubeAPIServer = empty()
-	}
-	if cpn.Status.Components.KubeControllerManager == nil {
-		cpn.Status.Components.KubeControllerManager = empty()
-	}
-	if cpn.Status.Components.KubeScheduler == nil {
-		cpn.Status.Components.KubeScheduler = empty()
-	}
 }
 
 // componentCheck holds spec and status checksums for a single component.
@@ -241,29 +220,26 @@ func (r *Reconciler) reconcileComponents(ctx context.Context, cpn *controlplanev
 }
 
 func (r *Reconciler) buildComponentChecks(cpn *controlplanev1alpha1.ControlPlaneNode) []componentCheck {
-	spec := &cpn.Spec.Components
-	status := &cpn.Status.Components
-
 	return []componentCheck{
 		{
 			component:      controlplanev1alpha1.OperationComponentEtcd,
-			specChecksum:   getChecksum(spec.Etcd),
-			statusChecksum: getChecksum(status.Etcd),
+			specChecksum:   cpn.Spec.Components.Etcd.Checksum,
+			statusChecksum: cpn.Status.Components.Etcd.Checksum,
 		},
 		{
 			component:      controlplanev1alpha1.OperationComponentKubeAPIServer,
-			specChecksum:   getChecksum(spec.KubeAPIServer),
-			statusChecksum: getChecksum(status.KubeAPIServer),
+			specChecksum:   cpn.Spec.Components.KubeAPIServer.Checksum,
+			statusChecksum: cpn.Status.Components.KubeAPIServer.Checksum,
 		},
 		{
 			component:      controlplanev1alpha1.OperationComponentKubeControllerManager,
-			specChecksum:   getChecksum(spec.KubeControllerManager),
-			statusChecksum: getChecksum(status.KubeControllerManager),
+			specChecksum:   cpn.Spec.Components.KubeControllerManager.Checksum,
+			statusChecksum: cpn.Status.Components.KubeControllerManager.Checksum,
 		},
 		{
 			component:      controlplanev1alpha1.OperationComponentKubeScheduler,
-			specChecksum:   getChecksum(spec.KubeScheduler),
-			statusChecksum: getChecksum(status.KubeScheduler),
+			specChecksum:   cpn.Spec.Components.KubeScheduler.Checksum,
+			statusChecksum: cpn.Status.Components.KubeScheduler.Checksum,
 		},
 		{
 			component:      controlplanev1alpha1.OperationComponentHotReload,
@@ -276,14 +252,6 @@ func (r *Reconciler) buildComponentChecks(cpn *controlplanev1alpha1.ControlPlane
 			statusChecksum: cpn.Status.PKIChecksum,
 		},
 	}
-}
-
-// getChecksum safely returns the checksum of a component checksum
-func getChecksum(c *controlplanev1alpha1.ComponentChecksum) string {
-	if c == nil {
-		return ""
-	}
-	return c.Checksum
 }
 
 // operationNameForNode returns a deterministic k8s like resource name for ControlPlaneOperation <node-name>-<component>-<checksum>.
@@ -319,10 +287,10 @@ func (r *Reconciler) reconcileConditions(ctx context.Context, cpn *controlplanev
 		spec     string
 		status   string
 	}{
-		{constants.ConditionEtcdReady, getChecksum(cpn.Spec.Components.Etcd), getChecksum(cpn.Status.Components.Etcd)},
-		{constants.ConditionAPIServerReady, getChecksum(cpn.Spec.Components.KubeAPIServer), getChecksum(cpn.Status.Components.KubeAPIServer)},
-		{constants.ConditionControllerManagerReady, getChecksum(cpn.Spec.Components.KubeControllerManager), getChecksum(cpn.Status.Components.KubeControllerManager)},
-		{constants.ConditionSchedulerReady, getChecksum(cpn.Spec.Components.KubeScheduler), getChecksum(cpn.Status.Components.KubeScheduler)},
+		{constants.ConditionEtcdReady, cpn.Spec.Components.Etcd.Checksum, cpn.Status.Components.Etcd.Checksum},
+		{constants.ConditionAPIServerReady, cpn.Spec.Components.KubeAPIServer.Checksum, cpn.Status.Components.KubeAPIServer.Checksum},
+		{constants.ConditionControllerManagerReady, cpn.Spec.Components.KubeControllerManager.Checksum, cpn.Status.Components.KubeControllerManager.Checksum},
+		{constants.ConditionSchedulerReady, cpn.Spec.Components.KubeScheduler.Checksum, cpn.Status.Components.KubeScheduler.Checksum},
 		{constants.ConditionPKISynced, cpn.Spec.PKIChecksum, cpn.Status.PKIChecksum},
 		{constants.ConditionsHotReloadSynced, cpn.Spec.HotReloadChecksum, cpn.Status.HotReloadChecksum},
 	}

@@ -29,16 +29,16 @@ type ComponentChecksum struct {
 // ComponentChecksums holds checksums for control plane components
 type ComponentChecksums struct {
 	// +kubebuilder:validation:Required
-	Etcd *ComponentChecksum `json:"etcd"`
+	Etcd ComponentChecksum `json:"etcd"`
 
 	// +kubebuilder:validation:Required
-	KubeAPIServer *ComponentChecksum `json:"kube-apiserver"`
+	KubeAPIServer ComponentChecksum `json:"kube-apiserver"`
 
 	// +kubebuilder:validation:Required
-	KubeControllerManager *ComponentChecksum `json:"kube-controller-manager"`
+	KubeControllerManager ComponentChecksum `json:"kube-controller-manager"`
 
 	// +kubebuilder:validation:Required
-	KubeScheduler *ComponentChecksum `json:"kube-scheduler"`
+	KubeScheduler ComponentChecksum `json:"kube-scheduler"`
 }
 
 type ControlPlaneNodeSpec struct {
