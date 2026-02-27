@@ -14,27 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package node
 
 import (
 	"context"
 	"fmt"
 
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/controller/common"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-)
-
-const (
-	nodeTypeLabelKey            = "node.deckhouse.io/type"
-	staticNodeTypeValue         = "Static"
-	cloudPermanentNodeTypeValue = "CloudPermanent"
 )
 
 type NodeReconciler struct {
@@ -77,8 +68,8 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	if isStaticNode(node) {
-		_, err := ensureInstanceExists(ctx, r.Client, node.Name, deckhousev1alpha2.InstanceSpec{
+	if IsStaticNode(node) {
+		_, err := common.EnsureInstanceExists(ctx, r.Client, node.Name, deckhousev1alpha2.InstanceSpec{
 			NodeRef: deckhousev1alpha2.NodeRef{Name: node.Name},
 		})
 		if err != nil {
@@ -91,55 +82,4 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	log.V(1).Info("node is not static, skipping")
 	return ctrl.Result{}, nil
-}
-
-func nodePredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			return true
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			return true
-		},
-		GenericFunc: func(e event.GenericEvent) bool {
-			return true
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldNode, oldOK := e.ObjectOld.(*corev1.Node)
-			newNode, newOK := e.ObjectNew.(*corev1.Node)
-			if !oldOK || !newOK {
-				return false
-			}
-
-			return !apiequality.Semantic.DeepEqual(oldNode.Labels, newNode.Labels)
-		},
-	}
-}
-
-func isStaticNode(node *corev1.Node) bool {
-	nodeType := node.Labels[nodeTypeLabelKey]
-	return nodeType == staticNodeTypeValue || nodeType == cloudPermanentNodeTypeValue
-}
-
-func (r *NodeReconciler) deleteStaticInstanceIfExists(ctx context.Context, name string) (bool, error) {
-	instance := &deckhousev1alpha2.Instance{}
-	if err := r.Get(ctx, types.NamespacedName{Name: name}, instance); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return false, nil
-		}
-		return false, fmt.Errorf("get instance %q: %w", name, err)
-	}
-
-	if instance.Spec.MachineRef != nil {
-		return false, nil
-	}
-
-	if err := r.Delete(ctx, instance); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return false, nil
-		}
-		return false, fmt.Errorf("delete static instance %q: %w", name, err)
-	}
-
-	return true, nil
 }

@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	machinecontroller "github.com/deckhouse/node-controller/internal/controller/machine"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -49,7 +50,7 @@ func (r *MCMMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *MCMMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx).WithValues("mcmMachine", req.NamespacedName.String())
-	factory := NewMachineFactory()
+	factory := machinecontroller.NewMachineFactory()
 
 	key := req.NamespacedName
 	machine := &mcmv1alpha1.Machine{}

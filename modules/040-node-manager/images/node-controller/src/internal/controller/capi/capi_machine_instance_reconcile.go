@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package capi
 
 import (
 	"context"
@@ -22,98 +22,17 @@ import (
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/controller/common"
+	"github.com/deckhouse/node-controller/internal/controller/machine"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-type CAPIMachineReconciler struct {
-	client.Client
-	machineFactory MachineFactory
-}
-
-type capiMachineReconcileData struct {
-	capiMachine   *capiv1beta2.Machine
-	instanceName  string
-	machineRef    *deckhousev1alpha2.MachineRef
-	machineStatus MachineStatus
-	nodeGroup     string
-}
-
-func SetupCAPIMachineController(mgr ctrl.Manager) error {
-	if err := (&CAPIMachineReconciler{
-		Client:         mgr.GetClient(),
-		machineFactory: NewMachineFactory(),
-	}).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to setup capi machine reconciler: %w", err)
-	}
-	return nil
-}
-
-func (r *CAPIMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if r.machineFactory == nil {
-		return fmt.Errorf("machineFactory is required")
-	}
-
-	return ctrl.NewControllerManagedBy(mgr).
-		Named("capi-machine-controller").
-		For(&capiv1beta2.Machine{}).
-		Complete(r)
-}
-
-func (r *CAPIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx).WithValues("capiMachine", req.NamespacedName.String())
-	ctx = ctrl.LoggerInto(ctx, log)
-
-	capiMachine := &capiv1beta2.Machine{}
-	if err := r.Get(ctx, req.NamespacedName, capiMachine); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			// req.Name == machine.GetName() == instanceName по инварианту buildReconcileData.
-			deleted, delErr := r.deleteInstanceIfExists(ctx, req.Name)
-			if delErr != nil {
-				return ctrl.Result{}, delErr
-			}
-			log.V(1).Info("machine not found, linked instance delete handled", "instance", req.Name, "deleted", deleted)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-
-	data, err := r.buildReconcileData(capiMachine)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("build reconcile data for capi machine %q: %w", capiMachine.Name, err)
-	}
-
-	if err := r.reconcileLinkedInstance(ctx, data); err != nil {
-		if apierrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, err
-	}
-
-	log.V(1).Info("reconcile complete", "status", data.machineStatus, "nodeGroup", data.nodeGroup)
-	return ctrl.Result{}, nil
-}
-
-func (r *CAPIMachineReconciler) buildReconcileData(capiMachine *capiv1beta2.Machine) (capiMachineReconcileData, error) {
-	machine, err := r.machineFactory.NewMachine(capiMachine)
-	if err != nil {
-		return capiMachineReconcileData{}, err
-	}
-
-	return capiMachineReconcileData{
-		capiMachine:   capiMachine,
-		instanceName:  machine.GetName(),
-		machineRef:    machine.GetMachineRef(),
-		machineStatus: machine.GetStatus(),
-		nodeGroup:     machine.GetNodeGroup(),
-	}, nil
-}
-
 func (r *CAPIMachineReconciler) reconcileLinkedInstance(ctx context.Context, data capiMachineReconcileData) error {
-	log := ctrl.LoggerFrom(ctx)
+	logger := log.FromContext(ctx)
 
 	instance, err := r.ensureInstanceExists(ctx, data.instanceName, data.machineRef)
 	if err != nil {
@@ -135,7 +54,7 @@ func (r *CAPIMachineReconciler) reconcileLinkedInstance(ctx context.Context, dat
 		return err
 	}
 
-	log.V(1).Info(
+	logger.V(1).Info(
 		"linked instance reconciled",
 		"instance", instance.Name,
 		"specUpdated", specUpdated,
@@ -158,7 +77,7 @@ func (r *CAPIMachineReconciler) ensureInstanceExists(
 		spec.MachineRef = &refCopy
 	}
 
-	return ensureInstanceExists(ctx, r.Client, name, spec)
+	return common.EnsureInstanceExists(ctx, r.Client, name, spec)
 }
 
 func (r *CAPIMachineReconciler) syncInstanceSpec(
@@ -187,7 +106,7 @@ func (r *CAPIMachineReconciler) syncInstanceSpec(
 func (r *CAPIMachineReconciler) syncInstanceStatus(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,
-	machineStatus MachineStatus,
+	machineStatus machine.MachineStatus,
 ) (bool, error) {
 	updated := instance.DeepCopy()
 	updated.Status.Phase = machineStatus.Phase
@@ -219,6 +138,18 @@ func (r *CAPIMachineReconciler) ensureMachineDeletionForDeletingInstance(
 		}
 		return false, fmt.Errorf("delete capi machine %q for deleting instance %q: %w", capiMachine.Name, instance.Name, err)
 	}
+	return true, nil
+}
+
+func (r *CAPIMachineReconciler) deleteInstanceIfExists(ctx context.Context, name string) (bool, error) {
+	instance := &deckhousev1alpha2.Instance{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	if err := r.Delete(ctx, instance); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return false, nil
+		}
+		return false, fmt.Errorf("delete instance %q: %w", name, err)
+	}
+
 	return true, nil
 }
 
