@@ -1,4 +1,33 @@
 {{- $providerClusterConfiguration := .Values.cloudProviderDvp.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+{{- define "registration_data" }}
+{{- $context := index . 0 }}
+{{- $providerClusterConfiguration := index . 1 }}
+type: {{ b64enc "dvp" | quote }}
+# DVP does not contain meaning regions and zones
+# but out machinery use them. we use default as region and as one zone
+region: {{ b64enc "default" | quote }}
+{{- $zones := $context.Values.cloudProviderDvp.internal.providerDiscoveryData.zones }}
+{{- if $zones }}
+zones: {{ $zones | toJson | b64enc | quote }}
+{{- else }}
+zones: {{ list "default" | toJson | b64enc | quote }}
+{{- end }}
+instanceClassKind: {{ b64enc "DVPInstanceClass" | quote }}
+machineClassKind: {{ b64enc "" | quote }}
+capiClusterKind: {{ b64enc "DeckhouseCluster" | quote }}
+capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+capiClusterAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
+capiClusterName: {{ b64enc "dvp" | quote }}
+capiMachineTemplateKind: {{ b64enc "DeckhouseMachineTemplate" | quote }}
+capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+capiMachineTemplateAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
+{{- with $providerClusterConfiguration.sshPublicKey }}
+sshPublicKey: {{ . | b64enc | quote }}
+{{- end }}
+
+{{- $dvpValues := dict }}
+dvp: {{ $dvpValues | toJson | b64enc | quote }}
+{{- end }}
 ---
 apiVersion: v1
 kind: Secret
@@ -8,28 +37,3 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: Opaque
 data:
-  type: {{ b64enc "dvp" | quote }}
-  # DVP does not contain meaning regions and zones
-  # but out machinery use them. we use default as region and as one zone
-  region: {{ b64enc "default" | quote }}
-  {{- $zones := .Values.cloudProviderDvp.internal.providerDiscoveryData.zones }}
-  {{- if $zones }}
-  zones: {{ $zones | toJson | b64enc | quote }}
-  {{- else }}
-  zones: {{ list "default" | toJson | b64enc | quote }}
-  {{- end }}
-  instanceClassKind: {{ b64enc "DVPInstanceClass" | quote }}
-  machineClassKind: {{ b64enc "" | quote }}
-  capiClusterKind: {{ b64enc "DeckhouseCluster" | quote }}
-  capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
-  capiClusterAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
-  capiClusterName: {{ b64enc "dvp" | quote }}
-  capiMachineTemplateKind: {{ b64enc "DeckhouseMachineTemplate" | quote }}
-  capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
-  capiMachineTemplateAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
-  {{- with $providerClusterConfiguration.sshPublicKey }}
-  sshPublicKey: {{ . | b64enc | quote }}
-  {{- end }}
-
-  {{- $dvpValues := dict }}
-  dvp: {{ $dvpValues | toJson | b64enc | quote }}
