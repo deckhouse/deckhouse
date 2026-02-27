@@ -928,7 +928,7 @@ spec:
                 fencing:
                   type: object
                   description: |
-                    Включить контроллер ограждения для этой группы.
+                    Включение fencing-контроллер для группы узлов.
                   required: [ mode ]
                   properties:
                     mode:
@@ -937,19 +937,20 @@ spec:
                         - "Watchdog"
                         - "Dryrun"
                       description: |
-                        Fencing mode:
+                        Режимы работы fencing:
                           - `Watchdog` — использует модуль ядра watchdog для автоматической перезагрузки узлов, потерявших связь с кластером.
-                          - `Dryrun` — запускает fencing-agent без активации watchdog.
+                          - `Dryrun` — запускает fencing-агент, но не активирует watchdog (режим проверки, без перезагрузок).
 
-                          Скрипт `NodeGroupConfiguration` загружает модуль ядра `softdog` с параметрами `soft_margin=<timeout>` и `soft_panic=1`.
+                        При включении `fencing` скрипт NodeGroupConfiguration загружает модуль ядра softdog с параметрами `soft_margin=<timeout>` и `soft_panic=1`.
 
-                        Fencing-agent — DaemonSet, развёрнутый на каждом узле в NodeGroup:
-                          - Открывает устройство `/dev/watchdog` и устанавливает на узле метку `node-manager.deckhouse.io/fencing-enabled`.
-                          - Участвует в gossip-кластере (memberlist) с другими fencing-agent'ами в той же NodeGroup.
-                          - Периодически проверяет кворум (доступность большинства узлов); если кворум не достигнут (quorum=false), выполняется резервная проверка доступности Kubernetes API.
-                          - Если кворум поддерживается ИЛИ Kubernetes API доступен, агент «кормит» watchdog (сбрасывает таймер).
-                          - Если ни одно из условий не выполнено, таймер watchdog истекает, что вызывает kernel panic и перезагрузку узла.
-                          - Отслеживает аннотации обслуживания (`node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, `update.node.deckhouse.io/disruption-approved`) для временного отключения watchdog на время планового обслуживания.
+                        Как работает fencing-агент:
+                          - Открывает устройство `/dev/watchdog` и устанавливает на узле лейбл `node-manager.deckhouse.io/fencing-enabled`.
+                          - Объединяется с агентами этой же NodeGroup в gossip-кластер (`memberlist`).
+                          - Регулярно проверяет кворум (доступность большинства узлов NodeGroup).
+                          - Если кворума нет (`quorum=false`), выполняет резервную проверку доступности Kubernetes API.
+                          - Если кворум есть или Kubernetes API доступен, агент сбрасывает таймер watchdog.
+                          - Если ни кворума, ни доступа к Kubernetes API нет, watchdog перестает сбрасываться, таймер истекает, что приводит к kernel panic и перезагрузке узла.
+                          - Учитывает аннотации обслуживания `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, `update.node.deckhouse.io/disruption-approved`, чтобы временно отключать watchdog на время плановых операций.
                     watchdog:
                       type: object
                       properties:

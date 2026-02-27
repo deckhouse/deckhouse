@@ -2372,7 +2372,7 @@ spec:
                 fencing:
                   type: object
                   description: |
-                    Enable fencing controller for this group.
+                    Enable fencing controller for this node group.
                   required: [mode]
                   properties:
                     mode:
@@ -2381,20 +2381,20 @@ spec:
                         - "Watchdog"
                         - "Dryrun"
                       description: |
-                        Fencing mode:
-                        - `Watchdog` — uses the watchdog kernel module to automatically reboot nodes that lose cluster connectivity.
-                        - `Dryrun` — runs the fencing-agent without activating the watchdog (for testing and monitoring only).
+                        Fencing operating modes:
+                        - `Watchdog`: uses the kernel watchdog module to automatically reboot nodes that have lost connectivity to the cluster.
+                        - `Dryrun`: runs the fencing-agent but does not activate the watchdog (validation mode, no reboots).
 
-                        `NodeGroupConfiguration` script loads the `softdog` kernel module with parameters `soft_margin=<timeout>` and `soft_panic=1`.
+                        When `fencing` is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin=<timeout>` and `soft_panic=1` parameters.
 
-                        Fencing-agent — a DaemonSet deployed on each node in the NodeGroup:
-                           - Opens `/dev/watchdog` device and sets the label `node-manager.deckhouse.io/fencing-enabled` on the node.
-                           - Participates in a gossip cluster (memberlist) with other fencing-agents in the same NodeGroup.
-                           - Periodically checks quorum (majority of nodes reachable), if quorum=false, fallback to check Kubernetes API availability.
-                           - If quorum is maintained OR Kubernetes API is available, the agent feeds the watchdog (resets the timer).
-                           - If neither condition is met, the watchdog timer expires, triggering a kernel panic and node reboot.
-                           - Monitors maintenance annotations (`node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, `update.node.deckhouse.io/disruption-approved`) to temporarily disable the watchdog during planned maintenance.
-
+                        How the fencing-agent works:
+                        - Opens `/dev/watchdog` and sets the `node-manager.deckhouse.io/fencing-enabled` label on the node.
+                        - Joins a gossip cluster (`memberlist`) with other fencing-agents in the same NodeGroup.
+                        - Regularly checks quorum (availability of a majority of nodes in the NodeGroup).
+                        - If quorum is not reached (`quorum=false`), performs a fallback check of Kubernetes API availability.
+                        - If quorum is present or the Kubernetes API is available, the agent resets the watchdog timer.
+                        - If neither quorum nor Kubernetes API access is available, the watchdog timer stops being reset, expires, and triggers a kernel panic followed by a node reboot.
+                        - Watches the maintenance annotations `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, and `update.node.deckhouse.io/disruption-approved` to temporarily disable the watchdog during planned maintenance operations.
                     watchdog:
                       type: object
                       properties:
