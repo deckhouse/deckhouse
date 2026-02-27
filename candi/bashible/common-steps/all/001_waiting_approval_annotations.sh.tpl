@@ -51,6 +51,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
     fi
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+      bb-waiting-approval-timeout "Waiting for annotation update.node.deckhouse.io/approved timed out. Steps are waiting for approval to start. Run: kubectl annotate node $(bb-d8-node-name) update.node.deckhouse.io/approved="
       >&2 echo "ERROR: Can't get annotation 'update.node.deckhouse.io/approved' from our Node."
       exit 1
     fi

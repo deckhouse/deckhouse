@@ -50,16 +50,22 @@ function bb-bashible-ready-steps-completed() {
 function bb-bashible-ready-steps-failed() {
   local step="$1"
   local log_excerpt="${2:-}"
+  local max_log_excerpt_len=500
 
   if [ -z "$log_excerpt" ]; then
     local step_log="/var/lib/bashible/step.log"
     if [[ -f "${step_log}" ]]; then
-      log_excerpt="$(tail -c 500 "${step_log}")"
-      log_excerpt="${log_excerpt//$'\n'/ }"
-      log_excerpt="${log_excerpt//$'\r'/ }"
+      # Keep only the latest non-empty line to avoid multi-line "wall of text" in condition message.
+      log_excerpt="$(tail -n 100 "${step_log}" | awk 'NF { line=$0 } END { print line }')"
     else
       log_excerpt="bashible step log is not available."
     fi
+  fi
+
+  log_excerpt="${log_excerpt//$'\n'/ }"
+  log_excerpt="${log_excerpt//$'\r'/ }"
+  if [ "${#log_excerpt}" -gt "${max_log_excerpt_len}" ]; then
+    log_excerpt="${log_excerpt:0:${max_log_excerpt_len}}"
   fi
 
   local message="${step}${log_excerpt:+: ${log_excerpt}}"
@@ -85,6 +91,11 @@ function bb-waiting-approval-required() {
 function bb-waiting-approval-not-required() {
   local message="${1:-}"
   bb-patch-instance-condition "WaitingApproval" "False" "UpdateApprovalNotRequired" "${message}"
+}
+
+function bb-waiting-approval-timeout() {
+  local message="${1:-}"
+  bb-patch-instance-condition "WaitingApproval" "True" "UpdateApprovalTimeout" "${message}"
 }
 
 
