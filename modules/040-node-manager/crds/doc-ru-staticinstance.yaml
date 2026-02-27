@@ -25,10 +25,31 @@ spec:
                   properties:
                     apiVersion:
                       description: Версия API ресурса.
+                    fieldPath:
+                      description: |-
+                        Если речь идет о части объекта, а не о целом объекте, эта строка должна содержать действительное выражение для доступа к полю JSON/Go, например `desiredState.manifest.containers[2]`.
+                        
+                        Например, если ссылка на объект относится к контейнеру внутри пода, этот параметр будет иметь значение вида: `spec.containers{name}` (где `name` — имя контейнера, который вызвал событие) или, если имя контейнера не указано, — `spec.containers[2]` (контейнер с индексом 2 в этом поде). Этот синтаксис выбран только для того, чтобы иметь четко определенный способ ссылки на часть объекта.
                     kind:
                       description: Kind ресурса.
                     name:
                       description: Имя ресурса.
+                    namespace:
+                      description: |-
+                        Неймспейс ресурса.
+
+                        Подробнее: [https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
+                    resourceVersion:
+                      description: |-
+                        Конкретная версия ресурса, на которую ссылается данная ссылка, если таковая имеется.
+
+                        Подробнее: [https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
+                      type: string
+                    uid:
+                      description: |-
+                        UID ресурса.
+                        
+                        Подробнее: [https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids)
     - name: v1alpha2
       schema:
         openAPIV3Schema:
@@ -52,8 +73,29 @@ spec:
                   properties:
                     apiVersion:
                       description: Версия API ресурса.
+                    fieldPath:
+                      description: |-
+                        Если речь идет о части объекта, а не о целом объекте, эта строка должна содержать действительное выражение для доступа к полю JSON/Go, например `desiredState.manifest.containers[2]`.
+                        
+                        Например, если ссылка на объект относится к контейнеру внутри пода, этот параметр будет иметь значение вида: `spec.containers{name}` (где `name` — имя контейнера, который вызвал событие) или, если имя контейнера не указано, — `spec.containers[2]` (контейнер с индексом 2 в этом поде). Этот синтаксис выбран только для того, чтобы иметь четко определенный способ ссылки на часть объекта.
                     kind:
                       description: Kind ресурса.
                     name:
                       description: Имя ресурса.
+                    namespace:
+                      description: |-
+                        Неймспейс ресурса.
+
+                        Подробнее: [https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
+                    resourceVersion:
+                      description: |-
+                        Конкретная версия ресурса, на которую ссылается данная ссылка, если таковая имеется.
+
+                        Подробнее: [https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
+                      type: string
+                    uid:
+                      description: |-
+                        UID ресурса.
+
+                        Подробнее: [https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids)
 
