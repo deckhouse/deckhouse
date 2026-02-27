@@ -1,5 +1,3 @@
-{{- $ciliumVersion := "1.17.4" }}
----
 # Based on https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/Dockerfile
 # and https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/download-grpc-health-probe.sh
 ---

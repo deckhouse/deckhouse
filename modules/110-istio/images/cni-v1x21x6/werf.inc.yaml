@@ -1,5 +1,5 @@
 ---
-{{- $istioVersion := "1.21.6" }}
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-21" $ ) }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.21.6 -> v1x21x6 */}}
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/cni/deployments/kubernetes/Dockerfile.install-cni

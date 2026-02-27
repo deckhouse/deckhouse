@@ -1,5 +1,3 @@
-{{- $metallb_version := "0.15.2" }}
----
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -20,7 +18,7 @@ secrets:
 shell:
   install:
   - cd /src
-  - git clone -b v{{ $metallb_version }} $(cat /run/secrets/SOURCE_REPO)/metallb/metallb.git .
+  - git clone -b v{{ include "get_oss_version_by_id" (list "metallb" $ ) }} $(cat /run/secrets/SOURCE_REPO)/metallb/metallb.git .
   - git apply /patches/*.patch --verbose --allow-empty
   - rm -rf e2etest website
   - rm -rf /src/.git

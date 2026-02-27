@@ -1,4 +1,4 @@
-{{- $cniVersion := "1.7.1" }}
+{{- $cniVersion := include "get_oss_version_by_id" (list "cni-plugins" $ )  -}}
 ---
 # #####################################################################
 # Build cni binaries

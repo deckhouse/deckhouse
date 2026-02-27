@@ -1,6 +1,4 @@
-{{- $hubbleUIVersion := "0.13.2" }}
-{{- $hubbleUIFrontVersion := "0.13.2" }}
-{{- $hubbleUIBackVersion := "0.13.2" }}
+{{- $hubbleUIVersion := include "get_oss_version_by_id" (list "cilium-hubble-ui" $ )  -}}
 ---
 # Based on https://github.com/cilium/cilium/blob/v1.17.4/install/kubernetes/cilium/values.yaml#L1698
 # and on https://github.com/cilium/cilium/blob/v1.17.4/install/kubernetes/cilium/values.yaml#L1732
