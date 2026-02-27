@@ -30,3 +30,7 @@ CVE-2026-24512
 CVE-2026-24513
 CVE-2026-24514
 https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
+
+### 005-nginx-version-02.patch
+
+Updates nginx version from 1.21.6 to 1.29.5 to fix CVEs.

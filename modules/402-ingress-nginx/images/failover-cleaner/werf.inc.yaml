@@ -12,7 +12,7 @@ git:
     - '**/*.mod'
 ---
 image: {{ .ModuleName }}/failover-cleaner-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/golang-alpine-1.25.7
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

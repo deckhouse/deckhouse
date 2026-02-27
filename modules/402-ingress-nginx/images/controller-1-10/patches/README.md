@@ -59,7 +59,7 @@ Fix tmpDir path for the cleanup procedure.
 
 https://github.com/kubernetes/ingress-nginx/pull/10797
 
-### 010-nginx-build.patch
+### 010-nginx-build-01.patch
 
 Build nginx for controller on ALT Linux.
 

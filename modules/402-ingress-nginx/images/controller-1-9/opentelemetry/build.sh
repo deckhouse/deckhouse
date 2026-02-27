@@ -80,7 +80,7 @@ install_otel()
 
 install_nginx()
 {
-  export NGINX_VERSION=1.21.6
+  export NGINX_VERSION=1.29.5
 
   # Check for recent changes: ${SOURCE_REPO}/open-telemetry/opentelemetry-cpp-contrib/compare/2656a4...main
   # export OPENTELEMETRY_CONTRIB_COMMIT=aaa51e2297bcb34297f3c7aa44fa790497d2f7f3

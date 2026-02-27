@@ -53,11 +53,11 @@ https://github.com/kubernetes/ingress-nginx/issues/12158
 https://github.com/kubernetes/ingress-nginx/issues/12173
 https://github.com/deckhouse/deckhouse/issues/9933
 
-### 010-cve-22122025.patch
+### 010-cve-22122025-01.patch
 
 Fix cve vulnerabilities.
 
-### 011-nginx-build.patch
+### 011-nginx-build-07.patch
 
 Build nginx for controller on ALT Linux.
 
@@ -100,3 +100,7 @@ CVE-2026-24512
 CVE-2026-24513
 CVE-2026-24514
 https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
+
+### 022-remove-patch-01.patch
+
+This patch deletes unneeded nginx patch.
