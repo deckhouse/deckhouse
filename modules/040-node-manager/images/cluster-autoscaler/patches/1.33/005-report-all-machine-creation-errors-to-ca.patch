@@ -11,6 +11,7 @@ diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go b/cluster-autos
 +			if machine.Status.LastOperation.ErrorCode == machinecodes.ResourceExhausted.String() {
 +				errorClass = cloudprovider.OutOfResourcesErrorClass
 +			}
++     klog.Warningf("Machine %q failed to create VM, Error: %v", machine.Name, machine.Status.LastOperation.Description)
  			return &cloudprovider.InstanceStatus{
  				State: cloudprovider.InstanceCreating,
  				ErrorInfo: &cloudprovider.InstanceErrorInfo{
