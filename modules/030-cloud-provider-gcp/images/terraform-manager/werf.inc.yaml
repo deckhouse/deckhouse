@@ -36,7 +36,7 @@ shell:
   - cd /src
   - git clone --depth 1 --branch v{{ .TF.gcp.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-google.git .
   - git apply /patches/*.patch --verbose
-  - rm -rf .git google/test-fixtures/appengine/hello-world-flask
+  - rm -rf .git scripts/diff.go google/test-fixtures/appengine/hello-world-flask
 ---
 image: terraform-provider-gcp
 final: false
