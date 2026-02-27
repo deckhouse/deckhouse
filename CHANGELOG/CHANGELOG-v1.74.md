@@ -149,6 +149,8 @@
  - **[dhctl]** Fixed a memory leak in Terraform exporter. [#15350](https://github.com/deckhouse/deckhouse/pull/15350)
  - **[extended-monitoring]** Cleanup exporter metrics when the monitored resource has been deleted [#17988](https://github.com/deckhouse/deckhouse/pull/17988)
  - **[extended-monitoring]** Add namespace-scoped overrides [#17213](https://github.com/deckhouse/deckhouse/pull/17213)
+ - **[ingress-nginx]** Nginx and module's dependencies are updated. [#18156](https://github.com/deckhouse/deckhouse/pull/18156)
+    All ingress-nginx controller pods will be restared.
  - **[ingress-nginx]** A false-positive trigger of alert GeoIPDownloadErrorDetectedFromMaxMind is fixed. [#17741](https://github.com/deckhouse/deckhouse/pull/17741)
  - **[ingress-nginx]** The CVE-2026-1580, CVE-2026-24512, CVE-2026-24513, CVE-2026-24514 CVEs fixes are backported. [#17823](https://github.com/deckhouse/deckhouse/pull/17823)
     The ingress nginx controllers' pods will be restated.
