@@ -39,8 +39,11 @@ var (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name="result",type="string",JSONPath=".status.result",description="Current render status."
 
-// ModuleDocumentation is a Module documentation rendering object.
+// ModuleDocumentation defines the rendering configuration of the Deckhouse module documentation.
+//
+// Deckhouse creates ModuleDocumentation resources by itself.
 type ModuleDocumentation struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -48,6 +51,7 @@ type ModuleDocumentation struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:validation:Required
 	Spec ModuleDocumentationSpec `json:"spec"`
 
 	Status ModuleDocumentationStatus `json:"status,omitempty"`
@@ -64,33 +68,59 @@ func (md *ModuleDocumentation) GetConditionByAddress(addr string) (ModuleDocumen
 	return ModuleDocumentationCondition{}, -1
 }
 
+// ModuleDocumentationSpec defines the desired state of ModuleDocumentation
 type ModuleDocumentationSpec struct {
-	Version  string `json:"version,omitempty"`
-	Path     string `json:"path,omitempty"`
+	// Module version.
+	// +kubebuilder:validation:Required
+	Version string `json:"version"`
+
+	// Path to the module version.
+	// +optional
+	Path string `json:"path,omitempty"`
+
+	// Module version checksum.
+	// +optional
 	Checksum string `json:"checksum,omitempty"`
 }
 
+// ModuleDocumentationStatus defines the observed state of ModuleDocumentation
 type ModuleDocumentationStatus struct {
+	// Conditions represent the current state of documentation rendering.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions   []ModuleDocumentationCondition           `json:"conditions,omitempty" patchStrategy:"retainKeys" patchKey:"address"`
+	// +listType=map
+	// +listMapKey=address
+	Conditions []ModuleDocumentationCondition `json:"conditions,omitempty" patchStrategy:"retainKeys" patchKey:"address"`
+
+	// Current render status.
+	// +optional
 	RenderResult ModuleDocumentationConditionRenderResult `json:"result,omitempty"`
 }
 
+// ModuleDocumentationCondition describes the state of a documentation rendering for a specific version.
 type ModuleDocumentationCondition struct {
 	// Type is the type of the condition.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	Type     ModuleDocumentationConditionType `json:"type"`
-	Version  string                           `json:"version"`
-	Checksum string                           `json:"checksum"`
-	// Status is the status of the condition.
-	// Can be True, False, Unknown.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+	// +kubebuilder:validation:Required
+	Type ModuleDocumentationConditionType `json:"type"`
+
+	// Module version.
+	// +kubebuilder:validation:Required
+	Version string `json:"version"`
+
+	// Module version checksum.
+	// +kubebuilder:validation:Required
+	Checksum string `json:"checksum"`
+
+	// Address of the rendered documentation.
+	// +kubebuilder:validation:Required
 	Address string `json:"address"`
+
 	// Last time the condition transitioned from one status to another.
 	// +optional
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+
 	// Human-readable message indicating details about last transition.
 	// +optional
 	Message string `json:"message"`

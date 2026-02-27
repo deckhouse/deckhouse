@@ -544,7 +544,7 @@ controller-gen-generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen yq ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	@echo "Removing old CRDs..."
 	@rm -rf ./bin/crd
 	@echo "Generating CRDs..."
@@ -555,6 +555,27 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	@cp bin/crd/bases/deckhouse.io_packagerepositories.yaml deckhouse-controller/crds/packagerepository.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
+	@cp bin/crd/bases/deckhouse.io_moduleconfigs.yaml deckhouse-controller/crds/module-config.yaml
+	@cp bin/crd/bases/deckhouse.io_moduledocumentations.yaml deckhouse-controller/crds/module-documentation.yaml
+	@cp bin/crd/bases/deckhouse.io_modulepulloverrides.yaml deckhouse-controller/crds/module-pull-override.yaml
+	@echo "Applying patches to CRDs..."
+	@for crd in deckhouse-controller/crds/*.yaml; do \
+		case "$$(basename $$crd)" in \
+			doc-ru-*|crd.go) \
+				continue ;; \
+			*) \
+				crd_name=$$(basename $$crd .yaml); \
+				patch_file="deckhouse-controller/crds/patches/$${crd_name}-patch.yaml"; \
+				if [ -f "$$patch_file" ]; then \
+					echo "  Patching $$(basename $$crd) with $$(basename $$patch_file)..."; \
+					$(YQ) eval-all 'select(fileIndex==0) *d select(fileIndex==1)' \
+						"$$crd" "$$patch_file" > "$$crd.tmp" && \
+					mv "$$crd.tmp" "$$crd" && \
+					echo "  ✓ Successfully patched $$(basename $$crd)"; \
+				fi ;; \
+		esac; \
+	done
+	@echo "CRD generation and patching complete."
 
 ## Generate clientset
 .PHONY: client-gen-generate

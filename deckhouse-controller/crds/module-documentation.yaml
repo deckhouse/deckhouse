@@ -1,6 +1,9 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: moduledocumentations.deckhouse.io
   labels:
     heritage: deckhouse
@@ -8,70 +11,122 @@ metadata:
     app.kubernetes.io/part-of: deckhouse
 spec:
   group: deckhouse.io
-  scope: Cluster
   names:
+    kind: ModuleDocumentation
+    listKind: ModuleDocumentationList
     plural: moduledocumentations
     singular: moduledocumentation
-    kind: ModuleDocumentation
-  preserveUnknownFields: false
+  scope: Cluster
   versions:
-    - name: v1alpha1
-      served: true
-      storage: true
+    - additionalPrinterColumns:
+        - description: Current render status.
+          jsonPath: .status.result
+          name: result
+          type: string
+      name: v1alpha1
       schema:
         openAPIV3Schema:
-          type: object
           description: |
             Defines the rendering configuration of the Deckhouse module documentation.
 
             **Deckhouse creates ModuleDocumentation resources by itself.**
-          required:
-            - spec
           properties:
-            spec:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
               type: object
+            spec:
+              description: ModuleDocumentationSpec defines the desired state of ModuleDocumentation
+              properties:
+                checksum:
+                  description: Module version checksum.
+                  type: string
+                  x-doc-examples:
+                    - abc123
+                path:
+                  description: Path to the module version.
+                  type: string
+                  x-doc-examples:
+                    - /path/to/module
+                version:
+                  description: Module version.
+                  type: string
+                  x-doc-examples:
+                    - 'v1.0.0'
               required:
                 - version
-              properties:
-                version:
-                  type: string
-                  description: Module version.
-                  x-doc-examples: ['v1.0.0']
-                checksum:
-                  type: string
-                  description: Module version checksum.
-                path:
-                  type: string
-                  description: Path to the module version.
-            status:
               type: object
+            status:
+              description: ModuleDocumentationStatus defines the observed state of ModuleDocumentation
               properties:
-                result:
-                  type: string
                 conditions:
-                  type: array
-                  x-kubernetes-patch-strategy: "retainKeys"
+                  description: Conditions represent the current state of documentation rendering.
                   items:
-                    type: object
+                    description: ModuleDocumentationCondition describes the state of a documentation rendering for a specific version.
                     properties:
-                      type:
-                        type: string
-                      version:
+                      address:
+                        description: Address of the rendered documentation.
                         type: string
                       checksum:
-                        type: string
-                      address:
+                        description: Module version checksum.
                         type: string
                       lastTransitionTime:
+                        description: Last time the condition transitioned from one status to another.
                         format: date-time
                         type: string
                       message:
+                        description: Human-readable message indicating details about last transition.
                         type: string
+                      type:
+                        description: |-
+                          Type is the type of the condition.
+                          More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                        type: string
+                      version:
+                        description: Module version.
+                        type: string
+                    required:
+                      - address
+                      - checksum
+                      - type
+                      - version
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - address
+                  x-kubernetes-list-type: map
+                  x-kubernetes-patch-strategy: "retainKeys"
+                result:
+                  description: Current render status.
+                  type: string
+              type: object
+          required:
+            - spec
+          type: object
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha1
+              kind: ModuleDocumentation
+              metadata:
+                name: module-1
+              spec:
+                version: v1.0.0
+                checksum: abc123
+                path: /path/to/module
+      served: true
+      storage: true
       subresources:
         status: {}
-      additionalPrinterColumns:
-        - name: result
-          jsonPath: .status.result
-          type: string
-          description: 'Current render status.'
-
+  preserveUnknownFields: false

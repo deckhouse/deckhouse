@@ -1,55 +1,86 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: moduleconfigs.deckhouse.io
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
   labels:
-    heritage: deckhouse
     app.kubernetes.io/name: deckhouse
     app.kubernetes.io/part-of: deckhouse
     backup.deckhouse.io/cluster-config: "true"
+    heritage: deckhouse
+  name: moduleconfigs.deckhouse.io
 spec:
   group: deckhouse.io
-  scope: Cluster
   names:
     kind: ModuleConfig
+    listKind: ModuleConfigList
     plural: moduleconfigs
-    singular: moduleconfig
     shortNames:
-    - mc
-  preserveUnknownFields: false
+      - mc
+    singular: moduleconfig
+  scope: Cluster
   versions:
-    - name: v1alpha1
-      served: true
-      storage: true
+    - additionalPrinterColumns:
+        - description: Module enabled state
+          jsonPath: .spec.enabled
+          name: Enabled
+          type: boolean
+        - description: The update policy of the module.
+          jsonPath: .spec.updatePolicy
+          name: UpdatePolicy
+          priority: 1
+          type: string
+        - description: The source of the module.
+          jsonPath: .spec.source
+          name: Source
+          priority: 1
+          type: string
+        - description: Version of settings schema in use
+          jsonPath: .status.version
+          name: Version
+          type: string
+        - description: 'CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
+          jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+        - description: Additional information
+          jsonPath: .status.message
+          name: Message
+          type: string
+      name: v1alpha1
       schema:
         openAPIV3Schema:
-          type: object
-          description: |
-            Defines the configuration of the Deckhouse Kubernetes Platform module (module parameters). The name of the ModuleConfig resource must match the name of the module (for example, `control-plane-manager` for the `control-plane-manager` module).
-          x-doc-examples:
-            - apiVersion: deckhouse.io/v1alpha1
-              kind: ModuleConfig
-              metadata:
-                name: module-1
-              spec:
-                enabled: true
-                settings: { }
-                version: 1
-          required:
-            - spec
+          description: |-
+            ModuleConfig defines the configuration of the Deckhouse Kubernetes Platform module (module parameters).
+            The name of the ModuleConfig resource must match the name of the module (for example, `control-plane-manager` for the `control-plane-manager` module).
           properties:
-            spec:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
               type: object
+            spec:
               properties:
                 enabled:
+                  description: Enables or disables the module.
                   type: boolean
-                  description: |
-                    Enables or disables the module.
-                  x-doc-examples: [false]
+                  x-doc-examples:
+                    - false
                 maintenance:
-                  type: string
-                  enum: ["NoResourceReconciliation"]
-                  description: |
+                  description: |-
                     Defines the module maintenance mode.
 
                     - `NoResourceReconciliation`: A mode for developing or tweaking the module.
@@ -60,65 +91,55 @@ spec:
                       - Resource monitoring is disabled, which prevents deleted resources from being restored.
                       - All the module's resources are labeled with `maintenance: NoResourceReconciliation`.
                       - The `ModuleIsInMaintenanceMode` alert is triggered.
-                  x-doc-examples: ['NoResourceReconciliation']
-                version:
-                  type: number
-                  description: |
-                    Version of settings schema.
-                  x-doc-examples: [1]
+                  enum:
+                    - NoResourceReconciliation
+                  type: string
+                  x-doc-examples:
+                    - NoResourceReconciliation
                 settings:
+                  description: Module settings.
                   type: object
-                  description: |
-                    Module settings.
                   x-kubernetes-preserve-unknown-fields: true
-                updatePolicy:
-                  type: string
-                  description: |
-                    Module update policy.
-                  x-doc-examples: ['test-alpha']
                 source:
+                  description: The source of the module it provided by one (otherwise empty).
                   type: string
-                  description: |
-                    The source of the module it provided by one (otherwise empty).
-            status:
-              type: object
-              properties:
+                updatePolicy:
+                  description: Module update policy.
+                  type: string
+                  x-doc-examples:
+                    - test-alpha
                 version:
-                  type: string
-                  description: "Version of settings schema in use"
+                  description: Version of settings schema.
+                  type: integer
+                  x-doc-examples:
+                    - 1
+              type: object
+            status:
+              properties:
                 message:
+                  description: Additional information
                   type: string
-                  description: "Additional information"
+                version:
+                  description: Version of settings schema in use
+                  type: string
+              required:
+                - message
+                - version
+              type: object
+          required:
+            - spec
+          type: object
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha1
+              kind: ModuleConfig
+              metadata:
+                name: module-1
+              spec:
+                enabled: true
+                settings: {}
+                version: 1
+      served: true
+      storage: true
       subresources:
         status: {}
-      additionalPrinterColumns:
-        - name: Enabled
-          type: boolean
-          description: "Module enabled state"
-          jsonPath: .spec.enabled
-        - name: UpdatePolicy
-          description: The update policy of the module.
-          jsonPath: .spec.updatePolicy
-          type: string
-          priority: 1
-        - name: Source
-          description: The source of the module.
-          type: string
-          jsonPath: .spec.source
-          priority: 1
-        - name: Version
-          type: string
-          description: "Version of settings schema in use"
-          jsonPath: .status.version
-        - name: Age
-          type: date
-          description: 'CreationTimestamp is a timestamp representing the server time
-            when this object was created. It is not guaranteed to be set in happens-before
-            order across separate operations. Clients may not set this value. It is represented
-            in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
-            lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
-          jsonPath: .metadata.creationTimestamp
-        - name: Message
-          type: string
-          description: "Additional information"
-          jsonPath: .status.message
+  preserveUnknownFields: false
