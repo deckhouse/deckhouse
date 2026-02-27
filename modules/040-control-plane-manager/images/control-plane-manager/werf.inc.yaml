@@ -1,10 +1,9 @@
+{{ $appRelPath := printf "%smodules/040-%s/images/%s/controller" $.ModulePath $.ModuleName $.ImageName }}
+{{ $appAbsPath := printf "/deckhouse/modules/040-%s/images/%s/controller" $.ModuleName $.ImageName }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
----
-{{ $appRelPath := printf "%smodules/040-%s/images/%s/controller" $.ModulePath $.ModuleName $.ImageName }}
-{{ $appAbsPath := printf "/deckhouse/modules/040-%s/images/%s/controller" $.ModuleName $.ImageName }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
@@ -53,7 +52,7 @@ fromCacheVersion: "2025-07-25-3"
 fromImage: common/src-artifact
 final: false
 git:
-- add: {{ $appRelPath }}
+- add: /{{ $appRelPath }}
   to:  /src{{ $appAbsPath }}
   stageDependencies:
     install:
