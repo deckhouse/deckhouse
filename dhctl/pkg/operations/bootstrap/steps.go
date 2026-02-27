@@ -645,9 +645,14 @@ func CheckDHCTLDependencies(ctx context.Context, nodeInterface node.Interface) e
 						continue
 					}
 					status, dep := fields[0], fields[1]
+					statusCode, err := strconv.Atoi(status)
+					if err != nil {
+						// Skipping non-numeric output line, hack to bypass problems with the sshd banner
+						continue
+					}
 
 					log.InfoF("Checking '%s' dependency\n", dep)
-					if status == "1" {
+					if statusCode == 1 {
 						log.Success(fmt.Sprintf("Dependency '%s' is available\n", dep))
 					} else {
 						log.WarnLn(fmt.Sprintf("Dependency '%s' is missing!\n", dep))
@@ -739,7 +744,6 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
