@@ -1,0 +1,83 @@
+Subject: [PATCH] go mod patch
+---
+Index: go.sum
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.sum b/go.sum
+--- a/go.sum	(revision be88f44271050f69d52f410bca388834afedfe71)
++++ b/go.sum	(date 1771272572000)
+@@ -191,8 +191,8 @@
+ github.com/hashicorp/terraform-plugin-mux v0.19.0/go.mod h1:MO+7zYzrMz2Ohc5r8m7sM6YT+F8ET4lgYKe2GhiYW0g=
+ github.com/hashicorp/terraform-plugin-sdk/v2 v2.37.0 h1:NFPMacTrY/IdcIcnUB+7hsore1ZaRWU9cnB6jFoBnIM=
+ github.com/hashicorp/terraform-plugin-sdk/v2 v2.37.0/go.mod h1:QYmYnLfsosrxjCnGY1p9c7Zj6n9thnEE+7RObeYs3fA=
+-github.com/hashicorp/terraform-plugin-testing v1.13.0 h1:vTELm6x3Z4H9VO3fbz71wbJhbs/5dr5DXfIwi3GMmPY=
+-github.com/hashicorp/terraform-plugin-testing v1.13.0/go.mod h1:b/hl6YZLm9fjeud/3goqh/gdqhZXbRfbHMkEiY9dZwc=
++github.com/hashicorp/terraform-plugin-testing v1.13.1 h1:0nhSm8lngGTggqXptU4vunFI0S2XjLAhJg3RylC5aLw=
++github.com/hashicorp/terraform-plugin-testing v1.13.1/go.mod h1:b/hl6YZLm9fjeud/3goqh/gdqhZXbRfbHMkEiY9dZwc=
+ github.com/hashicorp/terraform-registry-address v0.2.5 h1:2GTftHqmUhVOeuu9CW3kwDkRe4pcBDq0uuK5VJngU1M=
+ github.com/hashicorp/terraform-registry-address v0.2.5/go.mod h1:PpzXWINwB5kuVS5CA7m1+eO2f1jKb5ZDIxrOPfpnGkg=
+ github.com/hashicorp/terraform-svchost v0.1.1 h1:EZZimZ1GxdqFRinZ1tpJwVxxt49xc/S52uzrw4x0jKQ=
+@@ -339,6 +339,12 @@
+ github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
+ github.com/stretchr/testify v1.8.3 h1:RP3t2pwF7cMEbC1dqtB6poj3niw/9gnV4Cjg5oW5gtY=
+ github.com/stretchr/testify v1.8.3/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
++github.com/tidwall/gjson v1.18.0 h1:FIDeeyB800efLX89e5a8Y0BNH+LOngJyGrIWxG2FKQY=
++github.com/tidwall/gjson v1.18.0/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
++github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=
++github.com/tidwall/match v1.1.1/go.mod h1:eRSPERbgtNPcGhD8UCthc6PmLEQXEWd3PRB5JTxsfmM=
++github.com/tidwall/pretty v1.2.0 h1:RWIZEg2iJ8/g6fDDYzMpobmaoGh5OLl4AXtGUGPcqCs=
++github.com/tidwall/pretty v1.2.0/go.mod h1:ITEVvHYasfjBbM0u2Pg8T2nJnzm8xPwvNhhsoaGGjNU=
+ github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
+ github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=
+ github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
+@@ -530,8 +536,6 @@
+ k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9/go.mod h1:wZK2AVp1uHCp4VamDVgBP2COHZjqD1T68Rf0CM3YjSM=
+ k8s.io/kubectl v0.28.6 h1:46O3gGJYlpqy7wtwYlggieemyIcuZqmflnQVDci3MgY=
+ k8s.io/kubectl v0.28.6/go.mod h1:FS5ugZhi3kywpMQSCnp8MN+gctdFHJACzC6mH3fZ6lc=
+-k8s.io/kubernetes v1.28.6 h1:Nn2fXNjaqmKyXeFq6verbdqzlj1aqUpBcyeC1OhRFa4=
+-k8s.io/kubernetes v1.28.6/go.mod h1:0qpyGJTR3blkbQOmZA3Z0u1VDZJNxJM8ifLUVNJN0X8=
+ k8s.io/utils v0.0.0-20231127182322-b307cd553661 h1:FepOBzJ0GXm8t0su67ln2wAZjbQ6RxQGZDnzuLcrUTI=
+ k8s.io/utils v0.0.0-20231127182322-b307cd553661/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
+ sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
+Index: go.mod
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.mod b/go.mod
+--- a/go.mod	(revision be88f44271050f69d52f410bca388834afedfe71)
++++ b/go.mod	(date 1771272567000)
+@@ -19,12 +19,13 @@
+ 	github.com/hashicorp/terraform-plugin-log v0.9.0
+ 	github.com/hashicorp/terraform-plugin-mux v0.19.0
+ 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.37.0
+-	github.com/hashicorp/terraform-plugin-testing v1.13.0
++	github.com/hashicorp/terraform-plugin-testing v1.13.1
+ 	github.com/jinzhu/copier v0.3.5
+ 	github.com/mitchellh/go-homedir v1.1.0
+ 	github.com/mitchellh/hashstructure v1.1.0
+ 	github.com/robfig/cron v1.2.0
+ 	github.com/stretchr/testify v1.8.3
++	github.com/tidwall/gjson v1.18.0
+ 	golang.org/x/mod v0.24.0
+ 	k8s.io/api v0.28.6
+ 	k8s.io/apiextensions-apiserver v0.28.6
+@@ -32,7 +33,6 @@
+ 	k8s.io/client-go v0.28.6
+ 	k8s.io/kube-aggregator v0.28.6
+ 	k8s.io/kubectl v0.28.6
+-	k8s.io/kubernetes v1.28.6
+ 	sigs.k8s.io/yaml v1.4.0
+ )
+
+@@ -57,6 +57,8 @@
+ 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+ 	github.com/shopspring/decimal v1.3.1 // indirect
+ 	github.com/spf13/cast v1.5.0 // indirect
++	github.com/tidwall/match v1.1.1 // indirect
++	github.com/tidwall/pretty v1.2.0 // indirect
+ 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
+ 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
+ 	golang.org/x/exp v0.0.0-20230809150735-7b3493d9a819 // indirect
