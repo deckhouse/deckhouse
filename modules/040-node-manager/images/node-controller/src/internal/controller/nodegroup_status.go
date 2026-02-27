@@ -43,6 +43,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/conditions"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
@@ -176,23 +178,19 @@ func (r *NodeGroupStatusReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	configChecksum := r.getConfigurationChecksum(ctx, ng.Name)
 
 	var nodesCount, readyCount, upToDateCount int32
-	var updatingNodes, waitingForApprovalNodes []string
+	nodesForConditions := make([]*conditions.Node, 0, len(nodes))
 
 	for _, node := range nodes {
 		nodesCount++
 		if isNodeReady(&node) {
 			readyCount++
 		}
+		nodesForConditions = append(nodesForConditions, conditions.NodeToConditionsNode(&node))
+
 		if configChecksum != "" {
 			nodeChecksum := node.Annotations[ConfigurationChecksumAnnotation]
 			if nodeChecksum == configChecksum {
 				upToDateCount++
-			} else {
-				if node.Annotations[DisruptionRequiredAnnotation] != "" && node.Annotations[ApprovedAnnotation] == "" {
-					waitingForApprovalNodes = append(waitingForApprovalNodes, node.Name)
-				} else {
-					updatingNodes = append(updatingNodes, node.Name)
-				}
 			}
 		}
 	}
@@ -220,10 +218,12 @@ func (r *NodeGroupStatusReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			errorMsg = lastMachineFailures[len(lastMachineFailures)-1].Message
 		}
 	} else {
-		desired = nodesCount
+		// For Static/CloudPermanent, desired stays 0.
+		// conditions.CalculateNodeGroupConditions handles this:
+		// Static + desired=0: isReady = readySchedulableNodes == len(nodes)
 	}
 
-	// Build real error messages for conditions (matches original "|" separator)
+	// Build error list for conditions (matches original "|" separator)
 	var conditionErrors []string
 	if ng.Status.Error != "" {
 		conditionErrors = append(conditionErrors, ng.Status.Error)
@@ -231,7 +231,6 @@ func (r *NodeGroupStatusReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if errorMsg != "" {
 		conditionErrors = append(conditionErrors, errorMsg)
 	}
-	conditionErrorMsg := strings.Join(conditionErrors, "|")
 
 	// Build combined message for event
 	eventMsg := fmt.Sprintf("%s %s", ng.Status.Error, errorMsg)
@@ -247,14 +246,35 @@ func (r *NodeGroupStatusReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		statusMsg = "Machine creation failed. Check events for details."
 	}
 
-	conditions := r.calculateConditions(ng, nodes, readyCount, desired, instancesCount, isFrozen, conditionErrorMsg, updatingNodes, waitingForApprovalNodes)
-	conditionSummary := r.calculateConditionSummary(conditions, statusMsg)
+	// Use the original conditions package for calculation
+	ngForConditions := conditions.NodeGroup{
+		Type:                       ngv1.NodeType(ng.Spec.NodeType),
+		Desired:                    desired,
+		Instances:                  instancesCount,
+		HasFrozenMachineDeployment: isFrozen,
+	}
+
+	// Convert existing metav1.Condition to ngv1.NodeGroupCondition for the conditions package
+	existingNgConditions := convertToNgConditions(ng.Status.Conditions)
+
+	ngConditions := conditions.CalculateNodeGroupConditions(
+		ngForConditions,
+		nodesForConditions,
+		existingNgConditions,
+		conditionErrors,
+		int(minCount),
+	)
+
+	// Convert back to metav1.Condition for controller-runtime
+	newConditions := convertFromNgConditions(ngConditions)
+
+	conditionSummary := r.calculateConditionSummary(newConditions, statusMsg)
 
 	patch := client.MergeFrom(ng.DeepCopy())
 	ng.Status.Nodes = nodesCount
 	ng.Status.Ready = readyCount
 	ng.Status.UpToDate = upToDateCount
-	ng.Status.Conditions = conditions
+	ng.Status.Conditions = newConditions
 	ng.Status.ConditionSummary = conditionSummary
 	ng.Status.Error = statusMsg
 
@@ -452,86 +472,88 @@ func (r *NodeGroupStatusReconciler) createEventIfChanged(ng *v1.NodeGroup, msg s
 	r.lastEventMessages.Store(ng.Name, msg)
 }
 
-func (r *NodeGroupStatusReconciler) calculateConditions(ng *v1.NodeGroup, nodes []corev1.Node, readyCount, desired, instances int32, isFrozen bool, errorMsg string, updatingNodes, waitingForApprovalNodes []string) []metav1.Condition {
-	now := metav1.Now()
-	existing := ng.Status.Conditions
-	conditions := make([]metav1.Condition, 0, 6)
-	nodesCount := int32(len(nodes))
-
-	// Ready
-	readyCond := metav1.Condition{Type: ConditionTypeReady}
-	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
-		if readyCount >= desired && desired > 0 {
-			readyCond.Status, readyCond.Reason, readyCond.Message = metav1.ConditionTrue, "AllNodesReady", fmt.Sprintf("All %d nodes are ready", readyCount)
-		} else if desired == 0 {
-			readyCond.Status, readyCond.Reason, readyCond.Message = metav1.ConditionFalse, "NoNodesDesired", "No nodes desired"
-		} else {
-			readyCond.Status, readyCond.Reason, readyCond.Message = metav1.ConditionFalse, "NotAllNodesReady", fmt.Sprintf("%d of %d nodes are ready", readyCount, desired)
+// convertToNgConditions converts controller-runtime metav1.Condition to the
+// ngv1.NodeGroupCondition format expected by the conditions package.
+func convertToNgConditions(conds []metav1.Condition) []ngv1.NodeGroupCondition {
+	result := make([]ngv1.NodeGroupCondition, 0, len(conds))
+	for _, c := range conds {
+		ngCond := ngv1.NodeGroupCondition{
+			Type:               ngv1.NodeGroupConditionType(c.Type),
+			LastTransitionTime: c.LastTransitionTime,
 		}
-	} else {
-		if nodesCount > 0 && readyCount == nodesCount {
-			readyCond.Status, readyCond.Reason, readyCond.Message = metav1.ConditionTrue, "AllNodesReady", fmt.Sprintf("All %d nodes are ready", readyCount)
-		} else if nodesCount == 0 {
-			readyCond.Status, readyCond.Reason, readyCond.Message = metav1.ConditionFalse, "NoNodes", "No nodes in the group"
-		} else {
-			readyCond.Status, readyCond.Reason, readyCond.Message = metav1.ConditionFalse, "NotAllNodesReady", fmt.Sprintf("%d of %d nodes are ready", readyCount, nodesCount)
+		switch c.Status {
+		case metav1.ConditionTrue:
+			ngCond.Status = ngv1.ConditionTrue
+		case metav1.ConditionFalse:
+			ngCond.Status = ngv1.ConditionFalse
+		default:
+			ngCond.Status = ngv1.ConditionFalse
 		}
+		ngCond.Message = c.Message
+		result = append(result, ngCond)
 	}
-	setConditionTime(&readyCond, existing, now)
-	conditions = append(conditions, readyCond)
-
-	// Updating
-	updatingCond := metav1.Condition{Type: ConditionTypeUpdating, Status: metav1.ConditionFalse, Reason: "NoUpdatesInProgress"}
-	if len(updatingNodes) > 0 {
-		updatingCond.Status, updatingCond.Reason, updatingCond.Message = metav1.ConditionTrue, "NodesUpdating", fmt.Sprintf("Nodes updating: %s", strings.Join(updatingNodes, ", "))
-	}
-	setConditionTime(&updatingCond, existing, now)
-	conditions = append(conditions, updatingCond)
-
-	// WaitingForDisruptiveApproval
-	waitingCond := metav1.Condition{Type: ConditionTypeWaitingForDisruptiveApproval, Status: metav1.ConditionFalse, Reason: "NoDisruptiveUpdates"}
-	if len(waitingForApprovalNodes) > 0 {
-		waitingCond.Status, waitingCond.Reason, waitingCond.Message = metav1.ConditionTrue, "WaitingForApproval", fmt.Sprintf("Nodes waiting for approval: %s", strings.Join(waitingForApprovalNodes, ", "))
-	}
-	setConditionTime(&waitingCond, existing, now)
-	conditions = append(conditions, waitingCond)
-
-	// Error
-	errorCond := metav1.Condition{Type: ConditionTypeError, Status: metav1.ConditionFalse, Reason: "NoErrors"}
-	if errorMsg != "" {
-		errorCond.Status, errorCond.Reason, errorCond.Message = metav1.ConditionTrue, "ErrorOccurred", strings.TrimSpace(errorMsg)
-	}
-	setConditionTime(&errorCond, existing, now)
-	conditions = append(conditions, errorCond)
-
-	// Scaling (CloudEphemeral only)
-	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
-		scalingCond := metav1.Condition{Type: ConditionTypeScaling, Status: metav1.ConditionFalse, Reason: "NotScaling", Message: "Desired number of instances reached"}
-		if instances < desired {
-			scalingCond.Status, scalingCond.Reason, scalingCond.Message = metav1.ConditionTrue, "ScalingUp", fmt.Sprintf("Scaling up: %d instances, %d desired", instances, desired)
-		} else if instances > desired {
-			scalingCond.Status, scalingCond.Reason, scalingCond.Message = metav1.ConditionTrue, "ScalingDown", fmt.Sprintf("Scaling down: %d instances, %d desired", instances, desired)
-		}
-		setConditionTime(&scalingCond, existing, now)
-		conditions = append(conditions, scalingCond)
-
-		if isFrozen {
-			frozenCond := metav1.Condition{Type: ConditionTypeFrozen, Status: metav1.ConditionTrue, Reason: "MachineDeploymentFrozen", Message: "MachineDeployment is frozen due to errors"}
-			setConditionTime(&frozenCond, existing, now)
-			conditions = append(conditions, frozenCond)
-		}
-	}
-	return conditions
+	return result
 }
 
-func setConditionTime(cond *metav1.Condition, existing []metav1.Condition, now metav1.Time) {
-	for i := range existing {
-		if existing[i].Type == cond.Type && existing[i].Status == cond.Status {
-			cond.LastTransitionTime = existing[i].LastTransitionTime
-			return
+// convertFromNgConditions converts ngv1.NodeGroupCondition back to metav1.Condition
+// for the controller-runtime status patch.
+func convertFromNgConditions(conds []ngv1.NodeGroupCondition) []metav1.Condition {
+	result := make([]metav1.Condition, 0, len(conds))
+	for _, c := range conds {
+		cond := metav1.Condition{
+			Type:               string(c.Type),
+			Message:            c.Message,
+			LastTransitionTime: c.LastTransitionTime,
+		}
+		switch c.Status {
+		case ngv1.ConditionTrue:
+			cond.Status = metav1.ConditionTrue
+		case ngv1.ConditionFalse:
+			cond.Status = metav1.ConditionFalse
+		default:
+			cond.Status = metav1.ConditionFalse
+		}
+
+		// Set Reason based on condition type and status (required by metav1.Condition)
+		cond.Reason = reasonForCondition(string(c.Type), cond.Status)
+		result = append(result, cond)
+	}
+	return result
+}
+
+// reasonForCondition returns a CamelCase reason string for the given condition.
+// metav1.Condition requires Reason to be non-empty.
+func reasonForCondition(condType string, status metav1.ConditionStatus) string {
+	if status == metav1.ConditionTrue {
+		switch condType {
+		case ConditionTypeReady:
+			return "AllNodesReady"
+		case ConditionTypeUpdating:
+			return "NodesUpdating"
+		case ConditionTypeWaitingForDisruptiveApproval:
+			return "WaitingForApproval"
+		case ConditionTypeError:
+			return "ErrorOccurred"
+		case ConditionTypeScaling:
+			return "Scaling"
+		default:
+			return "True"
 		}
 	}
-	cond.LastTransitionTime = now
+	switch condType {
+	case ConditionTypeReady:
+		return "NotReady"
+	case ConditionTypeUpdating:
+		return "NoUpdatesInProgress"
+	case ConditionTypeWaitingForDisruptiveApproval:
+		return "NoDisruptiveUpdates"
+	case ConditionTypeError:
+		return "NoErrors"
+	case ConditionTypeScaling:
+		return "NotScaling"
+	default:
+		return "False"
+	}
 }
 
 func (r *NodeGroupStatusReconciler) calculateConditionSummary(conditions []metav1.Condition, statusMsg string) *v1.ConditionSummary {
