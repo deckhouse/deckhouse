@@ -74,7 +74,7 @@ require (
 	github.com/golangci/misspell v0.3.5 // indirect
 	github.com/golangci/revgrep v0.0.0-20210208091834-cd28932614b5 // indirect
 	github.com/golangci/unconvert v0.0.0-20180507085042-28b1c447d1f4 // indirect
-	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
+	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
@@ -194,7 +194,7 @@ require (
 	k8s.io/apimachinery v0.32.10 // indirect
 	k8s.io/client-go v0.32.10 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
+	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7 // indirect
 	mvdan.cc/gofumpt v0.1.1 // indirect
 	mvdan.cc/interfacer v0.0.0-20180901003855-c20040233aed // indirect
 	mvdan.cc/lint v0.0.0-20170908181259-adc824a0674b // indirect
