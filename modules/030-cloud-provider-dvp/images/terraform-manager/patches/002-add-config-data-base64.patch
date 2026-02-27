@@ -1,162 +1,23 @@
-From d4b6fce4ea6ebb8c736eda63d3262402dc5651cf Mon Sep 17 00:00:00 2001
-From: Yaroslav Borbat <yaroslav.borbat@flant.com>
-Date: Fri, 22 Mar 2024 15:33:41 +0300
-Subject: [PATCH 1/3] add argument config_data_base64
-
-Signed-off-by: Yaroslav Borbat <yaroslav.borbat@flant.com>
+Subject: [PATCH] add argument config_data_base64
 ---
- internal/framework/provider/provider.go       |  6 +++
- .../framework/provider/provider_configure.go  |  4 ++
- kubernetes/provider.go                        | 28 ++++++++++----
- manifest/provider/configure.go                | 31 +++++++++++++--
- manifest/provider/provider_config.go          | 11 ++++++
- util/loader.go                                | 38 +++++++++++++++++++
- 6 files changed, 107 insertions(+), 11 deletions(-)
- create mode 100644 util/loader.go
-
-diff --git a/internal/framework/provider/provider.go b/internal/framework/provider/provider.go
-index 7c6c6bb18e..82418244a3 100644
---- a/internal/framework/provider/provider.go
-+++ b/internal/framework/provider/provider.go
-@@ -59,6 +59,8 @@ type KubernetesProviderModel struct {
-
- 	ProxyURL types.String `tfsdk:"proxy_url"`
-
-+	ConfigDataBase64 types.String `tfsdk:"config_data_base64"`
-+
- 	IgnoreAnnotations types.List `tfsdk:"ignore_annotations"`
- 	IgnoreLabels      types.List `tfsdk:"ignore_labels"`
-
-@@ -143,6 +145,10 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
- 				Description: "URL to the proxy to be used for all API requests",
- 				Optional:    true,
- 			},
-+			"config_data_base64": schema.StringAttribute{
-+				Description: "Kubeconfig content in base64 format",
-+				Optional:    true,
-+			},
- 			"ignore_annotations": schema.ListAttribute{
- 				ElementType: types.StringType,
- 				Description: "List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.",
-diff --git a/internal/framework/provider/provider_configure.go b/internal/framework/provider/provider_configure.go
-index 46898a51e1..77ad5cbce1 100644
---- a/internal/framework/provider/provider_configure.go
-+++ b/internal/framework/provider/provider_configure.go
-@@ -5,6 +5,10 @@ package provider
-
- import (
- 	"context"
-+	"fmt"
-+	"github.com/hashicorp/terraform-provider-kubernetes/util"
-+	"os"
-+	"path/filepath"
-
- 	"github.com/hashicorp/terraform-plugin-framework/provider"
-
-diff --git a/kubernetes/provider.go b/kubernetes/provider.go
-index f0018379df..f759e5cfd6 100644
---- a/kubernetes/provider.go
-+++ b/kubernetes/provider.go
-@@ -7,6 +7,7 @@ import (
- 	"bytes"
- 	"context"
- 	"fmt"
-+	"github.com/hashicorp/terraform-provider-kubernetes/util"
- 	"log"
- 	"net/http"
- 	"os"
-@@ -21,7 +22,6 @@ import (
- 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
- 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
- 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
--
- 	"k8s.io/client-go/discovery"
- 	"k8s.io/client-go/dynamic"
- 	"k8s.io/client-go/kubernetes"
-@@ -130,6 +130,13 @@ func Provider() *schema.Provider {
- 				Description: "URL to the proxy to be used for all API requests",
- 				DefaultFunc: schema.EnvDefaultFunc("KUBE_PROXY_URL", ""),
- 			},
-+			"config_data_base64": {
-+				Type:          schema.TypeString,
-+				Optional:      true,
-+				Description:   "Kubeconfig content in base64 format",
-+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_DATA_BASE64", nil),
-+				ConflictsWith: []string{"config_path", "config_paths"},
-+			},
- 			"exec": {
- 				Type:     schema.TypeList,
- 				Optional: true,
-@@ -500,9 +507,9 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
- func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.Diagnostics) {
- 	diags := make(diag.Diagnostics, 0)
- 	overrides := &clientcmd.ConfigOverrides{}
--	loader := &clientcmd.ClientConfigLoadingRules{}
-+	fileLoader := &clientcmd.ClientConfigLoadingRules{}
-
--	configPaths := []string{}
-+	var configPaths []string
-
- 	if v, ok := d.Get("config_path").(string); ok && v != "" {
- 		configPaths = []string{v}
-@@ -517,7 +524,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
- 	}
-
- 	if len(configPaths) > 0 {
--		expandedPaths := []string{}
-+		var expandedPaths []string
- 		for _, p := range configPaths {
- 			path, err := homedir.Expand(p)
- 			if err != nil {
-@@ -529,9 +536,9 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
- 		}
-
- 		if len(expandedPaths) == 1 {
--			loader.ExplicitPath = expandedPaths[0]
-+			fileLoader.ExplicitPath = expandedPaths[0]
- 		} else {
--			loader.Precedence = expandedPaths
-+			fileLoader.Precedence = expandedPaths
- 		}
-
- 		ctxSuffix := "; default context"
-@@ -558,7 +565,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
- 			}
- 			log.Printf("[DEBUG] Using overridden context: %#v", overrides.Context)
- 		}
--	}
-+
-
- 	// Overriding with static configuration
- 	if v, ok := d.GetOk("insecure"); ok {
-@@ -631,7 +638,14 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
- 		overrides.ClusterDefaults.ProxyURL = v.(string)
- 	}
-
-+	var configDataBase64 string
-+	if v, ok := d.GetOk("config_data_base64"); ok {
-+		configDataBase64 = v.(string)
-+	}
-+
-+	loader := util.NewConfigLoader(fileLoader, configDataBase64)
- 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
-+
- 	cfg, err := cc.ClientConfig()
- 	if err != nil {
- 		nd := diag.Diagnostic{
+Index: manifest/provider/configure.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/manifest/provider/configure.go b/manifest/provider/configure.go
-index cd57f8a209..7a9e554d88 100644
---- a/manifest/provider/configure.go
-+++ b/manifest/provider/configure.go
-@@ -8,6 +8,7 @@ import (
- 	"encoding/pem"
- 	"errors"
- 	"fmt"
+--- a/manifest/provider/configure.go	(revision be88f44271050f69d52f410bca388834afedfe71)
++++ b/manifest/provider/configure.go	(date 1772208909371)
+@@ -14,6 +14,8 @@
+ 	"strconv"
+ 	"strings"
+
 +	"github.com/hashicorp/terraform-provider-kubernetes/util"
- 	"net/url"
- 	"os"
- 	"path/filepath"
-@@ -68,7 +69,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
++
+ 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+ 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+ 	"github.com/mitchellh/go-homedir"
+@@ -68,7 +70,7 @@
  	}
 
  	overrides := &clientcmd.ConfigOverrides{}
@@ -165,7 +26,7 @@ index cd57f8a209..7a9e554d88 100644
 
  	// Handle 'config_path' attribute
  	//
-@@ -101,8 +102,30 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
+@@ -101,8 +103,30 @@
  				Detail:   fmt.Sprintf("'config_path' refers to an invalid path: %q: %v", configPathAbs, err),
  			})
  		}
@@ -197,7 +58,7 @@ index cd57f8a209..7a9e554d88 100644
  	// Handle 'config_paths' attribute
  	//
  	var precedence []string
-@@ -143,7 +166,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
+@@ -143,7 +167,7 @@
  			}
  			precedence[i] = absPath
  		}
@@ -206,7 +67,7 @@ index cd57f8a209..7a9e554d88 100644
  	}
 
  	// Handle 'client_certificate' attribute
-@@ -589,7 +612,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
+@@ -589,7 +613,7 @@
  			overrides.AuthInfo.Exec = &execCfg
  		}
  	}
@@ -215,15 +76,160 @@ index cd57f8a209..7a9e554d88 100644
  	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
  	clientConfig, err := cc.ClientConfig()
  	if err != nil {
+Index: kubernetes/provider.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/kubernetes/provider.go b/kubernetes/provider.go
+--- a/kubernetes/provider.go	(revision be88f44271050f69d52f410bca388834afedfe71)
++++ b/kubernetes/provider.go	(date 1772209214006)
+@@ -11,8 +11,14 @@
+ 	"net/http"
+ 	"os"
+ 	"path/filepath"
++	"reflect"
+ 	"strconv"
+
++	"github.com/hashicorp/terraform-provider-kubernetes/util"
++	"k8s.io/apimachinery/pkg/api/meta"
++	"k8s.io/client-go/discovery/cached/memory"
++	"k8s.io/client-go/restmapper"
++
+ 	"github.com/hashicorp/go-cty/cty"
+ 	gversion "github.com/hashicorp/go-version"
+ 	"github.com/mitchellh/go-homedir"
+@@ -21,7 +27,6 @@
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+-
+ 	"k8s.io/client-go/discovery"
+ 	"k8s.io/client-go/dynamic"
+ 	"k8s.io/client-go/kubernetes"
+@@ -130,6 +135,13 @@
+ 				Description: "URL to the proxy to be used for all API requests",
+ 				DefaultFunc: schema.EnvDefaultFunc("KUBE_PROXY_URL", ""),
+ 			},
++			"config_data_base64": {
++				Type:          schema.TypeString,
++				Optional:      true,
++				Description:   "Kubeconfig content in base64 format",
++				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_DATA_BASE64", nil),
++				ConflictsWith: []string{"config_path", "config_paths"},
++			},
+ 			"exec": {
+ 				Type:     schema.TypeList,
+ 				Optional: true,
+@@ -360,6 +372,9 @@
+
+ 			//node
+ 			"kubernetes_runtime_class_v1": resourceKubernetesRuntimeClassV1(),
++
++			// readiness
++			"kubernetes_resource_ready_v1": resourceKubernetesResourceReadyV1(),
+ 		},
+ 	}
+
+@@ -380,6 +395,7 @@
+ 	AggregatorClientset() (*aggregator.Clientset, error)
+ 	DynamicClient() (dynamic.Interface, error)
+ 	DiscoveryClient() (discovery.DiscoveryInterface, error)
++	RESTMapper() (meta.RESTMapper, error)
+ }
+
+ type providerMetadata struct {
+@@ -390,6 +406,7 @@
+ 	aggregatorClientset *aggregator.Clientset
+ 	dynamicClient       dynamic.Interface
+ 	discoveryClient     discovery.DiscoveryInterface
++	restMapper          meta.RESTMapper
+
+ 	IgnoreAnnotations []string
+ 	IgnoreLabels      []string
+@@ -454,6 +471,22 @@
+ 	return k.discoveryClient, nil
+ }
+
++func (k providerMetadata) RESTMapper() (meta.RESTMapper, error) {
++	if k.restMapper != nil && !reflect.ValueOf(k.restMapper).IsNil() {
++		return k.restMapper, nil
++	}
++
++	dc, err := k.DiscoveryClient()
++	if err != nil {
++		return nil, err
++	}
++
++	cacheClient := memory.NewMemCacheClient(dc)
++	k.restMapper = restmapper.NewDeferredDiscoveryRESTMapper(cacheClient)
++
++	return k.restMapper, nil
++}
++
+ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
+ 	// Config initialization
+ 	cfg, diags := initializeConfiguration(d)
+@@ -500,9 +533,9 @@
+ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.Diagnostics) {
+ 	diags := make(diag.Diagnostics, 0)
+ 	overrides := &clientcmd.ConfigOverrides{}
+-	loader := &clientcmd.ClientConfigLoadingRules{}
++	fileLoader := &clientcmd.ClientConfigLoadingRules{}
+
+-	configPaths := []string{}
++	var configPaths []string
+
+ 	if v, ok := d.Get("config_path").(string); ok && v != "" {
+ 		configPaths = []string{v}
+@@ -517,7 +550,7 @@
+ 	}
+
+ 	if len(configPaths) > 0 {
+-		expandedPaths := []string{}
++		var expandedPaths []string
+ 		for _, p := range configPaths {
+ 			path, err := homedir.Expand(p)
+ 			if err != nil {
+@@ -529,9 +562,9 @@
+ 		}
+
+ 		if len(expandedPaths) == 1 {
+-			loader.ExplicitPath = expandedPaths[0]
++			fileLoader.ExplicitPath = expandedPaths[0]
+ 		} else {
+-			loader.Precedence = expandedPaths
++			fileLoader.Precedence = expandedPaths
+ 		}
+
+ 		ctxSuffix := "; default context"
+@@ -631,7 +664,14 @@
+ 		overrides.ClusterDefaults.ProxyURL = v.(string)
+ 	}
+
++	var configDataBase64 string
++	if v, ok := d.GetOk("config_data_base64"); ok {
++		configDataBase64 = v.(string)
++	}
++
++	loader := util.NewConfigLoader(fileLoader, configDataBase64)
+ 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
++
+ 	cfg, err := cc.ClientConfig()
+ 	if err != nil {
+ 		nd := diag.Diagnostic{
+Index: manifest/provider/provider_config.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/manifest/provider/provider_config.go b/manifest/provider/provider_config.go
-index 2adfb1cc63..a109f245eb 100644
---- a/manifest/provider/provider_config.go
-+++ b/manifest/provider/provider_config.go
-@@ -178,6 +178,17 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
- 				DescriptionKind: 0,
+--- a/manifest/provider/provider_config.go	(revision be88f44271050f69d52f410bca388834afedfe71)
++++ b/manifest/provider/provider_config.go	(date 1772208810025)
+@@ -179,6 +179,17 @@
  				Deprecated:      false,
  			},
-+			{
+ 			{
 +				Name:            "config_data_base64",
 +				Type:            tftypes.String,
 +				Description:     "Kubeconfig content in base64 format",
@@ -234,14 +240,154 @@ index 2adfb1cc63..a109f245eb 100644
 +				DescriptionKind: 0,
 +				Deprecated:      false,
 +			},
- 			{
++			{
  				Name:            "ignore_annotations",
  				Type:            tftypes.List{ElementType: tftypes.String},
+ 				Description:     "List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.",
+Index: kubernetes/provider_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/kubernetes/provider_test.go b/kubernetes/provider_test.go
+--- a/kubernetes/provider_test.go	(revision be88f44271050f69d52f410bca388834afedfe71)
++++ b/kubernetes/provider_test.go	(date 1772209356771)
+@@ -5,6 +5,7 @@
+
+ import (
+ 	"context"
++	"encoding/base64"
+ 	"errors"
+ 	"fmt"
+ 	"net/url"
+@@ -106,6 +107,24 @@
+ 	}
+ }
+
++func TestProvider_configure_config_data_base64(t *testing.T) {
++	ctx := context.TODO()
++	resetEnv := unsetEnv(t)
++	defer resetEnv()
++	data, err := os.ReadFile("test-fixtures/kube-config-sa-token.yaml")
++	if err != nil {
++		t.Fatal("Cannot read kubeconfig")
++	}
++	data64 := base64.StdEncoding.EncodeToString(data)
++	os.Setenv("KUBE_CONFIG_DATA_BASE64", data64)
++	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
++	p := Provider()
++	diags := p.Configure(ctx, rc)
++	if diags.HasError() {
++		t.Fatal(diags)
++	}
++}
++
+ func unsetEnv(t *testing.T) func() {
+ 	e := getEnv()
+
+@@ -124,6 +143,7 @@
+ 		"KUBE_INSECURE":             e.Insecure,
+ 		"KUBE_TLS_SERVER_NAME":      e.TLSServerName,
+ 		"KUBE_TOKEN":                e.Token,
++		"KUBE_CONFIG_DATA_BASE64":   e.ConfigDataBase64,
+ 	}
+
+ 	for k := range envVars {
+@@ -162,11 +182,15 @@
+ 	if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
+ 		e.ConfigPaths = filepath.SplitList(v)
+ 	}
++	if v := os.Getenv("KUBE_CONFIG_DATA_BASE64"); v != "" {
++		e.ConfigDataBase64 = v
++	}
+ 	return e
+ }
+
+ func testAccPreCheck(t *testing.T) {
+ 	ctx := context.TODO()
++	base64KubeConfig := getBase64KubeConfig()
+ 	hasFileCfg := (os.Getenv("KUBE_CTX_AUTH_INFO") != "" && os.Getenv("KUBE_CTX_CLUSTER") != "") ||
+ 		os.Getenv("KUBE_CTX") != "" ||
+ 		os.Getenv("KUBE_CONFIG_PATH") != ""
+@@ -176,7 +200,7 @@
+ 		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "") &&
+ 		(hasUserCredentials || hasClientCert || os.Getenv("KUBE_TOKEN") != "")
+
+-	if !hasFileCfg && !hasStaticCfg && !hasUserCredentials {
++	if base64KubeConfig == "" && !hasFileCfg && !hasStaticCfg && !hasUserCredentials {
+ 		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER) or static configuration"+
+ 			"(%s) or (%s) must be set for acceptance tests",
+ 			strings.Join([]string{
+@@ -194,7 +218,15 @@
+ 		)
+ 	}
+
+-	diags := testAccProvider.Configure(ctx, terraform.NewResourceConfigRaw(nil))
++	var data map[string]any
++
++	if base64KubeConfig != "" {
++		data = map[string]any{
++			"config_data_base64": base64KubeConfig,
++		}
++	}
++
++	diags := testAccProvider.Configure(ctx, terraform.NewResourceConfigRaw(data))
+ 	if diags.HasError() {
+ 		t.Fatal(diags[0].Summary)
+ 	}
+@@ -485,6 +517,7 @@
+
+ type currentEnv struct {
+ 	ConfigPath        string
++	ConfigDataBase64  string
+ 	ConfigPaths       []string
+ 	Ctx               string
+ 	CtxAuthInfo       string
+@@ -499,3 +532,7 @@
+ 	TLSServerName     string
+ 	Token             string
+ }
++
++func getBase64KubeConfig() string {
++	return os.Getenv("KUBE_CONFIG_DATA_BASE64")
++}
+Index: internal/framework/provider/provider.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/framework/provider/provider.go b/internal/framework/provider/provider.go
+--- a/internal/framework/provider/provider.go	(revision be88f44271050f69d52f410bca388834afedfe71)
++++ b/internal/framework/provider/provider.go	(date 1772208809900)
+@@ -59,6 +59,8 @@
+
+ 	ProxyURL types.String `tfsdk:"proxy_url"`
+
++	ConfigDataBase64 types.String `tfsdk:"config_data_base64"`
++
+ 	IgnoreAnnotations types.List `tfsdk:"ignore_annotations"`
+ 	IgnoreLabels      types.List `tfsdk:"ignore_labels"`
+
+@@ -142,6 +144,10 @@
+ 			"proxy_url": schema.StringAttribute{
+ 				Description: "URL to the proxy to be used for all API requests",
+ 				Optional:    true,
++			},
++			"config_data_base64": schema.StringAttribute{
++				Description: "Kubeconfig content in base64 format",
++				Optional:    true,
+ 			},
+ 			"ignore_annotations": schema.ListAttribute{
+ 				ElementType: types.StringType,
+Index: util/loader.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/util/loader.go b/util/loader.go
 new file mode 100644
-index 0000000000..768c3083f4
---- /dev/null
-+++ b/util/loader.go
+--- /dev/null	(date 1772208810040)
++++ b/util/loader.go	(date 1772208810040)
 @@ -0,0 +1,38 @@
 +package util
 +
@@ -281,87 +427,15 @@ index 0000000000..768c3083f4
 +	}
 +	return &cfg, nil
 +}
-
-From 8335427b580d333d7dab0a5ce30cbc46ccb6e492 Mon Sep 17 00:00:00 2001
-From: Yaroslav Borbat <yaroslav.borbat@flant.com>
-Date: Mon, 25 Mar 2024 12:41:42 +0300
-Subject: [PATCH 2/3] add test
-
-Signed-off-by: Yaroslav Borbat <yaroslav.borbat@flant.com>
----
- kubernetes/provider_test.go                   | 24 +++++++++++++++++++
- .../test-fixtures/kube-config-sa-token.yaml   | 21 ++++++++++++++++
- 2 files changed, 45 insertions(+)
- create mode 100644 kubernetes/test-fixtures/kube-config-sa-token.yaml
-
-diff --git a/kubernetes/provider_test.go b/kubernetes/provider_test.go
-index 1158b51f34..6950279680 100644
---- a/kubernetes/provider_test.go
-+++ b/kubernetes/provider_test.go
-@@ -5,6 +5,7 @@ package kubernetes
-
- import (
- 	"context"
-+	"encoding/base64"
- 	"errors"
- 	"fmt"
- 	"net/url"
-@@ -102,6 +103,24 @@ func TestProvider_configure_paths(t *testing.T) {
- 	}
- }
-
-+func TestProvider_configure_config_data_base64(t *testing.T) {
-+	ctx := context.TODO()
-+	resetEnv := unsetEnv(t)
-+	defer resetEnv()
-+	data, err := os.ReadFile("test-fixtures/kube-config-sa-token.yaml")
-+	if err != nil {
-+		t.Fatal("Cannot read kubeconfig")
-+	}
-+	data64 := base64.StdEncoding.EncodeToString(data)
-+	os.Setenv("KUBE_CONFIG_DATA_BASE64", data64)
-+	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
-+	p := Provider()
-+	diags := p.Configure(ctx, rc)
-+	if diags.HasError() {
-+		t.Fatal(diags)
-+	}
-+}
-+
- func unsetEnv(t *testing.T) func() {
- 	e := getEnv()
-
-@@ -120,6 +139,7 @@ func unsetEnv(t *testing.T) func() {
- 		"KUBE_INSECURE":             e.Insecure,
- 		"KUBE_TLS_SERVER_NAME":      e.TLSServerName,
- 		"KUBE_TOKEN":                e.Token,
-+		"KUBE_CONFIG_DATA_BASE64":   e.ConfigDataBase64,
- 	}
-
- 	for k := range envVars {
-@@ -158,6 +178,9 @@ func getEnv() *currentEnv {
- 	if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
- 		e.ConfigPaths = filepath.SplitList(v)
- 	}
-+	if v := os.Getenv("KUBE_CONFIG_DATA_BASE64"); v != "" {
-+		e.ConfigDataBase64 = v
-+	}
- 	return e
- }
-
-@@ -482,6 +505,7 @@ func clusterVersionGreaterThanOrEqual(vs string) bool {
-
- type currentEnv struct {
- 	ConfigPath        string
-+	ConfigDataBase64  string
- 	ConfigPaths       []string
- 	Ctx               string
- 	CtxAuthInfo       string
+Index: kubernetes/test-fixtures/kube-config-sa-token.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/kubernetes/test-fixtures/kube-config-sa-token.yaml b/kubernetes/test-fixtures/kube-config-sa-token.yaml
 new file mode 100644
-index 0000000000..19a3a78206
---- /dev/null
-+++ b/kubernetes/test-fixtures/kube-config-sa-token.yaml
+--- /dev/null	(date 1772208809936)
++++ b/kubernetes/test-fixtures/kube-config-sa-token.yaml	(date 1772208809936)
 @@ -0,0 +1,21 @@
 +apiVersion: v1
 +kind: Config
@@ -385,81 +459,3 @@ index 0000000000..19a3a78206
 +    user:
 +      token: ZHVtbXk=
 \ No newline at end of file
-
-From defbe23846dc6f9f6f93409c173f567dcfcee4ce Mon Sep 17 00:00:00 2001
-From: yaroslavborbat <yaroslav.752@gmail.com>
-Date: Wed, 8 Jan 2025 17:28:57 +0300
-Subject: [PATCH 3/3] fix rebase
-
-Signed-off-by: yaroslavborbat <yaroslav.752@gmail.com>
----
- internal/framework/provider/provider_configure.go | 4 ----
- kubernetes/provider.go                            | 5 +++--
- kubernetes/provider_test.go                       | 3 ++-
- 3 files changed, 5 insertions(+), 7 deletions(-)
-
-diff --git a/internal/framework/provider/provider_configure.go b/internal/framework/provider/provider_configure.go
-index 77ad5cbce1..46898a51e1 100644
---- a/internal/framework/provider/provider_configure.go
-+++ b/internal/framework/provider/provider_configure.go
-@@ -5,10 +5,6 @@ package provider
-
- import (
- 	"context"
--	"fmt"
--	"github.com/hashicorp/terraform-provider-kubernetes/util"
--	"os"
--	"path/filepath"
-
- 	"github.com/hashicorp/terraform-plugin-framework/provider"
-
-diff --git a/kubernetes/provider.go b/kubernetes/provider.go
-index f759e5cfd6..b23bb4147d 100644
---- a/kubernetes/provider.go
-+++ b/kubernetes/provider.go
-@@ -7,13 +7,14 @@ import (
- 	"bytes"
- 	"context"
- 	"fmt"
--	"github.com/hashicorp/terraform-provider-kubernetes/util"
- 	"log"
- 	"net/http"
- 	"os"
- 	"path/filepath"
- 	"strconv"
-
-+	"github.com/hashicorp/terraform-provider-kubernetes/util"
-+
- 	"github.com/hashicorp/go-cty/cty"
- 	gversion "github.com/hashicorp/go-version"
- 	"github.com/mitchellh/go-homedir"
-@@ -565,7 +566,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
- 			}
- 			log.Printf("[DEBUG] Using overridden context: %#v", overrides.Context)
- 		}
--
-+	}
-
- 	// Overriding with static configuration
- 	if v, ok := d.GetOk("insecure"); ok {
-diff --git a/kubernetes/provider_test.go b/kubernetes/provider_test.go
-index 6950279680..6a0e18ddb3 100644
---- a/kubernetes/provider_test.go
-+++ b/kubernetes/provider_test.go
-@@ -186,6 +186,7 @@ func getEnv() *currentEnv {
-
- func testAccPreCheck(t *testing.T) {
- 	ctx := context.TODO()
-+	hasEnvCfg := os.Getenv("KUBE_CONFIG_DATA_BASE64") != ""
- 	hasFileCfg := (os.Getenv("KUBE_CTX_AUTH_INFO") != "" && os.Getenv("KUBE_CTX_CLUSTER") != "") ||
- 		os.Getenv("KUBE_CTX") != "" ||
- 		os.Getenv("KUBE_CONFIG_PATH") != ""
-@@ -195,7 +196,7 @@ func testAccPreCheck(t *testing.T) {
- 		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "") &&
- 		(hasUserCredentials || hasClientCert || os.Getenv("KUBE_TOKEN") != "")
-
--	if !hasFileCfg && !hasStaticCfg && !hasUserCredentials {
-+	if !hasEnvCfg && !hasFileCfg && !hasStaticCfg && !hasUserCredentials {
- 		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER) or static configuration"+
- 			"(%s) or (%s) must be set for acceptance tests",
- 			strings.Join([]string{
