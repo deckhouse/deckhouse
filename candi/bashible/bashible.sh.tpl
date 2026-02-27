@@ -19,6 +19,9 @@ set -Eeo pipefail
 {{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
 {{- tpl $bbnn . }}
 
+{{- $bbnn := .Files.Get "deckhouse/candi/bashible/lib.sh.tpl" -}}
+{{- tpl $bbnn . }}
+
 bb-d8-node-name() {
   echo $(</var/lib/bashible/discovered-node-name)
 }
