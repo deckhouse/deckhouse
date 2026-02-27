@@ -1,0 +1,78 @@
+diff --git a/pkg/revision/dependency.go b/pkg/revision/dependency.go
+index 566ca1d0..06fb521e 100644
+--- a/pkg/revision/dependency.go
++++ b/pkg/revision/dependency.go
+@@ -16,15 +16,9 @@ package revision
+ 
+ import v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+ 
+-// DependsOnIstioCNI returns true if CNI is enabled in the revision
++// DependsOnIstioCNI returns true if the revision should require the IstioCNI resource to be present and healthy.
++// It is currently disabled: the operator does not request or look up the IstioCNI resource, so Istio/IstioRevision
++// status will not show IstioCNINotFound when IstioCNI is missing.
+ func DependsOnIstioCNI(rev *v1.IstioRevision) bool {
+-	// TODO: get actual final values and inspect pilot.cni.enabled
+-	values := rev.Spec.Values
+-	if values == nil {
+-		return false
+-	}
+-	global := values.Global
+-	pilot := values.Pilot
+-	return (global != nil && global.Platform != nil && *global.Platform == "openshift") ||
+-		(pilot != nil && pilot.Cni != nil && pilot.Cni.Enabled != nil && *pilot.Cni.Enabled)
++	return false
+ }
+diff --git a/pkg/revision/dependency_test.go b/pkg/revision/dependency_test.go
+index 3a09df62..d1932b88 100644
+--- a/pkg/revision/dependency_test.go
++++ b/pkg/revision/dependency_test.go
+@@ -73,7 +73,7 @@ func TestDependsOnIstioCNI(t *testing.T) {
+ 					},
+ 				},
+ 			},
+-			expected: true,
++			expected: false, // IstioCNI dependency check is disabled
+ 		},
+ 		{
+ 			name: "GlobalPlatformNotOpenshift",
+@@ -140,7 +140,7 @@ func TestDependsOnIstioCNI(t *testing.T) {
+ 					},
+ 				},
+ 			},
+-			expected: true,
++			expected: false, // IstioCNI dependency check is disabled
+ 		},
+ 		{
+ 			name: "PilotCniDisabled",
+diff --git a/tests/integration/api/istiorevision_test.go b/tests/integration/api/istiorevision_test.go
+index 228513ee..20a488a3 100644
+--- a/tests/integration/api/istiorevision_test.go
++++ b/tests/integration/api/istiorevision_test.go
+@@ -211,23 +211,21 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
+ 			Eventually(k8sClient.Get).WithArguments(ctx, cniKey, cni).Should(ReturnNotFoundError())
+ 		})
+ 
+-		It("shows dependencies unhealthy when IstioCNI is missing", func() {
++		It("reports dependencies healthy when IstioCNI is missing (IstioCNI dependency check disabled)", func() {
+ 			Eventually(func(g Gomega) {
+ 				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+ 				dependenciesHealthyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy)
+-				g.Expect(dependenciesHealthyCondition.Status).To(Equal(metav1.ConditionFalse))
+-				g.Expect(dependenciesHealthyCondition.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotFound))
++				g.Expect(dependenciesHealthyCondition.Status).To(Equal(metav1.ConditionTrue))
+ 			}).Should(Succeed())
+ 		})
+ 
+-		It("shows dependencies unhealthy when IstioCNI is unhealthy", func() {
++		It("reports dependencies healthy when IstioCNI is unhealthy (IstioCNI dependency check disabled)", func() {
+ 			Expect(k8sClient.Create(ctx, cni)).To(Succeed())
+ 
+ 			Eventually(func(g Gomega) {
+ 				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+ 				dependenciesHealthyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy)
+-				g.Expect(dependenciesHealthyCondition.Status).To(Equal(metav1.ConditionFalse))
+-				g.Expect(dependenciesHealthyCondition.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotHealthy))
++				g.Expect(dependenciesHealthyCondition.Status).To(Equal(metav1.ConditionTrue))
+ 			}).Should(Succeed())
+ 		})
+ 

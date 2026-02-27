@@ -94,21 +94,13 @@ lang: ru
 
 Чтобы убедиться в том, что переключение CNI с Flannel на Cilium прошло успешно:
 
-1. Проверьте очередь Deckhouse.
-
-   - В случае одного master-узла:
+1. Проверьте очередь задач кластера.
 
      ```shell
      d8 system queue list
      ```
 
-   - В случае мультимастерной инсталляции:
-
-     ```shell
-     d8 system queue list
-     ```
-
-2. Проверьте агенты Cilium. Они должны быть в статусе `Running`:
+1. Проверьте агенты Cilium. Они должны быть в статусе `Running`:
 
    ```shell
    d8 k get po -n d8-cni-cilium
@@ -123,7 +115,7 @@ lang: ru
    agent-wtv4p 2/2   Running 5 (23m ago) 26m
    ```
 
-3. Проверьте, что модуль `cni-flannel` выключен:
+1. Проверьте, что модуль `cni-flannel` выключен:
 
    ```shell
    d8 k get modules | grep flannel
@@ -135,7 +127,7 @@ lang: ru
    cni-flannel                         35     Disabled    Embedded
    ```
 
-4. Проверьте, что модуль `node-local-dns` включен:
+1. Проверьте, что модуль `node-local-dns` включен:
 
    ```shell
    d8 k get modules | grep node-local-dns

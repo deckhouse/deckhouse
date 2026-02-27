@@ -14,7 +14,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/client-go/discovery"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbaclisters "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/klog/v2"
@@ -30,7 +29,7 @@ type NamespaceResolver struct {
 	roleBindingLister        rbaclisters.RoleBindingLister
 	clusterRoleLister        rbaclisters.ClusterRoleLister
 	clusterRoleBindingLister rbaclisters.ClusterRoleBindingLister
-	discoveryClient          discovery.DiscoveryInterface
+	scopeCache               *ResourceScopeCache
 	mtEngine                 *multitenancy.Engine
 }
 
@@ -41,7 +40,7 @@ func NewNamespaceResolver(
 	roleBindingLister rbaclisters.RoleBindingLister,
 	clusterRoleLister rbaclisters.ClusterRoleLister,
 	clusterRoleBindingLister rbaclisters.ClusterRoleBindingLister,
-	discoveryClient discovery.DiscoveryInterface,
+	scopeCache *ResourceScopeCache,
 	mtEngine *multitenancy.Engine,
 ) *NamespaceResolver {
 	return &NamespaceResolver{
@@ -50,7 +49,7 @@ func NewNamespaceResolver(
 		roleBindingLister:        roleBindingLister,
 		clusterRoleLister:        clusterRoleLister,
 		clusterRoleBindingLister: clusterRoleBindingLister,
-		discoveryClient:          discoveryClient,
+		scopeCache:               scopeCache,
 		mtEngine:                 mtEngine,
 	}
 }
@@ -301,7 +300,6 @@ func (r *NamespaceResolver) hasNamespacedRules(rules []rbacv1.PolicyRule) bool {
 		}
 
 		// For specific resources, check if any is namespaced
-		// This is a best-effort check using discovery
 		for _, group := range rule.APIGroups {
 			for _, resource := range rule.Resources {
 				// Strip subresource if present
@@ -316,92 +314,18 @@ func (r *NamespaceResolver) hasNamespacedRules(rules []rbacv1.PolicyRule) bool {
 	return false
 }
 
-// isResourceNamespaced checks if a resource is namespaced using discovery.
-// Returns true if the resource is namespaced or if we can't determine (fail-open for this check).
+// isResourceNamespaced checks if a resource is namespaced using the scope cache.
+//
+// IMPORTANT: This function is used to decide whether the user has ANY namespaced access
+// via ClusterRoleBindings / RoleBindings. A false positive here results in listing
+// *all* namespaces as accessible (info leak). Therefore, for unknown resources
+// we fail CLOSED (assume cluster-scoped).
 func (r *NamespaceResolver) isResourceNamespaced(group, resource string) bool {
-	// Build fully qualified resource key (group/resource) to avoid collisions
-	// between resources with the same name in different API groups.
-	fqKey := group + "/" + resource
-
-	// Common namespaced resources.
-	// Key format: "apiGroup/resource" where core API group is empty string.
-	commonNamespaced := map[string]struct{}{
-		"/pods": {}, "/services": {}, "/configmaps": {}, "/secrets": {},
-		"/serviceaccounts": {}, "/endpoints": {}, "/events": {},
-		"/persistentvolumeclaims": {}, "/replicationcontrollers": {},
-		"apps/deployments": {}, "apps/replicasets": {}, "apps/statefulsets": {},
-		"apps/daemonsets": {}, "batch/jobs": {}, "batch/cronjobs": {},
-		"networking.k8s.io/ingresses": {}, "networking.k8s.io/networkpolicies": {},
-		"rbac.authorization.k8s.io/roles": {}, "rbac.authorization.k8s.io/rolebindings": {},
-	}
-	if _, known := commonNamespaced[fqKey]; known {
-		return true
-	}
-
-	// Common cluster-scoped resources.
-	commonClusterScoped := map[string]struct{}{
-		"/namespaces": {}, "/nodes": {}, "/persistentvolumes": {},
-		"rbac.authorization.k8s.io/clusterroles": {}, "rbac.authorization.k8s.io/clusterrolebindings": {},
-		"storage.k8s.io/storageclasses": {}, "scheduling.k8s.io/priorityclasses": {},
-	}
-	if _, known := commonClusterScoped[fqKey]; known {
+	if r.scopeCache == nil {
+		klog.V(5).Infof("No scope cache, assuming %s/%s is cluster-scoped", group, resource)
 		return false
 	}
-
-	// Without discovery client, assume unknown resources could be namespaced
-	if r.discoveryClient == nil {
-		klog.V(5).Infof("No discovery client, assuming %s/%s is namespaced", group, resource)
-		return true
-	}
-
-	// Determine the GroupVersion to query
-	gv, err := r.getPreferredGroupVersion(group)
-	if err != nil {
-		// Discovery error: fail-open, assume namespaced
-		klog.V(4).Infof("Failed to get preferred version for group %q: %v, assuming namespaced", group, err)
-		return true
-	}
-
-	resourceList, err := r.discoveryClient.ServerResourcesForGroupVersion(gv)
-	if err != nil {
-		// If discovery fails, assume it could be namespaced (fail-open)
-		klog.V(5).Infof("Discovery failed for %s/%s: %v, assuming namespaced", group, resource, err)
-		return true
-	}
-
-	for _, res := range resourceList.APIResources {
-		if res.Name == resource {
-			return res.Namespaced
-		}
-	}
-
-	// Resource not found in discovery, assume it could be namespaced
-	klog.V(5).Infof("Resource %s/%s not found in discovery, assuming namespaced", group, resource)
-	return true
-}
-
-// getPreferredGroupVersion returns the preferred GroupVersion string for an API group.
-// For core API (empty group), returns "v1".
-func (r *NamespaceResolver) getPreferredGroupVersion(group string) (string, error) {
-	// Core API group
-	if group == "" {
-		return "v1", nil
-	}
-
-	apiGroupList, err := r.discoveryClient.ServerGroups()
-	if err != nil {
-		return "", fmt.Errorf("failed to discover server groups: %w", err)
-	}
-
-	for _, g := range apiGroupList.Groups {
-		if g.Name == group {
-			return g.PreferredVersion.GroupVersion, nil
-		}
-	}
-
-	// Group not found - this means the resource doesn't exist or the group is invalid.
-	// We return an error and let the caller decide (fail-open in our case).
-	return "", fmt.Errorf("API group %q not found in server groups", group)
+	return r.scopeCache.IsNamespaced(group, resource)
 }
 
 // subjectMatches checks if any subject matches the user (for ClusterRoleBindings).

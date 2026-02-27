@@ -15,5 +15,4 @@ tests:
         object: disallowed.yaml
         assertions:
           - violations: yes
-            message: >-
-              PersistentVolumeClaim <disallowed> has invalid storage class: bar
+            message: "PersistentVolumeClaim <disallowed> has invalid storage class: bar"

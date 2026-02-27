@@ -35,11 +35,11 @@ imagePullSecrets:
 - name: d8-istio-sidecar-registry
 kind: ServiceAccount
 metadata:
-  name: istiod-v1x19
+  name: istiod-v1x21
   namespace: d8-istio
   labels:
     app: istiod
-    install.operator.istio.io/owning-resource: v1x19
+    install.operator.istio.io/owning-resource: v1x21
 `))
 			f.RunHook()
 		})
@@ -48,12 +48,12 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			sa := f.KubernetesResource("ServiceAccount", "d8-istio", "istiod-v1x19")
+			sa := f.KubernetesResource("ServiceAccount", "d8-istio", "istiod-v1x21")
 			Expect(sa.Exists()).To(BeTrue())
 			Expect(sa.Field("metadata.labels").String()).To(MatchJSON(`{
 "app": "istiod",
 "app.kubernetes.io/managed-by": "Helm",
-"install.operator.istio.io/owning-resource": "v1x19"
+"install.operator.istio.io/owning-resource": "v1x21"
         }`))
 
 			Expect(sa.Field("metadata.annotations").String()).To(MatchJSON(`{

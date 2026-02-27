@@ -9,10 +9,11 @@ Snapshots allow you to capture the current state of a resource for later recover
 
 Snapshots can be consistent or inconsistent; this is controlled by the `requiredConsistency` parameter. By default, `requiredConsistency` is set to `true`, which means a consistent snapshot is required.
 
-A consistent snapshot guarantees a consistent and complete state of the virtual machine's disks. Such a snapshot can be created when one of the following conditions is met:
+A consistent snapshot captures a complete and consistent state of disk data. You can create such a snapshot when one of the following conditions is met:
 
+- The disk is not attached to any virtual machine — the snapshot will always be consistent.
 - The virtual machine is turned off.
-- [`qemu-guest-agent`](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#guest-os-agent) is installed in the guest system, which temporarily suspends the file system at the time the snapshot is created to ensure its consistency.
+- [`qemu-guest-agent`](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#guest-os-agent) is installed and running in the guest OS. When a snapshot is created, it temporarily suspends ("freezes") the file system to ensure consistency.
 
 QEMU Guest Agent supports hook scripts that allow you to prepare applications for snapshot creation without stopping services, ensuring application-level consistency. For more information on configuring hooks scripts, see the [Guest OS agent](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#guest-os-agent) section.
 
@@ -71,9 +72,11 @@ d8 k get vdsnapshot
 Example output:
 
 ```console
-NAME                     PHASE     CONSISTENT   AGE
-linux-vm-root-1728027905   Ready                  3m2s
+NAME                       PHASE     CONSISTENT   AGE
+linux-vm-root-1728027905   Ready     true         3m2s
 ```
+
+The `CONSISTENT` field indicates whether the snapshot is consistent (`true`) or not (`false`). This value is determined automatically based on the snapshot creation conditions and cannot be changed.
 
 After creation, `VirtualDiskSnapshot` can be in the following states (phases):
 
@@ -112,7 +115,7 @@ spec:
   persistentVolumeClaim:
     size: 10Gi
     # Substitute your StorageClass name.
-    storageClassName: i-sds-replicated-thin-r2
+    storageClassName: rv-thin-r2
   dataSource:
     type: ObjectRef
     objectRef:
@@ -217,7 +220,7 @@ To restore a VM from a snapshot, use the `VirtualMachineOperation` resource with
 Example:
 
 ```yaml
-apiVersion: virtualisation.deckhouse.io/v1alpha2
+apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineOperation
 metadata:
   name: restore-vm
@@ -274,15 +277,28 @@ Cloning creates a copy of a VM, so the resources of the new VM must have unique 
 - `nameReplacements`: Allows you to replace the names of existing resources with new ones to avoid conflicts.
 - `customization`: Sets a prefix or suffix for the names of all cloned VM resources (disks, IP addresses, etc.).
 
-Configuration example:
+Example of renaming specific resources:
 
 ```yaml
 nameReplacements:
   - from:
-      kind: <resource type>
-      name: <old name>
+      kind: VirtualMachine
+      name: <old-vm-name>
     to:
-      name: <new name>
+      name: <new-vm-name>
+  - from:
+      kind: VirtualDisk
+      name: <old-disk-name>
+    to:
+      name: <new-disk-name>
+# ...
+```
+
+As a result, a VM named `<prefix><original-vm-name><suffix>` will be created, and all resources (disks, IP addresses, etc.) will receive the prefix and suffix.
+
+Example of adding a prefix or suffix to all resources:
+
+```yaml
 customization:
   namePrefix: <prefix>
   nameSuffix: <suffix>
@@ -293,7 +309,7 @@ As a result, a VM named <prefix><new name><suffix> will be created.
 One of three modes can be used for the cloning operation:
 
 - `DryRun`: Test run to check for possible conflicts. The results are displayed in the `status.resources` field of the corresponding operation resource.
-- `Strict`: Strict mode, requiring all resources with new names and their dependencies (e.g., images) to be present in the cloned VM.
+- `Strict`: Strict mode requiring all resources with new names and their dependencies (e.g., images) to be present in the cloned VM.
 - `BestEffort`: Mode in which missing external dependencies (e.g., ClusterVirtualImage, VirtualImage) are automatically removed from the configuration of the cloned VM.
 
 Information about conflicts that arose during cloning can be viewed in the operation resource status:
@@ -309,9 +325,9 @@ d8 k get vmsop <vmsop-name> -o json | jq '.status.resources'
 
 VM cloning is performed using the VirtualMachineOperation resource with the `Clone` operation type.
 
-{% alert level="warning" %}
-Before cloning, the source VM must be [powered off](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#virtual-machine-startup-policy-and-virtual-machine-state-management).
+Cloning is supported for both powered-off and running virtual machines. When cloning a running VM, a consistent snapshot is automatically created, from which the clone is then formed.
 
+{% alert level="info" %}
 It is recommended to set the `.spec.runPolicy: AlwaysOff` parameter in the configuration of the VM being cloned if you want to prevent the VM clone from starting automatically. This is because the clone inherits the behaviour of the parent VM.
 {% endalert %}
 
@@ -328,7 +344,7 @@ Windows:
 
 - Run `sysprep` with the `/generalize` option, or use tools to reset unique identifiers (SID, hostname, etc.).
 
-Example of creating a VM clone:
+To create a VM clone, use the following resource:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -350,11 +366,59 @@ The `nameReplacements` and `customization` parameters are configured in the `.sp
 During cloning, temporary snapshots are automatically created for the virtual machine and all its disks. The new VM is then assembled from these snapshots. After cloning is complete, the temporary snapshots are automatically deleted, so they are not visible in the resource list. However, the specification of cloned disks still contains a reference (`dataSource`) to the corresponding snapshot, even if the snapshot itself no longer exists. This is expected behavior and does not indicate a problem: such references remain valid because, by the time the clone starts, all necessary data has already been transferred to the new disks.
 {% endalert %}
 
+The following example demonstrates cloning a VM named `database` with an attached disk `database-root`:
+
+Example with renaming specific resources:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineOperation
+metadata:
+  name: clone-database
+spec:
+  type: Clone
+  virtualMachineName: database
+  clone:
+    mode: Strict
+    nameReplacements:
+      - from:
+          kind: VirtualMachine
+          name: database
+        to:
+          name: database-clone
+      - from:
+          kind: VirtualDisk
+          name: database-root
+        to:
+          name: database-clone-root
+```
+
+As a result, a VM named `database-clone` and a disk named `database-clone-root` will be created.
+
+Example with using a prefix for all resources:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineOperation
+metadata:
+  name: clone-database
+spec:
+  type: Clone
+  virtualMachineName: database
+  clone:
+    mode: Strict
+    customization:
+      namePrefix: clone-
+      nameSuffix: -prod
+```
+
+As a result, a VM named `clone-database-prod` and a disk named `clone-database-root-prod` will be created.
+
 ### Creating a clone from a VM snapshot
 
 Cloning a VM from a snapshot is performed using the VirtualMachineSnapshotOperation resource with the `CreateVirtualMachine` operation type.
 
-Example of creating a VM clone from a snapshot:
+To create a VM clone from a snapshot, use the following resource:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -372,9 +436,63 @@ spec:
 
 The `nameReplacements` and `customization` parameters are configured in the `.spec.createVirtualMachine` block (see [general description](#creating-a-vm-clone) above).
 
+To view the list of resources saved in a snapshot, use the command:
+
+```bash
+d8 k get vmsnapshot <snapshot-name> -o jsonpath='{.status.resources}' | jq
+```
+
 {% alert level="info" %}
 When cloning a VM from a snapshot, the disks associated with it are also created from the corresponding snapshots, so the disk specification will contain a `dataSource` parameter with a reference to the required disk snapshot.
 {% endalert %}
+
+The following example demonstrates cloning from a VM snapshot named `database-snapshot`, which contains a VM `database` and a disk `database-root`:
+
+Example with renaming specific resources:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineSnapshotOperation
+metadata:
+  name: clone-database-from-snapshot
+spec:
+  type: CreateVirtualMachine
+  virtualMachineSnapshotName: database-snapshot
+  createVirtualMachine:
+    mode: Strict
+    nameReplacements:
+      - from:
+          kind: VirtualMachine
+          name: database
+        to:
+          name: database-clone
+      - from:
+          kind: VirtualDisk
+          name: database-root
+        to:
+          name: database-clone-root
+```
+
+As a result, a VM named `database-clone` and a disk named `database-clone-root` will be created.
+
+Example with using a prefix for all resources:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineSnapshotOperation
+metadata:
+  name: clone-database-from-snapshot
+spec:
+  type: CreateVirtualMachine
+  virtualMachineSnapshotName: database-snapshot
+  createVirtualMachine:
+    mode: Strict
+    customization:
+      namePrefix: clone-
+      nameSuffix: -prod
+```
+
+As a result, a VM named `clone-database-prod` and a disk named `clone-database-root-prod` will be created.
 
 ## Data export
 
@@ -387,13 +505,13 @@ The disk must not be in use at the time of export. If it is attached to a VM, th
 Example: export a disk (run on a cluster node):
 
 ```bash
-d8 data download -n <namespace> vd/<virtual-disk-name> -o file.img
+d8 data export download -n <namespace> vd/<virtual-disk-name> -o file.img
 ```
 
 Example: export a disk snapshot (run on a cluster node):
 
 ```bash
-d8 data download -n <namespace> vds/<virtual-disksnapshot-name> -o file.img
+d8 data export download -n <namespace> vd/<virtual-disk-name> -o file.img
 ```
 
 If you are exporting data from a machine other than a cluster node (for example, from your local machine), use the `--publish` flag.

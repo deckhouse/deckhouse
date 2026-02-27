@@ -38,14 +38,17 @@ spec:
   ports:
   - targetPort: 6443
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: kubernetes
   namespace: default
-subsets:
+  labels:
+    kubernetes.io/service-name: kubernetes
+addressType: IPv4
+endpoints:
 - addresses:
-  - ip: 192.168.1.1
+  - 192.168.1.1
 `))
 			f.RunHook()
 		})
@@ -70,16 +73,21 @@ spec:
   ports:
   - targetPort: 443
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: kubernetes
   namespace: default
-subsets:
+  labels:
+    kubernetes.io/service-name: kubernetes
+addressType: IPv4
+endpoints:
 - addresses:
-  - ip: 192.168.1.1
-  - ip: 192.168.1.2
-  - ip: 192.168.1.3
+  - 192.168.1.1
+- addresses:
+  - 192.168.1.2
+- addresses:
+  - 192.168.1.3
 `))
 				f.RunHook()
 			})
@@ -118,13 +126,15 @@ spec:
   ports:
   - targetPort: 6443
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: kubernetes
   namespace: default
-subsets:
-- addresses: []
+  labels:
+    kubernetes.io/service-name: kubernetes
+addressType: IPv4
+endpoints: []
 `))
 			f.RunHook()
 		})

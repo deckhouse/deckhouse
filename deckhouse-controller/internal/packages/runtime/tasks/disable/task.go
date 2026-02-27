@@ -20,12 +20,12 @@ import (
 	"log/slog"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
-	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -41,7 +41,7 @@ type packageI interface {
 	// RunHooksByBinding executes hooks matching the given binding type (e.g., AfterDeleteHelm).
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 	// GetHooksByBinding returns hooks for a binding type to disable their controllers.
-	GetHooksByBinding(binding shtypes.BindingType) []*addonhooks.ModuleHook
+	GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook
 }
 
 // nelmI abstracts Helm release management operations.
