@@ -1,0 +1,275 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  labels:
+    heritage: deckhouse
+    module: deckhouse
+  name: conversionwebhooks.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: ConversionWebhook
+    listKind: ConversionWebhookList
+    plural: conversionwebhooks
+    shortNames:
+    - cwhc
+    singular: conversionwebhook
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ConversionWebhook is the Schema for the conversionwebhooks API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          context:
+            description: Run a hook on a Kubernetes object changes.
+            items:
+              properties:
+                kubernetes:
+                  properties:
+                    allowFailure:
+                      description: |-
+                        If `true`, Shell-operator skips the hook execution errors.
+                        If `false` or the parameter is not set, the hook is restarted after a 5 seconds delay in case of an error.
+                      type: boolean
+                    apiVersion:
+                      description: |-
+                        Is an optional group and version of object API.
+                        For example, it is `v1` for core objects (Pod, etc.), `rbac.authorization.k8s.io/v1beta1` for ClusterRole and `monitoring.coreos.com/v1` for prometheus-operator.
+                      type: string
+                    fieldSelector:
+                      properties:
+                        matchExpressions:
+                          items:
+                            properties:
+                              field:
+                                type: string
+                              operator:
+                                type: string
+                              value:
+                                type: string
+                            required:
+                            - field
+                            - operator
+                            type: object
+                          type: array
+                      required:
+                      - matchExpressions
+                      type: object
+                    includeSnapshotsFrom:
+                      description: |-
+                        An array of names of kubernetes bindings in a hook.
+                        When specified, a list of monitored objects from that bindings
+                        will be added to the binding context in a snapshots field. Self-include is also possible.
+                      items:
+                        type: string
+                      type: array
+                    jqFilter:
+                      description: |-
+                        An optional parameter that specifies event filtering using jq syntax.
+                        The hook will be triggered on the "Modified" event only if the filter result is changed after the last event.
+                      type: string
+                    kind:
+                      description: Is the type of a monitored Kubernetes resource.
+                        This field is required.
+                      type: string
+                    labelSelector:
+                      description: |-
+                        A label selector is a label query over a set of resources. The result of matchLabels and
+                        matchExpressions are ANDed. An empty label selector matches all objects. A null
+                        label selector matches no objects.
+                      properties:
+                        matchExpressions:
+                          description: matchExpressions is a list of label selector
+                            requirements. The requirements are ANDed.
+                          items:
+                            description: |-
+                              A label selector requirement is a selector that contains values, a key, and an operator that
+                              relates the key and values.
+                            properties:
+                              key:
+                                description: key is the label key that the selector
+                                  applies to.
+                                type: string
+                              operator:
+                                description: |-
+                                  operator represents a key's relationship to a set of values.
+                                  Valid operators are In, NotIn, Exists and DoesNotExist.
+                                type: string
+                              values:
+                                description: |-
+                                  values is an array of string values. If the operator is In or NotIn,
+                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                  the values array must be empty. This array is replaced during a strategic
+                                  merge patch.
+                                items:
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                          type: object
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    nameSelector:
+                      properties:
+                        matchNames:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - matchNames
+                      type: object
+                    namespace:
+                      description: Filters to choose namespaces.
+                      properties:
+                        labelSelector:
+                          description: |-
+                            A label selector is a label query over a set of resources. The result of matchLabels and
+                            matchExpressions are ANDed. An empty label selector matches all objects. A null
+                            label selector matches no objects.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        nameSelector:
+                          properties:
+                            matchNames:
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - matchNames
+                          type: object
+                      type: object
+                    queue:
+                      description: A name of a separate queue. It can be used to execute
+                        long-running hooks in parallel with hooks in the "main" queue.
+                      type: string
+                  required:
+                  - kind
+                  type: object
+                name:
+                  description: It is used to distinguish different bindings during
+                    runtime.
+                  type: string
+              required:
+              - name
+              type: object
+            type: array
+          conversions:
+            description: |-
+              This binding transforms a hook into a handler
+              for conversions defined in CustomResourceDefinition.
+              The Shell-operator updates a CRD with `.spec.conversion`,
+              starts HTTPS server, and runs hooks to handle ConversionReview requests.
+            items:
+              properties:
+                from:
+                  description: A version of a custom resource that hook can convert.
+                  type: string
+                handler:
+                  description: Code of the conversion handler.
+                  properties:
+                    python:
+                      description: Python script handler for object.
+                      type: string
+                  type: object
+                includeSnapshotsFrom:
+                  description: |-
+                    An array of names of Kubernetes bindings in a hook.
+                    When specified, a list of monitored objects from
+                    these bindings will be added to the binding context in the snapshots field.
+                  items:
+                    type: string
+                  type: array
+                to:
+                  description: A version of a custom resource that hook can produce.
+                  type: string
+              required:
+              - from
+              - handler
+              - to
+              type: object
+            type: array
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          status:
+            description: Status defines the observed state of ConversionWebhook.
+            type: object
+        required:
+        - conversions
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
