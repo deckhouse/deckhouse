@@ -90,9 +90,15 @@ spec:
 
 Чтобы применить только нужные политики безопасности, не отключая весь предустановленный набор:
 
+<<<<<<< changing-metka-to-label
+1. Добавьте в нужное пространство имён лейбл: `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
+1. Создайте ресурс SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
+1. Добавьте в пространство имён дополнительный лейбл, который будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`
+=======
 1. Добавьте в нужное пространство имён метку: `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
 1. Создайте SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
 1. Добавьте в пространство имён дополнительную метку, которая будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`
+>>>>>>> main
 
 SecurityPolicy, соответствующая baseline:
 
@@ -291,11 +297,11 @@ spec:
 
 В модуле реализована функция проверки подписи образов контейнеров, подписанных с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Подробнее о подписании и проверке образов контейнеров можно узнать в [документации DKP](/products/kubernetes-platform/documentation/v1/admin/configuration/security/policies.html#проверка-подписи-образов).
 
-## Как запретить удаление узла без метки
+## Как запретить удаление узла без лейбла
 
 > Примечание. Операции DELETE обрабатываются Gatekeeper по умолчанию.
 
-Можно создать собственную политику Gatekeeper, запрещающую удаление узла без специальной метки. Пример ниже использует `oldObject` для проверки меток удаляемого узла:
+Можно создать собственную политику Gatekeeper, запрещающую удаление узла без специального лейбла. Пример ниже использует `oldObject` для проверки лейблов удаляемого узла:
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
@@ -334,7 +340,7 @@ spec:
           is_delete
           is_node
           not has_required_label
-          msg := sprintf("Удаление Node запрещено. Добавьте метку %q=%q.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
+          msg := sprintf("Удаление Node запрещено. Добавьте лейбл %q=%q.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
         }
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1

@@ -38,7 +38,7 @@ description: "Мониторинг компонентов и сервисов De
    - `deckhouse_module_hook_run_seconds` — время выполнения хуков модулей.
    - `deckhouse_tasks_queue_action_duration_seconds` — время обработки очередей задач.
 
-1. **Метрики хуков** (`/metrics/hooks`) — пользовательские метрики, генерируемые хуками Deckhouse с `honorLabels: true` для сохранения меток, специфичных для хуков.
+1. **Метрики хуков** (`/metrics/hooks`) — пользовательские метрики, генерируемые хуками Deckhouse с `honorLabels: true` для сохранения лейблов, специфичных для хуков.
 
 ## Интеграция с модулем Observability
 

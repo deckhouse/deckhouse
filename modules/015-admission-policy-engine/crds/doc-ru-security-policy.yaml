@@ -65,7 +65,7 @@ spec:
                     allowPrivilegeEscalation:
                       description: |
                         Разрешает процессам в контейнерах запрашивать более широкий список привилегий, чем у родительского процесса.
-                        
+
                         **По умолчанию** (если значение не указано) — `false`. Это означает, что при отсутствии данного поля или его явного указания, контейнеру будет отказано в повышении привилегий. Если вы хотите разрешить повышение привилегий, задайте для данного параметра значение `true`.
                     allowedProcMount:
                       description: Разрешает монтирование `/proc` для контейнеров.
@@ -189,17 +189,17 @@ spec:
 
                             Пустой список запрещает использование локальных профилей.
                     seLinux:
-                      description: Определяет разрешенные для использования в параметре `secutiryContext` значения SELinux-меток.
+                      description: Определяет разрешенные для использования в параметре `secutiryContext` значения SELinux-лейблов.
                       items:
                         properties:
                           level:
-                            description: Значения для SELinux level-меток.
+                            description: Значения для SELinux level-лейблов.
                           role:
-                            description: Значения для SELinux role-меток.
+                            description: Значения для SELinux role-лейблов.
                           type:
-                            description: Значения для SELinux type-меток.
+                            description: Значения для SELinux type-лейблов.
                           user:
-                            description: Значения для SELinux user-меток.
+                            description: Значения для SELinux user-лейблов.
                     allowedClusterRoles:
                       description: "Список разрешенных ролей кластера для связывания с пользователями."
                     allowedVolumes:
@@ -207,7 +207,7 @@ spec:
                     allowedServiceTypes:
                       description: Список разрешенных типов сервисов.
                     blockWildcardDomains:
-                      description: Запрещает создание объектов Ingress с `*` в DNS доменах.                      
+                      description: Запрещает создание объектов Ingress с `*` в DNS доменах.
                     verifyImageSignatures:
                       description: |
                         Список политик проверки подписи образов контейнеров.
@@ -247,7 +247,7 @@ spec:
                           description: Выбирает все пространства имен, которых нет в списке. Допускается использование шаблонов (glob patterns).
                         labelSelector:
                           description: |
-                            Указывает селектор меток для фильтрации пространств имен.
+                            Указывает селектор лейблов для фильтрации пространств имен.
 
                             Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                           properties:

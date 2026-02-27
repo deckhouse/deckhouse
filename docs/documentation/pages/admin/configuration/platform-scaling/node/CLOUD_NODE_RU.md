@@ -183,7 +183,7 @@ spec:
 
 Для решений данной задачи существуют два механизма:
 
-1. Установка меток в [NodeGroup](/modules/node-manager/cr.html#nodegroup) `spec.nodeTemplate.labels` для последующего использования их в `Pod` [`spec.nodeSelector`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [`spec.affinity.nodeAffinity`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity). Указывает, какие именно узлы будут выбраны планировщиком для запуска целевого приложения.
+1. Установка лейблов в [NodeGroup](/modules/node-manager/cr.html#nodegroup) `spec.nodeTemplate.labels` для последующего использования их в `Pod` [`spec.nodeSelector`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [`spec.affinity.nodeAffinity`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity). Указывает, какие именно узлы будут выбраны планировщиком для запуска целевого приложения.
 1. Установка ограничений в NodeGroup `spec.nodeTemplate.taints` с дальнейшим снятием их в `Pod` [`spec.tolerations`](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Запрещает исполнение не разрешенных явно приложений на этих узлах.
 
 {% alert level="info" %}
