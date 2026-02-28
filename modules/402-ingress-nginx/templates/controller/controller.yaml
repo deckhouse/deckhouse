@@ -402,19 +402,19 @@ spec:
     {{- end }}
   {{- end }}
         volumeMounts:
-        - mountPath: /chroot/var/lib/nginx
+        - mountPath: /chroot/validation_chroot/var/lib/nginx
           name: var-lib-nginx
-        - mountPath: /chroot/var/log/nginx
+        - mountPath: /chroot/validation_chroot/var/log/nginx
           name: var-log-nginx
-        - mountPath: /chroot/etc/nginx/ssl/
+        - mountPath: /chroot/validation_chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
         - mountPath: /chroot/tmp
           name: tmp
-        - mountPath: /chroot/etc/ingress-controller
+        - mountPath: /chroot/validation_chroot/etc/ingress-controller
           name: etc-ingress-controller
 {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         - name: valgrind
-          mountPath: /chroot/var/log/valgrind
+          mountPath: /chroot/validation_chroot/var/log/valgrind
         - name: proc
           mountPath: /chroot/proc
 {{- end }}

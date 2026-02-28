@@ -204,17 +204,17 @@ spec:
             protocol: TCP
         volumeMounts:
           - name: secret-nginx-auth-tls
-            mountPath: /chroot/etc/nginx/ssl/
+            mountPath: /chroot/validation_chroot/etc/nginx/ssl/
           - name: webhook-cert
-            mountPath: /chroot/etc/nginx/webhook-ssl/
+            mountPath: /chroot/validation_chroot/etc/nginx/webhook-ssl/
             readOnly: true
-          - mountPath: /chroot/var/lib/nginx
+          - mountPath: /chroot/validation_chroot/var/lib/nginx
             name: var-lib-nginx
-          - mountPath: /chroot/var/log/nginx
+          - mountPath: /chroot/validation_chroot/var/log/nginx
             name: var-log-nginx
           - mountPath: /chroot/tmp
             name: tmp
-          - mountPath: /chroot/etc/ingress-controller
+          - mountPath: /chroot/validation_chroot/etc/ingress-controller
             name: etc-ingress-controller
       volumes:
         - name: tmp

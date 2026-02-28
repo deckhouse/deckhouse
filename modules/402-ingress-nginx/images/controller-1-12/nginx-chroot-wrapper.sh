@@ -14,5 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-printf '%s\n' "$(< /etc/resolv.conf)" > /chroot/etc/resolv.conf
+printf '%s\n' "$(< /etc/resolv.conf)" > /chroot/validation_chroot/etc/resolv.conf
 unshare -S 64535 -R /chroot /usr/local/nginx/sbin/nginx "$@"
