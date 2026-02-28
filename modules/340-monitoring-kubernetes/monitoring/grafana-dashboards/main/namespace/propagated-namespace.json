@@ -98,7 +98,7 @@
                   {
                     "targetBlank": true,
                     "title": "Controller Details",
-                    "url": "/d/IRPuf4ymk1/controller?var-ds_prometheus=${ds_prometheus}&var-namespace=${namespace}&var-controller=${__value.raw}&${__url_time_range}"
+                    "url": "/d/${__data.fields[\"controller_type\"]}?var-ds_prometheus=${ds_prometheus}&var-namespace=${namespace}&var-controller=${__value.raw}&var-name=${__data.fields[\"controller_name\"]}&${__url_time_range}"
                   }
                 ]
               },
@@ -597,6 +597,59 @@
                 "value": 230
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "controller_type"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "pattern": "VirtualMachine",
+                      "result": {
+                        "index": 0,
+                        "text": "bdw6dw2izvpxcb"
+                      }
+                    },
+                    "type": "regex"
+                  },
+                  {
+                    "options": {
+                      "pattern": ".*",
+                      "result": {
+                        "index": 1,
+                        "text": "m41rB4yiz1"
+                      }
+                    },
+                    "type": "regex"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 0
+              },
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "controller_name"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
           }
         ]
       },
@@ -621,7 +674,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.19",
       "repeatDirection": "h",
       "targets": [
         {
@@ -883,6 +936,21 @@
           "intervalFactor": 1,
           "legendFormat": "Memory",
           "refId": "U"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max by (job, namespace, controller, controller_name) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]))",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "URL",
+          "range": false,
+          "refId": "V"
         }
       ],
       "title": "Controllers",
@@ -914,8 +982,10 @@
                 "Value #P",
                 "Value #Q",
                 "Value #R",
+                "controller_type",
                 "Value #S",
-                "Value #T"
+                "Value #T",
+                "controller_name"
               ]
             }
           }
@@ -1154,7 +1224,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 12,
+        "w": 6,
         "x": 0,
         "y": 16
       },
@@ -1178,7 +1248,8 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (controller) \n  (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (max_over_time(kube_pod_info{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]))\n  )",
+          "editorMode": "code",
+          "expr": "sum by (controller) \n  (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller_type!=\"VirtualMachine\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (max_over_time(kube_pod_info{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]))\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ controller }}",
@@ -1186,6 +1257,152 @@
         }
       ],
       "title": "Pods count",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {}
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "description": "The number of VM pods",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": false,
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 16
+      },
+      "id": 795,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (controller) \n  (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=\"VirtualMachine\", controller=~\"$controller\"}\n    * on (pod) group_left()\n    sum by (pod) (max_over_time(kube_pod_info{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]))\n    unless on (pod)\n    (kube_pod_status_phase{phase=~\"Succeeded|Failed\"} == 1)\n  )",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ controller }}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "VM pods count",
       "transformations": [
         {
           "id": "calculateField",
