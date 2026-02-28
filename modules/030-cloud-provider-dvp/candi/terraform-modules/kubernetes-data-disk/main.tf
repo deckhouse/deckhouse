@@ -63,10 +63,20 @@ locals {
 }
 
 resource "kubernetes_resource_ready_v1" "kubernetes-data-disk" {
+  # for attributes: api_version, kind, name, namespace, any changes
+  # will recreate resource and start readiness check for new resource
+  # also, change apiVersion version, for example
+  # virtualization.deckhouse.io/v1alpha2 -> virtualization.deckhouse.io/v1
+  # will recreate resource. this case is huge for handling in provider
+  # and we skip this case for simplify code and developer of new resource
+  # believes this case is valid for re-testing readiness
   api_version = kubernetes_manifest.kubernetes-data-disk.object.apiVersion
   kind = kubernetes_manifest.kubernetes-data-disk.object.kind
   name = kubernetes_manifest.kubernetes-data-disk.object.metadata.name
   namespace = kubernetes_manifest.kubernetes-data-disk.object.metadata.namespace
+
+  # all next fields can be changed without recreate kubernetes_resource_ready_v1
+  # in this case readiness check will not start
 
   wait_timeout = var.timeouts.create
   # todo this attribute used on migration to resource ready resource

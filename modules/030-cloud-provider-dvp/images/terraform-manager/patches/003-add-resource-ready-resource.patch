@@ -1,5 +1,1706 @@
 Subject: [PATCH] add kubernetes_resource_ready_v1 resource
 ---
+Index: kubernetes/resource_kubernetes_resource_ready_v1.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/kubernetes/resource_kubernetes_resource_ready_v1.go b/kubernetes/resource_kubernetes_resource_ready_v1.go
+new file mode 100644
+--- /dev/null	(date 1772310762904)
++++ b/kubernetes/resource_kubernetes_resource_ready_v1.go	(date 1772310762904)
+@@ -0,0 +1,1691 @@
++package kubernetes
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"os"
++	"regexp"
++	"sort"
++	"strings"
++	"time"
++
++	"github.com/hashicorp/terraform-plugin-log/tflog"
++	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
++	"github.com/tidwall/gjson"
++	"k8s.io/apimachinery/pkg/api/meta"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	kubeschema "k8s.io/apimachinery/pkg/runtime/schema"
++	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/client-go/dynamic"
++
++	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
++	"k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++)
++
++const (
++	resourceReadyAPIVersionAttr = "api_version"
++	resourceReadyKindAttr       = "kind"
++	resourceReadyNameAttr       = "name"
++	resourceReadyNamespaceAttr  = "namespace"
++
++	resourceReadyFieldsAttr                            = "fields"
++	resourceReadyConditionsAttr                        = "condition"
++	resourceReadyFailConditionsAttr                    = "fail_condition"
++	resourceReadyWaitTimeoutAttr                       = "wait_timeout"
++	resourceReadyFailConditionsAppearanceDurationAttr  = "fail_conditions_appearance_duration"
++	resourceReadySkipCheckOnCreateResourceLiveTimeAttr = "skip_check_on_create_with_resource_live_time"
++
++	resourceReadyReadyAttr = "ready"
++)
++
++var (
++	failConditionsAppearanceDurationDefault               = 15 * time.Second
++	resourceReadySkipCheckOnCreateResourceLiveTimeDefault = time.Duration(0)
++
++	resourceReadyForceRecreateFields = []string{
++		resourceReadyAPIVersionAttr,
++		resourceReadyKindAttr,
++		resourceReadyNameAttr,
++		resourceReadyNamespaceAttr,
++	}
++
++	resourceReadySkipUpdateFields = []string{
++		resourceReadyFieldsAttr,
++		resourceReadyConditionsAttr,
++		resourceReadyFailConditionsAttr,
++		resourceReadyWaitTimeoutAttr,
++		resourceReadyFailConditionsAppearanceDurationAttr,
++		resourceReadySkipCheckOnCreateResourceLiveTimeAttr,
++	}
++
++	resourceReadyComputedFields = []string{
++		resourceReadyReadyAttr,
++	}
++)
++
++func resourceKubernetesResourceReadyV1() *schema.Resource {
++	conditionsSchema := func(description string) *schema.Schema {
++		return &schema.Schema{
++			Type:        schema.TypeSet,
++			Optional:    true,
++			Description: description,
++			Elem: &schema.Resource{
++				Schema: map[string]*schema.Schema{
++					"type": {
++						Type:        schema.TypeString,
++						Required:    true,
++						Description: "Type of condition for check. Check fully equal.",
++					},
++
++					"status": {
++						Type:        schema.TypeString,
++						Required:    true,
++						Description: "Status of condition for check. Check fully equal.",
++					},
++
++					"reason": {
++						Type:         schema.TypeString,
++						Optional:     true,
++						Required:     false,
++						Description:  "String or regexp for checking Reason of condition.",
++						ValidateFunc: validateResourceReadyRegexp("condition reason"),
++					},
++
++					"message": {
++						Type:         schema.TypeString,
++						Optional:     true,
++						Required:     false,
++						Description:  "String or regexp for checking Message of condition",
++						ValidateFunc: validateResourceReadyRegexp("condition message"),
++					},
++				},
++			},
++		}
++	}
++
++	failConditionsDescription := "Conditions that will checked for fail fast."
++	failConditionsDescription += " You can use same condition types for ready and fail, but with different"
++	failConditionsDescription += " status reason or message"
++
++	skipReadyLiveTimeDescription := "Duration for skip ready if resource create time great than this duration."
++	skipReadyLiveTimeDescription += " In general should use for migration."
++	skipReadyLiveTimeDescription += " Can be 0 for skipping check live time."
++	skipReadyLiveTimeDescription += " Should be a golang time.Duration."
++
++	resourceSchema := map[string]*schema.Schema{
++		resourceReadyAPIVersionAttr: {
++			Type:         schema.TypeString,
++			Required:     true,
++			Description:  "APIVersion of resource.",
++			ValidateFunc: validateResourceReadyAPIVersion,
++		},
++		resourceReadyKindAttr: {
++			Type:        schema.TypeString,
++			Required:    true,
++			Description: "Kind of resource.",
++		},
++
++		resourceReadyNameAttr: {
++			Type:        schema.TypeString,
++			Required:    true,
++			Description: "Resource name.",
++		},
++
++		resourceReadyNamespaceAttr: {
++			Type:        schema.TypeString,
++			Optional:    true,
++			Description: "Resource namespace.",
++		},
++
++		resourceReadyWaitTimeoutAttr: {
++			Type:         schema.TypeString,
++			Required:     true,
++			Description:  "Readiness wait timeout. Should be a golang time.Duration.",
++			ValidateFunc: validateResourceReadyTimeout,
++		},
++
++		resourceReadyFailConditionsAppearanceDurationAttr: {
++			Type:         schema.TypeString,
++			Required:     false,
++			Optional:     true,
++			Default:      failConditionsAppearanceDurationDefault.String(),
++			Description:  "Duration for hopes of appearance fail conditions. Should be a golang time.Duration.",
++			ValidateFunc: validateResourceReadyTimeout,
++		},
++
++		resourceReadySkipCheckOnCreateResourceLiveTimeAttr: {
++			Type:         schema.TypeString,
++			Required:     false,
++			Optional:     true,
++			Default:      resourceReadySkipCheckOnCreateResourceLiveTimeDefault.String(),
++			Description:  skipReadyLiveTimeDescription,
++			ValidateFunc: validateResourceReadyTimeout,
++		},
++
++		resourceReadyFieldsAttr: {
++			Type:        schema.TypeMap,
++			Optional:    true,
++			Description: "Fields that will checked. Keys is path in gjson format, value is regexp. fields or/and conditions should be set.",
++			Elem: &schema.Schema{
++				Type:         schema.TypeString,
++				ValidateFunc: validateResourceReadyFieldsMap,
++			},
++		},
++
++		resourceReadyConditionsAttr: conditionsSchema(
++			"Conditions that will checked for readiness. fields or/and conditions should be set.",
++		),
++
++		resourceReadyFailConditionsAttr: conditionsSchema(failConditionsDescription),
++
++		resourceReadyReadyAttr: {
++			Type:        schema.TypeBool,
++			Computed:    true,
++			Description: "Mark resource as ready.",
++		},
++	}
++
++	schemaFieldsLen := len(resourceSchema)
++	knownAttrsLen := len(resourceReadyForceRecreateFields) + len(resourceReadyComputedFields) + len(resourceReadySkipUpdateFields)
++	if schemaFieldsLen != knownAttrsLen {
++		panic(fmt.Sprintf("schema fields length mismatch with known fields: %d != %d", schemaFieldsLen, knownAttrsLen))
++	}
++
++	for _, forceField := range resourceReadyForceRecreateFields {
++		s, ok := resourceSchema[forceField]
++		if !ok {
++			panic(fmt.Sprintf("force recreate field %q not found in resource schema", forceField))
++		}
++		s.ForceNew = true
++	}
++
++	suppressDiffOnUpdateFunc := func(k, oldValue, newValue string, d *schema.ResourceData) bool {
++		return d.Id() != ""
++	}
++
++	for _, field := range resourceReadySkipUpdateFields {
++		s, ok := resourceSchema[field]
++		if !ok {
++			panic(fmt.Sprintf("skip update field %q not found in resource schema", field))
++		}
++
++		s.DiffSuppressFunc = suppressDiffOnUpdateFunc
++	}
++
++	return &schema.Resource{
++		Description: "Check that another resource is ready.",
++
++		CreateContext: resourceKubernetesResourceReadyV1Create,
++		ReadContext:   resourceKubernetesResourceReadyV1Read,
++		UpdateContext: resourceKubernetesResourceReadyV1Update,
++		DeleteContext: resourceKubernetesResourceReadyV1Delete,
++
++		Schema: resourceSchema,
++	}
++}
++
++func resourceKubernetesResourceReadyV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
++	ctx = tflog.NewSubsystem(ctx, "kubernetes_resource_ready_v1")
++
++	logResourceReadyTrace(ctx, "Start creating resource ready")
++
++	clientSet, ok := meta.(KubeClientsets)
++	if !ok {
++		return diag.Errorf("meta is not KubeClientsets")
++	}
++
++	checkerParams, checkerParamsDiags := extractResourceReadyCheckerParams(ctx, d)
++	if checkerParamsDiags.HasError() {
++		return checkerParamsDiags
++	}
++
++	logResourceReadyTrace(ctx, "Getting client")
++
++	client, provideClientDiags := provideClientForResourceReadyResource(ctx, clientSet, checkerParams.resource)
++	if provideClientDiags.HasError() {
++		return provideClientDiags
++	}
++
++	checker := newResourceReadyChecker(checkerParams, client, time.Now())
++
++	checkDiags := checker.StartCheck(ctx)
++	if checkDiags.HasError() {
++		return checkDiags
++	}
++
++	markReadyDiags := checker.MarkReady(ctx, d)
++	if markReadyDiags.HasError() {
++		return markReadyDiags
++	}
++
++	// return wait diags because wait can return warning diags
++	// for better observability
++	return checkDiags
++}
++
++func resourceKubernetesResourceReadyV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
++	id := d.Id()
++	logResourceReadyTrace(ctx, "Start and end reading %s", id)
++	return nil
++}
++
++func resourceKubernetesResourceReadyV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
++	id := d.Id()
++	logResourceReadyTrace(ctx, "Start updating %s", id)
++
++	forceChangedFields := make([]string, 0, len(resourceReadyForceRecreateFields))
++	for _, field := range resourceReadyForceRecreateFields {
++		if d.HasChange(field) {
++			forceChangedFields = append(forceChangedFields, field)
++		}
++	}
++
++	if len(forceChangedFields) > 0 {
++		return diag.Errorf(
++			"Internal error. Resource %s has force to recreate keys [%s] changes, but got update",
++			id,
++			strings.Join(forceChangedFields, ", "),
++		)
++	}
++
++	resource, err := newResourceReadyResourceFromID(id)
++	if err != nil {
++		return diag.FromErr(err)
++	}
++
++	ready, ok := d.GetOk(resourceReadyReadyAttr)
++
++	skipChangesFields := make([]string, 0, len(resourceReadySkipUpdateFields))
++	for _, field := range resourceReadySkipUpdateFields {
++		if d.HasChange(field) {
++			skipChangesFields = append(skipChangesFields, field)
++		}
++	}
++
++	resource.debug(
++		ctx,
++		"Resource updating skipped because it does not have cloud state. ReadyExists: %v; Ready: %v. Changed fields [%s]",
++		ok,
++		ready,
++		strings.Join(skipChangesFields, ", "),
++	)
++
++	return nil
++}
++
++func resourceKubernetesResourceReadyV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
++	id := d.Id()
++	logResourceReadyTrace(ctx, "Start deleting %s", id)
++
++	resource, err := newResourceReadyResourceFromID(id)
++	if err != nil {
++		return diag.FromErr(err)
++	}
++
++	ready, ok := d.GetOk(resourceReadyReadyAttr)
++
++	resource.trace(ctx, "Resource deleting skipped because it does not have cloud state. ReadyExists: %v; Ready: %v", ok, ready)
++
++	d.SetId("")
++
++	return nil
++}
++
++func provideClientForResourceReadyResource(ctx context.Context, clientSet KubeClientsets, r *resourceReadyResource) (dynamic.ResourceInterface, diag.Diagnostics) {
++	gv, err := kubeschema.ParseGroupVersion(r.apiVersion)
++	if err != nil {
++		return nil, diag.Errorf("cannot parse apiVersion: %v", err)
++	}
++
++	mapper, err := clientSet.RESTMapper()
++	if err != nil {
++		return nil, diag.Errorf("cannot provide rest mapper: %v", err)
++	}
++
++	gk := runtimeschema.GroupKind{
++		Group: gv.Group,
++		Kind:  r.kind,
++	}
++
++	mapping, err := mapper.RESTMapping(gk, gv.Version)
++	if err != nil {
++		return nil, diag.Errorf("cannot provide rest mapping: %v", err)
++	}
++
++	dc, err := clientSet.DynamicClient()
++	if err != nil {
++		return nil, diag.Errorf("cannot provide dynamic client: %v", err)
++	}
++
++	isNamespaced := mapping.Scope.Name() == meta.RESTScopeNameNamespace
++	if isNamespaced && r.namespace == "" {
++		r.namespace = "default"
++	}
++
++	if isNamespaced {
++		logResourceReadyTrace(ctx, "Provide namespaced client for %s in namespace %s", gk.String(), r.namespace)
++		return dc.Resource(mapping.Resource).Namespace(r.namespace), nil
++	}
++
++	logResourceReadyTrace(ctx, "Provide non-namespaced client for %s", gk.String())
++	return dc.Resource(mapping.Resource), nil
++
++}
++
++func getResourceReadyStringAttr(d *schema.ResourceData, name string, shouldNotEmpty bool) (string, diag.Diagnostics) {
++	v, ok := d.GetOk(name)
++	if !ok {
++		if shouldNotEmpty {
++			return "", diag.Errorf("%s", requiredOrSetEmptyError(name))
++		}
++
++		return "", nil
++	}
++
++	val, ok := v.(string)
++	if !ok {
++		return "", diag.Errorf("%s is required. it is not string", name)
++	}
++
++	if shouldNotEmpty && val == "" {
++		return "", diag.Errorf("%s is required. it is empty", name)
++	}
++
++	return val, nil
++}
++
++func extractResourceReadyCheckerParams(ctx context.Context, d *schema.ResourceData) (*resourceReadyCheckerParams, diag.Diagnostics) {
++	var resDiags diag.Diagnostics
++
++	resource, resourceDiags := extractResourceReadyResource(d)
++	if resourceDiags.HasError() {
++		resDiags = append(resDiags, resourceDiags...)
++	}
++
++	durations, durationsDiags := extractResourceReadyDurations(ctx, d)
++	if durationsDiags.HasError() {
++		resDiags = append(resDiags, durationsDiags...)
++	}
++
++	logResourceReadyTrace(ctx, "Extract fields matchers")
++
++	fieldMatchers, matchersDiags := extractFieldMatches(ctx, d)
++	if matchersDiags.HasError() {
++		resDiags = append(resDiags, matchersDiags...)
++	}
++
++	logResourceReadyTrace(ctx, "Extract conditions matchers")
++
++	readyConditions, conditionsDiags := extractConditionMatches(ctx, d, resourceReadyConditionsAttr)
++	if conditionsDiags.HasError() {
++		resDiags = append(resDiags, conditionsDiags...)
++	}
++
++	logResourceReadyTrace(ctx, "Extract fail conditions matchers")
++
++	failConditions, failConditionsDiags := extractConditionMatches(ctx, d, resourceReadyFailConditionsAttr)
++	if failConditionsDiags.HasError() {
++		logResourceReadyInfo(ctx, "Fail conditions matchers error: %v", failConditionsDiags)
++		resDiags = append(resDiags, failConditionsDiags...)
++	}
++
++	logResourceReadyTrace(ctx, "Validate fail and ready conditions")
++
++	failReadyValidationDiags := validateResourceReadyFailAndReadyConditions(failConditions, readyConditions)
++	if failReadyValidationDiags.HasError() {
++		resDiags = append(resDiags, failReadyValidationDiags...)
++	}
++
++	if len(fieldMatchers) == 0 && len(readyConditions) == 0 {
++		resDiags = append(resDiags, diag.Errorf("fields and/or ready conditions not provided")...)
++	}
++
++	if resDiags.HasError() {
++		return nil, resDiags
++	}
++
++	return &resourceReadyCheckerParams{
++		durations:       durations,
++		fields:          fieldMatchers,
++		readyConditions: readyConditions,
++		failConditions:  failConditions,
++		resource:        resource,
++	}, nil
++}
++
++func extractResourceReadyResource(d *schema.ResourceData) (*resourceReadyResource, diag.Diagnostics) {
++	var resDiags diag.Diagnostics
++
++	apiVersion, apiVersionDiags := getResourceReadyStringAttr(d, resourceReadyAPIVersionAttr, true)
++	if apiVersionDiags.HasError() {
++		resDiags = append(resDiags, apiVersionDiags...)
++	}
++
++	kind, kindDiags := getResourceReadyStringAttr(d, resourceReadyKindAttr, true)
++	if kindDiags.HasError() {
++		resDiags = append(resDiags, kindDiags...)
++	}
++
++	namespace, namespaceDiags := getResourceReadyStringAttr(d, resourceReadyNamespaceAttr, false)
++	if namespaceDiags.HasError() {
++		resDiags = append(resDiags, namespaceDiags...)
++	}
++
++	name, nameDiags := getResourceReadyStringAttr(d, resourceReadyNameAttr, true)
++	if nameDiags.HasError() {
++		resDiags = append(resDiags, nameDiags...)
++	}
++
++	if resDiags.HasError() {
++		return nil, resDiags
++	}
++
++	return newResourceReadyResource(apiVersion, kind, name, namespace), nil
++}
++
++type matchField struct {
++	path         string
++	valueMatcher *regexp.Regexp
++}
++
++func (m *matchField) isMatched(val string) bool {
++	if m.valueMatcher == nil {
++		return val == ""
++	}
++
++	return m.valueMatcher.MatchString(val)
++}
++
++func (m *matchField) String() string {
++	expr := ""
++	if m.valueMatcher != nil {
++		expr = m.valueMatcher.String()
++	}
++
++	return fmt.Sprintf("Path='%s' Expr='%s'", m.path, expr)
++}
++
++func extractFieldMatches(ctx context.Context, d *schema.ResourceData) ([]matchField, diag.Diagnostics) {
++	rawMap, ok := d.GetOk(resourceReadyFieldsAttr)
++	if !ok {
++		logResourceReadyDebug(ctx, "Fields matchers not set. Skip")
++		return nil, nil
++	}
++
++	mapAny, ok := rawMap.(map[string]any)
++	if !ok {
++		return nil, diag.Errorf("fields is not map. it is %T", rawMap)
++	}
++
++	if len(mapAny) == 0 {
++		logResourceReadyDebug(ctx, "Fields matchers set, but empty. Skip")
++		return nil, nil
++	}
++
++	var parseDiags diag.Diagnostics
++	appendParseDiags := func(path, f string, args ...any) {
++		f = path + ": " + f
++		parseDiags = append(parseDiags, diag.Errorf(f, args...)...)
++	}
++
++	res := make([]matchField, 0, len(mapAny))
++	for path, exprRaw := range mapAny {
++		expr, ok := exprRaw.(string)
++		if !ok {
++			appendParseDiags(path, "expression not string")
++			continue
++		}
++
++		match := matchField{
++			path:         path,
++			valueMatcher: nil,
++		}
++
++		if expr != "" {
++			reExpr, err := regexp.Compile(expr)
++			if err != nil {
++				appendParseDiags(path, "cannot parse as regexp expression: %v", err)
++				continue
++			}
++
++			match.valueMatcher = reExpr
++		}
++
++		logResourceReadyTrace(ctx, "Found field matcher: %s", match.String())
++
++		res = append(res, match)
++	}
++
++	if parseDiags.HasError() {
++		return nil, parseDiags
++	}
++
++	sort.Slice(res, func(i, j int) bool {
++		return res[i].path < res[j].path
++	})
++
++	logResourceReadyTrace(ctx, "Found %d field matchers", len(res))
++
++	return res, nil
++}
++
++type matchCondition struct {
++	name           string
++	status         string
++	reasonMatcher  *regexp.Regexp
++	messageMatcher *regexp.Regexp
++}
++
++func (c *matchCondition) statusIsMatched(val metav1.ConditionStatus) bool {
++	return c.status == string(val)
++}
++
++func (c *matchCondition) reasonIsMatched(val string) bool {
++	return c.matchRe(c.reasonMatcher, val)
++}
++
++func (c *matchCondition) messageIsMatched(val string) bool {
++	return c.matchRe(c.messageMatcher, val)
++}
++
++func (c *matchCondition) matchRe(re *regexp.Regexp, val string) bool {
++	if re == nil {
++		return true
++	}
++
++	return re.MatchString(val)
++}
++
++func (c *matchCondition) String() string {
++	messageRe := ""
++	if c.messageMatcher != nil {
++		messageRe = c.messageMatcher.String()
++	}
++
++	reasonRe := ""
++	if c.reasonMatcher != nil {
++		reasonRe = c.reasonMatcher.String()
++	}
++
++	return fmt.Sprintf(
++		"Type='%s'; Status='%s' ReasonRe='%s' MessageRe='%s'",
++		c.name,
++		c.status,
++		reasonRe,
++		messageRe,
++	)
++}
++
++func extractConditionMatches(ctx context.Context, d *schema.ResourceData, fieldName string) ([]matchCondition, diag.Diagnostics) {
++	rawConditions, ok := d.GetOk(fieldName)
++	if !ok {
++		logResourceReadyDebug(ctx, "Conditions matchers %s not set. Skip", fieldName)
++		return nil, nil
++	}
++
++	conditionsList, conditionsListDiags := setConditionsToListMapAny(rawConditions)
++	if conditionsListDiags.HasError() {
++		return nil, conditionsListDiags
++	}
++
++	if len(conditionsList) == 0 {
++		logResourceReadyDebug(ctx, "Conditions matchers %s set but empty. Skip", fieldName)
++		return nil, nil
++	}
++
++	var condsDiags diag.Diagnostics
++	var res []matchCondition
++
++	processedTypes := make(map[string]int)
++
++	for i, condMap := range conditionsList {
++		errorPrefix := fmt.Sprintf("%s condition %d", fieldName, i)
++		name, nameDiags := resourceReadyExtractString(condMap, "type", true, errorPrefix)
++		if nameDiags.HasError() {
++			condsDiags = append(condsDiags, nameDiags...)
++			continue
++		}
++
++		processedTypes[name]++
++
++		status, statusDiags := resourceReadyExtractString(condMap, "status", true, errorPrefix)
++		if statusDiags.HasError() {
++			condsDiags = append(condsDiags, statusDiags...)
++			continue
++		}
++
++		matchCond := matchCondition{
++			name:   name,
++			status: status,
++		}
++
++		messageDiags := processConditionRegexp(&processConditionRegexpParams{
++			condMap:         condMap,
++			field:           "message",
++			dest:            &matchCond.messageMatcher,
++			shouldPresent:   false,
++			conditionsField: fieldName,
++			conditionName:   name,
++			errorPrefix:     errorPrefix,
++		})
++
++		if messageDiags.HasError() {
++			condsDiags = append(condsDiags, messageDiags...)
++			continue
++		}
++
++		reasonDiags := processConditionRegexp(&processConditionRegexpParams{
++			condMap:         condMap,
++			field:           "reason",
++			dest:            &matchCond.reasonMatcher,
++			shouldPresent:   false,
++			conditionsField: fieldName,
++			conditionName:   name,
++			errorPrefix:     errorPrefix,
++		})
++
++		if reasonDiags.HasError() {
++			condsDiags = append(condsDiags, reasonDiags...)
++			continue
++		}
++
++		logResourceReadyTrace(ctx, "Found conditions matcher for %s: %s", fieldName, matchCond.String())
++
++		res = append(res, matchCond)
++	}
++
++	for name, count := range processedTypes {
++		if count > 1 {
++			condsDiags = append(
++				condsDiags,
++				diag.Errorf(
++					"Found multiple %d conditions matchers in %s for type %s",
++					count,
++					fieldName,
++					name,
++				)...,
++			)
++		}
++	}
++
++	if condsDiags.HasError() {
++		return nil, condsDiags
++	}
++
++	logResourceReadyTrace(ctx, "Found %d conditions matchers for %s", len(res), fieldName)
++
++	return res, nil
++}
++
++func extractResourceReadyDuration(ctx context.Context, d *schema.ResourceData, field string, defaultDuration time.Duration, required bool) (time.Duration, diag.Diagnostics) {
++	logResourceReadyTrace(ctx, "Start extracting %s with default %v", field, defaultDuration)
++
++	extract := func() (time.Duration, diag.Diagnostics) {
++		timeoutString, timeoutDiags := getResourceReadyStringAttr(d, field, required)
++		if timeoutDiags.HasError() {
++			return 0, timeoutDiags
++		}
++
++		if timeoutString == "" && defaultDuration > 0 {
++			return defaultDuration, nil
++		}
++
++		timeout, err := time.ParseDuration(timeoutString)
++		if err != nil {
++			return 0, diag.Errorf("%s parse failed: %v", field, err)
++		}
++
++		return timeout, nil
++	}
++
++	durationVal, extractDiags := extract()
++	if extractDiags.HasError() {
++		return 0, extractDiags
++	}
++
++	logResourceReadyTrace(ctx, "%s extracted with value %s", field, durationVal.String())
++
++	return durationVal, nil
++}
++
++func extractResourceReadyDurations(ctx context.Context, d *schema.ResourceData) (*resourceReadyCheckerDurations, diag.Diagnostics) {
++	var resDiags diag.Diagnostics
++	timeout, timeoutDiags := extractResourceReadyDuration(
++		ctx,
++		d,
++		resourceReadyWaitTimeoutAttr,
++		0,
++		true,
++	)
++	if timeoutDiags.HasError() {
++		resDiags = append(resDiags, timeoutDiags...)
++	}
++
++	failConditionsAppearanceDuration, appearanceDiags := extractResourceReadyDuration(
++		ctx,
++		d,
++		resourceReadyFailConditionsAppearanceDurationAttr,
++		failConditionsAppearanceDurationDefault,
++		false,
++	)
++	if appearanceDiags.HasError() {
++		resDiags = append(resDiags, appearanceDiags...)
++	}
++
++	skipCheckLiveTimeDuration, skipLiveTimeDiags := extractResourceReadyDuration(
++		ctx,
++		d,
++		resourceReadySkipCheckOnCreateResourceLiveTimeAttr,
++		resourceReadySkipCheckOnCreateResourceLiveTimeDefault,
++		false,
++	)
++	if skipLiveTimeDiags.HasError() {
++		resDiags = append(resDiags, skipLiveTimeDiags...)
++	}
++
++	if resDiags.HasError() {
++		return nil, resDiags
++	}
++
++	return &resourceReadyCheckerDurations{
++		fullCheck:                timeout,
++		failConditionsAppearance: failConditionsAppearanceDuration,
++		skipReadyLiveTime:        skipCheckLiveTimeDuration,
++	}, nil
++}
++
++type processConditionRegexpParams struct {
++	condMap         map[string]any
++	field           string
++	dest            **regexp.Regexp
++	shouldPresent   bool
++	conditionsField string
++	conditionName   string
++	errorPrefix     string
++}
++
++func (p *processConditionRegexpParams) errorDiags(msg string) diag.Diagnostics {
++	return diag.Errorf("%s in condition %s for %s", msg, p.conditionName, p.conditionsField)
++}
++
++func processConditionRegexp(params *processConditionRegexpParams) diag.Diagnostics {
++	reStr, reDiags := resourceReadyExtractString(
++		params.condMap,
++		params.field,
++		params.shouldPresent,
++		params.errorPrefix,
++	)
++
++	if reDiags.HasError() {
++		return reDiags
++	}
++
++	if reStr != "" {
++		re, err := regexp.Compile(reStr)
++		if err != nil {
++			return params.errorDiags(fmt.Sprintf("cannot parse %s regexp: %v", params.field, err))
++		}
++
++		*params.dest = re
++	}
++
++	return nil
++}
++
++const resourceReadyIDSeparator = ";"
++
++type resourceReadyResource struct {
++	apiVersion string
++	name       string
++	kind       string
++	namespace  string
++
++	fullName  string
++	logPrefix string
++}
++
++func newResourceReadyResource(apiVersion, kind, name, namespace string) *resourceReadyResource {
++	fullName := fmt.Sprintf("%s[%s/%s/%s]", apiVersion, namespace, kind, name)
++	return &resourceReadyResource{
++		apiVersion: apiVersion,
++		name:       name,
++		kind:       kind,
++		namespace:  namespace,
++		fullName:   fullName,
++		logPrefix:  fmt.Sprintf("Resource %s: ", fullName),
++	}
++}
++
++func newResourceReadyResourceFromID(id string) (*resourceReadyResource, error) {
++	parts := strings.Split(id, resourceReadyIDSeparator)
++	if len(parts) != 4 {
++		return nil, fmt.Errorf("invalid resource id: %s", id)
++	}
++
++	return newResourceReadyResource(parts[0], parts[1], parts[2], parts[3]), nil
++}
++
++func (r *resourceReadyResource) diagError(f string, args ...any) diag.Diagnostics {
++	return diag.Errorf(r.logPrefix+f, args...)
++}
++
++func (r *resourceReadyResource) info(ctx context.Context, f string, args ...any) {
++	logResourceReadyInfo(ctx, r.logPrefix+f, args...)
++}
++
++func (r *resourceReadyResource) trace(ctx context.Context, f string, args ...any) {
++	logResourceReadyTrace(ctx, r.logPrefix+f, args...)
++}
++
++func (r *resourceReadyResource) debug(ctx context.Context, f string, args ...any) {
++	logResourceReadyDebug(ctx, r.logPrefix+f, args...)
++}
++
++func (r *resourceReadyResource) id() string {
++	parts := []string{r.apiVersion, r.kind, r.name, r.namespace}
++
++	return strings.Join(parts, resourceReadyIDSeparator)
++}
++
++func (r *resourceReadyResource) String() string {
++	return r.fullName
++}
++
++type resourceReadyCheckerDurations struct {
++	fullCheck                time.Duration
++	skipReadyLiveTime        time.Duration
++	failConditionsAppearance time.Duration
++}
++
++type resourceReadyCheckerParams struct {
++	durations       *resourceReadyCheckerDurations
++	fields          []matchField
++	readyConditions []matchCondition
++	failConditions  []matchCondition
++	resource        *resourceReadyResource
++}
++
++type resourceReadyChecker struct {
++	params    *resourceReadyCheckerParams
++	client    dynamic.ResourceInterface
++	startTime time.Time
++
++	logPrefix string
++}
++
++func newResourceReadyChecker(params *resourceReadyCheckerParams, client dynamic.ResourceInterface, startTime time.Time) *resourceReadyChecker {
++	return &resourceReadyChecker{
++		params:    params,
++		client:    client,
++		startTime: startTime,
++
++		logPrefix: fmt.Sprintf("Resource ready checker for %s: ", params.resource.String()),
++	}
++}
++
++func (r *resourceReadyChecker) StartCheck(ctx context.Context) diag.Diagnostics {
++	cctx, cancel := context.WithTimeout(ctx, r.params.durations.fullCheck)
++	defer cancel()
++
++	return r.wait(cctx)
++}
++
++func (r *resourceReadyChecker) MarkReady(ctx context.Context, d *schema.ResourceData) diag.Diagnostics {
++	resource := r.params.resource
++	id := resource.id()
++	d.SetId(id)
++
++	if err := d.Set(resourceReadyReadyAttr, true); err != nil {
++		return resource.diagError("ready attr cannot be set: %v", err)
++	}
++
++	resource.trace(ctx, "ID '%s' added", id)
++	resource.info(ctx, "fully ready!")
++
++	return nil
++}
++
++func (r *resourceReadyChecker) wait(ctx context.Context) diag.Diagnostics {
++	waitTimeoutStr := r.params.durations.fullCheck.String()
++
++	r.trace(ctx, "Start waiting with timeout %s", waitTimeoutStr)
++
++	attemptTimeout := 2 * time.Second
++
++	var lastDiags diag.Diagnostics
++
++	debugDiagsAndSleep := func(diags diag.Diagnostics) {
++		lastDiags = diags
++		r.debugContinueDiags(ctx, diags)
++		time.Sleep(attemptTimeout)
++	}
++
++	attempt := 0
++
++	for {
++		attempt++
++
++		r.trace(ctx, "check attempt %d", attempt)
++
++		select {
++		case <-ctx.Done():
++			return r.params.resource.diagError(
++				"context error or wait timeout %s exceeded: %v\n  Last errors:\n%s",
++				waitTimeoutStr,
++				ctx.Err(),
++				resourceReadyDiagsToString(lastDiags),
++			)
++		default:
++		}
++
++		resource, getDiags := r.get(ctx)
++		if len(getDiags) > 0 {
++			if getDiags.HasError() {
++				return getDiags
++			}
++
++			debugDiagsAndSleep(getDiags)
++			continue
++		}
++
++		// check live time does one time. attempt always > 0
++		if attempt == 1 {
++			// rewrite start time after success get first get
++			r.startTime = time.Now()
++
++			liveTimeDiags := r.processLiveTime(ctx, resource)
++			// we should return warning for user for better observability
++			// that's way handle all diags
++			if len(liveTimeDiags) > 0 {
++				return liveTimeDiags
++			}
++		}
++
++		conditionsDiags := r.processConditions(ctx, resource)
++		if len(conditionsDiags) > 0 {
++			if conditionsDiags.HasError() {
++				return conditionsDiags
++			}
++
++			debugDiagsAndSleep(conditionsDiags)
++			continue
++		}
++
++		fieldsDiags := r.processFields(ctx, resource)
++		if len(fieldsDiags) > 0 {
++			if fieldsDiags.HasError() {
++				return fieldsDiags
++			}
++
++			debugDiagsAndSleep(fieldsDiags)
++			continue
++		}
++
++		r.info(ctx, "check successfully done")
++
++		return nil
++	}
++}
++
++func (r *resourceReadyChecker) processLiveTime(ctx context.Context, resource *unstructured.Unstructured) diag.Diagnostics {
++	liveTimeDuration := r.params.durations.skipReadyLiveTime
++
++	if liveTimeDuration == 0 {
++		r.trace(ctx, "Passed zero live time. Do readiness checks")
++		return nil
++	}
++
++	now := time.Now()
++
++	createTime := resource.GetCreationTimestamp()
++	timeForCheck := createTime.Add(liveTimeDuration)
++	liveTime := now.Sub(createTime.Time)
++
++	timesStr := fmt.Sprintf(
++		"%s (needs for skipping %s)",
++		liveTime.String(),
++		liveTimeDuration.String(),
++	)
++
++	if now.Before(timeForCheck) {
++		r.trace(ctx, "Resource is young %s for skipping ready. Do readiness checks", timesStr)
++		return nil
++	}
++
++	r.info(ctx, "Skip readiness check because resource too old %s", timesStr)
++
++	return diag.Diagnostics{diag.Diagnostic{
++		Severity: diag.Warning,
++		Summary:  "Resource is too old for checking ready. Skip readiness check.",
++		Detail: fmt.Sprintf(
++			"Resource live time is %s. Live time for skipping is %s.",
++			liveTime.String(),
++			liveTimeDuration.String(),
++		),
++	}}
++}
++
++func (r *resourceReadyChecker) processFields(ctx context.Context, resource *unstructured.Unstructured) diag.Diagnostics {
++	fields := r.params.fields
++	if len(fields) == 0 {
++		r.debug(ctx, "No fields. Skip check by fields")
++		return nil
++	}
++
++	jsonBytes, err := resource.MarshalJSON()
++	if err != nil {
++		return r.createContinueDiags("Cannot marshal resource to process fields: %v", err)
++	}
++
++	jsonString := string(jsonBytes)
++
++	var fieldsDiags diag.Diagnostics
++
++	for _, field := range fields {
++		val := gjson.Get(jsonString, field.path).String()
++		if !field.isMatched(val) {
++			fieldsDiags = append(
++				fieldsDiags,
++				r.createContinueDiags("Field '%s' is not match. value is '%s'", field.path, val)...,
++			)
++			continue
++		}
++
++		r.trace(ctx, "Field '%s' val '%s' is match to expression", field.path, val)
++	}
++
++	if len(fieldsDiags) > 0 {
++		return fieldsDiags
++	}
++
++	r.debug(ctx, "All fields matched to them expressions")
++
++	return nil
++}
++
++func (r *resourceReadyChecker) processConditions(ctx context.Context, resource *unstructured.Unstructured) diag.Diagnostics {
++	if len(r.params.readyConditions) == 0 && len(r.params.failConditions) == 0 {
++		r.debug(ctx, "No fail or ready conditions. Skip checks by conditions")
++		return nil
++	}
++
++	conditions := r.rawConditionsToStructConditions(resource)
++
++	var resDiags diag.Diagnostics
++
++	failConditionDiags := r.processFailConditions(ctx, conditions)
++	if len(failConditionDiags) > 0 {
++		if failConditionDiags.HasError() {
++			return failConditionDiags
++		}
++
++		resDiags = append(resDiags, failConditionDiags...)
++	}
++
++	readyDiags := r.processReadyConditions(ctx, conditions)
++	if len(readyDiags) > 0 {
++		if readyDiags.HasError() {
++			return append(resDiags, readyDiags...)
++		}
++
++		resDiags = append(resDiags, readyDiags...)
++	}
++
++	if len(resDiags) > 0 {
++		return resDiags
++	}
++
++	return nil
++}
++
++func (r *resourceReadyChecker) processFailConditions(ctx context.Context, conditions extractConditionsResult) diag.Diagnostics {
++	failConditions := r.params.failConditions
++
++	if len(failConditions) == 0 {
++		r.debug(ctx, "Fail conditions not present. Skip checks by fail conditions")
++		return nil
++	}
++
++	appearanceDuration := r.params.durations.failConditionsAppearance
++
++	now := time.Now()
++	timeStrFormat := time.RFC3339
++
++	appearanceEndTime := r.startTime
++	appearanceEndTime = appearanceEndTime.Add(appearanceDuration)
++	appearanceEndTimeStr := appearanceEndTime.Format(timeStrFormat)
++	appearanceIsExceed := now.After(appearanceEndTime)
++
++	r.trace(
++		ctx,
++		"Fail conditions appearance: duration %s; now %s; start time %s, end time %s; is exceed %v",
++		appearanceDuration.String(),
++		now.Format(timeStrFormat),
++		r.startTime.Format(timeStrFormat),
++		appearanceEndTimeStr,
++		appearanceIsExceed,
++	)
++
++	var inAppearanceDiags diag.Diagnostics
++	appendInAppearanceDiag := func(f string, args ...any) bool {
++		if appearanceIsExceed {
++			return false
++		}
++
++		f = f + fmt.Sprintf(
++			" and wait %s to %s in hopes of appearance the conditions",
++			appearanceDuration.String(),
++			appearanceEndTimeStr,
++		)
++
++		inAppearanceDiags = append(inAppearanceDiags, r.createContinueDiags(f, args...)...)
++		return true
++	}
++
++	processEmpty := func(conditions extractConditionsResult) (bool, diag.Diagnostics) {
++		if !conditions.isEmpty {
++			if len(conditions.diags) == 0 {
++				return false, nil
++			}
++
++			return true, conditions.diags
++		}
++
++		// if conditions is empty we should only check that
++		// we in appearance time, because extractor always return diags for empty
++		// or not present for ready condition check
++		// in its check we always fail if conditions not present or empty
++
++		if appendInAppearanceDiag("Conditions are empty") {
++			return true, inAppearanceDiags
++		}
++
++		r.debug(ctx, "Conditions are empty and appearance time %s exceed. Returns not fail", appearanceEndTimeStr)
++		return true, nil
++	}
++
++	shouldReturn, processEmptyDiags := processEmpty(conditions)
++	if shouldReturn {
++		return processEmptyDiags
++	}
++
++	for _, failCondition := range failConditions {
++		conditionToCheck, ok := conditions.conditions[failCondition.name]
++		if !ok {
++			if appendInAppearanceDiag("Fail condition %s is not present", failCondition.String()) {
++				continue
++			}
++
++			r.debug(ctx, "Fail condition %s not present. Skip", failCondition.String())
++			continue
++		}
++
++		hasNeedStatus := failCondition.statusIsMatched(conditionToCheck.Status)
++		hasNeedReason := failCondition.reasonIsMatched(conditionToCheck.Reason)
++		hasNeedMessage := failCondition.messageIsMatched(conditionToCheck.Message)
++
++		r.trace(
++			ctx,
++			"Fail condition %s check: hasNeedStatus=%v ('%s') hasNeedReason=%v ('%s') hasNeedMessage=%v ('%s')",
++			failCondition.String(),
++			hasNeedStatus,
++			conditionToCheck.Status,
++			hasNeedReason,
++			conditionToCheck.Reason,
++			hasNeedMessage,
++			conditionToCheck.Message,
++		)
++
++		if hasNeedStatus && hasNeedReason && hasNeedMessage {
++			return diag.Errorf("Ready failed by fail condition %s:\n%s", failCondition.String(), conditionToCheck.String())
++		}
++	}
++
++	if len(inAppearanceDiags) > 0 {
++		return inAppearanceDiags
++	}
++
++	r.debug(ctx, "All fail conditions were processed")
++
++	return nil
++}
++
++func (r *resourceReadyChecker) processReadyConditions(ctx context.Context, conditions extractConditionsResult) diag.Diagnostics {
++	readyConditions := r.params.readyConditions
++
++	if len(readyConditions) == 0 {
++		r.debug(ctx, "Ready conditions not present. Skip checks by ready conditions")
++		return nil
++	}
++
++	// always fail if have any diags
++	// isEmpty needs for fail conditions
++	if len(conditions.diags) > 0 {
++		return conditions.diags
++	}
++
++	var readyDiags diag.Diagnostics
++
++	appendReadyDiag := func(cond matchCondition, f string, args ...any) {
++		f = fmt.Sprintf("Ready condition %s: ", cond.String()) + f
++		readyDiags = append(readyDiags, r.createContinueDiags(f, args...)...)
++	}
++
++	for _, readyCondition := range readyConditions {
++		conditionToCheck, ok := conditions.conditions[readyCondition.name]
++		if !ok {
++			appendReadyDiag(readyCondition, "is not present")
++			continue
++		}
++
++		if !readyCondition.statusIsMatched(conditionToCheck.Status) {
++			appendReadyDiag(readyCondition, "status is not match. Current status is '%s'", conditionToCheck.Status)
++			continue
++		}
++
++		if !readyCondition.reasonIsMatched(conditionToCheck.Reason) {
++			appendReadyDiag(readyCondition, "reason is not match. Current reason is '%s'", conditionToCheck.Reason)
++			continue
++		}
++
++		if !readyCondition.messageIsMatched(conditionToCheck.Message) {
++			appendReadyDiag(readyCondition, "message is not match. Current message is '%s'", conditionToCheck.Message)
++			continue
++		}
++
++		r.debug(ctx, "Ready condition %s is matched", readyCondition.String())
++	}
++
++	if len(readyDiags) > 0 {
++		return readyDiags
++	}
++
++	r.debug(ctx, "All ready conditions were matched")
++
++	return nil
++}
++
++func (r *resourceReadyChecker) get(ctx context.Context) (*unstructured.Unstructured, diag.Diagnostics) {
++	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
++	defer cancel()
++
++	res, err := r.client.Get(cctx, r.params.resource.name, metav1.GetOptions{})
++	if err != nil {
++		if errors.IsGone(err) {
++			return nil, r.params.resource.diagError("resource was deleted")
++		}
++
++		return nil, r.createContinueDiags("cannot get resource: '%v'", err)
++	}
++
++	return res, nil
++}
++
++func (r *resourceReadyChecker) createContinueDiags(f string, args ...any) diag.Diagnostics {
++	return diag.Diagnostics{diag.Diagnostic{
++		Severity: diag.Warning,
++		Summary:  fmt.Sprintf(f, args...),
++	}}
++}
++
++func (r *resourceReadyChecker) debugContinueDiags(ctx context.Context, diagnostics diag.Diagnostics) {
++	for _, d := range diagnostics {
++		r.debug(ctx, "Resource not ready. Waiting will continue with next attempt: %s", d.Summary)
++	}
++}
++
++func (r *resourceReadyChecker) debug(ctx context.Context, f string, args ...any) {
++	logResourceReadyDebug(ctx, r.logPrefix+f, args...)
++}
++
++func (r *resourceReadyChecker) trace(ctx context.Context, f string, args ...any) {
++	logResourceReadyTrace(ctx, r.logPrefix+f, args...)
++}
++
++func (r *resourceReadyChecker) info(ctx context.Context, f string, args ...any) {
++	logResourceReadyTrace(ctx, r.logPrefix+f, args...)
++}
++
++type extractConditionsResult struct {
++	conditions map[string]metav1.Condition
++	isEmpty    bool
++	diags      diag.Diagnostics
++}
++
++func (r *resourceReadyChecker) rawConditionsToStructConditions(resource *unstructured.Unstructured) extractConditionsResult {
++	emptyConditions := func(isEmpty bool, msg string, args ...any) extractConditionsResult {
++		msg = msg + " for checking conditions"
++		return extractConditionsResult{
++			conditions: nil,
++			isEmpty:    isEmpty,
++			diags:      r.createContinueDiags(msg, args...),
++		}
++	}
++
++	obj := resource.Object
++	statusRaw, ok := obj["status"]
++	if !ok {
++		return emptyConditions(true, "status not present")
++	}
++
++	status, ok := statusRaw.(map[string]any)
++	if !ok {
++		return emptyConditions(false, "status is not map")
++	}
++
++	conditionsRaw, ok := status["conditions"]
++	if !ok {
++		return emptyConditions(true, "conditions not present")
++	}
++
++	conditionsSliceAny, ok := conditionsRaw.([]any)
++	if !ok {
++		return emptyConditions(false, "conditions not slice")
++	}
++
++	if len(conditionsSliceAny) == 0 {
++		return emptyConditions(true, "conditions list is empty")
++	}
++
++	jsonBytes, err := json.Marshal(conditionsSliceAny)
++	if err != nil {
++		return emptyConditions(false, "cannot marshal conditions to json: %v", err)
++	}
++
++	var conditions []metav1.Condition
++	if err := json.Unmarshal(jsonBytes, &conditions); err != nil {
++		return emptyConditions(false, "cannot unmarshal to conditions: %v", err)
++	}
++
++	res := make(map[string]metav1.Condition, len(conditions))
++
++	for _, condition := range conditions {
++		res[condition.Type] = condition
++	}
++
++	return extractConditionsResult{
++		conditions: res,
++		isEmpty:    false,
++		diags:      nil,
++	}
++}
++
++func resourceReadyExtractString(m map[string]any, key string, required bool, errorPrefix string) (string, diag.Diagnostics) {
++	vRaw, ok := m[key]
++	if !ok {
++		if required {
++			return "", diag.Errorf("%s %s", errorPrefix, requiredOrSetEmptyError(key))
++		}
++
++		return "", nil
++	}
++
++	vStr, ok := vRaw.(string)
++	if !ok {
++		return "", diag.Errorf("%s %s is not string", errorPrefix, key)
++	}
++
++	if vStr == "" && required {
++		return "", diag.Errorf("%s %s", errorPrefix, requiredOrSetEmptyError(key))
++	}
++
++	return vStr, nil
++}
++
++type conditionsSet = []map[string]any
++
++type resourceReadyKV struct {
++	key string
++	val any
++}
++
++func resourceReadyDiagsToString(diags diag.Diagnostics) string {
++	if len(diags) == 0 {
++		return ""
++	}
++
++	strDiags := make([]string, 0, len(diags))
++	for i, d := range diags {
++		msg := fmt.Sprintf("  %d: %s", i, d.Summary)
++		if d.Detail != "" {
++			msg = fmt.Sprintf("%s. %s", msg, d.Detail)
++		}
++
++		strDiags = append(strDiags, msg)
++	}
++
++	return strings.Join(strDiags, "\n")
++}
++
++func expandResourceReadyMap(m map[string]any) []resourceReadyKV {
++	res := make([]resourceReadyKV, 0, len(m))
++	for k, v := range m {
++		res = append(res, resourceReadyKV{k, v})
++	}
++
++	return res
++}
++
++func resourceReadyMapString(m []resourceReadyKV) string {
++	sort.Slice(m, func(i, j int) bool {
++		return m[i].key < m[j].key
++	})
++
++	buf := make([]string, 0, len(m))
++	for _, kv := range m {
++		buf = append(buf, fmt.Sprintf("%s=%v", kv.key, kv.val))
++	}
++
++	return strings.Join(buf, "##")
++}
++
++func setConditionsToListMapAny(m any) (conditionsSet, diag.Diagnostics) {
++	if mapAny, ok := m.(map[string]any); ok {
++		return conditionsSet{mapAny}, nil
++	}
++
++	schemaSet, ok := m.(*schema.Set)
++	if !ok {
++		return nil, diag.Errorf("cannot convert conditions set to *schema.Set")
++	}
++
++	set := schemaSet.List()
++	if len(set) == 0 {
++		return nil, nil
++	}
++
++	res := make(conditionsSet, 0, len(set))
++	equalElements := make(map[string]struct{}, len(set))
++
++	for i, conditionRaw := range set {
++		condition, ok := conditionRaw.(map[string]any)
++		if !ok {
++			return nil, diag.Errorf("cannot convert %d condition set to map[any]", i)
++		}
++
++		id := resourceReadyMapString(expandResourceReadyMap(condition))
++		if _, ok := equalElements[id]; ok {
++			continue
++		}
++
++		equalElements[id] = struct{}{}
++		res = append(res, condition)
++	}
++
++	return res, nil
++}
++
++func validateResourceReadyFailAndReadyConditions(fail []matchCondition, ready []matchCondition) diag.Diagnostics {
++	failByTypes := make(map[string]matchCondition)
++	readyByTypes := make(map[string]matchCondition)
++
++	for _, c := range fail {
++		failByTypes[c.name] = c
++	}
++
++	for _, c := range ready {
++		readyByTypes[c.name] = c
++	}
++
++	var resDiags diag.Diagnostics
++	for t, f := range failByTypes {
++		r, ok := readyByTypes[t]
++		if !ok {
++			continue
++		}
++
++		if f.String() == r.String() {
++			resDiags = append(resDiags, diag.Errorf("Found same fail and ready condition matcher for type %s", t)...)
++		}
++	}
++
++	if resDiags.HasError() {
++		return resDiags
++	}
++
++	return nil
++}
++
++func resourceReadyValidationError(f string, args ...any) ([]string, []error) {
++	return nil, []error{fmt.Errorf(f, args...)}
++}
++
++func validateResourceReadyTimeout(val any, key string) ([]string, []error) {
++	strVal, ok := val.(string)
++	if !ok {
++		return resourceReadyValidationError("expected type of %s to be string", key)
++	}
++
++	if strVal == "" {
++		return resourceReadyValidationError("%s", requiredOrSetEmptyError(key))
++	}
++
++	_, err := time.ParseDuration(strVal)
++	if err != nil {
++		return resourceReadyValidationError("%s should be golang time.Duration format: %v", key, err)
++	}
++
++	return nil, nil
++}
++
++func validateResourceReadyAPIVersion(val any, _ string) ([]string, []error) {
++	apiVersionValidationError := func(f string, args ...any) ([]string, []error) {
++		return resourceReadyValidationError(resourceReadyAPIVersionAttr+" "+f, args...)
++	}
++
++	apiVersion, ok := val.(string)
++	if !ok {
++		return apiVersionValidationError("is not a string")
++	}
++
++	if apiVersion == "" {
++		return resourceReadyValidationError("%s", requiredOrSetEmptyError(resourceReadyAPIVersionAttr))
++	}
++
++	_, err := kubeschema.ParseGroupVersion(apiVersion)
++	if err != nil {
++		return apiVersionValidationError("not a valid APIVersion: %v", err)
++	}
++
++	return nil, nil
++}
++
++func validateResourceReadyFieldsMap(val any, key string) ([]string, []error) {
++	mapVal, ok := val.(map[string]any)
++	if !ok {
++		return resourceReadyValidationError("%s should be map", key)
++	}
++
++	var errs []error
++	appendError := func(field string, msg string, args ...any) {
++		prefix := fmt.Sprintf("field %s is invalid: ", field)
++		errs = append(errs, fmt.Errorf(prefix+msg, args...))
++	}
++
++	for field, rawRegexp := range mapVal {
++		reStr, ok := rawRegexp.(string)
++		if !ok {
++			appendError(field, "should to be string")
++			continue
++		}
++
++		if reStr == "" {
++			continue
++		}
++
++		if _, err := regexp.Compile(reStr); err != nil {
++			appendError(field, "should to valid regexp: %v", err)
++			continue
++		}
++	}
++
++	return nil, errs
++}
++
++func validateResourceReadyRegexp(fieldName string) func(val any, key string) ([]string, []error) {
++	return func(val any, key string) ([]string, []error) {
++		regexpValidationError := func(f string, args ...any) ([]string, []error) {
++			f = fmt.Sprintf("%s %s: ", fieldName, key) + f
++			return resourceReadyValidationError(f, args...)
++		}
++
++		message, ok := val.(string)
++		if !ok {
++			return regexpValidationError("is not string")
++		}
++
++		if message == "" {
++			return nil, nil
++		}
++
++		if _, err := regexp.Compile(message); err != nil {
++			return regexpValidationError("should be a valid regexp: %v", err)
++		}
++
++		return nil, nil
++	}
++}
++
++func requiredOrSetEmptyError(key string) string {
++	return fmt.Sprintf("%s is required. it is not set or empty", key)
++}
++
++type resourceReadyLogFunc func(ctx context.Context, msg string, additionalFields ...map[string]interface{})
++
++var (
++	resourceReadyTraceLogFunc resourceReadyLogFunc
++	resourceReadyDebugLogFunc resourceReadyLogFunc
++)
++
++func init() {
++	resourceReadyDebugLogFunc = tflog.Debug
++	resourceReadyTraceLogFunc = tflog.Trace
++
++	resourceReadyLogEnv := strings.ToLower(os.Getenv("TF_RESOURCE_READY_TRACE_AND_DEBUG_AS_INFO"))
++	if resourceReadyLogEnv == "true" {
++		resourceReadyDebugLogFunc = tflog.Info
++		resourceReadyTraceLogFunc = tflog.Info
++		return
++	}
++
++	// increase trace log level for tests
++	accEnv := strings.ToLower(os.Getenv("TF_ACC"))
++	if accEnv != "" && accEnv != "0" && accEnv != "false" {
++		resourceReadyTraceLogFunc = tflog.Debug
++		return
++	}
++}
++
++func logResourceReadyInfo(ctx context.Context, f string, args ...any) {
++	tflog.Info(ctx, fmt.Sprintf(f, args...))
++}
++
++func logResourceReadyDebug(ctx context.Context, f string, args ...any) {
++	resourceReadyDebugLogFunc(ctx, fmt.Sprintf(f, args...))
++}
++
++func logResourceReadyTrace(ctx context.Context, f string, args ...any) {
++	resourceReadyTraceLogFunc(ctx, fmt.Sprintf(f, args...))
++}
 Index: run_resource_ready_tests.sh
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -7,8 +1708,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/run_resource_ready_tests.sh b/run_resource_ready_tests.sh
 new file mode 100755
---- /dev/null	(date 1772204949000)
-+++ b/run_resource_ready_tests.sh	(date 1772204949000)
+--- /dev/null	(date 1772211713627)
++++ b/run_resource_ready_tests.sh	(date 1772211713627)
 @@ -0,0 +1,92 @@
 +#!/usr/bin/env bash
 +
@@ -110,8 +1811,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/kubernetes/resource_kubernetes_resource_ready_v1_test.go b/kubernetes/resource_kubernetes_resource_ready_v1_test.go
 new file mode 100644
---- /dev/null	(date 1772205566000)
-+++ b/kubernetes/resource_kubernetes_resource_ready_v1_test.go	(date 1772205566000)
+--- /dev/null	(date 1772310418308)
++++ b/kubernetes/resource_kubernetes_resource_ready_v1_test.go	(date 1772310418308)
 @@ -0,0 +1,3092 @@
 +package kubernetes
 +
@@ -3204,1692 +4905,4 @@ new file mode 100644
 +		kubernetesProvider := Provider()
 +		return tf5muxserver.NewMuxServer(context.TODO(), kubernetesProvider.GRPCProvider, manifest.Provider())
 +	},
-+}
-Index: kubernetes/resource_kubernetes_resource_ready_v1.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/kubernetes/resource_kubernetes_resource_ready_v1.go b/kubernetes/resource_kubernetes_resource_ready_v1.go
-new file mode 100644
---- /dev/null	(date 1772203567000)
-+++ b/kubernetes/resource_kubernetes_resource_ready_v1.go	(date 1772203567000)
-@@ -0,0 +1,1678 @@
-+package kubernetes
-+
-+import (
-+	"context"
-+	"encoding/json"
-+	"fmt"
-+	"os"
-+	"regexp"
-+	"sort"
-+	"strings"
-+	"time"
-+
-+	"github.com/hashicorp/terraform-plugin-log/tflog"
-+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-+	"github.com/tidwall/gjson"
-+	"k8s.io/apimachinery/pkg/api/meta"
-+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-+	kubeschema "k8s.io/apimachinery/pkg/runtime/schema"
-+	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
-+	"k8s.io/client-go/dynamic"
-+
-+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-+	"k8s.io/apimachinery/pkg/api/errors"
-+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-+)
-+
-+const (
-+	resourceReadyAPIVersionAttr = "api_version"
-+	resourceReadyKindAttr       = "kind"
-+	resourceReadyNameAttr       = "name"
-+	resourceReadyNamespaceAttr  = "namespace"
-+
-+	resourceReadyFieldsAttr                            = "fields"
-+	resourceReadyConditionsAttr                        = "condition"
-+	resourceReadyFailConditionsAttr                    = "fail_condition"
-+	resourceReadyWaitTimeoutAttr                       = "wait_timeout"
-+	resourceReadyFailConditionsAppearanceDurationAttr  = "fail_conditions_appearance_duration"
-+	resourceReadySkipCheckOnCreateResourceLiveTimeAttr = "skip_check_on_create_with_resource_live_time"
-+
-+	resourceReadyReadyAttr = "ready"
-+)
-+
-+var (
-+	failConditionsAppearanceDurationDefault               = 15 * time.Second
-+	resourceReadySkipCheckOnCreateResourceLiveTimeDefault = time.Duration(0)
-+
-+	resourceReadyForceRecreateFields = []string{
-+		resourceReadyAPIVersionAttr,
-+		resourceReadyKindAttr,
-+		resourceReadyNameAttr,
-+		resourceReadyNamespaceAttr,
-+	}
-+
-+	resourceReadySkipUpdateFields = []string{
-+		resourceReadyFieldsAttr,
-+		resourceReadyConditionsAttr,
-+		resourceReadyFailConditionsAttr,
-+		resourceReadyWaitTimeoutAttr,
-+		resourceReadyFailConditionsAppearanceDurationAttr,
-+		resourceReadySkipCheckOnCreateResourceLiveTimeAttr,
-+	}
-+
-+	resourceReadyComputedFields = []string{
-+		resourceReadyReadyAttr,
-+	}
-+)
-+
-+func resourceKubernetesResourceReadyV1() *schema.Resource {
-+	conditionsSchema := func(description string) *schema.Schema {
-+		return &schema.Schema{
-+			Type:        schema.TypeSet,
-+			Optional:    true,
-+			Description: description,
-+			Elem: &schema.Resource{
-+				Schema: map[string]*schema.Schema{
-+					"type": {
-+						Type:        schema.TypeString,
-+						Required:    true,
-+						Description: "Type of condition for check. Check fully equal.",
-+					},
-+
-+					"status": {
-+						Type:        schema.TypeString,
-+						Required:    true,
-+						Description: "Status of condition for check. Check fully equal.",
-+					},
-+
-+					"reason": {
-+						Type:         schema.TypeString,
-+						Optional:     true,
-+						Required:     false,
-+						Description:  "String or regexp for checking Reason of condition.",
-+						ValidateFunc: validateResourceReadyRegexp("condition reason"),
-+					},
-+
-+					"message": {
-+						Type:         schema.TypeString,
-+						Optional:     true,
-+						Required:     false,
-+						Description:  "String or regexp for checking Message of condition",
-+						ValidateFunc: validateResourceReadyRegexp("condition message"),
-+					},
-+				},
-+			},
-+		}
-+	}
-+
-+	failConditionsDescription := "Conditions that will checked for fail fast."
-+	failConditionsDescription += " You can use same condition types for ready and fail, but with different"
-+	failConditionsDescription += " status reason or message"
-+
-+	skipReadyLiveTimeDescription := "Duration for skip ready if resource create time great than this duration."
-+	skipReadyLiveTimeDescription += " In general should use for migration."
-+	skipReadyLiveTimeDescription += " Can be 0 for skipping check live time."
-+	skipReadyLiveTimeDescription += " Should be a golang time.Duration."
-+
-+	resourceSchema := map[string]*schema.Schema{
-+		resourceReadyAPIVersionAttr: {
-+			Type:         schema.TypeString,
-+			Required:     true,
-+			Description:  "APIVersion of resource.",
-+			ValidateFunc: validateResourceReadyAPIVersion,
-+		},
-+		resourceReadyKindAttr: {
-+			Type:        schema.TypeString,
-+			Required:    true,
-+			Description: "Kind of resource.",
-+		},
-+
-+		resourceReadyNameAttr: {
-+			Type:        schema.TypeString,
-+			Required:    true,
-+			Description: "Resource name.",
-+		},
-+
-+		resourceReadyNamespaceAttr: {
-+			Type:        schema.TypeString,
-+			Optional:    true,
-+			Description: "Resource namespace.",
-+		},
-+
-+		resourceReadyWaitTimeoutAttr: {
-+			Type:         schema.TypeString,
-+			Required:     true,
-+			Description:  "Readiness wait timeout. Should be a golang time.Duration.",
-+			ValidateFunc: validateResourceReadyTimeout,
-+		},
-+
-+		resourceReadyFailConditionsAppearanceDurationAttr: {
-+			Type:         schema.TypeString,
-+			Required:     false,
-+			Optional:     true,
-+			Default:      failConditionsAppearanceDurationDefault.String(),
-+			Description:  "Duration for hopes of appearance fail conditions. Should be a golang time.Duration.",
-+			ValidateFunc: validateResourceReadyTimeout,
-+		},
-+
-+		resourceReadySkipCheckOnCreateResourceLiveTimeAttr: {
-+			Type:         schema.TypeString,
-+			Required:     false,
-+			Optional:     true,
-+			Default:      resourceReadySkipCheckOnCreateResourceLiveTimeDefault.String(),
-+			Description:  skipReadyLiveTimeDescription,
-+			ValidateFunc: validateResourceReadyTimeout,
-+		},
-+
-+		resourceReadyFieldsAttr: {
-+			Type:        schema.TypeMap,
-+			Optional:    true,
-+			Description: "Fields that will checked. Keys is path in gjson format, value is regexp. fields or/and conditions should be set.",
-+			Elem: &schema.Schema{
-+				Type:         schema.TypeString,
-+				ValidateFunc: validateResourceReadyFieldsMap,
-+			},
-+		},
-+
-+		resourceReadyConditionsAttr: conditionsSchema(
-+			"Conditions that will checked for readiness. fields or/and conditions should be set.",
-+		),
-+
-+		resourceReadyFailConditionsAttr: conditionsSchema(failConditionsDescription),
-+
-+		resourceReadyReadyAttr: {
-+			Type:        schema.TypeBool,
-+			Computed:    true,
-+			Description: "Mark resource as ready.",
-+		},
-+	}
-+
-+	schemaFieldsLen := len(resourceSchema)
-+	knownAttrsLen := len(resourceReadyForceRecreateFields) + len(resourceReadyComputedFields) + len(resourceReadySkipUpdateFields)
-+	if schemaFieldsLen != knownAttrsLen {
-+		panic(fmt.Sprintf("schema fields length mismatch with known fields: %d != %d", schemaFieldsLen, knownAttrsLen))
-+	}
-+
-+	for _, forceField := range resourceReadyForceRecreateFields {
-+		s, ok := resourceSchema[forceField]
-+		if !ok {
-+			panic(fmt.Sprintf("force recreate field %q not found in resource schema", forceField))
-+		}
-+		s.ForceNew = true
-+	}
-+
-+	suppressDiffOnUpdateFunc := func(k, oldValue, newValue string, d *schema.ResourceData) bool {
-+		return d.Id() != ""
-+	}
-+
-+	for _, field := range resourceReadySkipUpdateFields {
-+		s, ok := resourceSchema[field]
-+		if !ok {
-+			panic(fmt.Sprintf("skip update field %q not found in resource schema", field))
-+		}
-+
-+		s.DiffSuppressFunc = suppressDiffOnUpdateFunc
-+	}
-+
-+	return &schema.Resource{
-+		Description: "Check that another resource is ready.",
-+
-+		CreateContext: resourceKubernetesResourceReadyV1Create,
-+		ReadContext:   resourceKubernetesResourceReadyV1Read,
-+		UpdateContext: resourceKubernetesResourceReadyV1Update,
-+		DeleteContext: resourceKubernetesResourceReadyV1Delete,
-+
-+		Schema: resourceSchema,
-+	}
-+}
-+
-+func resourceKubernetesResourceReadyV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-+	ctx = tflog.NewSubsystem(ctx, "kubernetes_resource_ready_v1")
-+
-+	logResourceReadyTrace(ctx, "Start creating resource ready")
-+
-+	clientSet, ok := meta.(KubeClientsets)
-+	if !ok {
-+		return diag.Errorf("meta is not KubeClientsets")
-+	}
-+
-+	checkerParams, checkerParamsDiags := extractResourceReadyCheckerParams(ctx, d)
-+	if checkerParamsDiags.HasError() {
-+		return checkerParamsDiags
-+	}
-+
-+	logResourceReadyTrace(ctx, "Getting client")
-+
-+	client, provideClientDiags := provideClientForResourceReadyResource(ctx, clientSet, checkerParams.resource)
-+	if provideClientDiags.HasError() {
-+		return provideClientDiags
-+	}
-+
-+	checker := newResourceReadyChecker(checkerParams, client, time.Now())
-+
-+	checkDiags := checker.StartCheck(ctx)
-+	if checkDiags.HasError() {
-+		return checkDiags
-+	}
-+
-+	markReadyDiags := checker.MarkReady(ctx, d)
-+	if markReadyDiags.HasError() {
-+		return markReadyDiags
-+	}
-+
-+	// return wait diags because wait can return warning diags
-+	// for better observability
-+	return checkDiags
-+}
-+
-+func resourceKubernetesResourceReadyV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-+	id := d.Id()
-+	logResourceReadyTrace(ctx, "Start and end reading %s", id)
-+	return nil
-+}
-+
-+func resourceKubernetesResourceReadyV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-+	id := d.Id()
-+	logResourceReadyTrace(ctx, "Start updating %s", id)
-+
-+	forceChangedFields := make([]string, 0, len(resourceReadyForceRecreateFields))
-+	for _, field := range resourceReadyForceRecreateFields {
-+		if d.HasChange(field) {
-+			forceChangedFields = append(forceChangedFields, field)
-+		}
-+	}
-+
-+	if len(forceChangedFields) > 0 {
-+		return diag.Errorf(
-+			"Internal error. Resource %s has force to recreate keys [%s] changes, but got update",
-+			id,
-+			strings.Join(forceChangedFields, ", "),
-+		)
-+	}
-+
-+	resource, err := newResourceReadyResourceFromID(id)
-+	if err != nil {
-+		return diag.FromErr(err)
-+	}
-+
-+	ready, ok := d.GetOk(resourceReadyReadyAttr)
-+
-+	skipChangesFields := make([]string, 0, len(resourceReadySkipUpdateFields))
-+	for _, field := range resourceReadySkipUpdateFields {
-+		if d.HasChange(field) {
-+			skipChangesFields = append(skipChangesFields, field)
-+		}
-+	}
-+
-+	resource.debug(
-+		ctx,
-+		"Resource updating skipped because it does not have cloud state. ReadyExists: %v; Ready: %v. Changed fields [%s]",
-+		ok,
-+		ready,
-+		strings.Join(skipChangesFields, ", "),
-+	)
-+
-+	return nil
-+}
-+
-+func resourceKubernetesResourceReadyV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-+	id := d.Id()
-+	logResourceReadyTrace(ctx, "Start deleting %s", id)
-+
-+	resource, err := newResourceReadyResourceFromID(id)
-+	if err != nil {
-+		return diag.FromErr(err)
-+	}
-+
-+	ready, ok := d.GetOk(resourceReadyReadyAttr)
-+
-+	resource.trace(ctx, "Resource deleting skipped because it does not have cloud state. ReadyExists: %v; Ready: %v", ok, ready)
-+
-+	d.SetId("")
-+
-+	return nil
-+}
-+
-+func provideClientForResourceReadyResource(ctx context.Context, clientSet KubeClientsets, r *resourceReadyResource) (dynamic.ResourceInterface, diag.Diagnostics) {
-+	gv, err := kubeschema.ParseGroupVersion(r.apiVersion)
-+	if err != nil {
-+		return nil, diag.Errorf("cannot parse apiVersion: %v", err)
-+	}
-+
-+	mapper, err := clientSet.RESTMapper()
-+	if err != nil {
-+		return nil, diag.Errorf("cannot provide rest mapper: %v", err)
-+	}
-+
-+	gk := runtimeschema.GroupKind{
-+		Group: gv.Group,
-+		Kind:  r.kind,
-+	}
-+
-+	mapping, err := mapper.RESTMapping(gk, gv.Version)
-+	if err != nil {
-+		return nil, diag.Errorf("cannot provide rest mapping: %v", err)
-+	}
-+
-+	dc, err := clientSet.DynamicClient()
-+	if err != nil {
-+		return nil, diag.Errorf("cannot provide dynamic client: %v", err)
-+	}
-+
-+	isNamespaced := mapping.Scope.Name() == meta.RESTScopeNameNamespace
-+	if isNamespaced && r.namespace == "" {
-+		r.namespace = "default"
-+	}
-+
-+	if isNamespaced {
-+		logResourceReadyTrace(ctx, "Provide namespaced client for %s in namespace %s", gk.String(), r.namespace)
-+		return dc.Resource(mapping.Resource).Namespace(r.namespace), nil
-+	}
-+
-+	logResourceReadyTrace(ctx, "Provide non-namespaced client for %s", gk.String())
-+	return dc.Resource(mapping.Resource), nil
-+
-+}
-+
-+func getResourceReadyStringAttr(d *schema.ResourceData, name string, shouldNotEmpty bool) (string, diag.Diagnostics) {
-+	v, ok := d.GetOk(name)
-+	if !ok {
-+		if shouldNotEmpty {
-+			return "", diag.Errorf("%s", requiredOrSetEmptyError(name))
-+		}
-+
-+		return "", nil
-+	}
-+
-+	val, ok := v.(string)
-+	if !ok {
-+		return "", diag.Errorf("%s is required. it is not string", name)
-+	}
-+
-+	if shouldNotEmpty && val == "" {
-+		return "", diag.Errorf("%s is required. it is empty", name)
-+	}
-+
-+	return val, nil
-+}
-+
-+func extractResourceReadyCheckerParams(ctx context.Context, d *schema.ResourceData) (*resourceReadyCheckerParams, diag.Diagnostics) {
-+	var resDiags diag.Diagnostics
-+
-+	resource, resourceDiags := extractResourceReadyResource(d)
-+	if resourceDiags.HasError() {
-+		resDiags = append(resDiags, resourceDiags...)
-+	}
-+
-+	durations, durationsDiags := extractResourceReadyDurations(ctx, d)
-+	if durationsDiags.HasError() {
-+		resDiags = append(resDiags, durationsDiags...)
-+	}
-+
-+	logResourceReadyTrace(ctx, "Extract fields matchers")
-+
-+	fieldMatchers, matchersDiags := extractFieldMatches(ctx, d)
-+	if matchersDiags.HasError() {
-+		resDiags = append(resDiags, matchersDiags...)
-+	}
-+
-+	logResourceReadyTrace(ctx, "Extract conditions matchers")
-+
-+	readyConditions, conditionsDiags := extractConditionMatches(ctx, d, resourceReadyConditionsAttr)
-+	if conditionsDiags.HasError() {
-+		resDiags = append(resDiags, conditionsDiags...)
-+	}
-+
-+	logResourceReadyTrace(ctx, "Extract fail conditions matchers")
-+
-+	failConditions, failConditionsDiags := extractConditionMatches(ctx, d, resourceReadyFailConditionsAttr)
-+	if failConditionsDiags.HasError() {
-+		logResourceReadyInfo(ctx, "Fail conditions matchers error: %v", failConditionsDiags)
-+		resDiags = append(resDiags, failConditionsDiags...)
-+	}
-+
-+	logResourceReadyTrace(ctx, "Validate fail and ready conditions")
-+
-+	failReadyValidationDiags := validateResourceReadyFailAndReadyConditions(failConditions, readyConditions)
-+	if failReadyValidationDiags.HasError() {
-+		resDiags = append(resDiags, failReadyValidationDiags...)
-+	}
-+
-+	if len(fieldMatchers) == 0 && len(readyConditions) == 0 {
-+		resDiags = append(resDiags, diag.Errorf("fields and/or ready conditions not provided")...)
-+	}
-+
-+	if resDiags.HasError() {
-+		return nil, resDiags
-+	}
-+
-+	return &resourceReadyCheckerParams{
-+		durations:       durations,
-+		fields:          fieldMatchers,
-+		readyConditions: readyConditions,
-+		failConditions:  failConditions,
-+		resource:        resource,
-+	}, nil
-+}
-+
-+func extractResourceReadyResource(d *schema.ResourceData) (*resourceReadyResource, diag.Diagnostics) {
-+	var resDiags diag.Diagnostics
-+
-+	apiVersion, apiVersionDiags := getResourceReadyStringAttr(d, resourceReadyAPIVersionAttr, true)
-+	if apiVersionDiags.HasError() {
-+		resDiags = append(resDiags, apiVersionDiags...)
-+	}
-+
-+	kind, kindDiags := getResourceReadyStringAttr(d, resourceReadyKindAttr, true)
-+	if kindDiags.HasError() {
-+		resDiags = append(resDiags, kindDiags...)
-+	}
-+
-+	namespace, namespaceDiags := getResourceReadyStringAttr(d, resourceReadyNamespaceAttr, false)
-+	if namespaceDiags.HasError() {
-+		resDiags = append(resDiags, namespaceDiags...)
-+	}
-+
-+	name, nameDiags := getResourceReadyStringAttr(d, resourceReadyNameAttr, true)
-+	if nameDiags.HasError() {
-+		resDiags = append(resDiags, nameDiags...)
-+	}
-+
-+	if resDiags.HasError() {
-+		return nil, resDiags
-+	}
-+
-+	return newResourceReadyResource(apiVersion, kind, name, namespace), nil
-+}
-+
-+type matchField struct {
-+	path         string
-+	valueMatcher *regexp.Regexp
-+}
-+
-+func (m *matchField) isMatched(val string) bool {
-+	if m.valueMatcher == nil {
-+		return val == ""
-+	}
-+
-+	return m.valueMatcher.MatchString(val)
-+}
-+
-+func (m *matchField) String() string {
-+	expr := ""
-+	if m.valueMatcher != nil {
-+		expr = m.valueMatcher.String()
-+	}
-+
-+	return fmt.Sprintf("Path='%s' Expr='%s'", m.path, expr)
-+}
-+
-+func extractFieldMatches(ctx context.Context, d *schema.ResourceData) ([]matchField, diag.Diagnostics) {
-+	rawMap, ok := d.GetOk(resourceReadyFieldsAttr)
-+	if !ok {
-+		logResourceReadyDebug(ctx, "Fields matchers not set. Skip")
-+		return nil, nil
-+	}
-+
-+	mapAny, ok := rawMap.(map[string]any)
-+	if !ok {
-+		return nil, diag.Errorf("fields is not map. it is %T", rawMap)
-+	}
-+
-+	if len(mapAny) == 0 {
-+		logResourceReadyDebug(ctx, "Fields matchers set, but empty. Skip")
-+		return nil, nil
-+	}
-+
-+	var parseDiags diag.Diagnostics
-+	appendParseDiags := func(path, f string, args ...any) {
-+		f = path + ": " + f
-+		parseDiags = append(parseDiags, diag.Errorf(f, args...)...)
-+	}
-+
-+	res := make([]matchField, 0, len(mapAny))
-+	for path, exprRaw := range mapAny {
-+		expr, ok := exprRaw.(string)
-+		if !ok {
-+			appendParseDiags(path, "expression not string")
-+			continue
-+		}
-+
-+		match := matchField{
-+			path:         path,
-+			valueMatcher: nil,
-+		}
-+
-+		if expr != "" {
-+			reExpr, err := regexp.Compile(expr)
-+			if err != nil {
-+				appendParseDiags(path, "cannot parse as regexp expression: %v", err)
-+				continue
-+			}
-+
-+			match.valueMatcher = reExpr
-+		}
-+
-+		logResourceReadyTrace(ctx, "Found field matcher: %s", match.String())
-+
-+		res = append(res, match)
-+	}
-+
-+	if parseDiags.HasError() {
-+		return nil, parseDiags
-+	}
-+
-+	sort.Slice(res, func(i, j int) bool {
-+		return res[i].path < res[j].path
-+	})
-+
-+	logResourceReadyTrace(ctx, "Found %d field matchers", len(res))
-+
-+	return res, nil
-+}
-+
-+type matchCondition struct {
-+	name           string
-+	status         string
-+	reasonMatcher  *regexp.Regexp
-+	messageMatcher *regexp.Regexp
-+}
-+
-+func (c *matchCondition) statusIsMatched(val metav1.ConditionStatus) bool {
-+	return c.status == string(val)
-+}
-+
-+func (c *matchCondition) reasonIsMatched(val string) bool {
-+	return c.matchRe(c.reasonMatcher, val)
-+}
-+
-+func (c *matchCondition) messageIsMatched(val string) bool {
-+	return c.matchRe(c.messageMatcher, val)
-+}
-+
-+func (c *matchCondition) matchRe(re *regexp.Regexp, val string) bool {
-+	if re == nil {
-+		return true
-+	}
-+
-+	return re.MatchString(val)
-+}
-+
-+func (c *matchCondition) String() string {
-+	messageRe := ""
-+	if c.messageMatcher != nil {
-+		messageRe = c.messageMatcher.String()
-+	}
-+
-+	reasonRe := ""
-+	if c.reasonMatcher != nil {
-+		reasonRe = c.reasonMatcher.String()
-+	}
-+
-+	return fmt.Sprintf(
-+		"Type='%s'; Status='%s' ReasonRe='%s' MessageRe='%s'",
-+		c.name,
-+		c.status,
-+		reasonRe,
-+		messageRe,
-+	)
-+}
-+
-+func extractConditionMatches(ctx context.Context, d *schema.ResourceData, fieldName string) ([]matchCondition, diag.Diagnostics) {
-+	rawConditions, ok := d.GetOk(fieldName)
-+	if !ok {
-+		logResourceReadyDebug(ctx, "Conditions matchers %s not set. Skip", fieldName)
-+		return nil, nil
-+	}
-+
-+	conditionsList, conditionsListDiags := setConditionsToListMapAny(rawConditions)
-+	if conditionsListDiags.HasError() {
-+		return nil, conditionsListDiags
-+	}
-+
-+	if len(conditionsList) == 0 {
-+		logResourceReadyDebug(ctx, "Conditions matchers %s set but empty. Skip", fieldName)
-+		return nil, nil
-+	}
-+
-+	var condsDiags diag.Diagnostics
-+	var res []matchCondition
-+
-+	processedTypes := make(map[string]int)
-+
-+	for i, condMap := range conditionsList {
-+		errorPrefix := fmt.Sprintf("%s condition %d", fieldName, i)
-+		name, nameDiags := resourceReadyExtractString(condMap, "type", true, errorPrefix)
-+		if nameDiags.HasError() {
-+			condsDiags = append(condsDiags, nameDiags...)
-+			continue
-+		}
-+
-+		processedTypes[name]++
-+
-+		status, statusDiags := resourceReadyExtractString(condMap, "status", true, errorPrefix)
-+		if statusDiags.HasError() {
-+			condsDiags = append(condsDiags, statusDiags...)
-+			continue
-+		}
-+
-+		matchCond := matchCondition{
-+			name:   name,
-+			status: status,
-+		}
-+
-+		messageDiags := processConditionRegexp(&processConditionRegexpParams{
-+			condMap:         condMap,
-+			field:           "message",
-+			dest:            &matchCond.messageMatcher,
-+			shouldPresent:   false,
-+			conditionsField: fieldName,
-+			conditionName:   name,
-+			errorPrefix:     errorPrefix,
-+		})
-+
-+		if messageDiags.HasError() {
-+			condsDiags = append(condsDiags, messageDiags...)
-+			continue
-+		}
-+
-+		reasonDiags := processConditionRegexp(&processConditionRegexpParams{
-+			condMap:         condMap,
-+			field:           "reason",
-+			dest:            &matchCond.reasonMatcher,
-+			shouldPresent:   false,
-+			conditionsField: fieldName,
-+			conditionName:   name,
-+			errorPrefix:     errorPrefix,
-+		})
-+
-+		if reasonDiags.HasError() {
-+			condsDiags = append(condsDiags, reasonDiags...)
-+			continue
-+		}
-+
-+		logResourceReadyTrace(ctx, "Found conditions matcher for %s: %s", fieldName, matchCond.String())
-+
-+		res = append(res, matchCond)
-+	}
-+
-+	for name, count := range processedTypes {
-+		if count > 1 {
-+			condsDiags = append(
-+				condsDiags,
-+				diag.Errorf(
-+					"Found multiple %d conditions matchers in %s for type %s",
-+					count,
-+					fieldName,
-+					name,
-+				)...,
-+			)
-+		}
-+	}
-+
-+	if condsDiags.HasError() {
-+		return nil, condsDiags
-+	}
-+
-+	logResourceReadyTrace(ctx, "Found %d conditions matchers for %s", len(res), fieldName)
-+
-+	return res, nil
-+}
-+
-+func extractResourceReadyDuration(ctx context.Context, d *schema.ResourceData, field string, defaultDuration time.Duration, required bool) (time.Duration, diag.Diagnostics) {
-+	logResourceReadyTrace(ctx, "Start extracting %s with default %v", field, defaultDuration)
-+
-+	extract := func() (time.Duration, diag.Diagnostics) {
-+		timeoutString, timeoutDiags := getResourceReadyStringAttr(d, field, required)
-+		if timeoutDiags.HasError() {
-+			return 0, timeoutDiags
-+		}
-+
-+		if timeoutString == "" && defaultDuration > 0 {
-+			return defaultDuration, nil
-+		}
-+
-+		timeout, err := time.ParseDuration(timeoutString)
-+		if err != nil {
-+			return 0, diag.Errorf("%s parse failed: %v", field, err)
-+		}
-+
-+		return timeout, nil
-+	}
-+
-+	durationVal, extractDiags := extract()
-+	if extractDiags.HasError() {
-+		return 0, extractDiags
-+	}
-+
-+	logResourceReadyTrace(ctx, "%s extracted with value %s", field, durationVal.String())
-+
-+	return durationVal, nil
-+}
-+
-+func extractResourceReadyDurations(ctx context.Context, d *schema.ResourceData) (*resourceReadyCheckerDurations, diag.Diagnostics) {
-+	var resDiags diag.Diagnostics
-+	timeout, timeoutDiags := extractResourceReadyDuration(
-+		ctx,
-+		d,
-+		resourceReadyWaitTimeoutAttr,
-+		0,
-+		true,
-+	)
-+	if timeoutDiags.HasError() {
-+		resDiags = append(resDiags, timeoutDiags...)
-+	}
-+
-+	failConditionsAppearanceDuration, appearanceDiags := extractResourceReadyDuration(
-+		ctx,
-+		d,
-+		resourceReadyFailConditionsAppearanceDurationAttr,
-+		failConditionsAppearanceDurationDefault,
-+		false,
-+	)
-+	if appearanceDiags.HasError() {
-+		resDiags = append(resDiags, appearanceDiags...)
-+	}
-+
-+	skipCheckLiveTimeDuration, skipLiveTimeDiags := extractResourceReadyDuration(
-+		ctx,
-+		d,
-+		resourceReadySkipCheckOnCreateResourceLiveTimeAttr,
-+		resourceReadySkipCheckOnCreateResourceLiveTimeDefault,
-+		false,
-+	)
-+	if skipLiveTimeDiags.HasError() {
-+		resDiags = append(resDiags, skipLiveTimeDiags...)
-+	}
-+
-+	if resDiags.HasError() {
-+		return nil, resDiags
-+	}
-+
-+	return &resourceReadyCheckerDurations{
-+		fullCheck:                timeout,
-+		failConditionsAppearance: failConditionsAppearanceDuration,
-+		skipReadyLiveTime:        skipCheckLiveTimeDuration,
-+	}, nil
-+}
-+
-+type processConditionRegexpParams struct {
-+	condMap         map[string]any
-+	field           string
-+	dest            **regexp.Regexp
-+	shouldPresent   bool
-+	conditionsField string
-+	conditionName   string
-+	errorPrefix     string
-+}
-+
-+func (p *processConditionRegexpParams) errorDiags(msg string) diag.Diagnostics {
-+	return diag.Errorf("%s in condition %s for %s", msg, p.conditionName, p.conditionsField)
-+}
-+
-+func processConditionRegexp(params *processConditionRegexpParams) diag.Diagnostics {
-+	reStr, reDiags := resourceReadyExtractString(
-+		params.condMap,
-+		params.field,
-+		params.shouldPresent,
-+		params.errorPrefix,
-+	)
-+
-+	if reDiags.HasError() {
-+		return reDiags
-+	}
-+
-+	if reStr != "" {
-+		re, err := regexp.Compile(reStr)
-+		if err != nil {
-+			return params.errorDiags(fmt.Sprintf("cannot parse %s regexp: %v", params.field, err))
-+		}
-+
-+		*params.dest = re
-+	}
-+
-+	return nil
-+}
-+
-+const resourceReadyIDSeparator = ";"
-+
-+type resourceReadyResource struct {
-+	apiVersion string
-+	name       string
-+	kind       string
-+	namespace  string
-+
-+	fullName  string
-+	logPrefix string
-+}
-+
-+func newResourceReadyResource(apiVersion, kind, name, namespace string) *resourceReadyResource {
-+	fullName := fmt.Sprintf("%s[%s/%s/%s]", apiVersion, namespace, kind, name)
-+	return &resourceReadyResource{
-+		apiVersion: apiVersion,
-+		name:       name,
-+		kind:       kind,
-+		namespace:  namespace,
-+		fullName:   fullName,
-+		logPrefix:  fmt.Sprintf("Resource %s: ", fullName),
-+	}
-+}
-+
-+func newResourceReadyResourceFromID(id string) (*resourceReadyResource, error) {
-+	parts := strings.Split(id, resourceReadyIDSeparator)
-+	if len(parts) != 4 {
-+		return nil, fmt.Errorf("invalid resource id: %s", id)
-+	}
-+
-+	return newResourceReadyResource(parts[0], parts[1], parts[2], parts[3]), nil
-+}
-+
-+func (r *resourceReadyResource) diagError(f string, args ...any) diag.Diagnostics {
-+	return diag.Errorf(r.logPrefix+f, args...)
-+}
-+
-+func (r *resourceReadyResource) info(ctx context.Context, f string, args ...any) {
-+	logResourceReadyInfo(ctx, r.logPrefix+f, args...)
-+}
-+
-+func (r *resourceReadyResource) trace(ctx context.Context, f string, args ...any) {
-+	logResourceReadyTrace(ctx, r.logPrefix+f, args...)
-+}
-+
-+func (r *resourceReadyResource) debug(ctx context.Context, f string, args ...any) {
-+	logResourceReadyDebug(ctx, r.logPrefix+f, args...)
-+}
-+
-+func (r *resourceReadyResource) id() string {
-+	parts := []string{r.apiVersion, r.kind, r.name, r.namespace}
-+
-+	return strings.Join(parts, resourceReadyIDSeparator)
-+}
-+
-+func (r *resourceReadyResource) String() string {
-+	return r.fullName
-+}
-+
-+type resourceReadyCheckerDurations struct {
-+	fullCheck                time.Duration
-+	skipReadyLiveTime        time.Duration
-+	failConditionsAppearance time.Duration
-+}
-+
-+type resourceReadyCheckerParams struct {
-+	durations       *resourceReadyCheckerDurations
-+	fields          []matchField
-+	readyConditions []matchCondition
-+	failConditions  []matchCondition
-+	resource        *resourceReadyResource
-+}
-+
-+type resourceReadyChecker struct {
-+	params    *resourceReadyCheckerParams
-+	client    dynamic.ResourceInterface
-+	startTime time.Time
-+
-+	logPrefix string
-+}
-+
-+func newResourceReadyChecker(params *resourceReadyCheckerParams, client dynamic.ResourceInterface, startTime time.Time) *resourceReadyChecker {
-+	return &resourceReadyChecker{
-+		params:    params,
-+		client:    client,
-+		startTime: startTime,
-+
-+		logPrefix: fmt.Sprintf("Resource ready checker for %s: ", params.resource.String()),
-+	}
-+}
-+
-+func (r *resourceReadyChecker) StartCheck(ctx context.Context) diag.Diagnostics {
-+	cctx, cancel := context.WithTimeout(ctx, r.params.durations.fullCheck)
-+	defer cancel()
-+
-+	return r.wait(cctx)
-+}
-+
-+func (r *resourceReadyChecker) MarkReady(ctx context.Context, d *schema.ResourceData) diag.Diagnostics {
-+	resource := r.params.resource
-+	id := resource.id()
-+	d.SetId(id)
-+
-+	if err := d.Set(resourceReadyReadyAttr, true); err != nil {
-+		return resource.diagError("ready attr cannot be set: %v", err)
-+	}
-+
-+	resource.trace(ctx, "ID '%s' added", id)
-+	resource.info(ctx, "fully ready!")
-+
-+	return nil
-+}
-+
-+func (r *resourceReadyChecker) wait(ctx context.Context) diag.Diagnostics {
-+	waitTimeoutStr := r.params.durations.fullCheck.String()
-+
-+	r.trace(ctx, "Start waiting with timeout %s", waitTimeoutStr)
-+
-+	attemptTimeout := 2 * time.Second
-+
-+	var lastDiags diag.Diagnostics
-+
-+	debugDiagsAndSleep := func(diags diag.Diagnostics) {
-+		lastDiags = diags
-+		r.debugContinueDiags(ctx, diags)
-+		time.Sleep(attemptTimeout)
-+	}
-+
-+	attempt := 0
-+
-+	for {
-+		attempt++
-+
-+		r.trace(ctx, "check attempt %d", attempt)
-+
-+		select {
-+		case <-ctx.Done():
-+			return r.params.resource.diagError(
-+				"context error or wait timeout %s exceeded: %v\n  Last errors:\n%s",
-+				waitTimeoutStr,
-+				ctx.Err(),
-+				resourceReadyDiagsToString(lastDiags),
-+			)
-+		default:
-+		}
-+
-+		resource, getDiags := r.get(ctx)
-+		if len(getDiags) > 0 {
-+			if getDiags.HasError() {
-+				return getDiags
-+			}
-+
-+			debugDiagsAndSleep(getDiags)
-+			continue
-+		}
-+
-+		// check live time does one time. attempt always > 0
-+		if attempt == 1 {
-+			// rewrite start time after success get first get
-+			r.startTime = time.Now()
-+
-+			liveTimeDiags := r.processLiveTime(ctx, resource)
-+			// we should return warning for user for better observability
-+			// that's way handle all diags
-+			if len(liveTimeDiags) > 0 {
-+				return liveTimeDiags
-+			}
-+		}
-+
-+		conditionsDiags := r.processConditions(ctx, resource)
-+		if len(conditionsDiags) > 0 {
-+			if conditionsDiags.HasError() {
-+				return conditionsDiags
-+			}
-+
-+			debugDiagsAndSleep(conditionsDiags)
-+			continue
-+		}
-+
-+		fieldsDiags := r.processFields(ctx, resource)
-+		if len(fieldsDiags) > 0 {
-+			if fieldsDiags.HasError() {
-+				return fieldsDiags
-+			}
-+
-+			debugDiagsAndSleep(fieldsDiags)
-+			continue
-+		}
-+
-+		r.info(ctx, "check successfully done")
-+
-+		return nil
-+	}
-+}
-+
-+func (r *resourceReadyChecker) processLiveTime(ctx context.Context, resource *unstructured.Unstructured) diag.Diagnostics {
-+	liveTimeDuration := r.params.durations.skipReadyLiveTime
-+
-+	if liveTimeDuration == 0 {
-+		r.trace(ctx, "Passed zero live time. Do readiness checks")
-+		return nil
-+	}
-+
-+	now := time.Now()
-+
-+	createTime := resource.GetCreationTimestamp()
-+	timeForCheck := createTime.Add(liveTimeDuration)
-+	liveTime := now.Sub(createTime.Time)
-+
-+	timesStr := fmt.Sprintf(
-+		"%s (needs for skipping %s)",
-+		liveTime.String(),
-+		liveTimeDuration.String(),
-+	)
-+
-+	if now.Before(timeForCheck) {
-+		r.trace(ctx, "Resource is young %s for skipping ready. Do readiness checks", timesStr)
-+		return nil
-+	}
-+
-+	r.info(ctx, "Skip readiness check because resource too old %s", timesStr)
-+
-+	return diag.Diagnostics{diag.Diagnostic{
-+		Severity: diag.Warning,
-+		Summary:  "Resource is too old for checking ready. Skip readiness check.",
-+		Detail: fmt.Sprintf(
-+			"Resource live time is %s. Live time for skipping is %s.",
-+			liveTime.String(),
-+			liveTimeDuration.String(),
-+		),
-+	}}
-+}
-+
-+func (r *resourceReadyChecker) processFields(ctx context.Context, resource *unstructured.Unstructured) diag.Diagnostics {
-+	fields := r.params.fields
-+	if len(fields) == 0 {
-+		r.debug(ctx, "No fields. Skip check by fields")
-+		return nil
-+	}
-+
-+	jsonBytes, err := resource.MarshalJSON()
-+	if err != nil {
-+		return r.createContinueDiags("Cannot marshal resource to process fields: %v", err)
-+	}
-+
-+	jsonString := string(jsonBytes)
-+
-+	var fieldsDiags diag.Diagnostics
-+
-+	for _, field := range fields {
-+		val := gjson.Get(jsonString, field.path).String()
-+		if !field.isMatched(val) {
-+			fieldsDiags = append(
-+				fieldsDiags,
-+				r.createContinueDiags("Field '%s' is not match. value is '%s'", field.path, val)...,
-+			)
-+			continue
-+		}
-+
-+		r.trace(ctx, "Field '%s' val '%s' is match to expression", field.path, val)
-+	}
-+
-+	if len(fieldsDiags) > 0 {
-+		return fieldsDiags
-+	}
-+
-+	r.debug(ctx, "All fields matched to them expressions")
-+
-+	return nil
-+}
-+
-+func (r *resourceReadyChecker) processConditions(ctx context.Context, resource *unstructured.Unstructured) diag.Diagnostics {
-+	if len(r.params.readyConditions) == 0 && len(r.params.failConditions) == 0 {
-+		r.debug(ctx, "No fail or ready conditions. Skip checks by conditions")
-+		return nil
-+	}
-+
-+	conditions := r.rawConditionsToStructConditions(resource)
-+
-+	var resDiags diag.Diagnostics
-+
-+	failConditionDiags := r.processFailConditions(ctx, conditions)
-+	if len(failConditionDiags) > 0 {
-+		if failConditionDiags.HasError() {
-+			return failConditionDiags
-+		}
-+
-+		resDiags = append(resDiags, failConditionDiags...)
-+	}
-+
-+	readyDiags := r.processReadyConditions(ctx, conditions)
-+	if len(readyDiags) > 0 {
-+		if readyDiags.HasError() {
-+			return append(resDiags, readyDiags...)
-+		}
-+
-+		resDiags = append(resDiags, readyDiags...)
-+	}
-+
-+	if len(resDiags) > 0 {
-+		return resDiags
-+	}
-+
-+	return nil
-+}
-+
-+func (r *resourceReadyChecker) processFailConditions(ctx context.Context, conditions extractConditionsResult) diag.Diagnostics {
-+	failConditions := r.params.failConditions
-+
-+	if len(failConditions) == 0 {
-+		r.debug(ctx, "Fail conditions not present. Skip checks by fail conditions")
-+		return nil
-+	}
-+
-+	appearanceDuration := r.params.durations.failConditionsAppearance
-+
-+	now := time.Now()
-+	timeStrFormat := time.RFC3339
-+
-+	appearanceEndTime := r.startTime
-+	appearanceEndTime = appearanceEndTime.Add(appearanceDuration)
-+	appearanceEndTimeStr := appearanceEndTime.Format(timeStrFormat)
-+	appearanceIsExceed := now.After(appearanceEndTime)
-+
-+	r.trace(
-+		ctx,
-+		"Fail conditions appearance: duration %s; now %s; start time %s, end time %s; is exceed %v",
-+		appearanceDuration.String(),
-+		now.Format(timeStrFormat),
-+		r.startTime.Format(timeStrFormat),
-+		appearanceEndTimeStr,
-+		appearanceIsExceed,
-+	)
-+
-+	var inAppearanceDiags diag.Diagnostics
-+	appendInAppearanceDiag := func(f string, args ...any) bool {
-+		if appearanceIsExceed {
-+			return false
-+		}
-+
-+		f = f + fmt.Sprintf(
-+			" and wait %s to %s in hopes of appearance the conditions",
-+			appearanceDuration.String(),
-+			appearanceEndTimeStr,
-+		)
-+
-+		inAppearanceDiags = append(inAppearanceDiags, r.createContinueDiags(f, args...)...)
-+		return true
-+	}
-+
-+	processEmpty := func(conditions extractConditionsResult) (bool, diag.Diagnostics) {
-+		if !conditions.isEmpty {
-+			if len(conditions.diags) == 0 {
-+				return false, nil
-+			}
-+
-+			return true, conditions.diags
-+		}
-+
-+		// if conditions is empty we should only check that
-+		// we in appearance time, because extractor always return diags for empty
-+		// or not present for ready condition check
-+		// in its check we always fail if conditions not present or empty
-+
-+		if appendInAppearanceDiag("Conditions are empty") {
-+			return true, inAppearanceDiags
-+		}
-+
-+		r.debug(ctx, "Conditions are empty and appearance time %s exceed. Returns not fail", appearanceEndTimeStr)
-+		return true, nil
-+	}
-+
-+	shouldReturn, processEmptyDiags := processEmpty(conditions)
-+	if shouldReturn {
-+		return processEmptyDiags
-+	}
-+
-+	for _, failCondition := range failConditions {
-+		conditionToCheck, ok := conditions.conditions[failCondition.name]
-+		if !ok {
-+			if appendInAppearanceDiag("Fail condition %s is not present", failCondition.String()) {
-+				continue
-+			}
-+
-+			r.debug(ctx, "Fail condition %s not present. Skip", failCondition.String())
-+			continue
-+		}
-+
-+		hasNeedStatus := failCondition.statusIsMatched(conditionToCheck.Status)
-+		hasNeedReason := failCondition.reasonIsMatched(conditionToCheck.Reason)
-+		hasNeedMessage := failCondition.messageIsMatched(conditionToCheck.Message)
-+
-+		r.trace(
-+			ctx,
-+			"Fail condition %s check: hasNeedStatus=%v ('%s') hasNeedReason=%v ('%s') hasNeedMessage=%v ('%s')",
-+			failCondition.String(),
-+			hasNeedStatus,
-+			conditionToCheck.Status,
-+			hasNeedReason,
-+			conditionToCheck.Reason,
-+			hasNeedMessage,
-+			conditionToCheck.Message,
-+		)
-+
-+		if hasNeedStatus && hasNeedReason && hasNeedMessage {
-+			return diag.Errorf("Ready failed by fail condition %s:\n%s", failCondition.String(), conditionToCheck.String())
-+		}
-+	}
-+
-+	if len(inAppearanceDiags) > 0 {
-+		return inAppearanceDiags
-+	}
-+
-+	r.debug(ctx, "All fail conditions were processed")
-+
-+	return nil
-+}
-+
-+func (r *resourceReadyChecker) processReadyConditions(ctx context.Context, conditions extractConditionsResult) diag.Diagnostics {
-+	readyConditions := r.params.readyConditions
-+
-+	if len(readyConditions) == 0 {
-+		r.debug(ctx, "Ready conditions not present. Skip checks by ready conditions")
-+		return nil
-+	}
-+
-+	// always fail if have any diags
-+	// isEmpty needs for fail conditions
-+	if len(conditions.diags) > 0 {
-+		return conditions.diags
-+	}
-+
-+	var readyDiags diag.Diagnostics
-+
-+	appendReadyDiag := func(cond matchCondition, f string, args ...any) {
-+		f = fmt.Sprintf("Ready condition %s: ", cond.String()) + f
-+		readyDiags = append(readyDiags, r.createContinueDiags(f, args...)...)
-+	}
-+
-+	for _, readyCondition := range readyConditions {
-+		conditionToCheck, ok := conditions.conditions[readyCondition.name]
-+		if !ok {
-+			appendReadyDiag(readyCondition, "is not present")
-+			continue
-+		}
-+
-+		if !readyCondition.statusIsMatched(conditionToCheck.Status) {
-+			appendReadyDiag(readyCondition, "status is not match. Current status is '%s'", conditionToCheck.Status)
-+			continue
-+		}
-+
-+		if !readyCondition.reasonIsMatched(conditionToCheck.Reason) {
-+			appendReadyDiag(readyCondition, "reason is not match. Current reason is '%s'", conditionToCheck.Reason)
-+			continue
-+		}
-+
-+		if !readyCondition.messageIsMatched(conditionToCheck.Message) {
-+			appendReadyDiag(readyCondition, "message is not match. Current message is '%s'", conditionToCheck.Message)
-+			continue
-+		}
-+
-+		r.debug(ctx, "Ready condition %s is matched", readyCondition.String())
-+	}
-+
-+	if len(readyDiags) > 0 {
-+		return readyDiags
-+	}
-+
-+	r.debug(ctx, "All ready conditions were matched")
-+
-+	return nil
-+}
-+
-+func (r *resourceReadyChecker) get(ctx context.Context) (*unstructured.Unstructured, diag.Diagnostics) {
-+	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-+	defer cancel()
-+
-+	res, err := r.client.Get(cctx, r.params.resource.name, metav1.GetOptions{})
-+	if err != nil {
-+		if errors.IsGone(err) {
-+			return nil, r.params.resource.diagError("resource was deleted")
-+		}
-+
-+		return nil, r.createContinueDiags("cannot get resource: '%v'", err)
-+	}
-+
-+	return res, nil
-+}
-+
-+func (r *resourceReadyChecker) createContinueDiags(f string, args ...any) diag.Diagnostics {
-+	return diag.Diagnostics{diag.Diagnostic{
-+		Severity: diag.Warning,
-+		Summary:  fmt.Sprintf(f, args...),
-+	}}
-+}
-+
-+func (r *resourceReadyChecker) debugContinueDiags(ctx context.Context, diagnostics diag.Diagnostics) {
-+	for _, d := range diagnostics {
-+		r.debug(ctx, "Resource not ready. Waiting will continue with next attempt: %s", d.Summary)
-+	}
-+}
-+
-+func (r *resourceReadyChecker) debug(ctx context.Context, f string, args ...any) {
-+	logResourceReadyDebug(ctx, r.logPrefix+f, args...)
-+}
-+
-+func (r *resourceReadyChecker) trace(ctx context.Context, f string, args ...any) {
-+	logResourceReadyTrace(ctx, r.logPrefix+f, args...)
-+}
-+
-+func (r *resourceReadyChecker) info(ctx context.Context, f string, args ...any) {
-+	logResourceReadyTrace(ctx, r.logPrefix+f, args...)
-+}
-+
-+type extractConditionsResult struct {
-+	conditions map[string]metav1.Condition
-+	isEmpty    bool
-+	diags      diag.Diagnostics
-+}
-+
-+func (r *resourceReadyChecker) rawConditionsToStructConditions(resource *unstructured.Unstructured) extractConditionsResult {
-+	emptyConditions := func(isEmpty bool, msg string, args ...any) extractConditionsResult {
-+		msg = msg + " for checking conditions"
-+		return extractConditionsResult{
-+			conditions: nil,
-+			isEmpty:    isEmpty,
-+			diags:      r.createContinueDiags(msg, args...),
-+		}
-+	}
-+
-+	obj := resource.Object
-+	statusRaw, ok := obj["status"]
-+	if !ok {
-+		return emptyConditions(true, "status not present")
-+	}
-+
-+	status, ok := statusRaw.(map[string]any)
-+	if !ok {
-+		return emptyConditions(false, "status is not map")
-+	}
-+
-+	conditionsRaw, ok := status["conditions"]
-+	if !ok {
-+		return emptyConditions(true, "conditions not present")
-+	}
-+
-+	conditionsSliceAny, ok := conditionsRaw.([]any)
-+	if !ok {
-+		return emptyConditions(false, "conditions not slice")
-+	}
-+
-+	if len(conditionsSliceAny) == 0 {
-+		return emptyConditions(true, "conditions list is empty")
-+	}
-+
-+	jsonBytes, err := json.Marshal(conditionsSliceAny)
-+	if err != nil {
-+		return emptyConditions(false, "cannot marshal conditions to json: %v", err)
-+	}
-+
-+	var conditions []metav1.Condition
-+	if err := json.Unmarshal(jsonBytes, &conditions); err != nil {
-+		return emptyConditions(false, "cannot unmarshal to conditions: %v", err)
-+	}
-+
-+	res := make(map[string]metav1.Condition, len(conditions))
-+
-+	for _, condition := range conditions {
-+		res[condition.Type] = condition
-+	}
-+
-+	return extractConditionsResult{
-+		conditions: res,
-+		isEmpty:    false,
-+		diags:      nil,
-+	}
-+}
-+
-+func resourceReadyExtractString(m map[string]any, key string, required bool, errorPrefix string) (string, diag.Diagnostics) {
-+	vRaw, ok := m[key]
-+	if !ok {
-+		if required {
-+			return "", diag.Errorf("%s %s", errorPrefix, requiredOrSetEmptyError(key))
-+		}
-+
-+		return "", nil
-+	}
-+
-+	vStr, ok := vRaw.(string)
-+	if !ok {
-+		return "", diag.Errorf("%s %s is not string", errorPrefix, key)
-+	}
-+
-+	if vStr == "" && required {
-+		return "", diag.Errorf("%s %s", errorPrefix, requiredOrSetEmptyError(key))
-+	}
-+
-+	return vStr, nil
-+}
-+
-+type conditionsSet = []map[string]any
-+
-+type resourceReadyKV struct {
-+	key string
-+	val any
-+}
-+
-+func resourceReadyDiagsToString(diags diag.Diagnostics) string {
-+	if len(diags) == 0 {
-+		return ""
-+	}
-+
-+	strDiags := make([]string, 0, len(diags))
-+	for i, d := range diags {
-+		msg := fmt.Sprintf("  %d: %s", i, d.Summary)
-+		if d.Detail != "" {
-+			msg = fmt.Sprintf("%s. %s", msg, d.Detail)
-+		}
-+
-+		strDiags = append(strDiags, msg)
-+	}
-+
-+	return strings.Join(strDiags, "\n")
-+}
-+
-+func expandResourceReadyMap(m map[string]any) []resourceReadyKV {
-+	res := make([]resourceReadyKV, 0, len(m))
-+	for k, v := range m {
-+		res = append(res, resourceReadyKV{k, v})
-+	}
-+
-+	return res
-+}
-+
-+func resourceReadyMapString(m []resourceReadyKV) string {
-+	sort.Slice(m, func(i, j int) bool {
-+		return m[i].key < m[j].key
-+	})
-+
-+	buf := make([]string, 0, len(m))
-+	for _, kv := range m {
-+		buf = append(buf, fmt.Sprintf("%s=%v", kv.key, kv.val))
-+	}
-+
-+	return strings.Join(buf, "##")
-+}
-+
-+func setConditionsToListMapAny(m any) (conditionsSet, diag.Diagnostics) {
-+	if mapAny, ok := m.(map[string]any); ok {
-+		return conditionsSet{mapAny}, nil
-+	}
-+
-+	schemaSet, ok := m.(*schema.Set)
-+	if !ok {
-+		return nil, diag.Errorf("cannot convert conditions set to *schema.Set")
-+	}
-+
-+	set := schemaSet.List()
-+	if len(set) == 0 {
-+		return nil, nil
-+	}
-+
-+	res := make(conditionsSet, 0, len(set))
-+	equalElements := make(map[string]struct{}, len(set))
-+
-+	for i, conditionRaw := range set {
-+		condition, ok := conditionRaw.(map[string]any)
-+		if !ok {
-+			return nil, diag.Errorf("cannot convert %d condition set to map[any]", i)
-+		}
-+
-+		id := resourceReadyMapString(expandResourceReadyMap(condition))
-+		if _, ok := equalElements[id]; ok {
-+			continue
-+		}
-+
-+		equalElements[id] = struct{}{}
-+		res = append(res, condition)
-+	}
-+
-+	return res, nil
-+}
-+
-+func validateResourceReadyFailAndReadyConditions(fail []matchCondition, ready []matchCondition) diag.Diagnostics {
-+	failByTypes := make(map[string]matchCondition)
-+	readyByTypes := make(map[string]matchCondition)
-+
-+	for _, c := range fail {
-+		failByTypes[c.name] = c
-+	}
-+
-+	for _, c := range ready {
-+		readyByTypes[c.name] = c
-+	}
-+
-+	var resDiags diag.Diagnostics
-+	for t, f := range failByTypes {
-+		r, ok := readyByTypes[t]
-+		if !ok {
-+			continue
-+		}
-+
-+		if f.String() == r.String() {
-+			resDiags = append(resDiags, diag.Errorf("Found same fail and ready condition matcher for type %s", t)...)
-+		}
-+	}
-+
-+	if resDiags.HasError() {
-+		return resDiags
-+	}
-+
-+	return nil
-+}
-+
-+func resourceReadyValidationError(f string, args ...any) ([]string, []error) {
-+	return nil, []error{fmt.Errorf(f, args...)}
-+}
-+
-+func validateResourceReadyTimeout(val any, key string) ([]string, []error) {
-+	strVal, ok := val.(string)
-+	if !ok {
-+		return resourceReadyValidationError("expected type of %s to be string", key)
-+	}
-+
-+	if strVal == "" {
-+		return resourceReadyValidationError("%s", requiredOrSetEmptyError(key))
-+	}
-+
-+	_, err := time.ParseDuration(strVal)
-+	if err != nil {
-+		return resourceReadyValidationError("%s should be golang time.Duration format: %v", key, err)
-+	}
-+
-+	return nil, nil
-+}
-+
-+func validateResourceReadyAPIVersion(val any, _ string) ([]string, []error) {
-+	apiVersionValidationError := func(f string, args ...any) ([]string, []error) {
-+		return resourceReadyValidationError(resourceReadyAPIVersionAttr+" "+f, args...)
-+	}
-+
-+	apiVersion, ok := val.(string)
-+	if !ok {
-+		return apiVersionValidationError("is not a string")
-+	}
-+
-+	if apiVersion == "" {
-+		return resourceReadyValidationError("%s", requiredOrSetEmptyError(resourceReadyAPIVersionAttr))
-+	}
-+
-+	_, err := kubeschema.ParseGroupVersion(apiVersion)
-+	if err != nil {
-+		return apiVersionValidationError("not a valid APIVersion: %v", err)
-+	}
-+
-+	return nil, nil
-+}
-+
-+func validateResourceReadyFieldsMap(val any, key string) ([]string, []error) {
-+	mapVal, ok := val.(map[string]any)
-+	if !ok {
-+		return resourceReadyValidationError("%s should be map", key)
-+	}
-+
-+	var errs []error
-+	appendError := func(field string, msg string, args ...any) {
-+		prefix := fmt.Sprintf("field %s is invalid: ", field)
-+		errs = append(errs, fmt.Errorf(prefix+msg, args...))
-+	}
-+
-+	for field, rawRegexp := range mapVal {
-+		reStr, ok := rawRegexp.(string)
-+		if !ok {
-+			appendError(field, "should to be string")
-+			continue
-+		}
-+
-+		if reStr == "" {
-+			continue
-+		}
-+
-+		if _, err := regexp.Compile(reStr); err != nil {
-+			appendError(field, "should to valid regexp: %v", err)
-+			continue
-+		}
-+	}
-+
-+	return nil, errs
-+}
-+
-+func validateResourceReadyRegexp(fieldName string) func(val any, key string) ([]string, []error) {
-+	return func(val any, key string) ([]string, []error) {
-+		regexpValidationError := func(f string, args ...any) ([]string, []error) {
-+			f = fmt.Sprintf("%s %s: ", fieldName, key) + f
-+			return resourceReadyValidationError(f, args...)
-+		}
-+
-+		message, ok := val.(string)
-+		if !ok {
-+			return regexpValidationError("is not string")
-+		}
-+
-+		if message == "" {
-+			return nil, nil
-+		}
-+
-+		if _, err := regexp.Compile(message); err != nil {
-+			return regexpValidationError("should be a valid regexp: %v", err)
-+		}
-+
-+		return nil, nil
-+	}
-+}
-+
-+func requiredOrSetEmptyError(key string) string {
-+	return fmt.Sprintf("%s is required. it is not set or empty", key)
-+}
-+
-+func logResourceReadyInfo(ctx context.Context, f string, args ...any) {
-+	tflog.Info(ctx, fmt.Sprintf(f, args...))
-+}
-+
-+func logResourceReadyDebug(ctx context.Context, f string, args ...any) {
-+	tflog.Debug(ctx, fmt.Sprintf(f, args...))
-+}
-+
-+var resourceReadyTraceLogFunc func(ctx context.Context, msg string, additionalFields ...map[string]interface{})
-+
-+func init() {
-+	// increase trace log level for tests
-+	accEnv := strings.ToLower(os.Getenv("TF_ACC"))
-+	if accEnv != "" && accEnv != "0" && accEnv != "false" {
-+		resourceReadyTraceLogFunc = tflog.Debug
-+		return
-+	}
-+
-+	resourceReadyTraceLogFunc = tflog.Trace
-+}
-+
-+func logResourceReadyTrace(ctx context.Context, f string, args ...any) {
-+	resourceReadyTraceLogFunc(ctx, fmt.Sprintf(f, args...))
 +}
