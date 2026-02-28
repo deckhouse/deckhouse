@@ -56,11 +56,6 @@ groups:
     en: Traffic from nodes to master nodes
     ru: Трафик от узлов к master-узлам
   destinations:
-  - ports: "4234"
-    protocol: UDP
-    description:
-      en: NTP for time synchronization between nodes
-      ru: NTP для синхронизации времени между узлами
   - ports: "6443"
     protocol: TCP
     description:
