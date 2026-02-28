@@ -44,7 +44,7 @@ const (
 type packageI interface {
 	GetName() string
 	GetValuesChecksum() string
-	NeedStartup() bool
+	HooksInitialized() bool
 	// InitializeHooks creates hook controllers and binds them to events.
 	InitializeHooks()
 	GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook
@@ -105,11 +105,6 @@ func (t *task) String() string {
 // 2. Synchronize - run initial sync for hooks with WaitForSynchronization
 // 3. Run OnStartup hooks - execute startup bindings before normal operation
 func (t *task) Execute(ctx context.Context) error {
-	// skip if package already running
-	if !t.pkg.NeedStartup() {
-		return nil
-	}
-
 	t.logger.Debug("startup package")
 
 	t.status.HandleError(t.pkg.GetName(), &status.Error{
@@ -180,6 +175,10 @@ func (t *task) Execute(ctx context.Context) error {
 func (t *task) initializeHooks(ctx context.Context) (map[string][]hookcontroller.BindingExecutionInfo, error) {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "InitializeHooks")
 	defer span.End()
+
+	if t.pkg.HooksInitialized() {
+		return map[string][]hookcontroller.BindingExecutionInfo{}, nil
+	}
 
 	// Initialize hook controllers and bind them to Kubernetes events and schedules
 	t.logger.Debug("initialize package hooks")

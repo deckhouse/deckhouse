@@ -16,132 +16,125 @@ package lifecycle
 
 import (
 	"context"
+
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 )
 
-// Store is the central registry for runtime packages.
-// It manages the full lifecycle: creation, updates, event handling, and removal.
-type Store[P runtimePackage] struct {
-	packages map[string]*Package[P]
+// Store manages lifecycle contexts and pending settings for all runtime packages.
+// It is type-agnostic — it does not hold the loaded Application/Module instances,
+// only the version, settings, and context tree needed for change detection and
+// cancellation. The actual runtime instances live in plain maps on Runtime.
+//
+// Store is not thread-safe; callers must hold Runtime.mu before calling any method.
+type Store struct {
+	packages map[string]*Package
 }
 
 // NewStore creates an empty Store ready for use.
-func NewStore[P runtimePackage]() *Store[P] {
-	return &Store[P]{
-		packages: make(map[string]*Package[P]),
+func NewStore() *Store {
+	return &Store{
+		packages: make(map[string]*Package),
 	}
 }
 
-// Callback is invoked by Update when a version or settings change is detected.
-// Receives the new context, the event type, and the current app (nil on first install).
-type Callback[P runtimePackage] func(ctx context.Context, event int, pkg P)
-
-// Update registers a new package or detects changes to an existing one.
-//
-// Change detection (evaluated in order, first match wins):
-//  1. Package not in store → new entry, EventVersionChanged
-//  2. Version differs → EventVersionChanged (cancels all in-flight tasks)
-//  3. Settings checksum differs → EventSettingsChanged (cancels previous settings apply)
-//  4. No change → callback is not invoked
-//
-// For EventVersionChanged, app is nil on first install or the previously loaded app on upgrade.
-func (s *Store[P]) Update(name, version, settings string, f Callback[P]) {
+// NeedUpdate reports whether the package needs processing: true if the package
+// is new, the version changed, or the settings checksum differs.
+// Used as a fast-path check before the more expensive Update call.
+func (s *Store) NeedUpdate(name, version, checksum string) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
-		s.packages[name] = &Package[P]{
+		return true
+	}
+
+	if pkg.version != version {
+		return true
+	}
+
+	if pkg.settings.Checksum() != checksum {
+		return true
+	}
+
+	return false
+}
+
+// Update registers a new package or processes a version change.
+//
+// Returns a new root context (EventUpdate) when:
+//  1. Package not in store → creates entry, returns root context
+//  2. Version differs → cancels all in-flight tasks, returns new root context
+//
+// Returns nil when only settings changed (no new context needed — settings are
+// stored and will be picked up by the scheduler via GetPendingSettings on next
+// Reschedule, or by the next ApplySettings task in the schedule pipeline).
+//
+// Callers should check for nil: a nil return with a settings-only change means
+// the caller should trigger Reschedule to re-apply settings through the scheduler.
+func (s *Store) Update(name, version string, settings addonutils.Values) context.Context {
+	pkg, ok := s.packages[name]
+	if !ok {
+		s.packages[name] = &Package{
 			version:  version,
-			checksum: settings,
+			settings: settings,
 			cancels:  make(map[int]context.CancelFunc),
 		}
 
-		ctx := s.packages[name].newContext(EventVersionChanged)
-		f(ctx, EventVersionChanged, s.packages[name].pkg)
-		return
+		ctx := s.packages[name].newContext(EventUpdate)
+		return ctx
 	}
 
 	if pkg.version != version {
 		pkg.version = version
-		pkg.checksum = settings
-		ctx := pkg.newContext(EventVersionChanged)
-		f(ctx, EventVersionChanged, s.packages[name].pkg)
-		return
+		pkg.settings = settings
+
+		ctx := pkg.newContext(EventUpdate)
+		return ctx
 	}
 
-	if pkg.checksum != settings {
-		pkg.checksum = settings
-		ctx := pkg.newContext(EventSettingsChanged)
-		f(ctx, EventSettingsChanged, s.packages[name].pkg)
-		return
+	if pkg.settings.Checksum() != settings.Checksum() {
+		pkg.settings = settings
 	}
+
+	return nil
 }
 
-// Range iterates over all loaded packages under a read lock.
-// Skips entries where the app has not been loaded yet (pkg == nil).
-// The callback must not call other Store methods.
-func (s *Store[P]) Range(f func(pkg P)) {
-	for _, pkg := range s.packages {
-		if pkg.pkg != nil {
-			f(pkg.pkg)
-		}
-	}
-}
-
-// GetPackage returns the loaded runtime package, or nil if the package
-// doesn't exist or hasn't been loaded yet.
-func (s *Store[P]) GetPackage(name string) P {
+// HandleEvent renews the context for the given event type and returns it.
+//
+// For EventRemove: clears version and settings before renewing context, so a
+// subsequent Update sees the package as new (enabling re-create after remove).
+//
+// Returns nil if the package doesn't exist in the store.
+func (s *Store) HandleEvent(event int, name string) context.Context {
 	pkg, ok := s.packages[name]
 	if !ok {
 		return nil
 	}
 
-	return pkg.pkg
-}
-
-// SetPackage stores the loaded runtime package for a package.
-// Called by the Load task after successfully building the app from its package files.
-// No-op if the package entry doesn't exist (e.g., removed between download and load).
-func (s *Store[P]) SetPackage(name string, pkg P) {
-	if _, ok := s.packages[name]; !ok {
-		return
-	}
-
-	s.packages[name].pkg = pkg
-}
-
-// HandleEvent renews the context for the given event type and invokes the callback
-// with the new context and the loaded app.
-//
-// For EventRemove: clears version and checksum before renewing context, so a
-// subsequent Update sees the package as new (enabling re-create after remove).
-//
-// No-op if the package doesn't exist or hasn't been loaded yet (pkg == nil).
-// The callback executes under the Store lock.
-func (s *Store[P]) HandleEvent(event int, name string, f Callback[P]) {
-	pkg, ok := s.packages[name]
-	if !ok || pkg.pkg == nil {
-		return
-	}
-
-	f(pkg.newContext(event), event, pkg.pkg)
-
 	if event == EventRemove {
 		pkg.version = ""
-		pkg.checksum = ""
-		pkg.pkg = nil
+		pkg.settings = make(addonutils.Values)
 	}
+
+	return pkg.newContext(event)
 }
 
-// Delete removes a package entry from the store if it is still in the removed state
-// (version empty and pkg nil). Returns true if the entry was deleted.
-//
-// Safe for concurrent use with Update: if the package has been re-created
-// (new version set by Update), the entry is preserved.
-func (s *Store[P]) Delete(name string) bool {
-	pkg, ok := s.packages[name]
-	if !ok {
-		return false
-	}
+// GetPendingSettings returns the latest settings stored for a package.
+// Called by schedulePackage to pass current settings into the ApplySettings task.
+// This late-binding approach ensures settings changes that arrive between Update
+// and schedule are automatically picked up.
+func (s *Store) GetPendingSettings(name string) addonutils.Values {
+	return s.packages[name].settings
+}
 
-	if pkg.version != "" || pkg.pkg != nil {
+// Delete removes a package entry from the store if it still exists and is in
+// the removed state (version cleared by HandleEvent(EventRemove)).
+// Returns true if the entry was deleted.
+//
+// Safe against re-creation races: if Update has already set a new version
+// between the remove and this cleanup, the version is non-empty and Delete
+// returns false, preserving the re-created entry.
+func (s *Store) Delete(name string) bool {
+	pkg, ok := s.packages[name]
+	if !ok || pkg.version == "" {
 		return false
 	}
 

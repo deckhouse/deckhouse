@@ -16,7 +16,6 @@ package runtime
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -31,12 +30,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
-	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskdownload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/download"
 	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
-	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
 	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -55,12 +52,12 @@ type App struct {
 // renderManifests renders the Helm chart for a loaded package. Used by the debug server.
 func (r *Runtime) renderManifests(ctx context.Context, name string) (string, error) {
 	r.mu.Lock()
-	app := r.apps.GetPackage(name)
+	defer r.mu.Unlock()
+
+	app := r.apps[name]
 	if app == nil {
-		r.mu.Unlock()
 		return "", fmt.Errorf("app %s not found", name)
 	}
-	r.mu.Unlock()
 
 	return r.nelmService.Render(ctx, app.GetNamespace(), app)
 }
@@ -72,7 +69,7 @@ func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings ad
 	defer span.End()
 
 	r.mu.Lock()
-	app := r.apps.GetPackage(name)
+	app := r.apps[name]
 	if app == nil {
 		r.mu.Unlock()
 		return settingscheck.Result{Valid: true}, nil
@@ -82,8 +79,17 @@ func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings ad
 	return app.ValidateSettings(ctx, settings)
 }
 
-// UpdateApp handles application updates (version changes and settings changes).
-// Version changes and settings changes are handled independently with separate contexts.
+// UpdateApp handles application creation and version changes from the Application controller.
+//
+// Flow:
+//  1. NeedUpdate fast-path: skip if version and settings checksum are unchanged
+//  2. Store.Update: if version changed → new root context, enqueue full pipeline
+//     (Disable → Download → Install → Load); if only settings changed → nil context,
+//     trigger Reschedule so the scheduler re-runs ApplySettings → Startup → Run
+//  3. CheckConstraints: validate Kubernetes/Deckhouse version requirements before enqueuing
+//
+// Settings are applied lazily: the scheduler's schedulePackage reads pending settings
+// from the Store via GetPendingSettings when the package is scheduled for startup.
 func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -92,56 +98,55 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		app.Namespace = "default"
 	}
 
-	settingsChecksum := ""
-	if len(app.Settings) > 0 {
-		settingsChecksum = app.Settings.Checksum()
+	if len(app.Settings) == 0 {
+		app.Settings = make(addonutils.Values)
 	}
 
 	name := apps.BuildName(app.Namespace, app.Name)
 	version := app.Definition.Version
 
-	r.apps.Update(name, version, settingsChecksum, func(ctx context.Context, event int, pkg *apps.Application) {
-		var tasks []queue.Task
-		if event == lifecycle.EventVersionChanged {
-			if err := r.scheduler.CheckByConstraints(app.Definition.Constraints()); err != nil {
-				r.status.HandleError(name, err)
-				return
-			}
+	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum()) {
+		return
+	}
 
-			r.status.ClearRuntimeConditions(name)
-			r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
+	ctx := r.packages.Update(name, version, app.Settings)
+	if ctx == nil {
+		r.scheduler.Reschedule(name)
+		return
+	}
 
-			packageName := app.Definition.Name
-			packageVersion := app.Definition.Version
+	if err := r.scheduler.CheckConstraints(app.Definition.Constraints()); err != nil {
+		r.status.HandleError(name, err)
+		return
+	}
 
-			tasks = []queue.Task{
-				taskdownload.NewAppTask(name, packageName, packageVersion, repo, r.installer, r.status, r.logger),
-				taskinstall.NewAppTask(name, packageName, packageVersion, repo, r.installer, r.status, r.logger),
-				taskload.NewAppTask(name, repo, app.Settings, r.loadApp, r.status, r.logger),
-			}
+	r.status.ClearRuntimeConditions(name)
+	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
-			// If there's an existing app, disable it first
-			if pkg != nil {
-				tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger))
-			}
-		}
+	packageName := app.Definition.Name
+	packageVersion := app.Definition.Version
 
-		if event == lifecycle.EventSettingsChanged && pkg != nil {
-			tasks = []queue.Task{
-				taskapplysettings.NewTask(pkg, app.Settings, r.status, r.logger),
-				taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger),
-			}
-		}
+	tasks := []queue.Task{
+		taskdownload.NewAppTask(name, packageName, packageVersion, repo, r.installer, r.status, r.logger),
+		taskinstall.NewAppTask(name, packageName, packageVersion, repo, r.installer, r.status, r.logger),
+		taskload.NewAppTask(name, repo, r.loadApp, r.status, r.logger),
+	}
 
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
-	})
+	// If there's an existing app, disable it first
+	if pkg := r.apps[name]; pkg != nil {
+		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger))
+	}
+
+	for _, task := range tasks {
+		r.queueService.Enqueue(ctx, name, task)
+	}
 }
 
-// loadApp builds an Application from its package files, validates settings, and registers it
-// with the lifecycle store and scheduler. Called by the Load task after filesystem mount.
-func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, settings addonutils.Values, packagePath string) (string, error) {
+// loadApp builds an Application from its package files and stores it in r.apps.
+// Called by the Load task after the package image is mounted on the filesystem.
+// Does not apply settings or register with the scheduler — that happens in the
+// ApplySettings task which runs as part of the scheduler's schedule pipeline.
+func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath string) (string, error) {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadApp")
 	defer span.End()
 
@@ -165,22 +170,10 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, settings ad
 		return "", newLoadFailedErr(err)
 	}
 
-	res, err := app.ValidateSettings(ctx, settings)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return "", newApplyInitialSettingsErr(err)
-	}
-
-	if !res.Valid {
-		span.SetStatus(codes.Error, res.Message)
-		return "", newApplyInitialSettingsErr(errors.New(res.Message))
-	}
-
 	r.mu.Lock()
-	r.apps.SetPackage(app.GetName(), app)
-	r.mu.Unlock()
+	defer r.mu.Unlock()
 
-	r.scheduler.AddNode(app)
+	r.apps[app.GetName()] = app
 
 	return app.GetVersion().String(), nil
 }
@@ -201,20 +194,26 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	name := apps.BuildName(namespace, instance)
 	r.scheduler.RemoveNode(name)
 
-	r.apps.HandleEvent(lifecycle.EventRemove, name, func(ctx context.Context, _ int, pkg *apps.Application) {
-		cleanup := queue.WithOnDone(func() {
-			go func() {
-				r.mu.Lock()
-				defer r.mu.Unlock()
+	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
+	if ctx == nil {
+		return
+	}
 
-				if r.apps.Delete(name) {
-					r.queueService.Remove(name)
-					r.status.Delete(name)
-				}
-			}()
-		})
-
+	if pkg := r.apps[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, r.installer, r.logger), cleanup)
+	}
+
+	cleanup := queue.WithOnDone(func() {
+		go func() {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
+			if r.packages.Delete(name) {
+				r.queueService.Remove(name)
+				r.status.Delete(name)
+			}
+		}()
 	})
+
+	r.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, r.installer, r.logger), cleanup)
 }

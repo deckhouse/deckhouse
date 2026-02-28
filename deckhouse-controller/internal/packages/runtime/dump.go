@@ -58,19 +58,19 @@ func (r *Runtime) Dump() []byte {
 		Modules: make(map[string]moduleDump),
 	}
 
-	r.apps.Range(func(app *apps.Application) {
+	for _, app := range r.apps {
 		d.Apps[app.GetName()] = appDump{
 			r.status.GetStatus(app.GetName()),
 			app.GetInfo(),
 		}
-	})
+	}
 
-	r.modules.Range(func(module *modules.Module) {
+	for _, module := range r.modules {
 		d.Modules[module.GetName()] = moduleDump{
 			r.status.GetStatus(module.GetName()),
 			module.GetInfo(),
 		}
-	})
+	}
 
 	marshalled, _ := yaml.Marshal(d)
 	return marshalled

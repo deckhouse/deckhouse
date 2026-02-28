@@ -23,6 +23,7 @@ import (
 type Info struct {
 	Instance   string            `json:"name" yaml:"name"`
 	Namespace  string            `json:"namespace" yaml:"namespace"`
+	Running    bool              `json:"running" yaml:"running"`
 	Definition Definition        `json:"definition" yaml:"definition"`
 	Repository registry.Remote   `json:"repository" yaml:"repository"`
 	Digests    map[string]string `json:"digests" yaml:"digests"`
@@ -39,6 +40,7 @@ func (a *Application) GetInfo() Info {
 	return Info{
 		Instance:   a.instance,
 		Namespace:  a.namespace,
+		Running:    a.running.Load(),
 		Definition: a.definition,
 		Repository: a.repository,
 		Digests:    a.digests,

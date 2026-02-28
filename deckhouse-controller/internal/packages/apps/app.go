@@ -23,6 +23,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync/atomic"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
@@ -61,6 +62,8 @@ type Application struct {
 	path      string // path to the package dir on fs
 
 	version *semver.Version
+
+	running atomic.Bool
 
 	definition Definition        // Application definition
 	digests    map[string]string // Package digests
@@ -115,6 +118,7 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.instance = splits[1]
 
 	a.name = name
+	a.running = atomic.Bool{}
 
 	a.path = cfg.Path
 	a.definition = cfg.Definition
@@ -292,7 +296,7 @@ func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
 }
 
-// ApplySettings apply setting values to application
+// ApplySettings applies settings values to application
 func (a *Application) ApplySettings(settings addonutils.Values) error {
 	return a.values.ApplyConfigValues(settings)
 }
@@ -302,11 +306,11 @@ func (a *Application) GetConstraints() schedule.Constraints {
 	return a.definition.Constraints()
 }
 
-// NeedStartup reports whether the application requires a startup phase.
+// HooksInitialized reports whether the package requires a hook initialize phase.
 // This is true when hooks have not yet been initialized (no controllers attached),
-// meaning the app needs to go through the full startup sequence before it can run.
-func (a *Application) NeedStartup() bool {
-	return !a.hooks.Initialized()
+// meaning the pkg needs to go through the full startup sequence before it can run.
+func (a *Application) HooksInitialized() bool {
+	return a.hooks.Initialized()
 }
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
@@ -328,6 +332,33 @@ func (a *Application) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+}
+
+// DisableHooks tears down all active hook bindings and clears the hook registry.
+// Called by the Disable task when a package is being stopped or upgraded.
+//
+// Cleanup order: schedule bindings are disabled first (stops cron triggers),
+// then Kubernetes monitors are stopped (stops informer watches), and finally
+// the hook registry is cleared so a subsequent InitializeHooks starts fresh.
+func (a *Application) DisableHooks() {
+	// Disable all schedule-based hooks
+	schHooks := a.hooks.GetHooksByBinding(shtypes.Schedule)
+	for _, hook := range schHooks {
+		if hook.GetHookController() != nil {
+			hook.GetHookController().DisableScheduleBindings()
+		}
+	}
+
+	// Stop all Kubernetes event monitors
+	kubeHooks := a.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
+	for _, hook := range kubeHooks {
+		if hook.GetHookController() != nil {
+			hook.GetHookController().StopMonitors()
+		}
+	}
+
+	a.running.Store(false)
+	a.hooks.Clear()
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events
@@ -355,6 +386,10 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 
 	span.SetAttributes(attribute.String("binding", string(binding)))
 
+	if binding == shtypes.OnStartup && a.running.Load() {
+		return nil
+	}
+
 	for _, hook := range a.hooks.GetHooksByBinding(binding) {
 		bc := bctx.BindingContext{
 			Binding: string(binding),
@@ -370,6 +405,10 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
+	}
+
+	if binding == shtypes.OnStartup {
+		a.running.Store(true)
 	}
 
 	return nil

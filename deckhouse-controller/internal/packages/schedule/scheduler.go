@@ -115,9 +115,9 @@ func (s *Scheduler) Resume() {
 	s.schedule()
 }
 
-// CheckByConstraints evaluates the given constraints against the current cluster state
+// CheckConstraints evaluates the given constraints against the current cluster state
 // and returns an error describing the first unsatisfied constraint, or nil if all are met.
-func (s *Scheduler) CheckByConstraints(constraints Constraints) error {
+func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

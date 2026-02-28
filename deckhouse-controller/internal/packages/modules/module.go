@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"sync/atomic"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
@@ -55,6 +56,8 @@ type Module struct {
 	path string // path to the package dir on fs
 
 	version *semver.Version
+
+	running atomic.Bool
 
 	definition Definition        // Module definition
 	digests    map[string]string // Package digests
@@ -107,6 +110,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m := new(Module)
 
 	m.name = name
+	m.running = atomic.Bool{}
 
 	m.path = cfg.Path
 	m.definition = cfg.Definition
@@ -274,7 +278,7 @@ func (m *Module) GetValues() addonutils.Values {
 		m.values.GetValues())
 }
 
-// ApplySettings apply settings values
+// ApplySettings applies settings values
 func (m *Module) ApplySettings(settings addonutils.Values) error {
 	return m.values.ApplyConfigValues(settings)
 }
@@ -289,13 +293,6 @@ func (m *Module) GetHooks() []hooks.Hook {
 	return m.hooks.GetHooks()
 }
 
-// NeedStartup reports whether the application requires a startup phase.
-// This is true when hooks have not yet been initialized (no controllers attached),
-// meaning the app needs to go through the full startup sequence before it can run.
-func (m *Module) NeedStartup() bool {
-	return !m.hooks.Initialized()
-}
-
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
 func (m *Module) InitializeHooks() {
 	for _, hook := range m.hooks.GetHooks() {
@@ -306,6 +303,33 @@ func (m *Module) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+}
+
+// DisableHooks tears down all active hook bindings and clears the hook registry.
+// Called by the Disable task when a package is being stopped or upgraded.
+//
+// Cleanup order: schedule bindings are disabled first (stops cron triggers),
+// then Kubernetes monitors are stopped (stops informer watches), and finally
+// the hook registry is cleared so a subsequent InitializeHooks starts fresh.
+func (m *Module) DisableHooks() {
+	// Disable all schedule-based hooks
+	schHooks := m.hooks.GetHooksByBinding(shtypes.Schedule)
+	for _, hook := range schHooks {
+		if hook.GetHookController() != nil {
+			hook.GetHookController().DisableScheduleBindings()
+		}
+	}
+
+	// Stop all Kubernetes event monitors
+	kubeHooks := m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
+	for _, hook := range kubeHooks {
+		if hook.GetHookController() != nil {
+			hook.GetHookController().StopMonitors()
+		}
+	}
+
+	m.running.Store(false)
+	m.hooks.Clear()
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events
@@ -333,6 +357,10 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 
 	span.SetAttributes(attribute.String("binding", string(binding)))
 
+	if binding == shtypes.OnStartup && m.running.Load() {
+		return nil
+	}
+
 	for _, hook := range m.hooks.GetHooksByBinding(binding) {
 		bc := bctx.BindingContext{
 			Binding: string(binding),
@@ -348,6 +376,10 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
+	}
+
+	if binding == shtypes.OnStartup {
+		m.running.Store(true)
 	}
 
 	return nil

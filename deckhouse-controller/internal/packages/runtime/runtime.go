@@ -41,6 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
+	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
 	taskstartup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/startup"
@@ -65,12 +66,14 @@ const (
 // Runtime orchestrates the full lifecycle of application packages: discovery,
 // installation, hook execution, Helm release management, and removal.
 //
-// It delegates package state to lifecycle.Store (the single source of truth),
-// task execution to queue.Service (one queue per package), and cluster
-// coordination to the scheduler, NELM, and hook event systems.
+// State is split across three structures, all protected by r.mu:
+//   - packages (lifecycle.Store): contexts and pending settings — the cancellation
+//     and change-detection layer, type-agnostic
+//   - apps: loaded Application instances, keyed by name
+//   - modules: loaded Module instances, keyed by name
 //
-// All package mutations flow through lifecycle.Store callbacks, ensuring
-// atomicity between state changes and task enqueueing.
+// Task execution is delegated to queue.Service (one queue per package), and
+// cluster coordination to the scheduler, NELM, and hook event systems.
 type Runtime struct {
 	hookEventHandler *hookevent.Handler // Routes Kube/schedule events into hook tasks
 	queueService     *queue.Service     // Per-package task queues with retry
@@ -85,9 +88,10 @@ type Runtime struct {
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
 
-	mu      sync.RWMutex
-	apps    *lifecycle.Store[*apps.Application]
-	modules *lifecycle.Store[*modules.Module]
+	mu       sync.RWMutex
+	packages *lifecycle.Store
+	apps     map[string]*apps.Application
+	modules  map[string]*modules.Module
 
 	addonModuleManager moduleManagerI
 
@@ -111,8 +115,9 @@ type moduleManagerI interface {
 func New(moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
-	r.apps = lifecycle.NewStore[*apps.Application]()
-	r.modules = lifecycle.NewStore[*modules.Module]()
+	r.apps = make(map[string]*apps.Application)
+	r.modules = make(map[string]*modules.Module)
+	r.packages = lifecycle.NewStore()
 
 	// Initialize foundational services
 	r.addonModuleManager = moduleManager
@@ -414,12 +419,18 @@ func (r *Runtime) Run() {
 	}()
 }
 
-// schedulePackage is the scheduler's onSchedule callback, invoked when a package's
-// constraints are met and it should be enabled. It enqueues Startup → Run tasks
-// for the package. The Run task includes an onDone callback that notifies the scheduler
-// upon completion, allowing it to track active packages.
-// Note: EventSchedule is shared between enable and disable, so enqueueing here
-// automatically cancels any in-flight disable tasks for the same package.
+// schedulePackage handles scheduler enable events by enqueueing
+// ApplySettings → Startup → Run tasks for the named package.
+//
+// ApplySettings reads the latest pending settings from the Store and validates/applies
+// them to the loaded package instance. This is the single point where settings reach
+// the runtime — both initial load and settings-only changes flow through here.
+//
+// The Run task carries an onDone callback that calls scheduler.Complete, letting the
+// scheduler know the package has finished its run cycle.
+//
+// Both schedulePackage and disablePackage use EventSchedule, so enqueueing here
+// implicitly cancels any in-flight disable context for the same package.
 func (r *Runtime) schedulePackage(name string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -428,33 +439,40 @@ func (r *Runtime) schedulePackage(name string) {
 		r.scheduler.Complete(name)
 	})
 
-	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *apps.Application) {
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
+	settings := r.packages.GetPendingSettings(name)
+
+	if pkg := r.apps[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
-	})
+	}
 
-	r.modules.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *modules.Module) {
+	if pkg := r.apps[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
-	})
+	}
 }
 
-// disablePackage is the scheduler's onDisable callback, invoked when a package's
-// constraints are no longer met and it should be disabled. It enqueues a Disable task
-// that tears down the package's hooks and Helm release.
-// Note: EventSchedule is shared between enable and disable, so enqueueing here
-// automatically cancels any in-flight startup/run tasks for the same package.
+// disablePackage handles scheduler disable events by enqueueing a Disable task that
+// tears down the package's hooks and Helm release.
+//
+// Both disablePackage and schedulePackage use EventSchedule, so enqueueing the disable
+// task here implicitly cancels any in-flight startup/run context for the same package.
 func (r *Runtime) disablePackage(name string) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
-	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *apps.Application) {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
-	})
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
 
-	r.modules.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *modules.Module) {
+	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
-	})
+	}
+
+	if pkg := r.apps[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+	}
 }
 
 // Stop performs graceful shutdown of all operator subsystems.
