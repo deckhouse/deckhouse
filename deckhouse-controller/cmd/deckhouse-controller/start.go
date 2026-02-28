@@ -484,7 +484,8 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 	opts := make([]otlptracegrpc.Option, 0, 1)
 
 	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
-	opts = append(opts, otlptracegrpc.WithInsecure())
+	// 
+	// opts = append(opts, otlptracegrpc.WithInsecure())
 
 	if authToken != "" {
 		opts = append(opts, otlptracegrpc.WithHeaders(map[string]string{
