@@ -74,7 +74,7 @@ func applyCmFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 
 	defaultGWslice := strings.Split(defaultGWstring, "/")
 	if len(defaultGWslice) != 2 || len(defaultGWslice[0]) == 0 || len(defaultGWslice[1]) == 0 {
-		return nil, fmt.Errorf("failed to parse default gateway string from the configmap")
+		return &GatewayDesc{}, nil
 	}
 
 	return &GatewayDesc{
@@ -88,6 +88,10 @@ func setDiscoveredDefaultGateway(_ context.Context, input *go_hook.HookInput) er
 		defaultGW, err := sdkobjectpatch.UnmarshalToStruct[GatewayDesc](input.Snapshots, configmapSnapshot)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal %s snapshot: %w", configmapSnapshot, err)
+		}
+
+		if len(defaultGW[0].Name) == 0 || len(defaultGW[0].Namespace) == 0 {
+			input.Logger.Warn("could not detect default gateway")
 		}
 
 		input.Values.Set(discoveryDefaultGatewayPath, defaultGW[0])
