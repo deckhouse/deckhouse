@@ -433,7 +433,6 @@ spec:
 }
 
 func TestParseConfigFromFiles(t *testing.T) {
-	imagesDigestsJSON = "./mocks/images_digests.json"
 	app.VersionFile = "./mocks/version"
 	t.Run("parse wildcard", func(t *testing.T) {
 		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider())

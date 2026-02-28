@@ -633,17 +633,12 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (m *MetaConfig) LoadImagesDigests(filename string) error {
+func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
 	var imagesDigests imagesDigests
 
-	imagesDigestsJSONFile, err := os.ReadFile(filename)
+	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
 	if err != nil {
-		return fmt.Errorf("%s file load: %v", filename, err)
-	}
-
-	err = yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
-	if err != nil {
-		return fmt.Errorf("%s file unmarshal: %v", filename, err)
+		return fmt.Errorf("unmarshal: %v", err)
 	}
 
 	m.Images = imagesDigests

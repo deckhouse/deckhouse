@@ -28,10 +28,9 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
-
-var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
 const (
 	deckhouseRegistrySecretName      = "deckhouse-registry"
@@ -58,7 +57,7 @@ type DeckhouseDeploymentParams struct {
 
 type imagesDigests map[string]map[string]interface{}
 
-func loadImagesDigests(filename string) (imagesDigests, error) {
+func loadImagesDigests(imagesDigestsJSONFile []byte) (imagesDigests, error) {
 	if val, ok := os.LookupEnv("DHCTL_TEST"); ok && val == "yes" {
 		return map[string]map[string]interface{}{
 			"deckhouse": {
@@ -69,14 +68,9 @@ func loadImagesDigests(filename string) (imagesDigests, error) {
 
 	var imagesDigestsDict imagesDigests
 
-	imagesDigestsJSONFile, err := os.ReadFile(filename)
+	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigestsDict)
 	if err != nil {
-		return imagesDigestsDict, fmt.Errorf("%s file load: %v", filename, err)
-	}
-
-	err = yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigestsDict)
-	if err != nil {
-		return imagesDigestsDict, fmt.Errorf("%s file unmarshal: %v", filename, err)
+		return imagesDigestsDict, fmt.Errorf("unmarshal: %v", err)
 	}
 
 	return imagesDigestsDict, nil
@@ -172,7 +166,12 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 
 func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	initContainerImage := params.Registry
-	imagesDigestsDict, err := loadImagesDigests(imagesDigestsJSON)
+	imagesDigestsJSONFIle, err := digests.ImagesDigestsBytes()
+	if err != nil {
+		log.ErrorLn(err)
+	}
+
+	imagesDigestsDict, err := loadImagesDigests(imagesDigestsJSONFIle)
 	if err != nil {
 		log.ErrorLn(err)
 	} else {
@@ -769,8 +768,4 @@ func KubeDNSService(ipAddress string) *apiv1.Service {
 			},
 		},
 	}
-}
-
-func InitGlobalVars(pwd string) {
-	imagesDigestsJSON = pwd + "/deckhouse/candi/images_digests.json"
 }
