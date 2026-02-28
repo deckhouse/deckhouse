@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -40,8 +39,7 @@ type packageI interface {
 	GetQueues() []string
 	// RunHooksByBinding executes hooks matching the given binding type (e.g., AfterDeleteHelm).
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
-	// GetHooksByBinding returns hooks for a binding type to disable their controllers.
-	GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook
+	DisableHooks()
 }
 
 // nelmI abstracts Helm release management operations.
@@ -151,23 +149,7 @@ func (t *task) disablePackage(ctx context.Context) error {
 		}
 	}
 
-	// Disable all schedule-based hooks
-	schHooks := t.pkg.GetHooksByBinding(shtypes.Schedule)
-	for _, hook := range schHooks {
-		t.logger.Debug("disable schedule hook", slog.String("hook", hook.GetName()))
-		if hook.GetHookController() != nil {
-			hook.GetHookController().DisableScheduleBindings()
-		}
-	}
-
-	// Stop all Kubernetes event monitors
-	kubeHooks := t.pkg.GetHooksByBinding(shtypes.OnKubernetesEvent)
-	for _, hook := range kubeHooks {
-		t.logger.Debug("disable kube hook", slog.String("hook", hook.GetName()))
-		if hook.GetHookController() != nil {
-			hook.GetHookController().StopMonitors()
-		}
-	}
+	t.pkg.DisableHooks()
 
 	return nil
 }

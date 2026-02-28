@@ -44,6 +44,7 @@ const (
 type packageI interface {
 	GetName() string
 	GetValuesChecksum() string
+	HooksInitialized() bool
 	// InitializeHooks creates hook controllers and binds them to events.
 	InitializeHooks()
 	GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook
@@ -174,6 +175,10 @@ func (t *task) Execute(ctx context.Context) error {
 func (t *task) initializeHooks(ctx context.Context) (map[string][]hookcontroller.BindingExecutionInfo, error) {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "InitializeHooks")
 	defer span.End()
+
+	if t.pkg.HooksInitialized() {
+		return map[string][]hookcontroller.BindingExecutionInfo{}, nil
+	}
 
 	// Initialize hook controllers and bind them to Kubernetes events and schedules
 	t.logger.Debug("initialize package hooks")
