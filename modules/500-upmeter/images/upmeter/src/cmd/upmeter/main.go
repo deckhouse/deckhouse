@@ -117,7 +117,7 @@ func main() {
 
 			err := a.Stop()
 			if err != nil {
-				logger.Fatalf("error stopp agent gracefully: %v", err)
+				logger.Fatalf("error stop agent gracefully: %v", err)
 			}
 
 			os.Exit(0)

@@ -43,7 +43,7 @@ type AddEpisodesHandler struct {
 func (h *AddEpisodesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "%d POST is required\n", http.StatusBadRequest)
+		fmt.Fprintf(w, "%d POST is required\n", http.StatusMethodNotAllowed)
 		return
 	}
 	// check content-type

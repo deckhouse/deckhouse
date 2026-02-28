@@ -17,6 +17,7 @@ limitations under the License.
 package dao
 
 import (
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -194,7 +195,9 @@ func (d *EpisodeDao30s) Stats() ([]string, error) {
 	stats := []string{}
 	for rows.Next() {
 		var startUnix, count int64
-		rows.Scan(&startUnix, &count)
+		if err := rows.Scan(&startUnix, &count); err != nil {
+			return nil, fmt.Errorf("scan row: %w", err)
+		}
 		stats = append(stats, fmt.Sprintf("%d %d", startUnix, count))
 	}
 
@@ -225,11 +228,14 @@ func (d *EpisodeDao30s) GetEarliestTimeSlot() (time.Time, error) {
 	}
 	defer rows.Close()
 
-	for rows.Next() {
-		var startUnix int64
-		rows.Scan(&startUnix)
-		slot = time.Unix(startUnix, 0)
-		break
+	if rows.Next() {
+		var startUnix sql.NullInt64
+		if err := rows.Scan(&startUnix); err != nil {
+			return slot, fmt.Errorf("scan row: %w", err)
+		}
+		if startUnix.Valid {
+			slot = time.Unix(startUnix.Int64, 0)
+		}
 	}
 
 	return slot, nil

@@ -117,7 +117,7 @@ func (s *Sender) export() error {
 	if err != nil {
 		return err
 	}
-	if episodes == nil {
+	if len(episodes) == 0 {
 		// nothing to send, it is fine
 		return nil
 	}

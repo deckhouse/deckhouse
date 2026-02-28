@@ -35,7 +35,7 @@ type set map[string]struct{}
 
 // {b, a, c} => "a:b:c"
 func (s set) String() string {
-	var list []string
+	list := make([]string, 0, len(s))
 	for el := range s {
 		list = append(list, el)
 	}
@@ -348,15 +348,15 @@ func getEarliestTimeSlotByOriginsCount(ctx *dbcontext.DbContext, syncID string, 
 		return 0, ErrNotFound
 	}
 
-	// Slot is kept as number here, because this is not a high-level interface function, and we are likely
-	// going to reuse the int64 value
-	var slot int64
-	err = rows.Scan(&slot)
-	if err != nil {
+	// Slot is kept as number here. MIN(timeslot) can be NULL when no rows match.
+	var slot sql.NullInt64
+	if err = rows.Scan(&slot); err != nil {
 		return 0, fmt.Errorf("cannot parse: %v", err)
 	}
-
-	return slot, nil
+	if !slot.Valid {
+		return 0, ErrNotFound
+	}
+	return slot.Int64, nil
 }
 
 // getEarliestCommonTimeSlot finds the earliest timeslot for syncID
@@ -381,13 +381,15 @@ func getEarliestCommonTimeSlot(ctx *dbcontext.DbContext, syncID string) (int64, 
 		return 0, ErrNotFound
 	}
 
-	var slot int64
-	err = rows.Scan(&slot)
-	if err != nil {
+	// MIN(timeslot) can be NULL when no rows match.
+	var slot sql.NullInt64
+	if err = rows.Scan(&slot); err != nil {
 		return 0, fmt.Errorf("cannot parse: %v", err)
 	}
-
-	return slot, nil
+	if !slot.Valid {
+		return 0, ErrNotFound
+	}
+	return slot.Int64, nil
 }
 
 // getExportEpisodesBySyncIDAndSlot finds the episode list by slot and sync ID. The slot is number here for convenience,

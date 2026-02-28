@@ -50,7 +50,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			probe:  "prometheus",
 			check:  "api",
 			period: 10 * time.Second,
-			config: checker.PrometheusApiAvailable{
+			config: checker.PrometheusAPIAvailable{
 				Access:   access,
 				Timeout:  5 * time.Second,
 				Endpoint: "https://prometheus.d8-monitoring:9090/api/v1/query?query=vector(1)",
@@ -72,7 +72,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			probe:  "trickster",
 			check:  "api",
 			period: 10 * time.Second,
-			config: checker.PrometheusApiAvailable{
+			config: checker.PrometheusAPIAvailable{
 				Access:   access,
 				Timeout:  5 * time.Second,
 				Endpoint: "https://trickster.d8-monitoring:443/trickster/main/api/v1/query?query=vector(1)",
@@ -94,7 +94,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			probe:  "prometheus-metrics-adapter",
 			check:  "api",
 			period: 5 * time.Second,
-			config: checker.MetricsAdapterApiAvailable{
+			config: checker.MetricsAdapterAPIAvailable{
 				Access:   access,
 				Timeout:  5 * time.Second,
 				Endpoint: "https://kubernetes.default/apis/custom.metrics.k8s.io/v1beta1/namespaces/d8-upmeter/metrics/memory_1m",

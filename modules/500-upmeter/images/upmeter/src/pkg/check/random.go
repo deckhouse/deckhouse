@@ -84,7 +84,7 @@ func SetRef(eps []Episode, ref ProbeRef) {
 }
 
 func ListReferences(eps []Episode) []*Episode {
-	var refs []*Episode
+	refs := make([]*Episode, 0, len(eps))
 	for i := range eps {
 		refs = append(refs, &eps[i])
 	}

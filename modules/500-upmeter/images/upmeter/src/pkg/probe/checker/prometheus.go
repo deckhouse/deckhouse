@@ -28,14 +28,14 @@ import (
 	"d8.io/upmeter/pkg/kubernetes"
 )
 
-// PrometheusApiAvailable is a checker constructor and configurator
-type PrometheusApiAvailable struct {
+// PrometheusAPIAvailable is a checker constructor and configurator
+type PrometheusAPIAvailable struct {
 	Access   kubernetes.Access
 	Timeout  time.Duration
 	Endpoint string
 }
 
-func (c PrometheusApiAvailable) Checker() check.Checker {
+func (c PrometheusAPIAvailable) Checker() check.Checker {
 	verifier := prometheusAPIVerifier{
 		endpoint: c.Endpoint,
 		access:   c.Access,
@@ -155,10 +155,10 @@ func (v *metricPresenceVerifier) Verify(body []byte) check.Error {
 	return nil
 }
 
-func addMetricQuery(baseUrl, metricName string) string {
-	endpoint, err := url.Parse(baseUrl)
+func addMetricQuery(baseURL, metricName string) string {
+	endpoint, err := url.Parse(baseURL)
 	if err != nil {
-		panic(fmt.Errorf("cannot parse baseUrl: %v", err))
+		panic(fmt.Errorf("cannot parse baseURL: %v", err))
 	}
 
 	query := make(url.Values)

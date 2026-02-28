@@ -57,7 +57,7 @@ func DefaultConnectionOptions() map[string]string {
 
 // open opens a sqlite database
 func open(dbpath string, opts map[string]string) (*sql.DB, error) {
-	uri := buildUri(dbpath, opts)
+	uri := buildURI(dbpath, opts)
 
 	db, err := sql.Open("sqlite3", uri)
 	if err != nil {
@@ -69,7 +69,7 @@ func open(dbpath string, opts map[string]string) (*sql.DB, error) {
 	return db, nil
 }
 
-func buildUri(dbpath string, opts map[string]string) string {
+func buildURI(dbpath string, opts map[string]string) string {
 	options := url.Values{}
 	for k, v := range opts {
 		options.Set(k, v)

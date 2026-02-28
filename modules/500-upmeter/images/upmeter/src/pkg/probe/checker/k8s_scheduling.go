@@ -191,7 +191,7 @@ type pollingPodNodeFetcher struct {
 	interval time.Duration
 }
 
-func (f *pollingPodNodeFetcher) Node(ctx context.Context) (node string, err error) {
+func (f *pollingPodNodeFetcher) Node(ctx context.Context) (string, error) {
 	ticker := time.NewTicker(f.interval)
 	deadline := time.NewTimer(f.timeout)
 
@@ -201,7 +201,7 @@ func (f *pollingPodNodeFetcher) Node(ctx context.Context) (node string, err erro
 	for {
 		select {
 		case <-ticker.C:
-			node, err = f.fetcher.Node(ctx)
+			node, err := f.fetcher.Node(ctx)
 			if err != nil {
 				// apiserver fail
 				return "", err

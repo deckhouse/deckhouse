@@ -50,7 +50,7 @@ func (l *Loader) collectConfigs() []config {
 		{
 			group: "monitoring-and-autoscaling",
 			probe: "horizontal-pod-autoscaler",
-			mergeIds: []string{
+			mergeIDs: []string{
 				"monitoring-and-autoscaling/prometheus-metrics-adapter",
 				"control-plane/controller-manager",
 			},
@@ -69,8 +69,9 @@ func (l *Loader) collectConfigs() []config {
 }
 
 func (l *Loader) Load() []*Probe {
-	probes := make([]*Probe, 0)
-	for _, c := range l.collectConfigs() {
+	configs := l.collectConfigs()
+	probes := make([]*Probe, 0, len(configs))
+	for _, c := range configs {
 		p := c.Probe()
 		probes = append(probes, p)
 		l.logger.Infof("Registered calculated probe %s", p.ProbeRef().Id())
@@ -109,7 +110,7 @@ func (l *Loader) Probes() []check.ProbeRef {
 type config struct {
 	group    string
 	probe    string
-	mergeIds []string
+	mergeIDs []string
 }
 
 func (c config) Probe() *Probe {
@@ -117,21 +118,21 @@ func (c config) Probe() *Probe {
 		Group: c.group,
 		Probe: c.probe,
 	}
-	return &Probe{ref, c.mergeIds}
+	return &Probe{ref, c.mergeIDs}
 }
 
 // Probe combines check.Episode for included probe IDs.
 type Probe struct {
 	ref      *check.ProbeRef
-	mergeIds []string
+	mergeIDs []string
 }
 
 func (p *Probe) ProbeRef() check.ProbeRef {
 	return *p.ref
 }
 
-func (p *Probe) MergeIds() []string {
-	ids := make([]string, len(p.mergeIds))
-	copy(ids, p.mergeIds)
+func (p *Probe) MergeIDs() []string {
+	ids := make([]string, len(p.mergeIDs))
+	copy(ids, p.mergeIDs)
 	return ids
 }

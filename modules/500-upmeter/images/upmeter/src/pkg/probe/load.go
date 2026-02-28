@@ -111,7 +111,6 @@ func (l *Loader) Groups() []string {
 			continue
 		}
 		groups.Add(rc.group)
-
 	}
 
 	l.groups = groups.Slice()
@@ -135,7 +134,6 @@ func (l *Loader) Probes() []check.ProbeRef {
 		}
 		seen.Add(ref.Id())
 		l.probes = append(l.probes, ref)
-
 	}
 	sort.Sort(check.ByProbeRef(l.probes))
 	return l.probes
@@ -181,5 +179,5 @@ type Filter struct {
 }
 
 func (f Filter) Enabled(ref check.ProbeRef) bool {
-	return !(f.refs.Has(ref.Id()) || f.refs.Has(ref.Group) || f.refs.Has(ref.Group+"/"))
+	return !f.refs.Has(ref.Id()) && !f.refs.Has(ref.Group) && !f.refs.Has(ref.Group+"/")
 }

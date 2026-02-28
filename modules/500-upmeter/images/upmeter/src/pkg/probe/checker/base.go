@@ -61,7 +61,7 @@ type FailChecker struct {
 func (c *FailChecker) Check() check.Error {
 	err := c.checker.Check()
 	if err != nil {
-		return check.ErrFail(err.Error())
+		return check.ErrFail("%s", err.Error())
 	}
 	return nil
 }
@@ -163,7 +163,7 @@ type unknownCheckWrapper struct {
 
 func (c *unknownCheckWrapper) Check() check.Error {
 	if err := c.doer.Do(context.TODO()); err != nil {
-		return check.ErrUnknown(err.Error())
+		return check.ErrUnknown("%s", err.Error())
 	}
 	return nil
 }
@@ -175,7 +175,7 @@ type failCheckWrapper struct {
 
 func (c *failCheckWrapper) Check() check.Error {
 	if err := c.doer.Do(context.TODO()); err != nil {
-		return check.ErrFail(err.Error())
+		return check.ErrFail("%s", err.Error())
 	}
 	return nil
 }

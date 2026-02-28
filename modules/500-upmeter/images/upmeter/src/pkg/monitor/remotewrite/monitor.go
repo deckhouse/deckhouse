@@ -82,7 +82,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 		AddFunc: func(obj interface{}) {
 			rw, err := convert(obj)
 			if err != nil {
-				m.logger.Errorf(err.Error())
+				m.logger.Error(err.Error())
 				return
 			}
 			handler.OnAdd(rw)
@@ -90,7 +90,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 		UpdateFunc: func(_, newObj interface{}) {
 			rw, err := convert(newObj)
 			if err != nil {
-				m.logger.Errorf(err.Error())
+				m.logger.Error(err.Error())
 				return
 			}
 			handler.OnModify(rw)
@@ -98,7 +98,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 		DeleteFunc: func(obj interface{}) {
 			rw, err := convert(obj)
 			if err != nil {
-				m.logger.Errorf(err.Error())
+				m.logger.Error(err.Error())
 				return
 			}
 			handler.OnDelete(rw)

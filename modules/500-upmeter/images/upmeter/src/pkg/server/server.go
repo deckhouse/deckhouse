@@ -19,7 +19,7 @@ package server
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
@@ -128,7 +128,7 @@ func (s *Server) Start(ctx context.Context) error {
 	// Start http server. It blocks, that's why it is the last here.
 	s.logger.Debugf("starting HTTP server")
 	listenAddr := s.config.ListenHost + ":" + s.config.ListenPort
-	s.server = initHttpServer(dbctx, s.downtimeMonitor, s.remoteWriteController, probeLister, listenAddr)
+	s.server = initHTTPServer(dbctx, s.downtimeMonitor, s.remoteWriteController, probeLister, listenAddr)
 
 	err = s.server.ListenAndServe()
 	if err == http.ErrServerClosed {
@@ -202,7 +202,7 @@ func cleanOld5mEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext, retDays
 	}
 }
 
-func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *downtime.Monitor, controller *remotewrite.Controller, probeLister registry.ProbeLister, addr string) *http.Server {
+func initHTTPServer(dbCtx *dbcontext.DbContext, downtimeMonitor *downtime.Monitor, controller *remotewrite.Controller, probeLister registry.ProbeLister, addr string) *http.Server {
 	mux := http.NewServeMux()
 
 	// API handlers
@@ -265,6 +265,6 @@ func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.R
 
 func newDummyLogger() *log.Logger {
 	logger := log.New()
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 	return logger
 }

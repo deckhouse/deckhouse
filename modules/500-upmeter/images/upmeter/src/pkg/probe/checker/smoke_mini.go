@@ -36,8 +36,8 @@ import (
 // SmokeMiniAvailable is a checker constructor and configurator
 type SmokeMiniAvailable struct {
 	Path        string
-	DnsTimeout  time.Duration
-	HttpTimeout time.Duration
+	DNSTimeout  time.Duration
+	HTTPTimeout time.Duration
 	Logger      *log.Entry
 	Access      kubernetes.Access
 }
@@ -46,7 +46,7 @@ func (s SmokeMiniAvailable) Checker() check.Checker {
 	lkp := &nameLookuper{
 		name:    "smoke-mini",
 		port:    "8080",
-		timeout: s.DnsTimeout,
+		timeout: s.DNSTimeout,
 	}
 
 	// timeouts are maintained in request context
@@ -63,7 +63,7 @@ func (s SmokeMiniAvailable) Checker() check.Checker {
 
 		// http
 		path:        s.Path,
-		httpTimeout: s.HttpTimeout,
+		httpTimeout: s.HTTPTimeout,
 		client:      client,
 		access:      s.Access,
 
@@ -188,17 +188,17 @@ func (c *smokeMiniChecker) request(ctx context.Context, ip string) error {
 	return nil
 }
 
-// DnsAvailable is a checker constructor and configurator
-type DnsAvailable struct {
+// DNSAvailable is a checker constructor and configurator
+type DNSAvailable struct {
 	Domain     string
-	DnsTimeout time.Duration
+	DNSTimeout time.Duration
 	Logger     *log.Entry
 }
 
-func (d DnsAvailable) Checker() check.Checker {
+func (d DNSAvailable) Checker() check.Checker {
 	lkp := &nameLookuper{
 		name:    d.Domain,
-		timeout: d.DnsTimeout,
+		timeout: d.DNSTimeout,
 	}
 	return &dnsChecker{
 		lookuper: lkp,
@@ -263,11 +263,10 @@ func lookupAndShuffleIPs(name string, resolveTimeout time.Duration) ([]string, e
 	return ips, nil
 }
 
-func lookupIPs(domain string, timeout time.Duration) (ips []string, err error) {
+func lookupIPs(domain string, timeout time.Duration) ([]string, error) {
 	// If hostname is ip return it as is
 	if isIP(domain) {
-		ips = []string{domain}
-		return
+		return []string{domain}, nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -276,9 +275,10 @@ func lookupIPs(domain string, timeout time.Duration) (ips []string, err error) {
 	resolver := net.Resolver{}
 	addrs, err := resolver.LookupIPAddr(ctx, domain)
 	if err != nil {
-		return
+		return nil, err
 	}
 
+	var ips []string
 	for _, addr := range addrs {
 		ips = append(ips, addr.IP.String())
 	}

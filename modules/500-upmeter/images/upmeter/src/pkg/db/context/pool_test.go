@@ -18,7 +18,7 @@ package context
 
 import "testing"
 
-func Test_buildUri(t *testing.T) {
+func Test_buildURI(t *testing.T) {
 	type args struct {
 		path string
 		opts map[string]string
@@ -68,7 +68,7 @@ func Test_buildUri(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := buildUri(tt.args.path, tt.args.opts)
+		got := buildURI(tt.args.path, tt.args.opts)
 		if got != tt.want {
 			t.Errorf("uriby(): got=%s, want=%s", got, tt.want)
 		}
