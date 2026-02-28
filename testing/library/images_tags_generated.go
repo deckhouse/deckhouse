@@ -269,12 +269,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubernetesApiProxy":                  "imageHash-controlPlaneManager-kubernetesApiProxy",
 		"updateObserver":                      "imageHash-controlPlaneManager-updateObserver",
 	},
-	"dashboard": map[string]interface{}{
-		"api":            "imageHash-dashboard-api",
-		"auth":           "imageHash-dashboard-auth",
-		"metricsScraper": "imageHash-dashboard-metricsScraper",
-		"web":            "imageHash-dashboard-web",
-	},
 	"deckhouse": map[string]interface{}{
 		"init":                      "imageHash-deckhouse-init",
 		"initVexArtifact":           "imageHash-deckhouse-initVexArtifact",

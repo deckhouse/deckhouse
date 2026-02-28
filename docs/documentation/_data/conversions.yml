@@ -16,14 +16,6 @@ control-plane-manager:
         ru: Удалите `etcd.externalMembersNames`
       conversions:
         - del(.etcd.externalMembersNames) | if .etcd == {} then del(.etcd) end
-dashboard:
-    - version: 2
-      conversions:
-        - del(.auth.password) | if .auth == {} then del(.auth) end
-    - version: 3
-      conversions:
-        - del(.accessLevel)
-        - del(.auth.allowScale) | if .auth == {} then del(.auth) end
 descheduler:
     - version: 2
       description:

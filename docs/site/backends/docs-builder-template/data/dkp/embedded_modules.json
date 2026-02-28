@@ -700,57 +700,6 @@
       }
     },
     {
-      "title": "The dashboard module",
-      "description": "Kubernetes Dashboard Web UI for managing applications in the Deckhouse Kubernetes Platform cluster.",
-      "webIfaces": [
-        {
-          "name": "dashboard"
-        }
-      ],
-      "module": "dashboard",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability",
-        "web-interface"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "dashboard/",
-      "ru": {
-        "title": "Модуль dashboard",
-        "description": "Веб-интерфейс Kubernetes Dashboard для управления кластером Deckhouse Kubernetes Platform.",
-        "webIfaces": [
-          {
-            "name": "dashboard"
-          }
-        ]
-      },
-      "metadata": {
-        "name": "dashboard",
-        "stage": "Deprecated",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-dashboard",
-        "requirements": {
-          "user-authz": ">= 0.0.0"
-        },
-        "descriptions": {
-          "en": "Installs Kubernetes Dashboard Web UI for managing applications in the cluster. Integrated with user authentication and authorization modules.",
-          "ru": "Устанавливает Web UI Kubernetes Dashboard для управления приложениями в кластере. Интегрирован с модулями аутентификации и авторизации пользователей."
-        },
-        "oss": [
-          {
-            "name": "Kubernetes Dashboard",
-            "link": "https://github.com/kubernetes/dashboard",
-            "description": "A general purpose, web-based UI for Kubernetes clusters.",
-            "logo": "/images/logos/kubernetes.svg",
-            "license": "Apache License 2.0"
-          }
-        ]
-      }
-    },
-    {
       "title": "The deckhouse module",
       "search": "releaseChannel, release channel stabilization, auto-switching the release channel",
       "module": "deckhouse",
