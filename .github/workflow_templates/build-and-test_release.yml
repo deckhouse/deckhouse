@@ -127,6 +127,19 @@ jobs:
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
+  build_dev_fe:
+    name: Build FE dev
+    needs:
+      - git_info
+      - check_changelog
+    env:
+      WERF_ENV: "FE"
+      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}
+{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
   build_ee:
     name: Build EE
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_EE == 'true') }}
