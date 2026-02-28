@@ -36,15 +36,24 @@ pri = 1 * 8 + .syslog.severity;
 ., err = join([
   "<" + to_string(pri) + ">" + "1",     # <pri>version
   to_string!(.timestamp),
-  to_string!(.kubernetes.pod_name || .hostname || "${VECTOR_SELF_NODE_NAME}"),
-  to_string!(.app || .kubernetes.labels.app || .syslog.app || "-"),
+  to_string!(.pod_name || .host || "${VECTOR_SELF_NODE_NAME}"),  # hostname
+  to_string!(.app || .pod_labels.app || .syslog.app || "-"), # app-name
   "-", # procid
   to_string!(.syslog.message_id || "-"), # msgid
-  "-", # structured-data
+  to_string!(.sd_labels || "-"), # structured-data
   decode_base16!("EFBBBF") + to_string!(.message || encode_json(.)) # msg
 ], separator: " ")
 
 if err != null {
   log("Unable to construct syslog message for event:" + err + ". Dropping invalid event: " + encode_json(.), level: "error", rate_limit_secs: 10)
 }
+`
+const SyslogLabelsRule Rule = `
+sd_params = []
+{{ range $key := $.labels }}
+if exists(.{{$key}}) && !is_null(.{{$key}}) {
+  sd_params = append(sd_params, [{{$key | printf "%q"}} + "=\"" + to_string!(.{{$key}}) + "\""])
+}
+{{- end }}
+.sd_labels = if length(sd_params) > 0 { "[" + "deckhouse@0" + " " + join!(sd_params, separator: " ") + "]" }
 `
