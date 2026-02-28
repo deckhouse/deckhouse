@@ -354,4 +354,26 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 			Expect(cm.Field("data.hubble-export-fieldmask").Exists()).To(BeFalse())
 		})
 	})
+
+	Context("evpn is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
+			// Enable evpn
+			f.ValuesSet("cniCilium.evpn.enabled", true)
+
+			f.HelmRender()
+		})
+
+		It("Renders evpn manifests", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			evpnS := f.KubernetesResource("StatefulSet", "d8-cni-cilium", "evpn-rr")
+			Expect(evpnS.Exists()).To(BeTrue())
+
+			evpnC := f.KubernetesResource("DaemonSet", "d8-cni-cilium", "evpn-client")
+			Expect(evpnC.Exists()).To(BeTrue())
+		})
+	})
 })
