@@ -283,9 +283,16 @@ func (m *Module) ApplySettings(settings addonutils.Values) error {
 	return m.values.ApplyConfigValues(settings)
 }
 
-// GetConstraints return scheduler checks, their determine if an app should be enabled/disabled
+// GetConstraints return scheduler checks, their determine if an module should be enabled/disabled
 func (m *Module) GetConstraints() schedule.Constraints {
 	return m.definition.Constraints()
+}
+
+// HooksInitialized reports whether the package requires a hook initialize phase.
+// This is true when hooks have not yet been initialized (no controllers attached),
+// meaning the pkg needs to go through the full startup sequence before it can run.
+func (m *Module) HooksInitialized() bool {
+	return m.hooks.Initialized()
 }
 
 // GetHooks returns all hooks for this module in arbitrary order.

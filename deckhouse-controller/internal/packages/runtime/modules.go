@@ -100,9 +100,10 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	}
 }
 
-// loadModule builds a Module from its package files and stores it in r.modules.
-// Called by the Load task after the package image is mounted on the filesystem.
-// Does not apply settings or register with the scheduler — see loadApp for rationale.
+// loadModule builds a Module from its package files, stores it in r.modules,
+// and registers it with the scheduler via AddNode. Called by the Load task
+// after the package image is mounted on the filesystem.
+// Settings are applied later through the scheduler's schedulePackage pipeline.
 func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packagePath string) (string, error) {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadModule")
 	defer span.End()
@@ -132,6 +133,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	defer r.mu.Unlock()
 
 	r.modules[module.GetName()] = module
+	r.scheduler.AddNode(module)
 
 	return module.GetVersion().String(), nil
 }

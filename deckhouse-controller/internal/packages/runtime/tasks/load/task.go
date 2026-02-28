@@ -44,7 +44,6 @@ var (
 type loader func(ctx context.Context, repo registry.Remote, path string) (string, error)
 
 type statusService interface {
-	SetConditionTrue(name string, cond status.ConditionType)
 	HandleError(name string, err error)
 	SetVersion(name string, version string)
 }
@@ -111,7 +110,6 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("load package: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.name, status.ConditionSettingsValid)
 	t.status.SetVersion(t.name, version)
 
 	// Signal that package is loaded and waiting for the scheduler to enable it.

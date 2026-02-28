@@ -134,7 +134,7 @@ func (s *Store) GetPendingSettings(name string) addonutils.Values {
 // returns false, preserving the re-created entry.
 func (s *Store) Delete(name string) bool {
 	pkg, ok := s.packages[name]
-	if !ok || pkg.version == "" {
+	if !ok || pkg.version != "" {
 		return false
 	}
 

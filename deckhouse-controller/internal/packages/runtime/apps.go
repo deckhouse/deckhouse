@@ -174,6 +174,7 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	defer r.mu.Unlock()
 
 	r.apps[app.GetName()] = app
+	r.scheduler.AddNode(app)
 
 	return app.GetVersion().String(), nil
 }

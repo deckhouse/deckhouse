@@ -440,6 +440,10 @@ func (r *Runtime) schedulePackage(name string) {
 	})
 
 	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
+	if ctx == nil {
+		return
+	}
+
 	settings := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
@@ -448,7 +452,7 @@ func (r *Runtime) schedulePackage(name string) {
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
-	if pkg := r.apps[name]; pkg != nil {
+	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
@@ -465,12 +469,15 @@ func (r *Runtime) disablePackage(name string) {
 	defer r.mu.Unlock()
 
 	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
-
-	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+	if ctx == nil {
+		return
 	}
 
 	if pkg := r.apps[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+	}
+
+	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
 	}
 }
