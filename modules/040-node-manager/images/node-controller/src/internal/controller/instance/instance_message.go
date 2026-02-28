@@ -29,40 +29,45 @@ const (
 	bashibleMessagePrefix                        = "bashible: "
 )
 
-type MessageFactory interface {
-	FromConditions(conditions []deckhousev1alpha2.InstanceCondition) string
-}
-
-type messageFactory struct{}
-
 type conditionMatcher func(deckhousev1alpha2.InstanceCondition) bool
 
-var messagePriorityMatchers = []conditionMatcher{
-	func(c deckhousev1alpha2.InstanceCondition) bool {
-		return c.Type == deckhousev1alpha2.InstanceConditionTypeMachineReady
+type messagePriorityMatcher struct {
+	match  conditionMatcher
+	prefix string
+}
+
+var messagePriorityMatchers = []messagePriorityMatcher{
+	{
+		match: func(c deckhousev1alpha2.InstanceCondition) bool {
+			return c.Type == deckhousev1alpha2.InstanceConditionTypeMachineReady
+		},
+		prefix: machineMessagePrefix,
 	},
-	func(c deckhousev1alpha2.InstanceCondition) bool {
-		return c.Type == deckhousev1alpha2.InstanceConditionTypeBashibleReady
+	{
+		match: func(c deckhousev1alpha2.InstanceCondition) bool {
+			return c.Type == deckhousev1alpha2.InstanceConditionTypeBashibleReady
+		},
+		prefix: bashibleMessagePrefix,
 	},
-	func(c deckhousev1alpha2.InstanceCondition) bool {
-		return c.Reason == conditionReasonDisruptionApprovalNotRequired
+	{
+		match: func(c deckhousev1alpha2.InstanceCondition) bool {
+			return c.Type == deckhousev1alpha2.InstanceConditionTypeWaitingDisruptionApproval &&
+				c.Reason == conditionReasonDisruptionApprovalNotRequired
+		},
+		prefix: bashibleMessagePrefix,
 	},
-	func(c deckhousev1alpha2.InstanceCondition) bool {
-		return c.Type == deckhousev1alpha2.InstanceConditionTypeWaitingApproval
+	{
+		match: func(c deckhousev1alpha2.InstanceCondition) bool {
+			return c.Type == deckhousev1alpha2.InstanceConditionTypeWaitingApproval
+		},
+		prefix: bashibleMessagePrefix,
 	},
 }
 
-func NewMessageFactory() MessageFactory {
-	return &messageFactory{}
-}
-
-func (f *messageFactory) FromConditions(conditions []deckhousev1alpha2.InstanceCondition) string {
-	if message, ok := findConditionMessage(conditions, messagePriorityMatchers[0]); ok {
-		return machineMessagePrefix + message
-	}
-	for _, match := range messagePriorityMatchers[1:] {
-		if message, ok := findConditionMessage(conditions, match); ok {
-			return bashibleMessagePrefix + message
+func messageFromConditions(conditions []deckhousev1alpha2.InstanceCondition) string {
+	for _, matcher := range messagePriorityMatchers {
+		if message, ok := findConditionMessage(conditions, matcher.match); ok {
+			return matcher.prefix + message
 		}
 	}
 

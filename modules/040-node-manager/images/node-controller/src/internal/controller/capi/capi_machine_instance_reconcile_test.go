@@ -47,3 +47,28 @@ func TestGetConditionByType(t *testing.T) {
 		t.Fatalf("unexpected machine condition reason: %q", condition.Reason)
 	}
 }
+
+func TestConditionEqualExceptLastTransitionTime(t *testing.T) {
+	t.Parallel()
+
+	left := deckhousev1alpha2.InstanceCondition{
+		Type:               deckhousev1alpha2.InstanceConditionTypeMachineReady,
+		Status:             metav1.ConditionFalse,
+		Reason:             "WaitingForInfrastructure",
+		Message:            "Waiting for infrastructure",
+		Severity:           "Info",
+		ObservedGeneration: 3,
+		LastTransitionTime: metav1.Now(),
+	}
+	right := left
+	right.LastTransitionTime = metav1.Now()
+
+	if !conditionEqualExceptLastTransitionTime(left, right) {
+		t.Fatal("expected conditions to be equal when only LastTransitionTime differs")
+	}
+
+	right.Reason = "InfrastructureReady"
+	if conditionEqualExceptLastTransitionTime(left, right) {
+		t.Fatal("expected conditions to be different when non-time field differs")
+	}
+}

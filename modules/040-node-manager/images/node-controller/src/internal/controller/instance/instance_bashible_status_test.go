@@ -23,10 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestBashibleStatusFactory_FromConditions(t *testing.T) {
+func TestBashibleStatusFromConditions(t *testing.T) {
 	t.Parallel()
-
-	factory := NewBashibleStatusFactory()
 
 	tests := []struct {
 		name       string
@@ -78,11 +76,10 @@ func TestBashibleStatusFactory_FromConditions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual := factory.FromConditions(tt.conditions)
+			actual := bashibleStatusFromConditions(tt.conditions)
 			if actual != tt.expected {
 				t.Fatalf("expected %q, got %q", tt.expected, actual)
 			}

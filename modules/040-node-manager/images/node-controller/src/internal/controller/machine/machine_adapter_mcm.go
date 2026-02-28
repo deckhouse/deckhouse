@@ -55,10 +55,6 @@ func (m *mcmMachine) GetStatus() MachineStatus {
 	}
 }
 
-func (m *mcmMachine) Exists(ctx context.Context, c client.Client) (bool, error) {
-	return true, nil
-}
-
 func (m *mcmMachine) EnsureDeleted(ctx context.Context, c client.Client) (bool, error) {
 	if !m.machine.DeletionTimestamp.IsZero() {
 		return false, nil

@@ -55,19 +55,13 @@ func (m *capiMachine) GetStatus() MachineStatus {
 		m.machine.Status.Conditions,
 		capi.MachinePhase(m.machine.Status.Phase),
 	)
+	condition := buildMachineReadyCondition(state)
 
 	return MachineStatus{
-		Phase:         phase,
-		MachineStatus: state.statusString,
-		MachineReadyCondition: func() *deckhousev1alpha2.InstanceCondition {
-			condition := buildMachineReadyCondition(state)
-			return &condition
-		}(),
+		Phase:                 phase,
+		MachineStatus:         state.statusString,
+		MachineReadyCondition: &condition,
 	}
-}
-
-func (m *capiMachine) Exists(ctx context.Context, c client.Client) (bool, error) {
-	return true, nil
 }
 
 func (m *capiMachine) EnsureDeleted(ctx context.Context, c client.Client) (bool, error) {

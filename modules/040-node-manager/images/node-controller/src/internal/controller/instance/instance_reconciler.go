@@ -21,18 +21,21 @@ import (
 	"fmt"
 	"time"
 
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/controller/machine"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 )
 
 type InstanceReconciler struct {
 	client.Client
-	machineFactory        machine.MachineFactory
-	bashibleStatusFactory BashibleStatusFactory
-	messageFactory        MessageFactory
+	machineFactory machine.MachineFactory
 }
 
 const instanceControllerFinalizer = "node-manager.hooks.deckhouse.io/instance-controller"
@@ -40,10 +43,8 @@ const instanceRequeueInterval = time.Minute
 
 func SetupInstanceController(mgr ctrl.Manager) error {
 	if err := (&InstanceReconciler{
-		Client:                mgr.GetClient(),
-		machineFactory:        machine.NewMachineFactory(),
-		bashibleStatusFactory: NewBashibleStatusFactory(),
-		messageFactory:        NewMessageFactory(),
+		Client:         mgr.GetClient(),
+		machineFactory: machine.NewMachineFactory(),
 	}).
 		SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to setup instance reconciler: %w", err)
@@ -56,16 +57,17 @@ func (r *InstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.machineFactory == nil {
 		return fmt.Errorf("machineFactory is required")
 	}
-	if r.bashibleStatusFactory == nil {
-		return fmt.Errorf("bashibleStatusFactory is required")
-	}
-	if r.messageFactory == nil {
-		return fmt.Errorf("messageFactory is required")
-	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("instance").
 		For(&deckhousev1alpha2.Instance{}).
+		Watches(&capiv1beta2.Machine{}, handler.EnqueueRequestsFromMapFunc(mapObjectNameToInstance)).
+		Watches(&mcmv1alpha1.Machine{}, handler.EnqueueRequestsFromMapFunc(mapObjectNameToInstance)).
+		Watches(
+			&corev1.Node{},
+			handler.EnqueueRequestsFromMapFunc(mapObjectNameToInstance),
+			builder.WithPredicates(staticNodeEventPredicate()),
+		).
 		Complete(r)
 }
 

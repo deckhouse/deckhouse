@@ -22,10 +22,8 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
 
-func TestMessageFactory_FromConditions(t *testing.T) {
+func TestMessageFromConditions(t *testing.T) {
 	t.Parallel()
-
-	factory := NewMessageFactory()
 
 	tests := []struct {
 		name       string
@@ -64,6 +62,17 @@ func TestMessageFactory_FromConditions(t *testing.T) {
 			expected: "bashible: waiting approval",
 		},
 		{
+			name: "disruption approval reason on another condition type is ignored",
+			conditions: []deckhousev1alpha2.InstanceCondition{
+				{
+					Type:    deckhousev1alpha2.InstanceConditionTypeWaitingApproval,
+					Reason:  conditionReasonDisruptionApprovalNotRequired,
+					Message: "waiting approval",
+				},
+			},
+			expected: "bashible: waiting approval",
+		},
+		{
 			name: "empty messages return empty result",
 			conditions: []deckhousev1alpha2.InstanceCondition{
 				{Type: deckhousev1alpha2.InstanceConditionTypeMachineReady, Message: "  "},
@@ -74,11 +83,10 @@ func TestMessageFactory_FromConditions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual := factory.FromConditions(tt.conditions)
+			actual := messageFromConditions(tt.conditions)
 			if actual != tt.expected {
 				t.Fatalf("expected %q, got %q", tt.expected, actual)
 			}

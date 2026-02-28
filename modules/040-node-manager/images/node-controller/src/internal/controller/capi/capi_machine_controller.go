@@ -26,8 +26,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -62,7 +65,11 @@ func (r *CAPIMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("capi-machine-controller").
 		For(&capiv1beta2.Machine{}).
-		Watches(&deckhousev1alpha2.Instance{}, handler.EnqueueRequestsFromMapFunc(mapInstanceToCAPIMachine())).
+		Watches(
+			&deckhousev1alpha2.Instance{},
+			handler.EnqueueRequestsFromMapFunc(mapInstanceToCAPIMachine()),
+			builder.WithPredicates(capiInstanceWatchPredicate()),
+		).
 		Complete(r)
 }
 
@@ -125,6 +132,13 @@ func mapInstanceToCAPIMachine() handler.MapFunc {
 		if ref == nil || ref.Name == "" {
 			return nil
 		}
+		if ref.Kind != "" && ref.Kind != "Machine" {
+			return nil
+		}
+		if ref.APIVersion != capiv1beta2.GroupVersion.String() {
+			return nil
+		}
+
 		namespace := ref.Namespace
 		if namespace == "" {
 			namespace = machine.MachineNamespace
@@ -137,4 +151,48 @@ func mapInstanceToCAPIMachine() handler.MapFunc {
 			},
 		}}
 	}
+}
+
+func capiInstanceWatchPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return isCAPIMachineRef(e.Object)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return isCAPIMachineRef(e.Object)
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			instance, ok := e.ObjectNew.(*deckhousev1alpha2.Instance)
+			if !ok || !isCAPIMachineRef(instance) {
+				return false
+			}
+
+			if instance.Status.Phase == "" || instance.Status.MachineStatus == "" {
+				return true
+			}
+
+			_, hasMachineReady := getConditionByType(instance.Status.Conditions, deckhousev1alpha2.InstanceConditionTypeMachineReady)
+
+			return !hasMachineReady
+		},
+	}
+}
+
+func isCAPIMachineRef(obj client.Object) bool {
+	instance, ok := obj.(*deckhousev1alpha2.Instance)
+	if !ok || instance == nil {
+		return false
+	}
+	ref := instance.Spec.MachineRef
+	if ref == nil || ref.Name == "" {
+		return false
+	}
+	if ref.Kind != "" && ref.Kind != "Machine" {
+		return false
+	}
+
+	return ref.APIVersion == capiv1beta2.GroupVersion.String()
 }

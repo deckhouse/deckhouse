@@ -21,17 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type BashibleStatusFactory interface {
-	FromConditions(conditions []deckhousev1alpha2.InstanceCondition) deckhousev1alpha2.BashibleStatus
-}
-
-type bashibleStatusFactory struct{}
-
-func NewBashibleStatusFactory() BashibleStatusFactory {
-	return &bashibleStatusFactory{}
-}
-
-func (f *bashibleStatusFactory) FromConditions(
+func bashibleStatusFromConditions(
 	conditions []deckhousev1alpha2.InstanceCondition,
 ) deckhousev1alpha2.BashibleStatus {
 	var bashibleReady *deckhousev1alpha2.InstanceCondition

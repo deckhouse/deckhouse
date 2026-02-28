@@ -28,8 +28,8 @@ import (
 const instanceBashibleStatusFieldOwner = "node-controller-instance-bashible-status"
 
 func (r *InstanceReconciler) reconcileBashibleStatus(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
-	desiredStatus := r.bashibleStatusFactory.FromConditions(instance.Status.Conditions)
-	desiredMessage := r.messageFactory.FromConditions(instance.Status.Conditions)
+	desiredStatus := bashibleStatusFromConditions(instance.Status.Conditions)
+	desiredMessage := messageFromConditions(instance.Status.Conditions)
 	if instance.Status.BashibleStatus == desiredStatus && instance.Status.Message == desiredMessage {
 		return nil
 	}

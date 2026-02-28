@@ -34,15 +34,14 @@ func (r *InstanceReconciler) reconcileLinkedSourceExistence(ctx context.Context,
 
 	switch source.Type {
 	case instanceSourceMachine:
-		machine, machineErr := r.machineFactory.NewMachineFromRef(ctx, r.Client, source.MachineRef)
-		if machineErr != nil {
+		if _, machineErr := r.machineFactory.NewMachineFromRef(ctx, r.Client, source.MachineRef); machineErr != nil {
 			if apierrors.IsNotFound(machineErr) {
 				exists = false
 				break
 			}
 			return false, machineErr
 		}
-		exists, err = machine.Exists(ctx, r.Client)
+		exists = true
 	case instanceSourceNode:
 		exists, err = r.linkedNodeExists(ctx, source.NodeName)
 	default:

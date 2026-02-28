@@ -33,7 +33,7 @@ func (r *InstanceReconciler) reconcileInstanceDeletion(ctx context.Context, inst
 	}
 
 	if !controllerutil.ContainsFinalizer(instance, instanceControllerFinalizer) {
-		return !machineGone, nil
+		return false, nil
 	}
 	if !machineGone {
 		return true, nil

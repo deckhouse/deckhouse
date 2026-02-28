@@ -113,11 +113,22 @@ func (r *CAPIMachineReconciler) syncInstanceStatus(
 	}
 
 	currentCondition, hasCurrent := getConditionByType(instance.Status.Conditions, deckhousev1alpha2.InstanceConditionTypeMachineReady)
-	conditionChanged := !hasCurrent || !apiequality.Semantic.DeepEqual(currentCondition, *machineStatus.MachineReadyCondition)
+	desiredMachineReadyCondition := *machineStatus.MachineReadyCondition
 
-	fieldsChanged := instance.Status.Phase != machineStatus.Phase || instance.Status.MachineStatus != machineStatus.MachineStatus
+	if hasCurrent &&
+		currentCondition.Type == desiredMachineReadyCondition.Type &&
+		currentCondition.Status == desiredMachineReadyCondition.Status {
+		desiredMachineReadyCondition.LastTransitionTime = currentCondition.LastTransitionTime
+	}
 
-	if !fieldsChanged && !conditionChanged {
+	conditionChanged := !hasCurrent ||
+		!conditionEqualExceptLastTransitionTime(currentCondition, desiredMachineReadyCondition)
+
+	needsPatch := instance.Status.Phase != machineStatus.Phase ||
+		instance.Status.MachineStatus != machineStatus.MachineStatus ||
+		conditionChanged
+
+	if !needsPatch {
 		return nil
 	}
 
@@ -126,7 +137,7 @@ func (r *CAPIMachineReconciler) syncInstanceStatus(
 		instance.Name,
 		machineStatus.Phase,
 		machineStatus.MachineStatus,
-		*machineStatus.MachineReadyCondition,
+		desiredMachineReadyCondition,
 	)
 }
 
@@ -178,6 +189,16 @@ func getConditionByType(
 	}
 
 	return deckhousev1alpha2.InstanceCondition{}, false
+}
+
+func conditionEqualExceptLastTransitionTime(
+	left deckhousev1alpha2.InstanceCondition,
+	right deckhousev1alpha2.InstanceCondition,
+) bool {
+	left.LastTransitionTime = metav1.Time{}
+	right.LastTransitionTime = metav1.Time{}
+
+	return apiequality.Semantic.DeepEqual(left, right)
 }
 
 func (r *CAPIMachineReconciler) ensureMachineDeletionForDeletingInstance(
