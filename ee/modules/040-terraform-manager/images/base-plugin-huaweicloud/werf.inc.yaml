@@ -1,0 +1,11 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/scratch
+git:
+  - add: /{{ .ModulePath }}modules/030-cloud-provider-huaweicloud/candi
+    to: /deckhouse/candi/cloud-providers/huaweicloud
+import:
+  - image: cloud-provider-huaweicloud/terraform-manager
+    add: /terraform-manager/terraform-provider-huaweicloud
+    to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "huaweicloud") }}/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
+    before: setup

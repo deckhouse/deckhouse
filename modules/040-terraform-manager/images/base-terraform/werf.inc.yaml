@@ -1,0 +1,8 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/scratch
+import:
+- image: terraform
+  add: /terraform/terraform
+  to: /terraform
+  before: setup
