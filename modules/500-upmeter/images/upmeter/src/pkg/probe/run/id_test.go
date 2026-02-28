@@ -35,7 +35,7 @@ func Test_RandomIdentifier(t *testing.T) {
 	}
 }
 
-func Test_nodeNameHash(t *testing.T) {
+func Test_NodeNameHash(t *testing.T) {
 	tests := []struct {
 		nodeName string
 		want     string
@@ -51,8 +51,8 @@ func Test_nodeNameHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.nodeName, func(t *testing.T) {
-			if got := nodeNameHash(tt.nodeName); got != tt.want {
-				t.Errorf("nodeNameHash(%q) = %v, want %v", tt.nodeName, got, tt.want)
+			if got := NodeNameHash(tt.nodeName); got != tt.want {
+				t.Errorf("NodeNameHash(%q) = %v, want %v", tt.nodeName, got, tt.want)
 			}
 		})
 	}
