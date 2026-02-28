@@ -3,7 +3,7 @@ module github.com/deckhouse/deckhouse/pkg/registry
 go 1.24.6
 
 require (
-	github.com/deckhouse/deckhouse/pkg/log v0.1.0
+	github.com/deckhouse/deckhouse/pkg/log v0.1.1
 	github.com/google/go-containerregistry v0.20.2
 	github.com/stretchr/testify v1.10.0
 )
