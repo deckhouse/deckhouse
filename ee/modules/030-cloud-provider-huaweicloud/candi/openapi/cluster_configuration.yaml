@@ -60,6 +60,7 @@ apiVersions:
         enum: [HuaweiCloudClusterConfiguration]
       sshPublicKey:
         type: string
+        x-rules: [sshPublicKey]
         description: |
           A public key for accessing nodes.
       zones:

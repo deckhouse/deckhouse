@@ -70,6 +70,7 @@ apiVersions:
             type: integer
             x-doc-default: 0
       sshPublicKey:
+        x-rules: [sshPublicKey]
         description: |
           Public key to access nodes as `azureuser`.
         type: string

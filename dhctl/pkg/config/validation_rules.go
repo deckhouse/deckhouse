@@ -15,8 +15,10 @@
 package config
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"sigs.k8s.io/yaml"
 
@@ -35,6 +37,7 @@ const (
 	xUnsafeRuleUpdateMasterImage = "updateMasterImage"
 
 	xRulesSSHPrivateKey = "sshPrivateKey"
+	xRulesSSHPublicKey  = "sshPublicKey"
 )
 
 var xUnsafeRulesValidators = map[string]func(oldValue, newValue json.RawMessage) error{
@@ -45,6 +48,7 @@ var xUnsafeRulesValidators = map[string]func(oldValue, newValue json.RawMessage)
 
 var xRulesValidators = map[string]func(oldValue json.RawMessage) error{
 	xRulesSSHPrivateKey: ValidateSSHPrivateKey,
+	xRulesSSHPublicKey:  ValidateSSHPublicKey,
 }
 
 func UpdateReplicasRule(oldRaw, newRaw json.RawMessage) error {
@@ -170,4 +174,40 @@ func ValidateSSHPrivateKey(value json.RawMessage) error {
 	}
 
 	return nil
+}
+
+func ValidateSSHPublicKey(value json.RawMessage) error {
+	var key string
+	err := yaml.Unmarshal(value, &key)
+	if err != nil {
+		return err
+	}
+	data := []byte(key)
+
+	// only error matters, this is only point of nil error return
+	//nolint: dogsled
+	_, _, _, _, err = ssh.ParseAuthorizedKey(data)
+	if err == nil {
+		return nil
+	}
+
+	lines := strings.Split(string(data), "\n")
+	var base64Str string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "----") || strings.Contains(line, ":") || line == "" {
+			continue
+		}
+		base64Str += line
+	}
+	keyBytes, err := base64.StdEncoding.DecodeString(base64Str)
+	if err != nil {
+		return fmt.Errorf("%w: failed to decode base64 string: %w", ErrValidationRuleFailed, err)
+	}
+	_, err = ssh.ParsePublicKey(keyBytes)
+	if err != nil {
+		return fmt.Errorf("%w: failed to parse public key: %w", ErrValidationRuleFailed, err)
+	}
+
+	return fmt.Errorf("%w: wrong public key format: please, convert it to openssh format using command like ssh-keygen -i -f key.ssh2 > key.pub", ErrValidationRuleFailed)
 }

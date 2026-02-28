@@ -388,6 +388,7 @@ apiVersions:
           * **Caution!** If there is an Internet Gateway in the target VPC, the deployment of the basic infrastructure will fail with an error. Currently, an Internet Gateway cannot be adopted.
       sshPublicKey:
         type: string
+        x-rules: [sshPublicKey]
         description: |
           A public key for accessing nodes.
       disableDefaultSecurityGroup:
