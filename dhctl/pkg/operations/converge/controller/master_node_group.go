@@ -15,8 +15,13 @@
 package controller
 
 import (
+	stdcontext "context"
 	"errors"
 	"fmt"
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -44,6 +49,11 @@ type MasterNodeGroupController struct {
 
 	skipChecks bool
 }
+
+const (
+	masterCloudConfigRefreshRetryAttempts = 90
+	masterCloudConfigRefreshRetryInterval = 5 * time.Second
+)
 
 func NewMasterNodeGroupController(controller *NodeGroupController, skipChecks bool) *MasterNodeGroupController {
 	masterNodeGroupController := &MasterNodeGroupController{
@@ -122,6 +132,14 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 		log.DebugF("scale to multi master\n")
 		replicas := 3
 
+		if !c.convergeState.PreserveExistingHAMode {
+			c.convergeState.PreserveExistingHAMode = true
+			err := ctx.SetConvergeState(c.convergeState)
+			if err != nil {
+				return fmt.Errorf("failed to set converge state: %w", err)
+			}
+		}
+
 		err = c.runWithReplicas(ctx, replicas)
 		if err != nil {
 			return fmt.Errorf("failed to converge with 3 replicas: %w", err)
@@ -148,6 +166,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 		}
 
 		c.convergeState.Phase = ""
+		c.convergeState.PreserveExistingHAMode = false
 
 		log.DebugF("to single master scaled. saving state...\n")
 
@@ -292,15 +311,23 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 	var nodeGroupSettingsFromConfig []byte
 
+	oldMasterInternalIP, err := c.getNodeInternalIP(ctx, nodeName)
+	if err != nil {
+		return err
+	}
+
+	variablesRefresher := c.makeMasterNodeVariablesRefresher(ctx, metaConfig, nodeName, nodeIndex, oldMasterInternalIP)
+
 	nodeRunner, err := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(ctx.Ctx(), metaConfig, infrastructure.NodeRunnerOptions{
-		NodeName:        nodeName,
-		NodeGroupName:   c.name,
-		NodeGroupStep:   c.layoutStep,
-		NodeIndex:       nodeIndex,
-		NodeState:       nodeState,
-		NodeCloudConfig: c.cloudConfig,
-		CommanderMode:   ctx.CommanderMode(),
-		StateCache:      ctx.StateCache(),
+		NodeName:           nodeName,
+		NodeGroupName:      c.name,
+		NodeGroupStep:      c.layoutStep,
+		NodeIndex:          nodeIndex,
+		NodeState:          nodeState,
+		NodeCloudConfig:    c.cloudConfig,
+		VariablesRefresher: variablesRefresher,
+		CommanderMode:      ctx.CommanderMode(),
+		StateCache:         ctx.StateCache(),
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
 			infrastructurestate.NewNodeStateSaver(ctx, nodeName, global.MasterNodeGroupName, nodeGroupSettingsFromConfig),
 		},
@@ -322,6 +349,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 			log.DebugF("Destructive change single master. Scale to multimaster and converge\n")
 
 			c.convergeState.Phase = phases.ScaleToMultiMasterPhase
+			c.convergeState.PreserveExistingHAMode = true
 
 			err := ctx.SetConvergeState(c.convergeState)
 			if err != nil {
@@ -382,6 +410,85 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 	}
 
 	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodeName)
+}
+
+func (c *MasterNodeGroupController) refreshCloudConfigForMasterUpdate(ctx *context.Context, nodeName string, excludedPackagesProxyIP string) error {
+	log.InfoF("Refreshing master cloud config before converge for node '%s' (excluded packages proxy IP: '%s')\n", nodeName, excludedPackagesProxyIP)
+
+	nodeCloudConfig, err := entity.GetCloudConfigWithOptions(
+		ctx.Ctx(),
+		ctx.KubeClient(),
+		c.name,
+		global.HideDeckhouseLogs,
+		log.GetDefaultLogger(),
+		entity.CloudConfigOptions{
+			ExcludePackagesProxyEndpointIP: excludedPackagesProxyIP,
+			RetryAttempts:                  masterCloudConfigRefreshRetryAttempts,
+			RetryInterval:                  masterCloudConfigRefreshRetryInterval,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to refresh cloud config before converging node '%s': %w", nodeName, err)
+	}
+
+	c.cloudConfig = nodeCloudConfig
+
+	log.InfoF("Master cloud config refreshed before converge for node '%s'\n", nodeName)
+	return nil
+}
+
+func (c *MasterNodeGroupController) makeMasterNodeVariablesRefresher(
+	ctx *context.Context,
+	metaConfig *config.MetaConfig,
+	nodeName string,
+	nodeIndex int,
+	oldMasterInternalIP string,
+) infrastructure.VariablesRefresher {
+	return func(refreshCtx stdcontext.Context) ([]byte, error) {
+		log.InfoF(
+			"Refreshing master variables after before-action for node '%s' with excluded packages proxy IP '%s'\n",
+			nodeName,
+			oldMasterInternalIP,
+		)
+
+		nodeCloudConfig, err := entity.GetCloudConfigWithOptions(
+			refreshCtx,
+			ctx.KubeClient(),
+			c.name,
+			global.HideDeckhouseLogs,
+			log.GetDefaultLogger(),
+			entity.CloudConfigOptions{
+				ExcludePackagesProxyEndpointIP: oldMasterInternalIP,
+				RetryAttempts:                  masterCloudConfigRefreshRetryAttempts,
+				RetryInterval:                  masterCloudConfigRefreshRetryInterval,
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to refresh cloud config for node '%s' after before-action: %w", nodeName, err)
+		}
+
+		c.cloudConfig = nodeCloudConfig
+		log.InfoF("Master variables refreshed after before-action for node '%s'\n", nodeName)
+		return metaConfig.NodeGroupConfig(c.name, nodeIndex, nodeCloudConfig), nil
+	}
+}
+
+func (c *MasterNodeGroupController) getNodeInternalIP(ctx *context.Context, nodeName string) (string, error) {
+	log.InfoF("Resolving current internal IP for node '%s' before destructive converge\n", nodeName)
+
+	node, err := ctx.KubeClient().CoreV1().Nodes().Get(ctx.Ctx(), nodeName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get node '%s' for internal IP lookup: %w", nodeName, err)
+	}
+
+	for _, addr := range node.Status.Addresses {
+		if addr.Type == corev1.NodeInternalIP {
+			log.InfoF("Resolved internal IP '%s' for node '%s'\n", addr.Address, nodeName)
+			return addr.Address, nil
+		}
+	}
+
+	return "", fmt.Errorf("node '%s' has no InternalIP address in status", nodeName)
 }
 
 func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string, metaConfig *config.MetaConfig) infrastructure.InfraActionHook {
