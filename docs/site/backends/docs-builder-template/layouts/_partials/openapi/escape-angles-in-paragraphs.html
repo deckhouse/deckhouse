@@ -1,0 +1,24 @@
+{{/*
+  Escapes < and > inside <p>...</p>, except known HTML tags (strong, em, code, a, br…),
+  so placeholders like <secret-name> display correctly and **bold** etc. stay intact.
+  Pass the output of markdownify (HTML string).
+*/}}
+{{- $html := default "" . }}
+{{- $pBlocks := findRE `(?s)<p>.*?</p>` $html }}
+{{- $tags := slice "</a>" "</strong>" "</em>" "</b>" "</i>" "</code>" "</span>" "</sub>" "</sup>" "<strong>" "<em>" "<b>" "<i>" "<code>" "<span>" "<sub>" "<sup>" "<br>" "<br/>" "<br />" }}
+{{- $holders := slice "{{/a}}" "{{/strong}}" "{{/em}}" "{{/b}}" "{{/i}}" "{{/code}}" "{{/span}}" "{{/sub}}" "{{/sup}}" "{{strong}}" "{{em}}" "{{b}}" "{{i}}" "{{code}}" "{{span}}" "{{sub}}" "{{sup}}" "{{br}}" "{{br}}" "{{br}}" }}
+{{- range $pBlocks }}
+  {{- $inner := replaceRE `(?s)<p>(.*?)</p>` "$1" . }}
+  {{- $inner = replaceRE $inner `<a ([^>]*)>` "{{a:$1}}" }}
+  {{- range $i, $tag := $tags }}
+    {{- $inner = replace $inner $tag (index $holders $i) }}
+  {{- end }}
+  {{- $escaped := $inner | replace "<" "&lt;" | replace ">" "&gt;" }}
+  {{- $escaped = replaceRE $escaped `\{\{a:([^}]*)\}\}` "<a $1>" }}
+  {{- range $i, $tag := $tags }}
+    {{- $escaped = replace $escaped (index $holders $i) $tag }}
+  {{- end }}
+  {{- $fixed := printf "<p>%s</p>" $escaped }}
+  {{- $html = replace $html . $fixed }}
+{{- end }}
+{{- $html | safeHTML }}

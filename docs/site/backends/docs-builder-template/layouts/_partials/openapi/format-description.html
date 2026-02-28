@@ -1,0 +1,12 @@
+{{/*
+  Renders description HTML: if source contains backticks, use markdownify + escape inside <code> only.
+  Otherwise, in the source replace only placeholder-like <word> with &lt;word&gt; (so "> **bold**" and
+  other markdown stay intact), then markdownify.
+*/}}
+{{- $desc := default "" . }}
+{{- if in $desc "`" }}
+  {{- partial "openapi/escape-code-blocks" ($desc | markdownify) }}
+{{- else }}
+  {{- $withEscapedPlaceholders := replaceRE `<([a-zA-Z][a-zA-Z0-9-]*)>` "&lt;$1&gt;" $desc }}
+  {{- $withEscapedPlaceholders | markdownify }}
+{{- end }}

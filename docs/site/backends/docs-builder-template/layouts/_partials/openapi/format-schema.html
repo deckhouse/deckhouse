@@ -24,9 +24,9 @@
 
 {{- if reflect.IsMap $data }}
   {{- if and (reflect.IsMap $langData) $langData.description }}
-    {{- $description = $langData.description | htmlEscape | markdownify }}
+    {{- $description = $langData.description | markdownify }}
   {{- else }}
-    {{- $description =  $data.description | htmlEscape | markdownify }}
+    {{- $description =  $data.description | markdownify }}
   {{- end }}
 {{- end }}
 
