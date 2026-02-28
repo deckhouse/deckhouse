@@ -46,9 +46,6 @@ properties:
     properties:
       gatewayAPIDefaultGateway:
         type: object
-        default:
-          name: deckhouse-gateway
-          namespace: d8-alb-istio
         properties:
           name:
             type: string
