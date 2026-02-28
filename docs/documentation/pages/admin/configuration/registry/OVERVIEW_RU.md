@@ -1,20 +1,20 @@
 ---
-title: Работа с container registries и редакциями
+title: Работа с хранилищами образов контейнеров и редакциями
 permalink: ru/admin/configuration/registry/
-description: "Настройка и управление container registry в Deckhouse Kubernetes Platform. Внутренний registry, интеграция с внешними registry и переключение редакций."
+description: "Настройка и управление хранилища образов контейнеров в Deckhouse Kubernetes Platform. Хранилище образов контейнеров и переключение редакций."
 lang: ru
-search: container registry, registry configuration, edition management, registry management, container images, управление редакциями
+search: container registry, registry configuration, edition management, registry management, container images, управление редакциями, хранилища образов контейнеров
 ---
 
-В этом разделе описывается работа с container registries (registry) и редакциями в Deckhouse Kubernetes Platform.
+В этом разделе описывается работа с хранилищами образов контейнеров и редакциями в Deckhouse Kubernetes Platform.
 
-## Работа с registry
+## Работа с хранилищем образом контейнеров
 
-В разделе рассматривается работа с registry в функционирующем кластере. Если вас интересует информация про работу с registry при установке кластера, перейдите в раздел [«Установка платформы»](../../../installing/).
+В разделе рассматривается работа с хранилищем образов контейнеров в функционирующем кластере. Если вас интересует информация про работу с хранилищем образов при установке кластера, перейдите в раздел [«Установка платформы»](../../../installing/).
 
-В разделе [«Сторонний registry»](../registry/third-party.html) описан процесс переключения работающего кластера DKP на использование стороннего registry.
-В разделе [«Внутренний registry»](../registry/internal.html) рассматривается подготовка к переключению между режимами работы кластера: с использованием внутреннего container registry или без использования, а также процессы переключения.
-В разделе [«Восстановление подключения к registry»](../registry/restore-token.html) описан процесс восстановления загрузки образов Deckhouse Kubernetes Platform при истекшем лицензионном токене.
+В разделе [«Хранилище образов в Managed Kubernetes кластере»](../registry/third-party.html) описано управление хранилищем образов в Managed Kubernetes кластере.
+В разделе [«Хранилище образов в кластере, управляемом DKP»](../registry/internal.html) рассматривается управление хранилищем образов в кластере, полностью управляемом DKP: режимы работы с хранилищем и переключение между ними.
+В разделе [«Восстановление подключения к хранилищу образов»](../registry/restore-token.html) описан процесс восстановления загрузки образов Deckhouse Kubernetes Platform при истекшем лицензионном токене.
 
 ## Работа с редакциями
 

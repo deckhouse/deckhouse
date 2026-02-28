@@ -23,23 +23,23 @@ entries:
               url: /admin/configuration/
             - title:
                 en: Registries and editions
-                ru: Registries и редакции
+                ru: Хранилища образов контейнеров и редакции
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
                   url: /admin/configuration/registry/
                 - title:
-                    en: Third-party registry
-                    ru: Сторонний registry
-                  url: /admin/configuration/registry/third-party.html
-                - title:
-                    en: Internal registry
-                    ru: Внутренний registry
+                    en: Registry in clusters managed by DKP
+                    ru: Хранилище образов в кластере, управляемом DKP
                   url: /admin/configuration/registry/internal.html
                 - title:
+                    en: Registry in Managed Kubernetes clusters
+                    ru: Хранилище образов в Managed Kubernetes кластере
+                  url: /admin/configuration/registry/third-party.html
+                - title:
                     en: Restoring registry access
-                    ru: Восстановление подключения к registry
+                    ru: Восстановление подключения к хранилищу образов
                   url: /admin/configuration/registry/restore-token.html
                 - title:
                     en: Switching editions
@@ -1248,9 +1248,9 @@ entries:
                 ru: Архитектура аудита событий безопасности
               url: /architecture/security/runtime-audit.html
         - title:
-            en: Direct mode architecture (registry)
-            ru: Архитектура режима Direct (registry)
-          url: /architecture/registry-direct-mode.html
+            en: Architecture of registry modes
+            ru: Архитектура режимов работы с хранилищем образов
+          url: /architecture/registry-modes.html
     - title:
         en: Reference
         ru: Справка
