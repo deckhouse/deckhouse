@@ -4,4 +4,4 @@
   logo: https://github.com/jetstack/cert-manager/raw/master/logo/logo.png
   license: Apache License 2.0
   id: cert-manager
-  version: 1.19.2
+  version: 1.20.0-alpha.1
