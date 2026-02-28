@@ -85,6 +85,7 @@ spec:
           {{- end }}
 {{- end }}
 {{- end }}
+          - --enable-gateway-api=true
           ports:
             - containerPort: 9402
               name: http-metrics
