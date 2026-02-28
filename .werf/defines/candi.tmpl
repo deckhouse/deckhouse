@@ -1,0 +1,18 @@
+# render imports for candi images
+# . is dict with next params
+#   Env - werf env
+{{- define "candi_generic_imports" }}
+{{- $context := . -}}
+
+- image: dev-prebuild
+  add: /deckhouse
+  to: /deckhouse
+  includePaths:
+  - modules/*/openapi/config-values.yaml
+  - global-hooks/openapi/config-values.yaml
+  after: setup
+- image: version-map-artifact
+  add: /version_map_{{ $context.Env }}.yml
+  to: /deckhouse/candi/version_map.yml
+  before: setup
+{{- end }}
