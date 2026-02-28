@@ -53,6 +53,7 @@ sideEffects: None
   scope: '*'
 {{- end }}
 
+{{- if not .Values.global.internal.cniMigrationWebhooksDisable }}
 {{- if .Values.admissionPolicyEngine.internal.bootstrapped }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -143,4 +144,5 @@ webhooks:
 {{- end }}
 {{/* #### end of TODO */}}
 
+{{- end }}
 {{- end }}

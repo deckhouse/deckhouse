@@ -1,0 +1,40 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет конфигурацию для миграции CNI.
+          properties:
+            spec:
+              description: |
+                Определяет желаемое состояние миграции CNI.
+              properties:
+                targetCNI:
+                  description: |
+                    Целевой CNI, на который выполняется переключение (например, cilium, flannel).
+            status:
+              description: |
+                Определяет наблюдаемое состояние миграции CNI.
+              properties:
+                phase:
+                  description: |
+                    Текущий этап процесса миграции.
+                currentCNI:
+                  description: |
+                    Обнаруженный CNI, с которого выполняется переключение.
+                nodesTotal:
+                  description: |
+                    Общее количество узлов, участвующих в миграции.
+                nodesSucceeded:
+                  description: |
+                    Количество узлов, успешно завершивших текущую фазу.
+                nodesFailed:
+                  description: |
+                    Количество узлов, на которых произошла ошибка.
+                failedSummary:
+                  description: |
+                    Детализация ошибок по узлам.
+                conditions:
+                  description: |
+                    Отражает состояние миграции в целом. Список условий перехода между этапами.

@@ -1,0 +1,67 @@
+{{- if .Values.global.internal.cniMigrationEnabled }}
+{{- $webhooks := list
+  "d8-admission-policy-engine-config"
+  "d8-deckhouse-validating-webhook-handler-hooks"
+  "deckhouse-webhook"
+  "cert-manager-webhook"
+  | join "," }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cni-migration-manager
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cni-migration-manager")) | nindent 2 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: cni-migration-manager
+  template:
+    metadata:
+      labels:
+        app: cni-migration-manager
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      priorityClassName: system-cluster-critical
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+      - operator: Exists
+      serviceAccountName: cni-migration-manager
+      containers:
+      - name: manager
+        image: {{ include "helm_lib_module_common_image" (list . "cniMigrationController") }}
+        args:
+        - "--mode=manager"
+        - "--migration-name={{ .Values.global.internal.cniMigrationName }}"
+        - "--wait-for-webhooks={{ $webhooks }}"
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
+        livenessProbe:
+          exec:
+            command:
+            - /cni-migration-controller
+            - --mode=healthcheck
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          exec:
+            command:
+            - /cni-migration-controller
+            - --mode=healthcheck
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir: {}
+{{- end }}

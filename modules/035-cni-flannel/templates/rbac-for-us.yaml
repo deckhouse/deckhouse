@@ -26,6 +26,15 @@ rules:
     verbs:
       - patch
       - get
+  - apiGroups:
+      - network.deckhouse.io
+    resources:
+      - cnimigrations
+      - cninodemigrations
+    verbs:
+      - get
+      - list
+      - watch
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
