@@ -274,6 +274,50 @@
         {{- end }}
         usernamePrompt: {{ $provider.crowd.usernamePrompt | default "Crowd username" | quote }}
       {{- end }}
+
+      {{- if eq $provider.type "SAML" }}
+    - type: saml
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.displayName | quote }}
+      config:
+        ssoURL: {{ $provider.saml.ssoURL | quote }}
+        {{- if $provider.saml.ca }}
+        ca: {{ $provider.saml.ca | quote }}
+        {{- end }}
+        {{- if $provider.saml.caData }}
+        caData: {{ $provider.saml.caData | quote }}
+        {{- end }}
+        {{- if $provider.saml.entityIssuer }}
+        entityIssuer: {{ $provider.saml.entityIssuer | quote }}
+        {{- end }}
+        {{- if $provider.saml.ssoIssuer }}
+        ssoIssuer: {{ $provider.saml.ssoIssuer | quote }}
+        {{- end }}
+        redirectURI: {{ $provider.saml.redirectURI | default (printf "https://%s/callback" (include "helm_lib_module_public_domain" (list $context "dex"))) | quote }}
+        usernameAttr: {{ $provider.saml.usernameAttr | default "name" | quote }}
+        emailAttr: {{ $provider.saml.emailAttr | default "email" | quote }}
+        {{- if $provider.saml.groupsAttr }}
+        groupsAttr: {{ $provider.saml.groupsAttr | quote }}
+        {{- end }}
+        {{- if $provider.saml.groupsDelim }}
+        groupsDelim: {{ $provider.saml.groupsDelim | quote }}
+        {{- end }}
+        {{- if $provider.saml.allowedGroups }}
+        allowedGroups:
+          {{- range $provider.saml.allowedGroups }}
+          - {{ . | quote }}
+          {{- end }}
+        {{- end }}
+        {{- if $provider.saml.filterGroups }}
+        filterGroups: {{ $provider.saml.filterGroups }}
+        {{- end }}
+        {{- if $provider.saml.nameIDPolicyFormat }}
+        nameIDPolicyFormat: {{ $provider.saml.nameIDPolicyFormat | quote }}
+        {{- end }}
+        {{- if $provider.saml.insecureSkipSignatureValidation }}
+        insecureSkipSignatureValidation: {{ $provider.saml.insecureSkipSignatureValidation }}
+        {{- end }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

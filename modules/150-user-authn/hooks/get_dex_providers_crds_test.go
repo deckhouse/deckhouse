@@ -118,6 +118,24 @@ spec:
       - userAttr: DN
         groupAttr: member
 `
+		samlCR = `
+---
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: saml-test
+spec:
+  type: SAML
+  displayName: SAML Test Provider
+  saml:
+    ssoURL: "https://idp.example.com/saml/sso"
+    caData: "LS0tLS1CRUdJTi..."
+    entityIssuer: "https://dex.example.com"
+    usernameAttr: "name"
+    emailAttr: "email"
+    groupsAttr: "groups"
+    nameIDPolicyFormat: "persistent"
+`
 	)
 
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
@@ -271,6 +289,35 @@ spec:
 "enabled": true,
 "id": "bitbucket",
 "type": "BitbucketCloud"
+}]`))
+		})
+	})
+
+	Context("SAML provider", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(samlCR))
+			f.RunHook()
+		})
+		It("Should fill internal values with SAML provider fields", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("userAuthn.internal.providers").String()).To(MatchJSON(`
+[{
+"type": "SAML",
+"displayName": "SAML Test Provider",
+"enabled": true,
+"id": "saml-test",
+"saml": {
+		"ssoURL": "https://idp.example.com/saml/sso",
+		"caData": "LS0tLS1CRUdJTi...",
+		"entityIssuer": "https://dex.example.com",
+		"usernameAttr": "name",
+		"emailAttr": "email",
+		"groupsAttr": "groups",
+		"filterGroups": false,
+		"insecureSkipSignatureValidation": false,
+		"nameIDPolicyFormat": "persistent"
+}
 }]`))
 		})
 	})

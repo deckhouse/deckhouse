@@ -1,0 +1,18 @@
+---
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: saml-demo
+spec:
+  type: SAML
+  displayName: SAML Demo (Keycloak)
+  saml:
+    # Replace {{ __cluster__domain__ }} with your actual cluster domain
+    ssoURL: https://keycloak.{{ __cluster__domain__ }}/realms/dex-demo/protocol/saml
+    ca: ""
+    insecureSkipSignatureValidation: true
+    entityIssuer: dex-saml-demo
+    ssoIssuer: https://keycloak.{{ __cluster__domain__ }}/realms/dex-demo
+    usernameAttr: username
+    emailAttr: email
+    groupsAttr: groups

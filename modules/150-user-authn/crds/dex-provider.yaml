@@ -41,7 +41,7 @@ spec:
                 type:
                   type: string
                   description: 'Type of authentication provider.'
-                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
+                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP', 'SAML']
                 displayName:
                   type: string
                   description: |
@@ -529,6 +529,91 @@ spec:
                         krb5ConfSecretName:
                           type: string
                           description: Optional Secret name containing key 'krb5.conf' to mount at /etc/krb5.conf.
+                saml: &saml
+                  type: object
+                  description: |
+                    Parameters of a SAML provider  (intended for the `type: SAML`).
+                  properties:
+                    ssoURL:
+                      type: string
+                      description: |
+                        SSO URL used for POST value.
+                      x-doc-examples: ['https://idp.example.com/saml/sso']
+                    ca:
+                      type: string
+                      description: |
+                        Path to a trusted root certificate file for the IdP server.
+                        
+                        Not required if the IdP certificate is signed by a well-known CA.
+                    caData:
+                      type: string
+                      description: |
+                        Base64-encoded PEM CA certificate of the IdP server.
+                        
+                        Not required if the IdP certificate is signed by a well-known CA.
+                    entityIssuer:
+                      type: string
+                      description: |
+                        Issuer value expected in the SAML response.
+                        
+                        Defaults to the callback URL.
+                    ssoIssuer:
+                      type: string
+                      description: |
+                        Issuer value expected in the SAML response from the IdP.
+                    redirectURI:
+                      type: string
+                      description: |
+                        Callback URI.
+                        
+                        Overrides the default callback URL. Should be set to `https://<dex-domain>/callback`.
+                    usernameAttr:
+                      type: string
+                      description: |
+                        SAML attribute to map to the username claim.
+                      default: 'name'
+                    emailAttr:
+                      type: string
+                      description: |
+                        SAML attribute to map to the email claim.
+                      default: 'email'
+                    groupsAttr:
+                      type: string
+                      description: |
+                        SAML attribute to map to the groups claim.
+                    groupsDelim:
+                      type: string
+                      description: |
+                        Delimiter to split the groups attribute value if it is a single string.
+                    allowedGroups:
+                      type: array
+                      items:
+                        type: string
+                      description: |
+                        If set, only members of at least one of the listed groups will be allowed to log in.
+                    filterGroups:
+                      type: boolean
+                      description: |
+                        If `true`, the connector will filter the groups claim to only include groups from the `allowedGroups` list.
+                      default: false
+                    nameIDPolicyFormat:
+                      type: string
+                      description: |
+                        The NameIDPolicy format to request from the IdP.
+                      enum:
+                        - 'persistent'
+                        - 'emailAddress'
+                        - 'unspecified'
+                        - 'X509SubjectName'
+                        - 'WindowsDomainQualifiedName'
+                        - 'transient'
+                    insecureSkipSignatureValidation:
+                      type: boolean
+                      description: |
+                        Skip signature validation of SAML responses. This is insecure and should only be used for testing.
+                      default: false
+                  required:
+                    - ssoURL
               oneOf:
                 - properties:
                     inlet:
@@ -560,6 +645,11 @@ spec:
                       enum: ['LDAP']
                     ldap: {}
                   required: ['ldap']
+                - properties:
+                    inlet:
+                      enum: ['SAML']
+                    saml: {}
+                  required: ['saml']
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.type
           name: Type
@@ -602,7 +692,7 @@ spec:
                 type:
                   type: string
                   description: 'Type of authentication provider.'
-                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
+                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP', 'SAML']
                 displayName:
                   type: string
                   description: |
@@ -667,6 +757,7 @@ spec:
                 crowd: *crowd
                 oidc: *oidc
                 ldap: *ldap
+                saml: *saml
               oneOf:
                 - properties:
                     inlet:
@@ -698,4 +789,9 @@ spec:
                       enum: ['LDAP']
                     ldap: {}
                   required: ['ldap']
+                - properties:
+                    inlet:
+                      enum: ['SAML']
+                    saml: {}
+                  required: ['saml']
       additionalPrinterColumns: *additionalPrinterColumns

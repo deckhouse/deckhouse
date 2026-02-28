@@ -341,6 +341,58 @@ spec:
                         krb5ConfSecretName:
                           description: |
                             Необязательное имя секрета с ключом `krb5.conf` для монтирования в `/etc/krb5.conf` (обычно не требуется для офлайн‑проверки билетов).
+                saml: &saml
+                  description: |
+                    Параметры провайдера SAML (можно указывать, только если `type: SAML`).
+                  properties:
+                    ssoURL:
+                      description: |
+                        URL для отправки SAML AuthnRequest (SSO URL провайдера).
+                    ca:
+                      description: |
+                        Путь к файлу корневого сертификата IdP-сервера.
+                        
+                        Не требуется, если сертификат IdP подписан известным CA.
+                    caData:
+                      description: |
+                        CA-сертификат IdP-сервера в формате PEM, закодированный в Base64.
+                        
+                        Не требуется, если сертификат IdP подписан известным CA.
+                    entityIssuer:
+                      description: |
+                        Значение Issuer, ожидаемое в SAML-ответе. По умолчанию — URL callback.
+                    ssoIssuer:
+                      description: |
+                        Значение Issuer, ожидаемое в SAML-ответе от IdP.
+                    redirectURI:
+                      description: |
+                        URI обратного вызова.
+                        
+                        Переопределяет URL callback по умолчанию. Должен быть установлен в `https://<dex-domain>/callback`.
+                    usernameAttr:
+                      description: |
+                        SAML-атрибут для маппинга в claim username.
+                    emailAttr:
+                      description: |
+                        SAML-атрибут для маппинга в claim email.
+                    groupsAttr:
+                      description: |
+                        SAML-атрибут для маппинга в claim groups.
+                    groupsDelim:
+                      description: |
+                        Разделитель для разбиения значения атрибута groups, если оно является одной строкой.
+                    allowedGroups:
+                      description: |
+                        Если задано, вход будет разрешён только членам хотя бы одной из перечисленных групп.
+                    filterGroups:
+                      description: |
+                        Если `true`, коннектор будет фильтровать claim groups, оставляя только группы из списка `allowedGroups`.
+                    nameIDPolicyFormat:
+                      description: |
+                        Формат NameIDPolicy для запроса к IdP.
+                    insecureSkipSignatureValidation:
+                      description: |
+                        Пропустить проверку подписи SAML-ответов. Небезопасно, использовать только для тестирования.
     - name: v1
       schema:
         openAPIV3Schema:
@@ -404,3 +456,4 @@ spec:
                 crowd: *crowd
                 oidc: *oidc
                 ldap: *ldap
+                saml: *saml
