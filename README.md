@@ -28,7 +28,7 @@ _Deckhouse Kubernetes Platform [has passed](https://landscape.cncf.io/?view-mode
 
 ## Platform features across layers
 
-The diagram below illustrates how Deckhouse Kubernetes Platform features are distributed across different layers of the platform — from infrastructure to the control plane and cluster nodes.
+The diagram below illustrates how Deckhouse Kubernetes Platform features are distributed across different layers of the platform — from infrastructure to the control plane and cluster nodes. 
 
 ![Deckhouse Kubernetes Platform infrastructure](docs/site/images/diagrams/infrastructure.png)
 
