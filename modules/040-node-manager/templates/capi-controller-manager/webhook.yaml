@@ -16,7 +16,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta2-machine
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: default.machine.cluster.x-k8s.io
     rules:
@@ -39,7 +39,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta2-machinedeployment
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: default.machinedeployment.cluster.x-k8s.io
     rules:
@@ -62,7 +62,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta2-machinehealthcheck
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: default.machinehealthcheck.cluster.x-k8s.io
     rules:
@@ -85,7 +85,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta2-machineset
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: default.machineset.cluster.x-k8s.io
     rules:
@@ -108,7 +108,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta2-cluster
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: default.cluster.cluster.x-k8s.io
     rules:
@@ -131,7 +131,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta2-clusterclass
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: default.clusterclass.cluster.x-k8s.io
     rules:
@@ -154,7 +154,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /mutate-runtime-cluster-x-k8s-io-v1alpha1-extensionconfig
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: default.extensionconfig.runtime.addons.cluster.x-k8s.io
     rules:
@@ -177,7 +177,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta2-machinepool
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: default.machinepool.cluster.x-k8s.io
     rules:
@@ -200,7 +200,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /mutate-addons-cluster-x-k8s-io-v1beta2-clusterresourceset
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: default.clusterresourceset.addons.cluster.x-k8s.io
     rules:
@@ -230,7 +230,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta2-machine
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.machine.cluster.x-k8s.io
     rules:
@@ -253,7 +253,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta2-machinedeployment
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.machinedeployment.cluster.x-k8s.io
     rules:
@@ -276,7 +276,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta2-machinedrainrule
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.machinedrainrule.cluster.x-k8s.io
     rules:
@@ -299,7 +299,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta2-machinehealthcheck
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.machinehealthcheck.cluster.x-k8s.io
     rules:
@@ -322,7 +322,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta2-machineset
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.machineset.cluster.x-k8s.io
     rules:
@@ -345,7 +345,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta2-cluster
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.cluster.cluster.x-k8s.io
     rules:
@@ -369,7 +369,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta2-clusterclass
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.clusterclass.cluster.x-k8s.io
     rules:
@@ -393,7 +393,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-runtime-cluster-x-k8s-io-v1alpha1-extensionconfig
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.extensionconfig.runtime.cluster.x-k8s.io
     rules:
@@ -416,7 +416,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta2-machinepool
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.machinepool.cluster.x-k8s.io
     rules:
@@ -439,7 +439,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-addons-cluster-x-k8s-io-v1beta2-clusterresourceset
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.clusterresourceset.addons.cluster.x-k8s.io
     rules:
@@ -462,7 +462,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-addons-cluster-x-k8s-io-v1beta2-clusterresourcesetbinding
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.clusterresourcesetbinding.addons.cluster.x-k8s.io
     rules:
@@ -485,7 +485,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-ipam-cluster-x-k8s-io-v1beta2-ipaddress
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.ipaddress.ipam.cluster.x-k8s.io
     rules:
@@ -509,7 +509,7 @@ webhooks:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
         path: /validate-ipam-cluster-x-k8s-io-v1beta2-ipaddressclaim
-    failurePolicy: Fail
+    failurePolicy: Ignore
     matchPolicy: Equivalent
     name: validation.ipaddressclaim.ipam.cluster.x-k8s.io
     rules:
