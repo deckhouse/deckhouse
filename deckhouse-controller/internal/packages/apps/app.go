@@ -61,8 +61,12 @@ type Application struct {
 	namespace string // Application instance namespace
 	path      string // path to the package dir on fs
 
+	// version is the parsed semver version of the package, derived from definition.Version.
+	// Falls back to "0.0.0" if the version string cannot be parsed.
 	version *semver.Version
 
+	// running tracks whether OnStartup hooks have completed successfully.
+	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
 
 	definition Definition        // Application definition
