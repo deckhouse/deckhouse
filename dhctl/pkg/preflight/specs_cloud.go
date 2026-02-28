@@ -26,19 +26,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-const (
-	minimumRequiredCPUCores       = 4
-	minimumRequiredMemoryMB       = 8192 - reservedMemoryThresholdMB
-	minimumRequiredRootDiskSizeGB = 50
-
-	reservedMemoryThresholdMB = 512
-)
-
 func (pc *Checker) CheckCloudMasterNodeSystemRequirements(_ context.Context) error {
 	if app.PreflightSkipSystemRequirementsCheck {
 		log.DebugLn("System requirements check is skipped")
 		return nil
 	}
+	requirements := pc.getSystemRequirements()
 
 	configObject := make(map[string]any)
 	configKind, err := unmarshalProviderClusterConfiguration(pc.installConfig.ProviderClusterConfig, configObject)
@@ -94,13 +87,13 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements(_ context.Context) err
 		return fmt.Errorf("unknown provider cluster configuration kind: %s", configKind)
 	}
 
-	if err = validateIntegerPropertyAtPath(configObject, rootDiskPropertyPath, minimumRequiredRootDiskSizeGB, true); err != nil {
+	if err = validateIntegerPropertyAtPath(configObject, rootDiskPropertyPath, requirements.rootDiskSizeGB, true); err != nil {
 		return fmt.Errorf("Root disk capacity: %v", err)
 	}
-	if err = validateIntegerPropertyAtPath(configObject, ramAmountPropertyPath, minimumRequiredMemoryMB, false); err != nil {
+	if err = validateIntegerPropertyAtPath(configObject, ramAmountPropertyPath, requirements.memoryMB, false); err != nil {
 		return fmt.Errorf("RAM amount: %v", err)
 	}
-	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, minimumRequiredCPUCores, false); err != nil {
+	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, requirements.cpuCores, false); err != nil {
 		return fmt.Errorf("CPU cores count: %v", err)
 	}
 
