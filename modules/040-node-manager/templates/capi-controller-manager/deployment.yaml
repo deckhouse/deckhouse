@@ -91,7 +91,7 @@ spec:
         - --leader-elect-retry-period=5s
         - --diagnostics-address=127.0.0.1:4211
         - --insecure-diagnostics
-        - --feature-gates=MachinePool=true,ClusterResourceSet=false,ClusterTopology=false,RuntimeSDK=false
+        - --feature-gates=MachinePool=true,ClusterTopology=false,RuntimeSDK=true,InPlaceUpdates=true
         - --health-addr=127.0.0.1:9442
         - --webhook-port=4200
         - --skip-crd-migration-phases=StorageVersionMigration,CleanupManagedFields # disabled for now

@@ -153,7 +153,7 @@ webhooks:
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
-        path: /mutate-runtime-cluster-x-k8s-io-v1alpha1-extensionconfig
+        path: /mutate-runtime-cluster-x-k8s-io-v1beta2-extensionconfig
     failurePolicy: Fail
     matchPolicy: Equivalent
     name: default.extensionconfig.runtime.addons.cluster.x-k8s.io
@@ -392,7 +392,7 @@ webhooks:
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
-        path: /validate-runtime-cluster-x-k8s-io-v1alpha1-extensionconfig
+        path: /validate-runtime-cluster-x-k8s-io-v1beta2-extensionconfig
     failurePolicy: Fail
     matchPolicy: Equivalent
     name: validation.extensionconfig.runtime.cluster.x-k8s.io
