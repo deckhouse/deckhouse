@@ -24,7 +24,7 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 29,
+  "id": 40,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -635,7 +635,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -2066,7 +2066,7 @@
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 42
+            "y": 50
           },
           "id": 62,
           "links": [],
@@ -2262,7 +2262,7 @@
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 43
+            "y": 51
           },
           "id": 11,
           "links": [],
@@ -3257,7 +3257,7 @@
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 63
+            "y": 71
           },
           "id": 19,
           "links": [],
@@ -3975,6 +3975,161 @@
     },
     {
       "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 82
+      },
+      "id": 109,
+      "panels": [],
+      "title": "Disk Usage",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "bytes",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": false,
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 83
+      },
+      "id": 108,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by(pod) (\n  kube_summary_pod_ephemeral_storage_used_bytes{namespace=\"$namespace\"}\n  * on(pod, namespace)\n  group_right()\n  max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}) by(pod, namespace)\n)",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}",
+          "refId": "A"
+        }
+      ],
+      "title": "Ephemeral storage usage by pod",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {}
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
@@ -3983,7 +4138,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 92
       },
       "id": 81,
       "panels": [],
@@ -4088,7 +4243,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 83
+        "y": 93
       },
       "id": 82,
       "options": {
@@ -4222,7 +4377,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 83
+        "y": 93
       },
       "id": 84,
       "options": {
@@ -4308,8 +4463,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -4358,7 +4512,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 90
+        "y": 100
       },
       "id": 83,
       "options": {
@@ -4404,7 +4558,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 98
+        "y": 108
       },
       "id": 88,
       "panels": [],
@@ -4434,8 +4588,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4693,7 +4846,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 99
+        "y": 109
       },
       "id": 86,
       "options": {
@@ -4865,8 +5018,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4882,7 +5034,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 108
+        "y": 118
       },
       "id": 89,
       "options": {
