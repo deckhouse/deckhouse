@@ -1,6 +1,6 @@
 module basic-auth-proxy
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.2
 
@@ -24,7 +24,7 @@ require (
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 )

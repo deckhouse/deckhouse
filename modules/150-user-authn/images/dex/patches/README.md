@@ -43,3 +43,8 @@ This patch changes the Internal Error message to a human-readable 'Access Denied
 In the latest go versions (1.25.2, 1.24.8) the bug was fixed, and without this patch Dex fails with an error
 
 Upstream PR: https://github.com/dexidp/dex/pull/4363
+
+### 008-fix-cve.patch
+Fix CVEs:
+- CVE-2025-47914
+- CVE-2025-58181
