@@ -95,6 +95,18 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
       plk_protocol_version: "1"
       summary: API servers can't be reached.
       description: No API servers are reachable, or they have all disappeared from service discovery.
+  - alert: K8SApiserverHighLatency
+    expr: histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~"CONNECT|WATCH", job="kube-apiserver", instance=~".*:6443", verb=~".*"}[5m])) by (instance, le)) > 1
+    for: 1h
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      summary: High latency of the API server `{{`{{$labels.instance}}`}}`.
+      description: |
+        The API server is experiencing high latency, which may lead to degraded performance and additional issues in the cluster.
+        
+        To resolve the issue, verify whether the master nodes have sufficient CPU, memory, and disk resources.
   - alert: K8sCertificateExpiration
     expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="604800", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:

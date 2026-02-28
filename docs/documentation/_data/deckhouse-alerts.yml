@@ -4397,6 +4397,19 @@ alerts:
         API servers can't be reached.
       severity: "3"
       markupFormat: default
+    - name: K8SApiserverHighLatency
+      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kubernetes.tpl
+      moduleUrl: 340-monitoring-kubernetes-control-plane
+      module: monitoring-kubernetes-control-plane
+      edition: ce
+      description: |
+        The API server is experiencing high latency, which may lead to degraded performance and additional issues in the cluster.
+
+        To resolve the issue, verify whether the master nodes have sufficient CPU, memory, and disk resources.
+      summary: |
+        High latency of the API server {{$labels.instance}}.
+      severity: "5"
+      markupFormat: default
     - name: K8sCertificateExpiration
       sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kubernetes.tpl
       moduleUrl: 340-monitoring-kubernetes-control-plane
