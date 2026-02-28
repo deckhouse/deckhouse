@@ -161,7 +161,7 @@ resource "kubernetes_resource_ready_v1" "vm" {
     type = "Running"
     status = "False"
     # do not use ^ and $ because message can be multiline
-    reason = format("(%s)", join("|", local.not_running_fail_re_messages))
+    message = format("(%s)", join("|", local.not_running_fail_re_messages))
   }
 
   # wait 15 seconds appearance of the conditions to fail fast
