@@ -48,10 +48,19 @@ provider "openstack" {
 }
 
 locals {
-  worker_images = {
-    "redos"    = data.openstack_images_image_v2.redos_image.id
-    "opensuse" = data.openstack_images_image_v2.opensuse_image.id
-    "rosa"     = data.openstack_images_image_v2.rosa_image.id
+  worker_nodes = {
+    redos = {
+      image_id = data.openstack_images_image_v2.redos_image.id
+      ip       = "192.168.199.251"
+    }
+    opensuse = {
+      image_id = data.openstack_images_image_v2.opensuse_image.id
+      ip       = "192.168.199.250"
+    }
+    rosa = {
+      image_id = data.openstack_images_image_v2.rosa_image.id
+      ip       = "192.168.199.249"
+    }
   }
 }
 
@@ -63,7 +72,6 @@ data "openstack_networking_network_v2" "external" {
 resource "openstack_networking_network_v2" "internal" {
   name                  = "candi-${var.PREFIX}"
   admin_state_up        = "true"
-  #port_security_enabled = "false"
 }
 
 resource "openstack_networking_subnet_v2" "internal" {
@@ -71,12 +79,7 @@ resource "openstack_networking_subnet_v2" "internal" {
   network_id  = openstack_networking_network_v2.internal.id
   cidr        = "192.168.199.0/24"
   ip_version  = 4
-  enable_dhcp = "true"
-  allocation_pool {
-    start = "192.168.199.2"
-    end   = "192.168.199.253"
-  }
-  dns_nameservers = ["8.8.8.8", "8.8.4.4"]
+  enable_dhcp = "false"
 }
 
 resource "openstack_networking_port_v2" "master_internal_without_security" {
@@ -84,6 +87,7 @@ resource "openstack_networking_port_v2" "master_internal_without_security" {
   admin_state_up = "true"
   fixed_ip {
     subnet_id = openstack_networking_subnet_v2.internal.id
+    ip_address = "192.168.199.253"
   }
 }
 
@@ -101,15 +105,17 @@ resource "openstack_networking_port_v2" "system_internal_without_security" {
   admin_state_up = "true"
   fixed_ip {
     subnet_id = openstack_networking_subnet_v2.internal.id
+    ip_address = "192.168.199.252"
   }
 }
 
 resource "openstack_networking_port_v2" "worker_internal_without_security" {
-  for_each       = {for image_name, image_id in local.worker_images : image_name => image_id}
+  for_each       = local.worker_nodes
   network_id     = openstack_networking_network_v2.internal.id
   admin_state_up = "true"
   fixed_ip {
     subnet_id = openstack_networking_subnet_v2.internal.id
+    ip_address = each.value.ip
   }
 }
 
@@ -254,10 +260,10 @@ resource "openstack_compute_instance_v2" "system" {
 }
 
 resource "openstack_blockstorage_volume_v3" "worker" {
-  for_each             = {for image_name, image_id in local.worker_images : image_name => image_id}
+  for_each             = local.worker_nodes
   name                 = "candi-${var.PREFIX}-worker-${each.key}"
   size                 = "30"
-  image_id             = each.value
+  image_id             = each.value.image_id
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
   enable_online_resize = true
@@ -267,7 +273,7 @@ resource "openstack_blockstorage_volume_v3" "worker" {
 }
 
 resource "openstack_compute_instance_v2" "worker" {
-  for_each          = {for image_name, image_id in local.worker_images : image_name => image_id}
+  for_each          = local.worker_nodes
   name              = "candi-${var.PREFIX}-worker-${each.key}"
   flavor_name       = var.flavor_name_large
   key_pair          = "candi-${var.PREFIX}-key"
