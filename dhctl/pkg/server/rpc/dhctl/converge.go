@@ -265,6 +265,7 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
+		Embedded:              true,
 		IsDebug:               s.params.IsDebug,
 		TmpDir:                tmpDir,
 		Logger:                loggerFor,

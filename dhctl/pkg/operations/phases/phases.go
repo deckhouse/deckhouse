@@ -34,6 +34,8 @@ type PhaseWithSubPhases struct {
 	Phase     OperationPhase      `json:"phase"`
 	Action    *ProgressAction     `json:"action,omitempty,omitzero"`
 	SubPhases []OperationSubPhase `json:"subPhases,omitempty"`
+
+	includeIf func(opts phasesOpts) bool
 }
 
 const (
@@ -50,6 +52,13 @@ const (
 	OperationCommanderDetach Operation = "CommanderDetach"
 )
 
+// ClusterConfig holds cluster parameters that affect phase list and progress.
+// Pass via SetClusterConfig as soon as meta config is parsed, before any phase is reported.
+// Extensible for future fields (e.g. cloud provider, features).
+type ClusterConfig struct {
+	ClusterType string
+}
+
 // Define common operations phases for such operations as bootstrap, converge and destroy.
 // Notice that each operation could define own phases (like attach operation do).
 const (
@@ -64,6 +73,7 @@ const (
 	DeleteResourcesPhase                   OperationPhase = "DeleteResources"
 	ExecPostBootstrapPhase                 OperationPhase = "ExecPostBootstrap"
 	// converge only
+	ConvergeCheckPhase          OperationPhase = "Check"
 	AllNodesPhase               OperationPhase = "AllNodes"
 	ScaleToMultiMasterPhase     OperationPhase = "ScaleToMultiMaster"
 	ScaleToSingleMasterPhase    OperationPhase = "ScaleToSingleMaster"
@@ -107,7 +117,7 @@ const (
 
 func BootstrapPhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
-		{Phase: BaseInfraPhase},
+		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
 		{Phase: RegistryPackagesProxyPhase},
 		{Phase: ExecuteBashibleBundlePhase},
 		{
@@ -127,7 +137,14 @@ func BootstrapPhases() []PhaseWithSubPhases {
 
 func ConvergePhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
-		{Phase: BaseInfraPhase},
+		{
+			Phase: ConvergeCheckPhase,
+			SubPhases: []OperationSubPhase{
+				OperationSubPhase(CheckInfra),
+				OperationSubPhase(CheckConfiguration),
+			},
+		},
+		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
 		{Phase: InstallDeckhousePhase},
 		{Phase: AllNodesPhase},
 		{Phase: ScaleToMultiMasterPhase},
@@ -146,7 +163,7 @@ func DestroyPhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
 		{Phase: DeleteResourcesPhase},
 		{Phase: AllNodesPhase},
-		{Phase: BaseInfraPhase},
+		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
 	}
 }
 
@@ -177,8 +194,12 @@ func CommanderDetachPhases() []PhaseWithSubPhases {
 	}
 }
 
-func operationPhases(operation Operation) ([]PhaseWithSubPhases, bool) {
-	phase, ok := map[Operation][]PhaseWithSubPhases{
+type phasesOpts struct {
+	clusterConfig ClusterConfig
+}
+
+func operationPhases(operation Operation, opts phasesOpts) ([]PhaseWithSubPhases, bool) {
+	p, ok := map[Operation][]PhaseWithSubPhases{
 		OperationBootstrap:       BootstrapPhases(),
 		OperationConverge:        ConvergePhases(),
 		OperationCheck:           CheckPhases(),
@@ -187,5 +208,16 @@ func operationPhases(operation Operation) ([]PhaseWithSubPhases, bool) {
 		OperationCommanderDetach: CommanderDetachPhases(),
 	}[operation]
 
-	return phase, ok
+	phases := make([]PhaseWithSubPhases, 0, len(p))
+	for _, phase := range p {
+		if phase.includeIf == nil || phase.includeIf(opts) {
+			phases = append(phases, phase)
+		}
+	}
+
+	return phases, ok
+}
+
+func ifNotStatic(opts phasesOpts) bool {
+	return opts.clusterConfig.ClusterType != "Static"
 }

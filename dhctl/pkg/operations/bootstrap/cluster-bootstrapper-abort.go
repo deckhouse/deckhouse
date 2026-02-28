@@ -259,6 +259,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return err
 	}
 
+	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
 	if metaConfig.IsStatic() {
 		deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 		if err != nil {

@@ -264,6 +264,8 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 		return err
 	}
 
+	d.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
 	err = destroyer.Prepare(ctx)
 	if err != nil {
 		return err

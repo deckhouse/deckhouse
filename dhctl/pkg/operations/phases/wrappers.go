@@ -139,6 +139,7 @@ type (
 		// ActionInPipeline
 		// can return with actions which returns ErrPipelineDidNotStart if call before call run
 		ActionInPipeline() PhaseAction[OperationPhaseDataT]
+		SetClusterConfig(cfg ClusterConfig)
 	}
 
 	PipelineProvider[OperationPhaseDataT any]         func(opts ...PipelineOptsFunc) Pipeline[OperationPhaseDataT]
@@ -243,6 +244,14 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) GetLastState() DhctlState 
 	}
 
 	return p.phaseContext.GetLastState()
+}
+
+func (p *PipelineWithStateCache[OperationPhaseDataT]) SetClusterConfig(cfg ClusterConfig) {
+	if govalue.IsNil(p.phaseContext) {
+		return
+	}
+
+	p.phaseContext.SetClusterConfig(cfg)
 }
 
 func (p *PipelineWithStateCache[OperationPhaseDataT]) ActionInPipeline() PhaseAction[OperationPhaseDataT] {
