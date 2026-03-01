@@ -56,8 +56,7 @@ curl -s -X POST "${KC_URL}/admin/realms/dex-demo/clients" \
       "saml_name_id_format": "persistent",
       "saml.server.signature": "true",
       "saml.signature.algorithm": "RSA_SHA256",
-      "saml.authnstatement": "true",
-      "saml_single_logout_service_url_post": "https://'"${DEX_DOMAIN}"'/saml/slo/saml-demo"
+      "saml.authnstatement": "true"
     },
     "redirectUris": ["https://'"${DEX_DOMAIN}"'/callback"],
     "protocolMappers": [

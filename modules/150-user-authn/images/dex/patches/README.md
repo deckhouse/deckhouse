@@ -80,4 +80,4 @@ The flag is reset on successful password change.
 
 ### 013-saml-support.patch
 
-Adds refresh token support and simplified Single Logout (SLO) to the SAML connector. The SAML connector now implements `RefreshConnector` by caching the user identity in `ConnectorData` during initial authentication and returning it on refresh. A new `SAMLSLOConnector` interface and `/saml/slo/{connector}` endpoint allow IdPs to invalidate user sessions by sending a SAML `LogoutRequest`. Includes comprehensive tests for both features.
+Adds refresh token support to the SAML connector. The SAML connector now implements `RefreshConnector` by caching the user identity in `ConnectorData` during initial authentication and returning it on refresh. Also persists `ConnectorData` in `OfflineSessions` for proper session management. Includes comprehensive tests.

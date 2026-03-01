@@ -436,7 +436,6 @@ To configure the SAML Identity Provider:
    - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
    - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
    - **NameID format**: `persistent` or `emailAddress`
-   - **SLO URL** (optional): `https://dex.<modules.publicDomainTemplate>/saml/slo/<provider-name>`
 
 1. Configure attribute mappings in the IdP to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
 

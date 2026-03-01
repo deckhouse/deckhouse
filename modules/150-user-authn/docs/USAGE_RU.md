@@ -439,7 +439,6 @@ spec:
    - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
    - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
    - **Формат NameID**: `persistent` или `emailAddress`
-   - **SLO URL** (опционально): `https://dex.<modules.publicDomainTemplate>/saml/slo/<имя-провайдера>`
 
 1. Настройте маппинг атрибутов в IdP для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
 
