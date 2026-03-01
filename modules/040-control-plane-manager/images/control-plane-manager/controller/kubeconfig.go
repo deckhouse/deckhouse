@@ -80,11 +80,14 @@ func renewKubeconfigs() error {
 			return err
 		}
 	}
-	log.Info("time taken to create kubeconfig by kubeadm", slog.String("time", time.Since(start).String()))
+	log.Info("time taken to create kubeconfig by kubeadm", slog.String("duration", time.Since(start).String()))
 
 	start = time.Now()
-	kubeconfig.CreateControlPlaneKubeConfigFiles(kubeconfig.WithOutDir("/etc/kubernetes/tempkubeconfigs"))
-	log.Info("time taken to create kubeconfig by lib", slog.String("time", time.Since(start).String()))
+	err := kubeconfig.CreateControlPlaneKubeConfigFiles(kubeconfig.WithOutDir("/etc/kubernetes/tempkubeconfigs"))
+	if err != nil {
+		log.Error(err.Error())
+	}
+	log.Info("time taken to create kubeconfig by lib", slog.String("duration", time.Since(start).String()))
 
 	return nil
 }
