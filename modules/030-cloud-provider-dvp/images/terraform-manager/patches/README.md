@@ -70,7 +70,7 @@ Also, this patch contains huge testing for new resource. For testing, we can use
   This attribute can be changed on any time, change will not provide new plan and
   will not start readiness check.
 
-- `skip_check_on_create_with_resource_live_time` - golang `time.Duration`.
+- `skip_check_on_create_with_resource_lifetime` - golang `time.Duration`.
   Optional. Can be empty.
   Provider try to parse this duration on validation and if it cannot parse
   (for example, passed `irfirgir` string) will fail on validation.
@@ -206,7 +206,7 @@ but repeat in this place:
 - create waiter and start process with context timeout with `wait_timeout` duration.
 - get resource from cluster without retries. If getting was failed (include resource not found)
   will continue check process.
-- on first attempt, check lifetime of resource if `skip_check_on_create_with_resource_live_time`
+- on first attempt, check lifetime of resource if `skip_check_on_create_with_resource_lifetime`
   provided and not zero. Resource is old, stop checking process without error
   and output warning.
 - next, extract conditions from resource. Check fail conditions and ready conditions. If fail
@@ -226,7 +226,7 @@ but repeat in this place:
   from check procedure.
 
 Checking resource readiness doing only on create operation, only, if you provide
-non-zero or empty `skip_check_on_create_with_resource_live_time`, provider will check
+non-zero or empty `skip_check_on_create_with_resource_lifetime`, provider will check
 depended on resource lifetime and if lifetime is old, returns warning without
 readiness procedure.
 

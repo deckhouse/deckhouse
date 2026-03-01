@@ -58,7 +58,7 @@ resource "kubernetes_resource_ready_v1" "ipv4_address" {
   # and not check ready when converge
   # it can safe delete in future because any change this attribute not produce new plan
   # 120h = 5 days
-  skip_check_on_create_with_resource_live_time = "120h"
+  skip_check_on_create_with_resource_lifetime = "120h"
 
   fields = {
     "status.phase" = "Bound"
