@@ -63,6 +63,10 @@ func prepareCoreOptions(opts ...option) (*options, error) {
 		opt.ControlPlaneEndpoint = fmt.Sprintf("https://%s:6443", strings.TrimSpace(string(controlPlaneEndpoint)))
 	}
 
+	if opt.CertificateValidityPeriod == nil {
+		opt.CertificateValidityPeriod = &metav1.Duration{Duration: constants.CertificateValidityPeriod}
+	}
+
 	if opt.EncryptionAlgorithm == "" {
 		opt.EncryptionAlgorithm = constants.EncryptionAlgorithmRSA2048
 	}
