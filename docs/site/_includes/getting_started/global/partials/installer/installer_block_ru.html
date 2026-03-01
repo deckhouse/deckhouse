@@ -41,6 +41,7 @@
 {% endofftopic %}
 {% endalert %}
               <p>Выполните команду:</p>
+              <p><b>Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">инструкцией</a></b></p>
 {% capture command %}
 ```bash
 docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
@@ -100,6 +101,7 @@ xattr -c d8install
             </div>
             <div id="tab-linux-content-container" class="tab-content active">
               <p>Выполните команду:</p>
+              <p><b>Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">инструкцией</a></b></p>
 {% capture command %}
 ```bash
 docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
