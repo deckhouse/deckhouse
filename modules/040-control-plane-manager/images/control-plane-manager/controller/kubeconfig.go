@@ -34,6 +34,7 @@ import (
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -73,11 +74,21 @@ func renewKubeconfigs() error {
 
 	kubeconfigs := []string{"super-admin", "admin", "controller-manager", "scheduler"}
 
+	start := time.Now()
 	for _, v := range kubeconfigs {
 		if err := renewKubeconfig(v); err != nil {
 			return err
 		}
 	}
+	log.Info("time taken to create kubeconfig by kubeadm", slog.String("duration", time.Since(start).String()))
+
+	start = time.Now()
+	err := kubeconfig.CreateControlPlaneKubeConfigFiles(kubeconfig.WithOutDir("/etc/kubernetes/tempkubeconfigs"))
+	if err != nil {
+		log.Error(err.Error())
+	}
+	log.Info("time taken to create kubeconfig by lib", slog.String("duration", time.Since(start).String()))
+
 	return nil
 }
 

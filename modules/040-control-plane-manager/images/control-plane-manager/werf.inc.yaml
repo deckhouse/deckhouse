@@ -1,3 +1,5 @@
+{{ $appRelPath := printf "%smodules/040-%s/images/%s/controller" $.ModulePath $.ModuleName $.ImageName }}
+{{ $appAbsPath := printf "/deckhouse/modules/040-%s/images/%s/controller" $.ModuleName $.ImageName }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
@@ -32,8 +34,8 @@ fromCacheVersion: "2025-07-25-3"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /src
+  add: /src/deckhouse
+  to: /deckhouse
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -42,16 +44,21 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-    - cd /src
-    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go etcd.go
+    - cd {{ $appAbsPath }}
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /src/controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go etcd.go
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2025-07-25-3"
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
-  to: /src
+- add: /{{ $appRelPath }}
+  to:  /src{{ $appAbsPath }}
   stageDependencies:
     install:
     - '**/*'
+- add: /go_lib/controlplane
+  to: /src/deckhouse/go_lib/controlplane
+  stageDependencies:
+    install:
+      - '**/*'
