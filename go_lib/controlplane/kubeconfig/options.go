@@ -120,10 +120,10 @@ func WithLocalAPIEndpoint(localAPIEndpoint string) option {
 	}
 }
 
-// WithControlPlaneEndpoint is an option to set the control plane endpoint.
-func WithControlPlaneEndpoint(controlPlaneEndpoint string) option {
+// WithControlPlaneEndpoint is an option to set the control plane endpoint by IP.
+func WithControlPlaneEndpoint(controlPlaneIP string) option {
 	return func(o *options) {
-		o.ControlPlaneEndpoint = controlPlaneEndpoint
+		o.ControlPlaneEndpoint = fmt.Sprintf("https://%s:6443", strings.TrimSpace(string(controlPlaneIP)))
 	}
 }
 
