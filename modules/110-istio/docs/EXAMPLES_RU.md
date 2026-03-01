@@ -201,7 +201,7 @@ kind: IngressIstioController
 metadata:
  name: main
 spec:
-  # ingressGatewayClass содержит значение селектора меток, используемое при создании ресурса Gateway.
+  # ingressGatewayClass содержит значение селектора лейблов, используемое при создании ресурса Gateway.
   ingressGatewayClass: istio-hp
   inlet: HostPort
   hostPort:
@@ -240,7 +240,7 @@ metadata:
   namespace: app-ns
 spec:
   selector:
-    # Селектор меток для использования Istio Ingress Gateway main-hp.
+    # Селектор лейблов для использования Istio Ingress Gateway main-hp.
     istio.deckhouse.io/ingress-gateway-class: istio-hp
   servers:
     - port:

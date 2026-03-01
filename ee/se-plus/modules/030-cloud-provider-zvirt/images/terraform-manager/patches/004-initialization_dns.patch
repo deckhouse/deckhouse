@@ -1,0 +1,53 @@
+Subject: [PATCH] initialization_dns
+---
+Index: internal/ovirt/resource_ovirt_vm.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt_vm.go
+--- a/internal/ovirt/resource_ovirt_vm.go	(revision 2f73e2de4019043764a9abfcb74ce53d97a5036e)
++++ b/internal/ovirt/resource_ovirt_vm.go	(revision 84c10269ffa891ab540cb64c711baf07a6ff5cfb)
+@@ -166,6 +166,12 @@
+ 		ForceNew:    true,
+ 		Description: "Custom script that passed to VM during initialization.",
+ 	},
++	"initialization_dns": {
++		Type:        schema.TypeString,
++		Optional:    true,
++		ForceNew:    true,
++		Description: "Custom DNS servers (comma separated)",
++	},
+ 	"initialization_hostname": {
+ 		Type:        schema.TypeString,
+ 		Optional:    true,
+@@ -739,6 +745,7 @@
+ ) diag.Diagnostics {
+ 	vmInitScript := ""
+ 	vmHostname := ""
++	vmDNS := ""
+ 	useInit := false
+ 	var nicConfiguration *ovirtclient.BuildableNicConfiguration
+
+@@ -761,12 +768,21 @@
+ 		useInit = true
+ 	}
+
++	if hInitDnsServers, ok := data.GetOk("initialization_dns"); ok {
++		vmDNS = hInitDnsServers.(string)
++		useInit = true
++	}
++
+ 	if useInit {
+ 		initialization := ovirtclient.NewInitialization(vmInitScript, vmHostname)
+ 		if nicConfiguration != nil {
+ 			initialization = initialization.WithNicConfiguration(*nicConfiguration)
+ 		}
+
++		if vmDNS != "" {
++			initialization = initialization.WithDNS(vmDNS)
++		}
++
+ 		_, err := params.WithInitialization(initialization)
+
+ 		if err != nil {

@@ -20,6 +20,11 @@ Run the installer on the **personal computer**.
 
 <div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
 <!-- Linux or macOS install, EE -->
+
+{% alert level="info" %}
+If, with VPN enabled, the container with the installer cannot access the network, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
+{% endalert %}
+
 ```shell
  echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
@@ -57,6 +62,11 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 
 <div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
 <!-- Linux or macOS install, CE -->
+
+{% alert level="info" %}
+If, with VPN enabled, the container with the installer cannot access the network, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
+{% endalert %}
+
 ```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \

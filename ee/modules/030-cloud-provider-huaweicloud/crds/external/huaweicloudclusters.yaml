@@ -6,9 +6,9 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-huaweicloud
     cluster.x-k8s.io/provider: huaweicloud
-    cluster.x-k8s.io/v1beta1: v1alpha1
+    cluster.x-k8s.io/v1beta2: v1alpha1
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.1
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: huaweicloudclusters.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -19,59 +19,70 @@ spec:
     singular: huaweicloudcluster
   scope: Namespaced
   versions:
-    - name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          description: HuaweiCloudCluster is the schema for the huaweicloudclusters.
-            API
-          properties:
-            apiVersion:
-              description: |-
-                APIVersion defines the versioned schema of this representation of an object.
-                Servers should convert recognized schemas to the latest internal value, and
-                may reject unrecognized values.
-                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-              type: string
-            kind:
-              description: |-
-                Kind is a string value representing the REST resource this object represents.
-                Servers may infer this from the endpoint the client submits requests to.
-                Cannot be updated.
-                In CamelCase.
-                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-              type: string
-            metadata:
-              type: object
-            spec:
-              description: HuaweiCloudClusterSpec defines the desired state of HuaweiCloudCluster.
-              properties:
-                controlPlaneEndpoint:
-                  description: APIEndpoint represents a reachable Kubernetes API endpoint.
-                  properties:
-                    host:
-                      description: The hostname on which the API server is serving.
-                      type: string
-                    port:
-                      description: The port on which the API server is serving.
-                      format: int32
-                      type: integer
-                  required:
-                    - host
-                    - port
-                  type: object
-              type: object
-            status:
-              description: HuaweiCloudClusterStatus defines the observed state of HuaweiCloudCluster
-              properties:
-                failureMessage:
-                  type: string
-                failureReason:
-                  type: string
-                ready:
-                  type: boolean
-              type: object
-          type: object
-      served: true
-      storage: true
-      subresources:
-        status: {}
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: HuaweiCloudCluster is the Schema for the huaweicloudclusters
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: HuaweiCloudClusterSpec defines the desired state of HuaweiCloudCluster
+            properties:
+              controlPlaneEndpoint:
+                description: APIEndpoint represents a reachable Kubernetes API endpoint.
+                minProperties: 1
+                properties:
+                  host:
+                    description: host is the hostname on which the API server is serving.
+                    maxLength: 512
+                    minLength: 1
+                    type: string
+                  port:
+                    description: port is the port on which the API server is serving.
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                type: object
+            type: object
+          status:
+            description: HuaweiCloudClusterStatus defines the observed state of HuaweiCloudCluster
+            properties:
+              failureMessage:
+                type: string
+              failureReason:
+                type: string
+              initialization:
+                description: Initialization provides observations of the HuaweiCloudCluster
+                  initialization process.
+                properties:
+                  provisioned:
+                    description: Provisioned is true when the infrastructure provider
+                      reports that the cluster's infrastructure is fully provisioned.
+                    type: boolean
+                type: object
+              ready:
+                type: boolean
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
