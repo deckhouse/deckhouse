@@ -390,18 +390,24 @@ func Test_calcDisabledProbes(t *testing.T) {
 			),
 		},
 		{
-			name: "MAA/alertmanager off",
+			name: "MAA/alertmanager and observability-recording off",
 			args: args{
 				enabledModules: set.New("prometheus"),
 			},
-			expectDisabled: set.New("monitoring-and-autoscaling/alertmanager"),
+			expectDisabled: set.New(
+				"monitoring-and-autoscaling/alertmanager",
+				"monitoring-and-autoscaling/observability-recording",
+			),
 		},
 		{
-			name: "MAA/alertmanager on",
+			name: "MAA/alertmanager and observability-recording on",
 			args: args{
 				enabledModules: set.New("prometheus", "observability"),
 			},
-			expectNotDisabled: set.New("monitoring-and-autoscaling/alertmanager"),
+			expectNotDisabled: set.New(
+				"monitoring-and-autoscaling/alertmanager",
+				"monitoring-and-autoscaling/observability-recording",
+			),
 		},
 		// Metallb -> load-balancing/metallb
 		{
