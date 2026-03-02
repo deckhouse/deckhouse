@@ -30,10 +30,8 @@ const (
 )
 
 type app struct {
-	isReady     atomic.Bool
-	kubeAPIOK   atomic.Bool
-	lastEventHB atomic.Int64
-	lastKmsgHB  atomic.Int64
+	isReady   atomic.Bool
+	kubeAPIOK atomic.Bool
 
 	kmesgRE              *regexp.Regexp
 	kubernetesCounterVec *prometheus.CounterVec
