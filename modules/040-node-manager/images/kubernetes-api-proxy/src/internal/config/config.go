@@ -77,8 +77,8 @@ func (c Config) SLogLevel() slog.Level {
 func Parse() Config {
 	var cfg Config
 
-	listenAddr := flag.String("listen-address", getenvDefault("LISTEN_ADDRESS", "0.0.0.0"), "address to bind the load balancer to")
-	listenPort := flag.Int("listen-port", getenvIntDefault("LISTEN_PORT", 7443), "Port to bind the load balancer to")
+	listenAddr := flag.String("listen-address", getenvDefault("LISTEN_ADDRESS", "127.0.0.1"), "address to bind the load balancer to")
+	listenPort := flag.Int("listen-port", getenvIntDefault("LISTEN_PORT", 6445), "Port to bind the load balancer to")
 
 	dialTimeout := flag.Duration("dial-timeout", 5*time.Second, "Dial timeout for connections to upstreams")
 	keepAlivePeriod := flag.Duration("keepalive-period", 1*time.Second, "TCP keepalive period for connections")
@@ -86,7 +86,7 @@ func Parse() Config {
 	healthInterval := flag.Duration("health-interval", 1*time.Second, "Upstream healthcheck interval")
 	healthTimeout := flag.Duration("health-timeout", 100*time.Millisecond, "Upstream healthcheck timeout")
 	healthJitter := flag.Float64("health-jitter", 0.2, "Jitter factor for healthcheck interval (0..1 recommended)")
-	proxyHealthListen := flag.String("health-listen", getenvDefault("HEALTH_LISTEN", ":8080"), "address for HTTP health endpoints (e.g., :8080)")
+	proxyHealthListen := flag.String("health-listen", getenvDefault("HEALTH_LISTEN", "127.0.0.1:4300"), "address for HTTP health endpoints (e.g., :8080)")
 	logLevel := flag.String("log-level", getenvDefault("LOG_LEVEL", "info"), "Log level: debug|info|warn|error")
 
 	// Discovery
