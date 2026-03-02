@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -19,6 +20,8 @@ import (
 	"k8s.io/client-go/util/keyutil"
 )
 
+var logger = log.Default().Named("kubeconfig")
+
 type fileSpec struct {
 	ClusterName             string
 	APIServer               string
@@ -30,41 +33,38 @@ type fileSpec struct {
 	EncryptionAlgorithm     constants.EncryptionAlgorithmType
 }
 
-func CreateControlPlaneKubeConfigFiles(options ...option) error {
-	log.Info("creating kubeconfig files for control-plane")
+func CreateKubeconfigFiles(files []File, options ...option) error {
+	logger.Info("creating kubeconfig files for control-plane")
 
-	opt, err := prepareCoreOptions(options...)
+	opt, err := prepareOptions(options...)
 	if err != nil {
 		return fmt.Errorf("failed to prepare Options: %w", err)
 	}
 
-	files := []File{
-		SuperAdmin,
-		Admin,
-		Scheduler,
-		ControllerManager,
+	for _, file := range files {
+		if err := createKubeConfigFile(file, opt); err != nil {
+			return fmt.Errorf("failed to create kubeconfig file %q: %w", file, err)
+		}
 	}
 
-	return createKubeConfigFiles(opt, files...)
+	return nil
 }
 
-func createKubeConfigFiles(opt *options, files ...File) error {
-	for _, file := range files {
-		fileSpec, err := getFileSpec(file, opt)
-		if err != nil {
-			return fmt.Errorf("failed to get spec for file %s: %w", file, err)
-		}
+func createKubeConfigFile(file File, opt *options) error {
+	fileSpec, err := getFileSpec(file, opt)
+	if err != nil {
+		return fmt.Errorf("failed to get spec for %q: %w", file, err)
+	}
 
-		config, err := buildConfig(fileSpec)
-		if err != nil {
-			return fmt.Errorf("failed to build kube config for %s: %w", file, err)
-		}
+	config, err := buildConfig(fileSpec)
+	if err != nil {
+		return fmt.Errorf("failed to build kube config for %q: %w", file, err)
+	}
 
-		kubeConfigFilePath := filepath.Join(opt.OutDir, string(file))
+	kubeConfigFilePath := filepath.Join(opt.OutDir, string(file))
 
-		if err := writeKubeConfigFileIfNeeded(kubeConfigFilePath, config); err != nil {
-			return err
-		}
+	if err := writeKubeConfigFileIfNeeded(kubeConfigFilePath, config); err != nil {
+		return err
 	}
 
 	return nil
@@ -135,7 +135,7 @@ func buildConfig(spec *fileSpec) (*clientcmdapi.Config, error) {
 
 	clientCert, clientKey, err := pki.NewCertAndKey(spec.CACert, spec.CAKey, &clientCertConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failure while creating %s client certificate: %w", spec.ClientName, err)
+		return nil, fmt.Errorf("failure while creating %q client certificate: %w", spec.ClientName, err)
 	}
 	encodedClientKey, err := keyutil.MarshalPrivateKeyToPEM(clientKey)
 	if err != nil {
@@ -183,14 +183,14 @@ func newClientCertConfig(spec *fileSpec) pki.CertConfig {
 func writeKubeConfigFileIfNeeded(kubeConfigFilePath string, config *clientcmdapi.Config) error {
 	err := validateCurrentKubeConfig(kubeConfigFilePath, config)
 	if err == nil {
-		log.Info("Using existing kubeconfig file: %q", kubeConfigFilePath)
+		logger.Info("Using existing kubeconfig file", slog.String("path", kubeConfigFilePath))
 		return nil
 	}
 
-	log.Info("Writing new %q kubeconfig file, because current is not valid: %v", kubeConfigFilePath, err)
+	logger.Info("Writing new kubeconfig file", slog.String("path", kubeConfigFilePath), slog.String("reason", err.Error()))
 
 	if err := clientcmd.WriteToFile(*config, kubeConfigFilePath); err != nil {
-		return fmt.Errorf("failed to write kubeconfig %s: %w", kubeConfigFilePath, err)
+		return fmt.Errorf("failed to write kubeconfig %q: %w", kubeConfigFilePath, err)
 	}
 
 	return nil
@@ -220,7 +220,7 @@ func validateCurrentKubeConfig(kubeConfigFilePath string, desiredConfig *clientc
 	desiredCluster := desiredConfig.Clusters[desiredCtx.Cluster]
 
 	if currentCluster.Server != desiredCluster.Server {
-		return fmt.Errorf("kubeconfig address field changed: expected %s, got %s", desiredCluster.Server, currentCluster.Server)
+		return fmt.Errorf("kubeconfig address field changed: expected %q, got %q", desiredCluster.Server, currentCluster.Server)
 	}
 
 	if !bytes.Equal(bytes.TrimSpace(currentCluster.CertificateAuthorityData), bytes.TrimSpace(desiredCluster.CertificateAuthorityData)) {

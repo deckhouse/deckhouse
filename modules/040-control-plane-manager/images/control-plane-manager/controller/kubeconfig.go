@@ -83,7 +83,13 @@ func renewKubeconfigs(config *Config) error {
 	log.Info("time taken to create kubeconfig by kubeadm", slog.String("duration", time.Since(start).String()))
 
 	start = time.Now()
-	err := kubeconfig.CreateControlPlaneKubeConfigFiles(
+	err := kubeconfig.CreateKubeconfigFiles(
+		[]kubeconfig.File{
+			kubeconfig.SuperAdmin,
+			kubeconfig.Admin,
+			kubeconfig.Scheduler,
+			kubeconfig.ControllerManager,
+		},
 		kubeconfig.WithOutDir("/etc/kubernetes/tempkubeconfigs"),
 		kubeconfig.WithControlPlaneEndpoint(config.MyIP),
 	)

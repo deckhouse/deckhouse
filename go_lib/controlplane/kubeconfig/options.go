@@ -16,7 +16,6 @@ import (
 )
 
 type options struct {
-	// core options
 	OutDir                    string
 	ClusterName               string
 	CertificatesDir           string
@@ -30,7 +29,7 @@ type options struct {
 	NodeName string
 }
 
-func prepareCoreOptions(opts ...option) (*options, error) {
+func prepareOptions(opts ...option) (*options, error) {
 	var err error
 	opt := &options{}
 
