@@ -10,7 +10,7 @@ To enable Dex authentication for your application, follow these steps:
 
    When you create a [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) in a cluster, an instance of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) is created and connected to Dex. The Deployment, Service, Ingress, and Secret objects will be created in the specified namespace.
 
-   Example of the `DexAuthenticator` custom resource:
+   Example of the DexAuthenticator custom resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -56,7 +56,7 @@ To enable Dex authentication for your application, follow these steps:
       - `NS`: Value of the `metadata.namespace` parameter of the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator).
       - `C_DOMAIN`: Cluster domain (the [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource).
 
-   > *Note:** If the DexAuthenticator `<NAME>` is too long, the Service name may be truncated. To find the correct service name, use the following command (specify the namespace name and DexAuthenticator name):
+   > **Note:** If the DexAuthenticator `<NAME>` is too long, the Service name may be truncated. To find the correct service name, use the following command (specify the namespace name and DexAuthenticator name):
    >
    > ```shell
    > d8 k get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
@@ -111,14 +111,14 @@ Make sure your application Ingress has TLS configured before integrating with De
 1. DexAuthenticator sets the cookie with the full refresh token (instead of issuing a ticket as for the ID token) because Redis does not persist data.
    If no ID token is found in Redis by the ticket, the user can request a new ID token by providing the refresh token from the cookie.
 
-1. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. This is not required for services like [Upmeter](/modules/upmeter/), as Upmeter permissions are less granular.
+1. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. This is not required for services like [`upmeter`](/modules/upmeter/), as `upmeter` permissions are less granular.
    For the [Kubernetes Dashboard](/modules/dashboard/), it is critical: the Dashboard passes the ID token on to access the Kubernetes API.
 
 ## How to generate a kubeconfig and access Kubernetes API?
 
-`kubeconfig` for remote access to the cluster via `kubectl` can be generated in the `kubeconfigurator` web interface.
+`kubeconfig` for remote access to the cluster via `kubectl` can be generated in the [`kubeconfigurator` web interface](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
 
-Configure the [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) parameter:
+Configure the [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter:
 
 - Open the `user-authn` module settings (create the ModuleConfig `user-authn` resource if there is none):
 
@@ -133,11 +133,11 @@ Configure the [publishAPI](/modules/user-authn/configuration.html#parameters-pub
     enabled: true
   ```
 
-The name `kubeconfig` is reserved for the kubeconfig generation web interface. The URL depends on the [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter (e.g. for `%s.kube.my` — `kubeconfig.kube.my`, for `%s-kube.company.my` — `kubeconfig-kube.company.my`).
+The name `kubeconfig` is reserved for the kubeconfig generation web interface. The URL depends on the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter (for example, for the template that looks like `%s.kube.my`, the kubeconfig generation web interface will be available at `kubeconfig.kube.my`, and for `%s-kube.company.my` — at `kubeconfig-kube.company.my`).
 
 ### Configuring kube-apiserver
 
-Using the [control-plane-manager](/modules/control-plane-manager/) module, Deckhouse automatically configures `kube-apiserver` with the following flags so that the `dashboard` and `kubeconfig-generator` modules can work in the cluster.
+Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DKP automatically configures `kube-apiserver` with the following flags so that the `dashboard` and `kubeconfig-generator` modules can work in the cluster.
 
 {% offtopic title="kube-apiserver arguments that will be configured" %}
 
@@ -167,18 +167,18 @@ If clients run in a corporate SSO environment (browser trusts the Dex host), Dex
 
 Enabling Kerberos (SPNEGO) SSO for LDAP:
 
-1. In AD/KDC, create/provision an SPN `HTTP/<dex-fqdn>` for a service account and generate a keytab.
+1. In AD/KDC, create/provision an SPN `HTTP/<dex-fqdn>` for a service account and generate a `keytab`.
 1. In the cluster, create a Secret in the `d8-user-authn` namespace with the `krb5.keytab` data key.
-1. In the LDAP DexProvider resource, enable `spec.ldap.kerberos`:
+1. In the LDAP DexProvider resource, enable [`spec.ldap.kerberos`](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap-kerberos):
    - `enabled: true`
    - `keytabSecretName: <secret name>`
    - optional: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`
 
-Dex will mount the keytab automatically and start accepting SPNEGO. A server‑side `krb5.conf` is not required — tickets are validated using the keytab.
+Dex will mount the `keytab` automatically and start accepting SPNEGO. A server‑side `krb5.conf` is not required — tickets are validated using the keytab.
 
 ## How to configure Basic Authentication for accessing Kubernetes API via LDAP?
 
-1. Enable the [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) parameter in the `user-authn` module configuration.
+1. Enable the [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter in the `user-authn` module configuration.
 1. Create a [DexProvider](/modules/user-authn/cr.html#dexprovider) resource of type `LDAP` and set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 1. Configure [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) for groups obtained from LDAP.
 1. Provide users with a `kubeconfig` configured for Basic Authentication (LDAP username and password).
