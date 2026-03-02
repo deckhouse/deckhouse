@@ -95,6 +95,9 @@ const (
 
 	// InitConfigurationKind is the string kind value for the InitConfiguration struct
 	InitConfigurationKind = "InitConfiguration"
+
+	// AdminKubeConfigFileName defines name for the kubeconfig aimed to be used by the admin of the cluster
+	AdminKubeConfigFileName = "admin.conf"
 )
 
 // SupportedEtcdVersion lists officially supported etcd versions with corresponding Kubernetes releases
