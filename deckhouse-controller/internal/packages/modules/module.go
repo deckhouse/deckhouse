@@ -160,7 +160,7 @@ func (m *Module) addHooks(found ...hooks.Hook) error {
 // RuntimeValues holds runtime values that are not part of schema.
 // These values are passed to helm templates under .Runtime prefix.
 type RuntimeValues struct {
-	Package addonutils.Values
+	Package addonutils.Values `json:"Package"`
 }
 
 // GetRuntimeValues returns values that are not part of schema.
@@ -180,12 +180,11 @@ func (m *Module) GetRuntimeValues() RuntimeValues {
 // GetExtraNelmValues returns runtime values in string format
 func (m *Module) GetExtraNelmValues() string {
 	runtimeValues := m.GetRuntimeValues()
-	packageJSON, _ := json.Marshal(runtimeValues.Package)
+	marshalled, _ := json.Marshal(runtimeValues)
 
-	globalValues := m.globalValuesGetter(false)
-	globalJSON, _ := json.Marshal(globalValues)
+	marshalledGlobal := m.globalValuesGetter(false)
 
-	return fmt.Sprintf("Package=%s,Deckhouse=%s", packageJSON, globalJSON)
+	return fmt.Sprintf("Module=%s,Deckhouse=%s", marshalled, marshalledGlobal)
 }
 
 // GetName returns the full module identifier.
