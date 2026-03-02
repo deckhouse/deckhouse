@@ -126,6 +126,42 @@ properties:
                       Storage domain id which contains the shared resources that must be available to all datacenter hosts.
                     pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-[\da-fA-F]{4}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                     example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+                  customNetworkConfig:
+                    type: object
+                    additionalProperties: false
+                    description: |
+                      Enables a custom static network configuration for nodes in this NodeGroup.
+                      
+                      If specified, you must set `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` and `networkInterfaceNetmask`.
+                    properties:
+                      networkInterfaceName:
+                        type: string
+                        description: |
+                          Name of the network interface to apply the static configuration to.
+                        example: enp1s0
+                      networkInterfaceAddress:
+                        type: array
+                        items:
+                          type: string
+                        uniqueItems: true
+                        description: |
+                          List of IP addresses to assign to the interface.
+                        example:  ["192.168.1.10/24", "192.168.1.11/24"]
+                      networkInterfaceNetmask:
+                        type: string
+                        description: |
+                          Subnet mask for the interface.
+                        example:  255.255.255.0
+                      networkInterfaceGateway:
+                        type: string
+                        description: |
+                          Default network gateway.
+                        example: 192.168.1.1
+                      dnsServers:
+                        type: string
+                        description: |
+                          List of DNS servers.
+                        example: "8.8.8.8 8.8.4.4"
           nodeGroups:
             type: array
             description: |
