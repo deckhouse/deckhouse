@@ -1,0 +1,32 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Представляет информацию о доступном пакете приложения.
+          properties:
+            status:
+              description: |
+                Статус ресурса.
+              properties:
+                availableRepositories:
+                  description: |
+                    Список названий репозиториев, где доступен этот пакет приложения.
+                usedBy:
+                  description: |
+                    Информация о приложениях, использующих этот пакет.
+                  items:
+                    properties:
+                      name:
+                        description: |
+                          Название экземпляра приложения.
+                      namespace:
+                        description: |
+                          Неймспейс, в котором установлено приложение.
+                      version:
+                        description: |
+                          Версия пакета, используемая этим приложением.
+                usedByCount:
+                  description: |
+                    Количество приложений, использующих этот пакет.

@@ -13,25 +13,26 @@ This document describes the architecture of Deckhouse documentation and explains
 - Install [werf](https://werf.io/getting_started/).
   When installing, set the release channel to `alpha`.
 
-### Running the documentation site using separate services
+### Running the documentation site (option 1)
 
 #### Starting the documentation site
 
-To start the documentation site, open two separate terminal windows or tabs and follow these steps:
+To start the documentation site follow these steps:
 
-1. In the first terminal, run:
+1. Run the local container registry (if you don't have it):
 
    ```shell
-   cd docs/documentation
-   make up
+   make registry
    ```
-
-1. In the second terminal, run:
+   
+1. Run documentation:
 
    ```shell
    cd docs/site
    make up
    ```
+   
+   If you want to work with uncommited files, use `make dev` instead of `make up`.
 
 1. Open the documentation site in your browser at <http://localhost>.
 
@@ -42,14 +43,19 @@ To stop the documentation site, cancel the running processes and run the followi
 ```shell
 make down
 ```
+To destroy created registry run the following command:
 
-### Running the documentation site using a single command
+```shell
+make registry-down
+```
+
+### Running the documentation site (option 2)
 
 #### Starting the documentation site
 
 To start the documentation site, open a terminal and follow these steps:
 
-1. Run the following command:
+1. Run the following command in the repository root:
 
    ```shell
    make docs
@@ -586,4 +592,89 @@ Hugo:
 
 ```html
 data-search-context="{{ T "search_context" }}"
+```
+
+## Markup (external modules documentation)
+
+[Hugo](gohugo.io) SSG is used for rendering.
+
+The documentation content is written in Markdown with some custom shortcodes.
+
+### OpenAPI Specifications rendering
+
+TODO
+
+### Page parameters (front matter)
+
+#### Related links
+
+```yaml
+params:
+  relatedLinks:
+    - title: "Link"
+      url: link.html
+    - title: "External link"
+      url: "http://domain/external/link.html"
+    - url: /modules/monitoring-kubernetes/
+```
+
+### Shortcodes
+
+<div id="alert-details"></div>
+
+#### Alert
+
+There are following levels of alerts: `info`, `warning`, `danger`. The default level is `info`.
+
+```go
+{{< alert level="warning" >}}
+The warning message...
+{{< /alert >}}
+```
+
+#### Tabs
+
+```go
+{{< tabs name="tabs_uniq_name" >}}
+{{% tab name="Tab caption 1" %}}Tab 1 Content {{% /tab %}}
+{{% tab name="Tab caption 2" %}}Tab 2 Content {{% /tab %}}
+{{< /tabs >}}
+```
+
+#### Translate
+
+Translates content based on the current language using the translations defined in the `i18n` folder.
+
+```go
+{{< translate "version_of_module" >}}
+```
+
+<div id="shortcode-details"></div>
+
+#### Details
+
+```go
+{{% details "Summary..."%}}
+## Markdown content
+
+Markdown content...
+{{% /details %}}
+```
+
+### Partials
+
+#### Details
+
+The same as the [details shortcode](#user-content-shortcode-details), but used in templates.
+
+```
+{{ partial "details" ( dict "summary" "Summary..." "content" "Markdown content..." ) }}
+```
+
+#### Alert
+
+The same as the [alert shortcode](#user-content-alert-details), but used in templates.
+
+```
+{{ partial "alert" ( dict "level" "warning" "content" "Markdown content..." ) }}
 ```

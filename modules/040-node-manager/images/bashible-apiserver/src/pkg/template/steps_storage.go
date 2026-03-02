@@ -121,9 +121,9 @@ func (s *StepsStorage) subscribeOnCRD(ctx context.Context, ngConfigFactory dynam
 	})
 
 	informer := ginformer.Informer()
-	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+	_ = informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			s.nodeGroupConfigurationsQueue <- nodeConfigurationQueueAction{
 				action:    "add",
@@ -295,7 +295,6 @@ func (s *StepsStorage) RemoveNodeGroupConfiguration(nc *NodeGroupConfiguration) 
 }
 
 func (s *StepsStorage) renderNodeGroupConfigurations(ng string, templateContext map[string]interface{}) (map[string]string, error) {
-	configurations := make([]*nodeConfigurationScript, 0)
 	const autoGenHeader = `
 ### Auto-generated NGC header start ###
 case $(bb-is-bundle) in
@@ -307,6 +306,7 @@ esac
 
 	keyNg := fmt.Sprintf("*:%s", ng)
 	wildcard := "*:*"
+	configurations := make([]*nodeConfigurationScript, 0, len(s.nodeGroupConfigurations[keyNg])+len(s.nodeGroupConfigurations[wildcard]))
 
 	s.m.RLock()
 	configurations = append(configurations, s.nodeGroupConfigurations[keyNg]...)

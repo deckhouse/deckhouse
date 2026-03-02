@@ -49,7 +49,7 @@ func NewOutputExecutor(params OutputExecutorParams, logger log.Logger) (*OutputE
 	}, nil
 }
 
-func (e *OutputExecutor) Output(ctx context.Context, statePath string, outFielda ...string) (result []byte, err error) {
+func (e *OutputExecutor) Output(ctx context.Context, statePath string, outFielda ...string) ([]byte, error) {
 	_, out, err := terraformOutputRun(ctx, e.params.RunExecutorParams, statePath, outFielda...)
 
 	return out, err

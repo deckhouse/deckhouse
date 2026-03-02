@@ -112,7 +112,7 @@ func (c *MasterNodeGroupController) Run(ctx *context.Context) error {
 	return c.run(ctx)
 }
 
-func (c *MasterNodeGroupController) run(ctx *context.Context) (err error) {
+func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		return err

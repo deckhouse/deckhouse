@@ -20,10 +20,10 @@ import (
 	"os"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/deckhouse/deckhouse/pkg/log"
 
 	cloud_data "github.com/deckhouse/deckhouse/go_lib/cloud-data"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/app"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (

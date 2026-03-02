@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-DMT_VERSION=0.1.55
+DMT_VERSION=0.1.67
 
 function install_dmt() {
   platform_name=$(uname -m)
@@ -59,13 +59,20 @@ function install_dmt() {
 
 function structure_prepare {
   modules_dir=("ee/modules" "ee/be/modules" "ee/fe/modules" "ee/se/modules" "ee/se-plus/modules")
-  candi_cloud_providers_dir=("ee/candi/cloud-providers" "ee/se-plus/candi/cloud-providers")
+  cloud_providers_glob="030-cloud-provider-*"
+
   cp -R /deckhouse-src /deckhouse
+  mkdir -p /deckhouse/candi/cloud-providers
+
   for dir in "${modules_dir[@]}"; do
     cp -R /deckhouse/"${dir}"/* /deckhouse/modules
-  done
-  for dir in "${candi_cloud_providers_dir[@]}"; do
-    cp -R /deckhouse/"${dir}"/* /deckhouse/candi/cloud-providers
+
+    shopt -s nullglob
+    for cloud_provider_dir in /deckhouse/${dir}/${cloud_providers_glob}; do
+      local cloud_provider_name=$(echo "${cloud_provider_dir}" | grep -oP '(?<=030-cloud-provider-)[^[:space:]]+')
+      cp -R $cloud_provider_dir /deckhouse/candi/cloud-providers/"${cloud_provider_name}"
+    done
+    shopt -u nullglob
   done
 }
 

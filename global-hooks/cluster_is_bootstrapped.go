@@ -74,7 +74,7 @@ func applyReadyNotMasterNodeFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	var node v1core.Node
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	for _, taint := range node.Spec.Taints {

@@ -19,14 +19,15 @@ package dvpcsidriver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
-
-	"dvp-csi-driver/internal/endpoint"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-lib-utils/protosanitizer"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
+
+	"dvp-csi-driver/internal/endpoint"
 )
 
 func NewNonBlockingGRPCServer() *nonBlockingGRPCServer {
@@ -99,7 +100,9 @@ func (s *nonBlockingGRPCServer) serve(
 
 	klog.Infof("Listening for connections on address: %#v", listener.Addr())
 
-	server.Serve(listener)
+	if err := server.Serve(listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+		klog.Errorf("Failed to serve: %v", err)
+	}
 }
 
 func logGRPC(
@@ -148,14 +151,14 @@ func logGRPC(
 func logGRPCJson(method string, request, reply interface{}, err error) {
 	// Log JSON with the request and response for easier parsing
 	logMessage := struct {
-		Method   string
-		Request  interface{}
-		Response interface{}
+		Method   string      `json:"method"`
+		Request  interface{} `json:"request"`
+		Response interface{} `json:"response"`
 		// Error as string, for backward compatibility.
 		// "" on no error.
-		Error string
+		Error string `json:"error"`
 		// Full error dump, to be able to parse out full gRPC error code and message separately in a test.
-		FullError error
+		FullError error `json:"full_error"`
 	}{
 		Method:    method,
 		Request:   request,

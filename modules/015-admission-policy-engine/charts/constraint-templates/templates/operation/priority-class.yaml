@@ -29,6 +29,7 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           priorityClass := input.review.object.spec.priorityClassName
           not contains(input.parameters.priorityClassNames, priorityClass)
           msg := sprintf("Pod <%v> has invalid priority class: %v, allowed: %v", [input.review.object.metadata.name, priorityClass, input.parameters.priorityClassNames])

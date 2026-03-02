@@ -134,7 +134,9 @@ spec:
                         **By default** (if not specified) — `true`. This means that if the field is omitted or explicitly set to `true`, using wildcards is allowed. If you want to deny wildcards, set this parameter to `false`.
                     allowedHostPorts:
                       type: array
-                      description: The list of `hostPort` ranges allowed by the rule.
+                      description: |
+                        The list of `hostPort` ranges allowed by the rule.
+                        For pods with `hostNetwork: true`, an additional check is performed on the ports specified in `containerPort`.
                       items:
                         type: object
                         properties:

@@ -45,6 +45,7 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 fields := ["hostPID", "hostIPC"]
                 field := fields[_]
                 msg := check_violations(input.review.object, field)
@@ -67,6 +68,9 @@ spec:
                 label := obj.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := obj.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "network")
+                has_field(exception.spec.network, field)
+                has_field(exception.spec.network[field], "allowedValue")
                 obj.spec[field] == exception.spec.network[field].allowedValue
               }
 
@@ -92,4 +96,13 @@ spec:
               allowed_by_securitypolicy(obj, "hostPID") if {
                 obj.spec.hostPID
                 input.parameters.allowHostPID
+              }
+
+              # has_field returns whether an object has a field
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
               }

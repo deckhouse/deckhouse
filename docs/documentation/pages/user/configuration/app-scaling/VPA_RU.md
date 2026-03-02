@@ -1,5 +1,6 @@
 ---
-title: "Вертикальное масштабирование"
+title: "Настройка вертикального автомасштабирования (VPA) для приложений"
+description: "Настройка вертикального автомасштабирования (VPA) для пользовательской нагрузки в Deckhouse Kubernetes Platform. Управление ресурсами контейнеров, работа с лимитами, мониторинг и примеры конфигурации VerticalPodAutoscaler."
 permalink: ru/user/configuration/app-scaling/vpa.html
 lang: ru
 ---
@@ -111,7 +112,7 @@ VPA рассчитывает рекомендуемые значения на о
       kind: Deployment
       name: my-app
     updatePolicy:
-      updateMode: "Auto"
+      updateMode: "InPlaceOrRecreate"
     resourcePolicy:
       containerPolicies:
       - containerName: hamster
@@ -190,7 +191,7 @@ Grafana предоставляет несколько уровней детал�
        kind: Deployment
        name: my-app
      updatePolicy:
-       updateMode: "Auto"
+       updateMode: "InPlaceOrRecreate"
      resourcePolicy:
        containerPolicies:
        - containerName: hamster

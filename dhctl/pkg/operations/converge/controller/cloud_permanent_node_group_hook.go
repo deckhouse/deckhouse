@@ -16,22 +16,17 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 )
 
-type CloudPermanentNodeGroupHook struct {
+type HookForDestroyPipeline struct {
 	getter        kubernetes.KubeClientProvider
 	nodeToDestroy string
-}
-
-type HookForDestroyPipeline struct {
-	getter            kubernetes.KubeClientProvider
-	nodeToDestroy     string
-	oldMasterIPForSSH string
-	commanderMode     bool
+	commanderMode bool
 }
 
 func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
@@ -42,10 +37,15 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestr
 	}
 }
 
-func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (runPostAction bool, err error) {
-	err = infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, infra_utils.GetDrainConfirmation(h.commanderMode), infra_utils.DrainOptions{Force: false})
+func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
+	err := infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, infra_utils.GetDrainConfirmation(h.commanderMode), infra_utils.DrainOptions{Force: false})
 	if err != nil {
 		return false, err
+	}
+
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+	if err != nil {
+		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
 	}
 	return false, nil
 }

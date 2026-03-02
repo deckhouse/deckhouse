@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: kube-state-metrics
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "kube-state-metrics"

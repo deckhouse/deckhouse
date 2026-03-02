@@ -109,10 +109,6 @@ func (cb *ContextBuilder) SetInputData(data inputData) {
 	cb.clusterInputData = data
 }
 
-func (cb *ContextBuilder) setStepsOutput(f func(string, map[string]string)) {
-	cb.emitStepsOutput = f
-}
-
 func (cb *ContextBuilder) getCloudProvider() string {
 	if cb.clusterInputData.CloudProvider == nil {
 		// absent cloud provider means static nodes
@@ -179,7 +175,6 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		}
 		// bashibleContext always exists. Err is only for checksum generation
 		bb.bashibleContexts[bashibleContextName] = bashibleContext
-
 	}
 
 	for _, ng := range cb.clusterInputData.NodeGroups {
@@ -315,10 +310,9 @@ func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, clo
 }
 
 func (cb *ContextBuilder) getNodeUserConfigurations(nodeGroup string) []*UserConfiguration {
-
-	users := make([]*UserConfiguration, 0)
 	wildcardBundle := fmt.Sprintf("*:%s", nodeGroup)
 	totalWildcard := "*:*"
+	users := make([]*UserConfiguration, 0, len(cb.nodeUserConfigurations[wildcardBundle])+len(cb.nodeUserConfigurations[totalWildcard]))
 
 	users = append(users, cb.nodeUserConfigurations[wildcardBundle]...)
 	users = append(users, cb.nodeUserConfigurations[totalWildcard]...)
@@ -446,14 +440,6 @@ type bundleNGContext struct {
 	NodeStatusUpdateFrequency interface{} `json:"nodeStatusUpdateFrequency,omitempty" yaml:"nodeStatusUpdateFrequency,omitempty"`
 
 	NodeUsers []*UserConfiguration `json:"nodeUsers" yaml:"nodeUsers"`
-}
-
-type bundleK8sVersionContext struct {
-	*tplContextCommon
-
-	KubernetesVersion string `json:"kubernetesVersion" yaml:"kubernetesVersion"`
-
-	CloudProvider interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 }
 
 type normal struct {

@@ -22,9 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/layer2"
-
 	eeCommon "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
-
 	eeInternalCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
 )
 
@@ -46,7 +44,9 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	// Get resource
 	var egressGatewayInstance eeInternalCrd.SDNInternalEgressGatewayInstance
 	if err := r.Get(ctx, req.NamespacedName, &egressGatewayInstance); err != nil {
-		logger.Error(err, "unable to fetch egress gateway instance", "name", req.NamespacedName)
+		if client.IgnoreNotFound(err) != nil {
+			logger.Error(err, "unable to fetch egress gateway instance", "name", req.NamespacedName)
+		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -58,6 +58,7 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			logger.Error(err, "unable to cleanup egress gateway instance", "name", egressGatewayInstance.Name)
 			return ctrl.Result{}, err
 		}
+		return ctrl.Result{}, nil
 	}
 
 	desiredVirtualIPsToAnnounce := make(map[string][]string)
@@ -163,10 +164,11 @@ func (r *EgressGatewayInstanceReconciler) cleanupAnouncerWithFinalizer(ctx conte
 	return nil
 }
 
-func setStatusCondition(conditions *[]eeCommon.ExtendedCondition, newCondition eeCommon.ExtendedCondition) (changed bool) {
+func setStatusCondition(conditions *[]eeCommon.ExtendedCondition, newCondition eeCommon.ExtendedCondition) bool {
 	if conditions == nil {
 		return false
 	}
+	changed := false
 	existingCondition := findStatusCondition(*conditions, newCondition.Type)
 	if existingCondition == nil {
 		if newCondition.LastTransitionTime.IsZero() {

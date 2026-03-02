@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Discoverer struct {

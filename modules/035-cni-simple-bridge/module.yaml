@@ -1,7 +1,10 @@
 name: cni-simple-bridge
-stage: "General Availability"
+stage: General Availability
 critical: true
 weight: 35
 subsystems:
   - networking
 namespace: d8-cni-simple-bridge
+descriptions:
+  en: Provides networking with limited functionality in Kubernetes clusters.
+  ru: Обеспечивает работу сети с ограниченной функциональностью в кластерах Kubernetes.

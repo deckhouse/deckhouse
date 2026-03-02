@@ -134,7 +134,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
@@ -151,6 +151,9 @@ connectionProcessor:
 	}
 }
 
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
 func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) (result *pb.CommanderAttachResult) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -272,6 +275,7 @@ func (s *Service) commanderAttachServerTransitions() []fsm.Transition {
 	}
 }
 
+//nolint:musttag
 func (s *Service) attachSwitchPhaseData(onPhaseData phases.OnPhaseFuncData[attach.PhaseData]) (*pb.CommanderAttachResponse, error) {
 	phaseDataBytes, err := json.Marshal(onPhaseData.CompletedPhaseData)
 	if err != nil {

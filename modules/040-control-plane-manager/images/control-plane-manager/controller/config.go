@@ -20,16 +20,18 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -88,8 +90,7 @@ func NewConfig() (*Config, error) {
 
 func (c *Config) readEnvs() error {
 	var (
-		ok  bool
-		err error
+		ok bool
 	)
 	if c.MyPodName, ok = os.LookupEnv("MY_POD_NAME"); !ok || len(c.MyPodName) == 0 {
 		return errors.New("MY_POD_NAME env should be set")
@@ -116,13 +117,10 @@ func (c *Config) readEnvs() error {
 		return err
 	}
 
-	c.NodeName, err = os.Hostname()
-	if err != nil {
-		return err
+	if c.NodeName, ok = os.LookupEnv("NODE_NAME"); !ok || len(c.NodeName) == 0 {
+		return errors.New("NODE_NAME env should be set")
 	}
-	if c.NodeName == "" {
-		return errors.New("node name should be set")
-	}
+
 	return nil
 }
 
@@ -138,7 +136,7 @@ func (c *Config) newClient() error {
 }
 
 func (c *Config) checkKubernetesVersion() error {
-	log.Infof("check desired kubernetes version %s against allowed kubernetes version list: %s", c.KubernetesVersion, c.AllowedKubernetesVersions)
+	log.Info("check desired kubernetes version against allowed kubernetes versions list", slog.String("version", c.KubernetesVersion), slog.String("allowed_versions", c.AllowedKubernetesVersions))
 
 	for _, v := range strings.Split(c.AllowedKubernetesVersions, ",") {
 		if c.KubernetesVersion == v {

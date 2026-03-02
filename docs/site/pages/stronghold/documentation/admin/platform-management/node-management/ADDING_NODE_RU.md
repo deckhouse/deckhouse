@@ -58,7 +58,7 @@ lang: ru
 * Сгенерируйте на сервере пару SSH-ключей с пустой парольной фразой:
 
     ```shell
-    ssh-keygen -t rsa -f caps-id -C "" -N ""
+    ssh-keygen -t ed25519 -f caps-id -C "" -N ""
     ```
 
   Публичный и приватный ключи пользователя `caps` будут сохранены в файлах `caps-id.pub` и `caps-id` в текущей директории на сервере.
@@ -282,7 +282,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить NodeGroup, следуйте [этой инструкции](#как-изменить-nodegroup-у-статического-узла).
 
-> **Внимание!** Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то следуйте [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-вытеснить-drbd-ресурсы-с-узла) модуля `sds-replicated-volume`, чтобы выгнать ресурсы с узла и удалить узел LINSTOR/DRBD.
+> **Внимание.** Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то следуйте [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-вытеснить-drbd-ресурсы-с-узла) модуля `sds-replicated-volume`, чтобы выгнать ресурсы с узла и удалить узел LINSTOR/DRBD.
 
 1. Удалите узел из кластера Kubernetes:
 
@@ -375,11 +375,11 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
    d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
 
    # bootstrapStatus:
-   #   description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
+   #   description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
    #   logsEndpoint: 192.168.199.178:8000
    ```
 
-1. Выполните полученную команду (в примере выше — `nc 192.168.199.178 8000`), чтобы получить логи `cloud-init` для последующей диагностики.
+1. Выполните полученную команду (в примере выше — `curl -N http://192.168.199.158:8000`), чтобы получить логи `cloud-init` для последующей диагностики.
 
 Логи первоначальной настройки узла находятся в `/var/log/cloud-init-output.log`.
 

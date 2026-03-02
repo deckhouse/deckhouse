@@ -14,9 +14,9 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "6"
+  resourceVersion: "5"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -30,7 +30,7 @@ status:
       not found'
     reason: PackageRepositoryNotFound
     status: "False"
-    type: Processed
+    type: Completed
   phase: Processing
   startTime: "2025-10-31T12:00:00Z"
 ---

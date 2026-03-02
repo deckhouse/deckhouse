@@ -44,7 +44,7 @@ discovery:
   d8SpecificNodeCountByRole:
     master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  kubernetesVersion: 1.30.8
+  kubernetesVersion: 1.31.8
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   cloud:
@@ -54,7 +54,7 @@ clusterConfiguration:
   clusterType: Cloud
   defaultCRI: Containerd
   kind: ClusterConfiguration
-  kubernetesVersion: "1.30"
+  kubernetesVersion: "1.31"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
@@ -80,6 +80,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   allowedBundles:
     - "ubuntu-lts"
     - "centos"
@@ -96,16 +100,20 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
 
   clusterAutoscalerPriorities:
     "50":
-    - ^xxx-staging-[0-9a-zA-Z]+$
+    - .*xxx-staging-[0-9a-zA-Z]+$
     "70":
-    - ^xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
+    - .*xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
     "90":
-    - ^xxx-staging-spot-[0-9a-zA-Z]+$
-    - ^xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
-    - ^xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
+    - .*xxx-staging-spot-[0-9a-zA-Z]+$
+    - .*xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
+    - .*xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -136,7 +144,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -158,6 +166,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -191,7 +203,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -244,6 +256,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -274,7 +290,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -296,6 +312,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -328,7 +348,7 @@ internal:
     instanceClass:
       flavorName: m1.large
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -350,6 +370,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -392,7 +416,7 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -414,7 +438,7 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -435,6 +459,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -472,7 +500,7 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -499,7 +527,7 @@ internal:
         nestedHardwareVirtualization: false
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -521,6 +549,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -565,7 +597,7 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -590,6 +622,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -599,7 +635,7 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
 `
@@ -612,6 +648,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -738,31 +778,17 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "operator-prometheus", "vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
 		})
 
-		assertSpecDotGroupsArray := func(rule object_store.KubeObject, shouldEmpty bool) {
-			Expect(rule.Exists()).To(BeTrue())
-
-			groups := rule.Field("spec.groups")
-
-			Expect(groups.IsArray()).To(BeTrue())
-			if shouldEmpty {
-				Expect(groups.Array()).To(BeEmpty())
-			} else {
-				Expect(groups.Array()).ToNot(BeEmpty())
-			}
-		}
-
 		Context("For cluster auto-scaler", func() {
 			Context("cluster auto-scaler disabled", func() {
 				BeforeEach(func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be empty array", func() {
+				It("PrometheusRule does not Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
-
-					assertSpecDotGroupsArray(rule, true)
+					Expect(rule.Exists()).Should(BeFalse())
 				})
 			})
 
@@ -774,23 +800,23 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be none empty array", func() {
+				It("PrometheusRule Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					Expect(rule.Exists()).Should(BeTrue())
 					cm := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "cluster-autoscaler-priority-expander")
 					Expect(cm.Field("data.priorities").String()).To(MatchYAML(`
 50:
-  - ^xxx-staging-[0-9a-zA-Z]+$
+  - .*xxx-staging-[0-9a-zA-Z]+$
 70:
-  - ^xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
+  - .*xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
 90:
-  - ^xxx-staging-spot-[0-9a-zA-Z]+$
-  - ^xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
-  - ^xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
+  - .*xxx-staging-spot-[0-9a-zA-Z]+$
+  - .*xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
+  - .*xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
 `))
 
-					assertSpecDotGroupsArray(rule, false)
 				})
 			})
 		})
@@ -801,12 +827,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be empty array", func() {
+				It("PrometheusRule does not Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
-
-					assertSpecDotGroupsArray(rule, true)
+					Expect(rule.Exists()).Should(BeFalse())
 				})
 			})
 
@@ -818,12 +843,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be none empty array", func() {
+				It("PrometheusRule Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
-
-					assertSpecDotGroupsArray(rule, false)
+					Expect(rule.Exists()).Should(BeTrue())
 				})
 			})
 		})
@@ -1777,6 +1801,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -1955,6 +1983,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -2124,6 +2156,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -2168,7 +2204,7 @@ internal:
         resourceReservation:
           mode: Auto
         topologyManager: {}
-      kubernetesVersion: "1.30"
+      kubernetesVersion: "1.31"
       manualRolloutID: ""
       name: worker
       nodeType: CloudEphemeral

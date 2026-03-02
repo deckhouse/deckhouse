@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -34,6 +35,8 @@ import (
 	"bashible-apiserver/pkg/apiserver"
 	"bashible-apiserver/pkg/apiserver/readyz"
 	bashibleopenapi "bashible-apiserver/pkg/generated/openapi"
+	"bashible-apiserver/pkg/requestlog"
+	"bashible-apiserver/pkg/util/retry"
 )
 
 // BashibleServerOptions contains state for master/api server
@@ -90,7 +93,7 @@ func NewCommandStartBashibleServer(defaults *BashibleServerOptions, stopCh <-cha
 
 // Validate validates BashibleServerOptions
 func (o BashibleServerOptions) Validate(args []string) error {
-	errors := make([]error, 0)
+	errors := make([]error, 0, len(o.RecommendedOptions.Validate()))
 	errors = append(errors, o.RecommendedOptions.Validate()...)
 	return utilerrors.NewAggregate(errors)
 }
@@ -108,13 +111,21 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 	}
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
+	serverConfig.BuildHandlerChainFunc = func(apiHandler http.Handler, c *genericapiserver.Config) http.Handler {
+		return genericapiserver.DefaultBuildHandlerChain(requestlog.WithRequestLogging(apiHandler), c)
+	}
 
-	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIConfig(
+	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
 		bashibleopenapi.GetOpenAPIDefinitions,
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIV3Config.Info.Title = "Bashible"
 	serverConfig.OpenAPIV3Config.Info.Version = "0.1"
-	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+	if err := retry.DoWithRetry(context.Background(), "apply recommended options (authn/authz)", retry.DefaultKubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+			return false, err
+		}
+		return true, nil
+	}); err != nil {
 		return nil, err
 	}
 
@@ -123,7 +134,12 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIConfig.Info.Title = "Bashible"
 	serverConfig.OpenAPIConfig.Info.Version = "0.1"
-	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+	if err := retry.DoWithRetry(context.Background(), "apply recommended options (authn/authz)", retry.DefaultKubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+			return false, err
+		}
+		return true, nil
+	}); err != nil {
 		return nil, err
 	}
 

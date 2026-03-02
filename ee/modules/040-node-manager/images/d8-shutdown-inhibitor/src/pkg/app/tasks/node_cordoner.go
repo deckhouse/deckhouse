@@ -9,9 +9,9 @@ import (
 	"context"
 	"log/slog"
 
-	"d8_shutdown_inhibitor/pkg/kubernetes"
-
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
+	"d8_shutdown_inhibitor/pkg/kubernetes"
 )
 
 // NodeCordoner waits for shutdown signal and cordons the node.

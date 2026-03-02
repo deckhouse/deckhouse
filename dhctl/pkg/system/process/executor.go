@@ -227,16 +227,17 @@ func (e *Executor) StderrBytes() []byte {
 	return nil
 }
 
-func (e *Executor) SetupStreamHandlers() (err error) {
+func (e *Executor) SetupStreamHandlers() error {
 	// stderr goes to console (commented because ssh writes only "Connection closed" messages to stderr)
 	// e.Cmd.Stderr = os.Stderr
 	// connect console's stdin
 	// e.Cmd.Stdin = os.Stdin
+	var err error
 
 	// setup stdout stream handlers
 	if e.Live && e.StdoutBuffer == nil && e.StdoutHandler == nil && len(e.Matchers) == 0 {
 		e.cmd.Stdout = os.Stdout
-		return
+		return err
 	}
 
 	var stdoutReadPipe *os.File
@@ -368,7 +369,7 @@ func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWriteP
 	log.DebugLn("Start read from streams for command: ", e.cmd.String())
 
 	buf := make([]byte, 16)
-	matchersDone := false
+	var matchersDone bool
 	if len(e.Matchers) == 0 {
 		matchersDone = true
 	}

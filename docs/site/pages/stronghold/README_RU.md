@@ -1,5 +1,5 @@
 ---
-title: "Введение"
+title: "Документация Deckhouse Stronghold"
 permalink: ru/stronghold/documentation/
 lang: ru
 ---

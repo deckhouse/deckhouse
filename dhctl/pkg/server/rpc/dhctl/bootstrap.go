@@ -137,7 +137,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
@@ -154,6 +154,9 @@ connectionProcessor:
 	}
 }
 
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
 func (s *Service) bootstrapSafe(ctx context.Context, p bootstrapParams) (result *pb.BootstrapResult) {
 	defer func() {
 		if r := recover(); r != nil {

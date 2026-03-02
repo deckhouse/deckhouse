@@ -1,0 +1,114 @@
+diff --git a/google/resource_compute_network.go b/google/resource_compute_network.go
+index 785e397f..cb7ea573 100644
+--- a/google/resource_compute_network.go
++++ b/google/resource_compute_network.go
+@@ -116,6 +116,11 @@ is selected by GCP.`,
+ 				Type:     schema.TypeString,
+ 				Computed: true,
+ 			},
++			"remove_routes_on_deletion": {
++				Type:     schema.TypeBool,
++				Optional: true,
++				Default:  false,
++			},
+ 		},
+ 	}
+ }
+@@ -391,6 +396,12 @@ func resourceComputeNetworkDelete(d *schema.ResourceData, meta interface{}) erro
+ 		return err
+ 	}
+ 
++	log.Printf("[DEBUG] Deleting Routes in Network %q", d.Id())
++	err = removeRoutesFromNetwork(d, config, project)
++	if err != nil {
++		return err
++	}
++
+ 	var obj map[string]interface{}
+ 	log.Printf("[DEBUG] Deleting Network %q", d.Id())
+ 
+@@ -416,6 +427,84 @@ func resourceComputeNetworkDelete(d *schema.ResourceData, meta interface{}) erro
+ 	return nil
+ }
+ 
++func removeRoutesFromNetwork(d *schema.ResourceData, config *Config, project string) error {
++	if _, ok := d.GetOk("remove_routes_on_deletion"); !ok {
++		return nil
++	}
++
++	networkSelfLink, ok := d.GetOk("self_link")
++	if !ok {
++		return nil
++	}
++
++	userAgent, err := generateUserAgentString(d, config.userAgent)
++	if err != nil {
++		return err
++	}
++
++	params := make(map[string]string)
++	params["filter"] = fmt.Sprintf(`network = "%s"`, networkSelfLink.(string))
++	url, err := replaceVars(d, config, "{{ComputeBasePath}}projects/{{project}}/global/routes")
++	if err != nil {
++		return err
++	}
++
++	url, err = addQueryParams(url, params)
++	if err != nil {
++		return err
++	}
++
++	var routeNames []string
++
++	for {
++		res, err := sendRequest(config, "GET", "", url, userAgent, nil)
++		if err != nil {
++			return fmt.Errorf("error retrieving routes: %s", err)
++		}
++
++		items := res["items"]
++		if items == nil {
++			break
++		}
++
++		for _, rawRoute := range items.([]interface{}) {
++			route := rawRoute.(map[string]interface{})
++			routeNames = append(routeNames, route["name"].(string))
++		}
++
++		pToken, ok := res["nextPageToken"]
++		if ok && pToken != nil && pToken.(string) != "" {
++			params["pageToken"] = pToken.(string)
++		} else {
++			break
++		}
++	}
++
++	for _, routeName := range routeNames {
++		var obj map[string]interface{}
++		url, err := replaceVars(d, config, "{{ComputeBasePath}}projects/{{project}}/global/routes/"+routeName)
++		if err != nil {
++			return err
++		}
++		res, err := sendRequestWithTimeout(config, "DELETE", project, url, userAgent, obj, d.Timeout(schema.TimeoutDelete))
++		if err != nil {
++			if isGoogleApiErrorWithCode(err, 404) {
++				continue
++			}
++		}
++
++		err = computeOperationWaitTime(
++			config, res, project, "Deleting Route", userAgent,
++			d.Timeout(schema.TimeoutDelete))
++
++		if err != nil {
++			return err
++		}
++	}
++
++	return nil
++}
++
+ func resourceComputeNetworkImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+ 	config := meta.(*Config)
+ 	if err := parseImportId([]string{

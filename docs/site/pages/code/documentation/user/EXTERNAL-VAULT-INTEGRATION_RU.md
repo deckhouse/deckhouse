@@ -152,3 +152,200 @@ DATABASE_PASSWORD:
 | `environment_protected` | при наличии                 | Является ли окружение защищённым                                        |
 | `deployment_tier`       | при наличии                 | Тип окружения (`production`, `staging` и т.п.)                          |
 | `environment_action`    | при наличии                 | Тип действия над окружением (например, `deploy`)                        |
+
+## Быстрый старт
+
+В этом разделе приведён пример минимально необходимой настройки интеграции HashiCorp Vault с Deckhouse Code и проверки того, что CI job может получать секреты из Vault.
+
+{% alert level="warning" %}
+Данный пример предназначен только для ознакомления. Он не отражает лучшие практики безопасности и использует упрощённую конфигурацию, позволяющую быстро проверить работоспособность интеграции.
+{% endalert %}
+
+### Шаг 1. Установка переменных окружения
+
+Установите переменные окружения для Vault и Deckhouse Code.  
+Некоторые параметры можно оставить как есть, но `VAULT_ADDR`, `VAULT_TOKEN`, `CODE_URL` и `PROJECT_PATH` должны быть заданы вручную.
+
+```bash
+export VAULT_ADDR="https://vault.example.com"
+export VAULT_TOKEN="<your-token>"
+
+# URL-адрес Deckhouse Code.
+export CODE_URL="https://code.example.com"
+
+# Имя роли и политики Vault.
+export VAULT_ROLE="code-role"
+export VAULT_POLICY="code-policy"
+
+# Путь и данные секрета.
+export VAULT_SECRET_PATH="code/vault-demo"
+export VAULT_SECRET_FIELD="DATABASE_PASSWORD"
+export VAULT_SECRET_VALUE="super-secret-password"
+
+# Значение claim project_path, которое будет проверять Vault.
+export PROJECT_PATH="root/my-pr"
+```
+
+### Шаг 2. Включение метода аутентификации JWT
+
+Включите в Vault метод аутентификации JWT.
+Без этого Vault не сможет принимать ID-токены, которые Deckhouse Code передаёт в CI jobs.
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X POST "$VAULT_ADDR/v1/sys/auth/jwt" \
+  -d '{"type":"jwt"}'
+```
+
+### Шаг 3. Настройка JWT и OIDC
+
+Следующий запрос:
+
+- задаёт адрес OIDC discovery (`$CODE_URL`);
+- указывает ожидаемого issuer;
+- определяет *роль по умолчанию*, которую Vault выдаёт при аутентификации.
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X POST "$VAULT_ADDR/v1/auth/jwt/config" \
+  --data @- <<EOF
+{
+  "oidc_discovery_url": "$CODE_URL",
+  "bound_issuer": "$CODE_URL",
+  "default_role": "$VAULT_ROLE"
+}
+EOF
+```
+
+### Шаг 4. Монтирование Secret Engine KV v2
+
+KV v2 — это наиболее распространённый движок секретов Vault.
+Следующий запрос включает его по пути `/kv`:
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X POST "$VAULT_ADDR/v1/sys/mounts/kv" \
+  -d '{"type": "kv-v2"}'
+```
+
+### Шаг 5. Создание тестового секрета
+
+Создайте секрет, который затем должна будет прочитать CI job.
+Секрет размещается по пути `code/vault-demo` и содержит одно поле.
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X POST "$VAULT_ADDR/v1/kv/data/$VAULT_SECRET_PATH" \
+  --data @- <<EOF
+{
+  "data": {
+    "$VAULT_SECRET_FIELD": "$VAULT_SECRET_VALUE"
+  }
+}
+EOF
+```
+
+### Шаг 6. Создание ACL-политики
+
+Политика определяет, к каким путям в Vault разрешён доступ.
+В следующем примере политика предоставляет только право на чтение указанного секрета.
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X PUT "$VAULT_ADDR/v1/sys/policies/acl/$VAULT_POLICY" \
+  --data @- <<EOF
+{
+  "policy": "path \"kv/data/$VAULT_SECRET_PATH\" { capabilities = [\"read\"] }"
+}
+EOF
+```
+
+### Шаг 7. Создание роли Vault
+
+Роль определяет:
+
+- тип аутентификации;
+- обязательные claims в токене (`project_path`);
+- политики, которые получит аутентифицированный субъект;
+- допустимые аудитории (`aud`);
+- TTL токена.
+
+Deckhouse Code будет выпускать ID-токен с `aud=vault`, а Vault проверит, что значение `project_path` соответствует указанному.
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X POST "$VAULT_ADDR/v1/auth/jwt/role/$VAULT_ROLE" \
+  --data @- <<EOF
+{
+  "role_type":   "jwt",
+  "user_claim":  "sub",
+  "bound_audiences": ["vault"],
+
+  "bound_claims": {
+    "project_path": "$PROJECT_PATH"
+  },
+
+  "policies": ["$VAULT_POLICY"],
+  "ttl": "1h"
+}
+EOF
+```
+
+На этом настройка Vault завершена.
+
+### Тестирование интеграции в Deckhouse Code
+
+1. Откройте проект, указанный в `PROJECT_PATH`.
+   CI-токен проекта должен совпадать с claim `project_path`.
+   В противном случае Vault отклонит запрос на доступ к секретам.
+
+1. В настройках CI/CD проекта добавьте переменную `VAULT_SERVER_URL` со значением `$VAULT_ADDR`, использованным ранее.
+   Эта переменная сообщает Deckhouse Code, куда следует направлять запросы Vault API.
+
+1. Создайте файл `.gitlab-ci.yml`.
+   Файл запускает тестовую CI job, которая:
+
+   - получает ID-токен с `aud=vault`;
+   - передаёт его в Vault;
+   - загружает секрет из KV;
+   - выводит значение секрета.
+
+   ```yml
+   stages:
+     - test
+   
+   vault-demo:
+     stage: test
+     image: alpine
+     id_tokens:
+       VAULT_ID_TOKEN:
+         aud: vault
+     secrets:
+       DATABASE_PASSWORD:
+         vault: code/vault-demo/DATABASE_PASSWORD@kv
+         token: $VAULT_ID_TOKEN
+         file: false
+     script:
+       - echo "Raw value (masked by GitLab):"
+       - echo "$DATABASE_PASSWORD"
+   
+       - echo
+       - echo "Value with spaces (not masked):"
+       - printf '%s\n' "$DATABASE_PASSWORD" | sed 's/./& /g'
+   ```
+
+### Результат
+
+Если интеграция настроена правильно:
+
+- CI job успешно получит ID-токен;
+- Vault проверит значение `project_path` и выдаст доступ;
+- секрет будет считан и выведен в лог.
+
+В выводе вы увидите значение поля `DATABASE_PASSWORD`, загруженное напрямую из Vault.

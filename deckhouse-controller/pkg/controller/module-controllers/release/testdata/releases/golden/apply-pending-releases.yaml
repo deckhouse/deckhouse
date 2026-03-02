@@ -75,6 +75,7 @@ metadata:
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: commander
@@ -83,7 +84,7 @@ metadata:
     source: test
     status: deployed
   name: commander-1.0.3
-  resourceVersion: "1003"
+  resourceVersion: "1005"
 spec:
   moduleName: commander
   version: 1.0.3
@@ -127,6 +128,7 @@ metadata:
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca
@@ -135,7 +137,7 @@ metadata:
     source: test
     status: deployed
   name: parca-1.2.2
-  resourceVersion: "1003"
+  resourceVersion: "1005"
 spec:
   moduleName: parca
   version: 1.2.2

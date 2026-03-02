@@ -444,7 +444,7 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 	// upgradeCandidatesMap[kind][namespace][name]*upgradeCandidate{}
 	upgradeCandidatesMap := make(map[string]map[string]map[string]*upgradeCandidate)
 
-	k8sControllers := make([]sdkpkg.Snapshot, 0)
+	k8sControllers := make([]sdkpkg.Snapshot, 0) //nolint:prealloc
 	k8sControllers = append(k8sControllers, input.Snapshots.Get("deployment")...)
 	k8sControllers = append(k8sControllers, input.Snapshots.Get("statefulset")...)
 	k8sControllers = append(k8sControllers, input.Snapshots.Get("daemonset")...)

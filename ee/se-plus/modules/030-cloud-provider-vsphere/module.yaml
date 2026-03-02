@@ -1,6 +1,7 @@
 name: cloud-provider-vsphere
 descriptions:
-  en: Cloud provider Vsphere
+  en: Manages interaction with VMware vSphere-based cloud resources. Allows to use vSphere resources for provisioning nodes.
+  ru: Управляет взаимодействием с облачными ресурсами VMware vSphere. Позволяет использовать ресурсы vSphere при создании узлов.
 critical: true
 weight: 30
 subsystems:

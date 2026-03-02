@@ -44,7 +44,7 @@ $ stronghold write ssh-client-signer/config/ca generate_signing_key=true
 
 Key             Value
 ---             -----
-public_key      ssh-rsa AAAAB3NzaC1yc2EA...
+public_key      ssh-ed25519 AAAAB3NzaC1yc2EA...
 ```
 
 Если у вас уже есть пара ssh-ключей, укажите части открытого и закрытого ключей в составе команды:
@@ -108,25 +108,25 @@ EOH
 Следующие шаги выполняются клиентом (пользователем), который хочет аутентифицироваться на машинах, управляемых Stronghold.
 Эти команды обычно выполняются с локальной рабочей станции клиента.
 
-- Найдите или сгенерируйте открытый ключ SSH. Обычно он расположен по пути `~/.ssh/id_rsa.pub`.
+- Найдите или сгенерируйте открытый ключ SSH. Обычно он расположен по пути `~/.ssh/<SSH_PUBLIC_KEY_FILE>`.
 
 Если у вас нет пары ключей SSH, сгенерируйте их:
 
 ```text
-ssh-keygen -t rsa -C "user@example.com"
+ssh-keygen -t ed25519 -C "user@example.com"
 ```
 
-- Попросите Stronghold подписать ваш **публичный ключ** (public key). Этот файл обычно заканчивается на `.pub`, а его содержимое начинается с `ssh-rsa ...`.
+- Попросите Stronghold подписать ваш **публичный ключ** (public key). Этот файл обычно заканчивается на `.pub`, а его содержимое начинается с `ssh-ed25519 ...`.
 
 ```text
 $ stronghold write ssh-client-signer/sign/my-role \
-  public_key=@$HOME/.ssh/id_rsa.pub
+  public_key=@$HOME/.ssh/<SSH_PUBLIC_KEY_FILE>
 
 
  Key             Value
  ---             -----
  serial_number   c73f26d2340276aa
- signed_key      ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1...
+ signed_key      ssh-ed25519-cert-v01@openssh.com AAAAHHNzaC1...
 ```
 
 Результат будет содержать серийный номер (уникальный идентификатор сертификата) и подписанный ключ. Этот подписанный ключ является еще одним открытым ключом.
@@ -135,7 +135,7 @@ $ stronghold write ssh-client-signer/sign/my-role \
 ```text
 $ stronghold write ssh-client-signer/sign/my-role -<<"EOH"
  {
-   "public_key": "ssh-rsa AAA...",
+   "public_key": "ssh-ed25519 AAA...",
    "valid_principals": "my-user",
    "key_id": "custom-prefix",
    "extensions": {
@@ -150,10 +150,10 @@ $ stronghold write ssh-client-signer/sign/my-role -<<"EOH"
 
 ```text
 $ stronghold write -field=signed_key ssh-client-signer/sign/my-role \
-  public_key=@$HOME/.ssh/id_rsa.pub > signed-cert.pub
+  public_key=@$HOME/.ssh/<SSH_PUBLIC_KEY_FILE> > signed-cert.pub
 ```
 
-Если вы сохраняете сертификат непосредственно рядом с парой ключей SSH, добавьте в имя файла суффикс `-cert.pub` (`~/.ssh/id_rsa-cert.pub`).
+Если вы сохраняете сертификат непосредственно рядом с парой ключей SSH, добавьте в имя файла суффикс `-cert.pub` (`~/.ssh/id_ed25519-cert.pub`).
 При такой схеме именования OpenSSH будет автоматически использовать его при аутентификации.
 
 - (Необязательно) Просмотр включенных расширений, списка пользователей, хостов и метаданных подписанного ключа.
@@ -165,7 +165,7 @@ ssh-keygen -Lf ~/.ssh/signed-cert.pub
 -Выполните на локальной машине команду `ssh`, используя подписанный ключ. Вы должны передать как подписанный открытый ключ, так и соответствующий закрытый ключ в качестве аутентификации для установки SSH-соединения.
 
 ```text
-ssh -i signed-cert.pub -i ~/.ssh/id_rsa username@10.0.23.5
+ssh -i signed-cert.pub -i ~/.ssh/<SSH_PRIVATE_KEY_FILE> username@10.0.23.5
 ```
 
 ## Подпись ключа хоста (host)
@@ -193,7 +193,7 @@ $ stronghold write ssh-host-signer/config/ca generate_signing_key=true
 
 Key             Value
 ---             -----
-public_key      ssh-rsa AAAAB3NzaC1yc2EA...
+public_key      ssh-ed25519 AAAAB3NzaC1yc2EA...
 ```
 
    Если у вас уже есть пара ключей SSH, укажите части открытого и закрытого ключей в составе запроса:
@@ -234,7 +234,7 @@ $ stronghold write ssh-host-signer/sign/hostrole \
 Key             Value
 ---             -----
 serial_number   3746eb17371540d9
-signed_key      ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1y...
+signed_key      ssh-ed25519-cert-v01@openssh.com AAAAHHNzaC1y...
 ```
 
 - Установите полученный подписанный сертификат в качестве `HostCertificate` в конфигурации SSH на хост-машине.
@@ -284,7 +284,7 @@ stronghold read -field=public_key ssh-host-signer/config/ca
 ```text
 # ~/.ssh/known_hosts
 
-@cert-authority *.example.com ssh-rsa AAAAB3NzaC1yc2EAAA...
+@cert-authority *.example.com ssh-ed25519 AAAAB3NzaC1yc2EAAA...
 ```
 
 - Можно выполнять вход по SSH на удаленные машины.
@@ -431,8 +431,8 @@ ssh-keygen -C "...Comments" -N "" -t rsa -b 4096 -f host-ca
 ```shell-extension
 # Using CLI:
 stronghold secrets enable -path=hosts-ca ssh
-KEY_PRI=$(cat ~/.ssh/id_rsa | sed -z 's/\n/\\n/g')
-KEY_PUB=$(cat ~/.ssh/id_rsa.pub | sed -z 's/\n/\\n/g')
+KEY_PRI=$(cat ~/.ssh/<SSH_PRIVATE_KEY_FILE> | sed -z 's/\n/\\n/g')
+KEY_PUB=$(cat ~/.ssh/<SSH_PUBLIC_KEY_FILE> | sed -z 's/\n/\\n/g')
 # Create / update keypair in stronghold
 stronghold write ssh-client-signer/config/ca \
   generate_signing_key=false \
@@ -440,11 +440,13 @@ stronghold write ssh-client-signer/config/ca \
   public_key="${KEY_PUB}"
 ```
 
+> Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+
 ```shell-extension
 # Using API:
 curl -X POST -H "X-Vault-Token: ..." -d '{"type":"ssh"}' http://127.0.0.1:8200/v1/sys/mounts/hosts-ca
-KEY_PRI=$(cat ~/.ssh/id_rsa | sed -z 's/\n/\\n/g')
-KEY_PUB=$(cat ~/.ssh/id_rsa.pub | sed -z 's/\n/\\n/g')
+KEY_PRI=$(cat ~/.ssh/<SSH_PRIVATE_KEY_FILE> | sed -z 's/\n/\\n/g')
+KEY_PUB=$(cat ~/.ssh/<SSH_PUBLIC_KEY_FILE> | sed -z 's/\n/\\n/g')
 tee payload.json <<EOF
 {
   "generate_signing_key" : false,
@@ -475,13 +477,13 @@ curl -X POST -H "X-Vault-Token: ..." -d @payload.json http://127.0.0.1:8200/v1/h
 - В некоторых версиях SSH вы можете получить следующую ошибку на хосте:
 
 ```text
-  userauth_pubkey: certificate signature algorithm ssh-rsa: signature algorithm not supported [preauth]
+  userauth_pubkey: certificate signature algorithm ssh-ed25519: signature algorithm not supported [preauth]
 ```
 
 Исправление заключается в добавлении следующей строки в /etc/ssh/sshd_config
 
 ```text
-  CASignatureAlgorithms ^ssh-rsa
+  CASignatureAlgorithms ^ssh-ed25519
 ```
 
 Алгоритм ssh-rsa больше не поддерживается в [OpenSSH 8.2](https://www.openssh.com/txt/release-8.2)

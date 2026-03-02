@@ -17,7 +17,7 @@ func LoadConfig() Config {
 	return Config{
 		ServiceName: getEnvOrDefault("SERVICE_NAME_ISTIOD", "istiod"),
 		Namespace:   getEnvOrDefault("NAMESPACE_ISTIOD", "d8-istio"),
-		SA: getEnvOrDefault("SA_MONITOR", "multicluster-metrics-exporter"),
+		SA:          getEnvOrDefault("SA_MONITOR", "multicluster-metrics-exporter"),
 	}
 }
 

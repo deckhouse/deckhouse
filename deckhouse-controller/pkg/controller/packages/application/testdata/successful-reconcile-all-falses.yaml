@@ -5,8 +5,8 @@ metadata:
   namespace: foobar
 spec:
   packageName: test
-  packageRepository: deckhouse
-  version: v1.0.3
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.3
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
@@ -16,9 +16,10 @@ metadata:
     packages.deckhouse.io/package: test
     packages.deckhouse.io/repository: deckhouse
 spec:
-  packageName: test
-  version: v1.0.3
-  packageRepository: deckhouse
+  package:
+    name: test
+    repositoryName: deckhouse
+    version: v1.0.3
 status:
   conditions:
   - lastProbeTime: null
@@ -34,8 +35,6 @@ status:
       deckhouse: '>=1.0.0'
       kubernetes: '>=1.26'
     stage: Preview
-  packageName: test
-  version: v1.0.3
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage

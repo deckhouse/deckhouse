@@ -14,15 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package dvp
 
 import (
 	"context"
-	"dvp-common/api"
-	"dvp-common/config"
 	"io"
 	"log"
 	"time"
+
+	"dvp-common/api"
+	"dvp-common/config"
 
 	corev1 "k8s.io/api/core/v1"
 	discv1 "k8s.io/api/discovery/v1"
@@ -36,8 +38,6 @@ import (
 
 const (
 	providerName = "dvp"
-
-	envDVPKubernetesConfigBase64 = "DVP_KUBERNETES_CONFIG_BASE64"
 
 	svcNameLabel = "kubernetes.io/service-name"
 )
@@ -85,16 +85,14 @@ func (c *Cloud) Initialize(
 	nodeInformer := informerFactory.Core().V1().Nodes()
 	esInformer := informerFactory.Discovery().V1().EndpointSlices()
 
-	esInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = esInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			c.onEndpointSliceEvent(obj, serviceInformer.Lister(), nodeInformer.Lister())
 		},
 		UpdateFunc: func(_, newObj any) {
 			c.onEndpointSliceEvent(newObj, serviceInformer.Lister(), nodeInformer.Lister())
 		},
-		DeleteFunc: func(obj any) {
-			c.onEndpointSliceEvent(obj, serviceInformer.Lister(), nodeInformer.Lister())
-		},
+		DeleteFunc: func(obj any) {},
 	})
 
 	go serviceInformer.Informer().Run(stop)
@@ -189,6 +187,12 @@ func (c *Cloud) onEndpointSliceEvent(
 	nodes, err := nodeLister.List(labels.Everything())
 	if err != nil || len(nodes) == 0 {
 		klog.V(4).InfoS("onEndpointSliceEvent: no nodes to process", "namespace", es.Namespace, "service", svc.Name, "err", err)
+		return
+	}
+
+	if svc.DeletionTimestamp != nil {
+		klog.V(3).InfoS("onEndpointSliceEvent: service is deleting, skip ensureLB",
+			"namespace", svc.Namespace, "service", svc.Name, "slice", es.Name)
 		return
 	}
 

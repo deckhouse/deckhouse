@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
@@ -37,10 +38,25 @@ import (
 	"controller/internal/validate"
 )
 
+func parseManifest(raw string) (*unstructured.Unstructured, bool, error) {
+	object := new(unstructured.Unstructured)
+	if err := yaml.Unmarshal([]byte(raw), object); err != nil {
+		return nil, false, err
+	}
+	if object.GetAPIVersion() == "" || object.GetKind() == "" {
+		return nil, false, nil
+	}
+
+	// Normalize fields that can differ between serializers/versions.
+	unstructured.RemoveNestedField(object.Object, "metadata", "creationTimestamp")
+
+	return object, true, nil
+}
+
 func Test(t *testing.T) {
 	templates, err := parseHelmTemplates("../../helmlib")
 	assert.Nil(t, err)
-	for _, c := range []string{"default_case", "secure_case", "secure_with_dedicated_node_case", "empty_case", "without_ns_case"} {
+	for _, c := range []string{"default_case", "secure_case", "secure_with_dedicated_node_case", "empty_case", "without_ns_case", "skip_heritage_and_unmanaged_case"} {
 		t.Run(c, func(t *testing.T) {
 			basePath := filepath.Join("./testdata", c)
 			assert.Nil(t, test(templates, basePath))
@@ -67,7 +83,8 @@ func test(templates map[string][]byte, basePath string) error {
 		return err
 	}
 
-	buf, err := render(templates, project, projectTemplate)
+	// Use isFirstInstall=true for standard tests to include unmanaged resources
+	buf, err := render(templates, project, projectTemplate, true)
 	if err != nil {
 		return err
 	}
@@ -82,35 +99,35 @@ func test(templates map[string][]byte, basePath string) error {
 	}
 	expected := releaseutil.SplitManifests(string(rawExpected))
 
-	renderedMap := make(map[string]interface{})
+	renderedMap := make(map[string]*unstructured.Unstructured)
 	for _, raw := range rendered {
-		object := new(unstructured.Unstructured)
-		if err = yaml.Unmarshal([]byte(raw), object); err != nil {
-			return err
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			return parseErr
 		}
-		if object.GetAPIVersion() == "" || object.GetKind() == "" {
+		if !ok {
 			continue
 		}
-		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = raw
+		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
 	}
 
-	expectedMap := make(map[string]string)
+	expectedMap := make(map[string]*unstructured.Unstructured)
 	for _, raw := range expected {
-		object := new(unstructured.Unstructured)
-		if err = yaml.Unmarshal([]byte(raw), object); err != nil {
-			return err
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			return parseErr
 		}
-		if object.GetAPIVersion() == "" || object.GetKind() == "" {
+		if !ok {
 			continue
 		}
-		expectedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = raw
+		expectedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
 	}
 
 	for name := range renderedMap {
 		if _, ok := expectedMap[name]; !ok {
 			return fmt.Errorf("rendered manifests don't match the expected manifests: resource '%s' not found", name)
 		}
-		if diff := cmp.Diff(renderedMap[name], expectedMap[name]); diff != "" {
+		if diff := cmp.Diff(renderedMap[name].Object, expectedMap[name].Object, cmpopts.EquateEmpty()); diff != "" {
 			fmt.Println(diff)
 			return fmt.Errorf("rendered manifest '%s' doesn't match the expected manifest: %s", name, diff)
 		}
@@ -120,13 +137,161 @@ func test(templates map[string][]byte, basePath string) error {
 		if _, ok := renderedMap[name]; !ok {
 			return fmt.Errorf("expected manifests don't match the rendered manifests: resource '%s' not found", name)
 		}
-		if diff := cmp.Diff(renderedMap[name], expectedMap[name]); diff != "" {
+		if diff := cmp.Diff(renderedMap[name].Object, expectedMap[name].Object, cmpopts.EquateEmpty()); diff != "" {
 			fmt.Println(diff)
 			return fmt.Errorf("expected '%s' manifest doesn't match the rendered manifests: %s", name, diff)
 		}
 	}
 
 	return nil
+}
+
+func TestUnmanagedResourcesFirstInstall(t *testing.T) {
+	templates, err := parseHelmTemplates("../../helmlib")
+	assert.Nil(t, err)
+
+	basePath := filepath.Join("./testdata", "skip_heritage_and_unmanaged_case")
+	projectTemplate, err := read[v1alpha1.ProjectTemplate](filepath.Join(basePath, "template.yaml"))
+	assert.Nil(t, err)
+
+	project, err := read[v1alpha2.Project](filepath.Join(basePath, "project.yaml"))
+	assert.Nil(t, err)
+
+	// Test first install - unmanaged resources should be included
+	buf, err := render(templates, project, projectTemplate, true)
+	assert.Nil(t, err)
+
+	rendered := releaseutil.SplitManifests(buf.String())
+	renderedMap := make(map[string]*unstructured.Unstructured)
+	for _, raw := range rendered {
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			t.Fatalf("failed to unmarshal: %v", parseErr)
+		}
+		if !ok {
+			continue
+		}
+		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
+	}
+
+	// Check that unmanaged resource is present
+	unmanagedKey := "v1.ConfigMap.test.unmanaged"
+	if _, ok := renderedMap[unmanagedKey]; !ok {
+		t.Errorf("unmanaged resource should be present on first install, but it's missing")
+	}
+
+	// Verify unmanaged resource has correct annotations and labels
+	unmanagedObj := renderedMap[unmanagedKey]
+
+	annotations := unmanagedObj.GetAnnotations()
+	if annotations["helm.sh/resource-policy"] != "keep" {
+		t.Errorf("unmanaged resource should have helm.sh/resource-policy=keep annotation, got: %v", annotations)
+	}
+
+	labels := unmanagedObj.GetLabels()
+	if labels[v1alpha2.ResourceLabelHeritage] != "" {
+		t.Errorf("unmanaged resource should not have heritage label, but got: %s", labels[v1alpha2.ResourceLabelHeritage])
+	}
+	if labels[v1alpha2.ResourceLabelProject] != project.Name {
+		t.Errorf("unmanaged resource should have project label, got: %s", labels[v1alpha2.ResourceLabelProject])
+	}
+
+	// Compare with expected first install resources
+	rawExpected, err := os.ReadFile(filepath.Join(basePath, "resources_first_install.yaml"))
+	assert.Nil(t, err)
+	expected := releaseutil.SplitManifests(string(rawExpected))
+
+	expectedMap := make(map[string]*unstructured.Unstructured)
+	for _, raw := range expected {
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			t.Fatalf("failed to unmarshal expected: %v", parseErr)
+		}
+		if !ok {
+			continue
+		}
+		expectedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
+	}
+
+	for name := range renderedMap {
+		if _, ok := expectedMap[name]; !ok {
+			t.Errorf("rendered resource '%s' not found in expected first install manifests", name)
+		} else if diff := cmp.Diff(renderedMap[name].Object, expectedMap[name].Object, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("rendered manifest '%s' doesn't match expected first install manifest: %s", name, diff)
+		}
+	}
+
+	for name := range expectedMap {
+		if _, ok := renderedMap[name]; !ok {
+			t.Errorf("expected first install resource '%s' not found in rendered manifests", name)
+		}
+	}
+}
+
+func TestUnmanagedResourcesUpgrade(t *testing.T) {
+	templates, err := parseHelmTemplates("../../helmlib")
+	assert.Nil(t, err)
+
+	basePath := filepath.Join("./testdata", "skip_heritage_and_unmanaged_case")
+	projectTemplate, err := read[v1alpha1.ProjectTemplate](filepath.Join(basePath, "template.yaml"))
+	assert.Nil(t, err)
+
+	project, err := read[v1alpha2.Project](filepath.Join(basePath, "project.yaml"))
+	assert.Nil(t, err)
+
+	// Test upgrade - unmanaged resources should be excluded
+	buf, err := render(templates, project, projectTemplate, false)
+	assert.Nil(t, err)
+
+	rendered := releaseutil.SplitManifests(buf.String())
+	renderedMap := make(map[string]*unstructured.Unstructured)
+	for _, raw := range rendered {
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			t.Fatalf("failed to unmarshal: %v", parseErr)
+		}
+		if !ok {
+			continue
+		}
+		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
+	}
+
+	// Check that unmanaged resource is NOT present
+	unmanagedKey := "v1.ConfigMap.test.unmanaged"
+	if _, ok := renderedMap[unmanagedKey]; ok {
+		t.Errorf("unmanaged resource should NOT be present on upgrade, but it was found")
+	}
+
+	// Compare with expected upgrade resources (without unmanaged)
+	rawExpected, err := os.ReadFile(filepath.Join(basePath, "resources_upgrade.yaml"))
+	assert.Nil(t, err)
+	expected := releaseutil.SplitManifests(string(rawExpected))
+
+	expectedMap := make(map[string]*unstructured.Unstructured)
+	for _, raw := range expected {
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			t.Fatalf("failed to unmarshal expected: %v", parseErr)
+		}
+		if !ok {
+			continue
+		}
+		expectedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
+	}
+
+	for name := range renderedMap {
+		if _, ok := expectedMap[name]; !ok {
+			t.Errorf("rendered resource '%s' not found in expected upgrade manifests", name)
+		} else if diff := cmp.Diff(renderedMap[name].Object, expectedMap[name].Object, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("rendered manifest '%s' doesn't match expected upgrade manifest: %s", name, diff)
+		}
+	}
+
+	for name := range expectedMap {
+		if _, ok := renderedMap[name]; !ok {
+			t.Errorf("expected upgrade resource '%s' not found in rendered manifests", name)
+		}
+	}
 }
 
 func read[T any](path string) (*T, error) {
@@ -144,11 +309,8 @@ func read[T any](path string) (*T, error) {
 	return object, nil
 }
 
-func render(templates map[string][]byte, project *v1alpha2.Project, projectTemplate *v1alpha1.ProjectTemplate) (*bytes.Buffer, error) {
-	ch, err := buildChart(templates, project.Name)
-	if err != nil {
-		return nil, err
-	}
+func render(templates map[string][]byte, project *v1alpha2.Project, projectTemplate *v1alpha1.ProjectTemplate, isFirstInstall bool) (*bytes.Buffer, error) {
+	ch := buildChart(templates, project.Name)
 
 	valuesToRender, err := chartutil.ToRenderValues(ch, buildValues(project, projectTemplate), chartutil.ReleaseOptions{
 		Name:      project.Name,
@@ -168,5 +330,5 @@ func render(templates map[string][]byte, project *v1alpha2.Project, projectTempl
 		buf.WriteString(file)
 	}
 
-	return newPostRenderer(project, nil, ctrl.Log.WithName("test")).Run(buf)
+	return newPostRenderer(project, nil, ctrl.Log.WithName("test"), isFirstInstall).Run(buf)
 }

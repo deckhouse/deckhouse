@@ -23,9 +23,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"tools/helm_generate/helper"
 
 	"gopkg.in/yaml.v3"
+
+	"tools/helm_generate/helper"
 )
 
 const (

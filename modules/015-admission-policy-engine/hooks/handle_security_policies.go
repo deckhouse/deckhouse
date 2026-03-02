@@ -54,7 +54,8 @@ func handleSP(_ context.Context, input *go_hook.HookInput) error {
 
 	refs := make(map[string]set.Set)
 
-	for i, sp := range policies {
+	for i := range policies {
+		sp := &policies[i]
 		// set observed status
 		input.PatchCollector.PatchWithMutatingFunc(
 			set_cr_statuses.SetObservedStatus(sp, filterSP),
@@ -65,17 +66,19 @@ func handleSP(_ context.Context, input *go_hook.HookInput) error {
 			object_patch.WithSubresource("/status"),
 			object_patch.WithIgnoreHookError(),
 		)
-		preprocesSecurityPolicy(&policies[i])
+		preprocesSecurityPolicy(sp)
 
-		for _, v := range sp.Spec.Policies.VerifyImageSignatures {
-			if keys, ok := refs[v.Reference]; ok {
-				for _, key := range v.PublicKeys {
-					if !keys.Has(key) {
-						keys.Add(key)
+		if sp.Spec.Policies.VerifyImageSignatures != nil {
+			for _, v := range *sp.Spec.Policies.VerifyImageSignatures {
+				if keys, ok := refs[v.Reference]; ok {
+					for _, key := range v.PublicKeys {
+						if !keys.Has(key) {
+							keys.Add(key)
+						}
 					}
+				} else {
+					refs[v.Reference] = set.New(v.PublicKeys...)
 				}
-			} else {
-				refs[v.Reference] = set.New(v.PublicKeys...)
 			}
 		}
 	}
@@ -84,6 +87,7 @@ func handleSP(_ context.Context, input *go_hook.HookInput) error {
 		return policies[i].Metadata.Name < policies[j].Metadata.Name
 	})
 	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", policies)
+
 	imageReferences := make([]ratifyReference, 0, len(refs))
 	for k, v := range refs {
 		imageReferences = append(imageReferences, ratifyReference{
@@ -119,14 +123,33 @@ func hasItem(slice []string, value string) bool {
 	return false
 }
 
+func hasItemPtr(slice *[]string, value string) bool {
+	if slice == nil {
+		return false
+	}
+	for _, v := range *slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
+func sliceLenPtr[T any](slice *[]T) int {
+	if slice == nil {
+		return 0
+	}
+	return len(*slice)
+}
+
 func preprocesSecurityPolicy(sp *securityPolicy) {
 	// Check if we really need to create a constraint
 	// AllowedCapabilities with 'ALL' and empty RequiredDropCapabilities list result in a sensless constraint
-	if hasItem(sp.Spec.Policies.AllowedCapabilities, "ALL") && len(sp.Spec.Policies.RequiredDropCapabilities) == 0 {
+	if hasItemPtr(sp.Spec.Policies.AllowedCapabilities, "ALL") && sliceLenPtr(sp.Spec.Policies.RequiredDropCapabilities) == 0 {
 		sp.Spec.Policies.AllowedCapabilities = nil
 	}
 	// AllowedUnsafeSysctls with '*' and empty ForbiddenSysctls list result in a sensless constraint
-	if hasItem(sp.Spec.Policies.AllowedUnsafeSysctls, "*") && len(sp.Spec.Policies.ForbiddenSysctls) == 0 {
+	if hasItemPtr(sp.Spec.Policies.AllowedUnsafeSysctls, "*") && sliceLenPtr(sp.Spec.Policies.ForbiddenSysctls) == 0 {
 		sp.Spec.Policies.AllowedUnsafeSysctls = nil
 	}
 	// The rules set to 'RunAsAny' should be ignored
@@ -159,16 +182,21 @@ func preprocesSecurityPolicy(sp *securityPolicy) {
 		sp.Spec.Policies.AllowedProcMount = ""
 	}
 	// Having rules allowing '*' volumes makes no sense
-	if hasItem(sp.Spec.Policies.AllowedVolumes, "*") {
+	if hasItemPtr(sp.Spec.Policies.AllowedVolumes, "*") {
 		sp.Spec.Policies.AllowedVolumes = nil
 	}
 	// Having all seccomp profiles allowed also isn't worth creating a constraint
-	if hasItem(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && hasItem(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
-		sp.Spec.Policies.SeccompProfiles.AllowedProfiles = nil
-		sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles = nil
+	if sp.Spec.Policies.SeccompProfiles != nil {
+		if hasItemPtr(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && hasItemPtr(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
+			sp.Spec.Policies.SeccompProfiles.AllowedProfiles = nil
+			sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles = nil
+		}
+		if sp.Spec.Policies.SeccompProfiles.AllowedProfiles == nil && sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles == nil {
+			sp.Spec.Policies.SeccompProfiles = nil
+		}
 	}
 	// Having rules allowing '*' volumes makes no sense
-	if hasItem(sp.Spec.Policies.AllowedClusterRoles, "*") {
+	if hasItemPtr(sp.Spec.Policies.AllowedClusterRoles, "*") {
 		sp.Spec.Policies.AllowedClusterRoles = nil
 	}
 }

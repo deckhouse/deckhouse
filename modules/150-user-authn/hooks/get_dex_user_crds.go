@@ -26,9 +26,9 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -77,6 +77,7 @@ type DexUserLockReason string
 
 const (
 	PasswordPolicyLockout = DexUserLockReason("PasswordPolicyLockout")
+	LockedByAdministrator = DexUserLockReason("LockedByAdministrator")
 )
 
 type DexUserLock struct {
@@ -113,10 +114,18 @@ type DexGroupStatus struct {
 	} `json:"errors,omitempty"`
 }
 
+const (
+	PasswordAnnotationLockedByAdministrator = "deckhouse.io/locked-by-administrator"
+)
+
 type Password struct {
-	Username    string     `json:"username"`
-	Email       string     `json:"email"`
-	LockedUntil *time.Time `json:"lockedUntil"`
+	metav1.TypeMeta                 `json:",inline"`
+	metav1.ObjectMeta               `json:"metadata,omitempty"`
+	Username                        string     `json:"username"`
+	Email                           string     `json:"email"`
+	Hash                            string     `json:"hash"`
+	RequireResetHashOnNextSuccLogin bool       `json:"requireResetHashOnNextSuccLogin"`
+	LockedUntil                     *time.Time `json:"lockedUntil"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -151,6 +160,15 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 	users := make([]DexUserInternalValues, 0, len(input.Snapshots.Get("users")))
 	mapOfUsersToGroups := map[string]map[string]bool{}
 
+	// Build a username -> Password map once.
+	userNameToPassword := make(map[string]Password)
+	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'passwords' snapshot: %v", err)
+		}
+		userNameToPassword[password.Username] = password
+	}
+
 	groupsSnap := input.Snapshots.Get("groups")
 	for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](groupsSnap) {
 		if err != nil {
@@ -168,15 +186,6 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("cannot convert user to dex user: cannot iterate over 'users' snapshot: %v", err)
 		}
 
-		userNameToPassword := make(map[string]Password)
-		for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
-			if err != nil {
-				return fmt.Errorf("cannot convert user to password: cannot iterate over 'passwords' snapshot: %v", err)
-			}
-
-			userNameToPassword[password.Username] = password
-		}
-
 		var groups []string
 		for g := range mapOfUsersToGroups[dexUser.Name] {
 			groups = append(groups, g)
@@ -186,6 +195,19 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 		dexUser.Spec.Groups = groups
 
 		dexUser.Spec.UserID = dexUser.Name
+
+		// IMPORTANT:
+		// Dex updates Password objects when a user changes password in the UI.
+		// Deckhouse renders Password objects from dexUsersCRDs values on every reconcile.
+		// If we always take the hash from User.spec.password, we may overwrite the real updated password
+		// back to the old one (e.g. after logout/login).
+		//
+		// To keep password changes persistent, prefer the current Password.hash as the render source
+		// when a Password object already exists for the user. User.spec.password is used only for
+		// the initial Password creation.
+		if p, ok := userNameToPassword[dexUser.Name]; ok && p.Hash != "" {
+			dexUser.Spec.Password = p.Hash
+		}
 
 		var expireAt string
 
@@ -206,10 +228,29 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 		if ok && password.LockedUntil != nil && password.LockedUntil.After(time.Now()) {
 			lock = DexUserLock{
 				State:   true,
-				Reason:  lo.ToPtr(PasswordPolicyLockout),
-				Message: lo.ToPtr("Locked due to too many failed login attempts"),
-				Until:   lo.ToPtr(password.LockedUntil.Format(time.RFC3339)),
+				Reason:  ptr.To(PasswordPolicyLockout),
+				Message: ptr.To("Locked due to too many failed login attempts"),
+				Until:   ptr.To(password.LockedUntil.Format(time.RFC3339)),
 			}
+
+			// If this annotation exists - we consider lock was set by administrator.
+			if _, ok := password.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
+				lock.Reason = ptr.To(LockedByAdministrator)
+				lock.Message = ptr.To("Locked by administrator")
+			}
+		} else if _, ok = password.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
+			// In this case we have expired or unexisted lock and saved from previous lock annotation.
+			// For sure we need to delete it (and persist the change to the cluster).
+			input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+				annotations := obj.GetAnnotations()
+				if annotations == nil {
+					return obj, nil
+				}
+				delete(annotations, PasswordAnnotationLockedByAdministrator)
+				obj.SetAnnotations(annotations)
+				return obj, nil
+			}, "dex.coreos.com/v1", "Password", password.Namespace, password.Name)
+			delete(password.Annotations, PasswordAnnotationLockedByAdministrator)
 		}
 		dexUser.Status.Lock = lock
 
@@ -259,7 +300,7 @@ func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func applyPasswordFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	password := &Password{}
+	var password = &Password{}
 	err := sdk.FromUnstructured(obj, password)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)

@@ -263,7 +263,6 @@ func getKubeletRootDir() (string, error) {
 	for _, p := range procs {
 		cmdLine, err := p.CmdlineSlice()
 		if err != nil {
-
 			// Skip errors, as they are likely due to the process having terminated
 			continue
 		}

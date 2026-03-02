@@ -8,12 +8,16 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 diff --git a/cluster-autoscaler/simulator/cluster.go b/cluster-autoscaler/simulator/cluster.go
 --- a/cluster-autoscaler/simulator/cluster.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
 +++ b/cluster-autoscaler/simulator/cluster.go	(date 1745485212497)
-@@ -230,6 +230,10 @@
+@@ -230,6 +230,14 @@
 
  	newpods := make([]*apiv1.Pod, 0, len(pods))
  	for _, podptr := range pods {
++		if podptr == nil {
++			klog.Warningf("findPlaceFor: skipping nil pod in list for node %s", removedNode)
++			continue
++		}
 +		controllerRef := drain.ControllerRef(podptr)
-+		if controllerRef.Kind == "DaemonSet" && controllerRef.APIVersion == "apps.kruise.io/v1alpha1" {
++		if controllerRef != nil && controllerRef.Kind == "DaemonSet" && controllerRef.APIVersion == "apps.kruise.io/v1alpha1" {
 +			continue
 +		}
  		newpod := *podptr
@@ -50,7 +54,7 @@ diff --git a/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go b/clust
  func (Rule) Drainable(drainCtx *drainability.DrainContext, pod *apiv1.Pod, _ *framework.NodeInfo) drainability.Status {
 +	kruiseAds := false
 +	controllerRef := drain.ControllerRef(pod)
-+	if controllerRef.APIVersion == "apps.kruise.io/v1alpha1" && controllerRef.Kind == "DaemonSet" {
++	if controllerRef != nil && controllerRef.APIVersion == "apps.kruise.io/v1alpha1" && controllerRef.Kind == "DaemonSet" {
 +		kruiseAds = true
 +	}
  	for _, pdb := range drainCtx.RemainingPdbTracker.MatchingPdbs(pod) {

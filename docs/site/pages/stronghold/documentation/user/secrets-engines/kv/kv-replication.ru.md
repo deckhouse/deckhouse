@@ -1,0 +1,364 @@
+---
+title: "Репликация KV1/KV2"
+permalink: ru/stronghold/documentation/user/secrets-engines/kv/kv-replication.html
+lang: ru
+description: "Руководство администратора: Репликация KV1/KV2"
+---
+
+## Описание механизма репликации KV1/KV2 в Stronghold
+
+Под механизмом репликации подразумевается операция автоматического копирования секретов
+между несколькими экземплярами Stronghold в режиме master-slave с использованием pull-модели.
+Репликация поддерживается только для хранилищ KV1/KV2.
+
+Синхронизация данных производится периодически по расписанию или в соответствии с индивидуальными настройками каждого хранилища KV1/KV2.
+Для работы механизма репликации необходимо обеспечить сетевую связанность с удалённым кластером Stronghold, включая корректно настроенное TLS-соединение, а также получить токен для доступа к нему.
+Токен должен предоставлять права на выполнение операций list и read для хранилищ KV1/KV2 на удалённом кластере.
+
+Для включения репликации необходимо задать настройки репликации при монтировании нового хранилища KV1/KV2.
+Имена удалённого и локального mount-path могут не совпадать. Репликация также может быть настроена между разными пространствами имён на локальном и удалённом хранилищах.
+Допускается настройка репликации нескольких локальных хранилищ с разными именами на одно удалённое хранилище.
+
+Если для локального хранилища KV1/KV2 настроена репликация, оно доступно только для операций чтения.
+Запись, изменение и удаление секретов в таком хранилище невозможны — все изменения должны выполняться в исходном (мастер) хранилище.
+Все внесенные изменения будут перенесены в локальное хранилище при следующем запуске репликации.
+Если репликация для хранилища KV1/KV2 отключается, статус read-only снимается, и операции редактирования/удаления/добавления секретов становятся доступными.
+После следующего запуска репликации все внесённые изменения будут синхронизированы и применены к локальному хранилищу.
+
+При отключении репликации статус read-only снимается, и операции добавления, изменения и удаления секретов становятся доступными.
+При повторном включении репликации все локальные изменения будут удалены или перезаписаны данными из исходного хранилища.
+
+## Настройка репликации KV1/KV2 в Stronghold
+
+Настройка репликации производится на стороне потребителя (slave кластера Stronghold) путем задания настроек репликации
+при монтировании нового хранилища KV1/KV2.
+
+Настройки включают в себя следующие параметры:
+- адрес удалённого кластера Stronghold (источник данных);
+- токен для доступа к удалённому кластеру Stronghold (источнику данных);
+- сертификат TLS или путь к сертификату TLS для подключения к удалённому кластеру Stronghold (источнику данных);
+- имя namespace-path в котором находится хранилище KV1/KV2 на удалённом кластере Stronghold (по умолчанию root);
+- имя mount-path хранилища KV1/KV2 на удалённом кластере Stronghold (источнике данных);
+- список secret-path для репликации (по умолчанию реплицируются все секреты);
+- период запуска репликации данных (по умолчанию 1 минута);
+- включение/выключение репликации. При создании нового хранилища KV1/KV2 репликация будет включена по умолчанию. Изменение
+  состояния возможно через редактирование настроек хранилища KV1/KV2;
+- версия KV хранилища для монтирования и репликации.
+
+  > Версия локального и удалённого KV хранилища должны совпадать. Нельзя настроить репликацию kv1 в kv2 или kv2 в kv1.
+  
+### Как создать токен для репликации
+
+Токен для доступа к удалённому кластеру должен иметь права list и read для реплицируемых секретов. Если выданный токен поддерживает самопродление, то Strongold будет
+автоматически продлевать токен на 30 дней, когда оставшийся TTL токена будет менее 7 дней, и отсутствии превышения параметра maxTTL.
+
+Ниже приведён пример создания политики и токена для репликации из mount <dev-secrets>, находящегося в неймспейсе <ns_path_1>. Для этого на исходном сервере создайте политику и токен, привязанный к ней.
+
+```shell
+d8 stronghold policy write -namespace=ns_path_1 replicate-dev-secrets - <<EOF
+# Allow token to list/read secrets from dev-secrets
+path "dev-secrets/*" {
+  capabilities = ["read", "list"]
+}
+
+# Allow token to read info about dev-secrets
+path "sys/mounts/dev-secrets" {
+  capabilities = ["read"]
+}
+
+# Allow token to look up own properties
+path "auth/token/lookup-self" {
+    capabilities = ["read"]
+}
+
+# Allow token to renew self
+path "auth/token/renew-self" {
+    capabilities = ["update"]
+}
+EOF
+
+d8 stronghold token create -namespace=ns_path_1 -policy=replicate-dev-secrets -orphan=true -period=30d
+```
+
+### Настройка репликации через cli Stronghold
+
+Для настройки репликации через cli Stronghold необходимо выполнить следующие команды:
+
+Без использования TLS-соединения:
+
+```shell
+d8 stronghold secrets enable \
+ -path=<local_mount_path_name> \
+ -src-address=<address_of_source_cluster> \
+ -src-token=<token_of_source_cluster> \
+ -src-namespace=<namespace_path_in_source_cluster> \
+ -src-mount-path=<mount_path_in_source_cluster> \
+ -sync-period-min=3 \
+ -version=<1/2> \
+ -namespace=<namespace_path_in_local_cluster> \
+ kv
+```
+
+С передачей настроек TLS-соединения:
+
+```shell
+d8 stronghold secrets enable \
+ -path=<local_mount_path_name> \
+ -src-address=<address_of_source_cluster> \
+ -src-token=<token_of_source_cluster> \
+ -src-namespace=<namespace_path_in_source_cluster> \
+ -src-mount-path=<mount_path_in_source_cluster> \
+ -src-ca-cert=@<path_to_file_with_certificate> \
+ -sync-period-min=3 \
+ -version=<1/2> \
+ -namespace=<namespace_path_in_local_cluster> \
+ kv
+```
+
+Здесь:
+
+- `-path` - имя mount-path локального хранилища KV1/KV2 в кластере Stronghold, куда будет выполнено копирование данных из источника.
+  Обязательный параметр. Например: «my-mount-kv2».
+
+- `-src-address` - адрес удалённого кластера Stronghold. Обязательный параметр. Примеры: «127.0.0.1:8200», «vault.mycompany.tld:8200», «stronghold.mycompany.tld:443».
+
+- `-src-token` - токен для доступа к удалённому кластеру Stronghold (источнику данных). Обязательный параметр. Например: «z6VXjAi6F3vjaclHu99FLOcr».
+
+- `-src-namespace` - имя namespace-path в котором находится хранилище KV1/KV2 на удалённом кластере Stronghold. Необязательный параметр. По умолчанию: «root».
+
+- `-src-mount-path` - имя mount-path хранилища KV1/KV2 на удалённом кластере Stronghold. Обязательный параметр. Например: «remote-mount-kv2».
+
+- `-src-secret-path` - список secret paths для репликации. Необязательный параметр.
+
+- `-src-ca-cert` - сертификат CA для установки TLS - соединения. Eсли сертификат в файле, то `-src-ca-cert=@ca-cert.pem`
+  Необязательный параметр.
+
+- `-sync-period-min` - интервал в минутах, через который будет выполняться репликация заданного хранилища. Необязательный параметр. По умолчанию: 60 (1 час).
+
+- `-version` - версия KV хранилища для монтирования и репликации. Обязательный параметр.
+
+  > **Внимание.** Версия локального и удалённого KV хранилища должны совпадать.
+
+- `-namespace` - имя namespace-path, в котором создается хранилище KV1/KV2 на локальном кластере Stronghold. Необязательный параметр. По умолчанию: «root».
+
+### Изменение настроек репликации через cli Stronghold
+
+Для редактирования доступны следующие параметры:
+- токен для доступа к удалённому кластеру Stronghold (источнику данных).
+- сертификат TLS или путь к сертификату TLS для подключения к удалённому кластеру Stronghold (источнику данных).
+- список secret path для репликации (параметр пока не используется, по умолчанию будут реплицироваться все секреты).
+- период запуска репликации для данного хранилища.
+- включение/выключение репликации для данного хранилища.
+
+{% alert level="warning" %}
+При изменении secret path в конфигурации репликации старый путь в локальном кластере останется неизменным, а новый будет добавлен.
+Если secret path до изменения и после пересекаются, новые данные могут частично перезаписать существующие.
+Например до изменения было `-src-secret-path=[first-secret/one, second-sercet/two]`,
+а после изменения стало `-src-secret-path=[first-secret/two, second-sercet/two]`,
+то данные в `first-secret/one` останутся прежними и больше не будут изменяться.
+{% endalert %}
+
+Для изменения настроек репликации через cli Stronghold необходимо выполнить следующие команды:
+
+```shell
+d8 stronghold secrets tune \
+ -src-token=<token_of_source_cluster> \
+ -src-secret-path=<list_of_secret_paths_in_source_cluster> \
+ -src-ca-cert=@<path_to_file_with_certificate> \
+ -sync-enable=true \
+ -sync-period-min=3 \
+ -namespace=<namespace_path_in_local_cluster> \
+ <local_mount_path_name>
+```
+
+Здесь:
+
+- `-src-token` - токен для доступа к удалённому кластеру Stronghold (источнику данных). Обязательный параметр. Например: «z6VXjAi6F3vjaclHu99FLOcr».
+
+- `-src-secret-path` - список secret paths для репликации. Необязательный параметр.
+
+- `-src-ca-cert` - сертификат CA для установки TLS - соединения. Eсли сертификат в файле, то `-src-ca-cert=@ca-cert.pem`.
+  Необязательный параметр.
+
+- `-sync-enable` - включение или выключение репликации для данного локального mount-path. Обязательный параметр.
+
+- `-sync-period-min` - интервал в минутах, через который будет выполняться репликация заданного хранилища. Необязательный параметр.
+
+- `-namespace` - имя namespace-path в котором создается хранилище KV1/KV2 на локальном кластере Stronghold. Необязательный параметр. По умолчанию: «root».
+
+Для отключения репликации заданного хранилища достаточно выполнить операцию:
+
+```shell
+d8 stronghold secrets tune -sync-enable=false -namespace=<namespace_path_in_local_cluster> <local_mount_path_name>
+```
+
+Если будут переданы остальные параметры настройки репликации, то они будут проигнорированы.
+
+Для включения репликации необходимо выполнить команду:
+
+```shell
+d8 stronghold secrets tune -sync-enable=true -namespace=<namespace_path_in_local_cluster> <local_mount_path_name>
+```
+
+В данном случае также можно передавать и остальные параметры настройки репликации, они будут учитываться.
+
+Для чтения настроек репликации необходимо выполнить команду:
+
+```shell
+d8 stronghold read -namespace=<namespace_path_in_local_cluster> sys/mounts/<mount_path>/tune
+```
+
+### Настройка через API Stronghold
+
+Для настройки репликации через API Stronghold необходимо выполнить обращение к API
+создания mount и добавить в тело запроса конфигурацию для репликации:
+
+```shell
+curl --header "X-Vault-Token: <token_for_local_cluster>" \
+     --header "X-Vault-Namespace: <namespace_path_in_local_cluster>" \
+     --request POST \
+     --data '{
+  "type" : "<kv-v1>/<kv-v2>",
+  "config" : {
+    "replication_config" : {
+      "src_address" : "<address_of_source_cluster>",
+      "src_token" : "<token_of_source_cluster>",
+      "src_ca_cert" : "<tls_cert_for_source_cluster>",
+      "src_namespace" : "<namespace_path_in_source_cluster>",
+      "src_mount_path" : "<mount_path_in_source_cluster>",
+      "src_secret_path" : [ "<list_of_secret_paths_in_source_cluster>" ],
+      "sync_period_min" : <interval_in_minutes_for_synchronization_period>
+    }
+  }
+}’ <local_stronghold_address>/v1/sys/mounts/<local_mount_path_name>
+```
+
+Если удалённый кластер источника данных не поддерживает протокол tls, то параметр `"src_ca_cert"` передавать не нужно.
+По умолчанию параметр `"src_secret_path"` равен `"*"`, что означает, что реплицироваться будут все secret paths.
+
+Здесь:
+
+- `local_stronghold_address` - адрес локального стронгхолда, на котором настраивается репликация.
+
+- `token_for_local_cluster` - токен к кластеру репликации чтобы был доступ к созданию mount.
+
+- `namespace_path_in_local_cluster` - имя namespace-path в котором создается хранилище KV1/KV2 на локальном кластере Stronghold. Необязательный параметр. По умолчанию: «root».
+
+- `local_mount_path_name` - имя mount-path локального хранилища KV1/KV2 в кластере Stronghold, куда будет выполнено копирование данных из источника.
+  Обязательный параметр. Например: «my-mount-kv2».
+
+- `src_address` - адрес удалённого кластера Stronghold. Обязательный параметр. Пример: «127.0.0.1:8200», «vault.mycompany.tld:8200», «stronghold.mycompany.tld:443».
+
+- `src_token` - токен для доступа к удалённому кластеру Stronghold (источнику данных). Обязательный параметр. Например: «z6VXjAi6F3vjaclHu99FLOcr».
+
+- `src_namespace` - имя namespace-path в котором находится хранилище KV1/KV2 на удалённом кластере Stronghold. Необязательный параметр. По умолчанию: «root».
+
+- `src_mount_path` - имя mount-path хранилища KV1/KV2 на удалённом кластере Stronghold. Обязательный параметр. Например: «remote-mount-kv2».
+
+- `src_secret_path` - список secret paths для репликации. Необязательный параметр.
+
+- `src_ca_cert` - сертификат CA для установки TLS - соединения. Необязательный параметр.
+
+- `sync_period_min` - интервал в минутах, через который будет выполняться репликация заданного хранилища. Необязательный параметр. По умолчанию: 1 минута.
+
+- `type` - версия KV хранилища для монтирования и репликации. Обязательный параметр.
+
+  >  **Внимание.** Версия локального и удалённого KV хранилища должны совпадать.
+
+### Изменение настроек репликации через API Stronghold
+
+Для редактирования доступны следующие параметры:
+- токен для доступа к удалённому кластеру Stronghold (источнику данных).
+- сертификат TLS или путь к сертификату TLS для подключения к удалённому кластеру Stronghold (источнику данных).
+- список secret path для репликации (по умолчанию реплицируются все секреты).
+- период запуска репликации для данного хранилища.
+- включение/выключение репликации для данного хранилища.
+
+{% alert level="warning" %}
+При изменении secret path в конфигурации репликации старый путь в локальном кластере останется неизменным, а новый будет добавлен.
+Если secret path до изменения и после пересекаются, новые данные могут частично перезаписать существующие.
+Например до изменения было `"src_secret_path"=["first-secret/one", "second-sercet/two"]`,
+а после изменения стало `"src_secret_path"=["first-secret/two", "second-sercet/two"]`,
+то данные в `"first-secret/one"` останутся прежними и больше не будут изменяться.
+{% endalert %}
+
+Для изменения настроек репликации через API Stronghold необходимо выполнить обращение к API
+изменения mount и добавить в тело запроса новую конфигурацию для репликации:
+
+```shell
+curl --header "X-Vault-Token: <token_for_local_cluster>" \
+     --header "X-Vault-Namespace: <namespace_path_in_local_cluster>" \
+     --request POST \
+     --data '{
+        "replication_config" : {
+          "src_token" : "<token_of_source_cluster>",
+          "src_ca_cert" : "<tls_cert_for_source_cluster>",
+          "src_secret_path" : [ "<list_of_secret_paths_in_source_cluster>" ],
+          "sync_period_min" : <interval_in_minutes_for_synchronization_period>,
+          "sync_enable" : true
+        }
+    }’
+    <local_stronghold_address>/v1/sys/mounts/<local_mount_path_name>/tune
+```
+
+Здесь:
+
+- `local_stronghold_address` - адрес локального stronghold, на котором настраивается репликация.
+
+- `token_for_local_cluster` - токен к кластеру репликации чтобы был доступ к редактированию mount.
+
+- `namespace_path_in_local_cluster` - имя namespace-path в котором создается хранилище KV1/KV2 на локальном кластере Stronghold. Необязательный параметр. По умолчанию: «root».
+
+- `local_mount_path_name` - имя mount-path локального хранилища KV1/KV2 в кластере Stronghold, куда будет выполнено копирование данных из источника.
+  Обязательный параметр. Например: «my-mount-kv2».
+
+- `src_token` - токен для доступа к удалённому кластеру Stronghold (источнику данных). Обязательный параметр. Например: «z6VXjAi6F3vjaclHu99FLOcr».
+
+- `src_ca_cert` - сертификат CA для установки TLS - соединения. Необязательный параметр.
+
+- `sync_period_min` - интервал в минутах, через который будет выполняться репликация заданного хранилища. Необязательный параметр.
+
+- `sync_enable` - включение или выключение репликации для данного локального mount-path. Обязательный параметр.
+
+- `src_secret_path` - список secret paths для репликации. Необязательный параметр.
+
+Для отключения репликации заданного хранилища достаточно выполнить операцию:
+
+```shell
+curl --header "X-Vault-Token: <token_for_local_cluster>" \
+     --header "X-Vault-Namespace: <namespace_path_in_local_cluster>" \
+     --request POST \
+     --data '{
+        "replication_config" : {
+          "sync_enable" : false
+        }
+    }’
+    <local_stronghold_address>/v1/sys/mounts/<local_mount_path_name>/tune
+```
+
+Если будут переданы остальные параметры настройки репликации, то они будут проигнорированы.
+
+Для включения репликации необходимо выполнить команду:
+
+```shell
+curl --header "X-Vault-Token: <token_for_local_cluster>" \
+     --header "X-Vault-Namespace: <namespace_path_in_local_cluster>" \
+     --request POST \
+     --data '{
+        "replication_config" : {
+          "sync_enable" : true
+        }
+    }’
+    <local_stronghold_address>/v1/sys/mounts/<local_mount_path_name>/tune
+```
+
+В данном случае также можно передавать и остальные параметры настройки репликации, они будут учитываться
+
+Для чтения настроек репликации необходимо выполнить команду:
+
+```shell
+curl -X GET \
+     -H "X-Vault-Token: <token_for_local_cluster>" \
+     -H "X-Vault-Namespace: <namespace_path_in_local_cluster>" \
+     <local_stronghold_address>/v1/sys/mounts/<local_mount_path_name>/tune
+```

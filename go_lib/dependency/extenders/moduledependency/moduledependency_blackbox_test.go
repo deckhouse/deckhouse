@@ -17,6 +17,7 @@ limitations under the License.
 package moduledependency_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -481,8 +482,8 @@ func TestMultipleErrorFormatting(t *testing.T) {
 	assert.Error(t, err)
 
 	// Check that the error contains multiple lines with sorted error messages
-	multiError, ok := err.(*multierror.Error)
-	if assert.True(t, ok, "Error should be a multierror.Error") {
+	var multiError *multierror.Error
+	if assert.True(t, errors.As(err, &multiError), "Error should be a multierror.Error") {
 		assert.GreaterOrEqual(t, len(multiError.Errors), 3, "Should have at least 3 errors")
 
 		errString := err.Error()

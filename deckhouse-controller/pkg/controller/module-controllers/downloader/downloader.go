@@ -92,7 +92,7 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 
 	digest, err := img.Digest()
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("digest: %w", err)
 	}
 
 	if digest.String() == checksum {
@@ -199,7 +199,11 @@ func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion st
 		return nil, fmt.Errorf("fetch image: %w", err)
 	}
 
-	return moduletools.ExtractDocs(img)
+	docs, err := moduletools.ExtractDocs(img)
+	if err != nil {
+		return nil, fmt.Errorf("extract docs: %w", err)
+	}
+	return docs, nil
 }
 
 func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (crv1.Image, error) {
@@ -208,7 +212,11 @@ func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (crv1.Image,
 		return nil, fmt.Errorf("fetch module error: %v", err)
 	}
 
-	return regCli.Image(context.TODO(), imageTag)
+	img, err := regCli.Image(context.TODO(), imageTag)
+	if err != nil {
+		return nil, fmt.Errorf("image: %w", err)
+	}
+	return img, nil
 }
 
 func (md *ModuleDownloader) storeModule(moduleStorePath string, img crv1.Image) (*DownloadStatistic, error) {
@@ -236,7 +244,7 @@ func (md *ModuleDownloader) fetchAndCopyModuleByVersion(moduleName, moduleVersio
 func (md *ModuleDownloader) copyModuleToFS(rootPath string, img crv1.Image) (*DownloadStatistic, error) {
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extract: %w", err)
 	}
 	defer rc.Close()
 
@@ -283,7 +291,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 		switch hdr.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0o700); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("mkdir all: %w", err)
 			}
 		case tar.TypeReg:
 			outFile, err := os.Create(path.Join(rootPath, hdr.Name))
@@ -514,7 +522,10 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 		meta.Changelog = changelog
 	}
 
-	return meta, err
+	if err != nil {
+		return meta, fmt.Errorf("decode: %w", err)
+	}
+	return meta, nil
 }
 
 type moduleReader struct {
@@ -531,7 +542,7 @@ func (rr *moduleReader) untarMetadata(rc io.ReadCloser) error {
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("next: %w", err)
 		}
 
 		if strings.HasPrefix(hdr.Name, ".werf") {
@@ -542,7 +553,7 @@ func (rr *moduleReader) untarMetadata(rc io.ReadCloser) error {
 		case "module.yaml":
 			_, err := io.Copy(rr.moduleReader, tr)
 			if err != nil {
-				return err
+				return fmt.Errorf("copy: %w", err)
 			}
 
 			return nil

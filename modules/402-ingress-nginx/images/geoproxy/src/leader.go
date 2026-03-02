@@ -76,11 +76,12 @@ func (l *LeaderElection) AcquireLeaderElection(ctx context.Context) error {
 	// Visit https://pkg.go.dev/k8s.io/client-go/tools/leaderelection#LeaderElectionConfig
 	// for more information on the LeaderElectionConfig struct fields
 	lec := leaderelection.LeaderElectionConfig{
-		Lock:          leader,
-		LeaseDuration: time.Second * 15,
-		RenewDeadline: time.Second * 10,
-		RetryPeriod:   time.Second * 2,
-		Name:          l.leaseLockName,
+		Lock:            leader,
+		LeaseDuration:   time.Second * 15,
+		RenewDeadline:   time.Second * 10,
+		RetryPeriod:     time.Second * 2,
+		Name:            l.leaseLockName,
+		ReleaseOnCancel: true,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(_ context.Context) { println("I am the leader!") },
 			OnStoppedLeading: func() { println("I am not the leader anymore!") },

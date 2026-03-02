@@ -20,8 +20,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func StartFileWatcher(path string, fsEventHanlder func(event fsnotify.Event), done chan struct{}, logger log.Logger) (watcher *fsnotify.Watcher, err error) {
-	watcher, err = fsnotify.NewWatcher()
+func StartFileWatcher(path string, fsEventHanlder func(event fsnotify.Event), done chan struct{}, logger log.Logger) (*fsnotify.Watcher, error) {
+	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
 	}

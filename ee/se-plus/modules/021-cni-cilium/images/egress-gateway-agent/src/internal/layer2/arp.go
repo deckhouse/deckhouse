@@ -114,17 +114,17 @@ func (a *arpResponder) processRequest() dropReason {
 	// Ignore ARP requests that the announcer tells us to ignore.
 	reason := a.announce(pkt.TargetIP, a.intf)
 	if reason == dropReasonNotMatchInterface {
-		level.Debug(a.logger).Log("op", "arpRequestIgnore", "ip", pkt.TargetIP, "interface", a.intf, "reason", "notMatchInterface")
+		_ = level.Debug(a.logger).Log("op", "arpRequestIgnore", "ip", pkt.TargetIP, "interface", a.intf, "reason", "notMatchInterface")
 	}
 	if reason != dropReasonNone {
 		return reason
 	}
 
 	stats.GotRequest(pkt.TargetIP.String())
-	level.Debug(a.logger).Log("interface", a.intf, "ip", pkt.TargetIP, "senderIP", pkt.SenderIP, "senderMAC", pkt.SenderHardwareAddr, "responseMAC", a.hardwareAddr, "msg", "got ARP request for service IP, sending response")
+	_ = level.Debug(a.logger).Log("interface", a.intf, "ip", pkt.TargetIP, "senderIP", pkt.SenderIP, "senderMAC", pkt.SenderHardwareAddr, "responseMAC", a.hardwareAddr, "msg", "got ARP request for service IP, sending response")
 
 	if err := a.conn.Reply(pkt, a.hardwareAddr, pkt.TargetIP); err != nil {
-		level.Error(a.logger).Log("op", "arpReply", "interface", a.intf, "ip", pkt.TargetIP, "senderIP", pkt.SenderIP, "senderMAC", pkt.SenderHardwareAddr, "responseMAC", a.hardwareAddr, "error", err, "msg", "failed to send ARP reply")
+		_ = level.Error(a.logger).Log("op", "arpReply", "interface", a.intf, "ip", pkt.TargetIP, "senderIP", pkt.SenderIP, "senderMAC", pkt.SenderHardwareAddr, "responseMAC", a.hardwareAddr, "error", err, "msg", "failed to send ARP reply")
 	} else {
 		stats.SentResponse(pkt.TargetIP.String())
 	}

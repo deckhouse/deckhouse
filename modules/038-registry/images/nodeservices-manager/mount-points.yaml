@@ -1,0 +1,4 @@
+dirs:
+# for Daemonset
+- /etc/kubernetes
+- /tmp

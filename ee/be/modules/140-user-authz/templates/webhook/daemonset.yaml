@@ -18,7 +18,7 @@ spec:
     kind: DaemonSet
     name: user-authz-webhook
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: webhook
@@ -28,6 +28,32 @@ spec:
         cpu: 50m
         memory: 50Mi
   {{- end }}
+
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: {{ $.Chart.Name }}-webhook
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          User Authz Webhook need to run on hostNetwork for fault tolerance. Architectural feature.
+          The pod runs on the host network to ensure independence from the state of the "Service" object in k8s.
+    hostPorts:
+      # kube-apiserver calls the authorization webhook via node-local endpoint `https://127.0.0.1:40443`.
+      # This port is not used for inter-node traffic, but it must be explicitly allowed for hostNetwork pods
+      # to satisfy Admission Policy Engine / dmt validation rules.
+      - port: 40443
+        protocol: TCP
+        metadata:
+          description: Node-local authorization webhook listener.    
+{{- end }}   
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -43,6 +69,7 @@ spec:
     metadata:
       labels:
         app: user-authz-webhook
+        security.deckhouse.io/security-policy-exception: {{ $.Chart.Name }}-webhook
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
@@ -58,6 +85,19 @@ spec:
       - name: webhook
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "webhook") }}
+        ports:
+        - name: authz-webhook
+          containerPort: 40443
+          protocol: TCP
+        # Use node-local kube-apiserver endpoint (hostNetwork) instead of ClusterIP "kubernetes" service.
+        # Some environments may block access to ClusterIP from hostNetwork pods, which makes the webhook unstable.
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6443"
         volumeMounts:
         - mountPath: /etc/user-authz-webhook/
           name: user-authz-webhook-config

@@ -1,5 +1,6 @@
 ---
-title: "Веб-интерфейс загрузки утилит Deckhouse"
+title: "Веб-интерфейс загрузки CLI-утилит"
+description: "Веб-интерфейс для загрузки Deckhouse CLI (d8) в Deckhouse Kubernetes Platform. Централизованный доступ к исполняемым файлам Deckhouse CLI для Linux, macOS, Windows с уведомлениями об обновлениях."
 permalink: ru/user/web/deckhouse-tools.html
 lang: ru
 ---

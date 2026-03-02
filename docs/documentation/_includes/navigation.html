@@ -1,5 +1,6 @@
 {%- assign nav_pages = page | get_navigation_pages: page.sidebar -%}
 {%- if nav_pages.prev or nav_pages.next -%}
+<!--noindex-->
 <div class="page-navigation">
   <div class="page-navigation__container">
     {%- if nav_pages.prev -%}
@@ -29,4 +30,5 @@
     {%- endif -%}
   </div>
 </div>
+<!--/noindex-->
 {%- endif -%}

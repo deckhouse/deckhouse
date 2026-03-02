@@ -94,6 +94,11 @@ func (pc *Checker) Static(ctx context.Context) error {
 		},
 		pc.getCheckSSHTunnelStep(),
 		{
+			fun:            pc.CheckStaticInstancesSSH,
+			successMessage: "SSHCredentials for StaticInstances are correct.",
+			skipFlag:       app.StaticInstancesWithSSHCredentials,
+		},
+		{
 			fun:            pc.CheckDeckhouseUser,
 			successMessage: "deckhouse user and group aren't present on node",
 			skipFlag:       app.DeckhouseUserCheckName,
@@ -158,7 +163,6 @@ func (pc *Checker) StaticSudo(ctx context.Context) error {
 			successMessage: "ssh credential is correctly",
 			skipFlag:       app.SSHCredentialsCheckArgName,
 		},
-		pc.getCheckSSHTunnelStep(),
 		{
 			fun:            pc.CheckSudoIsAllowedForUser,
 			successMessage: "sudo is allowed for user",

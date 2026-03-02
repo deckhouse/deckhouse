@@ -21,12 +21,11 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -99,20 +98,36 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
 		logger.Error(err, "failed to load SSHCredentials")
-		if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
-			conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
+		if status == nil || status.Status != metav1.ConditionFalse || status.Reason != err.Error() {
+			conditions.Set(instanceScope.Instance, metav1.Condition{
+				// TODO: StaticInstanceBootstrapSucceededCondition type?
+				Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
+				Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
+				Status:             metav1.ConditionFalse,
+				Message:            err.Error(),
+				LastTransitionTime: metav1.Now(),
+			})
 		}
+
 		if instanceScope.Instance.Status.CurrentStatus == nil || instanceScope.Instance.Status.CurrentStatus.Phase == "" {
 			instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
 		}
+
 		err2 := instanceScope.Patch(ctx)
 		if err2 != nil {
 			return ctrl.Result{}, errors.Wrap(err2, "failed to set StaticInstance to Error phase")
 		}
 		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
 	} else {
-		if status == nil || status.Status != corev1.ConditionTrue {
-			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
+		if status == nil || status.Status != metav1.ConditionTrue {
+			conditions.Set(instanceScope.Instance, metav1.Condition{
+				// TODO: StaticInstanceBootstrapSucceededCondition type?
+				Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
+				Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
+				Status:             metav1.ConditionTrue,
+				Message:            "SSHCredentials are available",
+				LastTransitionTime: metav1.Now(),
+			})
 		}
 		err = instanceScope.Patch(ctx)
 		if err != nil {
@@ -148,29 +163,36 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	result, reconcileErr := r.reconcileNormal(ctx, instanceScope)
+	reconcileErr := r.reconcileNormal(ctx, instanceScope)
 	if reconcileErr != nil {
 		instanceScope.Logger.Error(reconcileErr, "failed to reconcile StaticInstance")
 	}
 
-	return result, reconcileErr
+	return ctrl.Result{}, reconcileErr
 }
 
 func (r *StaticInstanceReconciler) reconcileNormal(
 	ctx context.Context,
 	instanceScope *scope.InstanceScope,
-) (ctrl.Result, error) {
+) error {
 	if (instanceScope.Instance.Status.CurrentStatus == nil ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError) &&
-		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == corev1.ConditionTrue {
+		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == metav1.ConditionTrue {
+		conditions.Set(instanceScope.Instance, metav1.Condition{
+			// TODO: StaticInstanceBootstrapSucceededCondition type?
+			Type:               infrav1.StaticInstanceAddedToNodeGroupCondition,
+			Reason:             infrav1.StaticInstanceAddedToNodeGroupCondition,
+			Status:             metav1.ConditionTrue,
+			Message:            "StaticInstance is added to NodeGroup",
+			LastTransitionTime: metav1.Now(),
+		})
 
-		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 
 		err := instanceScope.Patch(ctx)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance phase to Pending")
+			return errors.Wrap(err, "failed to set StaticInstance phase to Pending")
 		}
 
 		instanceScope.Logger.Info("StaticInstance is pending")
@@ -181,7 +203,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 
 		labelSelector, err := instanceScope.MachineScope.LabelSelector()
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to get label selector")
+			return errors.Wrap(err, "failed to get label selector")
 		}
 
 		uidSelector := fields.OneTermEqualSelector("status.machineRef.uid", string(instanceScope.MachineScope.StaticMachine.UID))
@@ -193,7 +215,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 			client.MatchingFieldsSelector{Selector: uidSelector},
 		)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrapf(err, "failed to find StaticInstance by static machine uid '%s'", instanceScope.MachineScope.StaticMachine.UID)
+			return errors.Wrapf(err, "failed to find StaticInstance by static machine uid '%s'", instanceScope.MachineScope.StaticMachine.UID)
 		}
 
 		if len(instances.Items) == 0 {
@@ -201,16 +223,16 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 
 			err := r.Client.Delete(ctx, instanceScope.MachineScope.Machine)
 			if err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "failed to delete Machine")
+				return errors.Wrap(err, "failed to delete Machine")
 			}
 
 			r.Recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceNodeGroupLeaved", fmt.Sprintf("StaticInstance has left the StaticMachine.spec.labelSelector in NodeGroup '%s'", instanceScope.MachineScope.StaticMachine.Labels["node-group"]))
 
-			return ctrl.Result{}, nil
+			return nil
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *StaticInstanceReconciler) getStaticMachine(

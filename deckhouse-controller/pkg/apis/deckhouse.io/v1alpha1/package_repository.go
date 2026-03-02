@@ -30,6 +30,10 @@ const (
 	PackageRepositoryPhaseTerminating = "Terminating"
 
 	PackageRepositoryFinalizerPackageVersionExists = "packages.deckhouse.io/package-version-exists"
+
+	PackageRepositoryAnnotationRegistryChecksum = "packages.deckhouse.io/registry-spec-checksum"
+
+	PackageRepositoryConditionLastOperationScanFinished = "LastOperationScanFinished"
 )
 
 var (
@@ -52,6 +56,10 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
+// +kubebuilder:printcolumn:name=Sync,type=date,JSONPath=.status.syncTime
+// +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastOperationScanFinished')].message
+// +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
 // PackageRepository is a source of packages for Deckhouse.
 type PackageRepository struct {
@@ -69,26 +77,63 @@ type PackageRepository struct {
 }
 
 type PackageRepositorySpec struct {
+	// Interval for registry scan. Minimum is 3 minutes.
+	// +optional
+	ScanInterval *metav1.Duration `json:"scanInterval,omitempty"`
+	// Configuration for the package registry.
 	Registry PackageRepositorySpecRegistry `json:"registry"`
 }
 
 type PackageRepositorySpecRegistry struct {
-	Scheme    string `json:"scheme,omitempty"`
-	Repo      string `json:"repo"`
+	// Scheme to use for accessing the registry (e.g., https).
+	// +optional
+	Scheme string `json:"scheme,omitempty"`
+
+	// Repository path in the registry.
+	Repo string `json:"repo"`
+
+	// Docker configuration for authentication.
+	// +optional
 	DockerCFG string `json:"dockerCfg,omitempty"`
-	CA        string `json:"ca,omitempty"`
+
+	// Certificate authority data for TLS verification.
+	// +optional
+	CA string `json:"ca,omitempty"`
 }
 
 type PackageRepositoryStatus struct {
-	SyncTime      metav1.Time                      `json:"syncTime,omitempty"`
-	Packages      []PackageRepositoryStatusPackage `json:"packages,omitempty"`
-	PackagesCount int                              `json:"packagesCount,omitempty"`
-	Phase         string                           `json:"phase,omitempty"`
-	Message       string                           `json:"message,omitempty"`
+	// Last time the repository was synchronized.
+	// +optional
+	SyncTime metav1.Time `json:"syncTime,omitempty"`
+
+	// List of packages available in this repository.
+	// +optional
+	Packages []PackageRepositoryStatusPackage `json:"packages,omitempty"`
+
+	// Total number of packages in this repository.
+	// +optional
+	PackagesCount int `json:"packagesCount,omitempty"`
+
+	// Current phase of the repository.
+	// +optional
+	Phase string `json:"phase,omitempty"`
+
+	// Human-readable message about the repository status.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Conditions represent the latest available observations of the repository's state.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type PackageRepositoryStatusPackage struct {
+	// Name of the package.
 	Name string `json:"name"`
+
+	// Type of the package.
 	Type string `json:"type"`
 }
 

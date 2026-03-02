@@ -51,11 +51,7 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 
 	go func() {
 		defer wg.Done()
-
-		if err := p.listenReplies(listenCtx, conn); err != nil && !errors.Is(err, context.Canceled) {
-			log.Warn(fmt.Sprintf("listenReplies error: %v", err))
-			errCh <- err
-		}
+		p.listenReplies(listenCtx, conn)
 		log.Debug("listenReplies goroutine stopped")
 	}()
 
@@ -67,15 +63,6 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 		}
 		log.Debug("sendEventLoop goroutine stopped")
 	}()
-
-	// go func() {
-	// 	defer wg.Done()
-	// 	if err := p.sendPings(sendCtx, conn); err != nil && !errors.Is(err, context.Canceled) {
-	// 		log.Warn(fmt.Sprintf("sendPings error: %v", err))
-	// 		errCh <- err
-	// 	}
-	// 	log.Debug("sendPings goroutine stopped")
-	// }()
 
 	// Wait for goroutines to finish
 	go func() {
@@ -103,10 +90,10 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 // If the host is an IP address, the stats are returned directly from the maps.
 // If the host is a domain name (that resolved to multiple IPs), it aggregates `sentCount`
 // across all IPs that were resolved for this domain.
-func (p *Pinger) StatsForHost(host string) (sent int, recv int) {
+func (p *Pinger) StatsForHost(host string) (int, int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-
+	var sent, recv int
 	// Fast path: if host is an IP that was pinged directly, return its stats
 	if sentVal, ok := p.sentCount[host]; ok {
 		sent = sentVal

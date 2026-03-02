@@ -18,7 +18,7 @@ properties:
   username:
     type: string
     description: |
-      The login ID.
+      The login.
     x-examples:
       - myuname
   password:

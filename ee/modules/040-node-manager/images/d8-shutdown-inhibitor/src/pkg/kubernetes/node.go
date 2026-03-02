@@ -11,11 +11,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	dlog "github.com/deckhouse/deckhouse/pkg/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -36,7 +37,7 @@ type nodePatch struct {
 }
 
 type nodeSpecPatch struct {
-    Unschedulable bool `json:"unschedulable"`
+	Unschedulable bool `json:"unschedulable"`
 }
 
 type nodeMetadataPatch struct {

@@ -40,7 +40,7 @@ func (e Engine) deepCopyData() map[string]interface{} {
 }
 
 // Render
-func (e Engine) Render(tmpl []byte) (out *bytes.Buffer, err error) {
+func (e Engine) Render(tmpl []byte) (*bytes.Buffer, error) {
 	t := template.New(e.Name)
 	return e.renderWithTemplate(string(tmpl), t)
 }
@@ -71,10 +71,10 @@ func (e Engine) initFunMap(t *template.Template) {
 	// Add the `required` function here so we can use lintMode
 	funcMap["required"] = func(warn string, val interface{}) (interface{}, error) {
 		if val == nil {
-			return val, errors.Errorf(warnWrap(warn))
+			return val, errors.New(warnWrap(warn))
 		} else if _, ok := val.(string); ok {
 			if val == "" {
-				return val, errors.Errorf(warnWrap(warn))
+				return val, errors.New(warnWrap(warn))
 			}
 		}
 		return val, nil
@@ -85,6 +85,9 @@ func (e Engine) initFunMap(t *template.Template) {
 
 // renderWithTemplate takes a map of templates/values to render using
 // passed Template object.
+// keep named return to recover and wrap deferred error
+//
+//nolint:nonamedreturns
 func (e Engine) renderWithTemplate(tmpl string, t *template.Template) (out *bytes.Buffer, err error) {
 	// Basically, what we do here is start with an empty parent template and then
 	// build up a list of templates -- one for each file. Once all of the templates
@@ -175,7 +178,7 @@ type Files struct {
 // implements .Files.Get
 // helm version of .Files.Get returns empty string if file does not exists
 // https://github.com/helm/helm/blob/main/pkg/engine/files.go#L42-L54
-func (_ Files) Get(path string) (string, error) {
+func (Files) Get(path string) (string, error) {
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {

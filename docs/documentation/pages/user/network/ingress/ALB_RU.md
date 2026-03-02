@@ -1,5 +1,6 @@
 ---
-title: "ALB"
+title: "Использование Application Load Balancer (ALB)"
+description: "Настройка Application Load Balancer для HTTP/HTTPS/gRPC трафика в Deckhouse Kubernetes Platform. Использование ingress-nginx и istio для маршрутизации запросов, терминации SSL/TLS и публикации приложений."
 permalink: ru/user/network/ingress/alb.html
 lang: ru
 ---
@@ -50,9 +51,9 @@ spec:
               number: 80
 ```
 
-## Пример ресурса NGINX Ingress
+## Пример ресурса Ingress NGINX
 
-Для работы с NGINX Ingress администратор Deckhouse Kubernetes Platform должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
+Для работы с Ingress NGINX администратор Deckhouse Kubernetes Platform должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
 Для этого установите параметр [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) у кастомного ресурса IngressNginxController модуля [ingress-nginx](/modules/ingress-nginx/).
 
 Для публикации приложения подготовьте Ingress-ресурс, который ссылается на сервис. Обязательные аннотации для Ingress-ресурса:
@@ -133,7 +134,7 @@ spec:
         mode: SIMPLE
         # Ресурс Secret с сертификатом и ключом, который должен быть создан в пространстве имен d8-ingress-istio.
         # Поддерживаемые форматы Secret можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
-        credentialName: app-tls-secrets
+        credentialName: app-tls-secret
       hosts:
         - app.example.com
 ```

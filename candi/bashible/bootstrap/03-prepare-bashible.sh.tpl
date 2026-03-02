@@ -88,7 +88,7 @@ failure_limit=3
 while [ "$patch_pending" = true ] ; do
   for server in {{ .normal.apiserverEndpoints | join " " }} ; do
     server_addr=$(echo $server | cut -f1 -d":")
-    until tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
+    until node_ip="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
       echo "The network is not ready for connecting to apiserver yet, waiting..."
       sleep 1
     done
@@ -105,7 +105,7 @@ while [ "$patch_pending" = true ] ; do
       -H "Accept: application/json" \
       -H "Content-Type: application/json-patch+json" \
       --cacert "$BOOTSTRAP_DIR/ca.crt" \
-      --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"${tcp_endpoint}:${output_log_port}\"} }]" \
+      --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use curl -N 'http://${node_ip}:${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"http://${node_ip}:${output_log_port}\"} }]" \
       "https://$server/apis/deckhouse.io/v1alpha1/instances/${machine_name}/status" ; then
 
       echo "Successfully patched instance ${machine_name} status."

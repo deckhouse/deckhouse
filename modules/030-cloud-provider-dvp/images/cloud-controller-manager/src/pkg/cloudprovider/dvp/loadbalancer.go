@@ -14,16 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package dvp
 
 import (
 	"context"
-	"dvp-common/api"
 	"fmt"
 	"strings"
 
+	"dvp-common/api"
+
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 )
 
@@ -31,7 +32,7 @@ func (c *Cloud) GetLoadBalancer(
 	ctx context.Context,
 	clusterName string,
 	service *corev1.Service,
-) (status *corev1.LoadBalancerStatus, exists bool, err error) {
+) (*corev1.LoadBalancerStatus, bool, error) {
 	name := defaultLoadBalancerName(service)
 	svc, err := c.dvpService.LoadBalancerService.GetLoadBalancerByName(ctx, name)
 	if err != nil {
@@ -81,10 +82,10 @@ func (c *Cloud) EnsureLoadBalancerDeleted(
 	return c.dvpService.LoadBalancerService.DeleteLoadBalancerByName(ctx, name)
 }
 
-func defaultLoadBalancerName(service *v1.Service) string {
+func defaultLoadBalancerName(service *corev1.Service) string {
 	name := "a" + string(service.UID)
 
-	name = strings.Replace(name, "-", "", -1)
+	name = strings.ReplaceAll(name, "-", "")
 
 	if len(name) > 32 {
 		name = name[:32]
@@ -93,7 +94,7 @@ func defaultLoadBalancerName(service *v1.Service) string {
 	return name
 }
 
-func (c *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.Node) (*v1.LoadBalancerStatus, error) {
+func (c *Cloud) ensureLB(ctx context.Context, service *corev1.Service, nodes []*corev1.Node) (*corev1.LoadBalancerStatus, error) {
 	if len(nodes) == 0 {
 		return nil, fmt.Errorf("no Nodes provided")
 	}
@@ -104,6 +105,10 @@ func (c *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.N
 		Name:    lbName,
 		Service: service,
 		Nodes:   nodes,
+		ServiceLabels: map[string]string{
+			"deckhouse.io/managed-by":       "deckhouse",
+			"dvp.deckhouse.io/cluster-uuid": c.config.ClusterUUID,
+		},
 	}
 
 	svc, err := c.dvpService.LoadBalancerService.CreateOrUpdateLoadBalancer(ctx, lb)

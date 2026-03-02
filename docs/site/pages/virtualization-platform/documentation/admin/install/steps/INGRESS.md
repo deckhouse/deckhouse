@@ -16,11 +16,11 @@ Ensure that the Kruise controller manager for the [ingress-nginx](/modules/ingre
 d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
 
-Create an IngressNginxController resource that describes the parameters for the NGINX Ingress controller:
+Create an IngressNginxController resource that describes the parameters for the Ingress NGINX Controller:
 
 ```yaml
 d8 k apply -f - <<EOF
-# Section describing the NGINX Ingress controller parameters.
+# Section describing the Ingress NGINX Controller parameters.
 # https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

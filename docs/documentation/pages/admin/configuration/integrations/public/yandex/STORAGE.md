@@ -1,5 +1,5 @@
 ---
-title: Storage and load balancing
+title: Storage and load balancing in Yandex Cloud
 permalink: en/admin/integrations/public/yandex/storage.html
 ---
 

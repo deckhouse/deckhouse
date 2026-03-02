@@ -1,2 +1,6 @@
 dirs:
+# common
 - /config
+# for static pod (node-service)
+- /data
+- /pki

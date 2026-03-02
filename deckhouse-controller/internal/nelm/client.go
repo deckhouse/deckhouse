@@ -22,6 +22,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/werf/nelm/pkg/action"
@@ -48,6 +49,8 @@ var (
 	ErrReleaseNotFound = errors.New("release not found")
 	// ErrLabelNotFound is returned when a requested label is not present in the release
 	ErrLabelNotFound = errors.New("label not found")
+
+	one sync.Once
 )
 
 // Options contains configuration for the nelm client
@@ -108,7 +111,9 @@ type Client struct {
 // It initializes the nelm logger and applies any provided options
 func New(logger *log.Logger, opts ...Option) *Client {
 	// Set the default nelm logger to our custom adapter
-	nelmlog.Default = newNelmLogger(logger)
+	one.Do(func() {
+		nelmlog.Default = newNelmLogger(logger)
+	})
 
 	// Set default options with history limit of 10 revisions
 	defaultOpts := &Options{
@@ -206,24 +211,26 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles:    opts.ValuesPaths,
-			RuntimeSetJSON: valuesSet,
+			ValuesFiles: opts.ValuesPaths,
+			RootSetJSON: valuesSet,
 		},
 		TrackingOptions: common.TrackingOptions{
 			NoPodLogs: true,
 		},
-		Chart:                   opts.Path,
-		DefaultChartName:        releaseName,
-		DefaultChartVersion:     "0.2.0",
-		DefaultChartAPIVersion:  "v2",
-		ExtraLabels:             c.opts.Labels,
-		ExtraAnnotations:        c.opts.Annotations,
-		NoInstallStandaloneCRDs: true,
-		ReleaseHistoryLimit:     int(c.opts.HistoryMax),
-		ReleaseLabels:           opts.ReleaseLabels,
-		ReleaseStorageDriver:    c.driver,
-		Timeout:                 c.opts.Timeout,
-		ForceAdoption:           true,
+		Chart:                  opts.Path,
+		DefaultChartName:       releaseName,
+		DefaultChartVersion:    "0.2.0",
+		DefaultChartAPIVersion: "v2",
+		ReleaseInstallRuntimeOptions: common.ReleaseInstallRuntimeOptions{
+			ExtraLabels:             c.opts.Labels,
+			ExtraAnnotations:        c.opts.Annotations,
+			NoInstallStandaloneCRDs: true,
+			ReleaseHistoryLimit:     int(c.opts.HistoryMax),
+			ReleaseLabels:           opts.ReleaseLabels,
+			ReleaseStorageDriver:    c.driver,
+			ForceAdoption:           true,
+		},
+		Timeout: c.opts.Timeout,
 	}); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("install nelm release '%s': %w", releaseName, err)
@@ -253,8 +260,8 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles:    opts.ValuesPaths,
-			RuntimeSetJSON: valuesSet,
+			ValuesFiles: opts.ValuesPaths,
+			RootSetJSON: valuesSet,
 		},
 		OutputFilePath:         "/dev/null", // No output file, we return the manifest as a string
 		Chart:                  opts.Path,

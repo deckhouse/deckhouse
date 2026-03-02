@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{ $kubernetesVersion := .kubernetesVersion | toString }}
-{{ $kubeadmDir := ternary "/var/lib/bashible/kubeadm/v1beta4" "/var/lib/bashible/kubeadm/v1beta3" (semverCompare ">=1.31" $kubernetesVersion) }}
+{{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
 
 check_container_running() {
   local container_name=$1
@@ -46,9 +45,21 @@ kubeadm init phase certs all --config {{ $kubeadmDir}}/config.yaml
 kubeadm init phase kubeconfig all --config {{ $kubeadmDir}}/config.yaml
 kubeadm init phase etcd local --config {{ $kubeadmDir}}/config.yaml
 check_container_running "etcd"
+
+mkdir -p /etc/kubernetes/deckhouse/extra-files
+bb-sync-file /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml - << EOF
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+anonymous:
+  enabled: true
+  conditions:
+  - path: /livez
+  - path: /readyz
+  - path: /healthz
+EOF
+
 kubeadm init phase control-plane all --config {{ $kubeadmDir}}/config.yaml
 check_container_running "kube-apiserver"
-check_container_running "healthcheck"
 check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
 kubeadm init phase mark-control-plane --config {{ $kubeadmDir}}/config.yaml

@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- if include "nvidia_gpu_enabled" . }}
 apiVersion: v1
 kind: Service
@@ -15,4 +16,5 @@ spec:
   selector:
     app: nvidia-dcgm-exporter
   type: ClusterIP
+{{- end }}
 {{- end }}

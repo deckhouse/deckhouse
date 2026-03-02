@@ -5,3 +5,6 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-provider-azure
 stage: General Availability
+descriptions:
+  en: Manages interaction with Azure cloud resources. Allows to use Azure resources for provisioning nodes.
+  ru: Управляет взаимодействием с облачными ресурсами Azure. Позволяет использовать ресурсы Azure при создании узлов.

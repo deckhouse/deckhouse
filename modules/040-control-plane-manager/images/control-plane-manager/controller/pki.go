@@ -29,8 +29,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -41,7 +42,7 @@ const (
 )
 
 func installBasePKIfiles() error {
-	log.Info("phase: install base pki files")
+	log.Info("phase: install base PKI files")
 	if err := os.MkdirAll(filepath.Join(kubernetesPkiPath, "etcd"), 0o700); err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func installBasePKIfiles() error {
 func renewCertificates() error {
 	log.Info("phase: renew certificates")
 	components := make(map[string]string, 7)
-	
+
 	if config.EtcdArbiter {
 		components["etcd-server"] = "etcd/server"
 		components["etcd-peer"] = "etcd/peer"
@@ -93,7 +94,7 @@ func renewCertificates() error {
 		components["etcd-peer"] = "etcd/peer"
 		components["etcd-healthcheck-client"] = "etcd/healthcheck-client"
 	}
-	
+
 	for k, v := range components {
 		if err := renewCertificate(k, v); err != nil {
 			return err
@@ -105,11 +106,11 @@ func renewCertificates() error {
 func renewCertificate(componentName, f string) error {
 	path := filepath.Join(kubernetesPkiPath, f+".crt")
 	keyPath := filepath.Join(kubernetesPkiPath, f+".key")
-	log.Infof("generate or renew %s certificate %s", componentName, path)
+	log.Info("generate or renew certificate", slog.String("component", componentName), slog.String("cert_path", path))
 
 	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
 		var remove bool
-		log.Infof("configuration has changed since last certificate generation (last applied checksum %s, configuration checksum %s), verifying certificate", config.LastAppliedConfigurationChecksum, config.ConfigurationChecksum)
+		log.Info("configuration has changed since last certificate generation, verifying certificate", slog.String("last_applied_checksum", config.LastAppliedConfigurationChecksum), slog.String("configuration_checksum", config.ConfigurationChecksum))
 		if err := prepareCerts(componentName, true); err != nil {
 			return err
 		}
@@ -125,22 +126,22 @@ func renewCertificate(componentName, f string) error {
 		}
 
 		if !certificateSubjectAndSansIsEqual(currentCert, tmpCert) {
-			log.Infof("certificate %s subject or sans has been changed", path)
+			log.Info("certificate subject or SANs has been changed", slog.String("cert_path", path))
 			remove = true
 		}
 
 		if !certificateEncAndLengthIsEqual(currentCert, tmpCert) {
-			log.Infof("certificate %s encription or lenght has been changed", path)
+			log.Info("certificate encryption or length has been changed", slog.String("cert_path", path))
 			remove = true
 		}
 
 		if certificateExpiresSoon(currentCert, 30*24*time.Hour) {
-			log.Infof("certificate %s is expiring in less than 30 days", path)
+			log.Info("certificate is expiring in less than 30 days", slog.String("cert_path", path))
 			remove = true
 		}
 
 		if _, err := os.Stat(keyPath); err != nil {
-			log.Infof("certificate %s exists, but no appropriate key %s is found", path, keyPath)
+			log.Info("certificate exists, but no appropriate key is found", slog.String("cert_path", path), slog.String("key_path", keyPath))
 			remove = true
 		}
 
@@ -155,7 +156,7 @@ func renewCertificate(componentName, f string) error {
 	}
 
 	if _, err := os.Stat(path); err == nil {
-		log.Infof("%s certificate is up to date", path)
+		log.Info("certificate is up to date", slog.String("cert_path", path))
 		return nil
 	}
 	// regenerate certificate
@@ -184,7 +185,7 @@ func certificateSubjectAndSansIsEqual(a, b *x509.Certificate) bool {
 }
 
 func fillTmpDirWithPKIData() error {
-	log.Infof("phase: fill tmp dir %s with pki data", config.TmpPath)
+	log.Info("phase: fill temporary directory with PKI data", slog.String("dir", config.TmpPath))
 
 	if err := os.RemoveAll(config.TmpPath); err != nil {
 		return err
@@ -267,7 +268,7 @@ func prepareCerts(componentName string, isTemp bool) error {
 	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
-		log.Infof("%s", s)
+		log.Info(s)
 	}
 	return err
 }

@@ -39,6 +39,10 @@ social_links:
 
 output: web
 
+collections:
+  faq:
+    output: false
+
 exclude:
 - .idea/
 - .gitignore
@@ -131,4 +135,18 @@ defaults:
     values:
       lang: ru
       showPrevNextButton: true
+  - scope:
+      path: "_faq/admin"
+      type: faq
+    values:
+      section: admin
+      searchable: true
+      sitemap_include: true
+  - scope:
+      path: "_faq/user"
+      type: faq
+    values:
+      section: user
+      searchable: true
+      sitemap_include: true
 timezone: Europe/Moscow

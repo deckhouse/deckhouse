@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/pprof"
-	_ "net/http/pprof"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type PrometheusExporterMetrics struct {
@@ -49,7 +49,6 @@ type PrometheusExporterMetrics struct {
 }
 
 func RegisterMetrics(reg prometheus.Registerer) *PrometheusExporterMetrics {
-
 	p := &PrometheusExporterMetrics{
 		nodeSent: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "kube_node_ping_packets_sent_total",
@@ -125,7 +124,6 @@ func (p *PrometheusExporterMetrics) UpdateNode(name, ip string, rtts []float64, 
 func updateSet(sentVec, recvVec *prometheus.CounterVec, rttVec *prometheus.CounterVec,
 	minVec, maxVec, stdVec *prometheus.GaugeVec,
 	labels prometheus.Labels, rtts []float64, sent, received int) {
-
 	// log.Info(fmt.Sprintf("ping sent=%d, received=%d, rtts=%v", sent, received, rtts))
 
 	sentVec.With(labels).Add(float64(sent))
@@ -148,17 +146,16 @@ func updateSet(sentVec, recvVec *prometheus.CounterVec, rttVec *prometheus.Count
 }
 
 func StartPrometheusServer(ctx context.Context, addr string, reg *prometheus.Registry) {
-
 	mux := http.NewServeMux()
 
 	// Health check endpoints
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	// Metrics

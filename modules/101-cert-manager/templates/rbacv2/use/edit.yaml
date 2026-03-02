@@ -12,12 +12,26 @@ rules:
 - apiGroups:
   - cert-manager.io
   resources:
-  - certificaterequests
   - certificates
-  - issuers
+  - issuers  
   verbs:
   - create
   - update
   - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - challenges
+  - certificaterequests    
+  verbs:
+  - delete
+  - deletecollection
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - orders
+  verbs:
   - delete
   - deletecollection

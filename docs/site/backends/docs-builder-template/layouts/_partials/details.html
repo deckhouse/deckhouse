@@ -1,0 +1,8 @@
+<div class="details">
+    <p class="details__lnk"><a href="javascript:void(0)" class="details__summary">{{ .summary | markdownify }}</a></p>
+    <div class="details__content">
+        <div class="expand">
+          {{- .content | markdownify }}
+        </div>
+    </div>
+</div>

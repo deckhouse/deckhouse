@@ -174,7 +174,7 @@ func TestRegistrySecretHandler(t *testing.T) {
 			wantMessage: "must be in format login:password",
 		},
 		{
-			name: "login empty rejected",
+			name: "empty login allowed",
 			secret: createSecret("d8-system", "deckhouse-registry", map[string][]byte{
 				"address": []byte("registry"),
 				"path":    []byte("repo"),
@@ -184,8 +184,33 @@ func TestRegistrySecretHandler(t *testing.T) {
 					}
 				}`),
 			}),
-			wantAllowed: false,
-			wantMessage: "Login for registry",
+			wantAllowed: true,
+		},
+		{
+			name: "empty password allowed",
+			secret: createSecret("d8-system", "deckhouse-registry", map[string][]byte{
+				"address": []byte("registry"),
+				"path":    []byte("repo"),
+				".dockerconfigjson": []byte(`{
+					"auths": {
+						"registry.example.com": { "auth": "` + base64.StdEncoding.EncodeToString([]byte("login:")) + `" }
+					}
+				}`),
+			}),
+			wantAllowed: true,
+		},
+		{
+			name: "empty password and login are allowed",
+			secret: createSecret("d8-system", "deckhouse-registry", map[string][]byte{
+				"address": []byte("registry"),
+				"path":    []byte("repo"),
+				".dockerconfigjson": []byte(`{
+					"auths": {
+						"registry.example.com": { "auth": "` + base64.StdEncoding.EncodeToString([]byte(":")) + `" }
+					}
+				}`),
+			}),
+			wantAllowed: true,
 		},
 		{
 			name: "valid secret passes",

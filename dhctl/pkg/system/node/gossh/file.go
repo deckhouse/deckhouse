@@ -27,10 +27,12 @@ import (
 	"sync"
 
 	"github.com/bramvdbogaerde/go-scp"
+	uuid "gopkg.in/satori/go.uuid.v1"
+
+	ssh "github.com/deckhouse/lib-gossh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	ssh "github.com/deckhouse/lib-gossh"
-	uuid "gopkg.in/satori/go.uuid.v1"
 )
 
 type SSHFile struct {
@@ -124,13 +126,22 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 
 	if fType != "DIR" {
 		// regular file logic
+		lType, err := CheckLocalPath(dstPath)
+		if err != nil {
+			if !strings.ContainsAny(err.Error(), "No such file or directory") {
+				return err
+			}
+		}
+		if lType == "DIR" {
+			dstPath = filepath.Join(dstPath, filepath.Base(remotePath))
+		}
 		localFile, err := os.Create(dstPath)
 		if err != nil {
 			return fmt.Errorf("failed to open local file: %w", err)
 		}
 		defer localFile.Close()
 		if err := CopyFromRemote(ctx, localFile, remotePath, f.sshClient); err != nil {
-			return fmt.Errorf("failed to copy file to remote host: %w", err)
+			return fmt.Errorf("failed to copy file from remote host: %w", err)
 		}
 	} else {
 		// recursive copy logic
@@ -151,7 +162,10 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 		re := regexp.MustCompile(`\s+`)
 		files := re.Split(filesString, -1)
 		for _, file := range files {
-			f.Download(ctx, remotePath+"/"+file, dstPath+"/"+file)
+			err = f.Download(ctx, filepath.Join(remotePath, file), filepath.Join(dstPath, file))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -167,7 +181,7 @@ func (f *SSHFile) DownloadBytes(ctx context.Context, remotePath string) ([]byte,
 	defer func() {
 		err := os.Remove(dstPath)
 		if err != nil {
-			log.InfoF("Error: cannot remove tmp file '%s': %v\n", dstPath, err)
+			log.DebugF("Error: cannot remove tmp file '%s': %v\n", dstPath, err)
 		}
 	}()
 
@@ -362,7 +376,6 @@ func checkResponse(r io.Reader) error {
 	}
 
 	return nil
-
 }
 
 func wait(wg *sync.WaitGroup, ctx context.Context) error {
@@ -382,7 +395,6 @@ func wait(wg *sync.WaitGroup, ctx context.Context) error {
 }
 
 func CopyFromRemote(ctx context.Context, file *os.File, remotePath string, sshClient *ssh.Client) error {
-
 	session, err := sshClient.NewSession()
 	if err != nil {
 		return fmt.Errorf("Error creating ssh session in copy from remote: %v", err)
@@ -401,7 +413,6 @@ func CopyFromRemote(ctx context.Context, file *os.File, remotePath string, sshCl
 			errCh <- err
 			// We must unblock the go routine first as we block on reading the channel later
 			wg.Done()
-
 		}()
 
 		r, err := session.StdoutPipe()

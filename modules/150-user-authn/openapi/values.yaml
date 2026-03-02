@@ -202,6 +202,7 @@ properties:
                       type: string
                       enum:
                         - PasswordPolicyLockout
+                        - LockedByAdministrator
                     message:
                       type: string
                     until:
@@ -348,6 +349,15 @@ properties:
             ldap:
               type: object
               additionalProperties: true
+              properties:
+                enableBasicAuth:
+                  type: boolean
+                basicAuthUnsupported:
+                  type: boolean
+                scopes:
+                  type: array
+                  items:
+                    type: string
             bitbucketCloud:
               type: object
               additionalProperties: true

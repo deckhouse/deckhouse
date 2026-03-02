@@ -24,7 +24,7 @@ shell:
   - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -42,6 +42,11 @@ shell:
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
     - cd /src
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /egress-gateway-agent cmd/main.go
+    - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+    - | 
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o /egress-gateway-agent cmd/main.go` -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
     - chown 64535:64535 /egress-gateway-agent
     - chmod 0755 /egress-gateway-agent

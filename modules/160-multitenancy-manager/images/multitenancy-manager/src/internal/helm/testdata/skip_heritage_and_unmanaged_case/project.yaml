@@ -1,0 +1,8 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: test
+spec:
+  description: Test project for skip-heritage and unmanaged labels
+  projectTemplateName: skip-heritage-test
+  parameters: {}

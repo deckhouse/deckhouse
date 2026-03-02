@@ -1,0 +1,98 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kdc-config
+  namespace: d8-user-authn
+data:
+  krb5.conf: |
+    [libdefaults]
+      default_realm = EXAMPLE.COM
+      rdns = false
+      dns_lookup_kdc = false
+    [realms]
+      EXAMPLE.COM = {
+        kdc = kdc-0.kdc.d8-user-authn.svc.cluster.local
+        admin_server = kdc-0.kdc.d8-user-authn.svc.cluster.local
+      }
+  kdc.conf: |
+    [kdcdefaults]
+      kdc_ports = 88
+      kdc_tcp_ports = 88
+    [realms]
+      EXAMPLE.COM = {
+        max_life = 10h 0m 0s
+        max_renewable_life = 7d 0h 0m 0s
+        supported_enctypes = aes256-cts:normal aes128-cts:normal
+      }
+  kadm5.acl: |
+    */admin@EXAMPLE.COM *
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kdc
+  namespace: d8-user-authn
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: kdc }
+  template:
+    metadata:
+      labels: { app: kdc }
+    spec:
+      containers:
+      - name: kdc
+        image: debian:12-slim
+        imagePullProgressDeadlineSeconds: 600
+        securityContext: { runAsUser: 0 }
+        command: ["/bin/bash","-lc"]
+        args:
+          - |
+            set -e
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y krb5-kdc krb5-admin-server
+            cp /config/krb5.conf /etc/krb5.conf
+            cp /config/kdc.conf /etc/krb5kdc/kdc.conf
+            cp /config/kadm5.acl /etc/krb5kdc/kadm5.acl
+            if [ ! -f /var/lib/krb5kdc/principal ]; then
+              kdb5_util create -s -r EXAMPLE.COM -P adminpass || true
+              kadmin.local -q "addprinc -pw adminpass admin/admin" || true
+            fi
+            krb5kdc -n &
+            exec kadmind -nofork
+        volumeMounts:
+        - { name: kdc-config, mountPath: /config }
+        - { name: kdc-data,   mountPath: /var/lib/krb5kdc }
+      volumes:
+      - name: kdc-config
+        configMap: { name: kdc-config }
+      - name: kdc-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kdc
+  namespace: d8-user-authn
+spec:
+  type: NodePort
+  selector: { app: kdc }
+  ports:
+  - name: kdc-tcp
+    port: 88
+    targetPort: 88
+    protocol: TCP
+    # NodePort assigned automatically by Kubernetes (range 30000-32767)
+  - name: kdc-udp
+    port: 88
+    targetPort: 88
+    protocol: UDP
+    # NodePort assigned automatically by Kubernetes
+  - name: kadm
+    port: 749
+    targetPort: 749
+    protocol: TCP
+    # NodePort assigned automatically by Kubernetes
+
+

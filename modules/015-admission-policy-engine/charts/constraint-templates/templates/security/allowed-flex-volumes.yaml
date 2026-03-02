@@ -43,6 +43,7 @@ spec:
         package d8.security_policies
 
         violation[{"msg": msg, "details": {}}] {
+            not input.review.operation == "DELETE"
             volume := input_flexvolumes[_]
             not input_flexvolumes_allowed(volume)
             msg := sprintf("FlexVolume %v is not allowed, pod: %v. Allowed drivers: %v", [volume, input.review.object.metadata.name, input.parameters.allowedFlexVolumes])

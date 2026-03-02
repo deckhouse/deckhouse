@@ -11,8 +11,7 @@ lang: ru
 * **Control plane** — управляющие и обслуживающие сервисы. Под control plane обычно подразумевают поды istiod.
 * **Data plane** — прикладная часть Istio. Представляет собой контейнеры sidecar-proxy.
 
-![Архитектура кластера с включенным Istio](../../images/istio/istio-architecture.svg)
-<!--- Исходник: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
+![Архитектура кластера с включенным Istio](../../images/istio/istio-architecture.png)
 
 Все сервисы из Data Plane группируются в сервис-меш (service mesh). Его характеристики:
 

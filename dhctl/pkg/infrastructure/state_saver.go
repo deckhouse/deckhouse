@@ -39,6 +39,8 @@ type StateSaver struct {
 	watcher *fsnotify.Watcher
 	doneCh  chan struct{}
 	stopped bool
+
+	runnerName string
 }
 
 func NewStateSaver(destinations []SaverDestination) *StateSaver {
@@ -50,24 +52,31 @@ func NewStateSaver(destinations []SaverDestination) *StateSaver {
 // Start creates a new file watcher for r.statePath and
 // a chan to stop it.
 func (s *StateSaver) Start(runner *Runner) error {
-	if s.stopped {
+	if runner == nil {
+		log.ErrorF("Possible bug!!! The state watcher runner is nil!\n")
 		return nil
 	}
 
 	s.saversLock.RLock()
 	defer s.saversLock.RUnlock()
 
+	s.runnerName = fmt.Sprintf("[StateSaver runner='%s' state='%s'] ", runner.name, runner.statePath)
+
+	if s.stopped {
+		s.debug("Saver state saver has not been started. Already stopped.")
+		return nil
+	}
+
 	if len(s.saversDestinations) == 0 {
+		s.debug("Saver state saver has not been started. Empty destinations")
 		return nil
 	}
 
 	if s.watcher != nil {
+		s.debug("Saver state saver already started")
 		return nil
 	}
 
-	if runner == nil {
-		return nil
-	}
 	s.runner = runner
 
 	if err := fs.TouchFile(s.runner.statePath); err != nil {
@@ -87,6 +96,7 @@ func (s *StateSaver) Start(runner *Runner) error {
 // Stop is blocked until doneCh is closed.
 func (s *StateSaver) Stop() {
 	if s.stopped {
+		s.debug("Already been stopped")
 		return
 	}
 
@@ -94,11 +104,13 @@ func (s *StateSaver) Stop() {
 	if s.watcher != nil {
 		err := s.watcher.Close()
 		if err != nil {
-			log.DebugF("State file watcher did not close: %v \n", err)
+			s.debug("State file watcher did not close: %v", err)
 		}
 		// Wait until saves are completed.
 		<-s.doneCh
 	}
+
+	s.debug("Stopped successfully")
 }
 
 func (s *StateSaver) IsStarted() bool {
@@ -114,19 +126,19 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 	defer s.saversLock.RUnlock()
 
 	if s.runner == nil {
-		log.ErrorF("Possible bug!!! The state watcher got fs event while not started!")
+		log.ErrorF("Possible bug!!! The state watcher got fs event while not started!\n")
 	}
 
 	if event.Op&fsnotify.Write != fsnotify.Write {
 		return
 	}
-	log.DebugF("modified state file: %s\n", event.Name)
+	s.debug("State file modified: %s", event.Name)
 	if app.IsDebug {
 		fs.CreateFileBackup(event.Name)
 	}
 
 	if len(s.saversDestinations) == 0 {
-		log.DebugF("Not found state saversDestinations. Skip. %s\n", event.Name)
+		s.debug("Not found state saversDestinations. Skip. %s", event.Name)
 		return
 	}
 
@@ -136,7 +148,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 		return
 	}
 
-	log.DebugLn("Save intermediate state...")
+	s.debug("Save intermediate state...")
 	wg := &sync.WaitGroup{}
 	hasError := int32(0)
 	for _, saver := range s.saversDestinations {
@@ -157,8 +169,12 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 	wg.Wait()
 
 	if (s.stopped || s.runner.stopped) && hasError == 0 {
-		log.DebugF("Infrastructure state is saved.\n")
+		s.debug("Infrastructure state is saved.")
 	}
+}
+
+func (s *StateSaver) debug(f string, args ...any) {
+	debugStateSaver(s.runnerName+f, args...)
 }
 
 func (s *StateSaver) addDestinations(destinations ...SaverDestination) {
@@ -176,17 +192,17 @@ type cacheDestination struct {
 
 func (d *cacheDestination) SaveState(outputs *PipelineOutputs) error {
 	if len(outputs.InfrastructureState) == 0 {
-		log.DebugF("state is empty. Skip\n")
+		debugStateSaver("State is empty. Skip")
 		return nil
 	}
 	name := d.runner.stateName()
-	log.DebugF("Intermediate save state %s in cache...\n", name)
+	debugStateSaver("Intermediate save state %s in cache...\n", name)
 	err := d.runner.stateCache.Save(name, outputs.InfrastructureState)
 	msg := fmt.Sprintf("Intermediate state %s in cache was saved\n", name)
 	if err != nil {
 		msg = fmt.Sprintf("Intermediate state %s in cache was not saved: %v\n", name, err)
 	}
-	log.DebugF(msg)
+	debugStateSaver(msg)
 	return err
 }
 
@@ -198,4 +214,8 @@ func getCacheDestination(runner *Runner) *cacheDestination {
 	return &cacheDestination{
 		runner: runner,
 	}
+}
+
+func debugStateSaver(f string, args ...any) {
+	log.DebugF(f+"\n", args...)
 }

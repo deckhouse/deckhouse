@@ -21,10 +21,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	ssh_testing "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh/testing"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCommandOutput(t *testing.T) {

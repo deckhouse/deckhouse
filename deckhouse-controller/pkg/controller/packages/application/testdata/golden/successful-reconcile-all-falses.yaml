@@ -20,17 +20,12 @@ metadata:
     kind: ApplicationPackage
     name: test
     uid: ""
-  resourceVersion: "3"
+  resourceVersion: "2"
 spec:
   packageName: test
-  packageRepository: deckhouse
-  version: v1.0.3
-status:
-  resourceConditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: Processed
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.3
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage
@@ -43,10 +38,11 @@ metadata:
 status:
   availableRepositories:
   - deckhouse
-  installed:
-    foobar:
-    - name: test-app
-  installedOverall: 1
+  usedBy:
+  - name: test-app
+    namespace: foobar
+    version: v1.0.3
+  usedByCount: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
@@ -57,10 +53,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.3
   resourceVersion: "2"
-spec:
-  packageName: test
-  packageRepository: deckhouse
-  version: v1.0.3
+spec: {}
 status:
   conditions:
   - lastProbeTime: null
@@ -76,12 +69,10 @@ status:
       deckhouse: '>=1.0.0'
       kubernetes: '>=1.26'
     stage: Preview
-  packageName: test
   usedBy:
   - name: test-app
     namespace: foobar
   usedByCount: 1
-  version: v1.0.3
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

@@ -6,9 +6,10 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestExtractLoadBalancerInfo_BasicCase(t *testing.T) {
@@ -71,11 +72,7 @@ func TestExtractLoadBalancerInfo_BasicCase(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := extractLoadBalancerInfo(tt.services)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("extractLoadBalancerInfo() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := extractLoadBalancerInfo(tt.services)
 
 			if len(got) != len(tt.want) {
 				t.Fatalf("expected %d gateways, got %d", len(tt.want), len(got))
@@ -112,7 +109,7 @@ func TestExtractLoadBalancerInfo_EdgeCases(t *testing.T) {
 			},
 		}
 
-		got, _ := extractLoadBalancerInfo(services)
+		got := extractLoadBalancerInfo(services)
 		if len(got) != 1 {
 			t.Fatalf("expected 1 gateway, got %d", len(got))
 		}
@@ -149,7 +146,7 @@ func TestExtractLoadBalancerInfo_EdgeCases(t *testing.T) {
 			},
 		}
 
-		got, _ := extractLoadBalancerInfo(services)
+		got := extractLoadBalancerInfo(services)
 		if len(got) != 1 {
 			t.Errorf("expected 1 valid gateway, got %d", len(got))
 		}

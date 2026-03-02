@@ -1,0 +1,53 @@
+cloud-provider-azure:
+  fixes:
+    - summary: fixed patch in azure
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17696
+cloud-provider-dvp:
+  fixes:
+    - summary: Fixed VM deletion timeout and improved memory validation error reporting
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17587
+    - summary: Cleanup orphaned resources when VM creation fails
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17533
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: fix cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17171
+cloud-provider-vcd:
+  fixes:
+    - summary: fix the interaction of legacy and non-legacy components with the API
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17642
+cloud-provider-vsphere:
+  fixes:
+    - summary: fix cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17106
+cni-cilium:
+  fixes:
+    - summary: Fix hook discovery_cni_exclusive.go
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17719
+      impact: If the SDN module is used in the cluster, the Cilium agent pods will be restarted.
+docs:
+  features:
+    - summary: Add the enableNote display to the external modules configuration page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17603
+  fixes:
+    - summary: Fixed typo in the OpenStack integration section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17681
+    - summary: Added Docker Bearer Token Realm configuration steps for Nexus registry setup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17615
+    - summary: Document NAT instance deployment zones for different subnet configurations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15382
+      impact: Improved documentation clarity for Yandex Cloud NAT instance deployment scenarios
+ingress-nginx:
+  fixes:
+    - summary: Fixed useless geoip alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17713
+monitoring-kubernetes:
+  fixes:
+    - summary: fix kube_persistentvolume_is_local recording rule for not-bound PVCs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17638
+prometheus:
+  features:
+    - summary: improve redirects from Grafana to the Deckhouse UI when Grafana is disabled
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16988
+      impact: no impact
+

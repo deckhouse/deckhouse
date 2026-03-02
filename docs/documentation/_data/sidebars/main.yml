@@ -390,26 +390,6 @@ entries:
                     ru: Гибридный кластер
                   url: /admin/integrations/hybrid/overview.html
             - title:
-                en: Platform update
-                ru: Обновление платформы
-              folders:
-                - title:
-                    en: Overview
-                    ru: Обзор
-                  url: /admin/configuration/update/
-                - title:
-                    en: Configuring updates
-                    ru: Настройка обновлений
-                  url: /admin/configuration/update/configuration.html
-                - title:
-                    en: Configuring notifications
-                    ru: Настройка уведомлений
-                  url: /admin/configuration/update/notifications.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /admin/configuration/update/faq.html
-            - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
               folders:
@@ -453,10 +433,6 @@ entries:
                         en: Scaling and changing master nodes
                         ru: Масштабирование и изменение master-узлов
                       url: /admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html
-                    - title:
-                        en: Updating Kubernetes and versioning
-                        ru: Обновление Kubernetes и управление версиями
-                      url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
                 - title:
                     en: Node management
                     ru: Управление узлами
@@ -570,8 +546,8 @@ entries:
                         ru: ALB
                       folders:
                         - title:
-                            en: ALB with NGINX Ingress controller
-                            ru: ALB средствами NGINX Ingress controller
+                            en: ALB with Ingress NGINX Controller
+                            ru: ALB средствами Ingress NGINX Controller
                           url: /admin/configuration/network/ingress/alb/nginx.html
                         - title:
                             en: ALB with Istio
@@ -590,8 +566,8 @@ entries:
                         ru: Egress Gateway
                       url: /admin/configuration/network/egress/gateway.html
                 - title:
-                    en: Inter-cluster cooperation (alliance)
-                    ru: Межкластерное взаимодействие (альянс)
+                    en: Inter-cluster cooperation
+                    ru: Межкластерное взаимодействие
                   folders:
                     - title:
                         en: Overview
@@ -610,6 +586,18 @@ entries:
                      ru: Настройка сетевых политик
                   url: /admin/configuration/network/policy/configuration.html
                 - title:
+                    en: SDN
+                    ru: SDN
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/network/sdn/
+                    - title:
+                        en: Configuring SDN in a DKP cluster
+                        ru: Настройка SDN в кластере DKP
+                      url: /admin/configuration/network/sdn/configure.html
+                - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
                   folders:
@@ -623,7 +611,7 @@ entries:
                       url: /admin/configuration/network/other/dns.html
                     - title:
                         en: Caching DNS requests on cluster nodes
-                        ru: Кэширование DNS-запросов на узлах кластера
+                        ru: Кеширование DNS-запросов на узлах кластера
                       url: /admin/configuration/network/other/dns-caching.html
                     - title:
                         en: BpfLB operation modes for external traffic processing
@@ -847,8 +835,16 @@ entries:
                   url: /admin/configuration/logging/storage.html
             - title:
                 en: Multitenancy
-                ru: Мультенантность
-              url: /admin/multitenancy.html
+                ru: Мультитенантность
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/multitenancy.html
+                - title:
+                    en: Project management
+                    ru: Управление проектами
+                  url: /admin/multitenancy/project-management.html
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
@@ -858,10 +854,33 @@ entries:
                 ru: Назначение лейблов пространствам имён
               url: /admin/configuration/label-assignment.html
         - title:
+            en: Platform update
+            ru: Обновление платформы
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /admin/configuration/update/
+            - title:
+                en: Configuring updates
+                ru: Настройка обновлений
+              url: /admin/configuration/update/configuration.html
+            - title:
+                en: Configuring notifications
+                ru: Настройка уведомлений
+              url: /admin/configuration/update/notifications.html
+            - title:
+                en: Updating Kubernetes and versioning
+                ru: Обновление Kubernetes и управление версиями
+              url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /admin/configuration/update/faq.html
+        - title:
             en: Platform uninstalling
             ru: Удаление платформы
           url: /uninstalling/
-
 # ------------- Using -------------
     - title:
         en: Using
@@ -873,8 +892,8 @@ entries:
           draft: true
           url: /user/using-overview.html
         - title:
-            en: Access
-            ru: Доступ
+            en: IAM
+            ru: IAM
           folders:
           - title:
               en: Authentication
@@ -914,6 +933,18 @@ entries:
                     ru: ALB
                   url: /user/network/ingress/alb.html
             - title:
+                en: SDN
+                ru: SDN
+              folders:
+                - title:
+                    en: Additional networks for application pods
+                    ru: Дополнительные сети для прикладных подов
+                  url: /user/network/sdn/dedicated.html
+                - title:
+                    en: Connecting physical network interfaces to DPDK application pods
+                    ru: Подключение физических сетевых интерфейсов к подам DPDK-приложений
+                  url: /user/network/sdn/underlay.html
+            - title:
                 en: Intra-cluster communication
                 ru: Внутрикластерное взаимодействие
               url: /user/network/intra-cluster.html
@@ -931,7 +962,7 @@ entries:
               url: /user/network/app_istio_activation.html
             - title:
                 en: Managing request balancing between service endpoints with Istio
-                ru: Управление балансировкой запросов между эндпойнтами сервиса с Istio
+                ru: Управление балансировкой запросов между эндпоинтами сервиса с Istio
               url: /user/network/managing_request_between_service_istio.html
             - title:
                 en: Locality failover with Istio
@@ -1028,6 +1059,10 @@ entries:
                 en: Overview
                 ru: Обзор
               url: /user/monitoring/
+            - title:
+                en: Dashboards
+                ru: Дашборды
+              url: /user/monitoring/dashboards.html
             - title:
                 en: Configuring application monitoring
                 ru: Настройка мониторинга приложений
@@ -1194,7 +1229,7 @@ entries:
             url: /architecture/network/service-with-istio.html
           - title:
               en: Caching DNS server in a cluster
-              ru: Кэширующий DNS-сервер в кластере
+              ru: Кеширующий DNS-сервер в кластере
             url: /architecture/network/dns-caching.html
         - title:
             en: Multitenancy
@@ -1280,6 +1315,10 @@ entries:
             en: Reference
             ru: Справка
           url: /cli/d8/reference/
+    - title:
+        en: FAQ
+        ru: FAQ
+      url: /faq.html
     - title:
         en: Release notes
         ru: История изменений

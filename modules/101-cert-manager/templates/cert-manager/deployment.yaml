@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: cert-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "cert-manager"
@@ -63,8 +63,7 @@ spec:
           - --v=1
           - --cluster-resource-namespace=$(POD_NAMESPACE)
           - --leader-election-namespace=$(POD_NAMESPACE)
-          - --acme-http01-solver-resource-limits-cpu=0
-          - --acme-http01-solver-resource-request-cpu=0
+          - --feature-gates=ACMEHTTP01IngressPathTypeExact=false # TODO: Remove after update ingress-nginx up to v1.13.2+ and v1.12.6+
           - "--acme-http01-solver-image={{ include "helm_lib_module_image" (list . "certManagerAcmeSolver") }}"
           {{- if $.Values.certManager.maxConcurrentChallenges }}
           - --max-concurrent-challenges={{ $.Values.certManager.maxConcurrentChallenges }}

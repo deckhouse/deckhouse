@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -228,6 +229,11 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 		if err != nil {
 			return err
 		}
+		var countServices = 0
+		if privateMetadata.PublicServices != nil {
+			countServices = len(*privateMetadata.PublicServices)
+		}
+		input.Logger.Info(fmt.Sprintf("Cluster name: %s connected successfully, published services: %s", myTrustDomain, strconv.Itoa(countServices)))
 	}
 	return nil
 }

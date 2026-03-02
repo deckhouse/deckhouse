@@ -41,9 +41,10 @@ import (
 )
 
 const (
-	dbExtension    = ".tar.gz"
-	maxmindURL     = "https://download.maxmind.com/app/geoip_download?license_key=%v&edition_id=%v&suffix=tar.gz"
-	lockTimeLayout = time.RFC3339Nano
+	dbExtension           = ".tar.gz"
+	maxmindURL            = "https://download.maxmind.com/app/geoip_download?license_key=%v&edition_id=%v&suffix=tar.gz"
+	lockTimeLayout        = time.RFC3339Nano
+	legacyDownloadTimeout = 1 * time.Minute
 
 	headlessServiceName = "geoproxy-headless"
 	kubeRBACProxyPort   = "7475" // kube-rbac-proxy serves HTTPS on 7475
@@ -67,7 +68,8 @@ func NewDownloader(watcher *GeoUpdaterSecret, leader *LeaderElection) *Downloade
 func (d *Downloader) Download(ctx context.Context, dstPathRoot string, cfg *Config, force bool) error {
 	mapLicenseAndEditions := d.watcher.GetLicenseEditions()
 	if len(mapLicenseAndEditions) == 0 {
-		klog.Infof("License editions is emty, skip downloading...")
+		klog.Infof("License editions is empty, skip downloading...")
+		GeoIPDownloadError.Reset()
 		return nil
 	}
 
@@ -81,15 +83,20 @@ func (d *Downloader) Download(ctx context.Context, dstPathRoot string, cfg *Conf
 		}
 	}
 
+	GeoIPDownloadError.Reset()
+
 	var errs []error
 	for licenseKey, account := range mapLicenseAndEditions {
 		client, clientInitialized := d.initMaxMindClient(account.AccountID, licenseKey)
 
 		for _, edition := range account.Editions {
 			if err := d.downloadEdition(ctx, dstPathRoot, licenseKey, edition, account, client, clientInitialized, cfg); err != nil {
-				errs = append(errs, fmt.Errorf("license %s edition %s: %w", licenseKey, edition, err))
-				log.Error(err.Error())
+				errs = append(errs, fmt.Errorf("edition %s: %w", edition, err))
+				log.Error(fmt.Sprintf("Failed to download GeoIP database edition %s: %v", edition, err))
+				GeoIPDownloadError.WithLabelValues(edition).Set(1)
+				continue
 			}
+			GeoIPDownloadError.WithLabelValues(edition).Set(0)
 		}
 	}
 
@@ -103,7 +110,7 @@ func (d *Downloader) initMaxMindClient(accountID int, licenseKey string) (maxmin
 
 	client, err := maxmindClient.New(accountID, licenseKey)
 	if err != nil {
-		log.Error(fmt.Sprintf("Failed init MaxMind client: %v", err))
+		log.Error(fmt.Sprintf("Failed to initialize MaxMind client: %v", err))
 		return maxmindClient.Client{}, false
 	}
 
@@ -116,7 +123,7 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 
 	var maxmindErr error
 	// if not leader download db from leader
-	if !d.isLeader() {
+	if !d.isCurrentPodLeader() {
 		link, err := d.waitLeaderLink(ctx, cfg.Namespace, kubeRBACProxyPort)
 		if err == nil && link != "" {
 			account.Mirror.URL = link
@@ -124,7 +131,9 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 			account.DownloadFromLeader = true
 			return d.downloadFromLeader(ctx, dstPathRoot, licenseKey, edition, account)
 		}
-		log.Warn(fmt.Sprintf("Leader endpoint is unknown, fallback to direct download for %s: %v", edition, err))
+		if err != nil {
+			log.Warn(fmt.Sprintf("Leader endpoint is unknown, fallback to direct download for %s: %v", edition, err))
+		}
 	}
 
 	// try download db bu official library
@@ -135,7 +144,7 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 		}
 		if err != nil {
 			maxmindErr = err
-			log.Error(fmt.Sprintf("Failed download GeoIP DB by MaxMind client: %v", err))
+			log.Error(fmt.Sprintf("Failed to download GeoIP database via MaxMind client: %v", err))
 		}
 	}
 
@@ -151,7 +160,6 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 func (d *Downloader) tryMaxMindClient(ctx context.Context, client maxmindClient.Client, edition, currentMD5, dstPathRoot string) (bool, error) {
 	downloadResp, err := client.Download(ctx, edition, currentMD5)
 	if err != nil {
-		incrementError(err)
 		return false, fmt.Errorf("maxmind client download: %w", err)
 	}
 
@@ -184,7 +192,6 @@ func (d *Downloader) downloadLegacyEdition(ctx context.Context, dstPathRoot, lic
 	skipTLS := account.Mirror.InsecureSkipVerify || account.LegacySkipTLS
 	dataDB, err := downloadDB(ctx, url, skipTLS, account.Mirror.CA)
 	if err != nil {
-		incrementError(err)
 		return fmt.Errorf("download data: %w", err)
 	}
 
@@ -232,7 +239,7 @@ func downloadDB(ctx context.Context, url string, skipTLSverify bool, caPEM strin
 		transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
 	}
 
-	client := &http.Client{Transport: transport, Timeout: time.Second * 3}
+	client := &http.Client{Transport: transport, Timeout: legacyDownloadTimeout}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
@@ -369,6 +376,7 @@ func isTarGZArchive(gzipStream io.Reader) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("is not gzip archive: %w", err)
 	}
+	defer uncompressedStream.Close()
 
 	tarReader := tar.NewReader(uncompressedStream)
 	if _, err := tarReader.Next(); err != nil {
@@ -376,17 +384,6 @@ func isTarGZArchive(gzipStream io.Reader) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func incrementError(dlErr error) {
-	trimmedError := []rune(dlErr.Error())
-	if len(trimmedError) > 64 {
-		trimmedError = trimmedError[:64]
-	}
-
-	stringErr := string(trimmedError)
-
-	GeoIPErrors.WithLabelValues(stringErr, "download").Inc()
 }
 
 // saveDBFromMMDB packs a raw MMDB stream into a tar.gz archive named <edition>.mmdb
@@ -466,6 +463,7 @@ func (d *Downloader) saveDBFromMMDB(data io.ReadCloser, dstPathRoot, edition str
 
 func createURL(mirror, licenseKey, dbName string) string {
 	if mirror != "" {
+		mirror = strings.TrimRight(mirror, "/")
 		return fmt.Sprintf("%s/%s%s", mirror, dbName, dbExtension)
 	}
 	return fmt.Sprintf(maxmindURL, licenseKey, dbName)
@@ -502,13 +500,22 @@ func (d *Downloader) LockFileIsExpired(cfg *Config) (bool, error) {
 	return time.Since(lastTimeUpdate) >= cfg.MaxmindIntervalUpdate, nil
 }
 
-// getLeaderLinkForDownload returns base URL to the leader's download endpoint.
-// Returns "" if leader is unknown or we are the leader.
-func (d *Downloader) getLeaderLinkForDownload(serviceName, namespace, port string) string {
-	if d.isLeader() {
-		return ""
+// isCurrentPodLeader returns true when the current pod is the lease holder.
+func (d *Downloader) isCurrentPodLeader() bool {
+	if d.leader == nil {
+		return false
 	}
 
+	leaderPod := d.leaderPodName()
+	if leaderPod == "" {
+		return false
+	}
+
+	return leaderPod == d.leader.podName
+}
+
+// leaderPodName extracts pod name from the current leader identity.
+func (d *Downloader) leaderPodName() string {
 	if d.leader == nil || d.leader.le == nil {
 		return ""
 	}
@@ -518,12 +525,25 @@ func (d *Downloader) getLeaderLinkForDownload(serviceName, namespace, port strin
 		return ""
 	}
 
-	// Identity format: "<podName>#<random>". Extract podName before '#'.
 	hashIdx := strings.Index(leaderID, "#")
 	if hashIdx <= 0 {
 		return ""
 	}
-	leaderPod := leaderID[:hashIdx]
+
+	return leaderID[:hashIdx]
+}
+
+// getLeaderLinkForDownload returns base URL to the leader's download endpoint.
+// Returns "" if leader is unknown or we are the leader.
+func (d *Downloader) getLeaderLinkForDownload(serviceName, namespace, port string) string {
+	if d.isCurrentPodLeader() {
+		return ""
+	}
+
+	leaderPod := d.leaderPodName()
+	if leaderPod == "" {
+		return ""
+	}
 
 	// Use headless service to address the specific leader Pod and avoid round-robin back to ourselves.
 	// Expose the same /download endpoint as used by external consumers so that kube-rbac-proxy
@@ -538,6 +558,10 @@ func (d *Downloader) waitLeaderLink(ctx context.Context, namespace, port string)
 
 	deadline := time.Now().Add(maxWait)
 	for {
+		if d.isCurrentPodLeader() {
+			return "", nil
+		}
+
 		link := d.getLeaderLinkForDownload(headlessServiceName, namespace, port)
 		if link != "" {
 			return link, nil
@@ -553,12 +577,4 @@ func (d *Downloader) waitLeaderLink(ctx context.Context, namespace, port string)
 		case <-time.After(waitStep):
 		}
 	}
-}
-
-func (d *Downloader) isLeader() bool {
-	if d.leader == nil || d.leader.le == nil || !d.leader.le.IsLeader() {
-		return false
-	}
-
-	return true
 }

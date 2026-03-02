@@ -82,7 +82,7 @@ shell:
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -119,7 +119,10 @@ shell:
   - cd /src
   - go generate -tags plugins ./plugins
   - |
-    {{- include "image-build.build" (set $ "BuildCommand" `go build -tags "${PROMETHEUS_TAGS}" -ldflags="${LDFLAGS}" -o prometheus ./cmd/prometheus`) | indent 6 }}
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -tags "${PROMETHEUS_TAGS}" -ldflags="${LDFLAGS}" -o prometheus ./cmd/prometheus` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   - go build -tags "${PROMETHEUS_TAGS}" -ldflags="${LDFLAGS}" -o promtool ./cmd/promtool
   - mkdir -p /empty
   - chown 64535:64535 /src/prometheus /src/promtool

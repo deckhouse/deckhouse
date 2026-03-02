@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- if include "nvidia_gpu_enabled" . }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -137,4 +138,5 @@ spec:
             items:
               - key: nfd-worker.conf
                 path: nfd-worker.conf
+{{- end }}
 {{- end }}

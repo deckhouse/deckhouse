@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 func TestParams_Validate(t *testing.T) {
@@ -168,6 +169,89 @@ func TestParams_Validate(t *testing.T) {
 			} else {
 				require.NoError(t, err, "expected no error")
 			}
+		})
+	}
+}
+
+func TestParams_ToStateAndToParams(t *testing.T) {
+	certKey, err := registry_pki.GenerateCACertificate("test")
+	require.NoError(t, err)
+	certEncoded := string(registry_pki.EncodeCertificate(certKey.Cert))
+
+	tests := []struct {
+		name   string
+		state  ParamsState
+		params Params
+	}{
+		{
+			name: "with CA",
+			state: ParamsState{
+				Generation: 10,
+				Mode:       registry_const.ModeDirect,
+				ImagesRepo: "registry.example.com",
+				UserName:   "test-user",
+				Password:   "test-password",
+				TTL:        "10h",
+				Scheme:     "HTTPS",
+				CA:         certEncoded,
+				CheckMode:  registry_const.CheckModeDefault,
+			},
+			params: Params{
+				Generation: 10,
+				Mode:       registry_const.ModeDirect,
+				ImagesRepo: "registry.example.com",
+				UserName:   "test-user",
+				Password:   "test-password",
+				TTL:        "10h",
+				Scheme:     "HTTPS",
+				CA:         certKey.Cert,
+				CheckMode:  registry_const.CheckModeDefault,
+			},
+		},
+		{
+			name: "without CA",
+			state: ParamsState{
+				Generation: 10,
+				Mode:       registry_const.ModeDirect,
+				ImagesRepo: "registry.example.com",
+				UserName:   "test-user",
+				Password:   "test-password",
+				TTL:        "10h",
+				Scheme:     "HTTPS",
+				CheckMode:  registry_const.CheckModeDefault,
+			},
+			params: Params{
+				Generation: 10,
+				Mode:       registry_const.ModeDirect,
+				ImagesRepo: "registry.example.com",
+				UserName:   "test-user",
+				Password:   "test-password",
+				TTL:        "10h",
+				Scheme:     "HTTPS",
+				CheckMode:  registry_const.CheckModeDefault,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Run("state to params", func(t *testing.T) {
+				params, err := tt.state.toParams()
+				require.NoError(t, err)
+				require.EqualValues(t, tt.params, params)
+
+				state := params.toState()
+				require.EqualValues(t, tt.state, state)
+			})
+
+			t.Run("params to state", func(t *testing.T) {
+				state := tt.params.toState()
+				require.EqualValues(t, tt.state, state)
+
+				params, err := state.toParams()
+				require.NoError(t, err)
+				require.EqualValues(t, tt.params, params)
+			})
 		})
 	}
 }

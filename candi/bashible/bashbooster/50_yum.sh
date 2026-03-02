@@ -21,6 +21,17 @@ bb-var BB_YUM_UPDATED false
 bb-var BB_YUM_UNHANDLED_PACKAGES_STORE "/var/lib/bashible/bashbooster_unhandled_packages"
 bb-var BB_YUM_INSTALL_EXTRA_ARGS ""
 
+bb-check-yum() {
+    if bb-exe? yum; then
+        echo "yum"
+    elif bb-exe? dnf; then
+        echo "dnf"
+    else
+        bb-log-error "found neither yum or dnf"
+        exit 1
+    fi
+}
+
 bb-yum?() {
     bb-set-proxy
     trap bb-unset-proxy RETURN
@@ -52,7 +63,11 @@ bb-yum-update() {
 }
 
 bb-yum-install() {
-
+    if [ "$(bb-check-yum)" = "dnf" ]; then
+        bb-log-info "bb-yum-install upgraded to dnf"
+        bb-dnf-install "$@"
+        return
+    fi
     PACKAGES_TO_INSTALL=()
     for PACKAGE in "$@"
     do
@@ -84,6 +99,11 @@ bb-yum-install() {
 }
 
 bb-yum-remove() {
+    if [ "$(bb-check-yum)" = "dnf" ]; then
+        bb-log-info "bb-yum-remove upgraded to dnf"
+        bb-dnf-remove "$@"
+        return
+    fi
     bb-set-proxy
     trap bb-unset-proxy RETURN
     for PACKAGE in "$@"; do
@@ -93,6 +113,7 @@ bb-yum-remove() {
             bb-log-info "Removing package '$PACKAGE'"
             yum remove -y "$PACKAGE"
             bb-exit-on-error "Failed to remove package '$PACKAGE'"
+            bb-event-fire "bb-package-removed" "$PACKAGE"
         fi
     done
 }

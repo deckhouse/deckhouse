@@ -4,6 +4,10 @@ linters-settings:
       disable: true
   container:
     exclude-rules:
+      host-network-ports:
+        - kind: DaemonSet
+          name: user-authz-webhook
+          container: webhook
       readiness-probe:
         - kind: DaemonSet
           name: user-authz-webhook

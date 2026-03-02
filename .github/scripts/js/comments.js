@@ -113,9 +113,44 @@ module.exports.renderWorkflowStatusFinal = (status, name, ref, build_url, starte
   return `${statusComment}${info}`;
 };
 
-module.exports.renderDocumentationComments = () => {
-  let statusComment = `\n<details><summary>Environment URLS</summary>\n<ul><li>Stage: <a href="https://deckhouse.stage.flant.com/products/kubernetes-platform/documentation/v1/">deckhouse.stage.flant.com</a></li><li>Test: <a href="https://deckhouse.test.flant.com/products/kubernetes-platform/documentation/v1/">deckhouse.test.flant.com</a></li><li>Test2: <a href="https://deckhouse.2.test.flant.com/products/kubernetes-platform/documentation/v1/">deckhouse.2.test.flant.com</a></li><li>Test3: <a href="https://deckhouse.3.test.flant.com/products/kubernetes-platform/documentation/v1/">deckhouse.3.test.flant.com</a></li><li>Test4: <a href="https://deckhouse.4.test.flant.com/products/kubernetes-platform/documentation/v1/">deckhouse.4.test.flant.com</a></li><li>Test5: <a href="https://deckhouse.5.test.flant.com/products/kubernetes-platform/documentation/v1/">deckhouse.5.test.flant.com</a></li><li>Test6: <a href="https://deckhouse.6.test.flant.com/products/kubernetes-platform/documentation/v1/">deckhouse.6.test.flant.com</a></li><li>Test7: <a href="https://deckhouse.7.test.flant.com/products/kubernetes-platform/documentation/v1/">deckhouse.7.test.flant.com</a></li></ul></details>`;
-  return `${statusComment}`;
+module.exports.renderDocumentationComments = (workflowName) => {
+  const allEnvironments = [
+    { name: 'Stage', host: 'deckhouse.stage.flant.dev' },
+    { name: 'Test', host: 'deckhouse.test.flant.dev' },
+    ...Array.from({ length: 6 }, (_, i) => ({
+      name: `Test${i + 2}`,
+      host: `deckhouse-${i + 2}.test.flant.dev`
+    }))
+  ].map(env => ({
+    ...env,
+    key: env.name.toLowerCase().replace(/\s+/g, '')
+  }));
+
+  // Extract environment from workflow name (e.g., "Deploy web to stage" -> "stage")
+  let environments = allEnvironments;
+  if (workflowName) {
+    const match = workflowName.match(/Deploy web to (.+)$/i);
+    if (match) {
+      const envKey = match[1].toLowerCase().replace(/\s+/g, '');
+      const found = allEnvironments.find(env => env.key === envKey);
+      if (found) {
+        environments = [found];
+      }
+    }
+  }
+
+  const basePath = '/products/kubernetes-platform/documentation/v1/';
+  
+  if (environments.length === 1) {
+    const env = environments[0];
+    return `\nEnvironment URL: <a href="https://${env.host}${basePath}">${env.host}</a>`;
+  }
+  
+  const listItems = environments
+    .map(env => `<li>${env.name}: <a href="https://${env.host}${basePath}">${env.host}</a></li>`)
+    .join('');
+  
+  return `\nEnvironment URLS:\n<ul>${listItems}</ul>`;
 };
 
 /**

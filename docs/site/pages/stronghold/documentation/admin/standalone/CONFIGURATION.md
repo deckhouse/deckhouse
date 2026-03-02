@@ -98,6 +98,8 @@ To apply new parameters after modifying the configuration file, you need to rest
   LimitMEMLOCK=infinity
   ```
 
+* `disable_sealwrap` — disables using seal wrapping for any value except the root key. If this value is toggled, the new behavior will happen lazily (as values are read or written).
+
 * `plugin_directory` — optional string parameter. Defines the directory from which plugins are allowed to be loaded. For successful plugin loading, Stronghold must have read permissions for the files in this directory, and the value cannot be a symbolic link. By default, this parameter is not set and has the value `""`.
 
 * `plugin_tmpdir` — optional string parameter. Specifies the directory where Stronghold can create temporary files to support interaction with Unix sockets for containerized plugins. If this value is not set, Stronghold will use the default temporary file directory. In most cases, this parameter does not need to be configured, except when containerized plugins are used and Stronghold shares the temporary folder with other processes, such as when using the `PrivateTmp` parameter in systemd.

@@ -1,7 +1,10 @@
 name: user-authn
 critical: true
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - security
 namespace: d8-user-authn
 weight: 150
+descriptions:
+  en: Provides unified authentication system integrated with Kubernetes and web interfaces. Supports static users and external identity providers.
+  ru: Предоставляет единую систему аутентификации, интегрированную с Kubernetes и веб-интерфейсами. Поддерживает статических пользователей и внешние провайдеры идентификации.

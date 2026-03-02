@@ -14,25 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package dvpcsidriver
 
 import (
 	"errors"
-	"sync"
-
-	"dvp-csi-driver/internal/config"
-	"dvp-csi-driver/pkg/dvp-csi-driver/service"
 
 	dvpapi "dvp-common/api"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+
+	"dvp-csi-driver/internal/config"
+	"dvp-csi-driver/pkg/dvp-csi-driver/service"
 )
 
 type csiDriver struct {
 	csi.UnimplementedGroupControllerServer
 
 	config *config.CSIConfig
-	mutex  sync.Mutex
 	client *dvpapi.DVPCloudAPI
 }
 
@@ -73,7 +72,7 @@ func (d *csiDriver) Run() error {
 			d.config.VendorVersion,
 			d.client,
 		),
-		service.NewController(d.client),
+		service.NewController(d.client, d.config.ClusterUUID),
 		service.NewNode(d.config.NodeName, d.client),
 		d,
 	)

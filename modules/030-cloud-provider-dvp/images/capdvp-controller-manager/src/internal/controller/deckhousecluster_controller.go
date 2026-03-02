@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package controller
 
 import (
@@ -21,6 +22,8 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+
+	dvpapi "dvp-common/api"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
-	dvpapi "dvp-common/api"
 )
 
 // DeckhouseClusterReconciler reconciles a DeckhouseCluster object
@@ -52,7 +54,7 @@ type DeckhouseClusterReconciler struct {
 // move the current state of the cluster closer to the desired state.
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.0/pkg/reconcile
-func (r *DeckhouseClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
+func (r *DeckhouseClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciling DeckhouseCluster")
 

@@ -36,7 +36,7 @@ const (
 func setSearchDomain(_ context.Context, input *go_hook.HookInput) error {
 	userDefinedDomains, ok := input.ConfigValues.GetOk(clusterDomainsValuesPath)
 	if ok {
-		domains := make([]string, 0)
+		domains := make([]string, 0, len(userDefinedDomains.Array()))
 		for _, domain := range userDefinedDomains.Array() {
 			domains = append(domains, domain.String())
 		}

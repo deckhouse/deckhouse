@@ -86,7 +86,13 @@ For Splunk, the `pod_labels` fields are not exported because it is a nested obje
 
 ### File
 
-The `host` label is the only label that contains the server's hostname.
+The following metadata fields will be exposed:
+
+| Label    | Pod spec path     |
+|----------|-------------------|
+| `host`   | spec.nodeName     |
+| `host_ip`| status.hostIP     |
+| `file`   | Path to the log file being read |
 
 ## Log filters
 

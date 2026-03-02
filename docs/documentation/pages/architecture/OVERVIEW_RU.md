@@ -1,5 +1,5 @@
 ---
-title: Обзор
+title: Архитектура
 permalink: ru/architecture/
 lang: ru
 search: architecture overview, архитектура Deckhouse

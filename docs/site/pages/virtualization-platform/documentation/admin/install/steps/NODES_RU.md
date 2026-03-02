@@ -55,7 +55,7 @@ EOF
 Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на **master-узле** следующую команду:
 
 ```shell
-ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 ```
 
 Создайте в кластере ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials). Для этого выполните на **master-узле** следующую команду:

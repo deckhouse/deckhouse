@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: cloud-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "zvirt-cloud-controller-manager"

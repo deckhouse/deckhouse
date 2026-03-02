@@ -35,6 +35,15 @@ if bb-flag? kubelet-need-restart; then
   bb-log-warning "'kubelet-need-restart' flag was set, restarting kubelet."
   if [ -f /var/lib/kubelet/cpu_manager_state ]; then rm /var/lib/kubelet/cpu_manager_state; fi
   if [ -f /var/lib/kubelet/memory_manager_state ]; then rm /var/lib/kubelet/memory_manager_state; fi
+  {{ $kubernetesVersion := .kubernetesVersion | toString }}
+  {{ if eq $kubernetesVersion "1.32" }}
+  # https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.32.md#no-really-you-must-read-this-before-you-upgrade
+  if [ -f /var/lib/kubelet/pod_status_manager_state ]; then
+    bb-log-info "Removing /var/lib/kubelet/pod_status_manager_state for Kubernetes 1.32 upgrade"
+    rm -f /var/lib/kubelet/pod_status_manager_state
+  fi
+  {{ end }}
+  
   systemctl restart "kubelet.service"
   {{ if ne .runType "ClusterBootstrap" }}
   if [[ "${FIRST_BASHIBLE_RUN}" != "yes" ]] && ! bb-flag? reboot; then

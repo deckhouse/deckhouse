@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: gatekeeper-audit
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: manager
@@ -129,7 +129,7 @@ spec:
         - mountPath: /tmp/audit
           name: tmp-volume
       - name: constraint-exporter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "constraintExporter") }}
         imagePullPolicy: 'IfNotPresent'
         env:

@@ -17,11 +17,11 @@ limitations under the License.
 package destination
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
 type Socket struct {
@@ -36,12 +36,12 @@ type Socket struct {
 	TLS CommonTLS `json:"tls,omitempty"`
 }
 
-func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
+func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Socket {
 	spec := cspec.Socket
 
 	result := &Socket{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "socket",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),
@@ -95,37 +95,7 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 		if spec.Encoding.CEF.DeviceVersion != "" {
 			deviceVersion = spec.Encoding.CEF.DeviceVersion
 		}
-		extensions := map[string]string{
-			"message":   "message",
-			"timestamp": "timestamp",
-			"node":      "node",
-			"host":      "host",
-			"pod":       "pod",
-			"podip":     "pod_ip",
-			"namespace": "namespace",
-			"image":     "image",
-			"container": "container",
-			"podowner":  "pod_owner",
-		}
-
-		keys := make([]string, 0, len(cspec.ExtraLabels))
-		for key := range cspec.ExtraLabels {
-			keys = append(keys, key)
-		}
-
-		sort.Strings(keys)
-		specialKeys := map[string]struct{}{
-			"cef.name":     {},
-			"cef.severity": {},
-		}
-
-		for _, k := range keys {
-			normalized := normalizeKey(k)
-			if _, isSpecial := specialKeys[normalized]; isSpecial {
-				continue
-			}
-			extensions[normalized] = k
-		}
+		extensions := loglabels.GetCEFExtensions(sourceType, cspec.ExtraLabels)
 
 		encoding.Codec = "cef"
 		encoding.CEF = CEFEncoding{

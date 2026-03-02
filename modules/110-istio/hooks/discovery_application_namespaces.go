@@ -159,7 +159,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applicationNamespacesDiscovery(_ context.Context, input *go_hook.HookInput) error {
 	var applicationNamespaces = make([]string, 0)
 	var applicationNamespacesToMonitor = make([]string, 0)
-	var namespacesSnapshots = make([]pkg.Snapshot, 0)
+	var namespacesSnapshots = make([]pkg.Snapshot, 0) //nolint:prealloc
 	var namespacesMap = make(map[string]IstioNamespaceFilterResult)
 
 	for nsInfo, err := range sdkobjectpatch.SnapshotIter[IstioNamespaceFilterResult](input.Snapshots.Get("all_namespaces")) {

@@ -38,13 +38,17 @@ const (
 	ModuleReleasePhaseSkipped     = "Skipped"
 	ModuleReleasePhaseTerminating = "Terminating"
 
-	ModuleReleaseApprovalAnnotation              = "modules.deckhouse.io/approved"
-	ModuleReleaseAnnotationIsUpdating            = "modules.deckhouse.io/isUpdating"
-	ModuleReleaseAnnotationNotified              = "modules.deckhouse.io/notified"
-	ModuleReleaseAnnotationApplyNow              = "modules.deckhouse.io/apply-now"
-	ModuleReleaseAnnotationRegistrySpecChanged   = "modules.deckhouse.io/registry-spec-changed"
-	ModuleReleaseLabelUpdatePolicy               = "modules.deckhouse.io/update-policy"
-	ModuleReleaseFinalizerExistOnFs              = "modules.deckhouse.io/exist-on-fs"
+	ModuleReleaseApprovalAnnotation            = "modules.deckhouse.io/approved"
+	ModuleReleaseAnnotationIsUpdating          = "modules.deckhouse.io/isUpdating"
+	ModuleReleaseAnnotationNotified            = "modules.deckhouse.io/notified"
+	ModuleReleaseAnnotationApplyNow            = "modules.deckhouse.io/apply-now"
+	ModuleReleaseAnnotationRegistrySpecChanged = "modules.deckhouse.io/registry-spec-changed"
+	ModuleReleaseLabelUpdatePolicy             = "modules.deckhouse.io/update-policy"
+	ModuleReleaseFinalizerExistOnFs            = "modules.deckhouse.io/exist-on-fs"
+	// ModuleReleaseFinalizerMetricsRegistered ensures that the ModuleConfigurationError metric is reset to 0
+	// before the ModuleRelease resource is deleted. Without this finalizer, the resource could be removed
+	// before the reconciler has a chance to clear the metric, leaving stale error metrics in Prometheus.
+	ModuleReleaseFinalizerMetricsRegistered      = "modules.deckhouse.io/metrics-registered"
 	ModuleReleaseAnnotationNotificationTimeShift = "modules.deckhouse.io/notification-time-shift"
 	ModuleReleaseAnnotationForce                 = "modules.deckhouse.io/force"
 	ModuleReleaseAnnotationReinstall             = "modules.deckhouse.io/reinstall"

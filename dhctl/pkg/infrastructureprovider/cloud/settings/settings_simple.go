@@ -25,7 +25,7 @@ type Simple struct {
 	VersionVal               *string   `json:"version,omitempty"`
 	VersionsVal              *[]string `json:"versions,omitempty"`
 	DestinationBinaryVal     *string   `json:"destinationBinary,omitempty"`
-	VmResourceTypeVal        *string   `json:"vmResourceType,omitempty"`
+	VMResourceTypeVal        *string   `json:"vmResourceType,omitempty"`
 	UseOpenTofuVal           *bool     `json:"useOpentofu,omitempty"`
 	InfrastructureVersionVal *string   `json:"infrastructureVersion,omitempty"`
 }
@@ -51,7 +51,7 @@ func (s *Simple) Validate(strictInfraVersion bool) error {
 		return fmt.Errorf("destinationBinary is required")
 	}
 
-	if s.VmResourceTypeVal == nil {
+	if s.VMResourceTypeVal == nil {
 		return fmt.Errorf("vmResourceType is required")
 	}
 
@@ -104,12 +104,12 @@ func (s *Simple) DestinationBinary() string {
 	return *s.DestinationBinaryVal
 }
 
-func (s *Simple) VmResourceType() string {
-	if s.VmResourceTypeVal == nil {
+func (s *Simple) VMResourceType() string {
+	if s.VMResourceTypeVal == nil {
 		panic("vmResourceType is required")
 	}
 
-	return *s.VmResourceTypeVal
+	return *s.VMResourceTypeVal
 }
 
 func (s *Simple) UseOpenTofu() bool {

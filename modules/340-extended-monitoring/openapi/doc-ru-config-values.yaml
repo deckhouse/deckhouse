@@ -6,6 +6,21 @@ properties:
       exporterEnabled:
         description: |
           Включен ли imageAvailabilityExporter.
+      imageCheckInterval:
+        default: "60s"
+        description: |
+          Интервал запросов в registry для проверки доступности образа.
+          
+          Поддерживаемый формат - Go-style duration ("10s", "10m", "10h").
+          
+          Если не задан, то используется значение по умолчанию в 60 секунд.
+      defaultRegistry:
+        default: "index.docker.io"
+        description: |
+          Стандартный registry для проверки доступности образов.
+          Используется если в образе не указан registry.
+          
+          Если не задан, то используется index.docker.io
       ignoredImages:
         description: |
           Список образов, для которых нужно пропустить проверку, например `alpine:3.12` или `quay.io/test/test:v1.1`.

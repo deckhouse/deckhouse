@@ -1,5 +1,5 @@
 ---
-title: "Administrator guide overview"
+title: "Deckhouse Stronghold administrator guide"
 permalink: en/stronghold/documentation/admin/overview.html
 lang: en
 ---

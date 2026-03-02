@@ -9,12 +9,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/deckhouse/zvirt-cloud-controller-manager/pkg/zvirtapi"
 	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
+
+	"github.com/deckhouse/zvirt-cloud-controller-manager/pkg/zvirtapi"
 )
 
 func (zc *Cloud) NodeAddresses(ctx context.Context, nodeName types.NodeName) ([]v1.NodeAddress, error) {
@@ -125,7 +125,7 @@ func (zc *Cloud) extractNodeAddressesFromVM(ctx context.Context, vm ovirtclient.
 		})
 	}
 
-    // If there are no local IP addresses, replace them with external ones
+	// If there are no local IP addresses, replace them with external ones
 	if len(localIP) == 0 {
 		localIP = externalIP
 	}

@@ -1,4 +1,0 @@
-allowedResources:
-  - group: aquasecurity.github.io
-    resources:
-      - all

@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=1100">
 
 <!-- title/descriptions -->
+{%- assign description_maxlength = 199 -%}
 {%- assign page_url_parts = page.url | split: '/' -%}
 {%- assign max_ind = page_url_parts.size | minus: 1 -%}
 {%- assign title_parts = "" | split: "" -%}
@@ -52,23 +53,40 @@
 <title>{{ generated_title }} | {{ site.site_title }} {{ additional_title }}</title>
 
 {%- if page.description %}
-    {%- assign description = page.description | strip_html | strip_newlines | strip | truncate: 200 %}
+    {%- assign raw_description = page.description | strip_html | strip_newlines | strip %}
 {%- else %}
     {%- assign pageCommonName = page.name | replace: '_RU.md', '' | replace: '.md', '' | downcase %}
     {%- if pageCommonName == "configuration" or pageCommonName == "cr" or pageCommonName == "examples" or pageCommonName == "usage" or pageCommonName == "faq"  %}
         {%- assign i18nKey = 'description_' | append: pageCommonName %}
-        {%- assign description = site.data.i18n.common[i18nKey][page.lang] | replace: '<MODULENAME>', page['module-kebab-name'] %}
+        {%- assign raw_description = site.data.i18n.common[i18nKey][page.lang] | replace: '<MODULENAME>', page['module-kebab-name'] %}
     {%- elsif page.platform_type %}
-        {%- assign description = site.data.i18n.common['gs_description'][page.lang] | replace: '<TITLE>', page.title_main | replace: '<STEP>', page.step_name %}
+        {%- assign raw_description = site.data.i18n.common['gs_description'][page.lang] | replace: '<TITLE>', page.title_main | replace: '<STEP>', page.step_name %}
     {%- else %}
-        {%- assign description = page.content | markdownify | strip_html | normalizeSearchContent | strip_newlines | strip | truncate: 200 %}
+        {%- assign raw_description = page.content | markdownify | strip_html | normalizeSearchContent | strip_newlines | strip %}
     {%- endif %}
 {%- endif %}
+{%- if raw_description.size > description_maxlength %}
+    {%- assign truncated = raw_description | truncate: description_maxlength, '' %}
+    {%- assign boundary_char = raw_description | slice: description_maxlength, 1 %}
+    {%- if boundary_char != ' ' %}
+        {%- assign words = truncated | split: ' ' %}
+        {%- if words.size > 1 %}
+            {%- assign last_index = words.size | minus: 1 %}
+            {%- assign description = words | slice: 0, last_index | join: ' ' %}
+        {%- else %}
+            {%- assign description = truncated %}
+        {%- endif %}
+    {%- else %}
+        {%- assign description = truncated | strip %}
+    {%- endif %}
+{%- else %}
+    {%- assign description = raw_description %}
+{%- endif %}
 
-{%- if include.mode=='documentation' %}
-  {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
-{%- elsif page.sidebar == 'embedded-modules' %}
+{%- if page.sidebar == 'embedded-modules' %}
   {%- assign page_meta_url = page_url_without_lang | relative_url %}
+{%- elsif include.mode=='documentation' %}
+  {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
 {%- else %}
   {%- if page.product_code == 'kubernetes-platform' %}
     {%- assign page_url_without_lang = page_url_without_lang | relative_url | prepend: page.product_code | prepend: '/' %}
@@ -88,13 +106,18 @@
 <meta name="keywords" content="{{page.tags}}{% if page.tags %}, {% endif %}{% if page.keywords %}{{page.keywords}}, {% endif %}{% if page.search %}{{page.search}}{% endif %}">
 
 <!-- Open Graph / Facebook -->
-<meta property="og:type" content="website">
+<meta property="og:type" content="article">
 <meta property="og:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
 <meta property="og:title" content="{{ generated_title }} | {{ site.site_title }}">
 <meta property="og:description" content="{{ description }}">
 
+{%- if page.product_code == 'stronghold' or page.product_code == "virtualization-platform" or page.product_code == "code" or page.product_code == "delivery-kit" or page.product_code == "kubernetes-platform" or page.product_code == "observability-platform" or page.product_code == "prompp" %}
+<meta property="og:image" content="{{ site.urls[page.lang] }}/images/og/{{ page.product_code }}.png">
+<meta property="og:site_name" content="Deckhouse">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<meta property="og:image:type" content="image/png">
+{%- endif %}
+
 <!-- Twitter -->
-<meta property="twitter:card" content="summary_large_image">
-<meta property="twitter:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
-<meta property="twitter:title" content="{{ generated_title }} | {{ site.site_title }}">
-<meta property="twitter:description" content="{{ description }}">
+<meta name="twitter:card" content="summary_large_image">

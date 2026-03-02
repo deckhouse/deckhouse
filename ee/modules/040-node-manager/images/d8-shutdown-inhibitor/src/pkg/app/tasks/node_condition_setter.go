@@ -8,13 +8,12 @@ package tasks
 import (
 	"context"
 	"fmt"
-
 	"log/slog"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 
 	"d8_shutdown_inhibitor/pkg/app/nodecondition"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
-
-	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // NodeConditionSetter set condition on start to prevent shutdown sequence in the kubelet

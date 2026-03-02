@@ -8,8 +8,7 @@ The cluster components are divided into two categories:
 * **Control plane**: Managing and maintaining services. The control plane usually refers to istiod Pods.
 * **Data plane**: Istio application part composed of a set of sidecar-proxy containers.
 
-![Cluster architecture with Istio enabled](../../images/istio/istio-architecture.svg)
-<!--- Source: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
+![Cluster architecture with Istio enabled](../../images/istio/istio-architecture.png)
 
 All Data Plane services are grouped into a mesh with the following features:
 

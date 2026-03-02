@@ -1,1 +1,24 @@
-{{- include "helm_lib_prometheus_rules" (list . "d8-cloud-instance-manager") }}
+{{- $prometheusRules := list
+  "monitoring/prometheus-rules/caps-nodes.tpl"
+  "monitoring/prometheus-rules/cloud-data-discovery.tpl"
+  "monitoring/prometheus-rules/migrate-to-tofu.yaml"
+  "monitoring/prometheus-rules/node-group-deprecate.yaml"
+  "monitoring/prometheus-rules/node-group.tpl"
+  "monitoring/prometheus-rules/node-unmanaged.tpl"
+  "monitoring/prometheus-rules/node-update.yaml"
+  "monitoring/prometheus-rules/standby-deployment-unavailable.yaml"
+}}
+
+{{- if include "cluster_autoscaler_enabled" . }}
+  {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/cluster-autoscaler.tpl" }}
+{{- end }}
+
+{{- if .Values.nodeManager.earlyOomEnabled }}
+  {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/early-oom.tpl" }}
+{{- end }}
+
+{{- if include "machine_controller_manager_enabled" . }}
+  {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/machine-controller-manager.tpl" }}
+{{- end }}
+
+{{- include "helm_lib_prometheus_rules" (list . "d8-cloud-instance-manager" $prometheusRules) }}

@@ -171,7 +171,7 @@ func tlsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret v1.Secret
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return certificate.Certificate{
@@ -254,7 +254,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 	cert, err := certificate.ParseCertificate(certData)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("parse certificate: %w", err)
 	}
 
 	if time.Until(cert.NotAfter) < certOutdatedDuration {
@@ -295,7 +295,7 @@ func isOutdatedCA(ca string) (bool, error) {
 
 	cert, err := certificate.ParseCertificate(ca)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("parse certificate: %w", err)
 	}
 
 	if time.Until(cert.NotAfter) < certOutdatedDuration {
@@ -312,10 +312,10 @@ func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages 
 		certificate.WithKeySize(keySize),
 		certificate.WithCAExpiry(caExpiryDurationStr))
 	if err != nil {
-		return certificate.Certificate{}, err
+		return certificate.Certificate{}, fmt.Errorf("generate ca: %w", err)
 	}
 
-	return certificate.GenerateSelfSignedCert(input.Logger,
+	cert, err := certificate.GenerateSelfSignedCert(input.Logger,
 		cn,
 		ca,
 		certificate.WithSANs(sans...),
@@ -324,6 +324,10 @@ func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages 
 		certificate.WithSigningDefaultExpiry(certExpiryDuration),
 		certificate.WithSigningDefaultUsage(usages),
 	)
+	if err != nil {
+		return certificate.Certificate{}, fmt.Errorf("generate self signed cert: %w", err)
+	}
+	return cert, nil
 }
 
 // SANsGenerator function for generating sans

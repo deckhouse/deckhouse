@@ -1,10 +1,10 @@
 global:
   linters-settings:
-    documentation:
-      impact: warn
     module:
       rules:
         license:
+          impact: warn
+        oss: 
           impact: warn
     templates:
       rules:

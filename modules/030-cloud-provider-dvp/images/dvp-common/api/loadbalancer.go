@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,6 +36,8 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 )
 
 const (
@@ -141,7 +142,6 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	svc.Spec.ExternalIPs = []string{}
 	svc.Spec.LoadBalancerClass = nil
 	svc.Spec.LoadBalancerIP = ""
-	svc.Spec.HealthCheckNodePort = 0
 
 	if len(serviceLabels) > 0 {
 		svc.Labels = serviceLabels
@@ -157,9 +157,6 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	}
 	if service.Spec.LoadBalancerIP != "" {
 		svc.Spec.LoadBalancerIP = service.Spec.LoadBalancerIP
-	}
-	if service.Spec.HealthCheckNodePort > 0 {
-		svc.Spec.HealthCheckNodePort = service.Spec.HealthCheckNodePort
 	}
 
 	err := lb.client.Update(ctx, svc)
@@ -225,9 +222,6 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 	if service.Spec.LoadBalancerIP != "" {
 		svc.Spec.LoadBalancerIP = service.Spec.LoadBalancerIP
 	}
-	if service.Spec.HealthCheckNodePort > 0 {
-		svc.Spec.HealthCheckNodePort = service.Spec.HealthCheckNodePort
-	}
 
 	err := lb.client.Create(ctx, svc)
 	if err != nil {
@@ -253,7 +247,7 @@ func (lb *LoadBalancerService) pollLoadBalancer(ctx context.Context, name string
 		LBCreationPollInterval,
 		LBCreationPollTimeout,
 		true,
-		func(context.Context) (done bool, err error) {
+		func(context.Context) (bool, error) {
 			if len(svc.Status.LoadBalancer.Ingress) > 0 {
 				return true, nil
 			}
@@ -373,7 +367,7 @@ func lbLabelKey(lbName string) string {
 	return DVPLoadBalancerLabelPrefix + prittyfied
 }
 
-func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *corev1.Service, nodes []*corev1.Node) ([]*corev1.Node, error) {
+func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *corev1.Service, nodes []*corev1.Node) ([]*corev1.Node, error) { // nolint:unparam
 	if svc.Spec.ExternalTrafficPolicy != corev1.ServiceExternalTrafficPolicyTypeLocal ||
 		svc.Spec.HealthCheckNodePort == 0 {
 		return nodes, nil

@@ -50,7 +50,7 @@ func (s *Server) Start(ctx context.Context, server, metrics string) error {
 	mux.HandleFunc("/readyz", ok)
 
 	reg := prometheus.NewRegistry()
-	reg.MustRegister(GeoIPErrors)
+	reg.MustRegister(GeoIPDownloadError)
 	promMux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 
 	// pprof endpoints

@@ -125,9 +125,7 @@ func (sc *StateController) loadDeckhouseRegistrySecret(ctx context.Context) (dec
 		return ret, fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
 	}
 
-	if err := ret.decode(&secret); err != nil {
-		return ret, fmt.Errorf("cannot decode from secret: %w", err)
-	}
+	ret.decode(&secret)
 
 	if err := ret.validate(); err != nil {
 		return ret, fmt.Errorf("validation error: %w", err)

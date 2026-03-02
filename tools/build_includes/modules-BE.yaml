@@ -24,6 +24,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/be/modules/140-user-authz/templates/permission-browser-apiserver
+  to: /deckhouse/modules/140-user-authz/templates/permission-browser-apiserver
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/be/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
   stageDependencies:

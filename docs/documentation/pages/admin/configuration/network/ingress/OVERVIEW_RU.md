@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Балансировка входящего трафика"
 permalink: ru/admin/configuration/network/ingress/
 description: "Настройка балансировки входящего трафика в Deckhouse Kubernetes Platform с NLB и ALB. Маршрутизация трафика, SSL-терминация и настройка балансировки на уровне приложений."
 lang: ru
@@ -21,5 +21,5 @@ lang: ru
 
 Для балансировки трафика на уровне приложений в DKP доступны два решения:
 
-- [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) (модуль [`ingress-nginx`](/modules/ingress-nginx/)),
+- [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) (модуль [`ingress-nginx`](/modules/ingress-nginx/)),
 - [Istio](https://istio.io/) (модуль [`istio`](/modules/istio/)).

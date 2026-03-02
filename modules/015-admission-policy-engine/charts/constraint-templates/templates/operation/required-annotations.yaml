@@ -44,6 +44,7 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg, "details": {"missing_annotations": missing}}] {
+            not input.review.operation == "DELETE"
             provided := {annotation | input.review.object.metadata.annotations[annotation]}
             required := {annotation | annotation := input.parameters.annotations[_].key}
             missing := required - provided
@@ -52,6 +53,7 @@ spec:
         }
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           value := input.review.object.metadata.annotations[key]
           expected := input.parameters.annotations[_]
           expected.key == key

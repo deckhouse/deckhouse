@@ -7,11 +7,10 @@ package inputdev
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"syscall"
-
-	"log/slog"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )

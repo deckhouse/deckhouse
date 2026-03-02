@@ -8,8 +8,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
-	"service-with-healthchecks/internal/kubernetes"
 	"slices"
 
 	"github.com/go-logr/logr"
@@ -23,6 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
+	"service-with-healthchecks/internal/kubernetes"
 )
 
 const (

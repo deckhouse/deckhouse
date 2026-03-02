@@ -24,11 +24,11 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Discoverer struct {
@@ -40,12 +40,12 @@ type Discoverer struct {
 func NewDiscoverer(logger *log.Logger) *Discoverer {
 	location := os.Getenv("AZURE_LOCATION")
 	if location == "" {
-		logger.Fatalf("Cannot get AZURE_LOCATION env")
+		logger.Fatal("Cannot get AZURE_LOCATION env")
 	}
 
 	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
 	if location == "" {
-		logger.Fatalf("Cannot get AZURE_SUBSCRIPTION_ID env")
+		logger.Fatal("Cannot get AZURE_SUBSCRIPTION_ID env")
 	}
 
 	return &Discoverer{
@@ -146,7 +146,7 @@ func (d *Discoverer) continueProcessing(r *armcompute.ResourceSKU) (bool, error)
 	}
 
 	if *r.ResourceType != "virtualMachines" {
-		d.logger.Debugf("resource type is not virtual machine %s. skip", *r.ResourceType)
+		d.logger.Debug("resource type is not virtual machine. skip", "resource_type", *r.ResourceType)
 		return false, nil
 	}
 

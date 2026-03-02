@@ -92,6 +92,7 @@ func ToContext(ctx context.Context, log *slog.Logger, args ...any) context.Conte
 	return context.WithValue(ctx, loggerCtxKey{}, log.With(args...))
 }
 
+//nolint:sloglint
 func L(ctx context.Context) *slog.Logger {
 	l := ctx.Value(loggerCtxKey{})
 	if l == nil {

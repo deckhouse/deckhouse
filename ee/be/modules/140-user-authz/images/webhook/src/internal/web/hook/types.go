@@ -63,7 +63,7 @@ type WebhookRequest struct {
 type WebhookResourceSpec struct {
 	ResourceAttributes WebhookResourceAttributes `json:"resourceAttributes"`
 
-	Group []string `json:"group"`
+	Group []string `json:"groups"`
 	User  string   `json:"user"`
 }
 

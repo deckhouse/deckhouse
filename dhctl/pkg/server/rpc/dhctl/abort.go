@@ -135,7 +135,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
@@ -152,6 +152,9 @@ connectionProcessor:
 	}
 }
 
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
 func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.AbortResult) {
 	defer func() {
 		if r := recover(); r != nil {

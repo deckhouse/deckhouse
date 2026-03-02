@@ -180,6 +180,7 @@ func (l *InMemoryLogger) LogWarnF(format string, a ...interface{}) {
 	l.writeEntityFormatted(format, a...)
 	l.parent.LogWarnF(format, a...)
 }
+
 func (l *InMemoryLogger) LogWarnLn(a ...interface{}) {
 	l.writeEntityFormatted("%v\n", a)
 	l.parent.LogWarnLn(a...)
@@ -189,11 +190,12 @@ func (l *InMemoryLogger) LogSuccess(s string) {
 	l.writeEntityFormatted("Success: %s", s)
 	l.parent.LogSuccess(s)
 }
+
 func (l *InMemoryLogger) LogFail(s string) {
 	l.writeEntityWithPrefix(l.errorPrefix, "Fail: %s", s)
 	l.parent.LogFail(s)
-
 }
+
 func (l *InMemoryLogger) LogFailRetry(s string) {
 	l.writeEntityWithPrefix(l.errorPrefix, "Fail retry: %s", s)
 	l.parent.LogFailRetry(s)

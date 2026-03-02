@@ -32,7 +32,6 @@ func (pc *Checker) CheckSudoIsAllowedForUser(ctx context.Context) error {
 	}
 
 	return callSudo(ctx, pc.nodeInterface)
-
 }
 
 func callSudo(ctx context.Context, nodeInterface node.Interface) error {

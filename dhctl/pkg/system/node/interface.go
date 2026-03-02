@@ -152,4 +152,6 @@ type SSHClient interface {
 	Session() *session.Session
 
 	PrivateKeys() []session.AgentPrivateKey
+
+	RefreshPrivateKeys() error
 }

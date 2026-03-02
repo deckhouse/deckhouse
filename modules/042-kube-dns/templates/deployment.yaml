@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: d8-kube-dns
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "coredns"

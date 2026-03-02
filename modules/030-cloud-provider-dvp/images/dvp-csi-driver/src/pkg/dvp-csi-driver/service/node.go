@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package service
 
 import (
 	"context"
 	"crypto/md5"
-	"dvp-csi-driver/pkg/utils"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -34,6 +34,8 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/mount"
+
+	"dvp-csi-driver/pkg/utils"
 )
 
 type NodeService struct {
@@ -170,7 +172,7 @@ func (n *NodeService) getDevicePath(ctx context.Context, diskName string) (strin
 	_, err = os.Stat(device)
 	if err != nil {
 		msg := fmt.Errorf("device path %s for disk ID %v does not exists", device, diskName)
-		klog.Errorf(msg.Error())
+		klog.Errorf("%s", msg.Error())
 		return "", msg
 	}
 
@@ -301,14 +303,17 @@ func (n *NodeService) NodeExpandVolume(_ context.Context, req *csi.NodeExpandVol
 		return nil, status.Error(codes.InvalidArgument, "volume capability must be provided")
 	}
 	var resizeCmd string
+
 	fsType := volumeCapability.GetMount().FsType
-	if strings.HasPrefix(fsType, "ext") {
+	switch {
+	case strings.HasPrefix(fsType, "ext"):
 		resizeCmd = "resize2fs"
-	} else if strings.HasPrefix(fsType, "xfs") {
+	case strings.HasPrefix(fsType, "xfs"):
 		resizeCmd = "xfs_growfs"
-	} else {
+	default:
 		return nil, status.Error(codes.InvalidArgument, "fsType is neither xfs or ext[234]")
 	}
+
 	klog.Infof("Resizing filesystem %s mounted on %s with %s", fsType, volumePath, resizeCmd)
 
 	device, err := utils.GetDeviceByMountPoint(volumePath)

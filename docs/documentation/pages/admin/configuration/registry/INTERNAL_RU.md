@@ -1,7 +1,7 @@
 ---
 title: Управление внутренним container registry
 permalink: ru/admin/configuration/registry/internal.html
-description: "Настройка внутреннего container registry в Deckhouse Kubernetes Platform. Кэширование образов, оптимизация хранилища и управление высокодоступным registry."
+description: "Настройка внутреннего container registry в Deckhouse Kubernetes Platform. Кеширование образов, оптимизация хранилища и управление высокодоступным registry."
 lang: ru
 ---
 
@@ -27,12 +27,6 @@ lang: ru
 
 Работа с внутренним registry с помощью [модуля `registry`](/modules/registry/) имеет ряд ограничений и особенностей, касающихся установки, условий работы и переключения режимов.
 
-### Ограничения при установке кластера
-
-Bootstrap кластера Deckhouse Kubernetes Platform с включенным режимом `Direct` не поддерживается. Кластер разворачивается с настройками для режима `Unmanaged`. Настройки registry во время bootstrap задаются через [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
-
-Конфигурация registry через moduleConfig `deckhouse` во время bootstrap кластера DKP не поддерживается.
-
 ### Ограничения по условиям работы
 
 [Модуль `registry`](/modules/registry/), реализующий возможность использования внутреннего container registry, работает при соблюдении следующих условий:
@@ -48,6 +42,10 @@ Bootstrap кластера Deckhouse Kubernetes Platform с включенным
 - Переключение в неконфигурируемый режим `Unmanaged`  доступно только из `Unmanaged` режима. Подробнее — в разделе [«Модуль registry: FAQ»](/modules/registry/faq.html).
 
 ## Примеры переключения
+
+{% alert level="warning" %}
+Если в процессе переключения образ какого-либо модуля не загрузился заново и модуль не переустановился, для устранения проблемы воспользуйтесь [инструкцией](../../../faq.html#что-делать-если-образ-модуля-не-скачался-и-модуль-не-переустанов).
+{% endalert %}
 
 ### Переключение на режим `Direct`
 
@@ -332,7 +330,7 @@ containerd v2 использует новую схему по умолчанию
        EOF
    ```
 
-1. Примените `NodeGroupConfiguration`. Дождитесь появления конфигурационных файлов в директории `/etc/containerd/registry.d` на всех узлах.
+1. Примените [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Дождитесь появления конфигурационных файлов в директории `/etc/containerd/registry.d` на всех узлах.
 
 1. Проверьте корректность работы конфигураций. Для этого воспользуйтесь командой:
 
@@ -391,13 +389,13 @@ containerd v2 использует новую схему по умолчанию
 
    Это сообщение означает, что на узлах имеются старые конфигурации registry, расположенные в директории `/etc/containerd/conf.d`. И в данный момент переключение на новую конфигурацию containerd заблокировано. Для того чтобы разрешить переключение, необходимо удалить старые конфигурационные файлы.
 
-1. Удалите старые конфигурационные файлы, чтобы разрешить переключение на модуль `registry`. Для этого создайте `NodeGroupConfiguration`, пример:
+1. Удалите старые конфигурационные файлы, чтобы разрешить переключение на модуль `registry`. Для этого создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Пример манифеста NodeGroupConfiguration:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
-     name: containerd-additional-config-auth.sh
+     name: containerd-additional-config-auth-delete.sh
    spec:
      # Шаг должен выполниться до '032_configure_containerd.sh'
      weight: 0
@@ -451,6 +449,20 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
+
+1. Удалите [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), созданный на шаге удаления старых конфигурационных файлов:
+
+   ```shell
+   d8 k delete nodegroupconfiguration containerd-additional-config-auth-delete.sh
+   ```
+
+   Чтобы убедиться, что NodeGroupConfiguration удалён, используйте команду:
+
+   ```shell
+   d8 k get nodegroupconfiguration
+   ```
+
+   В списке не должно быть NodeGroupConfiguration, подлежащего удалению (в этом примере — `containerd-additional-config-auth-delete.sh`).
 
 ## Миграция обратно с модуля registry
 

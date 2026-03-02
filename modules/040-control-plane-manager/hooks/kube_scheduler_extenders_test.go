@@ -98,6 +98,47 @@ webhooks:
     caBundle: ABCD=
   timeoutSeconds: 10
 `
+
+		extender3 = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: KubeSchedulerWebhookConfiguration
+metadata:
+  name: test4
+webhooks:
+- weight: 10
+  failurePolicy: Fail
+  filterVerb: filtercustom
+  prioritizeVerb: prioritizecustom
+  clientConfig:
+    service:
+      name: scheduler
+      namespace: test4
+      port: 8080
+      path: /scheduler
+    caBundle: ABCD=
+  timeoutSeconds: 5
+`
+
+		extender4 = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: KubeSchedulerWebhookConfiguration
+metadata:
+  name: test5
+webhooks:
+- weight: 10
+  failurePolicy: Fail
+  preemptVerb: preempt
+  clientConfig:
+    service:
+      name: scheduler
+      namespace: test5
+      port: 8080
+      path: /scheduler
+    caBundle: ABCD=
+  timeoutSeconds: 5
+`
 	)
 
 	Context("Empty cluster", func() {
@@ -135,7 +176,10 @@ webhooks:
             "weight": 5,
             "timeout": 5,
             "ignorable": true,
-            "caData": "` + kubernetesCABase64 + `"
+            "caData": "` + kubernetesCABase64 + `",
+			"filterVerb": "filter",
+			"prioritizeVerb": "prioritize",
+			"preemptVerb": ""
           }
 `))
 		})
@@ -161,7 +205,10 @@ webhooks:
             "weight": 5,
             "timeout": 5,
             "ignorable": true,
-            "caData": "` + kubernetesCABase64 + `"
+            "caData": "` + kubernetesCABase64 + `",
+			"filterVerb": "filter",
+          	"prioritizeVerb": "prioritize",
+          	"preemptVerb": ""
 }`))
 
 			Expect(f.ValuesGet(configPath).Array()[1].String()).To(MatchJSON(`
@@ -170,7 +217,10 @@ webhooks:
             "weight": 10,
             "timeout": 5,
             "ignorable": false,
-            "caData": "` + kubernetesCABase64 + `"
+            "caData": "` + kubernetesCABase64 + `",
+			"filterVerb": "filter",
+          	"prioritizeVerb": "prioritize",
+          	"preemptVerb": ""
           }`))
 
 			Expect(f.ValuesGet(configPath).Array()[2].String()).To(MatchJSON(`
@@ -179,9 +229,68 @@ webhooks:
             "weight": 20,
             "timeout": 10,
             "ignorable": true,
-            "caData": "` + kubernetesCABase64 + `"
+            "caData": "` + kubernetesCABase64 + `",
+			"filterVerb": "filter",
+          	"prioritizeVerb": "prioritize",
+          	"preemptVerb": ""
           }`))
 
+		})
+
+	})
+
+	Context("Add one extender, set filterVerb and prioritizeVerb", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.discovery.kubernetesCA", kubernetesCA)
+			f.BindingContexts.Set(f.KubeStateSet(extender3))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It(configPath+" must contain one element", func() {
+			Expect(len(f.ValuesGet(configPath).Array())).To(Equal(1))
+			Expect(f.ValuesGet(configPath).Array()[0].String()).To(MatchJSON(`
+          {
+            "urlPrefix": "https://scheduler.test4.svc.cluster.local:8080/scheduler",
+            "weight": 10,
+            "timeout": 5,
+            "ignorable": false,
+            "caData": "` + kubernetesCABase64 + `",
+			"filterVerb": "filtercustom",
+          	"prioritizeVerb": "prioritizecustom",
+          	"preemptVerb": ""
+}`))
+		})
+
+	})
+
+	Context("Add one extender, set preemptVerb", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.discovery.kubernetesCA", kubernetesCA)
+			f.BindingContexts.Set(f.KubeStateSet(extender4))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It(configPath+" must contain one element", func() {
+			Expect(len(f.ValuesGet(configPath).Array())).To(Equal(1))
+			Expect(f.ValuesGet(configPath).Array()[0].String()).To(MatchJSON(`
+          {
+            "urlPrefix": "https://scheduler.test5.svc.cluster.local:8080/scheduler",
+            "weight": 10,
+            "timeout": 5,
+            "ignorable": false,
+            "caData": "` + kubernetesCABase64 + `",
+			"filterVerb": "filter",
+          	"prioritizeVerb": "prioritize",
+          	"preemptVerb": "preempt"
+}`))
 		})
 
 	})

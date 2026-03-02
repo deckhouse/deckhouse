@@ -60,13 +60,16 @@ func (c *Confirmation) Ask() bool {
 
 		response := strings.ToLower(strings.TrimSpace(string(line)))
 
-		if response == "y" || response == "yes" {
+		switch response {
+		case "y", "yes":
 			log.InfoF("\r")
 			return true
-		} else if response == "n" || response == "no" {
+
+		case "n", "no":
 			log.InfoF("\r")
 			return false
 		}
+
 		log.InfoF("\r")
 	}
 }

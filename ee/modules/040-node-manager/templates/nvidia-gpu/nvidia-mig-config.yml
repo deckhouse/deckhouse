@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- if include "nvidia_gpu_enabled" . }}
 apiVersion: v1
 kind: ConfigMap
@@ -197,6 +198,26 @@ data:
             "1g.12gb": 2
             "2g.24gb": 1
             "3g.48gb": 1
+
+{{- range $.Values.nodeManager.internal.nodeGroups }}
+  {{- if and .gpu .gpu.mig .gpu.mig.partedConfig }}
+    {{- if eq .gpu.mig.partedConfig "custom" }}
+      {{- $cfgName := (index $.Values.nodeManager.internal.customMIGNames .name) }}
+      {{- if not $cfgName }}
+        {{- fail (printf "custom MIG config name is not resolved for nodegroup %s" .name) }}
+      {{- end }}
+      {{- printf "\n" }}
+      {{ $cfgName }}:
+        {{- range .gpu.mig.customConfigs }}
+        - devices: [{{ .index }}]
+          mig-enabled: true
+          mig-devices:{{- range .slices }}
+            "{{ .profile }}": {{ default 1 .count }}{{- end }}
+        {{- end }}
+      {{- printf "\n" }}
+    {{- end }}
+  {{- end }}
+{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -988,4 +1009,5 @@ data:
     kubectl uncordon "${NODE_NAME}"
     kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/drained-
     kubectl taint nodes "${NODE_NAME}" mig-reconfigure=true:NoSchedule-
+{{- end }}
 {{- end }}

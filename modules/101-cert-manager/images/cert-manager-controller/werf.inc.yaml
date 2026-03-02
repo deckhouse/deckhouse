@@ -1,8 +1,8 @@
-{{- $version := "1.17.1" }}
+{{- $version := include "get_oss_version_by_id" (list "cert-manager" $ )  -}} # see in oss.yaml
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /controller-linux-amd64
   to: /bin/cert-manager-controller
   before: setup
@@ -10,7 +10,7 @@ imageSpec:
   config:
     entrypoint: ["/bin/cert-manager-controller"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact
 final: false
 git:
@@ -19,6 +19,8 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
+  to: /module_crds    
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -33,11 +35,46 @@ shell:
   - git show -s --format=%ct HEAD > GITEPOCH
   - rm -rf /src/.git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-ci-validator
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
+  to: /module_crds
+- add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/docs
+  to: /docs  
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+  add: /src/deploy/crds
+  to: /src/deploy/crds
+  before: install
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: install
+shell:
+  install:
+  - | 
+    echo "Checking if module crds are the same as cert-manager crds"
+    DOWNLOAD=false CRD_FILE_PATH=/src/deploy/crds MODULE_VERSION=v{{ $version }} /module_crds/cert-manager/update.sh
+
+    dir1="/src/deploy/crds"
+    dir2="/module_crds/cert-manager"
+    for f in $dir1/*.yaml; do
+      base=$(basename "$f")
+        diff <(yq -P 'sort_keys(..)' $dir1/$base) <(yq -P 'sort_keys(..)' $dir2/$base)
+    done  
+
+  - |
+    echo "Checking cert-manager version in documentation"
+    cat /docs/README.md    | grep {{ $version }} || ( echo "ERROR: version v{{ $version }} not found in /docs/README.md"    && exit 1 )
+    cat /docs/README_RU.md | grep {{ $version }} || ( echo "ERROR: version v{{ $version }} not found in /docs/README_RU.md" && exit 1 )
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src
   before: install
@@ -66,3 +103,5 @@ shell:
   - cp _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64 /
   - chown 64535:64535 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
   - chmod 700 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
+
+

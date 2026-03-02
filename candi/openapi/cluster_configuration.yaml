@@ -21,7 +21,7 @@ apiVersions:
       podSubnetNodeCIDRPrefix: "24"
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
-      kubernetesVersion: "1.30"
+      kubernetesVersion: "1.31"
       clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
@@ -85,13 +85,20 @@ apiVersions:
         description: |
           Address space of the cluster's Pods.
 
-          > Caution! Normally, you won't be able to change the parameter in a running cluster. To avoid this limitation use specific flag.
+          > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       podSubnetNodeCIDRPrefix:
         type: string
         description: |
-          The prefix of Pod network on a node.
+          The prefix size of the Pod network allocated to each node.
 
-          > Caution! Normally, you won't be able to change the parameter in a running cluster. To avoid this limitation use specific flag.
+          This parameter determines how many IP addresses are available for Pods on each individual node. For example, if `podSubnetCIDR: 10.111.0.0/16` and `podSubnetNodeCIDRPrefix: "24"`, each node will receive a `/24` subnet (e.g., `10.111.0.0/24`, `10.111.1.0/24`, etc.), providing up to 254 IP addresses per node (253 usable for Pods, accounting for network and broadcast addresses).
+
+          **Calculation examples:**
+          - With `/16` network and `/24` prefix: maximum **256 nodes** (2^(24-16) = 256)
+          - With `/16` network and `/25` prefix: maximum **512 nodes**, but only **126 IPs per node**
+          - Each Pod network IP can support up to 2 Pods (one running + one terminating)
+
+          > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
         default: "24"
       serviceSubnetCIDR:
         type: string
@@ -99,7 +106,7 @@ apiVersions:
         description: |
           Address space of the cluster's services.
 
-          > Caution! Normally, you won't be able to change the parameter in a running cluster. To avoid this limitation use specific flag.
+          > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       clusterDomain:
         type: string
         description: |
@@ -138,17 +145,15 @@ apiVersions:
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
-        - "1.30"
         - "1.31"
         - "1.32"
         - "1.33"
         - "1.34"
+        - "1.35"
         - "Automatic"
       encryptionAlgorithm:
         type: string
         description: |
-          In Kubernetes version **1.30** and earlier, only the `RSA-2048` algorithm is supported.
-
           Starting from version **1.31**, kubeadm use the specified asymmetric encryption algorithm
           when generating keys and certificates for the following control-plane components:
 

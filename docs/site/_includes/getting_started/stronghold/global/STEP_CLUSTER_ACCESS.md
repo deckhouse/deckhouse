@@ -79,7 +79,7 @@ The *DNS names template* is used to configure Ingress resources of system applic
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 The guide will use [sslip.io](https://sslip.io/) to simplify configuration.
 
-Run the following command on **the master node** to get the load balancer IP and to configure [template for DNS names](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) to use the *sslip.io*:
+Run the following command on **the master node** to get the load balancer IP and configure the [template for DNS names](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) to use the *sslip.io*:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
 {% raw %}

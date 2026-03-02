@@ -43,7 +43,7 @@ func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependen
 	var globalVersion string
 	var versionsToInstall = make([]string, 0)
 	var unsupportedVersions = make([]string, 0)
-	var supportedVersions = make([]string, 0)
+	var supportedVersions = make([]string, 0) //nolint:prealloc
 
 	var supportedVersionsResult = input.Values.Get("istio.internal.versionMap").Map()
 	for versionResult := range supportedVersionsResult {

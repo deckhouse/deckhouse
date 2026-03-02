@@ -121,3 +121,12 @@ The ability to dynamically assign additional IP addresses to nodes is implemente
 
 <div data-presentation="presentations/egressgateway_virtualip_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1jdn39uDFSraQIXVdrREBsRv-Lp4kPidhx4C-gvv1DVk/ --->
+
+## Exporting data from Hubble
+
+Deckhouse Kubernetes Platform allows to configure data export from Hubble running inside Cilium agents using the cluster-scoped custom resource [`HubbleMonitoringConfig`](cr.html#hubblemonitoringconfig).
+To enable export, [create a HubbleMonitoringConfig resource](examples.html#hubblemonitoringconfig).
+
+{% alert level="warning" %}
+Creating or modifying the HubbleMonitoringConfig resource will **restart all Cilium agents** in the cluster.
+{% endalert %}

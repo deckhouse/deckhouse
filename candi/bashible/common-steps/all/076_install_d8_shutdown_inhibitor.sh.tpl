@@ -76,7 +76,6 @@ Wants=network-online.target kubelet.service containerd-deckhouse.service
 After=network-online.target kubelet.service containerd-deckhouse.service
 [Service]
 Environment="PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-ExecStartPre=/bin/bash -c 'until /opt/deckhouse/bin/nc -z 127.0.0.1 6445; do sleep 1; done'
 ExecStart=/opt/deckhouse/bin/d8-shutdown-inhibitor{{ if $noCordon }} --no-cordon{{ end }}
 Restart=always
 StartLimitInterval=0

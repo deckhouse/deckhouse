@@ -1,0 +1,12 @@
+opentofu: 1.9.4
+
+kubernetes:
+  namespace: hashicorp
+  cloudName: DVP
+  type: kubernetes
+  version: 2.35.1
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
+  useOpentofu: true

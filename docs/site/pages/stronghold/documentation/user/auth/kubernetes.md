@@ -85,8 +85,6 @@ management tool.
 
 1. Use the `/config` endpoint to configure Stronghold to talk to Kubernetes. Use
   `d8 k cluster-info` to validate the Kubernetes host address and TCP port.
-  For the list of available configuration options, please see the
-  [API documentation](/api-docs/auth/kubernetes).
 
   ```bash
   d8 stronghold write auth/kubernetes/config \
@@ -98,8 +96,8 @@ management tool.
 {% alert level="critical" %}
 
  **Note:** The pattern Stronghold uses to authenticate Pods depends on sharing
-  the JWT token over the network. Given the [security model of
-  Stronghold](/docs/internals/security), this is allowable because Stronghold is
+  the JWT token over the network. Given the security model of
+  Stronghold, this is allowable because Stronghold is
   part of the trusted compute base. In general, Kubernetes applications should
   **not** share this JWT with other applications, as it allows API calls to be
   made on behalf of the Pod and can result in unintended access being granted
@@ -120,9 +118,6 @@ management tool.
   This role authorizes the "myapp" service account in the default
   namespace and it gives it the default policy.
 
-  For the complete list of configuration options, please see the [API
-  documentation](/api-docs/auth/kubernetes).
-
 ## Kubernetes 1.21
 
 Starting in version [1.21][k8s-1.21-changelog], the Kubernetes
@@ -134,7 +129,7 @@ Kubernetes auth:
 * The value of the JWT's `"iss"` claim depends on the cluster's configuration.
 
 The changes to token lifetime are important when configuring the
-[`token_reviewer_jwt`](/api-docs/auth/kubernetes#token_reviewer_jwt) option.
+`token_reviewer_jwt` option.
 If a short-lived token is used,
 Kubernetes will revoke it as soon as the pod or service account are deleted, or
 if the expiry time passes, and Stronghold will no longer be able to use the
@@ -243,48 +238,6 @@ This solution allows you to use short-lived tokens for all clients and removes
 the need for a reviewer JWT. However, the client tokens cannot be revoked before
 their TTL expires, so it is recommended to keep the TTL short with that
 limitation in mind.
-
-### Discovering the service account `issuer`
-
-{% alert level="info" %}
-
-**Note:** `disable_iss_validation` and `issuer` are deprecated and the
-default for `disable_iss_validation` has changed to `true` for new Kubernetes
-auth mounts. The following section only applies if you have set
-`disable_iss_validation=false` , but `disable_iss_validation=true` is the new
-recommended value for all versions of Stronghold.
-
-{% endalert %}
-Kubernetes 1.21+ clusters may require setting the service account
-[`issuer`](/api-docs/auth/kubernetes#issuer) to the same value as
-`kube-apiserver`'s `--service-account-issuer` flag. This is because the service
-account JWTs for these clusters may have an issuer specific to the cluster
-itself, instead of the old default of `kubernetes/serviceaccount`. If you are
-unable to check this value directly, you can run the following and look for the
-`"iss"` field to find the required value:
-
-```bash
-echo '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
-  | d8 k create -f- --raw /api/v1/namespaces/default/serviceaccounts/default/token \
-  | jq -r '.status.token' \
-  | cut -d . -f2 \
-  | base64 -d
-```
-
-Most clusters will also have that information available at the
-`.well-known/openid-configuration` endpoint:
-
-```bash
-d8 k get --raw /.well-known/openid-configuration | jq -r .issuer
-```
-
-This value is then used when configuring Kubernetes auth, e.g.:
-
-```bash
-d8 stronghold write auth/kubernetes/config \
-  kubernetes_host="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
-  issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
-```
 
 ## Configuring kubernetes
 

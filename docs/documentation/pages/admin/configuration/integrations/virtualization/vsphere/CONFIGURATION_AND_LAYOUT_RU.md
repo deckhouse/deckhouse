@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка VMware vSphere
 permalink: ru/admin/integrations/virtualization/vsphere/layout.html
 lang: ru
 ---

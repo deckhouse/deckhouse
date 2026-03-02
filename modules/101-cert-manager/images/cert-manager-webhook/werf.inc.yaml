@@ -1,8 +1,7 @@
-{{- $version := "1.17.1" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/cert-manager-controller-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/cert-manager-controller-artifact
   add: /webhook-linux-amd64
   to: /bin/webhook
   before: setup

@@ -87,6 +87,7 @@ spec:
   "loadBalancer": {},
   "controllerLogLevel": "Info",
   "loadBalancerWithProxyProtocol": {},
+  "loadBalancerWithSSLPassthrough": {},
   "maxReplicas": 1,
   "minReplicas": 1,
   "resourcesRequests": {
@@ -194,6 +195,7 @@ spec:
 "inlet": "LoadBalancer",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "controllerLogLevel": "Info",
@@ -220,7 +222,10 @@ spec:
 "hostPort": {},
 "hostPortWithProxyProtocol": {
   "httpPort": 80,
-  "httpsPort": 443
+  "httpsPort": 443,
+  "acceptClientIPHeadersFrom": [
+    "0.0.0.0/0"
+  ]
 },
 "hostWithFailover": {},
 "hsts": false,
@@ -229,6 +234,7 @@ spec:
 "inlet": "HostPortWithProxyProtocol",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "resourcesRequests": {
@@ -268,6 +274,7 @@ spec:
 "inlet": "LoadBalancerWithProxyProtocol",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "resourcesRequests": {

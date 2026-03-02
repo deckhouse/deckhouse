@@ -5,8 +5,6 @@
 Files:
 
 - pkg/vcdcsiclient/disks.go
-- go.sum
-- go.mod
 
 Changes:
 
@@ -32,7 +30,9 @@ Files:
 
 Changes:
 
-- Update dependencies
+- Update and pin dependency versions required to fix known CVEs.
+- The `go.mod` dependency updates were moved here from `001-add-iops-calculation.patch` to avoid patch ordering conflicts.
+- `001-add-iops-calculation.patch` now contains only code changes, while dependency updates are isolated in this patch.
 
 ## 004-metadata.patch
 

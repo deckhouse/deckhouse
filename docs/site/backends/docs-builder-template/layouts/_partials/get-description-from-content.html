@@ -1,0 +1,14 @@
+{{- $content := .content }}
+{{/* Remove all shortcode blocks including their content */}}
+{{- $content = replaceRE `(?s)\{\{<[^}]*?>.*?\{\{<[^}]*?>\}\}` "" $content }}
+{{/* Replace ALL newlines with spaces */}}
+{{- $content = replaceRE `\r?\n` " " $content }}
+{{/* Collapse multiple spaces (including tabs) to single space */}}
+{{- $content = replaceRE `[ \t]+` " " $content }}
+{{/* Remove leading/trailing spaces */}}
+{{- $content = strings.TrimSpace $content }}
+{{/* Trancate to 199 characters */}}
+{{- $content = $content | truncate 199 "…" }}
+{{- return $content }}
+
+

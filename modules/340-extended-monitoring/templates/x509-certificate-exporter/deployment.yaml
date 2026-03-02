@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: x509-certificate-exporter
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: x509-certificate-exporter

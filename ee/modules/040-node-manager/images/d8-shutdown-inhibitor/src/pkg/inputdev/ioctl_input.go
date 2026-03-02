@@ -12,6 +12,7 @@ import (
 	"unsafe"
 )
 
+//nolint:revive
 const (
 	KEY_MAX = 0x2ff
 )
@@ -19,6 +20,7 @@ const (
 // EventType is a type for event type constants.
 type EventType uint
 
+//nolint:revive
 const (
 	EV_SYN EventType = 0
 	EV_KEY EventType = 1
@@ -28,6 +30,8 @@ const (
 type Button uint
 
 // Only power keys.
+//
+//nolint:revive
 const (
 	KEY_POWER  Button = 116 /* SC System Power Down */
 	KEY_POWER2 Button = 0x164
@@ -41,6 +45,8 @@ const (
 // EVIOCGNAME is a copy from linux/input.h
 // It returns encoded command to get device name.
 // #define EVIOCGNAME(len) _IOC(_IOC_READ, 'E', 0x06, len)
+//
+//nolint:revive
 func EVIOCGNAME(size int) uint {
 	return _IOC(_IOC_READ, 'E', 0x06, size)
 }
@@ -66,6 +72,8 @@ func GetDeviceName(fd int) (string, error) {
 // EVIOCGBIT is a copy from linux/input.h
 // It returns info for the event type.
 // #define EVIOCGBIT(ev,len)  _IOC(_IOC_READ, 'E', 0x20 + ev, len)
+//
+//nolint:revive
 func EVIOCGBIT(ev EventType, size int) uint {
 	return _IOC(_IOC_READ, 'E', uint(0x20)+uint(ev), size)
 }

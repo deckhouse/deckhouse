@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в Microsoft Azure
 permalink: ru/admin/integrations/public/azure/authorization.html
 lang: ru
 ---

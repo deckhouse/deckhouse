@@ -24,6 +24,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
@@ -136,8 +137,8 @@ bastion:
   instanceClass:
     rootDiskSizeGb: 30
     sizingPolicy: *!CHANGE_SIZING_POLICY_BASTION*
-    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
+    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     mainNetworkIPAddress: 192.168.199.10
 edgeGateway:
   name: *!CHANGE_EDGE_GW_NAME*
@@ -148,8 +149,8 @@ createDefaultFirewallRules: false
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    storageProfile: *!CHANGE_STORAGE_PROFILE*
     sizingPolicy: *!CHANGE_SIZING_POLICY*
+    storageProfile: *!CHANGE_STORAGE_PROFILE*
     template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     mainNetworkIPAddresses:
       - 192.168.199.2
@@ -187,9 +188,9 @@ spec:
     minPerZone: 1
   nodeType: CloudEphemeral
 ---
-# [<en>] Section containing the parameters of NGINX Ingress controller.
+# [<en>] Section containing the parameters of Ingress NGINX Controller.
 # [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры NGINX Ingress controller.
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
 # [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -248,7 +249,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -д '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

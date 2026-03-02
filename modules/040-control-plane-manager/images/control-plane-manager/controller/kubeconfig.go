@@ -28,12 +28,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
@@ -87,10 +88,10 @@ func renewAdminKubeconfig() error {
 
 func renewKubeconfig(componentName string) error {
 	path := filepath.Join(kubernetesConfigPath, componentName+".conf")
-	log.Infof("generate or renew %s kubeconfig", path)
+	log.Info("generate or renew kubeconfig", slog.String("path", path))
 	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
 		tmpPath := filepath.Join(config.TmpPath, path)
-		log.Infof("configuration has changed since last kubeconfig generation (last applied checksum %s, configuration checksum %s), verifying kubeconfig", config.LastAppliedConfigurationChecksum, config.ConfigurationChecksum)
+		log.Info("configuration has changed since last kubeconfig generation, verifying kubeconfig", slog.String("last_applied_checksum", config.LastAppliedConfigurationChecksum), slog.String("configuration_checksum", config.ConfigurationChecksum))
 		if err := prepareKubeconfig(componentName, true); err != nil {
 			return err
 		}
@@ -100,7 +101,10 @@ func renewKubeconfig(componentName string) error {
 			log.Error(err.Error())
 		}
 		if shouldRecreateKubeConfig(err) {
-			removeFile(path)
+			err := removeFile(path)
+			if err != nil {
+				log.Error(err.Error())
+			}
 		}
 	}
 
@@ -109,7 +113,7 @@ func renewKubeconfig(componentName string) error {
 	}
 
 	// regenerate kubeconfig
-	log.Infof("generate new kubeconfig %s", path)
+	log.Info("generate new kubeconfig", slog.String("path", path))
 	return prepareKubeconfig(componentName, false)
 }
 
@@ -178,7 +182,7 @@ func prepareKubeconfig(componentName string, isTemp bool) error {
 	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
-		log.Infof("%s", s)
+		log.Info(s)
 	}
 	return err
 }
@@ -207,7 +211,7 @@ func updateRootKubeconfig() error {
 	}
 
 	originalPath := filepath.Join(kubernetesConfigPath, "admin.conf")
-	log.Infof("update root user kubeconfig (%s)", path)
+	log.Info("update root user kubeconfig", slog.String("path", path))
 	if _, err := os.Stat(path); err == nil {
 		p, err := filepath.EvalSymlinks(path)
 		if p == originalPath && err == nil {
@@ -227,7 +231,7 @@ func updateRootKubeconfig() error {
 
 func checkKubeletConfig() error {
 	kubeletPath := filepath.Join(kubernetesConfigPath, "kubelet.conf")
-	log.Infof("phase: check kubelet config %s", kubeletPath)
+	log.Info("phase: check kubelet config", slog.String("path", kubeletPath))
 
 	res, err := loadKubeconfig(kubeletPath)
 	if err != nil {
@@ -314,8 +318,7 @@ func checkEtcdManifest() error {
 	for _, arg := range pod.Spec.Containers[0].Command {
 		switch {
 		case strings.HasPrefix(arg, "--advertise-client-urls=https://"):
-			ip := strings.TrimPrefix(arg, "--advertise-client-urls=https://")
-			ip = strings.TrimSuffix(strings.TrimPrefix(arg, "--advertise-client-urls=https://"), ":2379")
+			ip := strings.TrimSuffix(strings.TrimPrefix(arg, "--advertise-client-urls=https://"), ":2379")
 			if ip != config.MyIP {
 				return fmt.Errorf("etcd is not supposed to change advertise address from %s to %s, please verify node's InternalIP", ip, config.MyIP)
 			}

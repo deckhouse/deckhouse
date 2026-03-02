@@ -18,7 +18,6 @@ package namespace
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"slices"
 
@@ -53,7 +52,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 	// other namespaces can be created only by deckhouse or multitenancy-manager
 	if !slices.Contains(v.allowedServiceAccounts, req.UserInfo.Username) {
-		return admission.Denied(fmt.Sprintf("namespaces can be created only as a part of a project"))
+		return admission.Denied("namespaces can be created only as a part of a project")
 	}
 
 	return admission.Allowed("")

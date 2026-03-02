@@ -15,9 +15,10 @@ import (
 	"time"
 
 	"github.com/coreos/go-iptables/iptables"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/fsnotify/fsnotify"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -85,7 +86,7 @@ func (rf *readinessMgr) checkReadinessStatus() error {
 	var err error
 	defer func() {
 		if err != nil {
-			rf.logger.Warnf("failed to check readiness status: %v", err)
+			rf.logger.Warn(fmt.Sprintf("failed to check readiness status: %v", err))
 		}
 	}()
 
@@ -178,7 +179,7 @@ func (rf *readinessMgr) startWatcher() error {
 	waitFor := 100 * time.Millisecond
 	t := time.AfterFunc(math.MaxInt64, func() {
 		if err := rf.handleStatus(); err != nil {
-			rf.logger.Errorf("failed to handle status: %v", err)
+			rf.logger.Error(fmt.Sprintf("failed to handle status: %v", err))
 		}
 	})
 	t.Stop()
@@ -190,14 +191,14 @@ loop:
 			if event.Op == fsnotify.Write {
 				t.Reset(waitFor)
 			} else {
-				rf.logger.Warnf("unsupported inotify event received: %s, restarting watcher...", event.Op)
+				rf.logger.Warn(fmt.Sprintf("unsupported inotify event received: %s, restarting watcher...", event.Op))
 				if err := syscall.Exec(iptablesLoopBinary, []string{iptablesLoopBinary}, os.Environ()); err != nil {
 					return fmt.Errorf("failed to restart watcher: %v", err)
 				}
 			}
 
 		case s := <-rf.signalCh:
-			rf.logger.Infof("signal %s received, exiting...", s)
+			rf.logger.Info(fmt.Sprintf("signal %s received, exiting...", s))
 			// best-effort delete to make sure the socket rule is deleted on exit
 			_ = rf.deleteIPtablesRule()
 			break loop
@@ -211,19 +212,19 @@ func main() {
 	logger := log.NewLogger()
 	log.SetDefault(logger)
 
-	kubeDnsSvc := os.Getenv("KUBE_DNS_SVC_IP")
-	if len(kubeDnsSvc) == 0 {
+	kubeDNSSvc := os.Getenv("KUBE_DNS_SVC_IP")
+	if len(kubeDNSSvc) == 0 {
 		logger.Fatal("failed to resolve KUBR_DNS_SVC_IP env")
 	}
 
-	iptablesRule := strings.Fields(fmt.Sprintf("-d %s/32 -m socket --nowildcard -j NOTRACK", kubeDnsSvc))
+	iptablesRule := strings.Fields(fmt.Sprintf("-d %s/32 -m socket --nowildcard -j NOTRACK", kubeDNSSvc))
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	iptablesMgr, err := iptables.New(iptables.IPFamily(iptables.ProtocolIPv4), iptables.Timeout(60))
 	if err != nil {
-		logger.Fatalf("failed to init iptables manager: %v", err)
+		logger.Fatal(fmt.Sprintf("failed to init iptables manager: %v", err))
 	}
 
 	rf := newReadinessMgr(readinessFilePath, iptablesMgr, iptablesRule, sigs, logger)
@@ -243,13 +244,13 @@ func main() {
 				break loop
 
 			case s := <-rf.signalCh:
-				rf.logger.Infof("signal %s received, exiting...", s)
+				rf.logger.Info(fmt.Sprintf("signal %s received, exiting...", s))
 				return
 			}
 		}
 	}
 
 	if err := rf.startWatcher(); err != nil {
-		log.Errorf("watcher failed: %v", err)
+		log.Error(fmt.Sprintf("watcher failed: %v", err))
 	}
 }

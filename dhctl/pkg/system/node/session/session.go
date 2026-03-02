@@ -85,6 +85,14 @@ type Host struct {
 	Name string
 }
 
+func (h *Host) String() string {
+	name := h.Name
+	if name != "" {
+		name = fmt.Sprintf("%s: ", name)
+	}
+	return fmt.Sprintf("%s%s", name, h.Host)
+}
+
 type SortByName []Host
 
 func (h SortByName) Len() int { return len(h) }
@@ -310,7 +318,8 @@ func (s *Session) selectNewHost() {
 	}
 
 	host := hosts[hostIndx]
-	s.remainingHosts = append(hosts[:hostIndx], hosts[hostIndx+1:]...)
+	s.remainingHosts = hosts[:hostIndx]
+	s.remainingHosts = append(s.remainingHosts, hosts[hostIndx+1:]...)
 
 	s.host = host.Host
 }

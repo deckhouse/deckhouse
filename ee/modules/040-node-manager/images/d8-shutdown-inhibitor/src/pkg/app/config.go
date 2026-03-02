@@ -10,6 +10,9 @@ import (
 )
 
 // Default configuration
+// InhibitDelayMaxSec refers to logind config value
+//
+//nolint:staticcheck
 const (
 	InhibitNodeShutdownLabel = "pod.deckhouse.io/inhibit-node-shutdown"
 	InhibitDelayMaxSec       = 3 * 24 * time.Hour // 3 days

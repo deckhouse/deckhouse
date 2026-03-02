@@ -5,3 +5,6 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-provider-gcp
 stage: General Availability
+descriptions:
+  en: Manages interaction with Google cloud resources. Allows to use GCP resources for provisioning nodes.
+  ru: Управляет взаимодействием с облачными ресурсами Google Cloud. Позволяет использовать ресурсы GCP при создании узлов.

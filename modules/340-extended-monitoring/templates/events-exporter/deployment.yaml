@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: events-exporter
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: events-exporter

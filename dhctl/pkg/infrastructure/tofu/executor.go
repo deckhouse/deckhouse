@@ -137,7 +137,7 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 	return err
 }
 
-func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exitCode int, err error) {
+func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int, error) {
 	args := []string{
 		"plan",
 		"-input=false",
@@ -167,7 +167,7 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 	return infraexec.Exec(ctx, e.cmd, e.logger)
 }
 
-func (e *Executor) Output(ctx context.Context, statePath string, outFielda ...string) (result []byte, err error) {
+func (e *Executor) Output(ctx context.Context, statePath string, outFielda ...string) ([]byte, error) {
 	cmd, out, err := tofuOutputRun(ctx, e.params.RunExecutorParams, statePath, outFielda...)
 	e.cmd = cmd
 	return out, err
@@ -189,7 +189,7 @@ func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts)
 	return err
 }
 
-func (e *Executor) Show(ctx context.Context, planPath string) (result []byte, err error) {
+func (e *Executor) Show(ctx context.Context, planPath string) ([]byte, error) {
 	args := []string{
 		"show",
 		"-json",
@@ -217,7 +217,7 @@ func (e *Executor) Stop() {
 	_ = syscall.Kill(-e.cmd.Process.Pid, syscall.SIGINT)
 }
 
-func (e *Executor) GetActions(ctx context.Context, planPath string) (actions []string, err error) {
+func (e *Executor) GetActions(ctx context.Context, planPath string) ([]string, error) {
 	args := []string{
 		"show",
 		"-json",

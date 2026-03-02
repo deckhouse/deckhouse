@@ -17,9 +17,13 @@ limitations under the License.
 package validation
 
 import (
+	"context"
 	"net/http"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -38,6 +42,10 @@ type moduleStorage interface {
 	GetModulesByExclusiveGroup(exclusiveGroup string) []string
 }
 
+type packageManager interface {
+	ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error)
+}
+
 type moduleManager interface {
 	IsModuleEnabled(name string) bool
 	GetEnabledModuleNames() []string
@@ -48,6 +56,7 @@ func RegisterAdmissionHandlers(
 	reg registerer,
 	cli client.Client,
 	mm moduleManager,
+	pm packageManager,
 	validator *configtools.Validator,
 	storage moduleStorage,
 	metricStorage metricsstorage.Storage,
@@ -63,4 +72,5 @@ func RegisterAdmissionHandlers(
 	reg.RegisterHandler("/validate/v1/static-configuration-secret", staticConfigurationHandler(schemaStore))
 	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
 	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts))
+	reg.RegisterHandler("/validate/v1alpha1/applications", applicationValidationHandler(pm))
 }

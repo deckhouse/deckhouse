@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: skip-heritage-test
+  name: test
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: test
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: skip-heritage-test
+  name: with-heritage
+  namespace: test
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: test
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: skip-heritage-test
+    projects.deckhouse.io/skip-heritage-label: "true"
+  name: skip-heritage
+  namespace: test
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    app: test
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: skip-heritage-test
+    projects.deckhouse.io/unmanaged: "true"
+  name: unmanaged
+  namespace: test
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app: test
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: skip-heritage-test
+  name: normal-resource
+  namespace: test

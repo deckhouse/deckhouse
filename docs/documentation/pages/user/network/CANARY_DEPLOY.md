@@ -1,5 +1,6 @@
 ---
-title: "Canary deployment"
+title: "Configuring Canary deployment"
+description: "Configuring Canary deployment strategy in Deckhouse Kubernetes Platform using ingress-nginx and istio. Gradual rollout of new application versions with traffic control and rollback capabilities."
 permalink: en/user/network/canary-deployment.html
 ---
 

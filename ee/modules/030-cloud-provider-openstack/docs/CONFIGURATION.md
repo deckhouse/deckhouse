@@ -6,6 +6,14 @@ The module is automatically enabled for all cloud clusters deployed in OpenStack
 
 {% include module-alerts.liquid %}
 
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
+{% include module-requirements.liquid %}
+
+{% include module-conversion.liquid %}
+
 You can configure the number and parameters of ordering machines in the cloud via the [`NodeGroup`](../../modules/node-manager/cr.html#nodegroup) custom resource of the node-manager module. Also, in this custom resource, you can specify the instance class's name for the above group of nodes (the `cloudInstances.ClassReference` NodeGroup parameter). In the case of the OpenStack-based cloud provider, the instance class is the [`OpenStackInstanceClass`](cr.html#openstackinstanceclass) custom resource that stores specific parameters of the machines.
 
 The module settings are set automatically based on the placement strategy chosen. In most cases, you do not have to configure the module manually.
@@ -25,9 +33,9 @@ A list of OpenStack services required for Deckhouse Kubernetes Platform to work 
 | Compute (Nova)                    | v2          |
 | Network (Neutron)                 | v2          |
 | Block Storage (Cinder)            | v3          |
-| Load Balancing (Octavia) &#8432;  | v2          |
+| Load Balancing (Octavia) *        | v2          |
 
-&#8432;  If you need to order a Load Balancer.
+\* If you need to order a Load Balancer.
 
 To ensure proper integration and functionality, the OpenStack user associated with the Deckhouse Kubernetes Platform should be granted the "member" role. This role assignment is essential to provide the necessary permissions for interacting with the listed services and managing resources within the OpenStack environment.
 

@@ -152,17 +152,17 @@ func (n *ndpResponder) processRequest() dropReason {
 	// Ignore NDP requests that the announcer tells us to ignore.
 	reason := n.announce(ns.TargetAddress, n.intf)
 	if reason == dropReasonNotMatchInterface {
-		level.Debug(n.logger).Log("op", "ndpRequestIgnore", "ip", ns.TargetAddress, "interface", n.intf, "reason", "notMatchInterface")
+		_ = level.Debug(n.logger).Log("op", "ndpRequestIgnore", "ip", ns.TargetAddress, "interface", n.intf, "reason", "notMatchInterface")
 	}
 	if reason != dropReasonNone {
 		return reason
 	}
 
 	stats.GotRequest(ns.TargetAddress.String())
-	level.Debug(n.logger).Log("interface", n.intf, "ip", ns.TargetAddress, "senderIP", src, "senderLLAddr", nsLLAddr, "responseMAC", n.hardwareAddr, "msg", "got NDP request for service IP, sending response")
+	_ = level.Debug(n.logger).Log("interface", n.intf, "ip", ns.TargetAddress, "senderIP", src, "senderLLAddr", nsLLAddr, "responseMAC", n.hardwareAddr, "msg", "got NDP request for service IP, sending response")
 
 	if err := n.advertise(src, ns.TargetAddress, false); err != nil {
-		level.Error(n.logger).Log("op", "ndpReply", "interface", n.intf, "ip", ns.TargetAddress, "senderIP", src, "senderLLAddr", nsLLAddr, "responseMAC", n.hardwareAddr, "error", err, "msg", "failed to send ARP reply")
+		_ = level.Error(n.logger).Log("op", "ndpReply", "interface", n.intf, "ip", ns.TargetAddress, "senderIP", src, "senderLLAddr", nsLLAddr, "responseMAC", n.hardwareAddr, "error", err, "msg", "failed to send ARP reply")
 	} else {
 		stats.SentResponse(ns.TargetAddress.String())
 	}

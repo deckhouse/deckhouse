@@ -29,11 +29,8 @@ import (
 )
 
 func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
 	resourcesToCreate := make(template.Resources, 0)
 	if app.ResourcesPath != "" {
@@ -84,7 +81,6 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-
 		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, nil)
 		if err != nil {
 			return err

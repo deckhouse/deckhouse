@@ -1,0 +1,4 @@
+dirs:
+  - /etc/ssl/permission-browser-apiserver
+  - /etc/user-authz-webhook
+  - /etc/kubernetes

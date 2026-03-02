@@ -34,6 +34,7 @@ metadata:
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca-kube-suitable
@@ -48,7 +49,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-kube-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1003"
+  resourceVersion: "1005"
 spec:
   changelog:
     features:

@@ -103,7 +103,7 @@ func (h HTTPProbeTarget) PerformCheck() error {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP bad status code %d", resp.StatusCode)
 	}
 	return nil

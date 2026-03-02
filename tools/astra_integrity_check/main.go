@@ -30,7 +30,7 @@ const resultXMLPath = "/tmp/astra-int-check-report.xml"
 
 func main() {
 	if os.Geteuid() != 0 {
-		log.Fatalln("This program should be run with root priviliges")
+		log.Fatalln("This program should be run with root privileges")
 	}
 
 	setupFlags()

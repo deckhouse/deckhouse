@@ -51,13 +51,19 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestr
 }
 
 func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
-	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
+	// use no strict because we can have situation when vm was destroyed
+	// in previous run, but all resources not deleted. in this situation
+	// we cannot have ssh ip and internal ip in state because infra util
+	// delete output on remove vm
+	// in restart operation we will get error with strict getting
+	outputs, err := infrastructure.GetMasterNodeResultNoStrict(ctx, runner)
 	if err != nil {
 		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
 	}
 
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
+		h.oldMasterIPForSSH = ""
 		log.InfoF("Got empty master IP for ssh for node %s. Skip removing control-plane from node.\n", h.nodeToDestroy)
 		return false, nil
 	}
@@ -67,6 +73,11 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	err = removeControlPlaneRoleFromNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
+	}
+
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+	if err != nil {
+		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
 	}
 
 	return false, nil

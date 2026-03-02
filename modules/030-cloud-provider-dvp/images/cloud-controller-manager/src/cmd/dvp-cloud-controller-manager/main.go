@@ -17,9 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"k8s.io/apimachinery/pkg/util/wait"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/cloud-provider/app"
@@ -28,12 +25,11 @@ import (
 	"k8s.io/cloud-provider/options"
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/logs"
-
-	_ "dvp-cloud-controller-manager/pkg/cloudprovider/dvp"
-
 	_ "k8s.io/component-base/metrics/prometheus/clientgo" // load all the prometheus client-go plugins
 	_ "k8s.io/component-base/metrics/prometheus/version"  // for version metric registration
 	"k8s.io/klog/v2"
+
+	_ "dvp-cloud-controller-manager/pkg/cloudprovider/dvp"
 )
 
 const (
@@ -64,8 +60,7 @@ func main() {
 	)
 
 	if err := command.Execute(); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+		klog.Fatalf("error: %v\n", err)
 	}
 }
 

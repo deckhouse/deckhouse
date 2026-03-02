@@ -26,11 +26,8 @@ import (
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
 	metaConfig, err := config.ParseConfig(
 		ctx,

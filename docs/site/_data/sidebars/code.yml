@@ -20,10 +20,6 @@ entries:
           ru: Создание группы для пользователей
         url: /code/documentation/admin/configuration/group.html
       - title:
-          en: Configuring MergeRequestApprovals
-          ru: Настройка MergeRequestApprovals
-        url: /code/documentation/admin/configuration/mr-approvals.html
-      - title:
           en: Monitoring and control
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html
@@ -80,9 +76,17 @@ entries:
           ru: API
         url: /code/documentation/user/api.html
       - title:
-          en: Pull Mirroring
-          ru: Pull зеркалирование
+          en: Pull mirroring
+          ru: Pull-зеркалирование
         url: /code/documentation/user/pull-mirroring.html
+      - title:
+          en: Approval rules
+          ru: Правила апрувов
+        url: /code/documentation/user/approval-rules.html
+      - title:
+          en: CODEOWNERS
+          ru: CODEOWNERS
+        url: /code/documentation/user/code-owners.html
       - title:
           en: External Vault integration
           ru: Интеграция с внешним Vault

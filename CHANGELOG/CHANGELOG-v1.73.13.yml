@@ -1,0 +1,48 @@
+candi:
+  fixes:
+    - summary: Updated the bashible step to include Linux kernel versions that address CVE-2025-37999
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17369
+cni-cilium:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17224
+cni-flannel:
+  fixes:
+    - summary: Bump version and fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17227
+istio:
+  fixes:
+    - summary: Fix CVE for Istio version 1.21 and 1.25
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17298
+kube-dns:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17230
+kube-proxy:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17353
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17232
+loki:
+  fixes:
+    - summary: disable send analytics report to stats.grafana.org
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17109
+      impact: config module loki ↓
+network-policy-engine:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17234
+node-local-dns:
+  fixes:
+    - summary: Bump version and fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17238
+openvpn:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17239
+registry:
+  fixes:
+    - summary: Omitted the auth field in DockerConfig when credentials (username and password) are empty.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17332
+

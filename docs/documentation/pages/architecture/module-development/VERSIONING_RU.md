@@ -4,7 +4,7 @@ permalink: ru/architecture/module-development/versioning/
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) используется принцип [семантического версионирования](https://semver.org/lang/ru/) для модулей.
+В Deckhouse Kubernetes Platform (DKP) используется принцип [семантического версионирования](https://semver.org/lang/ru/) для модулей.
 
 При выборе номера версии используйте следующие рекомендации:
 

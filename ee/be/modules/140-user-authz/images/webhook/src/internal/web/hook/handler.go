@@ -16,12 +16,12 @@ import (
 	"sync"
 	"time"
 
-	"webhook/internal/cache"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	kcache "k8s.io/client-go/tools/cache"
+
+	"webhook/internal/cache"
 )
 
 const (
@@ -81,7 +81,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(respData)
+	if _, err := w.Write(respData); err != nil {
+		h.logger.Printf("failed to write response: %v", err)
+	}
 
 	h.logger.Printf("response body: %s", respData)
 }
@@ -187,7 +189,6 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 	if err != nil {
 		// could not check whether resource is namespaced or not (from cache) - deny access
 		h.fillDenyRequest(request, internalErrorReason, err.Error())
-
 	} else if namespaced && hasAnyFilters(entry) {
 		// we should not allow cluster-scoped requests for the namespaced objects if access to the namespaces is limited
 		h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
@@ -425,7 +426,7 @@ func wrapRegex(ln string) string {
 	}
 
 	if !strings.HasSuffix(ln, "$") {
-		ln = ln + "$"
+		ln += "$"
 	}
 
 	return ln

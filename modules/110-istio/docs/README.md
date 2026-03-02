@@ -10,8 +10,7 @@ webIfaces:
 | Istio version | [K8S versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in D8          |
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
 |     1.25      |                                                1.29, 1.30, 1.31, 1.32                                                | Supported |
-|     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31                                                | Supported |
-|     1.19      |                                                    1.25<sup>*</sup>, 1.26, 1.27, 1.28                                                     |           Deprecated and will be deleted            |
+|     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31                                                | Deprecated and will be deleted |
 
 <sup>*</sup> — the Kubernetes version **is NOT supported** in the current Deckhouse Kubernetes Platform release.
 
@@ -130,8 +129,7 @@ The cluster components are divided into two categories:
 - Control plane — managing and maintaining services; "control-plane" usually refers to istiod Pods;
 - Data plane — mediating and controlling all network communication between microservices, it is composed of a set of sidecar-proxy containers.
 
-![Architecture of the cluster with Istio enabled](images/istio-architecture.svg)
-<!--- Source: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
+![Architecture of the cluster with Istio enabled](images/istio-architecture.png)
 
 All data plane services are grouped into a mesh with the following features:
 
@@ -213,6 +211,10 @@ It is also possible to add the sidecar to an individual pod in namespace without
 
 - Each request is DNAT'ed to Envoy that processes it and creates another one. The same thing happens on the receiving side.
 - Each Envoy stores information about all the services in the cluster, thereby consuming memory. The bigger the cluster, the more memory Envoy consumes. You can use the [Sidecar](istio-cr.html#sidecar) CustomResource to solve this problem.
+
+{% alert level="warning" %}
+The EnvoyFilter interface can be controlled by Lua plugins, but it is an internal control mechanism for implementing the Istio functionality. It must not be used in a user configuration, as doing so would compromise the integrity of the system.
+{% endalert %}
 
 It is also important to get the Ingress controller and the application's Ingress resources ready:
 

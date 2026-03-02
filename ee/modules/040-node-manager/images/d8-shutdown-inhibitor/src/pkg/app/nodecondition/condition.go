@@ -6,7 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package nodecondition
 
 const (
-	StatusTrue  = "True"
-	StatusFalse = "False"
+	StatusTrue    = "True"
+	StatusFalse   = "False"
 	StatusUnknown = "Unknown"
 )

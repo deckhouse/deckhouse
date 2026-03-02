@@ -31,6 +31,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
 	"github.com/deckhouse/deckhouse/pkg/registry"
 )
 
@@ -50,6 +51,8 @@ type Client struct {
 	constructedSegmentsOnce sync.Once
 	// remote options for go-containerregistry
 	options []remote.Option
+	// insecure flag for HTTP connections
+	insecure bool
 
 	timeout time.Duration
 
@@ -62,8 +65,6 @@ func NewClientWithOptions(registry string, opts *Options) *Client {
 	logger := ensureLogger(opts.Logger)
 
 	remoteOptions := buildRemoteOptions(opts)
-
-	opts.Insecure = false
 
 	opts.Scheme = strings.ToLower(opts.Scheme)
 	if opts.Scheme == "http" {
@@ -87,6 +88,7 @@ func NewClientWithOptions(registry string, opts *Options) *Client {
 		options:      remoteOptions,
 		timeout:      opts.Timeout,
 		logger:       logger,
+		insecure:     opts.Insecure,
 	}
 
 	if needsCustomTransport(opts) {
@@ -94,6 +96,15 @@ func NewClientWithOptions(registry string, opts *Options) *Client {
 	}
 
 	return client
+}
+
+// nameOptions returns name.Option slice for parsing references
+// Includes name.Insecure if the client is configured for HTTP
+func (c *Client) nameOptions() []name.Option {
+	if c.insecure {
+		return []name.Option{name.Insecure}
+	}
+	return nil
 }
 
 func (c *Client) withContext(ctx context.Context) remote.Option {
@@ -129,6 +140,7 @@ func (c *Client) WithSegment(segments ...string) registry.Client {
 		options:      c.options,
 		logger:       c.logger,
 		transport:    c.transport,
+		insecure:     c.insecure,
 	}
 }
 
@@ -157,7 +169,7 @@ func (c *Client) GetDigest(ctx context.Context, tag string) (*v1.Hash, error) {
 
 	logentry.Debug("Getting manifest")
 
-	ref, err := name.ParseReference(fullRegistry + ":" + tag)
+	ref, err := name.ParseReference(fullRegistry+":"+tag, c.nameOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -193,7 +205,7 @@ func (c *Client) GetManifest(ctx context.Context, tag string) (registry.Manifest
 
 	logentry.Debug("Getting manifest")
 
-	ref, err := name.ParseReference(fullRegistry + ":" + tag)
+	ref, err := name.ParseReference(fullRegistry+":"+tag, c.nameOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -248,7 +260,7 @@ func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.Imag
 		imagepath = fullRegistry + tag
 	}
 
-	ref, err := name.ParseReference(imagepath)
+	ref, err := name.ParseReference(imagepath, c.nameOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -295,7 +307,7 @@ func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts .
 
 	logentry.Debug("Pushing image")
 
-	ref, err := name.ParseReference(fullRegistry + ":" + tag)
+	ref, err := name.ParseReference(fullRegistry+":"+tag, c.nameOptions()...)
 	if err != nil {
 		return fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -386,7 +398,7 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 
 	logentry.Debug("Listing tags")
 
-	ref, err := name.ParseReference(fullRegistry)
+	ref, err := name.ParseReference(fullRegistry, c.nameOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -461,7 +473,7 @@ func (c *Client) ListRepositories(ctx context.Context, opts ...registry.ListRepo
 
 	logentry.Debug("Listing repositories")
 
-	ref, err := name.ParseReference(fullRegistry)
+	ref, err := name.ParseReference(fullRegistry, c.nameOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse registry reference: %w", err)
 	}
@@ -514,7 +526,7 @@ func (c *Client) CheckImageExists(ctx context.Context, tag string) error {
 
 	logentry.Debug("Checking if image exists")
 
-	ref, err := name.ParseReference(fullRegistry + ":" + tag)
+	ref, err := name.ParseReference(fullRegistry+":"+tag, c.nameOptions()...)
 	if err != nil {
 		return fmt.Errorf("failed to parse reference: %w", err)
 	}

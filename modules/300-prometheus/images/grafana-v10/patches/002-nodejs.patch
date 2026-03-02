@@ -1,0 +1,48 @@
+diff --git a/package.json b/package.json
+index b94acc3c..ea288780 100644
+--- a/package.json
++++ b/package.json
+@@ -409,6 +409,7 @@
+     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
+   },
+   "resolutions": {
++    "@grafana-plugins/tempo/react-router": "6.30.2",
+     "underscore": "1.13.6",
+     "@types/slate": "0.47.11",
+     "ngtemplate-loader/loader-utils": "^2.0.0",
+diff --git a/yarn.lock b/yarn.lock
+index 3841274b..be6043e1 100644
+--- a/yarn.lock
++++ b/yarn.lock
+@@ -7078,6 +7078,13 @@ __metadata:
+   languageName: node
+   linkType: hard
+ 
++"@remix-run/router@npm:1.23.1":
++  version: 1.23.1
++  resolution: "@remix-run/router@npm:1.23.1"
++  checksum: 10/f54845ad174564f157a2255aec8446a7f4f4e543d9d6ef9ec749d32d1fdc57273d9cc80574f87f411c2790fbe51a242273abe7002d118515038eaf4aefd3d988
++  languageName: node
++  linkType: hard
++
+ "@rollup/plugin-commonjs@npm:25.0.7":
+   version: 25.0.7
+   resolution: "@rollup/plugin-commonjs@npm:25.0.7"
+@@ -26524,6 +26531,17 @@ __metadata:
+   languageName: node
+   linkType: hard
+ 
++"react-router@npm:6.30.2":
++  version: 6.30.2
++  resolution: "react-router@npm:6.30.2"
++  dependencies:
++    "@remix-run/router": "npm:1.23.1"
++  peerDependencies:
++    react: ">=16.8"
++  checksum: 10/537bd68aa9e8125e1b20702180d4d875421150280e2c4c039c663a105da05956a457cb4d0f4f6a56605d6cadf9b1c1282dc45a9845f81bdca9bc87364eafc073
++  languageName: node
++  linkType: hard
++
+ "react-select-event@npm:5.5.1, react-select-event@npm:^5.1.0":
+   version: 5.5.1
+   resolution: "react-select-event@npm:5.5.1"

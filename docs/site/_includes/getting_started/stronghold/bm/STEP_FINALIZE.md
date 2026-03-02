@@ -115,7 +115,7 @@ EOF
     <p>Generate a new SSH key with an empty passphrase. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
-ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 ```
 {% endsnippetcut %}
   </li>

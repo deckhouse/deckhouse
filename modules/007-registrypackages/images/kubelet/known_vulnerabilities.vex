@@ -101,6 +101,34 @@
       "justification": "inline_mitigations_already_exist",
       "impact_statement": "Уязвимость невозможно эксплуатировать в рамках Deckhouse, так как для включения openTelemetry в компонентах control-plane необходимо добавить специальный ресурс TracingConfiguration (https://opentelemetry.io/blog/2023/k8s-runtime-observability/). Поскольку у пользователя нет возможности применять свою конфигурацию для control-plane компонентов, возможности включить openTelemetry нет. Так же имеется информация из оффициального репозиториия https://github.com/kubernetes/kubernetes/pull/121559#issuecomment-1782870871 о том что данная уязвимость не затрагивает компоненты kubernetes.",
       "timestamp": "2025-11-26T08:49:10.258937Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47914"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
+      "timestamp": "2025-12-29T21:09:21.097142Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58181"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
+      "timestamp": "2025-12-29T21:09:27.062618Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z"

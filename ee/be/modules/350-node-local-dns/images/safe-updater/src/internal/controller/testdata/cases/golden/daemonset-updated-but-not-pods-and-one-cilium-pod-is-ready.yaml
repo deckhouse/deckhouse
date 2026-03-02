@@ -20,7 +20,7 @@ metadata:
   generation: 1
   labels:
     app: agent
-    controller-revision-hash: 7cd779576d
+    controller-revision-hash: 6dc65d9f6
     module: cni-cilium
     pod-template-generation: "40"
   name: agent-xxlml
@@ -81,7 +81,7 @@ metadata:
   generation: 1
   labels:
     app: agent
-    controller-revision-hash: 7cd779576d
+    controller-revision-hash: 6dc65d9f6
     module: cni-cilium
     pod-template-generation: "40"
   name: agent-xylml

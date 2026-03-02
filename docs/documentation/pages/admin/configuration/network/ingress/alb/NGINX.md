@@ -1,17 +1,17 @@
 ---
-title: "ALB with NGINX Ingress controller"
+title: "ALB with Ingress NGINX Controller"
 permalink: en/admin/configuration/network/ingress/alb/nginx.html
-description: "Configure Application Load Balancer with NGINX Ingress controller in Deckhouse Kubernetes Platform. High availability setup, SSL termination, and traffic routing configuration."
+description: "Configure Application Load Balancer with Ingress NGINX Controller in Deckhouse Kubernetes Platform. High availability setup, SSL termination, and traffic routing configuration."
 ---
 
-The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx).
+The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx).
 
-The `ingress-nginx` module installs the NGINX Ingress controller and manages it with custom resources.
+The `ingress-nginx` module installs the Ingress NGINX Controller and manages it with custom resources.
 If there is more than one node available for hosting the Ingress controller,
 it is deployed in the HA mode, taking into account the infrastructure specifics of both cloud and bare-metal environments,
 as well as various Kubernetes cluster types.
 
-The module supports running and configuring several NGINX Ingress controllers simultaneously
+The module supports running and configuring several Ingress NGINX controllers simultaneously
 (one of the controllers is the **primary** one; you can create as many **additional** controllers as you want).
 This approach allows you to separate extranet and intranet Ingress resources of applications.
 
@@ -31,13 +31,13 @@ Traffic to `ingress-nginx` can be routed in several ways:
 
 ## HTTPS termination
 
-The module allows you to manage HTTPS security policies for each of the NGINX Ingress controllers, including:
+The module allows you to manage HTTPS security policies for each of the Ingress NGINX controllers, including:
 
 - HSTS parameters
 - Available SSL/TLS versions and encryption protocols
 
 The module is integrated with the [`cert-manager`](/modules/cert-manager/) module.
-Thus, it can get SSL certificates automatically and pass them to NGINX Ingress controllers for further use.
+Thus, it can get SSL certificates automatically and pass them to Ingress NGINX controllers for further use.
 
 ## Monitoring and statistics
 
@@ -282,6 +282,8 @@ Available in DKP Enterprise Edition only.
 
 1. Create a [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource:
 
+   > Metallb balancers should be placed on the same nodes as ingress controllers. In [typical deployment scenarios](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose (to deploy ingress controllers and Metallb load balancers on frontend nodes, use the annotation `node-role.deckhouse.io/frontend: ""` in their manifests).
+
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
    kind: MetalLoadBalancerClass
@@ -292,7 +294,7 @@ Available in DKP Enterprise Edition only.
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # Load balancer node selector.
+       node-role.deckhouse.io/frontend: "" # Load balancer node selector.
      type: L2
    ```
 
@@ -311,7 +313,16 @@ Available in DKP Enterprise Edition only.
        annotations:
          # Number of addresses to allocate from the pool defined in MetalLoadBalancerClass.
          network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+     nodeSelector:
+       node-role.deckhouse.io/frontend: ""
+     tolerations:
+     - effect: NoExecute
+       key: dedicated.deckhouse.io
+       value: frontend
+       operator: Equal
    ```
+
+   > When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to it. To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`). [Example of using annotations](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the service.
 
 The platform will create a LoadBalancer Service with the specified number of IPs:
 
@@ -333,7 +344,7 @@ In many applications, the same backend serves both the public part and the admin
 - `https://example.com` is the public zone;
 - `https://admin.example.com` is the administrative zone, access to which must be restricted (`ACL`, `mTLS`, `IP whitelist`, and so on).
 
-For this scenario, we recommend offloading administrative traffic to a separate Ingress controller (with a dedicated Ingress class if necessary) and restricting access to it by using the [`spec.acceptRequestsFrom`](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter.
+For this scenario, we recommend offloading administrative traffic to a separate Ingress controller (with a dedicated Ingress class if necessary) and restricting access to it by using the [`spec.acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter.
 
 #### Specifics of using a single Ingress controller
 
@@ -455,7 +466,7 @@ spec:
 In this example:
 
 - The Ingress controller is exposed on node ports through the `HostPort` inlet.
-- The [`acceptRequestsFrom`](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter allows connections to the controller only from the listed subnets.
+- The [`acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter allows connections to the controller only from the listed subnets.
 - Even if an external load balancer or client can set its own `X-Forwarded-*` header values, the decision whether to allow the connection to reach the controller is made based on the actual source address, not on headers.
 - Administrative Ingress resources (in this example `admin-ingress`) are served by this controller according to the configured Ingress class.
 

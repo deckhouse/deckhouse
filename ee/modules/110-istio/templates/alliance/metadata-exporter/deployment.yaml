@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: metadata-exporter
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: metadata-exporter

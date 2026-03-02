@@ -6,6 +6,7 @@ metadata:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
   name: test-source-1
 spec:
+  scanInterval: 6h30m
   registry:
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules

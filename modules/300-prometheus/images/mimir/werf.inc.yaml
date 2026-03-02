@@ -20,7 +20,7 @@ shell:
     - rm -rf .git ./operations
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 fromCacheVersion: "2025-20-10"
 final: false
 import:
@@ -39,7 +39,10 @@ shell:
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
     - |
-      {{- include "image-build.build" (set $ "BuildCommand" `go build -o mimir ./cmd/mimir`) | indent 6 }}
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -o mimir ./cmd/mimir` -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
     - chown -R 64535:64535 /src/mimir
     - chmod 0700 /src/mimir
 ---
@@ -50,8 +53,8 @@ import:
     add: /src/mimir
     to: /bin/mimir
     after: setup
-git:    
-{{- include "image mount points" . }}    
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/bin/mimir"]

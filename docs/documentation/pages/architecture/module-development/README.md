@@ -4,7 +4,14 @@ permalink: en/architecture/module-development/
 lang: en
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports both built-in modules and modules that can be fetched from a [module source](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). This section details what the DKP module is and how it works.
+A module is a set of resources and applications designed to extend the functionality of the Deckhouse Kubernetes Platform.
+
+This section is dedicated to the architecture of DKP modules. It will help you understand how modules are structured, how to develop and debug them, and how they interact with other components of the platform.
+
+Deckhouse Kubernetes Platform (DKP) can work with the following types of modules:
+
+* Built-in modules. These are included in DKP. Their release cycle is tied to the DKP release cycle.
+* Modules from [module source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source). The release cycle for these modules is not tied to the DKP release cycle.
 
 Creating a module consists of the following stages:
 

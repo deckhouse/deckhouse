@@ -103,11 +103,11 @@ func (u *UploadScript) UploadDir() string {
 	return u.uploadDir
 }
 
-func (u *UploadScript) Execute(ctx context.Context) (stdout []byte, err error) {
+func (u *UploadScript) Execute(ctx context.Context) ([]byte, error) {
 	scriptName := filepath.Base(u.ScriptPath)
 
 	remotePath := genssh.ExecuteRemoteScriptPath(u, scriptName, false)
-	err = NewFile(u.Session).Upload(ctx, u.ScriptPath, remotePath)
+	err := NewFile(u.Session).Upload(ctx, u.ScriptPath, remotePath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
@@ -175,12 +175,12 @@ func (u *UploadScript) pathWithEnv(path string) string {
 
 var ErrBashibleTimeout = errors.New("Timeout bashible step running")
 
-func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) (stdout []byte, err error) {
+func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) ([]byte, error) {
 	bundleName := fmt.Sprintf("bundle-%s.tar", time.Now().Format("20060102-150405"))
 	bundleLocalFilepath := filepath.Join(app.TmpDirName, bundleName)
 
 	// tar cpf bundle.tar -C /tmp/dhctl.1231qd23/var/lib bashible
-	err = tar.CreateTar(bundleLocalFilepath, parentDir, bundleDir)
+	err := tar.CreateTar(bundleLocalFilepath, parentDir, bundleDir)
 	if err != nil {
 		return nil, fmt.Errorf("tar bundle: %v", err)
 	}

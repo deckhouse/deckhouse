@@ -12,13 +12,13 @@ import (
 	"sync"
 	"time"
 
-	"d8_shutdown_inhibitor/pkg/app/nodecondition"
-	"d8_shutdown_inhibitor/pkg/kubernetes"
-	"d8_shutdown_inhibitor/pkg/system"
-
 	corev1 "k8s.io/api/core/v1"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
+	"d8_shutdown_inhibitor/pkg/app/nodecondition"
+	"d8_shutdown_inhibitor/pkg/kubernetes"
+	"d8_shutdown_inhibitor/pkg/system"
 )
 
 // PodObserver starts to check Pods on node and stops inhibitors when no pods to wait remain.

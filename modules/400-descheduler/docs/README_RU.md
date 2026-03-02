@@ -21,9 +21,9 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 
 Для фильтрации подов и узлов модуль использует механизм `labelSelector` Kubernetes:
 
-* `podLabelSelector` — ограничивает поды по меткам;
+* `podLabelSelector` — ограничивает поды по лейблам;
 * `namespaceLabelSelector` — фильтрует поды по пространствам имен.
-* `nodeLabelSelector` — выбирает узлы по меткам.
+* `nodeLabelSelector` — выбирает узлы по лейблам.
 
 ## Стратегии
 

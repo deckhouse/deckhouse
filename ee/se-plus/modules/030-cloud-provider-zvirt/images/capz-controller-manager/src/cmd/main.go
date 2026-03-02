@@ -3,6 +3,7 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
+// nolint:gci
 package main
 
 import (
@@ -14,15 +15,14 @@ import (
 	"time"
 
 	ovsdk "github.com/ovirt/go-ovirt-client/v3"
-	"k8s.io/utils/ptr"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -35,7 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/internal/credentials"
 	"github.com/deckhouse/deckhouse/internal/ovirt_logger"
 	"github.com/deckhouse/deckhouse/internal/tagger"
-	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -126,11 +125,12 @@ func main() {
 	zvirtCredentials := credentials.LoadZvirtCredentialsFromEnv()
 
 	tlsProvider := ovsdk.TLS()
-	if zvirtCredentials.Insecure {
+	switch {
+	case zvirtCredentials.Insecure:
 		tlsProvider.Insecure()
-	} else if zvirtCredentials.CaBundle != "" {
+	case zvirtCredentials.CaBundle != "":
 		tlsProvider.CACertsFromMemory([]byte(zvirtCredentials.CaBundle))
-	} else {
+	default:
 		tlsProvider.CACertsFromSystem()
 	}
 

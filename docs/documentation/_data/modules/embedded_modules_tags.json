@@ -67,6 +67,9 @@
   "control-plane-manager": [
     "core"
   ],
+  "csi-vsphere": [
+    "storage"
+  ],
   "dashboard": [
     "observability",
     "web-interface"
@@ -129,6 +132,9 @@
   "monitoring-custom": [
     "observability"
   ],
+  "monitoring-deckhouse": [
+    "observability"
+  ],
   "monitoring-kubernetes": [
     "observability"
   ],
@@ -171,9 +177,6 @@
   "operator-prometheus": [
     "observability"
   ],
-  "operator-trivy": [
-    "security"
-  ],
   "pod-reloader": [
     "core"
   ],
@@ -189,6 +192,9 @@
   "registry": [
     "core",
     "registry"
+  ],
+  "registry-packages-proxy": [
+    "core"
   ],
   "runtime-audit-engine": [
     "security"

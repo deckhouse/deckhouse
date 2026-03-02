@@ -1,11 +1,8 @@
 name: ingress-nginx
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - networking
 namespace: d8-ingress-nginx
 descriptions:
-  ru: |
-    Оператор для обслуживания входящего трафика на основе Nginx Ingress Controller.
-  en: |
-    Ingress controller for nginx
-    https://kubernetes.github.io/ingress-nginx
+  en: Installs and manages Ingress NGINX Controller using Custom Resources. Supports multiple controllers and high availability mode for traffic routing and load balancing.
+  ru: Устанавливает и управляет Ingress NGINX Controller с помощью Custom Resources. Поддерживает несколько контроллеров и режим высокой доступности для маршрутизации трафика и балансировки нагрузки.

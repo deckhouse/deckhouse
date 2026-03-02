@@ -8,8 +8,9 @@ package logr
 import (
 	"log/slog"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/go-logr/logr"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type LogrAdapter struct {

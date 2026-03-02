@@ -19,7 +19,6 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -36,9 +35,7 @@ const (
 )
 
 const (
-	kubeadmV1Beta4MinKubeVersion = "1.31.0"
-	kubeadmV1Beta4               = "v1beta4"
-	kubeadmV1Beta3               = "v1beta3"
+	kubeadmV1Beta4 = "v1beta4"
 )
 
 type saveFromTo struct {
@@ -91,17 +88,17 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
 }
 
+//nolint:prealloc
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, devicePath string) error {
-	saveInfo := []saveFromTo{
-		{
-			from: candiBashibleDir,
-			to:   bashibleDir,
-			data: templateData,
-			ignorePaths: map[string]struct{}{
-				filepath.Join(candiBashibleDir, "bootstrap.sh.tpl"): {},
-			},
+	saveInfo := make([]saveFromTo, 0)
+	saveInfo = append(saveInfo, saveFromTo{
+		from: candiBashibleDir,
+		to:   bashibleDir,
+		data: templateData,
+		ignorePaths: map[string]struct{}{
+			filepath.Join(candiBashibleDir, "bootstrap.sh.tpl"): {},
 		},
-	}
+	})
 
 	for _, steps := range []string{"all", "cluster-bootstrap"} {
 		saveInfo = append(saveInfo, saveFromTo{
@@ -139,17 +136,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 }
 
 func GetKubeadmVersion(kubernetesVersion string) (string, error) {
-	v, err := semver.NewVersion(kubernetesVersion)
-	if err != nil {
-		return "", err
-	}
-
-	minConstraint, _ := semver.NewConstraint(">=" + kubeadmV1Beta4MinKubeVersion)
-
-	if minConstraint.Check(v) {
-		return kubeadmV1Beta4, nil
-	}
-	return kubeadmV1Beta3, nil
+	return kubeadmV1Beta4, nil
 }
 
 func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}) error {
@@ -179,16 +166,6 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 		}
 	}
 	return nil
-}
-
-func withoutNodeGroup(data map[string]interface{}) map[string]interface{} {
-	filteredData := make(map[string]interface{}, len(data))
-	for key, value := range data {
-		if key != "nodeGroup" {
-			filteredData[key] = value
-		}
-	}
-	return filteredData
 }
 
 func InitGlobalVars(pwd string) {

@@ -44,6 +44,10 @@ entries:
                 en: HSM Support
                 ru: Поддержка HSM
               url: /stronghold/documentation/admin/standalone/hsm.html
+            - title:
+                en: Recover from lost quorum
+                ru: Восстановление после потери кворума
+              url: /stronghold/documentation/admin/standalone/raft-lost-quorum-recovery.html
         - title:
             en: Launch in DKP
             ru: Запуск в DKP
@@ -321,6 +325,10 @@ entries:
                     en: KV/v2
                     ru: KV/v2
                   url: /stronghold/documentation/user/secrets-engines/kv/kv-v2.html
+                - title:
+                    en: KV1/KV2 replication
+                    ru: Репликация KV1/KV2
+                  url: /stronghold/documentation/user/secrets-engines/kv/kv-replication.html
             - title:
                 en: PKI Secrets engine
                 ru: Механизм секретов PKI
@@ -385,10 +393,38 @@ entries:
             en: Automatic backup API guide
             ru: Руководство по API автоматического резервного копирования
           url: /stronghold/documentation/user/auto-snapshot.html
+        - title:
+            en: Stronghold agent
+            ru: Stronghold агент
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /stronghold/documentation/agent/overview.html
+            - title:
+                en: Use cases
+                ru: Сценарии использования
+              url: /stronghold/documentation/agent/use-cases.html
+            - title:
+                en: Key features
+                ru: Основные возможности
+              url: /stronghold/documentation/agent/key-features.html
+            - title:
+                en: Main settings
+                ru: Основные настройки
+              url: /stronghold/documentation/agent/settings.html
+            - title:
+                en: Launch and control
+                ru: Запуск и управление
+              url: /stronghold/documentation/agent/launch-and-control.html
     - title:
         en: Reference
         ru: Справка
       folders:
+        - title:
+            en: API
+            ru: API
+          url: /stronghold/documentation/api/openapi.html
         - title:
             en: Console utilities
             ru: Консольные утилиты

@@ -1,0 +1,39 @@
+<p style="padding-bottom: 2em;">{{ site.data.i18n.common['ossListPageBlock1'][page.lang] }}</p>
+
+<div markdown="0">
+    <div class="oss">
+        {%- for item in site.data.modules.metadata.oss %}
+          {%- if item[1].link.size > 0 and item[1].description.size > 0 and item[1].license.size > 0 %}
+            <div class="oss__item">
+                <div class="oss__item-logo">
+                    {%- if item[1].logo -%}
+                        <a href="{{ item[1].link }}" target="_blank">
+                            <img src="{{ item[1].logo }}" class="oss__item-logo" />
+                        </a>
+                    {%- endif -%}
+                </div>
+                <a href="{{ item[1].link }}" target="_blank" class="oss__item-title">
+                    {{- item[0] -}}
+                </a>
+                <div class="oss__item-description">
+                    {%- if item[1].version -%}
+                    <p>Version: {{ item[1].version }}</p>
+                    {%- endif -%}
+                    {{- item[1].description }}
+                {%- if item[1].modules.size > 0 %}
+                  <p>{% if item[1].modules.size == 1 %}Used in module{% else %}Used in modules:{% endif %} 
+                    {%- for module in item[1].modules -%}
+                    <a href="/modules/{{ module }}/" target="_blank">{{- module -}}</a>
+                    {%- unless forloop.last %}, {% endunless %}
+                    {%- endfor %}
+                  </p>
+                </div>
+                {%- endif %}
+                <div class="oss__item-license">
+                    {{ item[1].license }}
+                </div>
+            </div>
+          {%- endif %}
+        {%- endfor %}
+    </div>
+</div>

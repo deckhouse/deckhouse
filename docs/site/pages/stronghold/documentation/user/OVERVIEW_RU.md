@@ -1,5 +1,5 @@
 ---
-title: "Введение в руководство пользователя"
+title: "Руководство пользователя Deckhouse Stronghold"
 permalink: ru/stronghold/documentation/user/overview.html
 lang: ru
 ---

@@ -1,4 +1,4 @@
-{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+{%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <link href='../assets/css/supported_versions.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
 {%- assign osVersions = site.data.supported_versions.osDistributions | sort %}
@@ -15,7 +15,7 @@
 {{ site.data.i18n.common['os_supported_phrase'][page.lang] }}:
 
 <div markdown="0">
-  <table class="supported_versions fixed-header-table">
+  <table class="supported_versions">
     <thead class="versioning-table">
     <tr class="header-row">
       <th class="name" style="text-align: center; white-space: nowrap;">{{site.data.i18n.common['linux_distro'][page.lang] }}</th>
@@ -59,7 +59,7 @@
 {{ site.data.i18n.common['k8s_supported_phrase'][page.lang] }}:
 
 <div markdown="0">
-  <table class="supported_versions supported_versions__kubernetes fixed-header-table">
+  <table class="supported_versions supported_versions__kubernetes">
     <thead>
     <tr>
       <th style="width: 5%;"></th>
@@ -71,7 +71,7 @@
     {%- for k8sItem in k8sVersions %}
     {%- assign k8sStatus = k8sItem[1].status | default: 'preview' %}
     {%- assign iconStatus = k8sStatus| append: '.svg' | prepend: '/images/icons/' %}
-    <tr {%- if k8sItem[0] == site.data.version_kubernetes.default %} class="highlight-default"{% endif %}>
+    <tr {%- if k8sItem[1].default %} class="highlight-default"{% endif %}>
       <td style="text-align: center">
         <div class="icon">
           <img src="{{ iconStatus }}" alt="" />
@@ -99,7 +99,7 @@ Deckhouse should work with any container registry supporting Bearer authenticati
 {% endalert %}
 
 <div markdown="0">
-  <table class="supported_versions supported_versions__kubernetes supported_versions__kubernetes-container fixed-header-table">
+  <table class="supported_versions supported_versions__kubernetes supported_versions__kubernetes-container">
     <thead>
     <tr><th>
       {%- if page.lang == 'ru' %}

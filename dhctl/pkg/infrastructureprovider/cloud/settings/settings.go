@@ -19,7 +19,7 @@ type ProviderSettings interface {
 	CloudName() string
 	Versions() []string
 	DestinationBinary() string
-	VmResourceType() string
+	VMResourceType() string
 	UseOpenTofu() bool
 	InfrastructureVersion() string
 	Type() string

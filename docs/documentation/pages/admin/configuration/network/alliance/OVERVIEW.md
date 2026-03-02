@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Inter-cluster cooperation (cluster alliance)"
 permalink: en/admin/configuration/network/alliance/
 ---
 

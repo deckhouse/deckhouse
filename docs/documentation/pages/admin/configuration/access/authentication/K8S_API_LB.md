@@ -74,3 +74,102 @@ The following will be automatically configured when API publishing is enabled:
 - Deckhouse will set the required arguments for the kube-apiserver.
 - A CA certificate will be generated and added to the kubeconfig.
 - Login via Dex with OIDC support will be configured.
+
+## Access using Basic Authentication (LDAP)
+
+In addition to OIDC, you can configure direct access to the API using Basic Authentication (username and password). In this case, credentials are verified against LDAP-compatible directory service.
+
+To configure:
+
+1. Enable API publishing ([`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter).
+1. Configure an LDAP provider in the `user-authn` module and enable the [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) option.
+
+{% alert level="warning" %}
+Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+{% endalert %}
+
+After this, users can configure their `kubeconfig` by specifying their LDAP username and password:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Path to CA certificate or insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
+```
+
+## Kerberos (SPNEGO) SSO for LDAP
+
+Dex supports passwordless Kerberos (SPNEGO) flow for the LDAP connector. The mechanism works as follows:
+
+1. The browser, trusting the Dex host, sends `Authorization: Negotiate …`.
+1. Dex validates the Kerberos ticket against the keytab and skips the login/password input form.
+1. Dex matches the principal with the LDAP name, retrieves the groups, and completes the OIDC flow.
+
+{% alert level="info" %}
+To configure Kerberos (SPNEGO) SSO, LDAP must have an account with read-only privileges (service account). For more information on configuration, see the section [LDAP Integration](external-authentication-providers.html#ldap-integration).
+{% endalert %}
+
+Enabling Kerberos (SPNEGO) SSO for LDAP:
+
+1. In AD/KDC, create/provision an SPN `HTTP/<dex-fqdn>` for a service account and generate a keytab.
+1. In the cluster, create a Secret in the `d8-user-authn` namespace with the `krb5.keytab` data key.
+1. In the LDAP DexProvider resource, enable `spec.ldap.kerberos`:
+   - `enabled: true`
+   - `keytabSecretName: <secret name>`
+   - optional: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`
+
+Dex will mount the keytab automatically and start accepting SPNEGO. A server‑side `krb5.conf` is not required — tickets are validated using the keytab.
+
+Example of configuring SSO via Kerberos (SPNEGO) for LDAP (extension of the LDAP provider specification):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: active-directory
+spec:
+  type: LDAP
+  displayName: Active Directory
+  ldap:
+    host: ad.example.com:636
+    bindDN: cn=Administrator,cn=users,dc=example,dc=com
+    bindPW: admin0!
+    userSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      username: sAMAccountName
+      idAttr: uid
+      emailAttr: mail
+      nameAttr: cn
+    groupSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      nameAttr: cn
+      userMatchers:
+      - userAttr: uid
+        groupAttr: memberUid
+    kerberos:
+      enabled: true
+      keytabSecretName: dex-kerberos-keytab   # Secret in d8-user-authn with key 'krb5.keytab'.
+      expectedRealm: EXAMPLE.COM              # Optional, case-insensitive match.
+      usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
+      fallbackToPassword: false               # The default is false; if true, a login/password form is rendered when the `Authorization: Negotiate` header is missing or invalid.
+```
+
+Notes:
+
+- The Secret `dex-kerberos-keytab` must exist in the `d8-user-authn` namespace and have a data key named exactly `krb5.keytab`.
+- A single Dex Pod can serve multiple LDAP+Kerberos providers. Each provider mounts its own keytab; a shared `krb5.conf` is not required (Dex validates tickets offline using the keytab).

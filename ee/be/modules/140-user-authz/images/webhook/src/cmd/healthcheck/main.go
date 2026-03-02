@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 
 	"webhook/internal/web"
 )
@@ -26,14 +27,14 @@ func main() {
 	response, err := client.Get(addr.String())
 	check(err)
 
-	defer response.Body.Close()
-
 	if response.StatusCode != http.StatusOK {
-		io.Copy(log.Writer(), response.Body)
-		log.Fatalln()
+		_, _ = io.Copy(log.Writer(), response.Body)
+		response.Body.Close()
+		os.Exit(1)
 	}
 
-	io.Copy(io.Discard, response.Body)
+	_, _ = io.Copy(io.Discard, response.Body)
+	response.Body.Close()
 }
 
 func check(err error) {

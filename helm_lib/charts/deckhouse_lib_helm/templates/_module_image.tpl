@@ -5,13 +5,13 @@
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
   {{- $rawModuleName := $context.Chart.Name }}
   {{- if ge (len .) 3 }}
-  {{- $rawModuleName = (index . 2) }} {{- /* Optional module name */ -}}
+    {{- $rawModuleName = (index . 2) }} {{- /* Optional module name */ -}}
   {{- end }}
   {{- $moduleName := (include "helm_lib_module_camelcase_name" $rawModuleName) }}
   {{- $imageDigest := index $context.Values.global.modulesImages.digests $moduleName $containerName }}
   {{- if not $imageDigest }}
-  {{- $error := (printf "Image %s.%s has no digest" $moduleName $containerName ) }}
-  {{- fail $error }}
+    {{- $error := (printf "Image %s.%s has no digest" $moduleName $containerName ) }}
+    {{- fail $error }}
   {{- end }}
   {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
   {{- /*  handle external modules registry */}}

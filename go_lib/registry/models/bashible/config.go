@@ -18,6 +18,7 @@ package bashible
 
 import (
 	"fmt"
+	"slices"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
@@ -102,4 +103,43 @@ func (m ConfigMirrorHost) Validate() error {
 
 func (m ConfigMirrorHost) UniqueKey() string {
 	return m.Host + "|" + m.Scheme
+}
+
+func (c Config) ToContext() Context {
+	ret := Context{
+		Mode:           c.Mode,
+		Version:        c.Version,
+		ImagesBase:     c.ImagesBase,
+		ProxyEndpoints: slices.Clone(c.ProxyEndpoints),
+		Hosts:          make(map[string]ContextHosts, len(c.Hosts)),
+	}
+
+	for key, hosts := range c.Hosts {
+		host := ContextHosts{
+			Mirrors: make([]ContextMirrorHost, 0, len(hosts.Mirrors)),
+		}
+
+		for _, m := range hosts.Mirrors {
+			mirror := ContextMirrorHost{
+				Host:   m.Host,
+				Scheme: m.Scheme,
+				CA:     m.CA,
+				Auth: ContextAuth{
+					Username: m.Auth.Username,
+					Password: m.Auth.Password,
+					Auth:     m.Auth.Auth,
+				},
+			}
+
+			for _, rw := range m.Rewrites {
+				mirror.Rewrites = append(mirror.Rewrites, ContextRewrite(rw))
+			}
+
+			host.Mirrors = append(host.Mirrors, mirror)
+		}
+
+		ret.Hosts[key] = host
+	}
+
+	return ret
 }

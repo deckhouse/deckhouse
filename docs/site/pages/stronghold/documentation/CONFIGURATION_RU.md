@@ -7,7 +7,7 @@ lang: ru
 
 ## Включение модуля
 
-Включите модуль можно выполнив команду:
+Включите модуль, выполнив команду:
 
 ```shell
 d8 system module enable stronghold
@@ -18,7 +18,7 @@ d8 system module enable stronghold
 
 ## Как выключить модуль
 
-Выключить модуль можно выполнив команду:
+Выключить модуль, выполнив команду:
 
 ```shell
 d8 system module disable stronghold
@@ -236,7 +236,7 @@ certName="kubernetes"            # Имя сертификата для клас
 mkdir -p "${caName}"
 cd "${caName}"
 
-[ ! -f "${caName}.key" ] && openssl genrsa -out "${caName}.key" 4096
+[ ! -f "${caName}.key" ] && openssl ecparam -name prime256v1 -genkey -out "${caName}.key" 4096
 
 [ ! -f "${caName}.crt" ] &&  openssl req -x509 -new -nodes -key "${caName}.key" -sha256 -days 1826 -out "${caName}.crt" \
    -subj "/CN=${caName}/O=MyOrganisation"
@@ -352,7 +352,7 @@ spec:
 d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o jsonpath='{ .spec.clusterIP }'
 ```
 
-Допустим наш адрес `34.85.243.109`, тогда модуль-конфиг kube-dns будет выглядеть так
+Допустим наш адрес `34.85.243.109`, тогда модуль конфигурации kube-dns будет выглядеть так
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/BurntSushi/toml"
-
 	"github.com/siderolabs/talos/pkg/machinery/config/merge"
 )
 

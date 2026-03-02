@@ -22,8 +22,10 @@ import (
 	"strings"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	bashible "github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
-	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -75,8 +77,16 @@ type ConfigBuilder struct {
 type Config bashible.Config
 
 type ModeParams struct {
-	Direct    *DirectModeParams    `json:"direct,omitempty" yaml:"direct,omitempty"`
-	Unmanaged *UnmanagedModeParams `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
+	Proxy     *ProxyLocalModeParams `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	Local     *ProxyLocalModeParams `json:"local,omitempty" yaml:"local,omitempty"`
+	Direct    *DirectModeParams     `json:"direct,omitempty" yaml:"direct,omitempty"`
+	Unmanaged *UnmanagedModeParams  `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
+}
+
+type ProxyLocalModeParams struct {
+	CA       string `json:"ca,omitempty" yaml:"ca,omitempty"`
+	Username string `json:"username" yaml:"username"`
+	Password string `json:"password" yaml:"password"`
 }
 
 type UnmanagedModeParams struct {
@@ -195,7 +205,6 @@ func (s *State) process(params Params, inputs Inputs, isTransitionStage bool) (R
 	if params.ModeParams.isEmpty() {
 		return failedResult, fmt.Errorf("mode params are empty")
 	}
-
 	// Transition stage + params already contained -> skip (stage already done)
 	if isTransitionStage &&
 		s.ActualParams != nil && s.ActualParams.isEqual(params.ModeParams) {
@@ -245,13 +254,13 @@ func (b *ConfigBuilder) build() (*Config, error) {
 	}
 
 	ret := Config{
-		Mode:           mode,
+		Mode:           string(mode),
 		ImagesBase:     imagesBase,
 		ProxyEndpoints: b.proxyEndpoints(),
 		Hosts:          b.hosts(),
 	}
 
-	version, err := helpers.ComputeHash(&ret)
+	version, err := registry_pki.ComputeHash(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute config version: %w", err)
 	}
@@ -260,6 +269,11 @@ func (b *ConfigBuilder) build() (*Config, error) {
 }
 
 func (b *ConfigBuilder) proxyEndpoints() []string {
+	for _, p := range append(slices.Clone(b.ActualParams), b.ModeParams) {
+		if p.Proxy != nil || p.Local != nil {
+			return registry_const.GenerateProxyEndpoints(b.MasterNodesIPs)
+		}
+	}
 	return []string{}
 }
 
@@ -273,6 +287,10 @@ func (b *ConfigBuilder) hosts() map[string]bashible.ConfigHosts {
 		)
 
 		switch {
+		case params.Proxy != nil:
+			host, mirrors = params.Proxy.hostMirrors()
+		case params.Local != nil:
+			host, mirrors = params.Local.hostMirrors()
 		case params.Direct != nil:
 			host, mirrors = params.Direct.hostMirrors()
 		case params.Unmanaged != nil:
@@ -304,7 +322,7 @@ func (b *ConfigBuilder) hosts() map[string]bashible.ConfigHosts {
 }
 
 func (p *ModeParams) fromRegistrySecret(registrySecret deckhouse_registry.Config) error {
-	username, password, err := helpers.CredsFromDockerCfg(
+	username, password, err := registry_helpers.CredsFromDockerCfg(
 		registrySecret.DockerConfig,
 		registrySecret.Address,
 	)
@@ -329,6 +347,10 @@ func (p *ModeParams) mode() (registry_const.ModeType, error) {
 	switch {
 	case p == nil:
 		return "", fmt.Errorf("empty mode params")
+	case p.Proxy != nil:
+		return registry_const.ModeProxy, nil
+	case p.Local != nil:
+		return registry_const.ModeLocal, nil
 	case p.Direct != nil:
 		return registry_const.ModeDirect, nil
 	case p.Unmanaged != nil:
@@ -342,12 +364,20 @@ func (p *ModeParams) isEmpty() bool {
 	if p == nil {
 		return true
 	}
-	return p.Direct == nil &&
+	return p.Proxy == nil &&
+		p.Local == nil &&
+		p.Direct == nil &&
 		p.Unmanaged == nil
 }
 
 func (p *ModeParams) isEqual(other ModeParams) bool {
 	if p == nil {
+		return false
+	}
+	if !p.Proxy.isEqual(other.Proxy) {
+		return false
+	}
+	if !p.Local.isEqual(other.Local) {
 		return false
 	}
 	if !p.Direct.isEqual(other.Direct) {
@@ -379,8 +409,18 @@ func (p *DirectModeParams) isEqual(other *DirectModeParams) bool {
 	return false
 }
 
+func (p *ProxyLocalModeParams) isEqual(other *ProxyLocalModeParams) bool {
+	switch {
+	case p == nil && other == nil:
+		return true
+	case p != nil && other != nil:
+		return *p == *other
+	}
+	return false
+}
+
 func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
-	host, _ := helpers.RegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
+	host, _ := registry_helpers.SplitAddressAndPath(p.ImagesRepo)
 	return host, []bashible.ConfigMirrorHost{{
 		Host:   host,
 		CA:     p.CA,
@@ -393,7 +433,7 @@ func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost
 }
 
 func (p *DirectModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
-	host, path := helpers.RegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
+	host, path := registry_helpers.SplitAddressAndPath(p.ImagesRepo)
 	return registry_const.Host, []bashible.ConfigMirrorHost{{
 		Host:   host,
 		CA:     p.CA,
@@ -406,6 +446,18 @@ func (p *DirectModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
 			From: registry_const.PathRegexp,
 			To:   strings.TrimLeft(path, "/"),
 		}},
+	}}
+}
+
+func (p *ProxyLocalModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
+	return registry_const.Host, []bashible.ConfigMirrorHost{{
+		Host:   registry_const.ProxyHost,
+		CA:     p.CA,
+		Scheme: registry_const.Scheme,
+		Auth: bashible.ConfigAuth{
+			Username: p.Username,
+			Password: p.Password,
+		},
 	}}
 }
 

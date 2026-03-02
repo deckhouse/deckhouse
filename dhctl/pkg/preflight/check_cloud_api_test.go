@@ -84,9 +84,9 @@ deckhouse:
 				"provider": json.RawMessage(tt.providerConfigJSON),
 			}
 			s.Equal(tt.providerName, metaConfig.ProviderName)
-			cloudApiConfig, err := getCloudApiConfigFromMetaConfig(metaConfig)
+			cloudApiConfig, err := getCloudAPIConfigFromMetaConfig(metaConfig)
 			t.Logf("cloudApiConfig: %+v, error: %v", cloudApiConfig, err)
-			s.NoError(err, "getCloudApiConfigFromMetaConfig must be not nil")
+			s.NoError(err, "getCloudAPIConfigFromMetaConfig must be not nil")
 			s.NotNil(cloudApiConfig, "cloudApiConfig must be not nil")
 			cloudApiURL := cloudApiConfig.URL.String()
 			s.NoError(err)

@@ -95,13 +95,13 @@ spec:
                           items:
                             properties:
                               user:
-                                description: Метка пользователя SELinux.
+                                description: Лейбл пользователя SELinux.
                               role:
-                                description: Метка роли SELinux.
+                                description: Лейбл роли SELinux.
                               type:
-                                description: Метка типа SELinux.
+                                description: Лейбл типа SELinux.
                               level:
-                                description: Метка уровня SELinux.
+                                description: Лейбл уровня SELinux.
                         metadata:
                           description: Метаданные, связанные с исключением.
                     privileged:
@@ -135,7 +135,9 @@ spec:
                   description: Исключения для сетевых параметров.
                   properties:
                     hostPorts:
-                      description: Исключения для хостовых портов.
+                      description: |
+                        Исключения для хостовых портов.
+                        Для подов с `hostNetwork: true` исключения распространяются на порты, указанные в `containerPort`.
                       items:
                         properties:
                           port:

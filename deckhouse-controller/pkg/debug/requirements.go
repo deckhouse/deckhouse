@@ -34,7 +34,9 @@ func DefineRequirementsCommands(kpApp *kingpin.Application) {
 
 		defer resp.Body.Close()
 		_, err = io.Copy(os.Stdout, resp.Body)
-
-		return err
+		if err != nil {
+			return fmt.Errorf("copy: %w", err)
+		}
+		return nil
 	})
 }

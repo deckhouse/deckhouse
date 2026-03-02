@@ -1,5 +1,6 @@
 ---
 title: "Enabling Istio for applications"
+description: "Enabling Istio for applications in Deckhouse Kubernetes Platform. Adding sidecar containers via sidecar injector. Using istio-injection labels and annotations for traffic management."
 permalink: en/user/network/app_istio_activation.html
 ---
 

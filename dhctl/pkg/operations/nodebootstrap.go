@@ -35,11 +35,7 @@ import (
 )
 
 func IsSequentialNodesBootstrap() bool {
-	if os.Getenv("DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP") == "false" {
-		return true
-	}
-
-	return false
+	return os.Getenv("DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP") == "false"
 }
 
 func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
@@ -188,7 +184,6 @@ func ParallelBootstrapAdditionalNodes(
 	ngLogger log.Logger,
 	saveLogToBuffer bool,
 ) ([]string, error) {
-
 	var (
 		nodesToWait []string
 		wg          sync.WaitGroup
@@ -224,9 +219,9 @@ func ParallelBootstrapAdditionalNodes(
 			var buffNodeLog bytes.Buffer
 			var nodeLogger log.Logger
 
-			nodeLogger = ngLogger.CreateBufferLogger(&buffNodeLog)
+			nodeLogger = logger.CreateBufferLogger(&buffNodeLog)
 			if i == 0 && !saveLogToBuffer {
-				nodeLogger = ngLogger
+				nodeLogger = logger
 			}
 			err := BootstrapAdditionalNodeForParallelRun(
 				ctx,

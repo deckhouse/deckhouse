@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Storage"
 permalink: en/admin/configuration/storage/
 description: "Configure storage solutions in Deckhouse Kubernetes Platform including SDS, external storage, snapshots, and supported storage types."
 ---
@@ -12,6 +12,8 @@ In this section, you will learn:
 - How to set up both local (SDS) and external storage systems.
 - Which tools Deckhouse provides to simplify storage configuration and operation.
 - How to choose the optimal solution for your scenarios, based on requirements for reliability, performance, and scalability.
+
+For more details on disk layout and recommended sizes, see the [“Disk layout and size”](/products/kubernetes-platform/guides/fs-requirements.html) guide.
 
 ## Supported storage types
 

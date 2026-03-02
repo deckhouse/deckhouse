@@ -37,17 +37,19 @@ var (
 )
 
 type postRenderer struct {
-	project  *v1alpha2.Project
-	versions map[string]struct{}
-	logger   logr.Logger
-	warning  error
+	project        *v1alpha2.Project
+	versions       map[string]struct{}
+	logger         logr.Logger
+	warning        error
+	isFirstInstall bool
 }
 
-func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, logger logr.Logger) *postRenderer {
+func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, logger logr.Logger, isFirstInstall bool) *postRenderer {
 	return &postRenderer{
-		project:  project,
-		versions: versions,
-		logger:   logger.WithName("post-renderer"),
+		project:        project,
+		versions:       versions,
+		logger:         logger.WithName("post-renderer"),
+		isFirstInstall: isFirstInstall,
 	}
 }
 
@@ -86,8 +88,35 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 			labels = make(map[string]string)
 		}
 
-		// inject multitenancy-manager
-		labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
+		// check if resource should be excluded from management
+		isUnmanaged := false
+		if _, ok := labels[v1alpha2.ResourceLabelUnmanaged]; ok {
+			isUnmanaged = true
+			// Include unmanaged resources only on first install to create them once
+			// On subsequent upgrades, skip them so they won't be updated
+			if !r.isFirstInstall {
+				r.logger.Info("the resource is unmanaged and will be skipped (not first install)", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
+				continue
+			}
+			// On first install, include unmanaged resources but mark them to not be tracked
+			r.logger.Info("the resource is unmanaged but will be created on first install", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
+			// Add Helm resource-policy annotation to prevent deletion on release uninstall
+			annotations := object.GetAnnotations()
+			if len(annotations) == 0 {
+				annotations = make(map[string]string)
+			}
+			annotations["helm.sh/resource-policy"] = "keep"
+			object.SetAnnotations(annotations)
+		}
+
+		// inject multitenancy-manager labels
+		// For unmanaged resources, only add project and template labels, not heritage
+		// For other resources, skip heritage label if ResourceLabelSkipHeritage is set
+		if !isUnmanaged {
+			if _, skipHeritage := labels[v1alpha2.ResourceLabelSkipHeritage]; !skipHeritage {
+				labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
+			}
+		}
 		labels[v1alpha2.ResourceLabelProject] = r.project.Name
 		labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
 
@@ -109,7 +138,11 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 
 		object.SetNamespace(r.project.Name)
 
-		r.project.AddResource(object, true)
+		// Track resource in project status only if it's not unmanaged
+		// Unmanaged resources are created once but not tracked/updated
+		if _, isUnmanaged := labels[v1alpha2.ResourceLabelUnmanaged]; !isUnmanaged {
+			r.project.AddResource(object, true)
+		}
 
 		data, _ := yaml.Marshal(object.Object)
 		builder.WriteString("\n---\n" + string(data))

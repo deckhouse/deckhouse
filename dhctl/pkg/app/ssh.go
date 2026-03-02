@@ -129,7 +129,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		return nil
 	})
 
-	cmd.Action(func(c *kingpin.ParseContext) (err error) {
+	cmd.Action(func(c *kingpin.ParseContext) error {
 		if len(ConnectionConfigPath) == 0 {
 			return nil
 		}
@@ -141,13 +141,13 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		return parser.ParseConnectionConfigFromFile()
 	})
 
-	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
+	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if len(SSHPrivateKeys) != 0 {
 			return nil
 		}
 		return processConnectionConfigFlags()
 	})
-	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
+	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if SSHLegacyMode && (AskBecomePass && len(SSHPrivateKeys) == 0) {
 			return fmt.Errorf("SSH legacy mode does not support password-based SSH authentication. If you are using `--ask-become-pass`, please either specify `--ssh-modern-mode`, or leave the SSH mode unset to allow automatic detection of the appropriate method.")
 		}

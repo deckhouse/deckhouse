@@ -1,5 +1,6 @@
 ---
-title: "NLB"
+title: "Использование Network Load Balancer (NLB)"
+description: "Настройка Network Load Balancer в Deckhouse Kubernetes Platform. Балансировка TCP/UDP трафика с использованием Service LoadBalancer. Примеры настройки общего IP-адреса и портов для сервисов."
 permalink: ru/user/network/ingress/nlb.html
 lang: ru
 ---

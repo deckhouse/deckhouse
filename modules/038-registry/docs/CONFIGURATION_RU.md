@@ -2,8 +2,10 @@
 title: "Модуль registry: настройка"
 ---
 
-{% include module-alerts.liquid %}
+{% alert level="warning" %}
+Для настройки параметров подключения к container registry и управления режимом работы с container registry используйте секцию [`registry`](/modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`.
 
-{% include module-bundle.liquid %}
+Параметры самого модуля `registry` указываются в ModuleConfig `registry`.
+{% endalert %}
 
-Для управления работой с container registry используйте секцию [`registry`](../deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`, в которой можно указывать параметры подключения к registry и управлять режимом работы с ним.
+<!-- SCHEMA -->

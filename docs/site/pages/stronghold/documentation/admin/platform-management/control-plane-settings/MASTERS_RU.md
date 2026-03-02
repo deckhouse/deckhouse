@@ -31,7 +31,7 @@ master-2   Ready    control-plane,master   247d   v1.28.15
    d8 system queue list
    ```
 
-1. Снимите с узла метки `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.
+1. Снимите с узла лейблы `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.
 1. Убедитесь, что узел пропал из списка узлов кластера etcd:
 
    ```bash

@@ -21,6 +21,7 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           hostNetwork := input.review.object.spec.hostNetwork
           hostNetwork == true
 
@@ -31,6 +32,7 @@ spec:
         }
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           hostNetwork := input.review.object.spec.hostNetwork
           hostNetwork == true
 

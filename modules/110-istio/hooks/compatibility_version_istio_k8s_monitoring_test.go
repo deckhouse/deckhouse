@@ -31,7 +31,7 @@ istio:
   internal:
     istioToK8sCompatibilityMap:
       "1.16": ["1.22", "1.23", "1.24", "1.25"]
-      "1.19": ["1.25", "1.26", "1.27", "1.28", "1.29", "1.30"]
+      "1.21": ["1.30", "1.31", "1.32", "1.33", "1.34"]
 `
 	f := HookExecutionConfigInit(initValues, "")
 
@@ -83,7 +83,7 @@ istio:
 
 	Context("istio version known, but incompatible with current k8s version", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.16","1.19"]`))
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.16","1.21"]`))
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.28.4")
 
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -95,7 +95,7 @@ istio:
 			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(2))
+			Expect(m).To(HaveLen(3))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  monitoringMetricsGroup,
 				Action: operation.ActionExpireMetrics,
@@ -115,7 +115,7 @@ istio:
 
 	Context(" the istio version is known, and it is compatible with the current version of k8s", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.16","1.19"]`))
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.16","1.21"]`))
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.25.4")
 
 			f.RunHook()
@@ -126,7 +126,7 @@ istio:
 			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(1))
+			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  monitoringMetricsGroup,
 				Action: operation.ActionExpireMetrics,
@@ -134,9 +134,9 @@ istio:
 		})
 	})
 
-	Context(" the istio version is 1.19, and it is compatible with the current version of k8s 1.30", func() {
+	Context(" the istio version is 1.21, and it is compatible with the current version of k8s 1.30", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.19"]`))
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.21"]`))
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.30.1")
 
 			f.RunHook()

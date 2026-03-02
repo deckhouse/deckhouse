@@ -1,5 +1,6 @@
 ---
-title: "Logging settings"
+title: "Configuration of applications logs collection"
+description: "Configuring log collection and delivery in Deckhouse Kubernetes Platform. Working with PodLoggingConfig, log filtering, sending to Loki and Elasticsearch, enrichment with Kubernetes metadata."
 permalink: en/user/logging/
 ---
 

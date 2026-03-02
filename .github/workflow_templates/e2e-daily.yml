@@ -55,7 +55,7 @@ jobs:
 {!{- $criName := "Containerd" -}!}
 {!{- $kubernetesVersion := "Automatic" -}!}
 {!{- $kubernetesDefaultVersion := (tmpl.Exec "e2e_kubernetes_default_version" $ | strings.TrimSpace ) -}!}
-{!{- $providerNames := slice "AWS" "EKS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" "DVP" -}!}
+{!{- $providerNames := slice "AWS" "EKS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" "DVP" "zVirt" -}!}
 {!{- if $enableWorkflowOnTestRepos -}!}
 {!{-   $providerNames = slice "AWS" "OpenStack" "Azure" -}!}
 {!{- end -}!}
@@ -80,7 +80,7 @@ jobs:
     name: Send alert about workflow problem
     runs-on: "regular"
     needs: {!{ $dependsJobsForAlert | data.ToJSON }!}
-    if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ failure() && github.repository == 'deckhouse/deckhouse' && github.run_attempt == 1 }}
     steps:
 {!{- $labels := dict "trigger" "DailyE2EWorkflowFailed" -}!}
 {!{- $annotations := dict "summary" "Daily e2e tests workflow failed" -}!}

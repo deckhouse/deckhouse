@@ -1,6 +1,6 @@
 ---
 title: "Модуль registry: FAQ"
-description: "Часто задаваемые вопросы о модуле registry Deckhouse Kubernets Platform, включая процедуры миграции, переключение режимов, конфигурацию containerd и устранение проблем с registry."
+description: "Часто задаваемые вопросы о модуле registry Deckhouse Kubernets Platform, включая процедуры миграции, конфигурацию containerd и устранение проблем с registry."
 ---
 
 ## Как мигрировать на модуль registry?
@@ -104,7 +104,7 @@ containerd v2 использует новую схему по умолчанию
        EOF
    ```
 
-1. Примените `NodeGroupConfiguration`. Дождитесь появления конфигурационных файлов в директории `/etc/containerd/registry.d` на всех узлах.
+1. Примените [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Дождитесь появления конфигурационных файлов в директории `/etc/containerd/registry.d` на всех узлах.
 
 1. Проверьте корректность работы конфигураций. Для этого воспользуйтесь командой:
 
@@ -163,13 +163,13 @@ containerd v2 использует новую схему по умолчанию
 
    Данное сообщение означает, что на узлах имеются старые конфигурации registry, расположенные в директории `/etc/containerd/conf.d`. И в данный момент переключение на новую конфигурацию containerd заблокировано. Для того, чтобы разрешить переключение, необходимо удалить старые конфигурационные файлы.
 
-1. Удалите старые конфигурационные файлы, чтобы разрешить переключение на модуль `registry`. Для этого создайте `NodeGroupConfiguration`, пример:
+1. Удалите старые конфигурационные файлы, чтобы разрешить переключение на модуль `registry`. Для этого создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Пример манифеста NodeGroupConfiguration:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
-     name: containerd-additional-config-auth.sh
+     name: containerd-additional-config-auth-delete.sh
    spec:
      # Шаг должен выполниться до '032_configure_containerd.sh'
      weight: 0
@@ -223,6 +223,20 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
+
+1. Удалите  [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), созданный на шаге удаления старых конфигурационных файлов:
+
+   ```shell
+   d8 k delete nodegroupconfiguration containerd-additional-config-auth-delete.sh
+   ```
+
+   Чтобы убедиться, что NodeGroupConfiguration удалён, используйте команду:
+
+   ```shell
+   d8 k get nodegroupconfiguration
+   ```
+
+   В списке не должно быть NodeGroupConfiguration, подлежащего удалению (в этом примере — `containerd-additional-config-auth-delete.sh`).
 
 ## Как мигрировать обратно с модуля registry?
 
@@ -439,12 +453,15 @@ target_mode: Direct
 
 Описание условий:
 
-| Условие                           | Описание                                                                                                                                                                                            |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ContainerdConfigPreflightReady`  | Состояние проверки конфигурации containerd. Проверяется, что на узлах отсутствуют пользовательские auth конфигурации containerd.                                                                    |
-| `TransitionContainerdConfigReady` | Состояние подготовки конфигурации containerd в новый режим. Проверяется, что конфигурация containerd успешно подготовлена и содержит одновременно конфигурации нового и старого режима.             |
-| `FinalContainerdConfigReady`      | Состояние завершения переключения containerd в новый режим. Проверяется, что конфигурация containerd успешно применена и содержит конфигурацию нового режима.                                       |
-| `DeckhouseRegistrySwitchReady`    | Состояние переключения Deckhouse и его компонентов на использование нового registry. Значение `True` указывает, что Deckhouse успешно переключился на сконфигурированный registry и готов к работе. |
-| `InClusterProxyReady`             | Состояние готовности In-Cluster Proxy. Проверяется, что In-Cluster Proxy успешно запущен и работает.                                                                                                |
-| `CleanupInClusterProxy`           | Состояние очистки In-Cluster Proxy, если прокси не нужен для работы желаемого режима. Проверяется, что все ресурсы, связанные с In-Cluster Proxy, успешно удалены.                                  |
-| `Ready`                           | Общее состояние готовности registry к работе в указанном режиме. Проверяется, что все предыдущие условия выполнены и модуль готов к работе.                                                         |
+| Условие                           | Описание                                                                                                                                                                                                                     |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ContainerdConfigPreflightReady`  | Состояние проверки конфигурации containerd. Проверяется, что на узлах отсутствуют пользовательские auth конфигурации containerd.                                                                                             |
+| `TransitionContainerdConfigReady` | Состояние подготовки конфигурации containerd в новый режим. Проверяется, что конфигурация containerd успешно подготовлена и содержит одновременно конфигурации нового и старого режима.                                      |
+| `FinalContainerdConfigReady`      | Состояние завершения переключения containerd в новый режим. Проверяется, что конфигурация containerd успешно применена и содержит конфигурацию нового режима.                                                                |
+| `DeckhouseRegistrySwitchReady`    | Состояние переключения Deckhouse и его компонентов на использование нового registry. Значение `True` указывает, что Deckhouse успешно переключился на сконфигурированный registry и готов к работе.                          |
+| `InClusterProxyReady`             | Состояние готовности In-Cluster Proxy. Проверяется, что In-Cluster Proxy успешно запущен и работает.                                                                                                                         |
+| `CleanupInClusterProxy`           | Состояние очистки In-Cluster Proxy, если прокси не нужен для работы желаемого режима. Проверяется, что все ресурсы, связанные с In-Cluster Proxy, успешно удалены.                                                           |
+| `NodeServicesReady`               | Состояние готовности Node Services Manager и Static-Pod registry. Проверяется, что Node Services Manager успешно запущен и работает, и что Static-Pod registry был успешно развёрнут с помощью Node Services Manager.        |
+| `CleanupNodeServices`             | Состояние очистки Node Services Manager и Static-Pod registry, если компоненты не нужны для работы желаемого режима. Проверяется, что все ресурсы, связанные с Node Services Manager и Static-Pod registry, успешно удалены. |
+| `RegistryContainsRequiredImages`  | Состояние проверки registry на наличие необходимых образов.                                                                                                                                                                   |
+| `Ready`                           | Общее состояние готовности registry к работе в указанном режиме. Проверяется, что все предыдущие условия выполнены и модуль готов к работе.                                                                                  |

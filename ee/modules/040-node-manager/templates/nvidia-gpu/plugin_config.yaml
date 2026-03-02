@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- range $index, $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- if ($ng).gpu -}}
     {{ $devicePluginName := printf "nvidia-device-plugin-%s" ( $ng.name | sha256sum | trunc 7 ) }}
@@ -29,4 +30,5 @@ data:
           - name: nvidia.com/gpu
             replicas: {{ $timeSlicingReplicas }}
   {{- end }}
+{{- end }}
 {{- end }}

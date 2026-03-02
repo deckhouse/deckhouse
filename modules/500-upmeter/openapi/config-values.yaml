@@ -39,7 +39,7 @@ properties:
           externalAuthentication:
             type: object
             description: |
-              Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+              Parameters to enable external authentication based on the Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
               > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
             properties:
@@ -85,7 +85,7 @@ properties:
           externalAuthentication:
             type: object
             description: |
-              Parameters to enable external authentication. Uses NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+              Parameters to enable external authentication. Uses Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
             properties:
               authURL:
                 type: string
@@ -143,7 +143,7 @@ properties:
           externalAuthentication:
             type: object
             description: |
-              Parameters to enable external authentication. Uses NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+              Parameters to enable external authentication. Uses Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
             properties:
               authURL:
                 type: string

@@ -8,14 +8,13 @@ package nodecondition
 import (
 	"context"
 	"fmt"
-
 	"log/slog"
-
-	"d8_shutdown_inhibitor/pkg/kubernetes"
 
 	v1 "k8s.io/api/core/v1"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
+	"d8_shutdown_inhibitor/pkg/kubernetes"
 )
 
 const (
@@ -121,6 +120,10 @@ func (g *gracefulShutdownPostpone) uncordonOnStart(ctx context.Context, nodeName
 	dlog.Info("uncordonOnStart: shutdown progress state", slog.String("node", nodeName), slog.Bool("inProgress", isShutdownInProgress))
 
 	podsPresentCondition, err := node.GetConditionByReason(ReasonPodsArePresent)
+	if err != nil {
+		return false, err
+	}
+
 	isInhibited := g.isShutdownInhibitedByPods(podsPresentCondition)
 	dlog.Info("uncordonOnStart: inhibitor state", slog.String("node", nodeName), slog.Bool("inhibited", isInhibited))
 

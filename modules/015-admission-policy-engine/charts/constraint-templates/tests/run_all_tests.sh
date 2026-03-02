@@ -26,7 +26,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 discover_test_dirs() {
   local dirs=()
   for dir in "${BASE_DIR}"/*; do
-    if [ -d "${dir}" ] && [ -f "${dir}/test_suite.yaml" ]; then
+    if [ -d "${dir}" ]; then
       local dirname=$(basename "${dir}")
       # Skip common directory and other non-test directories
       if [ "${dirname}" != "common" ]; then
@@ -51,11 +51,6 @@ run_test() {
   
   if [ ! -d "${test_path}" ]; then
     echo -e "${YELLOW}[SKIP]${NC} ${test_dir} - directory not found"
-    return 2
-  fi
-  
-  if [ ! -f "${test_path}/test_suite.yaml" ]; then
-    echo -e "${YELLOW}[SKIP]${NC} ${test_dir} - no test_suite.yaml found"
     return 2
   fi
   

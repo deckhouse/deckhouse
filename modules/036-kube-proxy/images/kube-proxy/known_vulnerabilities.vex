@@ -10,7 +10,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/opencontainers/runc@v1.2.0-rc.3"
+          "@id": "pkg:golang/github.com/opencontainers/runc"
         }
       ],
       "status": "not_affected",
@@ -24,7 +24,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/opencontainers/runc@v1.2.0-rc.3"
+          "@id": "pkg:golang/github.com/opencontainers/runc"
         }
       ],
       "status": "not_affected",
@@ -38,7 +38,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/opencontainers/runc@v1.2.0-rc.3"
+          "@id": "pkg:golang/github.com/opencontainers/runc"
         }
       ],
       "status": "not_affected",

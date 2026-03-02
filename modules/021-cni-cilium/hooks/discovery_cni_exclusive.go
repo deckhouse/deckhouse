@@ -48,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "apps/v1",
 			Kind:       "DaemonSet",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"sdn-agent"},
+				MatchNames: []string{"agent"},
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{

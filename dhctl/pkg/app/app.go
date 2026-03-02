@@ -78,7 +78,7 @@ func setVar(env *string, filePath string) {
 	n, err := file.Read(buf)
 	if n > 0 && (errors.Is(err, io.EOF) || err == nil) {
 		*env = strings.TrimSpace(string(buf[:n]))
-		*env = strings.Replace(*env, "\n", "", -1)
+		*env = strings.ReplaceAll(*env, "\n", "")
 	}
 }
 

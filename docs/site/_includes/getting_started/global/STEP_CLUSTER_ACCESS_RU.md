@@ -52,7 +52,7 @@ kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
 ```
 {%- endofftopic %}
 
-{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
+{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' and page.platform_code != 'vcd' %}
 Также дождитесь готовности балансировщика:
 
 ```shell

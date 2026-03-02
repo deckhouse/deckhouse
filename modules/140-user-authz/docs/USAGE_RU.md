@@ -429,7 +429,7 @@ spec:
 1. Сгенерируйте ключ пользователя:
 
     ```shell
-    openssl genrsa -out myuser.key 2048
+    openssl ecparam -name prime256v1 -genkey -out myuser.key
     ```
 
 1. Создайте CSR, указав в нём имя пользователя `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
@@ -484,7 +484,7 @@ EOF
 1. Сгенерируйте ключ пользователя:
 
     ```shell
-    openssl genrsa -out myuser.key 2048
+    openssl ecparam -name prime256v1 -genkey -out myuser.key
     ```
 
 1. Создайте CSR, указав в нём имя пользователя `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
@@ -597,8 +597,8 @@ spec:
 
 Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multi-tenancy:
 
-* исправление аргумента `--authorization-mode`. Перед методом RBAC добавится метод Webhook (например, `--authorization-mode=Node,Webhook,RBAC`);
-* добавление аргумента `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`;
+* настройка цепочки авторизации через structured authorization configuration (`--authorization-config=/etc/kubernetes/deckhouse/extra-files/authorization-config.yaml`) с авторизаторами `Node`, `Webhook` и `RBAC`;
+* создание `kubeconfig` для authorization webhook по пути `/etc/kubernetes/deckhouse/extra-files/webhook-config.yaml`;
 * добавление `volumeMounts`:
 
   ```yaml

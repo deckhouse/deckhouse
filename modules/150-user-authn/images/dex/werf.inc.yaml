@@ -23,12 +23,17 @@ final: false
 git:
   - url: {{ $.SOURCE_REPO }}/dexidp/dex.git
     to: /src
-    tag: v2.44.0
+    tag: v{{ include "get_oss_version_by_id" (list "dex" $ ) }}
     stageDependencies:
       install:
         - '**/*.go'
         - '**/go.mod'
         - '**/go.sum'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/crds/
+    to: /module_crds
+    stageDependencies:
+      install:
+        - '**/*'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
     to: /patches
     stageDependencies:
@@ -41,6 +46,7 @@ git:
         - '**/*'
 shell:
   install:
+    - bash /module_crds/pull_dex_crds.sh --check --dex-dir /src/scripts/manifests/crds
     - cd /src
     - git apply /patches/*.patch --verbose
     - rm -rf examples

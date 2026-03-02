@@ -275,7 +275,7 @@ func createTmpDirLockAlreadyAcquiredTest(t *testing.T, params tmpDirLockAlreadyA
 	require.NotEmpty(t, params.subDirForCheck)
 	require.False(t, govalue.IsNil(params.logger))
 
-	rootDir, err := fs.RandomTmpDirWith10Runes(testTmpDirLockCheckDir, params.title, 8)
+	rootDir, err := fs.RandomTmpDirWithNRunes(testTmpDirLockCheckDir, params.title, 8)
 	require.NoError(t, err)
 
 	params.dirsFiles.makeAll(t, rootDir, params.logger, rootDir)

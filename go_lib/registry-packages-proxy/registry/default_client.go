@@ -23,13 +23,14 @@ import (
 	"net/http"
 	"strings"
 
-	ddk "github.com/deckhouse/delivery-kit-sdk/pkg/signature/image"
-	"github.com/deckhouse/rootca"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/pkg/errors"
+
+	ddk "github.com/deckhouse/delivery-kit-sdk/pkg/signature/image"
+	"github.com/deckhouse/rootca"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 )
@@ -80,7 +81,6 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 			log.Error("verify image signature failed: %w", err)
 		}
 	}
-
 
 	layers, err := image.Layers()
 	if err != nil {

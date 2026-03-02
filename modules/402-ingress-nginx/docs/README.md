@@ -1,11 +1,11 @@
 ---
 title: "The ingress-nginx module"
-description: "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using NGINX Ingress controller."
+description: "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using Ingress NGINX Controller."
 ---
 
-Installs and manages the [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) using Custom Resources. The module installs the Ingress controller in the HA mode if there is more than one node. In doing so, it takes into account all the aspects of cloud / bare metal infrastructure and various types of Kubernetes clusters.
+Installs and manages the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) using custom resources. The module installs the Ingress NGINX Controller in the HA mode if there is more than one node. In doing so, it takes into account all the aspects of cloud and bare-metal infrastructure and various types of Kubernetes clusters.
 
-The module supports running and configuring several NGINX Ingress controllers simultaneously (one of the controllers is the **primary** one; you can create any number of **additional** controllers). This approach allows you to separate extranet and intranet Ingress resources of applications.
+The module supports running and configuring several Ingress NGINX Controllers simultaneously (one of the controllers is the **primary** one; you can create any number of **additional** controllers). This approach allows you to separate extranet and intranet Ingress resources of applications.
 
 ## Traffic routing
 
@@ -23,12 +23,12 @@ Traffic to `ingress-nginx` can be routed in several ways:
 
 ## Terminating HTTPS
 
-The module allows you to manage HTTPS security policies for each NGINX Ingress controller, including:
+The module allows you to manage HTTPS security policies for each Ingress NGINX Controller, including:
 
 - HSTS parameters
 - Available SSL/TLS versions and encryption protocols
 
-The module integrates with the [cert-manager](../../modules/cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to NGINX Ingress controllers for further use.
+The `ingress-nginx` module is integrated with with the [`cert-manager`](/modules/cert-manager/) module. Thus, it can request SSL certificates automatically and pass them to Ingress NGINX Controllers for further use.
 
 ## Monitoring and statistics
 
@@ -56,7 +56,7 @@ The graphs are collected in convenient dashboards in Grafana, and there is a dri
 ### Basic principles of collecting statistics
 
 1. The module is called for each request (at the `log_by_lua_block` stage). It calculates the necessary data and forwards it to the buffer (each nginx worker has its own buffer).
-1. For every nginx worker at the `init_by_lua_block` stage), the process is run that asynchronously sends data in the `protobuf` format over a tcp socket to `protobuf_exporter` (DKP development) once a second.
+1. For every nginx worker at the `init_by_lua_block` stage, the process is run that asynchronously sends data in the `protobuf` format over a tcp socket to `protobuf_exporter` (DKP development) once a second.
 1. `protobuf_exporter` runs as a sidecar container in the ingress-controller's Pod. It receives messages in the protobuf format, parses them, aggregates them according to the specified rules, and exports them in the Prometheus format.
 1. Every 30 seconds, Prometheus scrapes both the ingress-controller (since it exports some of the required metrics) and protobuf_exporter. Then these data are used for stats.
 

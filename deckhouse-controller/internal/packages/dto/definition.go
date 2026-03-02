@@ -20,7 +20,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 )
 
 const (
@@ -36,9 +37,17 @@ type Definition struct {
 	Version string `yaml:"version" json:"version"`
 	Stage   string `yaml:"stage" json:"stage"`
 
-	Descriptions   Descriptions   `json:"descriptions,omitempty" yaml:"descriptions,omitempty"`
+	Descriptions   Descriptions   `yaml:"descriptions,omitempty" json:"descriptions,omitempty"`
 	Requirements   Requirements   `yaml:"requirements,omitempty" json:"requirements,omitempty"`
-	DisableOptions DisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
+	DisableOptions DisableOptions `yaml:"disable,omitempty" json:"disable,omitempty"`
+
+	Module DefinitionModule `yaml:"module,omitempty" json:"module,omitempty"`
+}
+
+// DefinitionModule specifies module specific fields
+type DefinitionModule struct {
+	Weight   int  `yaml:"weight" json:"weight"`
+	Critical bool `yaml:"critical,omitempty" json:"critical,omitempty"`
 }
 
 // Descriptions holds localized description text for the package.
@@ -78,7 +87,7 @@ func (d *Definition) ToApplication() (apps.Definition, error) {
 		}
 	}
 
-	modules := make(map[string]apps.Dependency)
+	deps := make(map[string]apps.Dependency)
 	for module, rawConstraint := range d.Requirements.Modules {
 		raw, optional := strings.CutSuffix(rawConstraint, "!optional")
 		constraint, err := semver.NewConstraint(raw)
@@ -86,7 +95,7 @@ func (d *Definition) ToApplication() (apps.Definition, error) {
 			return apps.Definition{}, fmt.Errorf("parse module requirement '%s': %w", module, err)
 		}
 
-		modules[module] = apps.Dependency{
+		deps[module] = apps.Dependency{
 			Constraints: constraint,
 			Optional:    optional,
 		}
@@ -103,7 +112,57 @@ func (d *Definition) ToApplication() (apps.Definition, error) {
 		Requirements: apps.Requirements{
 			Kubernetes: kubernetesConstraint,
 			Deckhouse:  deckhouseConstraint,
-			Modules:    modules,
+			Modules:    deps,
+		},
+	}, nil
+}
+
+// ToModule converts package definition to module definition
+func (d *Definition) ToModule() (modules.Definition, error) {
+	var err error
+
+	var kubernetesConstraint *semver.Constraints
+	if len(d.Requirements.Kubernetes) > 0 {
+		if kubernetesConstraint, err = semver.NewConstraint(d.Requirements.Kubernetes); err != nil {
+			return modules.Definition{}, fmt.Errorf("parse kubernetes requirement: %w", err)
+		}
+	}
+
+	var deckhouseConstraint *semver.Constraints
+	if len(d.Requirements.Deckhouse) > 0 {
+		if deckhouseConstraint, err = semver.NewConstraint(d.Requirements.Deckhouse); err != nil {
+			return modules.Definition{}, fmt.Errorf("parse deckhouse requirement: %w", err)
+		}
+	}
+
+	deps := make(map[string]modules.Dependency)
+	for module, rawConstraint := range d.Requirements.Modules {
+		raw, optional := strings.CutSuffix(rawConstraint, "!optional")
+		constraint, err := semver.NewConstraint(raw)
+		if err != nil {
+			return modules.Definition{}, fmt.Errorf("parse module requirement '%s': %w", module, err)
+		}
+
+		deps[module] = modules.Dependency{
+			Constraints: constraint,
+			Optional:    optional,
+		}
+	}
+
+	return modules.Definition{
+		Name:     d.Name,
+		Version:  d.Version,
+		Critical: d.Module.Critical,
+		Weight:   uint32(d.Module.Weight),
+		Stage:    d.Stage,
+		DisableOptions: modules.DisableOptions{
+			Confirmation: d.DisableOptions.Confirmation,
+			Message:      d.DisableOptions.Message,
+		},
+		Requirements: modules.Requirements{
+			Kubernetes: kubernetesConstraint,
+			Deckhouse:  deckhouseConstraint,
+			Modules:    deps,
 		},
 	}, nil
 }

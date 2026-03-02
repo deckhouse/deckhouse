@@ -33,6 +33,10 @@ var sensitiveKeywords = []string{
 	`"kind":"SSHCredentialsList"`,
 	`"kind":"ClusterLogDestination"`,
 	`"kind":"ClusterLogDestinationList"`,
+	`"kind":"NodeUser"`,
+	`cluster-tf-state.json`,
+	`cloud-provider-discovery-data.json`,
+	`node-tf-state.json`,
 }
 
 type LogSanitizer struct{}

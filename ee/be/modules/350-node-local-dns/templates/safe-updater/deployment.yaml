@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: node-local-dns-safe-updater
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
       - containerName: safe-updater

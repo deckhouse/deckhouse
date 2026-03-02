@@ -8,7 +8,7 @@ package tagger
 import (
 	"context"
 
-	"github.com/ovirt/go-ovirt-client/v3"
+	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
 )
 
 type Tagger interface {

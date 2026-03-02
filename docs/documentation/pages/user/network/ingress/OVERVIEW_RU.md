@@ -1,5 +1,6 @@
 ---
-title: "Обзор"
+title: "Обработка входящего трафика"
+description: "Настройка Network Load Balancer (NLB) и Application Load Balancer (ALB) в Deckhouse Kubernetes Platform. Балансировка TCP/UDP трафика и HTTP/HTTPS запросов. Предоставление внешнего доступа к приложениям."
 permalink: ru/user/network/ingress/
 lang: ru
 ---

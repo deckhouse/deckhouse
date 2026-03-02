@@ -74,6 +74,7 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 	setDefaultEmptyObjectOnCondition("loadBalancer", spec, inlet == "LoadBalancer")
 	setDefaultEmptyObjectOnCondition("loadBalancerWithProxyProtocol", spec, inlet == "LoadBalancerWithProxyProtocol")
+	setDefaultEmptyObjectOnCondition("loadBalancerWithSSLPassthrough", spec, inlet == "LoadBalancerWithSSLPassthrough")
 	setDefaultEmptyObjectOnCondition("hostPort", spec, inlet == "HostPort")
 	setDefaultEmptyObjectOnCondition("hostPortWithProxyProtocol", spec, inlet == "HostPortWithProxyProtocol")
 	setDefaultEmptyObjectOnCondition("hostWithFailover", spec, inlet == "HostWithFailover")

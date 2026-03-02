@@ -18,6 +18,7 @@ package update
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -52,8 +53,11 @@ func FromJSON(data []byte) (Windows, error) {
 	var w Windows
 
 	err := json.Unmarshal(data, &w)
+	if err != nil {
+		return w, fmt.Errorf("unmarshal: %w", err)
+	}
 
-	return w, err
+	return w, nil
 }
 
 // IsAllowed returns if specified time get into windows

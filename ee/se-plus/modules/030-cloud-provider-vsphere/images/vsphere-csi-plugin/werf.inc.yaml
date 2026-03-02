@@ -5,7 +5,8 @@
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
     {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
-      {{- if contains $version $path }}
+      {{- $dir := base $path }}
+      {{- if eq $dir $version }}
         {{- $patch = true }}
       {{- end }}
     {{- end }}

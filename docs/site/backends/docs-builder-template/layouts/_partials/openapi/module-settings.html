@@ -1,0 +1,7 @@
+{{- $moduleName := .ModuleName }}
+{{- $configVersion := .configVersion}}
+
+{{- $content := replace (T "module_settings_details_content") "<ModuleName>" $moduleName }}
+{{- $content := replace $content "<configVersion>" $configVersion }}
+
+{{- partial "details" (dict "summary" (T "module_settings_details_title") "content" $content) }}

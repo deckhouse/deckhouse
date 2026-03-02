@@ -27,9 +27,10 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -91,7 +92,6 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("the kernel meets the requirements, there is nothing to do")
-	return
 }
 
 func isCiliumBinaryExists(cniCiliumPath string) (bool, error) {

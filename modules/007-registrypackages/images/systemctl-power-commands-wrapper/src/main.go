@@ -235,11 +235,14 @@ func parseArgs() (*Config, error) {
 	config.unknownArgs = unknownArgs
 
 	// Handle action overrides from flags
-	if *reboot || *rebootR {
+	switch {
+	case *reboot || *rebootR:
 		config.action = ActionReboot
-	} else if *poweroff || *poweroffP || (*poweroffLowerP && config.action != ActionReboot) {
+
+	case *poweroff || *poweroffP || (*poweroffLowerP && config.action != ActionReboot):
 		config.action = ActionPoweroff
-	} else if *halt || *haltH || (*haltLowerH && config.action != ActionHalt) {
+
+	case *halt || *haltH || (*haltLowerH && config.action != ActionHalt):
 		if config.action != ActionHalt {
 			config.action = ActionPoweroff
 		}

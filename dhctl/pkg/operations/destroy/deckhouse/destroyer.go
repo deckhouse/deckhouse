@@ -1,0 +1,233 @@
+// Copyright 2025 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package deckhouse
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/google/uuid"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+)
+
+type DestroyerParams struct {
+	CommanderMode bool
+	CommanderUUID uuid.UUID
+	SkipResources bool
+
+	State *State
+
+	LoggerProvider       log.LoggerProvider
+	KubeProvider         kubernetes.KubeClientProviderWithCtx
+	PhasedActionProvider phases.DefaultActionProvider
+}
+
+type Destroyer struct {
+	DestroyerParams
+}
+
+func NewDestroyer(opts DestroyerParams) *Destroyer {
+	return &Destroyer{
+		DestroyerParams: opts,
+	}
+}
+
+func (d *Destroyer) CheckCommanderUUID(ctx context.Context) error {
+	logger := d.logger()
+
+	if !d.CommanderMode {
+		logger.LogDebugF("Check commander UUID skipped. No in commander mode\n")
+		return nil
+	}
+
+	if d.isSkipResources("CheckCommanderUUID") {
+		return nil
+	}
+
+	uuidInCache, err := d.State.CommanderUUID()
+	if err != nil {
+		return err
+	}
+
+	passedUUID := d.CommanderUUID.String()
+
+	if uuidInCache != "" {
+		if uuidInCache == passedUUID {
+			logger.LogDebugF("Commander UUID found and correct. Skipping commander UUID check\n")
+			return nil
+		}
+
+		return fmt.Errorf("Commander UUID found but incorrect. UUID in cache '%s' - UUID passed '%s'\n", uuidInCache, passedUUID)
+	}
+
+	kubeCl, err := d.KubeProvider.KubeClientCtx(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, d.CommanderUUID)
+	if err != nil {
+		return fmt.Errorf("UUID consistency check failed: %w", err)
+	}
+
+	return d.PhasedActionProvider().Run(phases.CommanderUUIDWasChecked, false, func() (phases.DefaultContextType, error) {
+		return nil, d.State.SetCommanderUUID(passedUUID)
+	})
+}
+
+func (d *Destroyer) CheckAndDeleteResources(ctx context.Context) error {
+	logger := d.logger()
+
+	if d.isSkipResources("DeleteResources") {
+		return nil
+	}
+
+	return d.PhasedActionProvider().Run(phases.DeleteResourcesPhase, false, func() (phases.DefaultContextType, error) {
+		return nil, d.deleteResources(ctx, logger)
+	})
+}
+
+func (d *Destroyer) Finalize(context.Context) error {
+	if d.isSkipResources("Finalize") {
+		return nil
+	}
+
+	alreadyDestroyed, err := d.State.IsResourcesDestroyed()
+	if err != nil {
+		return err
+	}
+
+	logger := d.logger()
+
+	if alreadyDestroyed {
+		logger.LogDebugLn("Resources already destroyed. Skip set as destroyed")
+		return nil
+	}
+
+	err = d.PhasedActionProvider().Run(phases.SetDeckhouseResourcesDeletedPhase, false, func() (phases.DefaultContextType, error) {
+		return nil, d.State.SetResourcesDestroyed()
+	})
+
+	if err != nil {
+		return err
+	}
+
+	logger.LogDebugLn("Resources were destroyed set")
+	return nil
+}
+
+func (d *Destroyer) deleteResources(ctx context.Context, logger log.Logger) error {
+	resourcesDestroyed, err := d.State.IsResourcesDestroyed()
+	if err != nil {
+		return err
+	}
+
+	if resourcesDestroyed {
+		logger.LogWarnLn("Resources was destroyed. Skip it")
+		return nil
+	}
+
+	kubeCl, err := d.KubeProvider.KubeClientCtx(ctx)
+	if err != nil {
+		return err
+	}
+
+	return logger.LogProcess("common", "Delete resources from the Kubernetes cluster", func() error {
+		return d.deleteEntities(ctx, kubeCl)
+	})
+}
+
+func (d *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	err := deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForDeckhouseDeploymentDeletion(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeletePDBs(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeleteServices(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForServicesDeletion(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeleteAllD8StorageResources(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeleteStorageClasses(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeletePVC(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeletePods(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForPVCDeletion(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForPVDeletion(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeleteMachinesIfResourcesExist(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *Destroyer) isSkipResources(phase string) bool {
+	if d.SkipResources {
+		d.logger().LogInfoF("Deckhouse resources destroyer '%s': skipped by flag\n", phase)
+		return true
+	}
+
+	return false
+}
+
+func (d *Destroyer) logger() log.Logger {
+	return log.SafeProvideLogger(d.LoggerProvider)
+}

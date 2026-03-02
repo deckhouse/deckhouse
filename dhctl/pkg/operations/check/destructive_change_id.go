@@ -88,8 +88,6 @@ func addNodeChanges(nodes []NodeCheckResult, m map[string]any) {
 			m[fmt.Sprintf("node:%s:resource_recreated:%d:next", node.Name, i)] = resourcedRecreated.NextValue
 		}
 	}
-
-	return
 }
 
 func addClusterChanges(cluster ClusterCheckResult, m map[string]any) {

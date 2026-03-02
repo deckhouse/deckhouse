@@ -19,11 +19,15 @@ package orchestrator
 import (
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 const (
 	ConditionTypeReady                          = "Ready"
+	ConditionTypeNodeServices                   = "NodeServicesReady"
+	ConditionTypeNodeServicesCleanup            = "CleanupNodeServices"
 	ConditionTypeInClusterProxy                 = "InClusterProxyReady"
 	ConditionTypeInClusterProxyCleanup          = "CleanupInClusterProxy"
 	ConditionTypeBashiblePreflightCheck         = "ContainerdConfigPreflightReady"
@@ -31,6 +35,7 @@ const (
 	ConditionTypeBashibleFinalStage             = "FinalContainerdConfigReady"
 	ConditionTypeDeckhouseRegistrySwitch        = "DeckhouseRegistrySwitchReady"
 	ConditionTypeRegistryContainsRequiredImages = "RegistryContainsRequiredImages"
+	ConditionTypeErrTransitionNotSupported      = "ErrTransitionNotSupported"
 
 	ConditionReasonReady      = "Ready"
 	ConditionReasonProcessing = "Processing"
@@ -39,6 +44,8 @@ const (
 
 var supportedConditions = map[string]struct{}{
 	ConditionTypeReady:                          {},
+	ConditionTypeNodeServices:                   {},
+	ConditionTypeNodeServicesCleanup:            {},
 	ConditionTypeInClusterProxy:                 {},
 	ConditionTypeInClusterProxyCleanup:          {},
 	ConditionTypeBashiblePreflightCheck:         {},
@@ -46,6 +53,7 @@ var supportedConditions = map[string]struct{}{
 	ConditionTypeBashibleFinalStage:             {},
 	ConditionTypeDeckhouseRegistrySwitch:        {},
 	ConditionTypeRegistryContainsRequiredImages: {},
+	ConditionTypeErrTransitionNotSupported:      {},
 }
 
 var _ error = ErrTransitionNotSupported{}
@@ -56,4 +64,13 @@ type ErrTransitionNotSupported struct {
 
 func (err ErrTransitionNotSupported) Error() string {
 	return fmt.Sprintf("mode transition from %v to %v not supported", err.From, err.To)
+}
+
+func (err ErrTransitionNotSupported) Condition() metav1.Condition {
+	return metav1.Condition{
+		Type:    ConditionTypeErrTransitionNotSupported,
+		Status:  metav1.ConditionTrue,
+		Reason:  ConditionReasonError,
+		Message: err.Error(),
+	}
 }

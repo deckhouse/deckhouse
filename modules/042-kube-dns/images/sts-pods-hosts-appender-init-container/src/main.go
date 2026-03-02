@@ -53,13 +53,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err = fd.WriteString(fmt.Sprintf(baseHosts, podIP, podHostname, podSubdomain, podNamespace, clusterDomain, podHostname))
+	_, err = fmt.Fprintf(fd, baseHosts, podIP, podHostname, podSubdomain, podNamespace, clusterDomain, podHostname)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, alias := range strings.Fields(clusterDomainAliases) {
-		_, err := fd.WriteString(fmt.Sprintf(hostsEntry+"\n", podIP, podHostname, podSubdomain, podNamespace, alias))
+		_, err := fmt.Fprintf(fd, hostsEntry+"\n", podIP, podHostname, podSubdomain, podNamespace, alias)
 		if err != nil {
 			log.Fatal(err)
 		}

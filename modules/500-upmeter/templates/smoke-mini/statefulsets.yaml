@@ -22,7 +22,7 @@ spec:
     kind: StatefulSet
     name: smoke-mini-{{ $k }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "smoke-mini"

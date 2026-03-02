@@ -43,7 +43,6 @@ type InLockRunner struct {
 	fullUnlock     bool
 	getter         kubernetes.KubeClientProvider
 	unlockConverge func(fullUnlock bool)
-	unlockMutex    sync.Mutex
 }
 
 func NewInLockRunner(getter kubernetes.KubeClientProvider, identity string) *InLockRunner {
@@ -121,9 +120,13 @@ func (r *InLockRunner) Stop() {
 	r.unlockConverge(true)
 }
 
-func LockConverge(ctx context.Context, getter kubernetes.KubeClientProvider, identity string) (func(bool), error) {
+func LockConverge(ctx context.Context, provider kubernetes.KubeClientProvider, identity string) (func(bool), error) {
 	localIdentity := getLocalConvergeLockIdentity(identity)
 	lockConfig := GetLockLeaseConfig(localIdentity)
+	return LockConvergeWithConfig(ctx, provider, lockConfig)
+}
+
+func LockConvergeWithConfig(ctx context.Context, getter kubernetes.KubeClientProvider, lockConfig *lease.LeaseLockConfig) (func(bool), error) {
 	unlockConverge, err := lockLease(ctx, getter, lockConfig, false)
 	if err != nil {
 		return nil, err
@@ -135,6 +138,11 @@ func LockConverge(ctx context.Context, getter kubernetes.KubeClientProvider, ide
 	})
 
 	return unlockConverge, nil
+}
+
+func IsConvergeLocked(ctx context.Context, getter kubernetes.KubeClientProvider, lockConfig *lease.LeaseLockConfig, checkIsStillLocked bool) (bool, error) {
+	leaseLock := lease.NewLeaseLock(getter, *lockConfig)
+	return leaseLock.IsLocked(ctx, checkIsStillLocked)
 }
 
 func GetLockLeaseConfig(identity string) *lease.LeaseLockConfig {
@@ -202,13 +210,13 @@ func lockLease(
 	getter kubernetes.KubeClientProvider,
 	config *lease.LeaseLockConfig,
 	forceLock bool,
-) (toDefer func(fullUnlock bool), err error) {
+) (func(fullUnlock bool), error) {
 	log.DebugLn("Create converge lock and mutex")
 	mutex := &sync.Mutex{}
 	leaseLock := lease.NewLeaseLock(getter, *config)
 
 	log.DebugLn("Try to lock converge")
-	err = leaseLock.Lock(ctx, forceLock)
+	err := leaseLock.Lock(ctx, forceLock)
 	if err != nil {
 		return nil, err
 	}

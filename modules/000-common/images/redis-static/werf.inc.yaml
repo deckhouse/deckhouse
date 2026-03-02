@@ -8,11 +8,11 @@ secrets:
 shell:
   install:
   - git clone --branch 7.4.0 --depth 1 $(cat /run/secrets/SOURCE_REPO)/redis/redis.git /src
-  - rm -r /src/utils
+  - rm -r /src/utils/req-res-validator/requirements.txt
   - rm -r /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/alpine-3.20
+fromImage: builder/alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

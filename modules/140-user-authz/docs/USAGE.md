@@ -429,7 +429,7 @@ To create a user using a client certificate issued through OpenSSL, follow these
 1. Generate the user key:
 
     ```shell
-    openssl genrsa -out myuser.key 2048
+    openssl ecparam -name prime256v1 -genkey -out myuser.key
     ```
 
 1. Create a CSR file and specify the username in it (`myuser`) and groups to which this user belongs (`mygroup1` and `mygroup2`):
@@ -484,7 +484,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
 1. Generate the user key:
 
     ```shell
-    openssl genrsa -out myuser.key 2048
+    openssl ecparam -name prime256v1 -genkey -out myuser.key
     ```
 
 1. Create a CSR file and specify in it the username (`myuser`) and groups to which this user belongs (`mygroup1` and `mygroup2`):
@@ -597,8 +597,8 @@ Working in multi-tenancy mode requires enabling the [Webhook authorization plugi
 
 Changes to the `kube-apiserver` manifest that will occur after enabling multi-tenancy mode:
 
-* The `--authorization-mode` argument will be modified: the Webhook method will be added in front of the RBAC method (e.g., `--authorization-mode=Node,Webhook,RBAC`);
-* The `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml` will be added;
+* The authorization chain will be configured using the structured authorization configuration (`--authorization-config=/etc/kubernetes/deckhouse/extra-files/authorization-config.yaml`) with `Node`, `Webhook`, and `RBAC` authorizers;
+* The `kubeconfig` for the authorization webhook will be created at `/etc/kubernetes/deckhouse/extra-files/webhook-config.yaml`;
 * The `volumeMounts` parameter will be added:
 
   ```yaml

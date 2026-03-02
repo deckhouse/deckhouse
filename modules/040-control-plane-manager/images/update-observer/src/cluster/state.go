@@ -1,0 +1,115 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package cluster
+
+import (
+	"update-observer/common"
+	"update-observer/pkg/version"
+)
+
+type State struct {
+	Spec
+	Status
+}
+
+func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneState, downgradeInProgress bool) *State {
+	state := &State{
+		Spec: Spec{
+			DesiredVersion: cfg.DesiredVersion,
+			UpdateMode:     cfg.UpdateMode,
+		},
+		Status: Status{
+			CurrentVersion:    determineCurrentVersion(nodes.versions, controlPlane.versions, downgradeInProgress),
+			ControlPlaneState: *controlPlane,
+			NodesState:        *nodes,
+		},
+	}
+
+	state.determineStatePhase()
+	state.calculateProgress()
+
+	return state
+}
+
+func (s *State) determineStatePhase() {
+	var phase Phase
+	switch s.ControlPlaneState.Phase {
+	case ControlPlaneUpdating:
+		phase = ClusterControlPlaneUpdating
+	case ControlPlaneVersionDrift:
+		phase = ClusterControlPlaneVersionDrift
+	case ControlPlaneInconsistent:
+		phase = ClusterControlPlaneInconsistent
+	case ControlPlaneUpToDate:
+		if s.Spec.UpdateMode == UpdateModeAutomatic && s.CurrentVersion > s.Spec.DesiredVersion {
+			phase = ClusterVersionDrift
+			break
+		}
+		if s.NodesState.UpToDateCount < s.NodesState.DesiredCount {
+			phase = ClusterNodesUpdating
+			break
+		}
+		if s.NodesState.UpToDateCount == s.NodesState.DesiredCount {
+			phase = ClusterUpToDate
+			break
+		}
+		if s.NodesState.UpToDateCount > s.NodesState.DesiredCount {
+			phase = ClusterInconsistent
+			break
+		}
+	}
+
+	s.Phase = phase
+}
+
+func (s *State) calculateProgress() {
+	s.Progress = common.CalculateProgress(
+		s.ControlPlaneState.UpToDateComponentCount+s.NodesState.UpToDateCount,
+		s.ControlPlaneState.DesiredComponentCount+s.NodesState.DesiredCount)
+}
+
+func determineCurrentVersion(nodes *version.UniqueAggregator, controlPlane *version.UniqueAggregator, downgradeInProgress bool) string {
+	if downgradeInProgress {
+		return version.GetMax(nodes.GetMax(), controlPlane.GetMax())
+	}
+	return version.GetMin(nodes.GetMin(), controlPlane.GetMin())
+}
+
+type Spec struct {
+	DesiredVersion string
+	UpdateMode     UpdateMode
+}
+
+type Status struct {
+	CurrentVersion    string
+	ControlPlaneState ControlPlaneState
+	NodesState        NodesState
+	Phase             Phase
+	Progress          string
+}
+
+type Phase string
+
+const (
+	ClusterControlPlaneUpdating     Phase = "ControlPlaneUpdating"
+	ClusterControlPlaneVersionDrift Phase = "ControlPlaneVersionDrift"
+	ClusterControlPlaneInconsistent Phase = "ControlPlaneInconsistent"
+	ClusterUpToDate                 Phase = "UpToDate"
+	ClusterNodesUpdating            Phase = "NodesUpdating"
+	ClusterVersionDrift             Phase = "VersionDrift"
+	ClusterInconsistent             Phase = "Inconsistent"
+)

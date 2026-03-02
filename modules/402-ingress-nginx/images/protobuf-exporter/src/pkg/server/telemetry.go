@@ -25,12 +25,13 @@ import (
 	"strconv"
 	"strings"
 
-	mproto "github.com/flant/protobuf_exporter/pkg/proto"
-	"github.com/flant/protobuf_exporter/pkg/stats"
-	"github.com/flant/protobuf_exporter/pkg/vault"
 	pio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/common/log"
+
+	mproto "github.com/flant/protobuf_exporter/pkg/proto"
+	"github.com/flant/protobuf_exporter/pkg/stats"
+	"github.com/flant/protobuf_exporter/pkg/vault"
 )
 
 // Markers are used as first byte of message to detect metric type because lua-protobuf doesn't support oneof streaming

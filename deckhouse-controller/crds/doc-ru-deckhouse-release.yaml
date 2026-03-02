@@ -4,39 +4,60 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Определяет конфигурацию релизов Deckhouse.
+            Определяет состояние и параметры применения конкретного релиза (версии) Deckhouse Kubernetes Platform (DKP) в кластере.
+
+            Объекты DeckhouseRelease создаются DKP автоматически, при обнаружении новых версий DKP на выбранном [канале обновлений](/products/kubernetes-platform/documentation/latest/reference/release-channels.html). Изменение DeckhouseRelease позволяет управлять процессом применения соответствующей версии DKP. Подробнее о настройке обновлений DKP можно почитать в [документации](../../admin/configuration/update/configuration.html).
+
+            Актуальные версии DKP и модулей по каналам обновлений можно узнать на [releases.deckhouse.ru](https://releases.deckhouse.ru).
           properties:
             approved:
               description: |
                 Разрешает или запрещает ручное обновление.
 
-                Игнорируется, если в конфигурации модуля установлен режим обновления `Auto` (`update.mode: Auto`).
+                Используется только если в конфигурации [модуля `deckhouse`](/modules/deckhouse/) установлен ручной режим обновлений (параметр [update.mode](/modules/deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
+                Игнорируется, если установлен режим обновления `Auto` или `AutoPatch`.
+
+                Подробнее о ручном подтверждении обновлений можно почитать [в документации](../../admin/configuration/update/configuration.html#ручное-подтверждение-обновлений).
             spec:
               properties:
                 version:
-                  description: Версия Deckhouse.
+                  description: Версия DKP.
                 applyAfter:
-                  description: Время, до которого отложено обновление, если релиз является частью canary-release.
+                  description: Время, до которого отложено обновление, если релиз является частью [canary-release](../../user/network/canary-deployment.html). Если релиз ожидает применения, уточнить причину можно в поле [`.status.message`](../../admin/configuration/update/notifications.html#формат-уведомлений) объекта DeckhouseRelease.
                 requirements:
-                  description: Требования для установки релиза.
+                  description: |
+                    Структура, содержащая список требований для установки релиза. Используется ядром DKP. Если требования не выполняются, релиз может быть пропущен или заблокирован для установки.
+
+                    Сообщения о невыполненных требованиях, можно найти в поле [`.status.message`](../../admin/configuration/update/notifications.html#формат-уведомлений) объекта DeckhouseRelease.
                 disruptions:
                   x-doc-deprecated: true
                   description: Изменения в релизе, которые могут привести к кратковременному простою в работе системных компонентов.
                 changelog:
-                  description: Изменения включенных модулей в данном релизе.
+                  description: Структура, содержащая список изменений DKP (и модулей, входящих в состав DKP) данного релиза. Подробнее об истории изменений в релизах DKP можно почитать в [разделе «Обновление»](../../architecture/updating.html#получение-истории-изменений-changelog).
                 changelogLink:
                   description: Ссылка на страницу со всеми изменениями данного релиза.
             status:
               properties:
                 phase:
-                  description: Текущий статус релиза.
+                  description: |
+                    Текущий статус релиза.
+
+                    Типичные значения:
+
+                    - `Pending` — релиз создан, но еще не применен (ожидание ручного подтверждения, окон обновлений, canary-release, минимального времени уведомления);
+                    - `Deployed` — DKP переключился на версию релиза (обновление модулей и компонентов может продолжаться асинхронно);
+                    - `Superseded` — релиз устарел и больше не используется;
+                    - `Suspended` — релиз отменен (как правило, до применения);
+                    - `Skipped` — релиз пропущен из-за невыполненных требований (`requirements`).
+
+                    Подробнее о статусах релизов DKP можно почитать в [документации модуля `deckhouse`](/modules/deckhouse/#обновление-релизов-deckhouse).
                 message:
-                  description: Детальное сообщение об ошибки или статусе релиза.
+                  description: Детальное сообщение об ошибке или статусе релиза.
                 transitionTime:
-                  description: Время изменения статуса релиза
+                  description: Время изменения статуса релиза.
                 approved:
                   description: |
-                    Статус готовности релиза к обновлению. Используется только для режима обновления Manual (`update.mode: Manual`).
+                    Статус готовности релиза к обновлению. Используется только для режима обновления [`Manual`](/modules/deckhouse/#закрепление-релиза) (`update.mode: Manual`).
       subresources:
         status: {}
       additionalPrinterColumns:
@@ -51,4 +72,4 @@ spec:
         - name: message
           jsonPath: .status.message
           type: string
-          description: 'Детали статуса релиза.'
+          description: 'Детали статуса релиза (почему релиз ожидает или пропущен).'

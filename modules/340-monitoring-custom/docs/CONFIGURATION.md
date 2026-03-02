@@ -7,3 +7,9 @@ The module works if the `prometheus` module is enabled and does not have any par
 {% include module-alerts.liquid %}
 
 {% include module-bundle.liquid %}
+
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
+{% include module-requirements.liquid %}

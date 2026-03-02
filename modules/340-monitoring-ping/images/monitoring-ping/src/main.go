@@ -18,23 +18,23 @@ package main
 
 import (
 	"context"
+	"flag"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
-	"flag"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
-	countPings int = 30 // Count pings on every cycle
+	countPings                 int = 30 // Count pings on every cycle
 	cleanupNodeExporterMetrics bool
 )
 
 func main() {
-
 	flag.BoolVar(&cleanupNodeExporterMetrics, "cleanup-node-exporter-metrics", false, "Clean up node exporter metrics")
 	flag.Parse()
 	if cleanupNodeExporterMetrics {
@@ -50,10 +50,10 @@ func main() {
 
 	//
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	nodeTracker := NewNodeTracker()
 	if err := nodeTracker.Start(ctx, cfg.targetsCM, cfg.Namespace); err != nil {
+		stop()
 		log.Fatal("can't start node tracker: %v", err)
 	}
 
@@ -93,4 +93,5 @@ func main() {
 	log.Info("main: context canceled (SIGINT/SIGTERM), waiting for goroutines...")
 	wg.Wait()
 	log.Info("main: shutdown complete")
+	stop()
 }

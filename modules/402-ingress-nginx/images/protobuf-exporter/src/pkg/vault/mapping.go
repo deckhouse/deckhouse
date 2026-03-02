@@ -18,7 +18,7 @@ package vault
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -53,7 +53,7 @@ func LoadMappings(fileContent []byte) ([]Mapping, error) {
 }
 
 func LoadMappingsByPath(path string) ([]Mapping, error) {
-	fileContent, err := ioutil.ReadFile(path)
+	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading mappings: %v", err)
 	}

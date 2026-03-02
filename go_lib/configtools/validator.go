@@ -186,7 +186,11 @@ func (v *Validator) validateSettings(configName string, configSettings map[strin
 		utils.Values{valuesKey: configSettings},
 	)
 
-	return schemaStorage.ValidateConfigValues(valuesKey, values)
+	err := schemaStorage.ValidateConfigValues(valuesKey, values)
+	if err != nil {
+		return fmt.Errorf("validate config values: %w", err)
+	}
+	return nil
 }
 
 func valuesKeyFromObjectName(name string) string {
@@ -221,5 +225,5 @@ func cleanupMultilineError(err error) string {
 }
 
 func hasVersionedSettings(cfg *v1alpha1.ModuleConfig) bool {
-	return cfg != nil && cfg.Spec.Version > 0 && len(cfg.Spec.Settings.Raw) > 0
+	return cfg != nil && cfg.Spec.Version > 0 && cfg.Spec.Settings != nil && len(cfg.Spec.Settings.Raw) > 0
 }

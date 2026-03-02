@@ -27,7 +27,7 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 )
 
 const (
@@ -66,7 +66,7 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	scheme, ok := secret.Data["scheme"]

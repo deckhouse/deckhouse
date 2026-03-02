@@ -74,7 +74,7 @@ func TestProvidersSettings(t *testing.T) {
 		require.NotEmpty(t, set.Namespace())
 		require.NotEmpty(t, set.DestinationBinary())
 		require.NotEmpty(t, set.Versions())
-		require.NotEmpty(t, set.VmResourceType())
+		require.NotEmpty(t, set.VMResourceType())
 	}
 
 	for _, p := range tofuProviders {

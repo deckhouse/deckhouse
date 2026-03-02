@@ -95,7 +95,11 @@ func (c *Client) Create(ctx context.Context, obj client.Object, opts ...client.C
 		}
 	}
 
-	return c.Client.Create(ctx, obj, opts...)
+	err := c.Client.Create(ctx, obj, opts...)
+	if err != nil {
+		return fmt.Errorf("create: %w", err)
+	}
+	return nil
 }
 
 func (c *Client) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
@@ -111,7 +115,11 @@ func (c *Client) Update(ctx context.Context, obj client.Object, opts ...client.U
 		}
 	}
 
-	return c.Client.Update(ctx, obj, opts...)
+	err := c.Client.Update(ctx, obj, opts...)
+	if err != nil {
+		return fmt.Errorf("update: %w", err)
+	}
+	return nil
 }
 
 func (c *Client) Patch(ctx context.Context, obj client.Object, p client.Patch, opts ...client.PatchOption) error {
@@ -137,7 +145,11 @@ func (c *Client) Patch(ctx context.Context, obj client.Object, p client.Patch, o
 		}
 	}
 
-	return c.Client.Patch(ctx, obj, p, opts...)
+	err = c.Client.Patch(ctx, obj, p, opts...)
+	if err != nil {
+		return fmt.Errorf("patch: %w", err)
+	}
+	return nil
 }
 
 func ignoreStatus(errs []error) []error {

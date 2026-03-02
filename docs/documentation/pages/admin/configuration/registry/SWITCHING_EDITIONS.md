@@ -17,6 +17,7 @@ Switching DKP to CE/BE/SE/SE+/EE can be done in one of the following ways:
 - The guide assumes the use of the public container registry address: `registry.deckhouse.io`. If you are using a different container registry address, modify the commands accordingly or refer to the [guide on switching Deckhouse to use a different registry](./third-party.html).
 - The Deckhouse CE/BE/SE/SE+ editions do not support the cloud providers `dynamix`, `openstack`, `VCD`, and `vSphere` (vSphere is supported in SE+) and a number of modules.
 - All commands are executed on the master node of the existing cluster with `root` user.
+- If, during the switching process, the image of a module did not reload and the module did not reinstall, use the [instructions](../../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
 {% endalert %}
 
 ### Switching using the registry module
@@ -216,7 +217,39 @@ Removing this parameter will trigger a check for the presence of critical compon
        type: Ready
    ```
 
-1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` your previous edition name:
+1. Check for any pods in the `d8-*` namespaces that are in an error state and unable to load images. This must be done manually, as Deckhouse modules currently do not automatically reinitialize after the changes described above.
+
+   Get a list of pods:
+
+   ```shell
+   d8 k get po -A
+   ```
+
+   Get detailed information about problematic pods:
+
+   ```shell
+   d8 k describe po <pod_name> <namespace>
+   ```
+
+   Re-download the modules corresponding to the problematic pods by running the following command on all master nodes:
+
+   ```shell
+   rm -rf /var/lib/deckhouse/downloaded/<module-name>/
+   ```
+
+   To get `<module-name>`, run the command:
+
+   ```shell
+   d8 k get modules
+   ```
+
+   After  removing the data of the required modules, restart Deckhouse:
+
+   ```shell
+   d8 k rollout restart deploy -n d8-system deckhouse
+   ```
+
+1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` is your previous edition name:
 
    For Unmanaged mode:
 

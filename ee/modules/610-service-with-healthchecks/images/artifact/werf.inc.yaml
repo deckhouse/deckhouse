@@ -20,7 +20,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -43,11 +43,21 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cmd/agent
-  - go build -mod=vendor -ldflags="-s -w" -o /agent .
+  - |
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "ProjectName" (list .ModuleName "agent" | join "/") }}
+    {{- $_ := set $buildContext "BuildCommand" `go build -mod=vendor -ldflags="-s -w" -o /agent .` -}}
+    {{- include "image-build.build" $buildContext | indent 6 }}
   - chown 64535:64535 /agent
   - chmod +x /agent
   - cd /src/cmd/controller
-  - go build -mod=vendor -ldflags="-s -w" -o /controller .
+  - |
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "ProjectName" (list .ModuleName "controller" | join "/") }}
+    {{- $_ := set $buildContext "BuildCommand" `go build -mod=vendor -ldflags="-s -w" -o /controller .` -}}
+    {{- include "image-build.build" $buildContext | indent 6 }}
   - chown 64535:64535 /controller
   - chmod +x /controller
   - rm -rf /src/vendor

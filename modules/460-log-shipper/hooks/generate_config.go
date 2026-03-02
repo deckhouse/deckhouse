@@ -30,6 +30,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -100,28 +101,29 @@ func filterLogShipperTLSSecrets(obj *unstructured.Unstructured) (go_hook.FilterR
 	return secret, nil
 }
 
-func filterLokiEndpoints(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	endpoints := new(corev1.Endpoints)
+func filterLokiEndpointSlice(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	endpointSlice := new(discoveryv1.EndpointSlice)
 
-	err := sdk.FromUnstructured(obj, endpoints)
+	err := sdk.FromUnstructured(obj, endpointSlice)
 	if err != nil {
 		return nil, err
 	}
 
 	var lokiEndpoint endpoint
 
-	for _, subset := range endpoints.Subsets {
-		for _, p := range subset.Ports {
-			if p.Name == "loki" {
-				lokiEndpoint.port = strconv.FormatInt(int64(p.Port), 10)
+	for _, p := range endpointSlice.Ports {
+		if p.Name != nil && *p.Name == "loki" {
+			lokiEndpoint.port = strconv.FormatInt(int64(*p.Port), 10)
 
-				break
-			}
+			break
 		}
+	}
 
-		for _, address := range subset.Addresses {
-			lokiEndpoint.addresses = append(lokiEndpoint.addresses, address.IP)
+	for _, ep := range endpointSlice.Endpoints {
+		if ep.Conditions.Ready != nil && !*ep.Conditions.Ready {
+			continue
 		}
+		lokiEndpoint.addresses = append(lokiEndpoint.addresses, ep.Addresses...)
 	}
 
 	return lokiEndpoint, nil
@@ -130,6 +132,17 @@ func filterLokiEndpoints(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 type endpoint struct {
 	addresses []string
 	port      string
+}
+
+func mergeEndpoints(endpoints []endpoint) endpoint {
+	var merged endpoint
+	for _, ep := range endpoints {
+		if ep.port != "" {
+			merged.port = ep.port
+		}
+		merged.addresses = append(merged.addresses, ep.addresses...)
+	}
+	return merged
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -192,17 +205,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "loki_endpoint",
-			ApiVersion: "v1",
-			Kind:       "Endpoints",
+			ApiVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{
 					"d8-monitoring",
 				}},
 			},
-			NameSelector: &types.NameSelector{MatchNames: []string{
-				"loki",
-			}},
-			FilterFunc: filterLokiEndpoints,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"kubernetes.io/service-name": "loki"},
+			},
+			FilterFunc: filterLokiEndpointSlice,
 		},
 	},
 }, generateConfig)
@@ -288,14 +301,11 @@ func generateConfig(_ context.Context, input *go_hook.HookInput) error {
 		token = tokens[0]
 	}
 
-	lokiEndpoints, err := sdkobjectpatch.UnmarshalToStruct[endpoint](input.Snapshots, "loki_endpoint")
+	lokiEndpointSlices, err := sdkobjectpatch.UnmarshalToStruct[endpoint](input.Snapshots, "loki_endpoint")
 	if err != nil {
 		return fmt.Errorf("unmarshal loki endpoint: %w", err)
 	}
-	var lokiEndpoint endpoint
-	if len(lokiEndpoints) > 0 {
-		lokiEndpoint = lokiEndpoints[0]
-	}
+	lokiEndpoint := mergeEndpoints(lokiEndpointSlices)
 
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 

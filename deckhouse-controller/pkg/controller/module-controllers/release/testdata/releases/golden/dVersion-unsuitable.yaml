@@ -30,6 +30,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/metrics-registered
   labels:
     module: parca-unsuitable
     modules.deckhouse.io/update-policy: foxtrot-alpha-unsuitable
@@ -42,7 +44,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-unsuitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   changelog:
     features:
@@ -54,8 +56,9 @@ spec:
   weight: 900
 status:
   approved: false
-  message: 'requirements are not satisfied: current deckhouse version is not suitable:
-    1.0.0 is less than or equal to v1.63.0'
+  message: 'check module release requirements: validate release: requirements are
+    not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or
+    equal to v1.63.0'
   phase: Pending
   pullDuration: 0s
   size: 0

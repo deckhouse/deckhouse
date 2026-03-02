@@ -27,4 +27,5 @@ var _ = storage_class_change.RegisterHook(storage_class_change.Args{
 	LabelSelectorValue: "geoproxy",
 	ObjectKind:         "StatefulSet",
 	ObjectName:         "geoproxy",
+	AllowEmptyDir:      true,
 })

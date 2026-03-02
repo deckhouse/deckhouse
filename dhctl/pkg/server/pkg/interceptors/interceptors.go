@@ -44,7 +44,7 @@ func PanicRecoveryHandler() func(ctx context.Context, p any) error {
 }
 
 func UnaryLogger(log *slog.Logger) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		return handler(logger.ToContext(ctx, log, logger.AttrFromGRPCCtx(ctx)...), req)
 	}
 }
@@ -64,7 +64,7 @@ func Logger() logging.Logger {
 }
 
 func UnaryRequestsCounter(counter *rc.RequestsCounter) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		counter.Add(info.FullMethod)
 		return handler(ctx, req)
 	}
@@ -78,7 +78,7 @@ func StreamRequestsCounter(counter *rc.RequestsCounter) grpc.StreamServerInterce
 }
 
 func UnaryParallelTasksLimiter(sem chan struct{}, prefix string) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if !strings.HasPrefix(info.FullMethod, prefix) {
 			return handler(ctx, req)
 		}

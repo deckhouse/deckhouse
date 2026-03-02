@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: trickster
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: trickster

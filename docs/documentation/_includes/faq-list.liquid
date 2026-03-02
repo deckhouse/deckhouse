@@ -1,0 +1,33 @@
+{%- assign faqs = site.faq | where: "lang", page.lang %}
+
+{%- assign all_subsystems = "" | split: "" %}
+{%- for faq in faqs %}
+  {%- for subsystem in faq.subsystems %}
+    {%- assign all_subsystems = all_subsystems | push: subsystem %}
+  {%- endfor %}
+{%- endfor %}
+
+{%- assign all_subsystems = all_subsystems | push: "_common" %}
+{%- assign unique_subsystems = all_subsystems | uniq | sort %}
+
+<div markdown="0">
+{%- for subsystem in unique_subsystems %}
+
+{%- if subsystem == "_common" %}
+  {%- assign subsystem_faqs = faqs | where_exp: "item", "item.subsystems contains subsystem or item.subsystems == nil or item.subsystems.size == 0" | sort: "weight" %}
+{%- else %}
+  {%- assign subsystem_faqs = faqs | where_exp: "item", "item.subsystems contains subsystem" | sort: "weight" %}
+{%- endif %}
+
+{%- if subsystem_faqs.size > 0 -%}
+  <h2 id="subsystem-{{ subsystem | slugify }}">{{ site.data.subsystems[subsystem][page.lang] }}</h2>
+
+  {%- for faq in subsystem_faqs -%}
+    <h3>{{ faq.title }}</h3>
+    <div markdown="0">
+    {{ faq.content | markdownify }}
+    </div>
+  {%- endfor %}
+{%- endif %}
+{%- endfor %}
+</div>

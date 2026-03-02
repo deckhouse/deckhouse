@@ -212,7 +212,6 @@ metadata:
 		}
 
 		return nil
-
 	})
 
 	return serviceAccounts, err

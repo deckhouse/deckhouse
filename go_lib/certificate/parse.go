@@ -28,12 +28,12 @@ import (
 func ParseCertificatesFromBase64(ca, crt, key string) (*x509.Certificate, *tls.Certificate, error) {
 	caCert, err := generateCACert(ca)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("generate ca cert: %w", err)
 	}
 
 	clientCert, err := generateTLSCert(crt, key)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("generate tls cert: %w", err)
 	}
 
 	return caCert, clientCert, nil
@@ -46,7 +46,7 @@ func generateCACert(caBase64 string) (*x509.Certificate, error) {
 
 	caData, err := base64.StdEncoding.DecodeString(caBase64)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode string: %w", err)
 	}
 
 	block, _ := pem.Decode(caData)
@@ -58,7 +58,11 @@ func generateCACert(caBase64 string) (*x509.Certificate, error) {
 		return nil, fmt.Errorf("not valid ca certificate")
 	}
 
-	return x509.ParseCertificate(block.Bytes)
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse certificate: %w", err)
+	}
+	return cert, nil
 }
 
 func generateTLSCert(crt, key string) (*tls.Certificate, error) {
@@ -68,16 +72,16 @@ func generateTLSCert(crt, key string) (*tls.Certificate, error) {
 
 	certData, err := base64.StdEncoding.DecodeString(crt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode string: %w", err)
 	}
 	keyData, err := base64.StdEncoding.DecodeString(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode string: %w", err)
 	}
 
 	cert, err := tls.X509KeyPair(certData, keyData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("x509 key pair: %w", err)
 	}
 	return &cert, nil
 }
@@ -91,7 +95,7 @@ func ParseCertificatesFromPEM(ca, crt, key string) (*x509.Certificate, *tls.Cert
 
 	clientCert, err := tls.X509KeyPair([]byte(crt), []byte(key))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("x509 key pair: %w", err)
 	}
 
 	return caCert, &clientCert, nil
@@ -110,7 +114,7 @@ func ParseCertificate(crt string) (*x509.Certificate, error) {
 
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse certificate: %w", err)
 	}
 
 	return cert, nil

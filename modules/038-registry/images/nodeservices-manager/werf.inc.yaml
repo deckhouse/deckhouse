@@ -1,0 +1,56 @@
+{{ $appRelPath := printf "%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
+{{ $appAbsPath := printf "/deckhouse/modules/038-%s/images/%s/app" $.ModuleName $.ImageName }}
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+fromImage: common/src-artifact
+final: false
+git:
+  - add: {{ $appRelPath }}
+    to:  /src{{ $appAbsPath }}
+    stageDependencies:
+      install:
+        - '**/*'
+  - add: /go_lib/registry
+    to: /src/deckhouse/go_lib/registry
+    stageDependencies:
+      install:
+        - '**/*'
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src/deckhouse
+    to: /deckhouse
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: "{{ $.GOPROXY }}"
+shell:
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - cd {{ $appAbsPath }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /manager ./cmd/staticpod
+    - chown 64535:64535 /manager
+    - chmod 0755 /manager
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
+fromImage: common/distroless
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /manager
+    to: /manager
+    before: setup
+  - image: common/pause
+    add: /pause
+    to: /pause
+    before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/manager"]

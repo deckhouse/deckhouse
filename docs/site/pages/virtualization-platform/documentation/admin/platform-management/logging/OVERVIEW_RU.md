@@ -1,5 +1,5 @@
 ---
-title: Обзор
+title: Логирование
 permalink: ru/virtualization-platform/documentation/admin/platform-management/logging/
 lang: ru
 ---
