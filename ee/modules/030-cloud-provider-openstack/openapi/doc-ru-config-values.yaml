@@ -77,6 +77,9 @@ properties:
     description: |
       Параметры Load Balancer'а.
     properties:
+      enabled:
+        description: |
+          Включить поддержку LoadBalancer. Установите в `false`, если в облаке OpenStack отсутствует сервис Octavia (LBaaS).
       subnetID:
         description: |
           ID подсети Neutron, в которой необходимо создать load balancer virtual IP.
