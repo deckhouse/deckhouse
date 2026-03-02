@@ -58,25 +58,13 @@ func NewFilteredPackageRepositoryOperationInformer(client versioned.Interface, r
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().PackageRepositoryOperations().List(context.Background(), options)
+				return client.DeckhouseV1alpha1().PackageRepositoryOperations().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().PackageRepositoryOperations().Watch(context.Background(), options)
-			},
-			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
-				if tweakListOptions != nil {
-					tweakListOptions(&options)
-				}
-				return client.DeckhouseV1alpha1().PackageRepositoryOperations().List(ctx, options)
-			},
-			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
-				if tweakListOptions != nil {
-					tweakListOptions(&options)
-				}
-				return client.DeckhouseV1alpha1().PackageRepositoryOperations().Watch(ctx, options)
+				return client.DeckhouseV1alpha1().PackageRepositoryOperations().Watch(context.TODO(), options)
 			},
 		},
 		&apisdeckhouseiov1alpha1.PackageRepositoryOperation{},

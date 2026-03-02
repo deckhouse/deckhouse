@@ -58,25 +58,13 @@ func NewFilteredDeckhouseReleaseInformer(client versioned.Interface, resyncPerio
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().DeckhouseReleases().List(context.Background(), options)
+				return client.DeckhouseV1alpha1().DeckhouseReleases().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().DeckhouseReleases().Watch(context.Background(), options)
-			},
-			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
-				if tweakListOptions != nil {
-					tweakListOptions(&options)
-				}
-				return client.DeckhouseV1alpha1().DeckhouseReleases().List(ctx, options)
-			},
-			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
-				if tweakListOptions != nil {
-					tweakListOptions(&options)
-				}
-				return client.DeckhouseV1alpha1().DeckhouseReleases().Watch(ctx, options)
+				return client.DeckhouseV1alpha1().DeckhouseReleases().Watch(context.TODO(), options)
 			},
 		},
 		&apisdeckhouseiov1alpha1.DeckhouseRelease{},
