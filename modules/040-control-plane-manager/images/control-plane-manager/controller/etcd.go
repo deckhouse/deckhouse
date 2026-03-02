@@ -252,7 +252,7 @@ status: {}`
 
 	// var kubeClient clientset.Interface
 
-	if err := etcd.JoinCluster([]byte(etcdManifest) /*kubeClient,*/, nil, config, &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName, false); err != nil {
+	if err := etcd.JoinCluster([]byte(etcdManifest), config, &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName, false); err != nil {
 		log.Error("failed to test etcd library JoinCluster", log.Err(err))
 	}
 
