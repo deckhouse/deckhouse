@@ -1,5 +1,5 @@
-{{- $crds_external := .Files.Glob "crds/external/*.yaml" -}}
-{{- $capi := .Files.Glob "capi/*" -}}
+{{- $crds_external := .Files.Glob "crds/**.yaml" -}}
+{{- $capi := .Files.Glob "capi/**" -}}
 ---
 apiVersion: v1
 kind: Secret
@@ -8,9 +8,9 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
-{{- if $crds_external -}}
-  {{ $crds_external.AsSecrets | nindent 2 }}
-{{- end -}}
-{{- if $capi -}}
-  {{ $capi.AsSecrets | nindent 2 }}
-{{- end -}}
+{{- range $path, $_ :=  $crds_external }}
+  {{ $path }}: {{ $crds_external.Get $path | b64enc }}
+{{- end }}
+{{- range $path, $_ :=  $capi }}
+  {{ $path }}: {{ $capi.Get $path | b64enc }}
+{{- end }}
