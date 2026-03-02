@@ -20,7 +20,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -88,22 +87,6 @@ func main() {
 
 	kmsgWatcher := kmsg.NewKmsgWatcher(types.WatcherConfig{Plugin: "kmsg"})
 	logCh, err := kmsgWatcher.Watch()
-
-	go func() {
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-		for range ticker.C {
-			a.lastKmsgHB.Store(time.Now().Unix())
-		}
-	}()
-
-	go func() {
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-		for range ticker.C {
-			a.lastEventHB.Store(time.Now().Unix())
-		}
-	}()
 
 	if err != nil {
 		glog.Fatal("Could not create log watcher")
