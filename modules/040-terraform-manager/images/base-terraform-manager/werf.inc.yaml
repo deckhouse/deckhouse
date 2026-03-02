@@ -1,5 +1,3 @@
-{{- $terraformVersion := include "get_oss_version_by_id" (list "terraform" $ )  -}}
-{{- $opentofuVersion := include "get_oss_version_by_id" (list "opentofu" $ )  -}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 final: false
@@ -53,7 +51,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $terraformVersion }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform.git /src
+  - git clone --depth 1 --branch v{{ .TF.terraform }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
@@ -72,7 +70,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $opentofuVersion }} $(cat /run/secrets/SOURCE_REPO)/opentofu/opentofu.git /src
+  - git clone --depth 1 --branch v{{ .TF.opentofu }} $(cat /run/secrets/SOURCE_REPO)/opentofu/opentofu.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
