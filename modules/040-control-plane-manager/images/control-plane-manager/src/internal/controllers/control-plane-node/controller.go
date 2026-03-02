@@ -54,6 +54,7 @@ const (
 
 type Reconciler struct {
 	client client.Client
+	log    *log.Logger
 }
 
 func Register(mgr manager.Manager) error {
@@ -64,6 +65,7 @@ func Register(mgr manager.Manager) error {
 
 	r := &Reconciler{
 		client: mgr.GetClient(),
+		log:    log.Default(),
 	}
 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
@@ -122,28 +124,28 @@ func Register(mgr manager.Manager) error {
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	nodeName := req.Name
-	log.Info("Reconcile started for ControlPlaneNode", slog.String("node", nodeName))
+	logger := r.log.With(slog.String("node", nodeName))
+	logger.Info("Reconcile started for ControlPlaneNode")
 
 	controlPlaneNode := &controlplanev1alpha1.ControlPlaneNode{}
 	err := r.client.Get(ctx, client.ObjectKey{Name: nodeName}, controlPlaneNode)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("ControlPlaneNode not found, skipping", slog.String("node", nodeName))
+			logger.Info("ControlPlaneNode not found, skipping")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
 
-	log.Info("ControlPlaneNode found", slog.String("node", nodeName))
+	logger.Info("ControlPlaneNode found")
 
-	// Save original before modifications so MergeFrom includes components in the patch
-	originalForPatch := controlPlaneNode.DeepCopy()
+	checks := buildComponentChecks(controlPlaneNode)
 
-	if err := r.reconcileComponents(ctx, controlPlaneNode); err != nil {
+	if err := r.ensureOperationsExist(ctx, controlPlaneNode, checks, logger); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.reconcileConditions(ctx, controlPlaneNode, originalForPatch); err != nil {
+	if err := r.updateStatusConditions(ctx, controlPlaneNode, checks); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -155,12 +157,24 @@ type componentCheck struct {
 	component      controlplanev1alpha1.OperationComponent
 	specChecksum   string
 	statusChecksum string
+	conditionType  string
 }
 
-// reconcileComponents compares spec vs status checksums and creates ControlPlaneOperation for each component where they differ.
-func (r *Reconciler) reconcileComponents(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode) error {
+// ensureOperationsExist compares spec vs status checksums and creates ControlPlaneOperation for each component where they differ.
+func (r *Reconciler) ensureOperationsExist(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, checks []componentCheck, logger *log.Logger) error {
 	nodeName := cpn.Name
-	checks := r.buildComponentChecks(cpn)
+
+	operations := &controlplanev1alpha1.ControlPlaneOperationList{}
+	if err := r.client.List(ctx, operations, client.MatchingLabels{
+		constants.ControlPlaneNodeNameLabelKey: nodeName,
+	}); err != nil {
+		return fmt.Errorf("list ControlPlaneOperations for node %s: %w", nodeName, err)
+	}
+
+	existingNames := make(map[string]struct{}, len(operations.Items))
+	for i := range operations.Items {
+		existingNames[operations.Items[i].Name] = struct{}{}
+	}
 
 	for _, check := range checks {
 		if check.specChecksum == check.statusChecksum {
@@ -168,50 +182,19 @@ func (r *Reconciler) reconcileComponents(ctx context.Context, cpn *controlplanev
 		}
 
 		operationName := operationNameForNode(nodeName, check.component, check.specChecksum)
-		existing := &controlplanev1alpha1.ControlPlaneOperation{}
-		err := r.client.Get(ctx, client.ObjectKey{Name: operationName}, existing)
-		if err == nil {
-			log.Debug("ControlPlaneOperation already exists, skipping",
+		if _, exists := existingNames[operationName]; exists {
+			logger.Debug("ControlPlaneOperation already exists, skipping",
 				slog.String("operation", operationName),
 				slog.String("component", string(check.component)))
 			continue
 		}
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get ControlPlaneOperation %s: %w", operationName, err)
-		}
 
-		operation := &controlplanev1alpha1.ControlPlaneOperation{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: operationName,
-				Labels: map[string]string{
-					constants.ControlPlaneNodeNameLabelKey:  nodeName,
-					constants.ControlPlaneComponentLabelKey: string(check.component),
-				},
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion:         controlplanev1alpha1.GroupVersion.String(),
-						Kind:               "ControlPlaneNode",
-						Name:               cpn.Name,
-						UID:                cpn.UID,
-						Controller:         ptr.To(true),
-						BlockOwnerDeletion: ptr.To(false),
-					},
-				},
-			},
-			Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
-				ConfigVersion:   cpn.Spec.ConfigVersion,
-				NodeName:        nodeName,
-				Component:       check.component,
-				Command:         controlplanev1alpha1.OperationCommandUpdate,
-				DesiredChecksum: check.specChecksum,
-				Approved:        false,
-			},
-		}
+		operation := newControlPlaneOperation(cpn, operationName, nodeName, check)
 
 		if err := r.client.Create(ctx, operation); err != nil {
 			return fmt.Errorf("create ControlPlaneOperation %s: %w", operationName, err)
 		}
-		log.Info("ControlPlaneOperation created",
+		logger.Info("ControlPlaneOperation created",
 			slog.String("operation", operationName),
 			slog.String("component", string(check.component)))
 	}
@@ -219,37 +202,73 @@ func (r *Reconciler) reconcileComponents(ctx context.Context, cpn *controlplanev
 	return nil
 }
 
-func (r *Reconciler) buildComponentChecks(cpn *controlplanev1alpha1.ControlPlaneNode) []componentCheck {
+func buildComponentChecks(cpn *controlplanev1alpha1.ControlPlaneNode) []componentCheck {
 	return []componentCheck{
 		{
 			component:      controlplanev1alpha1.OperationComponentEtcd,
+			conditionType:  constants.ConditionEtcdReady,
 			specChecksum:   cpn.Spec.Components.Etcd.Checksum,
 			statusChecksum: cpn.Status.Components.Etcd.Checksum,
 		},
 		{
 			component:      controlplanev1alpha1.OperationComponentKubeAPIServer,
+			conditionType:  constants.ConditionAPIServerReady,
 			specChecksum:   cpn.Spec.Components.KubeAPIServer.Checksum,
 			statusChecksum: cpn.Status.Components.KubeAPIServer.Checksum,
 		},
 		{
 			component:      controlplanev1alpha1.OperationComponentKubeControllerManager,
+			conditionType:  constants.ConditionControllerManagerReady,
 			specChecksum:   cpn.Spec.Components.KubeControllerManager.Checksum,
 			statusChecksum: cpn.Status.Components.KubeControllerManager.Checksum,
 		},
 		{
 			component:      controlplanev1alpha1.OperationComponentKubeScheduler,
+			conditionType:  constants.ConditionSchedulerReady,
 			specChecksum:   cpn.Spec.Components.KubeScheduler.Checksum,
 			statusChecksum: cpn.Status.Components.KubeScheduler.Checksum,
 		},
 		{
 			component:      controlplanev1alpha1.OperationComponentHotReload,
+			conditionType:  constants.ConditionHotReloadSynced,
 			specChecksum:   cpn.Spec.HotReloadChecksum,
 			statusChecksum: cpn.Status.HotReloadChecksum,
 		},
 		{
 			component:      controlplanev1alpha1.OperationComponentPKI,
+			conditionType:  constants.ConditionPKISynced,
 			specChecksum:   cpn.Spec.PKIChecksum,
 			statusChecksum: cpn.Status.PKIChecksum,
+		},
+	}
+}
+
+func newControlPlaneOperation(cpn *controlplanev1alpha1.ControlPlaneNode, operationName, nodeName string, check componentCheck) *controlplanev1alpha1.ControlPlaneOperation {
+	return &controlplanev1alpha1.ControlPlaneOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: operationName,
+			Labels: map[string]string{
+				constants.ControlPlaneNodeNameLabelKey:  nodeName,
+				constants.ControlPlaneComponentLabelKey: string(check.component),
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         controlplanev1alpha1.GroupVersion.String(),
+					Kind:               "ControlPlaneNode",
+					Name:               cpn.Name,
+					UID:                cpn.UID,
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(false),
+				},
+			},
+		},
+		Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
+			ConfigVersion:   cpn.Spec.ConfigVersion,
+			NodeName:        nodeName,
+			Component:       check.component,
+			Command:         controlplanev1alpha1.OperationCommandUpdate,
+			DesiredChecksum: check.specChecksum,
+			Approved:        false,
 		},
 	}
 }
@@ -264,7 +283,7 @@ func operationNameForNode(nodeName string, component controlplanev1alpha1.Operat
 }
 
 // TODO: Add controlPlaneOperation based conditions logic.
-func buildCondition(condType string, specChecksum, statusChecksum string, generation int64) metav1.Condition {
+func newCondition(condType string, specChecksum, statusChecksum string, generation int64) metav1.Condition {
 	if specChecksum == statusChecksum {
 		return metav1.Condition{
 			Type:               condType,
@@ -281,31 +300,17 @@ func buildCondition(condType string, specChecksum, statusChecksum string, genera
 	}
 }
 
-func (r *Reconciler) reconcileConditions(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, originalForPatch *controlplanev1alpha1.ControlPlaneNode) error {
-	checks := []struct {
-		condType string
-		spec     string
-		status   string
-	}{
-		{constants.ConditionEtcdReady, cpn.Spec.Components.Etcd.Checksum, cpn.Status.Components.Etcd.Checksum},
-		{constants.ConditionAPIServerReady, cpn.Spec.Components.KubeAPIServer.Checksum, cpn.Status.Components.KubeAPIServer.Checksum},
-		{constants.ConditionControllerManagerReady, cpn.Spec.Components.KubeControllerManager.Checksum, cpn.Status.Components.KubeControllerManager.Checksum},
-		{constants.ConditionSchedulerReady, cpn.Spec.Components.KubeScheduler.Checksum, cpn.Status.Components.KubeScheduler.Checksum},
-		{constants.ConditionPKISynced, cpn.Spec.PKIChecksum, cpn.Status.PKIChecksum},
-		{constants.ConditionsHotReloadSynced, cpn.Spec.HotReloadChecksum, cpn.Status.HotReloadChecksum},
-	}
+func (r *Reconciler) updateStatusConditions(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, checks []componentCheck) error {
+	original := cpn.DeepCopy()
 
 	for _, check := range checks {
-		cond := buildCondition(check.condType, check.spec, check.status, cpn.Generation)
+		cond := newCondition(check.conditionType, check.specChecksum, check.statusChecksum, cpn.Generation)
 		meta.SetStatusCondition(&cpn.Status.Conditions, cond)
 	}
 
-	// On the very first reconcile (no conditions have been set yet), use Update instead of Patch
-	// That all status fields including empty-string checksums (PKIChecksum, ConfigVersion, etc.) are explicitly persisted.
-	// MergeFrom patch silently drop them because "" == "" produces no diff.
-	if len(originalForPatch.Status.Conditions) == 0 {
-		return r.client.Status().Update(ctx, cpn)
+	if reflect.DeepEqual(original.Status.Conditions, cpn.Status.Conditions) {
+		return nil
 	}
 
-	return r.client.Status().Patch(ctx, cpn, client.MergeFrom(originalForPatch))
+	return r.client.Status().Patch(ctx, cpn, client.MergeFrom(original))
 }

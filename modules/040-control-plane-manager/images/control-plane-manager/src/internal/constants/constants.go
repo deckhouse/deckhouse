@@ -44,7 +44,7 @@ const (
 	ConditionControllerManagerReady = "ControllerManagerReady"
 	ConditionSchedulerReady         = "SchedulerReady"
 	ConditionPKISynced              = "PKISynced"
-	ConditionsHotReloadSynced       = "HotReloadSynced"
+	ConditionHotReloadSynced        = "HotReloadSynced"
 
 	ReasonSynced        = "Synced"
 	ReasonOutOfSync     = "OutOfSync"

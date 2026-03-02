@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -74,6 +75,7 @@ func (suite *ControllerTestSuite) setupController(objs []client.Object) {
 
 	suite.controller = &Reconciler{
 		client: suite.client,
+		log:    log.NewNop(),
 	}
 }
 
