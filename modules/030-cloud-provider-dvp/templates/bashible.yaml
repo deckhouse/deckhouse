@@ -1,4 +1,5 @@
-{{- $bashible := .Files.Glob "candi/bashible/*.tpl" -}}
+{{- $bashbilePath := "candi/bashible/" -}}
+{{- $bashible := .Files.Glob (printf "%s**" $bashbilePath) -}}
 ---
 apiVersion: v1
 kind: Secret
@@ -7,4 +8,6 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
-{{ $bashible.AsSecrets | indent 2 }}
+{{- range $path, $_ :=  $bashible }}
+  {{ $path | trimPrefix $bashbilePath }}: {{ $bashible.Get $path | b64enc }}
+{{- end }}
