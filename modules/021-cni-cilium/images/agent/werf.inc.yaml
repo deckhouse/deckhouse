@@ -255,8 +255,8 @@ import:
   to: /usr/sbin/ipset
 - image: tools/kmod-v33
   before: setup
-  add: /bin/
-  to: /usr/sbin/
+  add: /bin
+  to: /usr/sbin
   includePaths:
   - kmod
   - lsmod
@@ -268,8 +268,8 @@ import:
   - rmmod
 - image: tools/iproute2-v6.12.0
   before: setup
-  add: /sbin/
-  to: /usr/sbin/
+  add: /sbin
+  to: /usr/sbin
   includePaths:
   - dcb
   - devlink
