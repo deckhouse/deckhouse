@@ -165,7 +165,7 @@ This address is managed by MetalLB in L2 mode on dedicated frontend nodes.
 This instruction is applicable only for the `Standard` deployment layout.
 {% endalert %}
 
-When using [cert-manager](/modules/cert-manager/) with the HTTP-01 ACME challenge type, you may need to configure Hairpin NAT (NAT loopback) on the Edge Gateway.
+When using [`cert-manager`](/modules/cert-manager/) with the HTTP-01 ACME challenge type, you may need to configure Hairpin NAT (NAT loopback) on the Edge Gateway.
 
 This is required when the Ingress domain name resolves to the external IP address of the Edge Gateway, while requests to that address are made from **inside** the cluster (from the node network). In this case, the traffic must be correctly routed back to the internal network to the Ingress address (for example, the [MetalLB](/modules/metallb/) address).
 
