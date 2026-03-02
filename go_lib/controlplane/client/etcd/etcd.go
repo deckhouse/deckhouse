@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	kubeadmapp "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapp"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
@@ -719,7 +721,7 @@ func InitCluster(podManifest []byte, cfgPath string, endpoint *kubeadmapi.APIEnd
 	return nil
 }
 
-func JoinCluster(podManifest []byte, kubeClient clientset.Interface, config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
+func JoinCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
 
 	// data, ok := c.(JoinData)
 
@@ -730,6 +732,19 @@ func JoinCluster(podManifest []byte, kubeClient clientset.Interface, config *etc
 	// // gets access to the cluster using the identity defined in admin.conf
 
 	// cfg, err := data.InitCfg()
+	kubeClient, err := kubeadmapp.MyNewKubernetesClient()
+	if err != nil {
+		return err
+	}
+
+	///////////////////////////// test kubeClient
+	fmt.Println(kubeClient)
+	pods, err := kubeClient.CoreV1().Pods("d8-chrony").List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	fmt.Println("TEST-ETCD KUBECLIENT: pods", pods)
+	////////////////////////////////
 
 	// config = &etcdconfig.EtcdConfig{}
 	config = &etcdconfig.EtcdConfig{
@@ -763,24 +778,31 @@ func JoinCluster(podManifest []byte, kubeClient clientset.Interface, config *etc
 	etcdPeerAddress := GetPeerURL(endpoint)
 
 	var cluster []Member
-	// var etcdClient *Client
+	var etcdClient *Client
 	// var err error
 	if isDryRun {
 		fmt.Printf("[etcd] Would add etcd member: %s\n", etcdPeerAddress)
 	} else {
 		// Creates an etcd client that connects to all the local/stacked etcd members.
-		klog.V(1).Info("creating etcd client that connects to etcd pods")
-		// etcdClient, err = NewFromCluster(kubeClient, config.CertificatesDir)
-		// if err != nil {
-		// 	return err
-		// }
+		klog.V(1).Info("TEST-ETCD client: creating etcd client that connects to etcd pods")
+		etcdClient, err = NewFromCluster(kubeClient, config.CertificatesDir)
+		if err != nil {
+			return err
+		}
+		fmt.Println("TEST-ETCD client: etcdClient", etcdClient)
+		clusterStatus, err := etcdClient.getClusterStatus()
+		if err != nil {
+			return err
+		}
+		fmt.Println("TEST-ETCD client: clusterStatus", clusterStatus)
+
 		// klog.V(1).Infof("[etcd] Adding etcd member: %s", etcdPeerAddress)
 		// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
 		// if err != nil {
 		// 	return err
 		// }
-		fmt.Println("[etcd] Announced new etcd member joining to the existing etcd cluster")
-		klog.V(1).Infof("Updated etcd member list: %v", cluster)
+		fmt.Println("TEST-ETCD client: [etcd] Announced new etcd member joining to the existing etcd cluster")
+		klog.V(1).Infof("TEST-ETCD client: Updated etcd member list: %v", cluster)
 	}
 
 	fmt.Printf("[etcd] Creating static Pod manifest for %q\n", constants.Etcd)
