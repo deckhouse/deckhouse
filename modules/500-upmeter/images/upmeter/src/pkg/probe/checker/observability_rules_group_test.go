@@ -136,26 +136,32 @@ func Test_isMetricPresentInPrometheusResponse(t *testing.T) {
 }
 
 func Test_hasAlertInAlertmanagerResponse(t *testing.T) {
-	t.Run("found and silenced", func(t *testing.T) {
-		body := []byte(`[
-  {
-    "labels": {"alertname":"UpmeterMiniE2E","upmeter_alert_id":"abc-123"},
-    "status": {"silencedBy":["silence-1"]}
-  }
-]`)
+	t.Run("found and silenced in dop_alerts format", func(t *testing.T) {
+		body := []byte(`{
+  "list": [
+    {
+      "alert": {"labels": {"alertname":"UpmeterMiniE2E","upmeter_alert_id":"abc-123"}},
+      "status": {"silencedBy":["silence-1"]}
+    }
+  ],
+  "continue": ""
+}`)
 		found, silenced, err := hasAlertInAlertmanagerResponse(body, "UpmeterMiniE2E", "upmeter_alert_id", "abc-123")
 		assert.NoError(t, err)
 		assert.True(t, found)
 		assert.True(t, silenced)
 	})
 
-	t.Run("found but not silenced yet", func(t *testing.T) {
-		body := []byte(`[
-  {
-    "labels": {"alertname":"UpmeterMiniE2E","upmeter_alert_id":"abc-123"},
-    "status": {"silencedBy":[]}
-  }
-]`)
+	t.Run("found but not silenced yet in dop_alerts format", func(t *testing.T) {
+		body := []byte(`{
+  "list": [
+    {
+      "alert": {"labels": {"alertname":"UpmeterMiniE2E","upmeter_alert_id":"abc-123"}},
+      "status": {"silencedBy":[]}
+    }
+  ],
+  "continue": ""
+}`)
 		found, silenced, err := hasAlertInAlertmanagerResponse(body, "UpmeterMiniE2E", "upmeter_alert_id", "abc-123")
 		assert.NoError(t, err)
 		assert.True(t, found)

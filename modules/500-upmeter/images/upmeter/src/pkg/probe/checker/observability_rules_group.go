@@ -56,6 +56,10 @@ var (
 	}
 )
 
+const (
+	alertmanagerScopeHeaderName = "X-Scope-Orgid"
+)
+
 type ObservabilityRulesGroupRecordingLifecycle struct {
 	Access           kubernetes.Access
 	PreflightChecker check.Checker
@@ -727,7 +731,14 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) waitAlertPresentAndSilenc
 		c.waitAlertPresentTimeout,
 		pollingInterval(c.waitAlertPresentTimeout),
 		func() (bool, error) {
-			body, err := queryEndpoint(c.access, c.alertmanagerEndpoint, c.requestTimeout)
+			body, err := queryEndpointWithHeaders(
+				c.access,
+				c.alertmanagerEndpoint,
+				c.requestTimeout,
+				map[string]string{
+					alertmanagerScopeHeaderName: c.namespace,
+				},
+			)
 			if err != nil {
 				return false, err
 			}
@@ -804,7 +815,16 @@ func namespaceExists(ctx context.Context, access kubernetes.Access, namespace st
 }
 
 func queryEndpoint(access kubernetes.Access, endpoint string, timeout time.Duration) ([]byte, error) {
-	req, err := newGetRequest(endpoint, access.ServiceAccountToken(), access.UserAgent())
+	return queryEndpointWithHeaders(access, endpoint, timeout, nil)
+}
+
+func queryEndpointWithHeaders(
+	access kubernetes.Access,
+	endpoint string,
+	timeout time.Duration,
+	headers map[string]string,
+) ([]byte, error) {
+	req, err := newGetRequestWithHeaders(endpoint, access.ServiceAccountToken(), access.UserAgent(), headers)
 	if err != nil {
 		return nil, err
 	}
@@ -839,28 +859,28 @@ func isMetricPresentInPrometheusResponse(body []byte) (bool, error) {
 }
 
 func hasAlertInAlertmanagerResponse(body []byte, alertName, labelKey, labelValue string) (bool, bool, error) {
-	alerts := gjson.ParseBytes(body)
+	alerts := gjson.GetBytes(body, "list")
 	if !alerts.IsArray() {
-		return false, false, fmt.Errorf("cannot parse Alertmanager response as array")
+		return false, false, fmt.Errorf("cannot parse Alertmanager response: expected object with list array")
 	}
 
 	found := false
-	labelPath := "labels." + labelKey
-	for _, alert := range alerts.Array() {
-		if alert.Get("labels.alertname").String() != alertName {
+	labelPath := "alert.labels." + labelKey
+
+	for _, item := range alerts.Array() {
+		if item.Get("alert.labels.alertname").String() != alertName {
 			continue
 		}
-		if alert.Get(labelPath).String() != labelValue {
+		if item.Get(labelPath).String() != labelValue {
 			continue
 		}
 
 		found = true
-		silencedBy := alert.Get("status.silencedBy")
+		silencedBy := item.Get("status.silencedBy")
 		if silencedBy.IsArray() && len(silencedBy.Array()) > 0 {
 			return true, true, nil
 		}
 	}
-
 	return found, false, nil
 }
 

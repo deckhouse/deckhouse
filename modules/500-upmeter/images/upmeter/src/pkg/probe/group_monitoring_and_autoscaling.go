@@ -196,7 +196,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 				AlertName:            "UpmeterObservabilityMiniE2EAlert",
 				AlertLabelKey:        "upmeter_alert_id",
 				AlertLabelValue:      run.StaticIdentifier("obsv-alert"),
-				AlertmanagerEndpoint: "https://alertmanager.d8-observability:8443/api/v2/alerts",
+				AlertmanagerEndpoint: "https://alertmanager.d8-observability:8443/api/v2/dop_alerts",
 
 				RequestTimeout:                   5 * time.Second,
 				WaitPrometheusRuleCreatedTimeout: 90 * time.Second,
