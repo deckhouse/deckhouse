@@ -26,11 +26,11 @@ metadata:
 ...
 ```
 
-#### Как принудительно обновить модуль
+#### Принудительное обновление модуля
 
-Чтобы немедленно применить обновление конкретного модуля, установите аннотацию `modules.deckhouse.io/apply-now: "true"` в соответствующем ресурсе [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease).
+Чтобы принудительно применить обновление конкретного модуля, установите аннотацию `modules.deckhouse.io/apply-now: "true"` в соответствующем ресурсе [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease).
 
-В этом случае обновление модуля будет выполнено сразу после установки аннотации, даже если не выполняются требования для обновления (например, версия Kubernetes, зависимости или другие условия).
+Аннотация применяет релиз немедленно, не дожидаясь окна обновлений. Требования из [`spec.requirements`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-requirements) при этом сохраняются — если они не выполняются, релиз не будет применен.
 
 Пример ресурса с установленной аннотацией:
 
@@ -38,7 +38,7 @@ metadata:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  name: console-0.9.3
+  name: console-v1.43.3
   annotations:
     modules.deckhouse.io/apply-now: "true"
 ...
