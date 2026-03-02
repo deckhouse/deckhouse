@@ -312,7 +312,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		logger.Error(fmt.Errorf("VM in degraded state"), "VM failed",
 			"vm_phase", vm.Status.Phase,
 			"vm_name", vm.Name,
-			"has_node_ref", machine.Status.NodeRef != nil,
+			"has_node_ref", machine.Status.NodeRef.Name != "",
 			"requested_memory", dvpMachine.Spec.Memory.String(),
 			"requested_cpu_cores", dvpMachine.Spec.CPU.Cores,
 			"vm_class", dvpMachine.Spec.VMClassName,
@@ -321,7 +321,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		infraReady := false
 		dvpMachine.Status.Initialization.Provisioned = &infraReady
 
-		if machine.Status.NodeRef == nil {
+		if machine.Status.NodeRef.Name == "" {
 			// VM never successfully started - likely a resource or configuration error
 			err = fmt.Errorf("VM state %q indicates failure, likely due to resource constraints or configuration error", vm.Status.Phase)
 
