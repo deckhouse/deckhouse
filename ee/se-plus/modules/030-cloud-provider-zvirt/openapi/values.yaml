@@ -145,8 +145,8 @@ properties:
                           type: string
                         uniqueItems: true
                         description: |
-                          List of IP addresses to assign to the interface.
-                        example:  ["192.168.1.10/24", "192.168.1.11/24"]
+                          List of IP addresses to assign to the interface (one IP address per node).
+                        example:  ["192.168.1.10", "192.168.1.11"]
                       networkInterfaceNetmask:
                         type: string
                         description: |
