@@ -195,8 +195,8 @@ spec:
 ```
 
 {% alert level="info" %}
-`destination` не поддерживает метки пода для индексирования.
-Чтобы добавить нужные метки, используйте [опцию `extraLabels`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-extralabels):
+`destination` не поддерживает лейблы пода для индексирования.
+Чтобы добавить нужные лейблы, используйте [опцию `extraLabels`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-extralabels):
 
 ```yaml
 extraLabels:

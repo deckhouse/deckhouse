@@ -595,7 +595,7 @@ d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 
 - Секреты и ConfigMap'ы, из пространств имён, начинающихся на `d8-` или `kube-`, если они явно перечислены в файле whitelist.
 
-- Роли и биндинги уровня кластера (ClusterRole и ClusterRoleBinding), если они не помечены меткой:
+- Роли и биндинги уровня кластера (ClusterRole и ClusterRoleBinding), если они не помечены лейблом:
 
   ```console
   heritage=deckhouse
@@ -690,7 +690,7 @@ d8 backup loki --days 1 > ./loki.log
 
 Флаги:
 
-- `--start`, `--end` — временные метки в формате "YYYY-MM-DD HH:MM:SS";
+- `--start`, `--end` — временные лейблы в формате "YYYY-MM-DD HH:MM:SS";
 - `--days` — ширина временного окна выгрузки (по умолчанию 5 дней);
 - `--limit` — максимум строк в одном запросе (по умолчанию 5000).
 

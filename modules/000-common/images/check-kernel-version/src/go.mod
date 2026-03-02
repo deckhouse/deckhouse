@@ -1,6 +1,6 @@
 module check-kernel-version
 
-go 1.18
+go 1.25
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
