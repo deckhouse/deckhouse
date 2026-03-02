@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"path/filepath"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -36,6 +35,7 @@ const (
 )
 
 var (
+	embeddedDeployedDir  = "modules"
 	modulesDownloadedDir = d8env.GetDownloadedModulesDir()
 	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "modules")
 	appsDownloadedDir    = filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
@@ -72,7 +72,7 @@ func NewAppTask(name string, repo registry.Remote, settings addonutils.Values, l
 		settings:   settings,
 		loader:     loader,
 		status:     status,
-		logger:     logger.Named(taskTracer),
+		logger:     logger.Named(taskTracer).With("name", name),
 	}
 }
 
@@ -86,7 +86,18 @@ func NewModuleTask(name string, repo registry.Remote, settings addonutils.Values
 		settings:   settings,
 		loader:     loader,
 		status:     status,
-		logger:     logger.Named(taskTracer),
+		logger:     logger.Named(taskTracer).With("name", name),
+	}
+}
+
+func NewEmbeddedTask(name string, settings addonutils.Values, loader loader, status statusService, logger *log.Logger) queue.Task {
+	return &task{
+		name:     name,
+		deployed: filepath.Join(embeddedDeployedDir, name),
+		settings: settings,
+		loader:   loader,
+		status:   status,
+		logger:   logger.Named(taskTracer).With("name", name),
 	}
 }
 
@@ -96,7 +107,7 @@ func (t *task) String() string {
 
 func (t *task) Execute(ctx context.Context) error {
 	// Load package into package manager (parse hooks, values, chart)
-	t.logger.Debug("load package", slog.String("name", t.name))
+	t.logger.Debug("load package")
 	version, err := t.loader(ctx, t.repository, t.settings, t.deployed)
 	if err != nil {
 		t.status.HandleError(t.name, err)

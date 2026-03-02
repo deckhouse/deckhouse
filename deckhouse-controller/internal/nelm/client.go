@@ -211,24 +211,26 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles:    opts.ValuesPaths,
-			RuntimeSetJSON: valuesSet,
+			ValuesFiles: opts.ValuesPaths,
+			RootSetJSON: valuesSet,
 		},
 		TrackingOptions: common.TrackingOptions{
 			NoPodLogs: true,
 		},
-		Chart:                   opts.Path,
-		DefaultChartName:        releaseName,
-		DefaultChartVersion:     "0.2.0",
-		DefaultChartAPIVersion:  "v2",
-		ExtraLabels:             c.opts.Labels,
-		ExtraAnnotations:        c.opts.Annotations,
-		NoInstallStandaloneCRDs: true,
-		ReleaseHistoryLimit:     int(c.opts.HistoryMax),
-		ReleaseLabels:           opts.ReleaseLabels,
-		ReleaseStorageDriver:    c.driver,
-		Timeout:                 c.opts.Timeout,
-		ForceAdoption:           true,
+		Chart:                  opts.Path,
+		DefaultChartName:       releaseName,
+		DefaultChartVersion:    "0.2.0",
+		DefaultChartAPIVersion: "v2",
+		ReleaseInstallRuntimeOptions: common.ReleaseInstallRuntimeOptions{
+			ExtraLabels:             c.opts.Labels,
+			ExtraAnnotations:        c.opts.Annotations,
+			NoInstallStandaloneCRDs: true,
+			ReleaseHistoryLimit:     int(c.opts.HistoryMax),
+			ReleaseLabels:           opts.ReleaseLabels,
+			ReleaseStorageDriver:    c.driver,
+			ForceAdoption:           true,
+		},
+		Timeout: c.opts.Timeout,
 	}); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("install nelm release '%s': %w", releaseName, err)
@@ -258,8 +260,8 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles:    opts.ValuesPaths,
-			RuntimeSetJSON: valuesSet,
+			ValuesFiles: opts.ValuesPaths,
+			RootSetJSON: valuesSet,
 		},
 		OutputFilePath:         "/dev/null", // No output file, we return the manifest as a string
 		Chart:                  opts.Path,
