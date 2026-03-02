@@ -44,11 +44,8 @@ type OperationService struct {
 	logger *log.Logger
 }
 
-// errNoPackageMetadata is returned by detectPackageType when a package
-// - has no type labels
-// - has no package.yaml in the version image
-//
-// This typically means the package is a legacy module which lives under packages/ path.
+// errNoPackageMetadata — no Docker labels, no package.yaml → legacy module (v1alpha1).
+// Used by detectPackageType and handleMissingVersionPath.
 var errNoPackageMetadata = errors.New("package has no type labels and no package.yaml, processed as the legacy module (v1alpha1)")
 
 // errPackageTypeInvalid is returned by detectPackageType when a package has manifest files
@@ -321,6 +318,9 @@ func latestVersionString(versions []*semver.Version) string {
 	return "v" + versions[len(versions)-1].String()
 }
 
+// ProcessPackageVersions processes a single package: lists version tags from <package>/version,
+// detects type (Application/Module) via detectPackageType, creates APV/MPV resources.
+// Delegates to handleMissingVersionPath when /version path doesn't exist (NAME_UNKNOWN).
 func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*PackageProcessResult, error) {
 	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
 	if err != nil {
@@ -404,10 +404,10 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	}, nil
 }
 
-// handleMissingVersionPath handles the case when <package>/version path doesn't exist.
-// It tries to detect the package type via the release image to distinguish between:
-// - A broken new package (has type label on release image) → record as failed with informative error
-// - A legacy v1alpha1 module (no type metadata at all) → record as legacy module
+// handleMissingVersionPath — fallback when <package>/version doesn't exist (NAME_UNKNOWN).
+// Lists tags on <package>, checks release image label:
+//   - label found → CI bug (type exists but /version missing)
+//   - label not found → legacy module (v1alpha1)
 func (s *OperationService) handleMissingVersionPath(ctx context.Context, packageName string) (*PackageProcessResult, error) {
 	pkg := s.svc.Package(packageName)
 
@@ -426,7 +426,7 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 		)
 		return &PackageProcessResult{
 			Failed: []failedVersion{{
-				Error: fmt.Sprintf("%s: %s", errNoPackageMetadata.Error(), packageName),
+				Error: fmt.Sprintf("package has no /version path and no tags, processed as the legacy module (v1alpha1): %s", packageName),
 			}},
 		}, nil
 	}
@@ -438,19 +438,20 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 		s.logger.Warn(
 			"failed to get release image config for legacy detection",
 			slog.String("package", packageName),
-			slog.String("tag", sampleTag),
+			slog.String("image", packageName+":"+sampleTag),
 			log.Err(err),
 		)
 		releaseConfig = nil
 	}
 
 	if releaseConfig != nil && releaseConfig.Config.Labels != nil {
-		if rawType := releaseConfig.Config.Labels[packageTypeLabel]; rawType != "" {
+		if rawType, hasLabel := releaseConfig.Config.Labels[packageTypeLabel]; hasLabel {
 			// Package HAS a type label but is missing /version path — broken new package (CI issue)
 			s.logger.Warn(
 				"package has type label but missing /version path",
 				slog.String("package", packageName),
 				slog.String("type", rawType),
+				slog.String("image", packageName+":"+sampleTag),
 			)
 			return &PackageProcessResult{
 				Failed: []failedVersion{{
@@ -462,12 +463,13 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 
 	// No type label on release image → legacy v1alpha1 module
 	s.logger.Info(
-		"package has no version path and no type label, treating as legacy module (v1alpha1)",
+		"no type label on release image, treating as legacy module (v1alpha1)",
 		slog.String("package", packageName),
+		slog.String("image", packageName+":"+sampleTag),
 	)
 	return &PackageProcessResult{
 		Failed: []failedVersion{{
-			Error: fmt.Sprintf("%s: %s", errNoPackageMetadata.Error(), packageName),
+			Error: fmt.Sprintf("no type label on release image %s:%s, processed as the legacy module (v1alpha1): %s", packageName, sampleTag, packageName),
 		}},
 	}, nil
 }
@@ -501,7 +503,7 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 		versionConfig = nil
 	}
 	if versionConfig != nil && versionConfig.Config.Labels != nil {
-		if rawPackageType := versionConfig.Config.Labels[packageTypeLabel]; rawPackageType != "" {
+		if rawPackageType, hasLabel := versionConfig.Config.Labels[packageTypeLabel]; hasLabel {
 			return parsePackageType(rawPackageType)
 		}
 	}
@@ -515,7 +517,7 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 		releaseConfig = nil
 	}
 	if releaseConfig != nil && releaseConfig.Config.Labels != nil {
-		if raw := releaseConfig.Config.Labels[packageTypeLabel]; raw != "" {
+		if raw, hasLabel := releaseConfig.Config.Labels[packageTypeLabel]; hasLabel {
 			return parsePackageType(raw)
 		}
 	}
