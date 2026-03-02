@@ -212,7 +212,7 @@ func (h *PublicStatusHandler) calcStatuses(rng ranges.StepRange, lister entity.R
 
 			probeSummaryList, err := h.getProbeSummaryList(lister, filter)
 			if err != nil {
-				return nil, fmt.Errorf("getting summary for probe %s/%s: %v", group, groupRef.Probe, err)
+				return nil, fmt.Errorf("getting summary for probe %s/%s: %v", group, probeRef.Probe, err)
 			}
 
 			av := calculateAvailability(probeSummaryList)

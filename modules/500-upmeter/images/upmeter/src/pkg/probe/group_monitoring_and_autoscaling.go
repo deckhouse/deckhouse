@@ -58,7 +58,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
-			probe:  "prometheus",
+			probe:  "observability-recording",
 			check:  "observability-rules-group-recording",
 			period: time.Minute,
 			config: checker.ObservabilityRulesGroupRecordingLifecycle{
@@ -72,10 +72,10 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 				PrometheusEndpoint: "https://prometheus.d8-monitoring:9090/api/v1/query",
 
 				RequestTimeout:                   5 * time.Second,
-				WaitPrometheusRuleCreatedTimeout: 90 * time.Second,
-				WaitMetricPresentTimeout:         90 * time.Second,
-				WaitPrometheusRuleDeletedTimeout: 90 * time.Second,
-				WaitNamespaceDeletedTimeout:      90 * time.Second,
+				WaitPrometheusRuleCreatedTimeout: 60 * time.Second,
+				WaitMetricPresentTimeout:         60 * time.Second,
+				WaitPrometheusRuleDeletedTimeout: 60 * time.Second,
+				WaitNamespaceDeletedTimeout:      60 * time.Second,
 				Timeout:                          5 * time.Minute,
 			},
 		}, {
@@ -199,10 +199,10 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 				AlertmanagerEndpoint: "https://alertmanager.d8-observability:8443/api/v2/dop_alerts",
 
 				RequestTimeout:                   5 * time.Second,
-				WaitPrometheusRuleCreatedTimeout: 90 * time.Second,
-				WaitAlertPresentTimeout:          90 * time.Second,
-				WaitPrometheusRuleDeletedTimeout: 90 * time.Second,
-				WaitNamespaceDeletedTimeout:      90 * time.Second,
+				WaitPrometheusRuleCreatedTimeout: 60 * time.Second,
+				WaitAlertPresentTimeout:          60 * time.Second,
+				WaitPrometheusRuleDeletedTimeout: 60 * time.Second,
+				WaitNamespaceDeletedTimeout:      60 * time.Second,
 				Timeout:                          5 * time.Minute,
 			},
 		}, {
