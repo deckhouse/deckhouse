@@ -49,17 +49,17 @@ func prepareOptions(opts ...option) (*options, error) {
 		opt.CertificatesDir = DefaultCertificatesDir
 	}
 
-	if opt.LocalAPIEndpoint == "" {
-		opt.LocalAPIEndpoint = DefaultLocalAPIEndpoint
+	if opt.ControlPlaneEndpoint == "" {
+		opt.ControlPlaneEndpoint = DefaultControlPlaneEndpoint
 	}
 
-	if opt.ControlPlaneEndpoint == "" {
-		controlPlaneEndpoint, err := os.ReadFile(constants.DiscoveredNodeIPPath)
-		if err != nil || len(controlPlaneEndpoint) == 0 {
-			return nil, fmt.Errorf("failed to read discovered control plane endpoint: %w", err)
+	if opt.LocalAPIEndpoint == "" {
+		localAPIEndpoint, err := os.ReadFile(constants.DiscoveredNodeIPPath)
+		if err != nil || len(localAPIEndpoint) == 0 {
+			return nil, fmt.Errorf("failed to read %q file: %w", constants.DiscoveredNodeIPPath, err)
 		}
 
-		opt.ControlPlaneEndpoint = fmt.Sprintf("https://%s:6443", strings.TrimSpace(string(controlPlaneEndpoint)))
+		opt.LocalAPIEndpoint = fmt.Sprintf("https://%s:6443", strings.TrimSpace(string(localAPIEndpoint)))
 	}
 
 	if opt.CertificateValidityPeriod == nil {
