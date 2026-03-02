@@ -1,6 +1,6 @@
 ## Patches
 
-### 001-go-mod.patch
+### 001-go-mod-01.patch
 
 Go mod patches for ingress-nginx-controller
 Collected with

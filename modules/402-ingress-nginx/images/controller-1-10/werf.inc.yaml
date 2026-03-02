@@ -42,7 +42,7 @@ shell:
   - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
   - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
-  - patch -p1 < /patches/001-go-mod.patch
+  - patch -p1 < /patches/001-go-mod-01.patch
   - patch -p1 < /patches/002-healthcheck.patch
   - patch -p1 < /patches/004-lua-info.patch
   - patch -p1 < /patches/005-makefile.patch
