@@ -63,3 +63,10 @@ See issues:
 ### set-usage-GOPROXY.patch
 
 Removes GOPROXY=off from the build so that our value is used when building the image.
+
+### 010-x-kubernetes-sensitive-data.patch
+x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
+When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets) hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource and unconditionally mask the value in audit logs.
+See our KEP:
+- https://github.com/kubernetes/enhancements/pull/5937
+- https://github.com/kubernetes/enhancements/issues/5933
