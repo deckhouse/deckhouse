@@ -81,6 +81,7 @@ shell:
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
   - mv /src/scripts/* /
   - chmod +x /d8 /install /uninstall
+  - chmod u+s /d8
   - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
