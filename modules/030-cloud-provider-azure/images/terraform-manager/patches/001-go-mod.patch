@@ -8,7 +8,7 @@ index 6e83421e4f..d437046834 100644
 +1.24.0
 \ No newline at end of file
 diff --git a/go.mod b/go.mod
-index 7f85477c81..14d194a8e0 100644
+index 7f85477c81..a1b90f1caa 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -13,7 +13,7 @@ require (
@@ -36,7 +36,7 @@ index 7f85477c81..14d194a8e0 100644
  	github.com/apparentlymart/go-textseg v1.0.0 // indirect
  	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 -	github.com/cloudflare/circl v1.3.7 // indirect
-+	github.com/cloudflare/circl v1.6.1 // indirect
++	github.com/cloudflare/circl v1.6.3-0.20260122110810-fcba359f4178 // indirect
  	github.com/golang/protobuf v1.5.4 // indirect
  	github.com/hashicorp/errwrap v1.1.0 // indirect
  	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
@@ -67,7 +67,7 @@ index 7f85477c81..14d194a8e0 100644
 +
 +toolchain go1.24.3
 diff --git a/go.sum b/go.sum
-index ecc3060565..4e427d1e9f 100644
+index ecc3060565..42dc008f47 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -42,8 +42,8 @@ github.com/btubbs/datetime v0.1.1 h1:KuV+F9tyq/hEnezmKZNGk8dzqMVsId6EpFVrQCfA3To
@@ -76,8 +76,8 @@ index ecc3060565..4e427d1e9f 100644
  github.com/bufbuild/protocompile v0.4.0/go.mod h1:3v93+mbWn/v3xzN+31nwkJfrEpAUwp+BagBSZWx+TP8=
 -github.com/cloudflare/circl v1.3.7 h1:qlCDlTPz2n9fu58M0Nh1J/JzcFpfgkFHHX3O35r5vcU=
 -github.com/cloudflare/circl v1.3.7/go.mod h1:sRTcRWXGLrKw6yIGJ+l7amYJFfAXbZG0kBSc8r4zxgA=
-+github.com/cloudflare/circl v1.6.1 h1:zqIqSPIndyBh1bjLVVDHMPpVKqp8Su/V+6MeDzzQBQ0=
-+github.com/cloudflare/circl v1.6.1/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
++github.com/cloudflare/circl v1.6.3-0.20260122110810-fcba359f4178 h1:n+zqUd1FtiFkNMBQzj0Lfm8U59goBZMubLmS/upiAoY=
++github.com/cloudflare/circl v1.6.3-0.20260122110810-fcba359f4178/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
  github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
  github.com/cyphar/filepath-securejoin v0.2.4 h1:Ugdm7cg7i6ZK6x3xDF1oEu1nfkyfH53EtKeQYTC3kyg=
  github.com/cyphar/filepath-securejoin v0.2.4/go.mod h1:aPGpWjXOXUn2NCNjFvBE6aRxGGx79pTxQpKOJNYHHl4=
