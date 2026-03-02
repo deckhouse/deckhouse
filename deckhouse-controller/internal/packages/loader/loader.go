@@ -82,7 +82,7 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 		return nil, ErrPackageNotFound
 	}
 
-	def, err := loadPackageDefinition(ctx, appDir)
+	def, err := loadPackageDefinition(appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", appDir, err)
@@ -137,6 +137,101 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 	}, nil
 }
 
+// LoadEmbeddedConf loads a module config from an embedded (built-in) module directory.
+// Unlike LoadModuleConf, it does not resolve version by symlinks.
+func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger) (*modules.Config, error) {
+	ctx, span := otel.Tracer(loaderTracer).Start(ctx, "LoadModuleConf")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("path", moduleDir))
+
+	logger = logger.With(slog.String("path", moduleDir))
+
+	logger.Debug("load embedded module from directory", slog.String("path", moduleDir))
+
+	// Embedded modules have contract on fs like this <weight>-<name>
+	moduleDir, err := resolveEmbeddedPath(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("resolve embedded path: %w", err)
+	}
+
+	if _, err = os.Stat(moduleDir); os.IsNotExist(err) {
+		span.SetStatus(codes.Error, ErrPackageNotFound.Error())
+		return nil, ErrPackageNotFound
+	}
+
+	// Load package definition (package.yaml/module.yaml)
+	def, err := loadPackageDefinition(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load package from '%s': %w", moduleDir, err)
+	}
+
+	// Load values from values.yaml and openapi schemas
+	static, config, values, err := loadValues(def.Name, moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load values: %w", err)
+	}
+
+	// Discover and load hooks (shell and batch)
+	hooks, err := loadEmbeddedHooks(ctx, def.Name, logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load hooks: %w", err)
+	}
+
+	moduleDef, err := def.ToModule()
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("convert module definition: %w", err)
+	}
+
+	digests, err := loadDigests(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load digests: %w", err)
+	}
+
+	return &modules.Config{
+		Path:       moduleDir,
+		Definition: moduleDef,
+
+		Digests: digests,
+
+		StaticValues: static,
+		ConfigSchema: config,
+		ValuesSchema: values,
+
+		Hooks: hooks,
+	}, nil
+}
+
+// resolveEmbeddedPath finds the actual directory for an embedded module whose
+// path on disk includes a weight prefix (e.g., "modules/002-deckhouse" for "modules/deckhouse").
+// It globs for directories matching "<parent>/*-<name>" and returns the first match.
+func resolveEmbeddedPath(packagePath string) (string, error) {
+	// If the path exists as-is (no weight prefix), use it directly.
+	if _, err := os.Stat(packagePath); err == nil {
+		return packagePath, nil
+	}
+
+	parent := filepath.Dir(packagePath)
+	name := filepath.Base(packagePath)
+
+	matches, err := filepath.Glob(filepath.Join(parent, "*-"+name))
+	if err != nil {
+		return "", fmt.Errorf("glob for embedded module %q: %w", name, err)
+	}
+
+	if len(matches) == 0 {
+		return "", fmt.Errorf("embedded module directory not found for %q in %q", name, parent)
+	}
+
+	return matches[0], nil
+}
+
 // LoadModuleConf loads a module package from the given directory on the filesystem.
 //
 // Steps:
@@ -162,12 +257,21 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		return nil, ErrPackageNotFound
 	}
 
-	def, err := loadPackageDefinition(ctx, moduleDir)
+	def, err := loadPackageDefinition(moduleDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", moduleDir, err)
 	}
 
+	if def.Version == "" {
+		// TODO(ipaqsa): its better to have version injected into package.yaml, but we can retrieve by fs
+		def.Version, err = getModuleVersion(ctx, moduleDir)
+		if err != nil {
+			return nil, fmt.Errorf("load module version: %w", err)
+		}
+	}
+
+	// Load values from values.yaml and openapi schemas
 	static, config, values, err := loadValues(def.Name, moduleDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -253,9 +357,8 @@ func LoadGlobalConf(ctx context.Context, logger *log.Logger) (*global.Config, er
 
 // loadPackageDefinition reads the package definition from the given directory.
 // It first tries package.yaml (new format). If that file doesn't exist, it falls back
-// to module.yaml (legacy format) and converts it to a dto.Definition, additionally
-// resolving the version from the filesystem or dm-verity device.
-func loadPackageDefinition(ctx context.Context, packageDir string) (*dto.Definition, error) {
+// to module.yaml (legacy format) and converts it to a dto.Definition
+func loadPackageDefinition(packageDir string) (*dto.Definition, error) {
 	definitionPath := filepath.Join(packageDir, dto.DefinitionFile)
 
 	content, err := os.ReadFile(definitionPath)
@@ -277,29 +380,37 @@ func loadPackageDefinition(ctx context.Context, packageDir string) (*dto.Definit
 		return nil, fmt.Errorf("load module definition: %w", err)
 	}
 
-	// TODO(ipaqsa): its better to have version injected into package.yaml, but we can retrieve by fs
-	version, err := getModuleVersion(ctx, packageDir)
-	if err != nil {
-		return nil, fmt.Errorf("load module version: %w", err)
+	var requirements dto.Requirements
+	if def.Requirements != nil {
+		requirements = dto.Requirements{
+			Kubernetes: def.Requirements.Kubernetes,
+			Deckhouse:  def.Requirements.Deckhouse,
+		}
+	}
+
+	var disableOpts dto.DisableOptions
+	if def.DisableOptions != nil {
+		disableOpts = dto.DisableOptions{
+			Confirmation: def.DisableOptions.Confirmation,
+			Message:      def.DisableOptions.Message,
+		}
+	}
+
+	var descriptions dto.Descriptions
+	if def.Descriptions != nil {
+		descriptions = dto.Descriptions{
+			Ru: def.Descriptions.Ru,
+			En: def.Descriptions.En,
+		}
 	}
 
 	return &dto.Definition{
-		Name:    def.Name,
-		Type:    "Module",
-		Version: version,
-		Stage:   def.Stage,
-		Descriptions: dto.Descriptions{
-			Ru: def.Descriptions.Ru,
-			En: def.Descriptions.En,
-		},
-		Requirements: dto.Requirements{
-			Kubernetes: def.Requirements.Kubernetes,
-			Deckhouse:  def.Requirements.Deckhouse,
-		},
-		DisableOptions: dto.DisableOptions{
-			Confirmation: def.DisableOptions.Confirmation,
-			Message:      def.DisableOptions.Message,
-		},
+		Name:           def.Name,
+		Type:           "Module",
+		Stage:          def.Stage,
+		Descriptions:   descriptions,
+		Requirements:   requirements,
+		DisableOptions: disableOpts,
 		Module: dto.DefinitionModule{
 			Weight:   int(def.Weight),
 			Critical: def.Critical,
