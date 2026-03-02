@@ -33,6 +33,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -171,9 +172,16 @@ func (r *Reconciler) ensureOperationsExist(ctx context.Context, cpn *controlplan
 		return fmt.Errorf("list ControlPlaneOperations for node %s: %w", nodeName, err)
 	}
 
-	existingNames := make(map[string]struct{}, len(operations.Items))
+	// Ensures we only skip creation when the operation is already owned by the current CPN instance.
+	// If cpn was deleted and recreated, it will have a different UID
+	existingOwners := make(map[string]types.UID, len(operations.Items))
 	for i := range operations.Items {
-		existingNames[operations.Items[i].Name] = struct{}{}
+		for _, ref := range operations.Items[i].OwnerReferences {
+			if ref.Controller != nil && *ref.Controller {
+				existingOwners[operations.Items[i].Name] = ref.UID
+				break
+			}
+		}
 	}
 
 	for _, check := range checks {
@@ -182,7 +190,7 @@ func (r *Reconciler) ensureOperationsExist(ctx context.Context, cpn *controlplan
 		}
 
 		operationName := operationNameForNode(nodeName, check.component, check.specChecksum)
-		if _, exists := existingNames[operationName]; exists {
+		if ownerUID, exists := existingOwners[operationName]; exists && ownerUID == cpn.UID {
 			logger.Debug("ControlPlaneOperation already exists, skipping",
 				slog.String("operation", operationName),
 				slog.String("component", string(check.component)))
