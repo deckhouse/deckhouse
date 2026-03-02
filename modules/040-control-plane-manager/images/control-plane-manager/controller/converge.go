@@ -376,7 +376,7 @@ status: {}`
 			log.Error("failed to test etcd library InitCluster", log.Err(err))
 		}
 
-		if err := etcd.JoinCluster([]byte(etcdManifest), nil, nil, &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName, false); err != nil {
+		if err := etcd.JoinCluster([]byte(etcdManifest), nil, &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName, false); err != nil {
 			log.Error("failed to test etcd library JoinCluster", log.Err(err))
 		}
 	}
