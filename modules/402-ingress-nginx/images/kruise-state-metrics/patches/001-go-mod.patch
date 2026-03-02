@@ -6,7 +6,7 @@ index 9059ada..dcef85c 100644
  module github.com/openkruise/kruise-state-metrics
  
 -go 1.16
-+go 1.25.7
++go 1.25
  
  require (
 -	github.com/google/go-cmp v0.5.5

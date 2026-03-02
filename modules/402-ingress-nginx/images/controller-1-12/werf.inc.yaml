@@ -130,7 +130,7 @@ shell:
   - rm -rf /src/owasp-modsecurity-crs/.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine-1.25.7
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

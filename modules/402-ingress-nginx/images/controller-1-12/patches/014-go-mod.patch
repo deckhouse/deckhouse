@@ -6,7 +6,7 @@ index 26cff52e0..f1de986b0 100644
  module k8s.io/ingress-nginx
 
 -go 1.24.1
-+go 1.24.6
++go 1.25
 
  require (
  	dario.cat/mergo v1.0.1
