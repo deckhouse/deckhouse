@@ -143,36 +143,36 @@ func (c *observabilityRulesGroupRecordingLifecycleChecker) Check() (res check.Er
 	}()
 
 	if err := c.createNamespace(ctx); err != nil {
-		return check.ErrUnknown("creating namespace: %v", err)
+		return lifecycleStepError("creating namespace", err)
 	}
 
 	if err := c.createRulesGroup(ctx); err != nil {
-		return check.ErrUnknown("creating ObservabilityMetricsRulesGroup: %v", err)
+		return lifecycleStepError("creating ObservabilityMetricsRulesGroup", err)
 	}
 
 	if err := c.waitPrometheusRulePresent(ctx); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: PrometheusRule did not appear")
 		}
-		return check.ErrUnknown("waiting for PrometheusRule creation: %v", err)
+		return lifecycleStepError("waiting for PrometheusRule creation", err)
 	}
 
 	if err := c.waitRecordingMetricPresent(); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: recording metric %q is missing in Prometheus", c.recordingMetric)
 		}
-		return check.ErrUnknown("waiting for recording metric in Prometheus: %v", err)
+		return lifecycleStepError("waiting for recording metric in Prometheus", err)
 	}
 
 	if err := c.deleteRulesGroup(ctx); err != nil && !apierrors.IsNotFound(err) {
-		return check.ErrUnknown("deleting ObservabilityMetricsRulesGroup: %v", err)
+		return lifecycleStepError("deleting ObservabilityMetricsRulesGroup", err)
 	}
 
 	if err := c.waitPrometheusRuleAbsent(ctx); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: PrometheusRule is still present after deleting ObservabilityMetricsRulesGroup")
 		}
-		return check.ErrUnknown("waiting for PrometheusRule deletion: %v", err)
+		return lifecycleStepError("waiting for PrometheusRule deletion", err)
 	}
 
 	return nil
@@ -467,40 +467,40 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) Check() (res check.Error)
 	}()
 
 	if err := c.createNamespace(ctx); err != nil {
-		return check.ErrUnknown("creating namespace: %v", err)
+		return lifecycleStepError("creating namespace", err)
 	}
 
 	if err := c.createRulesGroup(ctx); err != nil {
-		return check.ErrUnknown("creating ObservabilityMetricsRulesGroup: %v", err)
+		return lifecycleStepError("creating ObservabilityMetricsRulesGroup", err)
 	}
 
 	if err := c.createSilence(ctx); err != nil {
-		return check.ErrUnknown("creating ObservabilityNotificationSilence: %v", err)
+		return lifecycleStepError("creating ObservabilityNotificationSilence", err)
 	}
 
 	if err := c.waitPrometheusRulePresent(ctx); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: PrometheusRule did not appear")
 		}
-		return check.ErrUnknown("waiting for PrometheusRule creation: %v", err)
+		return lifecycleStepError("waiting for PrometheusRule creation", err)
 	}
 
 	if err := c.waitAlertPresentAndSilenced(); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: alert %q did not appear as silenced in Alertmanager", c.alertName)
 		}
-		return check.ErrUnknown("waiting for alert in Alertmanager: %v", err)
+		return lifecycleStepError("waiting for alert in Alertmanager", err)
 	}
 
 	if err := c.deleteRulesGroup(ctx); err != nil && !apierrors.IsNotFound(err) {
-		return check.ErrUnknown("deleting ObservabilityMetricsRulesGroup: %v", err)
+		return lifecycleStepError("deleting ObservabilityMetricsRulesGroup", err)
 	}
 
 	if err := c.waitPrometheusRuleAbsent(ctx); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: PrometheusRule is still present after deleting ObservabilityMetricsRulesGroup")
 		}
-		return check.ErrUnknown("waiting for PrometheusRule deletion: %v", err)
+		return lifecycleStepError("waiting for PrometheusRule deletion", err)
 	}
 
 	return nil
@@ -767,6 +767,30 @@ func wrapCleanupResult(res check.Error, cleanupErr error) check.Error {
 	}
 
 	return check.ErrUnknown("%s; cleanup: %v", res.Error(), cleanupErr)
+}
+
+func lifecycleStepError(step string, err error) check.Error {
+	if err == nil {
+		return nil
+	}
+
+	if checkErr, ok := err.(check.Error); ok {
+		if checkErr.Status() == check.Down {
+			return check.ErrFail("%s: %v", step, err)
+		}
+		return check.ErrUnknown("%s: %v", step, err)
+	}
+
+	if apierrors.IsForbidden(err) ||
+		apierrors.IsUnauthorized(err) ||
+		apierrors.IsInvalid(err) ||
+		apierrors.IsBadRequest(err) ||
+		apierrors.IsAlreadyExists(err) ||
+		apierrors.IsNotFound(err) {
+		return check.ErrFail("%s: %v", step, err)
+	}
+
+	return check.ErrUnknown("%s: %v", step, err)
 }
 
 func waitForCondition(timeout, interval time.Duration, condition func() (bool, error)) error {

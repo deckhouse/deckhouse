@@ -17,11 +17,16 @@ limitations under the License.
 package checker
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
+
+	"d8.io/upmeter/pkg/check"
 )
 
 func Test_expectedPrometheusRuleName(t *testing.T) {
@@ -173,5 +178,32 @@ func Test_hasAlertInAlertmanagerResponse(t *testing.T) {
 		assert.Error(t, err)
 		assert.False(t, found)
 		assert.False(t, silenced)
+	})
+}
+
+func Test_lifecycleStepError(t *testing.T) {
+	t.Run("wraps check fail as fail", func(t *testing.T) {
+		err := lifecycleStepError("step", check.ErrFail("boom"))
+		assert.Equal(t, check.Down, err.Status())
+		assert.Contains(t, err.Error(), "step")
+	})
+
+	t.Run("wraps check unknown as unknown", func(t *testing.T) {
+		err := lifecycleStepError("step", check.ErrUnknown("boom"))
+		assert.Equal(t, check.Unknown, err.Status())
+		assert.Contains(t, err.Error(), "step")
+	})
+
+	t.Run("forbidden is fail", func(t *testing.T) {
+		err := lifecycleStepError(
+			"step",
+			apierrors.NewForbidden(schema.GroupResource{Group: "apps", Resource: "deployments"}, "x", errors.New("forbidden")),
+		)
+		assert.Equal(t, check.Down, err.Status())
+	})
+
+	t.Run("service unavailable is unknown", func(t *testing.T) {
+		err := lifecycleStepError("step", apierrors.NewServiceUnavailable("temporarily unavailable"))
+		assert.Equal(t, check.Unknown, err.Status())
 	})
 }
