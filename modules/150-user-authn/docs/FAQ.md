@@ -183,7 +183,9 @@ Dex will mount the `keytab` automatically and start accepting SPNEGO. A serverâ€
 1. Configure [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) for groups obtained from LDAP.
 1. Provide users with a `kubeconfig` configured for Basic Authentication (LDAP username and password).
 
-> **Warning.** Only one authentication provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+{% alert level="warning" %}
+Only one authentication provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+{% endalert %}
 
 A detailed example is described in the [Usage](/modules/user-authn/usage.html#configuring-basic-authentication) section.
 
