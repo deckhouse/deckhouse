@@ -43,6 +43,8 @@ To enable Dex authentication for your application, follow these steps:
      - 192.168.0.0/24
    ```
 
+{% raw %}
+
 1. Connect your application to Dex.
 
    For this, add the following annotations to the application's Ingress resource:
@@ -69,6 +71,8 @@ To enable Dex authentication for your application, follow these steps:
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
+
+{% endraw %}
 
 {% alert level="warning" %}
 The application Ingress must have TLS configured. DexAuthenticator does not support HTTP-only Ingress resources.

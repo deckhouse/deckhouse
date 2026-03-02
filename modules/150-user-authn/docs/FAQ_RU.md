@@ -42,6 +42,8 @@ title: "Модуль user-authn: FAQ"
      - 192.168.0.0/24
    ```
 
+{% raw %}
+
 1. Подключите приложение к Dex.
 
    Для этого добавьте в Ingress-ресурс приложения следующие аннотации:
@@ -68,6 +70,8 @@ title: "Модуль user-authn: FAQ"
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
+
+{% endraw %}
 
 {% alert level="warning" %}
 Ingress приложения должен иметь настроенный TLS. DexAuthenticator не поддерживает Ingress-ресурсы, работающие только по HTTP.
