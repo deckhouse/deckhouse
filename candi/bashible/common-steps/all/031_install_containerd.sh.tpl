@@ -14,14 +14,6 @@
 
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 
-is_package_installed() {
-  if rpm -q "$1" &>/dev/null; then
-    return 0
-  else
-    return 1
-  fi
-}
-
 bb-event-on 'bb-package-installed' 'post-install'
 
 # This handler triggered by 'bb-event-fire "bb-package-installed" "${PACKAGE}"'
@@ -62,8 +54,8 @@ cntrd_version_change_check() {
 command -v containerd &>/dev/null && cntrd_version_change_check
 
 if bb-is-distro-like? "rhel"; then
-  if is_package_installed "selinux-policy"; then
-    if ! is_package_installed "container-selinux"; then
+  if bb-dnf-package? "selinux-policy"; then
+    if ! bb-dnf-package? "container-selinux"; then
       bb-log-info "Installing container-selinux"
       bb-dnf-install "container-selinux"
     fi
