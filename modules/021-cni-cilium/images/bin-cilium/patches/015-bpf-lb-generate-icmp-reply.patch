@@ -159,7 +159,7 @@ index 87623dbed9..8db9bba793 100644
  	// EnableHealthCheckLoadBalancerIP
  	EnableHealthCheckLoadBalancerIP = false
 diff --git a/pkg/maps/lbmap/lbmap.go b/pkg/maps/lbmap/lbmap.go
-index 70d220b69c..02ebbd5c27 100644
+index 70d220b69c..be21c979ad 100644
 --- a/pkg/maps/lbmap/lbmap.go
 +++ b/pkg/maps/lbmap/lbmap.go
 @@ -15,6 +15,7 @@ import (
@@ -170,29 +170,14 @@ index 70d220b69c..02ebbd5c27 100644
  	"github.com/cilium/cilium/pkg/ip"
  	"github.com/cilium/cilium/pkg/loadbalancer"
  	"github.com/cilium/cilium/pkg/logging"
-@@ -240,6 +241,14 @@ func deleteServiceProto(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev
- 		return fmt.Errorf("Unable to delete revNAT entry %+v: %w", revNATKey, err)
- 	}
- 
-+	if option.Config.EnableLoadBalancerICMPReply {
-+		/*
-+			EnableLoadBalancerICMPReply feature is used to generate ICMP reply packets for LoadBalancer services.
-+			When a backend is deleted, we need to decrement value of Count in the special ICMP instance of loadbalancer key.
-+			When a LoadBalancer service with port=0 is deleted with all backends, the special instance of loadbalancer will be also deleted.
-+		*/
-+		lbICMPReplyHandleSvcDecrement(svc, ipv6)
-+	}
- 	return nil
- }
- 
-@@ -613,6 +622,116 @@ func (*LBBPFMap) IsMaglevLookupTableRecreated(ipv6 bool) bool {
+@@ -613,6 +614,114 @@ func (*LBBPFMap) IsMaglevLookupTableRecreated(ipv6 bool) bool {
  	return maglevRecreatedIPv4
  }
  
-+// handleLoadBalancerICMPReplyDecrement handles decrementing the port=0 key count
++// LBICMPReplyHandleSvcDecrement handles decrementing the port=0 key count
 +// when a LoadBalancer service backend is deleted.
-+func lbICMPReplyHandleSvcDecrement(svc loadbalancer.L3n4AddrID, ipv6 bool) {
-+	if svc.Port == 0 {
++func LBICMPReplyHandleSvcDecrement(svc loadbalancer.L3n4AddrID, svcType loadbalancer.SVCType, ipv6 bool) {
++	if svc.Port == 0 || svcType != loadbalancer.SVCTypeLoadBalancer {
 +		return
 +	}
 +
@@ -208,8 +193,6 @@ index 70d220b69c..02ebbd5c27 100644
 +	existingValue, err := portZeroKey.Map().Lookup(portZeroKey.ToNetwork())
 +	if err != nil {
 +		if errors.Is(err, ebpf.ErrKeyNotExist) {
-+			fmt.Printf("MEG: ICMP set delete ErrKeyNotExist\n")
-+			// If Port=0 key doesn't exist, nothing to decrement
 +			log.WithFields(logrus.Fields{
 +				logfields.ServiceKey: portZeroKey,
 +			}).Debug("LoadBalancerICMPReply ICMP instance does not exist, Nothing to handle")
@@ -302,7 +285,7 @@ index 70d220b69c..02ebbd5c27 100644
  func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quarantinedBackends int, revNATID int,
  	svcType loadbalancer.SVCType, svcForwardingMode loadbalancer.SVCForwardingMode, svcExtLocal, svcIntLocal bool,
  	svcNatPolicy loadbalancer.SVCNatPolicy, sessionAffinity bool, sessionAffinityTimeoutSec uint32,
-@@ -652,6 +771,16 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
+@@ -652,6 +761,16 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
  		deleteLeastConnServiceMap(fe)
  	}
  
@@ -352,10 +335,10 @@ index b2abedec59..1cec05394d 100644
  	c.EnableHostLegacyRouting = vp.GetBool(EnableHostLegacyRouting)
  	c.NodePortBindProtection = vp.GetBool(NodePortBindProtection)
 diff --git a/pkg/service/service.go b/pkg/service/service.go
-index fb2494991c..707de346bf 100644
+index fb2494991c..26c0c553dc 100644
 --- a/pkg/service/service.go
 +++ b/pkg/service/service.go
-@@ -1963,6 +1963,124 @@ func (s *Service) restoreServicesLocked(svcBackendsById map[lb.BackendID]struct{
+@@ -1963,6 +1963,111 @@ func (s *Service) restoreServicesLocked(svcBackendsById map[lb.BackendID]struct{
  		logfields.FailedSVCs:   failed,
  	}).Info("Restored services from maps")
  
@@ -429,54 +412,58 @@ index fb2494991c..707de346bf 100644
 +			if _, err := icmpKey.Map().SilentDelete(icmpKey.ToNetwork()); err != nil {
 +				log.WithFields(logrus.Fields{
 +					logfields.ServiceKey: icmpKey,
-+				}).WithError(err).Warn("LoadBalancerICMPReply Unable to delete floating ICMP entry without service")
++				}).WithError(err).Warn("LoadBalancerICMPReply Unable to delete floatingICMP entry without service")
 +			}
 +		}
 +	}
 +
 +	// Add ICMP entries for services that don't have them
-+	for keyStr, info := range serviceIPs {
-+		if _, found := icmpEntries[keyStr]; !found {
-+			svc := info.svc
++	for _, info := range serviceIPs {
++		svc := info.svc
 +
-+			backendCount := 0
-+			for _, backend := range svc.Backends {
-+				if backend != nil {
-+					backendCount++
-+				}
-+			}
++		// Create new key with same IP, port = 0, protocol ICMP (1), and scope
++		var portZeroKey lbmap.ServiceKey
++		var portZeroValue lbmap.ServiceValue
++		ipv6 := svc.Frontend.IsIPv6()
++		if ipv6 {
++			portZeroKey = lbmap.NewService6Key(svc.Frontend.AddrCluster.AsNetIP(), 0, u8proto.U8proto(1), svc.Frontend.Scope, 0)
++			portZeroValue = &lbmap.Service6Value{}
++		} else {
++			portZeroKey = lbmap.NewService4Key(svc.Frontend.AddrCluster.AsNetIP(), 0, u8proto.U8proto(1), svc.Frontend.Scope, 0)
++			portZeroValue = &lbmap.Service4Value{}
++		}
 +
-+			if backendCount == 0 {
-+				continue
-+			}
-+
-+			// Create new key with same IP, port = 0, protocol ICMP (1), and scope
-+			var portZeroKey lbmap.ServiceKey
-+			var portZeroValue lbmap.ServiceValue
-+			ipv6 := svc.Frontend.IsIPv6()
-+			if ipv6 {
-+				portZeroKey = lbmap.NewService6Key(svc.Frontend.AddrCluster.AsNetIP(), 0, u8proto.U8proto(1), svc.Frontend.Scope, 0)
-+				portZeroValue = &lbmap.Service6Value{}
-+			} else {
-+				portZeroKey = lbmap.NewService4Key(svc.Frontend.AddrCluster.AsNetIP(), 0, u8proto.U8proto(1), svc.Frontend.Scope, 0)
-+				portZeroValue = &lbmap.Service4Value{}
-+			}
-+
-+			// Create ICMP entry with backend count
-+			portZeroValue.SetCount(info.count)
-+			portZeroValue.SetRevNat(0)
-+			portZeroValue.SetFlags(0)
-+			portZeroValue.SetQCount(0)
-+			if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), portZeroValue.ToNetwork()); err != nil {
-+				log.WithFields(logrus.Fields{
-+					logfields.ServiceKey: portZeroKey,
-+					logfields.ServiceID:  svc.Frontend.ID,
-+					"serviceCount":       info.count,
-+				}).WithError(err).Warn("LoadBalancerICMPReply Unable to create ICMP entry for service")
-+			}
++		// Create ICMP entry with backend count
++		portZeroValue.SetCount(info.count)
++		portZeroValue.SetRevNat(0)
++		portZeroValue.SetFlags(0)
++		portZeroValue.SetQCount(0)
++		if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), portZeroValue.ToNetwork()); err != nil {
++			log.WithFields(logrus.Fields{
++				logfields.ServiceKey: portZeroKey,
++				logfields.ServiceID:  svc.Frontend.ID,
++				"serviceCount":       info.count,
++			}).WithError(err).Warn("LoadBalancerICMPReply Unable to create ICMP entry for service")
 +		}
 +	}
 +
  	return nil
  }
  
+@@ -1981,6 +2086,16 @@ func (s *Service) deleteServiceLocked(svc *svcInfo) error {
+ 		return err
+ 	}
+ 
++	// Handle ICMP reply decrement for LoadBalancer services
++	if option.Config.EnableLoadBalancerICMPReply {
++		/*
++			EnableLoadBalancerICMPReply feature is used to generate ICMP reply packets for LoadBalancer services.
++			When a backend is deleted, we need to decrement value of Count in the special ICMP instance of loadbalancer key.
++			When a LoadBalancer service with port=0 is deleted with all backends, the special instance of loadbalancer will be also deleted.
++		*/
++		lbmap.LBICMPReplyHandleSvcDecrement(svc.frontend, svc.svcType, ipv6)
++	}
++
+ 	// Delete affinity matches
+ 	if option.Config.EnableSessionAffinity && svc.sessionAffinity {
+ 		backendIDs := make([]lb.BackendID, 0, len(svc.backends))
