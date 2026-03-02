@@ -21,7 +21,7 @@ output "name" {
 }
 
 output "uid" {
-  value = data.kubernetes_resource.vm_data.uid
+  value =  data.kubernetes_resource.vm_data.object.metadata["uid"]
 }
 
 output "cloudinit_secret_name" {
