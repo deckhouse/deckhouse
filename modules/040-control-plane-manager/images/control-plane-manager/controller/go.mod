@@ -67,4 +67,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 )
 
-replace github.com/deckhouse/deckhouse => ../../../../../
+replace github.com/deckhouse/deckhouse/go_lib/controlplane => ../../../../../go_lib/controlplane
