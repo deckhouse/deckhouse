@@ -85,12 +85,14 @@ spec:
         httpGet:
           path: /readyz
           port: health
+          host: 127.0.0.1
         initialDelaySeconds: 2
         periodSeconds: 5
       livenessProbe:
         httpGet:
           path: /healthz
           port: health
+          host: 127.0.0.1
         initialDelaySeconds: 2
         periodSeconds: 10
       resources:
