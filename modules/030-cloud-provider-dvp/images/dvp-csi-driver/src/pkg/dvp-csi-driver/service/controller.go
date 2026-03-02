@@ -218,17 +218,14 @@ func (c *ControllerService) ControllerPublishVolume(
 	_, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, vmHostname)
 	if err != nil {
 		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.InstanceNotFound) {
-			// keep info-level: this is a meaningful state, not a duplicate of an error
 			klog.Infof("VM %v not found in parent DVP cluster, cannot publish disk %v", vmHostname, diskName)
 			return nil, status.Error(codes.NotFound, "VM not found in parent DVP cluster")
 		}
-		// removed klog.Errorf here: status error will be logged by sidecar; avoid duplicates
 		return nil, status.Errorf(codes.Internal, "error from parent DVP cluster while finding VM %v: %v", vmHostname, err)
 	}
 
 	exists, attached, err := c.getDiskAttachState(ctx, diskName, vmHostname)
 	if err != nil {
-		// removed klog.Error(err.Error()): avoid duplicates; err already has grpc status with context
 		return nil, err
 	}
 
@@ -238,11 +235,9 @@ func (c *ControllerService) ControllerPublishVolume(
 	}
 
 	if exists {
-		// keep as operational signal (optional): this state is often useful even if status also contains it
 		klog.Errorf("Publish requested but vmBDA exists for disk=%s vm=%s and is not Attached yet; retry later",
 			diskName, vmHostname,
 		)
-		// enrich status to match the log text and include disk/vm
 		return nil, status.Errorf(
 			codes.Aborted,
 			"Publish requested but vmBDA exists for disk=%s vm=%s and is not Attached yet; retry later",
@@ -254,7 +249,6 @@ func (c *ControllerService) ControllerPublishVolume(
 	if err != nil {
 		sExists, sAttached, sErr := c.getDiskAttachState(ctx, diskName, vmHostname)
 		if sErr != nil {
-			// no klog: avoid duplicate; push the same context into the returned status below
 			return nil, status.Errorf(
 				codes.Internal,
 				"Publish: failed to attach disk (and failed to get vmBDA state after attach error): disk=%s vm=%s stateErr=%v attachErr=%v",
@@ -263,7 +257,6 @@ func (c *ControllerService) ControllerPublishVolume(
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
-			// removed klog.Errorf: keep status only; sidecar will log it
 			return nil, status.Errorf(
 				codes.DeadlineExceeded,
 				"Publish: timeout while attaching disk (Kubernetes will retry): disk=%s vm=%s exists=%t attached=%t: %v",
@@ -271,7 +264,6 @@ func (c *ControllerService) ControllerPublishVolume(
 			)
 		}
 
-		// removed klog.Errorf: keep status only, but include the same context that used to be in the log
 		return nil, status.Errorf(
 			codes.Internal,
 			"Publish: failed to attach disk to VM: disk=%s vm=%s exists=%t attached=%t: %v",
@@ -330,7 +322,6 @@ func (c *ControllerService) ControllerUnpublishVolume(
 				vmHostname, diskName,
 			)
 		} else {
-			// removed klog.Errorf: status will be logged by sidecar
 			return nil, status.Errorf(
 				codes.Internal,
 				"error from parent DVP cluster while finding VM %v: %v",
@@ -341,7 +332,6 @@ func (c *ControllerService) ControllerUnpublishVolume(
 
 	exists, attached, err := c.getDiskAttachState(ctx, diskName, vmHostname)
 	if err != nil {
-		// removed klog.Error(err.Error()): avoid duplicates
 		return nil, err
 	}
 
@@ -354,7 +344,6 @@ func (c *ControllerService) ControllerUnpublishVolume(
 	}
 
 	if !attached {
-		// keep as operational signal (optional)
 		klog.Errorf(
 			"vmBDA exists for disk=%s vm=%s but is not Attached; still trying to unpublish(detach)",
 			diskName, vmHostname,
@@ -370,7 +359,6 @@ func (c *ControllerService) ControllerUnpublishVolume(
 			return &csi.ControllerUnpublishVolumeResponse{}, nil
 		}
 
-		// removed klog.Errorf: status carries same text
 		return nil, status.Errorf(
 			codes.Internal,
 			"error from parent DVP cluster while removing disk %v from VM %v: %v",
@@ -406,16 +394,13 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 	disk, err := c.dvpCloudAPI.DiskService.GetDiskByName(ctx, volumeName)
 	if err != nil {
 		if errors.Is(err, dvpapi.ErrNotFound) {
-			// removed klog.Errorf: not found is expected-ish; status will show up in sidecar logs
 			return nil, status.Errorf(codes.NotFound, "disk %v wasn't found", volumeName)
 		}
-		// removed klog.Errorf: avoid duplicates
 		return nil, status.Errorf(codes.Internal, "error from parent DVP cluster while finding disk %v: %v", volumeName, err)
 	}
 
 	diskSize, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
 	if err != nil {
-		// removed klog.Errorf: avoid duplicates; keep status with same detail
 		return nil, status.Errorf(codes.Internal, "failed to parse disk %v capacity %q: %v", volumeName, disk.Status.Capacity, err)
 	}
 
@@ -434,14 +419,12 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 		newSize,
 	)
 	if err != nil {
-		// removed klog.Errorf: status contains full message
 		return nil, status.Errorf(codes.ResourceExhausted, "failed to expand volume %v, error from parent DVP cluster: %v", volumeName, err)
 	}
 	klog.Infof("Expanded Disk %v to %v", volumeName, newSize)
 
 	newSizeBytes, err := utils.ConvertStringQuantityToInt64(newSize)
 	if err != nil {
-		// removed klog.Errorf: keep status
 		return nil, status.Errorf(codes.Internal, "failed to parse new size %q for volume %v: %v", newSize, volumeName, err)
 	}
 
