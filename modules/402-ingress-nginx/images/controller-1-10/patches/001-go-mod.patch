@@ -204,7 +204,7 @@ index ac741bb5a..f6cc0eb5a 100644
 +++ b/go.work
 @@ -1,4 +1,4 @@
 -go 1.22.6
-+go 1.25.7
++go 1.25
  
  use (
  	.
