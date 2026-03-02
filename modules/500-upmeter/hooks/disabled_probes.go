@@ -212,6 +212,7 @@ func disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes set.Se
 	}
 	if !enabledModules.Has("observability") {
 		disabledProbes.Add("monitoring-and-autoscaling/alertmanager")
+		disabledProbes.Add("monitoring-and-autoscaling/observability-recording")
 	}
 }
 

@@ -28,17 +28,18 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	serializeryaml "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 )
 
-var (
-	errConditionTimeout = errors.New("condition timeout")
+const (
+	observabilityNamespace      = "d8-observability"
+	alertmanagerScopeHeaderName = "X-Scope-Orgid"
+)
 
+var (
 	observabilityMetricsRulesGroupGVR = schema.GroupVersionResource{
 		Group:    "observability.deckhouse.io",
 		Version:  "v1alpha1",
@@ -56,10 +57,7 @@ var (
 	}
 )
 
-const (
-	alertmanagerScopeHeaderName = "X-Scope-Orgid"
-)
-
+// ObservabilityRulesGroupRecordingLifecycle is a checker constructor and configurator
 type ObservabilityRulesGroupRecordingLifecycle struct {
 	Access           kubernetes.Access
 	PreflightChecker check.Checker
@@ -81,53 +79,287 @@ type ObservabilityRulesGroupRecordingLifecycle struct {
 
 func (c ObservabilityRulesGroupRecordingLifecycle) Checker() check.Checker {
 	checker := &observabilityRulesGroupRecordingLifecycleChecker{
-		access:                           c.Access,
-		preflightChecker:                 c.PreflightChecker,
-		agentID:                          fallbackString(c.AgentID, "unknown"),
-		namespace:                        c.Namespace,
-		rulesGroupName:                   c.RulesGroupName,
-		prometheusRuleName:               expectedPrometheusRuleName(c.Namespace, c.RulesGroupName),
-		recordingMetric:                  c.RecordingMetric,
-		prometheusEndpoint:               c.PrometheusEndpoint,
-		requestTimeout:                   fallbackDuration(c.RequestTimeout, 5*time.Second),
-		waitPrometheusRuleCreatedTimeout: fallbackDuration(c.WaitPrometheusRuleCreatedTimeout, 90*time.Second),
-		waitMetricPresentTimeout:         fallbackDuration(c.WaitMetricPresentTimeout, 90*time.Second),
-		waitPrometheusRuleDeletedTimeout: fallbackDuration(c.WaitPrometheusRuleDeletedTimeout, 90*time.Second),
-		waitNamespaceDeletedTimeout:      fallbackDuration(c.WaitNamespaceDeletedTimeout, 90*time.Second),
+		observabilityLifecycleBase: observabilityLifecycleBase{
+			access:                           c.Access,
+			preflightChecker:                 c.PreflightChecker,
+			agentID:                          fallbackString(c.AgentID, "unknown"),
+			namespace:                        c.Namespace,
+			probeName:                        "observability-recording",
+			rulesGroupName:                   c.RulesGroupName,
+			prometheusRuleName:               expectedPrometheusRuleName(c.Namespace, c.RulesGroupName),
+			requestTimeout:                   fallbackDuration(c.RequestTimeout, 5*time.Second),
+			waitPrometheusRuleCreatedTimeout: fallbackDuration(c.WaitPrometheusRuleCreatedTimeout, 60*time.Second),
+			waitPrometheusRuleDeletedTimeout: fallbackDuration(c.WaitPrometheusRuleDeletedTimeout, 60*time.Second),
+			waitNamespaceDeletedTimeout:      fallbackDuration(c.WaitNamespaceDeletedTimeout, 60*time.Second),
+		},
+		recordingMetric:          c.RecordingMetric,
+		prometheusEndpoint:       c.PrometheusEndpoint,
+		waitMetricPresentTimeout: fallbackDuration(c.WaitMetricPresentTimeout, 60*time.Second),
 	}
 
 	return withTimeout(checker, fallbackDuration(c.Timeout, 5*time.Minute))
 }
 
-type observabilityRulesGroupRecordingLifecycleChecker struct {
+// ObservabilityRulesGroupAlertLifecycle is a checker constructor and configurator
+type ObservabilityRulesGroupAlertLifecycle struct {
+	Access           kubernetes.Access
+	PreflightChecker check.Checker
+
+	AgentID        string
+	Namespace      string
+	RulesGroupName string
+	SilenceName    string
+
+	AlertName       string
+	AlertLabelKey   string
+	AlertLabelValue string
+
+	AlertmanagerEndpoint string
+
+	RequestTimeout                   time.Duration
+	WaitPrometheusRuleCreatedTimeout time.Duration
+	WaitAlertPresentTimeout          time.Duration
+	WaitPrometheusRuleDeletedTimeout time.Duration
+	WaitNamespaceDeletedTimeout      time.Duration
+	Timeout                          time.Duration
+}
+
+func (c ObservabilityRulesGroupAlertLifecycle) Checker() check.Checker {
+	checker := &observabilityRulesGroupAlertLifecycleChecker{
+		observabilityLifecycleBase: observabilityLifecycleBase{
+			access:                           c.Access,
+			preflightChecker:                 c.PreflightChecker,
+			agentID:                          fallbackString(c.AgentID, "unknown"),
+			namespace:                        c.Namespace,
+			probeName:                        "alertmanager",
+			rulesGroupName:                   c.RulesGroupName,
+			prometheusRuleName:               expectedPrometheusRuleName(c.Namespace, c.RulesGroupName),
+			requestTimeout:                   fallbackDuration(c.RequestTimeout, 5*time.Second),
+			waitPrometheusRuleCreatedTimeout: fallbackDuration(c.WaitPrometheusRuleCreatedTimeout, 60*time.Second),
+			waitPrometheusRuleDeletedTimeout: fallbackDuration(c.WaitPrometheusRuleDeletedTimeout, 60*time.Second),
+			waitNamespaceDeletedTimeout:      fallbackDuration(c.WaitNamespaceDeletedTimeout, 60*time.Second),
+		},
+		silenceName:             c.SilenceName,
+		alertName:               c.AlertName,
+		alertLabelKey:           c.AlertLabelKey,
+		alertLabelValue:         c.AlertLabelValue,
+		alertmanagerEndpoint:    c.AlertmanagerEndpoint,
+		waitAlertPresentTimeout: fallbackDuration(c.WaitAlertPresentTimeout, 60*time.Second),
+	}
+
+	return withTimeout(checker, fallbackDuration(c.Timeout, 5*time.Minute))
+}
+
+type observabilityLifecycleBase struct {
 	access           kubernetes.Access
 	preflightChecker check.Checker
 
 	agentID            string
 	namespace          string
+	probeName          string
 	rulesGroupName     string
 	prometheusRuleName string
 
-	recordingMetric    string
-	prometheusEndpoint string
-
 	requestTimeout                   time.Duration
 	waitPrometheusRuleCreatedTimeout time.Duration
-	waitMetricPresentTimeout         time.Duration
 	waitPrometheusRuleDeletedTimeout time.Duration
 	waitNamespaceDeletedTimeout      time.Duration
 }
 
-func (c *observabilityRulesGroupRecordingLifecycleChecker) Check() (res check.Error) {
-	ctx := context.TODO()
-
-	if c.preflightChecker != nil {
-		if err := c.preflightChecker.Check(); err != nil {
+func (b *observabilityLifecycleBase) preflight() check.Error {
+	if b.preflightChecker != nil {
+		if err := b.preflightChecker.Check(); err != nil {
 			return check.ErrUnknown("preflight: %v", err)
 		}
 	}
+	return nil
+}
 
-	hasGarbage, err := c.hasGarbage(ctx)
+func (b *observabilityLifecycleBase) createNamespace(ctx context.Context) error {
+	ns := &v1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Namespace",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: b.namespace,
+			Labels: map[string]string{
+				"heritage":      "upmeter",
+				agentLabelKey:   b.agentID,
+				"upmeter-group": "monitoring-and-autoscaling",
+				"upmeter-probe": b.probeName,
+			},
+		},
+	}
+	_, err := b.access.Kubernetes().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	return err
+}
+
+func (b *observabilityLifecycleBase) deleteNamespace(ctx context.Context) error {
+	return b.access.Kubernetes().CoreV1().Namespaces().Delete(ctx, b.namespace, metav1.DeleteOptions{})
+}
+
+func (b *observabilityLifecycleBase) createRulesGroupFromManifest(ctx context.Context, manifest string) error {
+	obj, err := decodeManifestToUnstructured(manifest)
+	if err != nil {
+		return err
+	}
+	_, err = b.access.Kubernetes().Dynamic().
+		Resource(observabilityMetricsRulesGroupGVR).
+		Namespace(b.namespace).
+		Create(ctx, obj, metav1.CreateOptions{})
+	return err
+}
+
+func (b *observabilityLifecycleBase) deleteRulesGroup(ctx context.Context) error {
+	return b.access.Kubernetes().Dynamic().
+		Resource(observabilityMetricsRulesGroupGVR).
+		Namespace(b.namespace).
+		Delete(ctx, b.rulesGroupName, metav1.DeleteOptions{})
+}
+
+func (b *observabilityLifecycleBase) rulesGroupExists(ctx context.Context) (bool, error) {
+	_, err := b.access.Kubernetes().Dynamic().
+		Resource(observabilityMetricsRulesGroupGVR).
+		Namespace(b.namespace).
+		Get(ctx, b.rulesGroupName, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (b *observabilityLifecycleBase) waitPrometheusRulePresent(ctx context.Context) error {
+	return waitForCondition(
+		b.waitPrometheusRuleCreatedTimeout,
+		pollingInterval(b.waitPrometheusRuleCreatedTimeout),
+		func() (bool, error) {
+			_, err := b.access.Kubernetes().Dynamic().
+				Resource(prometheusRuleGVR).
+				Namespace(observabilityNamespace).
+				Get(ctx, b.prometheusRuleName, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			if err != nil {
+				return false, err
+			}
+			return true, nil
+		},
+	)
+}
+
+func (b *observabilityLifecycleBase) waitPrometheusRuleAbsent(ctx context.Context) error {
+	return waitForCondition(
+		b.waitPrometheusRuleDeletedTimeout,
+		pollingInterval(b.waitPrometheusRuleDeletedTimeout),
+		func() (bool, error) {
+			_, err := b.access.Kubernetes().Dynamic().
+				Resource(prometheusRuleGVR).
+				Namespace(observabilityNamespace).
+				Get(ctx, b.prometheusRuleName, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
+			if err != nil {
+				return false, err
+			}
+			return false, nil
+		},
+	)
+}
+
+func (b *observabilityLifecycleBase) deletePrometheusRule(ctx context.Context) error {
+	return b.access.Kubernetes().Dynamic().
+		Resource(prometheusRuleGVR).
+		Namespace(observabilityNamespace).
+		Delete(ctx, b.prometheusRuleName, metav1.DeleteOptions{})
+}
+
+func (b *observabilityLifecycleBase) prometheusRuleExists(ctx context.Context) (bool, error) {
+	_, err := b.access.Kubernetes().Dynamic().
+		Resource(prometheusRuleGVR).
+		Namespace(observabilityNamespace).
+		Get(ctx, b.prometheusRuleName, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (b *observabilityLifecycleBase) hasBaseGarbage(ctx context.Context) (bool, error) {
+	if exists, err := namespaceExists(ctx, b.access, b.namespace); err != nil {
+		return false, err
+	} else if exists {
+		return true, nil
+	}
+
+	if exists, err := b.prometheusRuleExists(ctx); err != nil {
+		return false, err
+	} else if exists {
+		return true, nil
+	}
+
+	if exists, err := b.rulesGroupExists(ctx); err != nil {
+		return false, err
+	} else if exists {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// baseCleanup removes common resources and returns collected error strings.
+func (b *observabilityLifecycleBase) baseCleanup(ctx context.Context) []string {
+	errs := make([]string, 0)
+
+	if err := b.deleteRulesGroup(ctx); err != nil && !apierrors.IsNotFound(err) {
+		errs = append(errs, fmt.Sprintf("delete ObservabilityMetricsRulesGroup: %v", err))
+	}
+	if err := b.deletePrometheusRule(ctx); err != nil && !apierrors.IsNotFound(err) {
+		errs = append(errs, fmt.Sprintf("delete PrometheusRule: %v", err))
+	}
+	if err := b.waitPrometheusRuleAbsent(ctx); err != nil {
+		errs = append(errs, fmt.Sprintf("wait PrometheusRule deletion: %v", err))
+	}
+	if err := b.deleteNamespace(ctx); err != nil && !apierrors.IsNotFound(err) {
+		errs = append(errs, fmt.Sprintf("delete namespace: %v", err))
+	}
+	if err := waitNamespaceAbsent(
+		ctx,
+		b.access,
+		b.namespace,
+		b.waitNamespaceDeletedTimeout,
+		pollingInterval(b.waitNamespaceDeletedTimeout),
+	); err != nil {
+		errs = append(errs, fmt.Sprintf("wait namespace deletion: %v", err))
+	}
+
+	return errs
+}
+
+type observabilityRulesGroupRecordingLifecycleChecker struct {
+	observabilityLifecycleBase
+
+	recordingMetric          string
+	prometheusEndpoint       string
+	waitMetricPresentTimeout time.Duration
+}
+
+func (c *observabilityRulesGroupRecordingLifecycleChecker) Check() (res check.Error) {
+	ctx := context.Background()
+
+	if err := c.preflight(); err != nil {
+		return err
+	}
+
+	hasGarbage, err := c.hasBaseGarbage(ctx)
 	if err != nil {
 		return check.ErrUnknown("checking garbage: %v", err)
 	}
@@ -146,7 +378,8 @@ func (c *observabilityRulesGroupRecordingLifecycleChecker) Check() (res check.Er
 		return lifecycleStepError("creating namespace", err)
 	}
 
-	if err := c.createRulesGroup(ctx); err != nil {
+	manifest := recordingRulesGroupManifest(c.agentID, c.namespace, c.rulesGroupName, c.recordingMetric)
+	if err := c.createRulesGroupFromManifest(ctx, manifest); err != nil {
 		return lifecycleStepError("creating ObservabilityMetricsRulesGroup", err)
 	}
 
@@ -178,177 +411,12 @@ func (c *observabilityRulesGroupRecordingLifecycleChecker) Check() (res check.Er
 	return nil
 }
 
-func (c *observabilityRulesGroupRecordingLifecycleChecker) hasGarbage(ctx context.Context) (bool, error) {
-	if exists, err := namespaceExists(ctx, c.access, c.namespace); err != nil {
-		return false, err
-	} else if exists {
-		return true, nil
-	}
-
-	if exists, err := c.prometheusRuleExists(ctx); err != nil {
-		return false, err
-	} else if exists {
-		return true, nil
-	}
-
-	if exists, err := c.rulesGroupExists(ctx); err != nil {
-		return false, err
-	} else if exists {
-		return true, nil
-	}
-
-	return false, nil
-}
-
 func (c *observabilityRulesGroupRecordingLifecycleChecker) cleanup(ctx context.Context) error {
-	errs := make([]string, 0)
-
-	if err := c.deleteRulesGroup(ctx); err != nil && !apierrors.IsNotFound(err) {
-		errs = append(errs, fmt.Sprintf("delete ObservabilityMetricsRulesGroup: %v", err))
-	}
-	if err := c.deletePrometheusRule(ctx); err != nil && !apierrors.IsNotFound(err) {
-		errs = append(errs, fmt.Sprintf("delete PrometheusRule: %v", err))
-	}
-	if err := c.waitPrometheusRuleAbsent(ctx); err != nil {
-		errs = append(errs, fmt.Sprintf("wait PrometheusRule deletion: %v", err))
-	}
-	if err := c.deleteNamespace(ctx); err != nil && !apierrors.IsNotFound(err) {
-		errs = append(errs, fmt.Sprintf("delete namespace: %v", err))
-	}
-	if err := waitNamespaceAbsent(
-		ctx,
-		c.access,
-		c.namespace,
-		c.waitNamespaceDeletedTimeout,
-		pollingInterval(c.waitNamespaceDeletedTimeout),
-	); err != nil {
-		errs = append(errs, fmt.Sprintf("wait namespace deletion: %v", err))
-	}
-
+	errs := c.baseCleanup(ctx)
 	if len(errs) == 0 {
 		return nil
 	}
 	return errors.New(strings.Join(errs, "; "))
-}
-
-func (c *observabilityRulesGroupRecordingLifecycleChecker) createNamespace(ctx context.Context) error {
-	ns := &v1.Namespace{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Namespace",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: c.namespace,
-			Labels: map[string]string{
-				"heritage":      "upmeter",
-				agentLabelKey:   c.agentID,
-				"upmeter-group": "monitoring-and-autoscaling",
-				"upmeter-probe": "prometheus",
-			},
-		},
-	}
-	_, err := c.access.Kubernetes().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	return err
-}
-
-func (c *observabilityRulesGroupRecordingLifecycleChecker) deleteNamespace(ctx context.Context) error {
-	return c.access.Kubernetes().CoreV1().Namespaces().Delete(ctx, c.namespace, metav1.DeleteOptions{})
-}
-
-func (c *observabilityRulesGroupRecordingLifecycleChecker) createRulesGroup(ctx context.Context) error {
-	manifest := recordingRulesGroupManifest(c.agentID, c.namespace, c.rulesGroupName, c.recordingMetric)
-	obj, err := decodeManifestToUnstructured(manifest)
-	if err != nil {
-		return err
-	}
-
-	_, err = c.access.Kubernetes().Dynamic().
-		Resource(observabilityMetricsRulesGroupGVR).
-		Namespace(c.namespace).
-		Create(ctx, obj, metav1.CreateOptions{})
-	return err
-}
-
-func (c *observabilityRulesGroupRecordingLifecycleChecker) deleteRulesGroup(ctx context.Context) error {
-	return c.access.Kubernetes().Dynamic().
-		Resource(observabilityMetricsRulesGroupGVR).
-		Namespace(c.namespace).
-		Delete(ctx, c.rulesGroupName, metav1.DeleteOptions{})
-}
-
-func (c *observabilityRulesGroupRecordingLifecycleChecker) rulesGroupExists(ctx context.Context) (bool, error) {
-	_, err := c.access.Kubernetes().Dynamic().
-		Resource(observabilityMetricsRulesGroupGVR).
-		Namespace(c.namespace).
-		Get(ctx, c.rulesGroupName, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func (c *observabilityRulesGroupRecordingLifecycleChecker) waitPrometheusRulePresent(ctx context.Context) error {
-	return waitForCondition(
-		c.waitPrometheusRuleCreatedTimeout,
-		pollingInterval(c.waitPrometheusRuleCreatedTimeout),
-		func() (bool, error) {
-			_, err := c.access.Kubernetes().Dynamic().
-				Resource(prometheusRuleGVR).
-				Namespace("d8-observability").
-				Get(ctx, c.prometheusRuleName, metav1.GetOptions{})
-			if apierrors.IsNotFound(err) {
-				return false, nil
-			}
-			if err != nil {
-				return false, err
-			}
-			return true, nil
-		},
-	)
-}
-
-func (c *observabilityRulesGroupRecordingLifecycleChecker) waitPrometheusRuleAbsent(ctx context.Context) error {
-	return waitForCondition(
-		c.waitPrometheusRuleDeletedTimeout,
-		pollingInterval(c.waitPrometheusRuleDeletedTimeout),
-		func() (bool, error) {
-			_, err := c.access.Kubernetes().Dynamic().
-				Resource(prometheusRuleGVR).
-				Namespace("d8-observability").
-				Get(ctx, c.prometheusRuleName, metav1.GetOptions{})
-			if apierrors.IsNotFound(err) {
-				return true, nil
-			}
-			if err != nil {
-				return false, err
-			}
-			return false, nil
-		},
-	)
-}
-
-func (c *observabilityRulesGroupRecordingLifecycleChecker) deletePrometheusRule(ctx context.Context) error {
-	return c.access.Kubernetes().Dynamic().
-		Resource(prometheusRuleGVR).
-		Namespace("d8-observability").
-		Delete(ctx, c.prometheusRuleName, metav1.DeleteOptions{})
-}
-
-func (c *observabilityRulesGroupRecordingLifecycleChecker) prometheusRuleExists(ctx context.Context) (bool, error) {
-	_, err := c.access.Kubernetes().Dynamic().
-		Resource(prometheusRuleGVR).
-		Namespace("d8-observability").
-		Get(ctx, c.prometheusRuleName, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 func (c *observabilityRulesGroupRecordingLifecycleChecker) waitRecordingMetricPresent() error {
@@ -363,92 +431,28 @@ func (c *observabilityRulesGroupRecordingLifecycleChecker) waitRecordingMetricPr
 				return false, err
 			}
 
-			present, err := isMetricPresentInPrometheusResponse(body)
-			if err != nil {
-				return false, err
-			}
-
-			return present, nil
+			return isMetricPresentInPrometheusResponse(body)
 		},
 	)
 }
 
-type ObservabilityRulesGroupAlertLifecycle struct {
-	Access           kubernetes.Access
-	PreflightChecker check.Checker
-
-	AgentID        string
-	Namespace      string
-	RulesGroupName string
-	SilenceName    string
-
-	AlertName       string
-	AlertLabelKey   string
-	AlertLabelValue string
-
-	AlertmanagerEndpoint string
-
-	RequestTimeout                   time.Duration
-	WaitPrometheusRuleCreatedTimeout time.Duration
-	WaitAlertPresentTimeout          time.Duration
-	WaitPrometheusRuleDeletedTimeout time.Duration
-	WaitNamespaceDeletedTimeout      time.Duration
-	Timeout                          time.Duration
-}
-
-func (c ObservabilityRulesGroupAlertLifecycle) Checker() check.Checker {
-	checker := &observabilityRulesGroupAlertLifecycleChecker{
-		access:                           c.Access,
-		preflightChecker:                 c.PreflightChecker,
-		agentID:                          fallbackString(c.AgentID, "unknown"),
-		namespace:                        c.Namespace,
-		rulesGroupName:                   c.RulesGroupName,
-		prometheusRuleName:               expectedPrometheusRuleName(c.Namespace, c.RulesGroupName),
-		silenceName:                      c.SilenceName,
-		alertName:                        c.AlertName,
-		alertLabelKey:                    c.AlertLabelKey,
-		alertLabelValue:                  c.AlertLabelValue,
-		alertmanagerEndpoint:             c.AlertmanagerEndpoint,
-		requestTimeout:                   fallbackDuration(c.RequestTimeout, 5*time.Second),
-		waitPrometheusRuleCreatedTimeout: fallbackDuration(c.WaitPrometheusRuleCreatedTimeout, 90*time.Second),
-		waitAlertPresentTimeout:          fallbackDuration(c.WaitAlertPresentTimeout, 90*time.Second),
-		waitPrometheusRuleDeletedTimeout: fallbackDuration(c.WaitPrometheusRuleDeletedTimeout, 90*time.Second),
-		waitNamespaceDeletedTimeout:      fallbackDuration(c.WaitNamespaceDeletedTimeout, 90*time.Second),
-	}
-
-	return withTimeout(checker, fallbackDuration(c.Timeout, 5*time.Minute))
-}
-
 type observabilityRulesGroupAlertLifecycleChecker struct {
-	access           kubernetes.Access
-	preflightChecker check.Checker
+	observabilityLifecycleBase
 
-	agentID            string
-	namespace          string
-	rulesGroupName     string
-	prometheusRuleName string
-	silenceName        string
-
+	silenceName     string
 	alertName       string
 	alertLabelKey   string
 	alertLabelValue string
 
-	alertmanagerEndpoint string
-
-	requestTimeout                   time.Duration
-	waitPrometheusRuleCreatedTimeout time.Duration
-	waitAlertPresentTimeout          time.Duration
-	waitPrometheusRuleDeletedTimeout time.Duration
-	waitNamespaceDeletedTimeout      time.Duration
+	alertmanagerEndpoint    string
+	waitAlertPresentTimeout time.Duration
 }
 
 func (c *observabilityRulesGroupAlertLifecycleChecker) Check() (res check.Error) {
-	ctx := context.TODO()
+	ctx := context.Background()
 
-	if c.preflightChecker != nil {
-		if err := c.preflightChecker.Check(); err != nil {
-			return check.ErrUnknown("preflight: %v", err)
-		}
+	if err := c.preflight(); err != nil {
+		return err
 	}
 
 	hasGarbage, err := c.hasGarbage(ctx)
@@ -470,12 +474,13 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) Check() (res check.Error)
 		return lifecycleStepError("creating namespace", err)
 	}
 
-	if err := c.createRulesGroup(ctx); err != nil {
-		return lifecycleStepError("creating ObservabilityMetricsRulesGroup", err)
-	}
-
 	if err := c.createSilence(ctx); err != nil {
 		return lifecycleStepError("creating ObservabilityNotificationSilence", err)
+	}
+
+	manifest := alertRulesGroupManifest(c.agentID, c.namespace, c.rulesGroupName, c.alertName, c.alertLabelKey, c.alertLabelValue)
+	if err := c.createRulesGroupFromManifest(ctx, manifest); err != nil {
+		return lifecycleStepError("creating ObservabilityMetricsRulesGroup", err)
 	}
 
 	if err := c.waitPrometheusRulePresent(ctx); err != nil {
@@ -507,129 +512,27 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) Check() (res check.Error)
 }
 
 func (c *observabilityRulesGroupAlertLifecycleChecker) hasGarbage(ctx context.Context) (bool, error) {
-	if exists, err := namespaceExists(ctx, c.access, c.namespace); err != nil {
-		return false, err
-	} else if exists {
-		return true, nil
+	if has, err := c.hasBaseGarbage(ctx); has || err != nil {
+		return has, err
 	}
-
-	if exists, err := c.prometheusRuleExists(ctx); err != nil {
-		return false, err
-	} else if exists {
-		return true, nil
-	}
-
-	if exists, err := c.rulesGroupExists(ctx); err != nil {
-		return false, err
-	} else if exists {
-		return true, nil
-	}
-
-	if exists, err := c.silenceExists(ctx); err != nil {
-		return false, err
-	} else if exists {
-		return true, nil
-	}
-
-	return false, nil
+	return c.silenceExists(ctx)
 }
 
 func (c *observabilityRulesGroupAlertLifecycleChecker) cleanup(ctx context.Context) error {
 	errs := make([]string, 0)
-
 	if err := c.deleteSilence(ctx); err != nil && !apierrors.IsNotFound(err) {
 		errs = append(errs, fmt.Sprintf("delete ObservabilityNotificationSilence: %v", err))
 	}
-	if err := c.deleteRulesGroup(ctx); err != nil && !apierrors.IsNotFound(err) {
-		errs = append(errs, fmt.Sprintf("delete ObservabilityMetricsRulesGroup: %v", err))
-	}
-	if err := c.deletePrometheusRule(ctx); err != nil && !apierrors.IsNotFound(err) {
-		errs = append(errs, fmt.Sprintf("delete PrometheusRule: %v", err))
-	}
-	if err := c.waitPrometheusRuleAbsent(ctx); err != nil {
-		errs = append(errs, fmt.Sprintf("wait PrometheusRule deletion: %v", err))
-	}
-	if err := c.deleteNamespace(ctx); err != nil && !apierrors.IsNotFound(err) {
-		errs = append(errs, fmt.Sprintf("delete namespace: %v", err))
-	}
-	if err := waitNamespaceAbsent(
-		ctx,
-		c.access,
-		c.namespace,
-		c.waitNamespaceDeletedTimeout,
-		pollingInterval(c.waitNamespaceDeletedTimeout),
-	); err != nil {
-		errs = append(errs, fmt.Sprintf("wait namespace deletion: %v", err))
-	}
-
+	errs = append(errs, c.baseCleanup(ctx)...)
 	if len(errs) == 0 {
 		return nil
 	}
 	return errors.New(strings.Join(errs, "; "))
 }
 
-func (c *observabilityRulesGroupAlertLifecycleChecker) createNamespace(ctx context.Context) error {
-	ns := &v1.Namespace{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Namespace",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: c.namespace,
-			Labels: map[string]string{
-				"heritage":      "upmeter",
-				agentLabelKey:   c.agentID,
-				"upmeter-group": "monitoring-and-autoscaling",
-				"upmeter-probe": "alertmanager",
-			},
-		},
-	}
-	_, err := c.access.Kubernetes().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	return err
-}
-
-func (c *observabilityRulesGroupAlertLifecycleChecker) deleteNamespace(ctx context.Context) error {
-	return c.access.Kubernetes().CoreV1().Namespaces().Delete(ctx, c.namespace, metav1.DeleteOptions{})
-}
-
-func (c *observabilityRulesGroupAlertLifecycleChecker) createRulesGroup(ctx context.Context) error {
-	manifest := alertRulesGroupManifest(c.agentID, c.namespace, c.rulesGroupName, c.alertName, c.alertLabelKey, c.alertLabelValue)
-	obj, err := decodeManifestToUnstructured(manifest)
-	if err != nil {
-		return err
-	}
-
-	_, err = c.access.Kubernetes().Dynamic().
-		Resource(observabilityMetricsRulesGroupGVR).
-		Namespace(c.namespace).
-		Create(ctx, obj, metav1.CreateOptions{})
-	return err
-}
-
-func (c *observabilityRulesGroupAlertLifecycleChecker) deleteRulesGroup(ctx context.Context) error {
-	return c.access.Kubernetes().Dynamic().
-		Resource(observabilityMetricsRulesGroupGVR).
-		Namespace(c.namespace).
-		Delete(ctx, c.rulesGroupName, metav1.DeleteOptions{})
-}
-
-func (c *observabilityRulesGroupAlertLifecycleChecker) rulesGroupExists(ctx context.Context) (bool, error) {
-	_, err := c.access.Kubernetes().Dynamic().
-		Resource(observabilityMetricsRulesGroupGVR).
-		Namespace(c.namespace).
-		Get(ctx, c.rulesGroupName, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func (c *observabilityRulesGroupAlertLifecycleChecker) createSilence(ctx context.Context) error {
 	startsAt := time.Now().UTC().Add(-1 * time.Minute)
-	endsAt := time.Now().UTC().Add(10 * time.Minute)
+	endsAt := time.Now().UTC().Add(20 * time.Minute)
 	manifest := observabilitySilenceManifest(c.agentID, c.namespace, c.silenceName, c.alertLabelKey, c.alertLabelValue, startsAt, endsAt)
 
 	obj, err := decodeManifestToUnstructured(manifest)
@@ -656,67 +559,6 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) silenceExists(ctx context
 		Resource(observabilityNotificationSilenceGVR).
 		Namespace(c.namespace).
 		Get(ctx, c.silenceName, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func (c *observabilityRulesGroupAlertLifecycleChecker) waitPrometheusRulePresent(ctx context.Context) error {
-	return waitForCondition(
-		c.waitPrometheusRuleCreatedTimeout,
-		pollingInterval(c.waitPrometheusRuleCreatedTimeout),
-		func() (bool, error) {
-			_, err := c.access.Kubernetes().Dynamic().
-				Resource(prometheusRuleGVR).
-				Namespace("d8-observability").
-				Get(ctx, c.prometheusRuleName, metav1.GetOptions{})
-			if apierrors.IsNotFound(err) {
-				return false, nil
-			}
-			if err != nil {
-				return false, err
-			}
-			return true, nil
-		},
-	)
-}
-
-func (c *observabilityRulesGroupAlertLifecycleChecker) waitPrometheusRuleAbsent(ctx context.Context) error {
-	return waitForCondition(
-		c.waitPrometheusRuleDeletedTimeout,
-		pollingInterval(c.waitPrometheusRuleDeletedTimeout),
-		func() (bool, error) {
-			_, err := c.access.Kubernetes().Dynamic().
-				Resource(prometheusRuleGVR).
-				Namespace("d8-observability").
-				Get(ctx, c.prometheusRuleName, metav1.GetOptions{})
-			if apierrors.IsNotFound(err) {
-				return true, nil
-			}
-			if err != nil {
-				return false, err
-			}
-			return false, nil
-		},
-	)
-}
-
-func (c *observabilityRulesGroupAlertLifecycleChecker) deletePrometheusRule(ctx context.Context) error {
-	return c.access.Kubernetes().Dynamic().
-		Resource(prometheusRuleGVR).
-		Namespace("d8-observability").
-		Delete(ctx, c.prometheusRuleName, metav1.DeleteOptions{})
-}
-
-func (c *observabilityRulesGroupAlertLifecycleChecker) prometheusRuleExists(ctx context.Context) (bool, error) {
-	_, err := c.access.Kubernetes().Dynamic().
-		Resource(prometheusRuleGVR).
-		Namespace("d8-observability").
-		Get(ctx, c.prometheusRuleName, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return false, nil
 	}
@@ -793,95 +635,6 @@ func lifecycleStepError(step string, err error) check.Error {
 	return check.ErrUnknown("%s: %v", step, err)
 }
 
-func waitForCondition(timeout, interval time.Duration, condition func() (bool, error)) error {
-	if interval <= 0 {
-		interval = time.Second
-	}
-
-	deadline := time.Now().Add(timeout)
-	for {
-		done, err := condition()
-		if err != nil {
-			return err
-		}
-		if done {
-			return nil
-		}
-		if time.Now().After(deadline) {
-			return errConditionTimeout
-		}
-		time.Sleep(interval)
-	}
-}
-
-func waitNamespaceAbsent(ctx context.Context, access kubernetes.Access, namespace string, timeout, interval time.Duration) error {
-	return waitForCondition(timeout, interval, func() (bool, error) {
-		_, err := access.Kubernetes().CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-		if apierrors.IsNotFound(err) {
-			return true, nil
-		}
-		if err != nil {
-			return false, err
-		}
-		return false, nil
-	})
-}
-
-func namespaceExists(ctx context.Context, access kubernetes.Access, namespace string) (bool, error) {
-	_, err := access.Kubernetes().CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func queryEndpoint(access kubernetes.Access, endpoint string, timeout time.Duration) ([]byte, error) {
-	return queryEndpointWithHeaders(access, endpoint, timeout, nil)
-}
-
-func queryEndpointWithHeaders(
-	access kubernetes.Access,
-	endpoint string,
-	timeout time.Duration,
-	headers map[string]string,
-) ([]byte, error) {
-	req, err := newGetRequestWithHeaders(endpoint, access.ServiceAccountToken(), access.UserAgent(), headers)
-	if err != nil {
-		return nil, err
-	}
-
-	client := newInsecureClient(3 * timeout)
-	body, reqErr := doRequest(client, req)
-	if reqErr != nil {
-		return nil, reqErr
-	}
-
-	return body, nil
-}
-
-func isMetricPresentInPrometheusResponse(body []byte) (bool, error) {
-	resultPath := "data.result"
-	result := gjson.GetBytes(body, resultPath)
-	if !result.IsArray() {
-		return false, fmt.Errorf("cannot parse path %q in Prometheus response", resultPath)
-	}
-
-	if len(result.Array()) == 0 {
-		return false, nil
-	}
-
-	countPath := "data.result.0.value.1"
-	count := gjson.GetBytes(body, countPath)
-	if !count.Exists() {
-		return false, nil
-	}
-
-	return count.String() != "0", nil
-}
-
 func hasAlertInAlertmanagerResponse(body []byte, alertName, labelKey, labelValue string) (bool, bool, error) {
 	alerts := gjson.GetBytes(body, "list")
 	if !alerts.IsArray() {
@@ -908,92 +661,74 @@ func hasAlertInAlertmanagerResponse(body []byte, alertName, labelKey, labelValue
 	return found, false, nil
 }
 
-func decodeManifestToUnstructured(manifest string) (*unstructured.Unstructured, error) {
-	dec := serializeryaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	obj := &unstructured.Unstructured{}
-
-	if _, _, err := dec.Decode([]byte(manifest), nil, obj); err != nil {
-		return nil, err
-	}
-
-	return obj, nil
-}
-
 func expectedPrometheusRuleName(namespace, rulesGroupName string) string {
 	return fmt.Sprintf("%s-%s", namespace, rulesGroupName)
 }
 
 func recordingRulesGroupManifest(agentID, namespace, name, metric string) string {
-	tpl := `
+	return fmt.Sprintf(`
 apiVersion: observability.deckhouse.io/v1alpha1
 kind: ObservabilityMetricsRulesGroup
 metadata:
   labels:
     heritage: upmeter
-    upmeter-agent: %q
+    upmeter-agent: %s
     upmeter-group: monitoring-and-autoscaling
-    upmeter-probe: prometheus
-  name: %q
-  namespace: %q
+    upmeter-probe: observability-recording
+  name: %s
+  namespace: %s
 spec:
   interval: "30s"
   rules:
-  - record: %q
+  - record: %s
     expr: kube_namespace_created
-`
-
-	return fmt.Sprintf(tpl, agentID, name, namespace, metric)
+`, agentID, name, namespace, metric)
 }
 
 func alertRulesGroupManifest(agentID, namespace, name, alertName, alertLabelKey, alertLabelValue string) string {
-	tpl := `
+	return fmt.Sprintf(`
 apiVersion: observability.deckhouse.io/v1alpha1
 kind: ObservabilityMetricsRulesGroup
 metadata:
   labels:
     heritage: upmeter
-    upmeter-agent: %q
+    upmeter-agent: %s
     upmeter-group: monitoring-and-autoscaling
     upmeter-probe: alertmanager
-  name: %q
-  namespace: %q
+  name: %s
+  namespace: %s
 spec:
   interval: "30s"
   rules:
-  - alert: %q
+  - alert: %s
     expr: kube_namespace_created > 0
     labels:
       severity: warning
-      %s: %q
+      %s: %s
     annotations:
       summary: "upmeter observability mini e2e alert"
-`
-
-	return fmt.Sprintf(tpl, agentID, name, namespace, alertName, alertLabelKey, alertLabelValue)
+`, agentID, name, namespace, alertName, alertLabelKey, alertLabelValue)
 }
 
 func observabilitySilenceManifest(agentID, namespace, name, alertLabelKey, alertLabelValue string, startsAt, endsAt time.Time) string {
-	tpl := `
+	return fmt.Sprintf(`
 apiVersion: observability.deckhouse.io/v1alpha1
 kind: ObservabilityNotificationSilence
 metadata:
   labels:
     heritage: upmeter
-    upmeter-agent: %q
+    upmeter-agent: %s
     upmeter-group: monitoring-and-autoscaling
     upmeter-probe: alertmanager
-  name: %q
-  namespace: %q
+  name: %s
+  namespace: %s
 spec:
-  startsAt: %q
-  endsAt: %q
+  startsAt: "%s"
+  endsAt: "%s"
   selector:
     matchLabels:
-      %s: %q
-`
-
-	return fmt.Sprintf(
-		tpl,
+      %s: %s
+`,
 		agentID,
 		name,
 		namespace,
@@ -1002,29 +737,4 @@ spec:
 		alertLabelKey,
 		alertLabelValue,
 	)
-}
-
-func fallbackDuration(actual, fallback time.Duration) time.Duration {
-	if actual <= 0 {
-		return fallback
-	}
-	return actual
-}
-
-func fallbackString(actual, fallback string) string {
-	if actual == "" {
-		return fallback
-	}
-	return actual
-}
-
-func pollingInterval(timeout time.Duration) time.Duration {
-	interval := timeout / 10
-	if interval < time.Second {
-		return time.Second
-	}
-	if interval > 5*time.Second {
-		return 5 * time.Second
-	}
-	return interval
 }

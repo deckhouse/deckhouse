@@ -260,6 +260,14 @@ const langPack: LangPack = {
         reasonUnknown: REASON_APISERVER_UNAVAILABLE,
         reasonNodata: REASON_AGENTS_STOPPED,
       },
+      "observability-recording": {
+        title: "Observability Recording Rules",
+        description: "Mini e2e test: creates an ObservabilityMetricsRulesGroup with a recording rule, waits for the corresponding PrometheusRule and metric in Prometheus, then cleans up.",
+        reasonUp: "ObservabilityMetricsRulesGroup is reconciled into a PrometheusRule and the recording metric appears in Prometheus",
+        reasonDown: "PrometheusRule was not created, or recording metric did not appear, or PrometheusRule was not deleted after cleanup",
+        reasonUnknown: REASON_APISERVER_UNAVAILABLE,
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
     },
     synthetic: {
       access: {
