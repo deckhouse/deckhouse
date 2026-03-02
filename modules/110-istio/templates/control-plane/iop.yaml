@@ -134,7 +134,6 @@ spec:
         clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
       externalIstiod: false
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
-      resourceScope: "all"
 
   {{- if $.Values.istio.multicluster.enabled }}
       meshNetworks:
