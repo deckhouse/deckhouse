@@ -138,7 +138,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -195,9 +195,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -354,7 +354,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -478,7 +478,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -535,9 +535,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -694,7 +694,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -818,7 +818,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -875,9 +875,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -1034,7 +1034,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1158,7 +1158,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.33"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -1215,9 +1215,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -1374,7 +1374,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1498,7 +1498,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.34"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -1555,9 +1555,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -1714,7 +1714,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1838,7 +1838,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -1895,9 +1895,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -2054,7 +2054,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2178,7 +2178,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -2235,9 +2235,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -2394,7 +2394,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2518,7 +2518,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -2575,9 +2575,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -2734,7 +2734,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2858,7 +2858,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -2915,9 +2915,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -3074,7 +3074,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3198,7 +3198,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.33"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -3255,9 +3255,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -3414,7 +3414,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3538,7 +3538,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.34"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -3595,9 +3595,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -3754,7 +3754,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3878,7 +3878,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -3935,9 +3935,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -4094,7 +4094,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
