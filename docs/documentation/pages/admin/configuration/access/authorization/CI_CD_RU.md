@@ -5,7 +5,7 @@ lang: ru
 description: "Настройка доступа CI/CD к API Kubernetes в Deckhouse: ServiceAccount, Basic Auth и Token Exchange."
 ---
 
-Для аутентификации CI/CD-пайплайнов в API Kubernetes доступны три метода:
+Для аутентификации CI/CD-пайплайнов в API Kubernetes доступны следующие методы:
 - [ServiceAccount](#serviceaccount) — токен Kubernetes ServiceAccount.
 - [Basic Auth](#basic-auth) — логин и пароль через IdP.
 - [Token Exchange](#token-exchange) — обмен токена IdP на токен Dex.
