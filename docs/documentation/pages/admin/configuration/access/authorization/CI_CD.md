@@ -13,7 +13,7 @@ The following methods are available for authenticating CI/CD pipelines in the Ku
 
 ## ServiceAccount
 
-The ServiceAccount token is used directly for API authentication. No external IdP is required. For ServiceAccount, you can create [long-lived tokens](#create-serviceaccount-and-a-long-lived-token) (without TTL, with the possibility of revocation or rotation) and [short-lived tokens](#short-lived-tokens).
+The ServiceAccount token is used directly for API authentication. No external IdP is required. For ServiceAccount, you can create [long-lived tokens](#create-serviceaccount-and-a-long-lived-token) (without TTL, with the possibility of revocation or rotation) and [short-lived tokens](#short-lived-tokens-tokenrequest).
 
 When multiple pipelines share a single ServiceAccount, audit logs will not contain information about specific pipelines.
 
