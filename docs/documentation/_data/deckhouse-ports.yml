@@ -537,4 +537,8 @@ groups:
       description:
         en: Healtcheck for Kubernetes apiserver proxy
         ru: Healtcheck-порт для Kubernetes apiserver proxy
-
+    - ports: "5001"
+      protocol: TCP
+      description:
+        en: Registry proxy
+        ru: Registry proxy
