@@ -104,6 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function capitalizeWords(value) {
+    return value
+      .trim()
+      .split(/\s+/)
+      .map(word => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+      .join(' ');
+  }
+
   function markEmptyCheckboxes() {
     const availableTags = new Set();
     const availableStages = new Set();
@@ -251,6 +259,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked:not([data-select-all="true"])');
     const query = filterSearch ? filterSearch.value.trim() : '';
 
+    if (checkedCheckboxes.length > 0) {
+      resetButton.classList.add('active');
+    } else {
+      resetButton.classList.remove('active');
+    }
+
     if (selectedFiltersList) {
       const groupedFilters = new Map();
 
@@ -282,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (isStagesFilter) {
           valuesText = Array.from(entry.values).map(code => stageTitles[code] || code).join(', ');
         } else {
-          valuesText = Array.from(entry.values).join(', ');
+          valuesText = Array.from(entry.values).map(value => capitalizeWords(value)).join(', ');
         }
 
         const checkboxText = `${filterName}: ${valuesText}`;
