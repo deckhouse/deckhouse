@@ -83,45 +83,8 @@ func (f Frame) Format(s fmt.State, verb rune) {
 	}
 }
 
-// MarshalText formats a stacktrace Frame as a text string. The output is the
-// same as that of fmt.Sprintf("%+v", f), but without newlines or tabs.
-func (f Frame) MarshalText() ([]byte, error) {
-	name := f.name()
-	if name == "unknown" {
-		return []byte(name), nil
-	}
-	return []byte(fmt.Sprintf("%s %s:%d", name, f.file(), f.line())), nil
-}
-
 // StackTrace is stack of Frames from innermost (newest) to outermost (oldest).
 type StackTrace []Frame
-
-// Format formats the stack of Frames according to the fmt.Formatter interface.
-//
-//	%s	lists source files for each Frame in the stack
-//	%v	lists the source file and line number for each Frame in the stack
-//
-// Format accepts flags that alter the printing of some verbs, as follows:
-//
-//	%+v   Prints filename, function, and line number for each Frame in the stack.
-func (st StackTrace) Format(s fmt.State, verb rune) {
-	switch verb {
-	case 'v':
-		switch {
-		case s.Flag('+'):
-			for _, f := range st {
-				io.WriteString(s, "\n")
-				f.Format(s, verb)
-			}
-		case s.Flag('#'):
-			fmt.Fprintf(s, "%#v", []Frame(st))
-		default:
-			st.formatSlice(s, verb)
-		}
-	case 's':
-		st.formatSlice(s, verb)
-	}
-}
 
 // formatSlice will format this StackTrace into the given buffer as a slice of
 // Frame, only valid when called with '%s' or '%v'.
@@ -150,14 +113,6 @@ func (s *stack) Format(st fmt.State, verb rune) {
 			}
 		}
 	}
-}
-
-func (s *stack) StackTrace() StackTrace {
-	f := make([]Frame, len(*s))
-	for i := 0; i < len(f); i++ {
-		f[i] = Frame((*s)[i])
-	}
-	return f
 }
 
 func callers() *stack {
