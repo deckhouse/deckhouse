@@ -17,6 +17,7 @@ package client
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -37,6 +38,17 @@ func AuthFromDockerConfig(repo, dockerCfgBase64 string) (authn.Authenticator, er
 	return &authn.Basic{
 		Username: authConfig.Username,
 		Password: authConfig.Password,
+	}, nil
+}
+
+func AuthFromCredentials(login, password string) (authn.Authenticator, error) {
+	if login == "" {
+		return authn.Anonymous, nil
+	}
+
+	return &authn.Basic{
+		Username: login,
+		Password: password,
 	}, nil
 }
 
@@ -75,6 +87,24 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 	}
 
 	return authn.AuthConfig{}, fmt.Errorf("%q credentials not found in the dockerCfg", repo)
+}
+
+func readFromCredentialsBase64(credentialsBase64 string) (string, string, error) {
+	if credentialsBase64 != "" {
+		cred, err := base64.StdEncoding.DecodeString(credentialsBase64)
+		if err != nil {
+			return "", "", fmt.Errorf("decode credentials: %w", err)
+		}
+
+		parts := strings.Split(string(cred), ":")
+		if len(parts) != 2 {
+			return "", "", fmt.Errorf("credentials must be in form of <username>:<password>")
+		}
+
+		return parts[0], parts[1], nil
+	}
+
+	return "", "", errors.New("credentials is empty")
 }
 
 // parse parses url without scheme://
