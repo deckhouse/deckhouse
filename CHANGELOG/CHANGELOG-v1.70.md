@@ -2,6 +2,7 @@
 
 ## Know before update
 
+
  - Dashboards and alerts based on the `falco_events` metric might be broken.
  - Deckhouse will not update if `ceph-csi` is enabled in the cluster. Use `csi-ceph` module.
  - Dhctl in commander mode will skip draining errors.
