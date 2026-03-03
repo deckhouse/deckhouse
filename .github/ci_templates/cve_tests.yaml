@@ -101,8 +101,8 @@ remove_labels:
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host" "DECKHOUSE_READ_REGISTRY_HOST" "PROD_READ_REGISTRY" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/ssdlc-registry-read-license" "login" "PROD_READ_REGISTRY_USER" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/ssdlc-registry-read-license" "password" "PROD_READ_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token" "login" "PROD_READ_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token" "password" "PROD_READ_REGISTRY_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/b050f3bd-733f-4746-9640-9df80d484074/DefectDojo/Prod/TrivyReporter" "token" "DEV_DD_TOKEN" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/b050f3bd-733f-4746-9640-9df80d484074/DefectDojo/Prod/URL" "DD_DEV_URL" "DEV_DD_URL" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Trivy_CVE_Scan_CI_Secrets" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
