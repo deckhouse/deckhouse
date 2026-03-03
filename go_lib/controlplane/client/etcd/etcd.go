@@ -16,14 +16,15 @@ import (
 	kubeadmapp "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapp"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog"
 
 	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
-	dryrunutil "github.com/deckhouse/deckhouse/go_lib/controlplane/client/dryrun"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/etcdconfig"
 	images "github.com/deckhouse/deckhouse/go_lib/controlplane/client/image"
 	kubeadmapi "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapi"
 	kubeadmutil "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmutil"
 	staticpodutil "github.com/deckhouse/deckhouse/go_lib/controlplane/client/staticpod"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
@@ -35,9 +36,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/klog"
 	utilsnet "k8s.io/utils/net"
 )
+
+var logger = log.Default().Named("etcd")
 
 const etcdTimeout = 2 * time.Second
 
@@ -603,22 +605,15 @@ func getEtcdCommand(config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpo
 	return command
 }
 
-func WriteStaticPodToDisk(podManifest []byte, componentName, manifestDir string, pod v1.Pod) error {
+func WriteStaticPodToDisk(podManifest []byte, componentName, manifestDir string) error {
 
-	// creates target folder if not already exists
 	if err := os.MkdirAll(manifestDir, 0700); err != nil {
 		return errors.Wrapf(err, "failed to create directory %q", manifestDir)
 	}
 
-	// // writes the pod to disk
-	// serialized, err := kubeadmutil.MarshalToYaml(&pod, v1.SchemeGroupVersion)
-	// if err != nil {
-	// 	return errors.Wrapf(err, "failed to marshal manifest for %q to YAML", componentName)
-	// }
-
 	filename := constants.GetStaticPodFilepath(componentName, manifestDir)
 
-	if err := os.WriteFile(filename /*serialized*/, podManifest, 0600); err != nil {
+	if err := os.WriteFile(filename, podManifest, 0600); err != nil {
 		return errors.Wrapf(err, "failed to write static pod manifest file for %q (%q)", componentName, filename)
 	}
 
@@ -643,27 +638,16 @@ func addMembersToPodManifest(podManifest []byte, initialCluster []Member) []byte
 	return []byte(podManifestString)
 }
 
-func prepareAndWriteEtcdStaticPod(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, initialCluster []Member, isDryRun bool) error {
-	// gets etcd StaticPodSpec, actualized for the current ClusterConfiguration and the new list of etcd members
-
-	spec := GetEtcdPodSpec(config, endpoint, nodeName, initialCluster)
-
-	// TODO change podManifest with initialCluster if not nil
+func prepareAndWriteEtcdStaticPod(podManifest []byte, config *etcdconfig.EtcdConfig, nodeName string, initialCluster []Member) error {
 	if len(initialCluster) > 0 {
 		podManifest = addMembersToPodManifest(podManifest, initialCluster)
 	}
 
-	// writes etcd StaticPod to disk
-	if err := WriteStaticPodToDisk(podManifest, constants.Etcd, config.ManifestDir, spec); err != nil {
+	if err := WriteStaticPodToDisk(podManifest, constants.Etcd, config.ManifestDir); err != nil {
 		return err
 	}
+	logger.Info("[etcd] podManifest is written to disk")
 
-	// If dry-running, print the static etcd pod manifest file.
-	if isDryRun {
-		realPath := constants.GetStaticPodFilepath(constants.Etcd, config.ManifestDir)
-		outputPath := constants.GetStaticPodFilepath(constants.Etcd, constants.GetStaticPodDirectory())
-		return dryrunutil.PrintDryRunFiles([]dryrunutil.FileToPrint{dryrunutil.NewFileToPrint(realPath, outputPath)}, os.Stdout)
-	}
 	return nil
 }
 
@@ -677,15 +661,6 @@ func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints
 }
 
 func InitCluster(podManifest []byte, cfgPath string, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
-
-	// data, ok := c.(InitData)
-	// config := data.Cfg()
-	// config, err := kubeadmutil.LoadOrDefaultInitConfiguration(cfgPath, &kubeadmapiv1.InitConfiguration{}, &kubeadmapiv1.ClusterConfiguration{}, kubeadmutil.LoadOrDefaultConfigurationOptions{})
-	// if err != nil {
-	// 	return err
-	// }
-
-	// deckhouse/go_lib/controlplane/client/etcd/etcd.go
 
 	config := &etcdconfig.EtcdConfig{
 		ManifestDir:       "/etc/kubernetes/manifests_mytest",
@@ -715,38 +690,30 @@ func InitCluster(podManifest []byte, cfgPath string, endpoint *kubeadmapi.APIEnd
 		StartupTimeout: 4 * time.Minute,
 	}
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, config, endpoint, nodeName, []Member{}, isDryRun); err != nil {
+	logger.Info("[etcd] Creating static Pod manifest for %q during init cluster", constants.Etcd)
+
+	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, []Member{}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func JoinCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
+func JoinCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string) error {
 
-	// data, ok := c.(JoinData)
-
-	// if !ok || data.Cfg().ControlPlane == nil {
-	// 	return nil
-	// }
-
-	// // gets access to the cluster using the identity defined in admin.conf
-
-	// cfg, err := data.InitCfg()
 	kubeClient, err := kubeadmapp.MyNewKubernetesClient()
 	if err != nil {
 		return err
 	}
 
 	///////////////////////////// test kubeClient
-	fmt.Println(kubeClient)
+	logger.Info("TEST-ETCD KUBECLIENT: kubeClient", kubeClient)
 	pods, err := kubeClient.CoreV1().Pods("d8-chrony").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
-	fmt.Println("TEST-ETCD KUBECLIENT: pods", pods)
+	logger.Info("TEST-ETCD KUBECLIENT: pods", pods)
 	////////////////////////////////
 
-	// config = &etcdconfig.EtcdConfig{}
 	config = &etcdconfig.EtcdConfig{
 		ManifestDir:       "/etc/kubernetes/manifests_mytest_join",
 		CertificatesDir:   "/etc/kubernetes/pki",
@@ -775,52 +742,43 @@ func JoinCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *ku
 		StartupTimeout: 4 * time.Minute,
 	}
 
-	etcdPeerAddress := GetPeerURL(endpoint)
+	// etcdPeerAddress := GetPeerURL(endpoint)
 
 	var cluster []Member
 	var etcdClient *Client
-	// var err error
-	if isDryRun {
-		fmt.Printf("[etcd] Would add etcd member: %s\n", etcdPeerAddress)
-	} else {
-		// Creates an etcd client that connects to all the local/stacked etcd members.
-		klog.V(1).Info("TEST-ETCD client: creating etcd client that connects to etcd pods")
-		etcdClient, err = NewFromCluster(kubeClient, config.CertificatesDir)
-		if err != nil {
-			return err
-		}
-		fmt.Println("TEST-ETCD client: etcdClient", etcdClient)
-		clusterStatus, err := etcdClient.getClusterStatus()
-		if err != nil {
-			return err
-		}
-		fmt.Println("TEST-ETCD client: clusterStatus", clusterStatus)
-
-		// klog.V(1).Infof("[etcd] Adding etcd member: %s", etcdPeerAddress)
-		// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
-		// if err != nil {
-		// 	return err
-		// }
-		fmt.Println("TEST-ETCD client: [etcd] Announced new etcd member joining to the existing etcd cluster")
-		klog.V(1).Infof("TEST-ETCD client: Updated etcd member list: %v", cluster)
+	////////////////////////////////////////////
+	// Creates an etcd client that connects to all the local/stacked etcd members.
+	logger.Info("TEST-ETCD client: creating etcd client that connects to etcd pods")
+	etcdClient, err = NewFromCluster(kubeClient, config.CertificatesDir)
+	if err != nil {
+		return err
 	}
+	logger.Info("TEST-ETCD client: etcdClient", etcdClient)
+	clusterStatus, err := etcdClient.getClusterStatus()
+	if err != nil {
+		return err
+	}
+	logger.Info("TEST-ETCD client: clusterStatus", clusterStatus)
 
-	fmt.Printf("[etcd] Creating static Pod manifest for %q\n", constants.Etcd)
-
+	// logger.Info("[etcd] Adding etcd member: %s", etcdPeerAddress)
+	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
+	// if err != nil {
+	// 	return err
+	// }
 	cluster = []Member{
 		{Name: "borovets-multi-master-master-0", PeerURL: "https://10.241.32.26:2380"},
 		{Name: "borovets-multi-master-master-1", PeerURL: "https://10.241.36.19:2380"},
 		{Name: "borovets-multi-master-master-2", PeerURL: "https://10.241.44.16:2380"},
 	}
+	logger.Info("TEST-ETCD client: [etcd] Announced new etcd member joining to the existing etcd cluster")
+	logger.Info("TEST-ETCD client: Updated etcd member list: %v", cluster)
+	////////////////////////////////////////////
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, config, endpoint, nodeName, cluster, isDryRun); err != nil {
+	logger.Info("[etcd] Creating static Pod manifest for %q during join cluster", constants.Etcd)
+
+	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, cluster); err != nil {
 		return err
 	}
-
-	// if isDryRun {
-	// 	fmt.Println("[etcd] Would wait for the new etcd member to join the cluster")
-	// 	return nil
-	// }
 
 	// learnerID, err := etcdClient.GetMemberID(etcdPeerAddress)
 	// if err != nil {
@@ -831,7 +789,7 @@ func JoinCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *ku
 	// 	return err
 	// }
 
-	// fmt.Printf("[etcd] Waiting for the new etcd member to join the cluster. This can take up to %v\n", etcdHealthyCheckInterval*etcdHealthyCheckRetries)
+	// logger.Info("[etcd] Waiting for the new etcd member to join the cluster. This can take up to %v\n", etcdHealthyCheckInterval*etcdHealthyCheckRetries)
 	// if _, err := etcdClient.WaitForClusterAvailable(etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
 	// 	return err
 	// }
