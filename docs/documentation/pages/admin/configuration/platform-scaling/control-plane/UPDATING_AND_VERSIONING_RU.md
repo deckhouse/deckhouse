@@ -47,9 +47,9 @@ lang: ru
 
 Компонент `update-observer`:
 
-- читает конфигурацию кластера из Secret `d8-cluster-configuration`;
-- отслеживает версии kubelet на всех узлах через `nodeInfo.kubeletVersion`;
-- собирает версии со всех экземпляров control plane по аннотации `control-plane-manager.deckhouse.io/kubernetes-version`;
+- Читает конфигурацию кластера из секрета `d8-cluster-configuration`;
+- Отслеживает версии kubelet на всех узлах через `nodeInfo.kubeletVersion`;
+- Собирает версии всех экземпляров control plane по аннотации `control-plane-manager.deckhouse.io/kubernetes-version`;
 - создаёт и поддерживает ConfigMap **`d8-cluster-kubernetes`** в пространстве имён `kube-system` с детальным статусом обновления.
 
 В ConfigMap `d8-cluster-kubernetes` отображаются:
