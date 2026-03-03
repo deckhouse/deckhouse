@@ -331,6 +331,10 @@ DKP configures kube-apiserver to validate Dex tokens. The `email` and `groups` c
 
 The set of claims required by kube-apiserver for authentication depends on configuration. If kube-apiserver requires the `name` claim, add the `profile` scope.
 
+For details on granting permissions, see [Granting permissions to users and service accounts](granting.html).
+
+For the current role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+
 ```shell
 cat <<EOF | d8 k apply -f -
 apiVersion: deckhouse.io/v1
@@ -342,6 +346,25 @@ spec:
   - kind: User
     name: deployer@example.com
   accessLevel: Admin
+EOF
+```
+
+For the experimental role model, use [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
+
+```shell
+cat <<EOF | d8 k apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ci-deployer
+subjects:
+- kind: User
+  name: deployer@example.com
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:manage:all:manager
+  apiGroup: rbac.authorization.k8s.io
 EOF
 ```
 
