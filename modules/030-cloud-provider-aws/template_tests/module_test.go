@@ -152,8 +152,6 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
 			registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-
 			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
 			ccmServiceAccount := f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-controller-manager")
 			ccmClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:cloud-controller-manager")
@@ -183,8 +181,13 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
 
 			// user story #1
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
-			expectedAWSJSON := `{
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-aws")
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+
+			expectedProviderRegistrationJSON := `{
   "instances":{
     "ami": "ami-aaabbbccc",
     "associatePublicIPAddress": true,
@@ -202,9 +205,27 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
       "aaa": "aaa"
     }
 }`
-			dataAWS, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.aws").String())
+			actualProviderRegistrationJSON, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.aws").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(dataAWS)).To(MatchJSON(expectedAWSJSON))
+			Expect(string(actualProviderRegistrationJSON)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			actualProviderSpecificRegistrationJSON, err := base64.StdEncoding.DecodeString(providerSpecificRegistrationSecret.Field("data.aws").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(actualProviderSpecificRegistrationJSON)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-aws-mcm")
+			Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
+			providerSpecificMCMSecretData := providerSpecificMCMSecret.Field("data").Map()
+			Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificMCMSecretData) == 3 ).To(BeTrue())
+			Expect(len(providerSpecificMCMSecretData["cloud-instance-manager/config-for-machine-controller-manager.yaml"].String()) > 0 ).To(BeTrue())
+
+			providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-aws-bashible")
+			Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
+			providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
+			Expect(providerSpecificBashibleSecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificBashibleSecretData) == 5 ).To(BeTrue())
+			Expect(len(providerSpecificBashibleSecretData["common-steps/all/000_set_cloud_variables.sh.tpl"].String()) > 0 ).To(BeTrue())
 
 			// user story #2
 			Expect(ccmDeployment.Exists()).To(BeTrue())
