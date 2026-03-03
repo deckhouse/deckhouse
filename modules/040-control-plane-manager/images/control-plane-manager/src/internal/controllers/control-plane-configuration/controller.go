@@ -316,7 +316,7 @@ func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pki
 		ObjectMeta: ctrl.ObjectMeta{
 			Name: nodeName,
 			Labels: map[string]string{
-				"control-plane.deckhouse.io/node": nodeName,
+				constants.ControlPlaneNodeNameLabelKey: nodeName,
 			},
 		},
 		Spec: controlplanev1alpha1.ControlPlaneNodeSpec{
@@ -324,10 +324,10 @@ func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pki
 			ConfigVersion:     fmt.Sprintf("%s.%s", cpmSecret.ResourceVersion, pkiSecret.ResourceVersion),
 			HotReloadChecksum: hotReloadChecksum,
 			Components: controlplanev1alpha1.ComponentChecksums{
-				Etcd:                  &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["etcd"]},
-				KubeAPIServer:         &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-apiserver"]},
-				KubeControllerManager: &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-controller-manager"]},
-				KubeScheduler:         &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-scheduler"]},
+				Etcd:                  controlplanev1alpha1.ComponentChecksum{Checksum: checksums["etcd"]},
+				KubeAPIServer:         controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-apiserver"]},
+				KubeControllerManager: controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-controller-manager"]},
+				KubeScheduler:         controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-scheduler"]},
 			},
 		},
 	}, nil
