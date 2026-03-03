@@ -310,4 +310,3 @@ data:
 kind: ConfigMap
 metadata:
 ```
-
