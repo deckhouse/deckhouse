@@ -7,6 +7,12 @@ lang: ru
 
 Аннотация применяет релиз немедленно, не дожидаясь окна обновлений. Требования из [`spec.requirements`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-requirements) при этом сохраняются — если они не выполняются, релиз не будет применен.
 
+Пример установки аннотации для модуля `console`:
+
+```shell
+d8 k annotate mr console-v1.43.3 modules.deckhouse.io/apply-now: "true"
+```
+
 Пример ресурса с установленной аннотацией:
 
 ```yaml

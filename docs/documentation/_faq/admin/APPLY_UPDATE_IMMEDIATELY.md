@@ -1,5 +1,5 @@
 ---
-title: How can I apply an update DKP or module immediately, bypassing update windows, canary releases, and manual update mode?
+title: How can I apply an update DKP immediately, bypassing update windows, canary releases, and manual update mode?
 lang: en
 ---
 
