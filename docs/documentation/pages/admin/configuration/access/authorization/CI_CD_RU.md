@@ -146,13 +146,27 @@ d8 k config set-context $CONTEXT_NAME \
 d8 k config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
 ```
 
-### Короткоживущие токены
+### Короткоживущие токены (TokenRequest)
 
 TokenRequest API позволяет создавать токены с ограниченным сроком действия. При создании такого токена укажите в команде имя ServiceAccount, которому нужно предоставить доступ (в примере — `gitlab-runner-deploy`):
 
 ```shell
 d8 k create token gitlab-runner-deploy -n ci-deploy --duration=1h
 ```
+
+{% alert level="warning" %}
+Команда `d8 k create token` сама требует доступа к Kubernetes API. Если CI-job не имеет начального доступа к кластеру, выполнить TokenRequest внутри job невозможно.
+{% endalert %}
+
+#### Паттерны использования в CI
+
+**Bootstrap-токен с минимальными правами.** CI хранит долгоживущий kubeconfig/токен, который имеет право только на создание TokenRequest для конкретного ServiceAccount. В начале job bootstrap-токен выпускает короткоживущий токен, который используется для деплоя.
+
+**Внешний token broker.** Оператор, секрет-менеджер (Vault, External Secrets) или внешний сервис периодически выпускает короткоживущие токены и помещает их в CI-переменные или секреты. CI-job только потребляет готовый токен.
+
+{% alert level="info" %}
+Bootstrap-токен должен иметь минимальные права: только `create` на ресурс `serviceaccounts/token` для конкретного ServiceAccount/namespace. Не используйте cluster-admin. Ограничивайте TTL выпускаемых токенов и оперативно отзывайте bootstrap-доступ при компрометации.
+{% endalert %}
 
 Пример использования без файла kubeconfig:
 
