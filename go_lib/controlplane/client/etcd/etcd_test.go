@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/etcdconfig"
 )
 
 func TestAddMembersToPodManifest(t *testing.T) {
@@ -93,7 +92,7 @@ spec:
 
 func TestPrepareAndWriteEtcdStaticPod(t *testing.T) {
 	tmpDir := t.TempDir()
-	config := &etcdconfig.EtcdConfig{
+	config := &EtcdConfig{
 		ManifestDir: tmpDir,
 	}
 
