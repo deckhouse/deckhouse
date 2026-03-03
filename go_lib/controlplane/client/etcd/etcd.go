@@ -89,11 +89,6 @@ func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints
 
 func InitCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string) error {
 
-	config = &EtcdConfig{
-		ManifestDir:     "/etc/kubernetes/manifests_mytest",
-		CertificatesDir: "/etc/kubernetes/pki",
-	}
-
 	logger.Info(fmt.Sprintf("[etcd] Creating static Pod manifest for %q during init cluster", constants.Etcd))
 
 	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, []Member{}); err != nil {
@@ -117,11 +112,6 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	}
 	logger.Info(fmt.Sprintf("TEST-ETCD KUBECLIENT: pods: %v", pods))
 	////////////////////////////////
-
-	config = &EtcdConfig{
-		ManifestDir:     "/etc/kubernetes/manifests_mytest_join",
-		CertificatesDir: "/etc/kubernetes/pki",
-	}
 
 	etcdPeerAddress := GetPeerURL(endpoint)
 
