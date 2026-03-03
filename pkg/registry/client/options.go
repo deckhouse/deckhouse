@@ -49,6 +49,8 @@ type Options struct {
 	CA string
 	// Timeout sets the timeout for registry operations
 	Timeout time.Duration
+	// Keychain provides a custom keychain for authentication (alternative to Auth)
+	Keychain authn.Keychain
 
 	// Logger for client operations
 	Logger *log.Logger
@@ -69,6 +71,10 @@ func buildRemoteOptions(opts *Options) []remote.Option {
 
 	if opts.Auth != nil {
 		remoteOptions = append(remoteOptions, remote.WithAuth(opts.Auth))
+	}
+
+	if opts.Keychain != nil {
+		remoteOptions = append(remoteOptions, remote.WithAuthFromKeychain(opts.Keychain))
 	}
 
 	if opts.UserAgent != "" {
