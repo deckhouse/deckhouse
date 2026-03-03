@@ -278,8 +278,6 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
 			registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "yandex.csi.flant.com")
 			csiControllerSS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 			csiNodeDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
@@ -313,7 +311,12 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
 
 			// user story #1
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-yandex")
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+
 			expectedProviderRegistrationJSON := `{
           "folderID": "myfoldid",
           "region": "myreg",
@@ -330,9 +333,28 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			  "imageID": "test"
 		  }
         }`
+
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.yandex").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			providerSpecificRegistrationData, err := base64.StdEncoding.DecodeString(providerSpecificRegistrationSecret.Field("data.yandex").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(providerSpecificRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-yandex-mcm")
+			Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
+			providerSpecificMCMSecretData := providerSpecificMCMSecret.Field("data").Map()
+			Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificMCMSecretData) == 3 ).To(BeTrue())
+			Expect(len(providerSpecificMCMSecretData["cloud-instance-manager/config-for-machine-controller-manager.yaml"].String()) > 0 ).To(BeTrue())
+
+			providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-yandex-bashible")
+			Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
+			providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
+			Expect(providerSpecificBashibleSecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificBashibleSecretData) == 2 ).To(BeTrue())
+			Expect(len(providerSpecificBashibleSecretData["common-steps/all/000_set_cloud_variables.sh.tpl"].String()) > 0 ).To(BeTrue())
 
 			// user story #2
 			Expect(csiDriver.Exists()).To(BeTrue())
