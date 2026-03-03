@@ -63,10 +63,10 @@ spec:
                     description: Docker configuration for authentication.
                     type: string
                   login:
-                    description: Login from the repository
+                    description: Login for authentication.
                     type: string
                   password:
-                    description: Password from the repository
+                    description: Password for authentication.
                     type: string
                   repo:
                     description: Repository path in the registry.
