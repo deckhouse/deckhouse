@@ -25,7 +25,7 @@ spec:
   {{- range .nodeGroup.instanceClass.additionalDisks }}
   - boot: false
     autoDelete: {{ if hasKey . "autoDelete" }}{{ .autoDelete }}{{ else }}true{{ end }}
-    sizeGb: {{ .sizeGb }}
+    sizeGb: {{ .size }}
     type: {{ .type | quote }}
     {{- if hasKey . "provisionedIops" }}
     provisionedIops: {{ .provisionedIops }}

@@ -43,9 +43,9 @@ metadata:
 spec:
   machineType: n1-standard-8
   additionalDisks:
-  - sizeGb: 200
+  - size: 200
     type: pd-ssd
-  - sizeGb: 500
+  - size: 500
     type: pd-standard
     autoDelete: true
 ```

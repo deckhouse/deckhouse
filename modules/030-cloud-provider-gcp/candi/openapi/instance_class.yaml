@@ -128,16 +128,16 @@ spec:
                     Useful for storage workloads such as LINSTOR, Ceph, NFS, and similar.
                   type: array
                   x-doc-examples:
-                  - - sizeGb: 100
+                  - - size: 100
                       type: pd-ssd
                   items:
                     type: object
                     required:
-                      - sizeGb
+                      - size
                       - type
                     properties:
-                      sizeGb:
-                        description: Disk size in GB.
+                      size:
+                        description: Disk size in gigabytes (GB).
                         type: integer
                         minimum: 1
                         x-doc-examples: [100]

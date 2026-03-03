@@ -75,8 +75,8 @@ spec:
                     Полезно для нагрузок, связанных с хранением данных, таких как LINSTOR, Ceph, NFS и аналогичные решения.
                   items:
                     properties:
-                      sizeGb:
-                        description: Размер диска в ГБ.
+                      size:
+                        description: Размер диска в гигабайтах (ГБ).
                       type:
                         description: |
                           Тип диска.
