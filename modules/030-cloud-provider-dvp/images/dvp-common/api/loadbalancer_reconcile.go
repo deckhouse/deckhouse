@@ -37,25 +37,23 @@ func (lb *LoadBalancerService) CreateOrUpdateLoadBalancer(
 	ctx context.Context,
 	loadBalancer LoadBalancer,
 ) (*corev1.Service, error) {
-	useSWHC, err := shouldUseSWHC(ctx, lb.Service)
+	var svc *corev1.Service
+	svc, err := lb.GetLoadBalancerByName(ctx, loadBalancer.Name)
 	if err != nil {
-		klog.V(4).InfoS("shouldUseSWHC returned error", "lbName", loadBalancer.Name, "err", err)
+		return nil, err
+	}
+	if svc != nil {
+		return lb.updateLoadBalancerService(ctx, svc, loadBalancer)
 	}
 
-	if useSWHC {
+	if shouldUseSWHC(ctx, lb.Service) {
 		svc, err := lb.CreateOrUpdateServiceWithHealthchecks(ctx, loadBalancer)
-		if err == nil && svc != nil {
-			return svc, nil
-		}
-		if err != nil && !isSWHCUnsupportedErr(err) {
+		if err != nil {
 			return nil, err
 		}
-	}
-
-	var svc *corev1.Service
-	svc, err = lb.GetLoadBalancerByName(ctx, loadBalancer.Name)
-	if svc != nil && err == nil {
-		return lb.updateLoadBalancerService(ctx, svc, loadBalancer)
+		if svc != nil {
+			return svc, nil
+		}
 	}
 
 	return lb.createLoadBalancerService(ctx, loadBalancer)
@@ -71,61 +69,27 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 		}
 	}()
 
-	if err := lb.DeleteServiceWithHealthchecksByName(ctx, name); err != nil && !isSWHCUnsupportedErr(err) {
-		return err
-	}
-
 	svc, err := lb.GetLoadBalancerByName(ctx, name)
 	if err != nil {
 		klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
 		return err
 	}
-	if svc == nil {
+	if svc != nil {
+		if err = lb.client.Delete(ctx, svc); err != nil {
+			if k8serrors.IsNotFound(err) {
+				return nil
+			}
+			klog.Errorf("Failed to delete LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
+			return err
+		}
 		return nil
 	}
-	if err = lb.client.Delete(ctx, svc); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return nil
-		}
-		klog.Errorf("Failed to delete LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
+
+	if err := lb.DeleteServiceWithHealthchecksByName(ctx, name); err != nil {
 		return err
 	}
+
 	return nil
-}
-
-func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *corev1.Service, nodes []*corev1.Node) ([]*corev1.Node, error) { // nolint:unparam
-	if svc.Spec.ExternalTrafficPolicy != corev1.ServiceExternalTrafficPolicyTypeLocal ||
-		svc.Spec.HealthCheckNodePort == 0 {
-		return nodes, nil
-	}
-
-	cs := &ComputeService{Service: lb.Service}
-	client := &http.Client{Timeout: 3 * time.Second}
-
-	healthy := make([]*corev1.Node, 0, len(nodes))
-	for _, n := range nodes {
-		vm, err := cs.GetVMByHostname(ctx, n.Name)
-		if err != nil {
-			continue
-		}
-		ips, _, err := cs.GetVMIPAddresses(vm)
-		if err != nil || len(ips) == 0 {
-			continue
-		}
-
-		url := "http://" + net.JoinHostPort(ips[0], strconv.Itoa(int(svc.Spec.HealthCheckNodePort))) + "/healthz"
-		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		resp, err := client.Do(req)
-		if err == nil && resp != nil && resp.StatusCode == http.StatusOK {
-			_ = resp.Body.Close()
-			healthy = append(healthy, n)
-			continue
-		}
-		if resp != nil {
-			_ = resp.Body.Close()
-		}
-	}
-	return healthy, nil
 }
 
 func (lb *LoadBalancerService) removeVMLabelsByKey(ctx context.Context, lbKey string) error {
@@ -205,4 +169,39 @@ func lbLabelKey(lbName string) string {
 		prittyfied = prittyfied[:max]
 	}
 	return DVPLoadBalancerLabelPrefix + prittyfied
+}
+
+func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *corev1.Service, nodes []*corev1.Node) ([]*corev1.Node, error) { // nolint:unparam
+	if svc.Spec.ExternalTrafficPolicy != corev1.ServiceExternalTrafficPolicyTypeLocal ||
+		svc.Spec.HealthCheckNodePort == 0 {
+		return nodes, nil
+	}
+
+	cs := &ComputeService{Service: lb.Service}
+	client := &http.Client{Timeout: 3 * time.Second}
+
+	healthy := make([]*corev1.Node, 0, len(nodes))
+	for _, n := range nodes {
+		vm, err := cs.GetVMByHostname(ctx, n.Name)
+		if err != nil {
+			continue
+		}
+		ips, _, err := cs.GetVMIPAddresses(vm)
+		if err != nil || len(ips) == 0 {
+			continue
+		}
+
+		url := "http://" + net.JoinHostPort(ips[0], strconv.Itoa(int(svc.Spec.HealthCheckNodePort))) + "/healthz"
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		resp, err := client.Do(req)
+		if err == nil && resp != nil && resp.StatusCode == http.StatusOK {
+			_ = resp.Body.Close()
+			healthy = append(healthy, n)
+			continue
+		}
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+	}
+	return healthy, nil
 }

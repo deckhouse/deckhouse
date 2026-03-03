@@ -34,39 +34,35 @@ var (
 	swhcCachedOK    bool
 )
 
-func shouldUseSWHC(ctx context.Context, svc *Service) (bool, error) {
+func shouldUseSWHC(ctx context.Context, svc *Service) bool {
 	now := time.Now()
 
 	swhcMu.Lock()
 	if !swhcCachedUntil.IsZero() && now.Before(swhcCachedUntil) {
 		ok := swhcCachedOK
 		swhcMu.Unlock()
-		return ok, nil
+		return ok
 	}
 	swhcMu.Unlock()
 
 	ok, err := detectSWHCResource(ctx, svc)
+	if err != nil {
+		ok = false
+	}
 
 	swhcMu.Lock()
 	swhcCachedUntil = now.Add(5 * time.Minute)
 	swhcCachedOK = ok
 	swhcMu.Unlock()
 
-	return ok, err
+	return ok
 }
 
 func detectSWHCResource(ctx context.Context, svc *Service) (bool, error) {
 	discovery := svc.clientset.Discovery()
 	res, err := discovery.ServerResourcesForGroupVersion("network.deckhouse.io/v1alpha1")
 	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			return false, nil
-		}
-		msg := strings.ToLower(err.Error())
-		if strings.Contains(msg, "the server could not find the requested resource") {
-			return false, nil
-		}
-		if strings.Contains(msg, "could not find the requested resource") {
+		if isSWHCUnsupportedErr(err) {
 			return false, nil
 		}
 		return false, err
@@ -83,6 +79,9 @@ func detectSWHCResource(ctx context.Context, svc *Service) (bool, error) {
 func isSWHCUnsupportedErr(err error) bool {
 	if err == nil {
 		return false
+	}
+	if k8serrors.IsNotFound(err) {
+		return true
 	}
 	msg := strings.ToLower(err.Error())
 	if strings.Contains(msg, "no matches for kind") {
