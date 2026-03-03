@@ -4,7 +4,7 @@ permalink: en/admin/configuration/access/authorization/ci_cd.html
 description: "Configure CI/CD access to Kubernetes API in Deckhouse: ServiceAccount, Basic Auth, and Token Exchange."
 ---
 
-Three methods are available for authenticating CI/CD pipelines to the Kubernetes API:
+The following methods are available for authenticating CI/CD pipelines in the Kubernetes API:
 - [ServiceAccount](#serviceaccount) — Kubernetes ServiceAccount token.
 - [Basic Auth](#basic-auth) — username and password via IdP.
 - [Token Exchange](#token-exchange) — exchange IdP token for Dex token.
@@ -13,16 +13,20 @@ Three methods are available for authenticating CI/CD pipelines to the Kubernetes
 
 ## ServiceAccount
 
-The ServiceAccount token is used directly for API authentication. No external IdP is required.
+The ServiceAccount token is used directly for API authentication. No external IdP is required. For ServiceAccount, you can create [long-lived tokens](#create-serviceaccount-and-a-long-lived-token) (without TTL, with the possibility of revocation or rotation) and [short-lived tokens](#short-lived-tokens).
 
 When multiple pipelines share a single ServiceAccount, audit logs will not contain information about specific pipelines.
 
 ### Prerequisites
 
+To configure token-based authentication for ServiceAccount, the following requirements must be met:
+
 - Cluster access with permissions to create ServiceAccounts and Secrets.
 - For external access: [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) or direct API access via VPN.
 
-### Create ServiceAccount and token
+### Create ServiceAccount and a long-lived token
+
+To create a ServiceAccount and token, use the command:
 
 ```shell
 d8 k create ns ci-deploy || true
@@ -53,7 +57,9 @@ The `kubernetes.io/service-account-token` Secret type is a legacy approach. The 
 
 For details on granting permissions, see [Granting permissions to users and service accounts](granting.html).
 
-[ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+Assign the necessary permissions to the ServiceAccount.
+
+For the current role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -73,7 +79,7 @@ EOF
 
 Available levels: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
 
-Experimental role model — [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
+For the experimental role model, use [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -113,6 +119,8 @@ d8 k -n d8-user-authn get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.
 
 ### Create kubeconfig
 
+Example of generating kubeconfig for a previously created ServiceAccount:
+
 ```shell
 export CLUSTER_NAME=my-cluster
 export USER_NAME=gitlab-runner-deploy
@@ -139,7 +147,7 @@ d8 k config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
 
 ### Short-lived tokens
 
-The TokenRequest API allows creating tokens with limited lifetime:
+The TokenRequest API allows creating tokens with limited lifetime. When creating such a token, specify the name of the ServiceAccount that needs to be granted access in the command (in the example — `gitlab-runner-deploy`):
 
 ```shell
 d8 k create token gitlab-runner-deploy -n ci-deploy --duration=1h
@@ -169,6 +177,8 @@ Only one DexProvider in the cluster can have `enableBasicAuth: true`.
 
 ### Prerequisites
 
+The following requirements must be met to configure Basic Auth:
+
 - [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) enabled.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) configured for IdP.
 
@@ -178,6 +188,8 @@ Add `enableBasicAuth: true` to DexProvider. For DexProvider configuration exampl
 
 ### Get API endpoint
 
+To get the API endpoint, use the command:
+
 ```shell
 API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
 echo "https://${API_HOST}"
@@ -185,13 +197,20 @@ echo "https://${API_HOST}"
 
 ### Verification
 
+To check access, use the command:
+
 ```shell
 curl -q -u "$K8S_USER:$K8S_PASSWORD" "https://${API_HOST}/version"
 ```
 
-`401` — invalid credentials or Basic Auth not enabled. `403` — authentication succeeded but RBAC denies access.
+Possible errors:
+
+- `401` — invalid credentials or Basic Auth not enabled.
+- `403` — authentication succeeded but RBAC denies access.
 
 ### Configure kubeconfig
+
+Example of kubeconfig configuration for Basic Auth:
 
 {% raw %}
 
@@ -219,6 +238,8 @@ current-context: default
 
 ### Use in GitLab CI
 
+Example of using Basic Auth in GitLab CI:
+
 {% raw %}
 
 ```yaml
@@ -245,6 +266,8 @@ DKP/Dex does not receive the user password. How `IDP_TOKEN` is obtained depends 
 
 ### Prerequisites
 
+The following requirements must be met to configure Token Exchange:
+
 - [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) enabled.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) configured as **OIDC type**.
 
@@ -253,6 +276,8 @@ Token exchange is guaranteed to work with OIDC connectors. For `type: GitLab` or
 {% endalert %}
 
 ### Create DexClient
+
+To create DexClient, use the command:
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -278,6 +303,8 @@ d8 k -n d8-user-authn get secret dex-client-ci-token-exchange -o jsonpath='{.dat
 **client_id** format: `dex-client-ci-token-exchange@d8-user-authn`.
 
 ### Get Dex and API URLs
+
+To get the Dex URL and API, use the following commands:
 
 ```shell
 DEX_HOST=$(d8 k -n d8-user-authn get ingress dex -o jsonpath='{.spec.rules[0].host}')
@@ -306,6 +333,8 @@ EOF
 
 ### Token exchange request
 
+Example of a token exchange request:
+
 ```shell
 RESPONSE=$(curl -q -s -X POST "https://${DEX_HOST}/token" \
   -u "${DEX_CLIENT_ID}:${DEX_CLIENT_SECRET}" \
@@ -331,6 +360,8 @@ If the API returns 401 with an audience error, use `audience:server:client_id:<e
 {% endalert %}
 
 ### GitLab CI
+
+Example of a token request for GitLab CI:
 
 {% raw %}
 
