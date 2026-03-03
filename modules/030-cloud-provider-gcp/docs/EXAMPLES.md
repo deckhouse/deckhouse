@@ -19,7 +19,7 @@ spec:
 
 To run virtual machine workloads (e.g., KVM-based VMs) inside GCP instances, enable nested virtualization.
 
-> **Warning.** Only supported on specific machine types. See [the GCP documentation](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types) for the list of compatible types.
+> Only supported on specific machine types. See [the GCP documentation](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types) for the list of compatible types.
 
 ```yaml
 apiVersion: deckhouse.io/v1
