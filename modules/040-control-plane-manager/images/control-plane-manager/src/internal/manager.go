@@ -30,6 +30,7 @@ import (
 
 	"control-plane-manager/internal/constants"
 	controlplaneconfiguration "control-plane-manager/internal/controllers/control-plane-configuration"
+	controlplanenode "control-plane-manager/internal/controllers/control-plane-node"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/klog/v2/textlogger"
@@ -123,6 +124,10 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 
 	if err = controlplaneconfiguration.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register controlplane controller: %w", err)
+	}
+
+	if err = controlplanenode.Register(runtimeManager); err != nil {
+		return nil, fmt.Errorf("register control-plane-node controller: %w", err)
 	}
 
 	return &Manager{
