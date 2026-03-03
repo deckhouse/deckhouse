@@ -43,7 +43,7 @@ lang: ru
 
 ## Мониторинг процесса обновления Kubernetes
 
-Модуль [control-plane-manager](/modules/control-plane-manager/) включает компонент update-observer, который даёт актуальную информацию о процессе обновления версии Kubernetes в кластере.
+Модуль [`control-plane-manager`](/modules/control-plane-manager/) включает компонент `update-observer`, который предоставляет актуальную информацию о процессе обновления Kubernetes в кластере.
 
 Update-observer:
 
