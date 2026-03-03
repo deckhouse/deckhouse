@@ -22,12 +22,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/golang/glog"
 )
 
-func (a *app) startPodWatcher(ctx context.Context, clientset *kubernetes.Clientset) cache.SharedIndexInformer {
+func (a *app) startPodWatcher(ctx context.Context) {
+	kubeConfig, err := rest.InClusterConfig()
+	if err != nil {
+		glog.Fatal(err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		glog.Fatal(err)
+	}
+
 	factory := informers.NewSharedInformerFactoryWithOptions(
 		clientset,
 		5*time.Minute,
@@ -73,7 +84,9 @@ func (a *app) startPodWatcher(ctx context.Context, clientset *kubernetes.Clients
 
 	a.kubeAPIOK.Store(true)
 	a.isReady.Store(true)
-	return podInformer
+	a.podIndexer = podInformer.GetIndexer()
+
+	return
 }
 
 func (a *app) syncPod(obj interface{}) {
@@ -85,10 +98,7 @@ func (a *app) syncPod(obj interface{}) {
 	containerIDs := getPodContainerIDs(pod)
 	removedIDs := a.updatePodContainers(string(pod.UID), containerIDs)
 	for _, containerID := range removedIDs {
-		if labels, ok := a.getTrackedLabels(containerID); ok {
-			a.kubernetesCounterVec.Delete(a.buildPrometheusLabels(labels))
-			a.deleteTrackedLabels(containerID)
-		}
+		a.deleteTrackedLabels(containerID)
 	}
 
 	for containerID, containerName := range containerIDs {
@@ -106,7 +116,7 @@ func (a *app) deletePod(obj interface{}) {
 
 	for _, containerID := range a.deletePodContainers(string(pod.UID)) {
 		if labels, ok := a.getTrackedLabels(containerID); ok {
-			a.kubernetesCounterVec.Delete(a.buildPrometheusLabels(labels))
+			a.markForCleanup(a.buildPrometheusLabels(labels))
 			a.deleteTrackedLabels(containerID)
 		}
 	}

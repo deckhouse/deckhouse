@@ -15,6 +15,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -27,7 +28,11 @@ func (a *app) startMetricsServer(metricsAddr string) {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/metrics", promhttp.Handler())
+	metricsHandler := promhttp.Handler()
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		metricsHandler.ServeHTTP(w, r)
+		a.flushPendingCleanup()
+	})
 
 	mux.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
 		if !a.isReady.Load() {
@@ -54,5 +59,7 @@ func (a *app) startMetricsServer(metricsAddr string) {
 		Handler:           mux,
 	}
 
-	glog.Warning(server.ListenAndServe())
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		glog.Fatalf("Metrics server failed: %v", err)
+	}
 }
