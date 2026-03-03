@@ -33,6 +33,7 @@ func (pc *Checker) CheckStaticNodeSystemRequirements(ctx context.Context) error 
 		log.DebugLn("System requirements check is skipped")
 		return nil
 	}
+	requirements := pc.getSystemRequirements()
 
 	ramKb, err := extractRAMCapacityFromNode(ctx, pc.nodeInterface)
 	if err != nil {
@@ -45,18 +46,18 @@ func (pc *Checker) CheckStaticNodeSystemRequirements(ctx context.Context) error 
 	}
 
 	failures := make([]string, 0)
-	if coresCount < minimumRequiredCPUCores {
+	if coresCount < requirements.cpuCores {
 		failures = append(failures, fmt.Sprintf(
 			" - System requirements mandate at least %d CPU(s) on the node, but it has %d",
-			minimumRequiredCPUCores,
+			requirements.cpuCores,
 			coresCount,
 		))
 	}
 
-	if ramKb < minimumRequiredMemoryMB*1024 {
+	if ramKb < requirements.memoryMB*1024 {
 		failures = append(failures, fmt.Sprintf(
 			" - System requirements mandate at least %d MiB of RAM on the node, but it has %d MiB",
-			minimumRequiredMemoryMB,
+			requirements.memoryMB,
 			ramKb/1024,
 		))
 	}
@@ -75,7 +76,10 @@ func extractRAMCapacityFromNode(ctx context.Context, sshCl node.Interface) (int,
 		return 0, fmt.Errorf("Failed to read MemTotal from /proc/meminfo: %w", err)
 	}
 
-	submatch := regexp.MustCompile(`^MemTotal:\s*(\d+)\s.B`).FindSubmatch(memInfo)
+	submatch := regexp.MustCompile(`(?m)^MemTotal:\s*(\d+)\s+kB`).FindSubmatch(memInfo)
+	if len(submatch) < 2 {
+		return 0, fmt.Errorf("Failed to parse MemTotal from /proc/meminfo: MemTotal line is missing")
+	}
 	ramKb, err := strconv.Atoi(string(submatch[1]))
 	if err != nil {
 		return 0, fmt.Errorf("Failed to parse MemTotal from /proc/meminfo: %w", err)
@@ -107,6 +111,9 @@ func logicalCoresCountFromCPUInfo(cpuinfo []byte) (int, error) {
 		}
 
 		field := strings.SplitN(line, ": ", 2)
+		if len(field) < 2 {
+			continue
+		}
 		if strings.TrimSpace(field[0]) == "processor" {
 			processors[strings.TrimSpace(field[1])] = struct{}{}
 		}
