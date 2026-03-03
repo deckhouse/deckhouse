@@ -98,7 +98,7 @@
                     width: 25px;
                     height: 20px;
                     margin-left: 6px;
-                    padding-left: 4px;
+                    padding-left: 3px;
                     background-image: url(/images/number-of-filters.svg);
                     background-repeat: no-repeat;
                     color: #fff;
@@ -134,12 +134,16 @@
                 outline: none;
                 width: 100%;
                 transition: all 0.3s ease;
-                color: #B2B8D9;
+                color: #222a5e;
                 font-family: "Open Sans";
                 font-size: 14px;
                 font-style: normal;
                 font-weight: 400;
                 line-height: normal;
+
+                &::placeholder {
+                    color: #B2B8D9;
+                }
             }
         }
 
@@ -319,10 +323,7 @@
                 color: #0064FF;
 
                 &:hover {
-                    border-color: #222a5e;
-                    background-image: url(/images/icons/reset_icon.svg);
-                    background-color: #f5f5fb;
-                    color: #C4CAD4;
+                    opacity: 0.7;
                 }
 
                 &:active {
