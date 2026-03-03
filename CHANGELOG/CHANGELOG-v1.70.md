@@ -2,7 +2,7 @@
 
 ## Know before update
 
-
+ - Dashboards and alerts based on the `falco_events` metric might be broken.
  - Deckhouse will not update if `ceph-csi` is enabled in the cluster. Use `csi-ceph` module.
  - Dhctl in commander mode will skip draining errors.
  - Reassembling all images.
@@ -161,6 +161,7 @@
  - **[openvpn]** Fixed condition of alert triggering for client certificate. [#13900](https://github.com/deckhouse/deckhouse/pull/13900)
  - **[openvpn]** Disabling openvpn verification in e2e-tests. [#13658](https://github.com/deckhouse/deckhouse/pull/13658)
  - **[openvpn]** Ciphers `BF-CBC` has been added to the options `data-ciphers-fallback`. [#13647](https://github.com/deckhouse/deckhouse/pull/13647)
+ - **[operator-trivy]** Add support anon registry creds for bdu updater. [#13855](https://github.com/deckhouse/deckhouse/pull/13855)
  - **[prometheus]** Fix fake longterm emptydir alert. [#14100](https://github.com/deckhouse/deckhouse/pull/14100)
  - **[prometheus]** Add headers field to values spec [#13823](https://github.com/deckhouse/deckhouse/pull/13823)
  - **[prometheus]** Improved caching of the long-range requests. [#13436](https://github.com/deckhouse/deckhouse/pull/13436)
@@ -168,6 +169,9 @@
  - **[prometheus]** Kube-rbac-proxy stale cache request timeout has been set. [#11986](https://github.com/deckhouse/deckhouse/pull/11986)
     All components using kube-rbac-proxy will be restarted.
  - **[registry-packages-proxy]** Fixed `registry-packages-proxy` CVE vulnerabilities. [#13307](https://github.com/deckhouse/deckhouse/pull/13307)
+ - **[runtime-audit-engine]** Improve memory footprint by switching to the stdlib memory allocator instead of jemalloc [#14688](https://github.com/deckhouse/deckhouse/pull/14688)
+ - **[runtime-audit-engine]** Fixed usage lib in `falco`. [#13475](https://github.com/deckhouse/deckhouse/pull/13475)
+ - **[runtime-audit-engine]** Fixed `falco` CVE vulnerabilities. [#13318](https://github.com/deckhouse/deckhouse/pull/13318)
  - **[service-with-healthchecks]** change port kube-rbac-proxy in agent DaemonSet [#13891](https://github.com/deckhouse/deckhouse/pull/13891)
  - **[upmeter]** Added a hook for replacing old sts, increase storage capacity, and scale down retention to 13 months. [#12809](https://github.com/deckhouse/deckhouse/pull/12809)
  - **[user-authn]** fix dex oidc connector insecureSkipVerify and rootCAData options [#14535](https://github.com/deckhouse/deckhouse/pull/14535)
@@ -204,6 +208,10 @@
  - **[openvpn]** The logic of clearing expired certificates has been changed. [#14103](https://github.com/deckhouse/deckhouse/pull/14103)
  - **[openvpn]** The logic of clearing expired certificates has been changed. [#14033](https://github.com/deckhouse/deckhouse/pull/14033)
  - **[openvpn]** Added e2e test for `OpenVPN`. [#13061](https://github.com/deckhouse/deckhouse/pull/13061)
+ - **[operator-trivy]** Set proxy env for updater and operator. [#13337](https://github.com/deckhouse/deckhouse/pull/13337)
+ - **[runtime-audit-engine]** Fixed CVE's: CVE-2025-30204, CVE-2025-29923, CVE-2025-22869, CVE-2025-22870, CVE-2025-22872, CVE-2025-22868, CVE-2025-8556, CVE-2025-54410, GHSA-fv92-fjc5-jj9h [#15113](https://github.com/deckhouse/deckhouse/pull/15113)
+ - **[runtime-audit-engine]** Limit memory consumption by falco containers [#14818](https://github.com/deckhouse/deckhouse/pull/14818)
+ - **[runtime-audit-engine]** Removed deprecated `falco_events` metric. [#13228](https://github.com/deckhouse/deckhouse/pull/13228)
  - **[runtime-audit-engine]** Update CI file. [#15410](https://github.com/deckhouse/deckhouse/pull/15410)
  - **[user-authz]** Fix CVE-2025-22868 [#15120](https://github.com/deckhouse/deckhouse/pull/15120)
 
