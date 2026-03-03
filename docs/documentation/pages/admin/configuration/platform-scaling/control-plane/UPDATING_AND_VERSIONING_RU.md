@@ -45,7 +45,7 @@ lang: ru
 
 Модуль [`control-plane-manager`](/modules/control-plane-manager/) включает компонент `update-observer`, который предоставляет актуальную информацию о процессе обновления Kubernetes в кластере.
 
-Update-observer:
+Компонент `update-observer`:
 
 - читает конфигурацию кластера из Secret `d8-cluster-configuration`;
 - отслеживает версии kubelet на всех узлах через `nodeInfo.kubeletVersion`;
