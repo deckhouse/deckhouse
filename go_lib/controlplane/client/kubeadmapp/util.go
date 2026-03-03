@@ -38,43 +38,6 @@ func ClientSetFromFile(path string) (clientset.Interface, error) {
 func MyNewKubernetesClient() (clientset.Interface, error) {
 	pathAdmin := filepath.Join(constants.KubernetesDir, constants.AdminKubeConfigFileName)
 
-	// if j.dryRun {
-	// 	dryRun := apiclient.NewDryRun()
-	// 	// For the dynamic dry-run client use this kubeconfig only if it exists.
-	// 	// That would happen presumably after TLS bootstrap.
-	// 	if _, err := os.Stat(pathAdmin); err == nil {
-	// 		if err := dryRun.WithKubeConfigFile(pathAdmin); err != nil {
-	// 			return nil, err
-	// 		}
-	// 	} else if j.tlsBootstrapCfg != nil {
-	// 		if err := dryRun.WithKubeConfig(j.tlsBootstrapCfg); err != nil {
-	// 			return nil, err
-	// 		}
-	// 	} else if j.cfg.Discovery.BootstrapToken != nil {
-	// 		insecureConfig := token.BuildInsecureBootstrapKubeConfig(j.cfg.Discovery.BootstrapToken.APIServerEndpoint)
-	// 		resetConfig, err := clientcmd.NewDefaultClientConfig(*insecureConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
-	// 		if err != nil {
-	// 			return nil, errors.Wrap(err, "failed to create API client configuration from kubeconfig")
-	// 		}
-	// 		if err := dryRun.WithRestConfig(resetConfig); err != nil {
-	// 			return nil, err
-	// 		}
-	// 	}
-
-	// 	dryRun.WithDefaultMarshalFunction().
-	// 		WithWriter(os.Stdout).
-	// 		AppendReactor(dryRun.GetClusterInfoReactor()).
-	// 		AppendReactor(dryRun.GetKubeadmConfigReactor()).
-	// 		AppendReactor(dryRun.GetKubeadmCertsReactor()).
-	// 		AppendReactor(dryRun.GetKubeProxyConfigReactor()).
-	// 		AppendReactor(dryRun.GetKubeletConfigReactor()).
-	// 		AppendReactor(dryRun.GetNodeReactor()).
-	// 		AppendReactor(dryRun.PatchNodeReactor())
-
-	// 	j.client = dryRun.FakeClient()
-	// 	return j.client, nil
-	// }
-
 	client, err := ClientSetFromFile(pathAdmin)
 	if err != nil {
 		return nil, errors.Wrap(err, "[preflight] couldn't create Kubernetes client")

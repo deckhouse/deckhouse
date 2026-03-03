@@ -207,10 +207,3 @@ func GetActiveTimeouts() *Timeouts {
 	defer timeoutMutex.RUnlock()
 	return activeTimeouts
 }
-
-// SetActiveTimeouts sets the active timeouts structure.
-func SetActiveTimeouts(timeouts *Timeouts) {
-	timeoutMutex.Lock()
-	activeTimeouts = timeouts.DeepCopy()
-	timeoutMutex.Unlock()
-}
