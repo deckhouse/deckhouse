@@ -52,10 +52,12 @@ func waitNamespaceAbsent(ctx context.Context, access kubernetes.Access, namespac
 	})
 }
 
+// queryEndpoint sends an authenticated GET request to the endpoint via insecure client.
 func queryEndpoint(access kubernetes.Access, endpoint string, timeout time.Duration) ([]byte, error) {
 	return queryEndpointWithHeaders(access, endpoint, timeout, nil)
 }
 
+// queryEndpointWithHeaders sends an authenticated GET request with custom headers.
 func queryEndpointWithHeaders(
 	access kubernetes.Access,
 	endpoint string,
@@ -76,6 +78,7 @@ func queryEndpointWithHeaders(
 	return body, nil
 }
 
+// decodeManifestToUnstructured parses a YAML manifest into an Unstructured object.
 func decodeManifestToUnstructured(manifest string) (*unstructured.Unstructured, error) {
 	dec := serializeryaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	obj := &unstructured.Unstructured{}
