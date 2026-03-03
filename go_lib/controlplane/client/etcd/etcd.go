@@ -577,7 +577,7 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 		CertificatesDir: "/etc/kubernetes/pki",
 	}
 
-	// etcdPeerAddress := GetPeerURL(endpoint)
+	etcdPeerAddress := GetPeerURL(endpoint)
 
 	var cluster []Member
 	var etcdClient *Client
@@ -595,17 +595,17 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	}
 	logger.Info(fmt.Sprintf("TEST-ETCD client: clusterStatus: %v", clusterStatus))
 
-	// logger.Info("[etcd] Adding etcd member: %s", etcdPeerAddress)
-	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
-	// if err != nil {
-	// 	return err
-	// }
+	logger.Info(fmt.Sprintf("[etcd] Adding etcd member: %s", etcdPeerAddress))
+	cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
+	if err != nil {
+		return err
+	}
 	cluster = []Member{
 		{Name: "borovets-multi-master-master-0", PeerURL: "https://10.241.32.26:2380"},
 		{Name: "borovets-multi-master-master-1", PeerURL: "https://10.241.36.19:2380"},
 		{Name: "borovets-multi-master-master-2", PeerURL: "https://10.241.44.16:2380"},
 	}
-	logger.Info("TEST-ETCD client: [etcd] Announced new etcd member joining to the existing etcd cluster")
+	logger.Info(fmt.Sprintf("TEST-ETCD client: [etcd] Announced new etcd member joining to the existing etcd cluster"))
 	logger.Info(fmt.Sprintf("TEST-ETCD client: Updated etcd member list: %v", cluster))
 	////////////////////////////////////////////
 
@@ -615,19 +615,19 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 		return err
 	}
 
-	// learnerID, err := etcdClient.GetMemberID(etcdPeerAddress)
-	// if err != nil {
-	// 	return err
-	// }
-	// err = etcdClient.MemberPromote(learnerID)
-	// if err != nil {
-	// 	return err
-	// }
+	learnerID, err := etcdClient.GetMemberID(etcdPeerAddress)
+	if err != nil {
+		return err
+	}
+	err = etcdClient.MemberPromote(learnerID)
+	if err != nil {
+		return err
+	}
 
-	// logger.Info("[etcd] Waiting for the new etcd member to join the cluster. This can take up to %v\n", etcdHealthyCheckInterval*etcdHealthyCheckRetries)
-	// if _, err := etcdClient.WaitForClusterAvailable(etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
-	// 	return err
-	// }
+	logger.Info(fmt.Sprintf("[etcd] Waiting for the new etcd member to join the cluster. This can take up to %v\n", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
+	if _, err := etcdClient.WaitForClusterAvailable(etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
+		return err
+	}
 
 	return nil
 }
