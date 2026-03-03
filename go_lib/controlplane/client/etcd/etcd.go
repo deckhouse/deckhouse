@@ -36,8 +36,6 @@ var logger = log.Default().Named("etcd")
 const etcdTimeout = 2 * time.Second
 
 const (
-	etcdVolumeName           = "etcd-data"
-	certsVolumeName          = "etcd-certs"
 	etcdHealthyCheckInterval = 5 * time.Second
 	etcdHealthyCheckRetries  = 8
 )
@@ -546,7 +544,7 @@ func InitCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *ku
 		CertificatesDir: "/etc/kubernetes/pki",
 	}
 
-	logger.Info("[etcd] Creating static Pod manifest for %q during init cluster", constants.Etcd)
+	logger.Info(fmt.Sprintf("[etcd] Creating static Pod manifest for %q during init cluster", constants.Etcd))
 
 	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, []Member{}); err != nil {
 		return err
@@ -562,12 +560,12 @@ func JoinCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *ku
 	}
 
 	///////////////////////////// test kubeClient
-	logger.Info("TEST-ETCD KUBECLIENT: kubeClient", kubeClient)
+	logger.Info(fmt.Sprintf("TEST-ETCD KUBECLIENT: kubeClient: %v", kubeClient))
 	pods, err := kubeClient.CoreV1().Pods("d8-chrony").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
-	logger.Info("TEST-ETCD KUBECLIENT: pods", pods)
+	logger.Info(fmt.Sprintf("TEST-ETCD KUBECLIENT: pods: %v", pods))
 	////////////////////////////////
 
 	config = &etcdconfig.EtcdConfig{
@@ -586,12 +584,12 @@ func JoinCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *ku
 	if err != nil {
 		return err
 	}
-	logger.Info("TEST-ETCD client: etcdClient", etcdClient)
+	logger.Info(fmt.Sprintf("TEST-ETCD client: etcdClient: %v", etcdClient))
 	clusterStatus, err := etcdClient.getClusterStatus()
 	if err != nil {
 		return err
 	}
-	logger.Info("TEST-ETCD client: clusterStatus", clusterStatus)
+	logger.Info(fmt.Sprintf("TEST-ETCD client: clusterStatus: %v", clusterStatus))
 
 	// logger.Info("[etcd] Adding etcd member: %s", etcdPeerAddress)
 	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
@@ -604,10 +602,10 @@ func JoinCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *ku
 		{Name: "borovets-multi-master-master-2", PeerURL: "https://10.241.44.16:2380"},
 	}
 	logger.Info("TEST-ETCD client: [etcd] Announced new etcd member joining to the existing etcd cluster")
-	logger.Info("TEST-ETCD client: Updated etcd member list: %v", cluster)
+	logger.Info(fmt.Sprintf("TEST-ETCD client: Updated etcd member list: %v", cluster))
 	////////////////////////////////////////////
 
-	logger.Info("[etcd] Creating static Pod manifest for %q during join cluster", constants.Etcd)
+	logger.Info(fmt.Sprintf("[etcd] Creating static Pod manifest for %q during join cluster", constants.Etcd))
 
 	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, cluster); err != nil {
 		return err
