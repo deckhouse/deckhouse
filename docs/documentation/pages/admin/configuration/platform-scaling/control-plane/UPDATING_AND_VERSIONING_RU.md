@@ -311,4 +311,3 @@ kind: ConfigMap
 metadata:
 ```
 
-
