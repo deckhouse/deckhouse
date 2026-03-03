@@ -159,8 +159,6 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
 			registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-
 			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-controller-manager")
 			ccmDeploy := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
 			ccmSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-controller-manager")
@@ -192,7 +190,12 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			// user story #1
+
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-aws")
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
 			expectedProviderRegistrationJSON := `{
         "additionalTags": {
           "tag": "zzz"
