@@ -61,7 +61,7 @@ spec:
                     Список дополнительных лейблов.
 
                     Подробно про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
-                nestedVirtualization:
+                enableNestedVirtualization:
                   description: |
                     Включить [вложенную виртуализацию](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview) на инстансе.
 

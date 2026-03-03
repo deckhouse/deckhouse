@@ -28,7 +28,7 @@ metadata:
   name: vm-nodes
 spec:
   machineType: n2-standard-8
-  nestedVirtualization: true
+  enableNestedVirtualization: true
 ```
 
 ## Adding additional disks

@@ -9,8 +9,8 @@ spec:
   region: {{ .Values.nodeManager.internal.cloudProvider.gcp.region | quote }}
   zone: {{ .zoneName }}
   machineType: {{ .nodeGroup.instanceClass.machineType }}
-{{- if hasKey .nodeGroup.instanceClass "nestedVirtualization" }}
-  {{- if .nodeGroup.instanceClass.nestedVirtualization }}
+{{- if hasKey .nodeGroup.instanceClass "enableNestedVirtualization" }}
+  {{- if .nodeGroup.instanceClass.enableNestedVirtualization }}
   advancedMachineFeatures:
     enableNestedVirtualization: true
   {{- end }}

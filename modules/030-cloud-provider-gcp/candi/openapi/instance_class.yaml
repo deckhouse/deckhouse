@@ -112,7 +112,7 @@ spec:
                   x-kubernetes-preserve-unknown-fields: true
                   additionalProperties:
                     type: string
-                nestedVirtualization:
+                enableNestedVirtualization:
                   description: |
                     Enables [nested virtualization](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview) on the instance.
 
