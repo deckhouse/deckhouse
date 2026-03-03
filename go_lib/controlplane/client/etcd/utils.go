@@ -97,12 +97,6 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 	return etcdEndpoints, len(podList.Items), nil
 }
 
-// GetClientURL creates an HTTPS URL that uses the configured advertise
-// address and client port for the API controller
-func GetClientURL(localEndpoint *kubeadmapi.APIEndpoint) string {
-	return "https://" + net.JoinHostPort(localEndpoint.AdvertiseAddress, strconv.Itoa(constants.EtcdListenClientPort))
-}
-
 // GetPeerURL creates an HTTPS URL that uses the configured advertise
 // address and peer port for the API controller
 func GetPeerURL(localEndpoint *kubeadmapi.APIEndpoint) string {
