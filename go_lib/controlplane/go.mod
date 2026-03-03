@@ -3,7 +3,7 @@ module github.com/deckhouse/deckhouse/go_lib/controlplane
 go 1.25.6
 
 require (
-	github.com/deckhouse/deckhouse/pkg/log v0.1.1
+	github.com/deckhouse/deckhouse/pkg/log v0.2.0
 	github.com/go-errors/errors v1.5.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
@@ -21,8 +21,8 @@ require (
 
 require (
 	github.com/DataDog/gostackparse v0.7.0 // indirect
-	github.com/coreos/go-semver v0.3.0 // indirect
-	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
+	github.com/coreos/go-semver v0.3.1 // indirect
+	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
