@@ -7,6 +7,12 @@ To apply an update for a specific module immediately, set the `modules.deckhouse
 
 This annotation applies the release immediately without waiting for the update window. The requirements from [`spec.requirements`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-requirements) still apply. If they are not met, the release will not be applied.
 
+Example of setting the annotation for the `console` module:
+
+```shell
+d8 k annotate mr console-v1.43.3 modules.deckhouse.io/apply-now="true"
+```
+
 Example resource with the annotation set:
 
 ```yaml

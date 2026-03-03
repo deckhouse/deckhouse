@@ -10,7 +10,7 @@ lang: ru
 Пример установки аннотации для модуля `console`:
 
 ```shell
-d8 k annotate mr console-v1.43.3 modules.deckhouse.io/apply-now: "true"
+d8 k annotate mr console-v1.43.3 modules.deckhouse.io/apply-now="true"
 ```
 
 Пример ресурса с установленной аннотацией:
