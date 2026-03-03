@@ -2,8 +2,106 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 11,
+  "version": 12,
   "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.35.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость path hijacking в resource detection (macOS/Darwin) в go.opentelemetry.io/otel/sdk не применима при эксплуатации deckhouse-tools web в типичном Linux-окружении.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-23831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость nil pointer dereference в Rekor (COSE entry type) не достигается в рамках использования deckhouse-tools web; уязвимый путь не вызывается при текущем сценарии работы.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24117"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость SSRF в endpoint /api/v1/index/retrieve Rekor не используется в функционале deckhouse-tools web; компонент не обращается к данному API.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24137"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/sigstore@v1.8.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал TUF клиента с уязвимым path traversal в sigstore не используется в рамках текущих сценариев deckhouse-tools web; кэширование из ненадёжных TUF-репозиториев не применяется.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25934"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость проверки целостности .idx/.pack в go-git требует подмены данных репозитория. В типичном использовании deckhouse-tools web источники репозиториев контролируются администратором, что снижает применимость атаки.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-26958"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/filippo.io/edwards25519@v1.1.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в MultiScalarMult (edwards25519) затрагивает редко используемый API; в deckhouse-tools web зависимость от edwards25519 транзитивная, уязвимый метод не вызывается.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-1229"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/cloudflare/circl@v1.6.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CombinedMult в ecc/p384 (circl) не затрагивает ECDH и ECDSA на используемых путях; в deckhouse-tools web задействованные сценарии не проходят через уязвимую функцию.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
     {
       "vulnerability": {
         "name": "CVE-2024-9675"
@@ -173,6 +271,6 @@
       "timestamp": "2025-11-13T00:00:00Z"
     }
   ],
-  "timestamp": "2025-10-09T14:21:14Z",
-  "last_updated": "2026-01-20T00:00:00Z"
+  "timestamp": "2026-03-04T12:00:00Z",
+  "last_updated": "2026-03-04T12:00:00Z"
 }

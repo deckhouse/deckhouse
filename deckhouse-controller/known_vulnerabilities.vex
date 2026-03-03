@@ -2,8 +2,50 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 11,
+  "version": 12,
   "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.36.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость path hijacking в resource detection (macOS/Darwin, ioreg) в go.opentelemetry.io/otel/sdk не применима при эксплуатации deckhouse-controller в Kubernetes на Linux. Уязвимый код выполняется только при определении host id на macOS.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47914"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
+        }
+      ],
+      "status": "affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость в SSH Agent (golang.org/x/crypto) связана с обработкой new identity requests. В deckhouse-controller уязвимый код не используется в контексте, допускающем контроль размера сообщений злоумышленником.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58181"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
+        }
+      ],
+      "status": "affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость в разборе GSSAPI authentication (golang.org/x/crypto) не эксплуатируется в рамках архитектуры deckhouse-controller из-за отсутствия контроля над числом механизмов аутентификации.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
     {
       "vulnerability": {
         "name": "CVE-2023-36308"
@@ -145,6 +187,6 @@
       "timestamp": "2026-02-17T12:00:00Z"
     }
   ],
-  "timestamp": "2026-02-17T12:00:00Z",
-  "last_updated": "2026-02-17T12:00:00Z"
+  "timestamp": "2026-03-04T12:00:00Z",
+  "last_updated": "2026-03-04T12:00:00Z"
 }
