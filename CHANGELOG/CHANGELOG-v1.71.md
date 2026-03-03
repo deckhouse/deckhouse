@@ -1,14 +1,5 @@
 # Changelog v1.71
 
-## [MALFORMED]
-
-
- - #13731 unknown section "operator-trivy"
- - #13874 unknown section "pod-reloader"
- - #14134 unknown section "operator-trivy"
- - #14160 unknown section "runtime-audit-engine"
- - #14673 unknown section "runtime-audit-engine"
-
 ## Know before update
 
 
@@ -124,6 +115,8 @@
  - **[openvpn]** Resolved false-positive OpenVPNServerCertificateExpired alert triggered when certificate Secret lacks expected label. [#14440](https://github.com/deckhouse/deckhouse/pull/14440)
  - **[openvpn]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[operator-prometheus]** Fixed CVEs vulnerabilities operator-prometheus. [#13792](https://github.com/deckhouse/deckhouse/pull/13792)
+ - **[operator-trivy]** Added startup probe to trivy-server. [#13731](https://github.com/deckhouse/deckhouse/pull/13731)
+ - **[pod-reloader]** Added probes for `kube-rbac-proxy` in pod-reloader components. [#13874](https://github.com/deckhouse/deckhouse/pull/13874)
  - **[prometheus]** fix securityContext indentation in the Prometheus main and longterm resources [#15116](https://github.com/deckhouse/deckhouse/pull/15116)
     main and longterm Prometheuses will be rollout-restarted
  - **[prometheus]** use the "deckhouse" ModuleSource as the default for the prompp ModuleConfig [#14612](https://github.com/deckhouse/deckhouse/pull/14612)
@@ -138,6 +131,8 @@
  - **[prometheus]** Fixed CVEs vulnerabilities  alerts receiver. [#13740](https://github.com/deckhouse/deckhouse/pull/13740)
  - **[prometheus]** Fixed CVEs vulnerabilities alertmanager. [#13739](https://github.com/deckhouse/deckhouse/pull/13739)
  - **[prometheus-metrics-adapter]** Fixed CVEs vulnerabilities prometheus-metrics-adapter. [#13794](https://github.com/deckhouse/deckhouse/pull/13794)
+ - **[runtime-audit-engine]** Improve memory footprint by switching to the stdlib memory allocator instead of jemalloc [#14673](https://github.com/deckhouse/deckhouse/pull/14673)
+ - **[runtime-audit-engine]** Added falco build fixes for CSE. [#14160](https://github.com/deckhouse/deckhouse/pull/14160)
  - **[service-with-healthchecks]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[service-with-healthchecks]** Fixed handling of pods without IP addresses and corrected initial readiness threshold evaluation. [#12390](https://github.com/deckhouse/deckhouse/pull/12390)
  - **[user-authn]** fix dex oidc connector insecureSkipVerify and rootCAData options [#14524](https://github.com/deckhouse/deckhouse/pull/14524)
