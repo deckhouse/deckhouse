@@ -1,12 +1,5 @@
 # Changelog v1.71
 
-## [MALFORMED]
-
-
- - #13874 unknown section "pod-reloader"
- - #14160 unknown section "runtime-audit-engine"
- - #14673 unknown section "runtime-audit-engine"
-
 ## Know before update
 
 
@@ -32,6 +25,7 @@
  - **[cni-cilium]** Added optional least-conn load-balancing algorithm for Services. [#13867](https://github.com/deckhouse/deckhouse/pull/13867)
  - **[cni-cilium]** Added a traffic encryption mode using WireGuard (`pod-to-pod` and `node-to-node`). [#13749](https://github.com/deckhouse/deckhouse/pull/13749)
  - **[cni-cilium]** Cni-cilium is updated to consider Virtualization Nesting Level when discovering tunnel-port value. [#9996](https://github.com/deckhouse/deckhouse/pull/9996)
+ - **[deckhouse-controller]** ignore migrate module if disabled [#16107](https://github.com/deckhouse/deckhouse/pull/16107)
  - **[deckhouse-controller]** add validation for module source changes [#14821](https://github.com/deckhouse/deckhouse/pull/14821)
  - **[deckhouse-controller]** Added user notify when module config has conflict. [#14296](https://github.com/deckhouse/deckhouse/pull/14296)
  - **[deckhouse-controller]** Optimized ModuleRelease update flow. [#14144](https://github.com/deckhouse/deckhouse/pull/14144)
@@ -86,6 +80,7 @@
  - **[cni-cilium]** fFxed bug in cilium 1.17 operator priority filter. [#13734](https://github.com/deckhouse/deckhouse/pull/13734)
  - **[control-plane-manager]** correct indentation of the 'certSANs' in v1beta4 template. [#14554](https://github.com/deckhouse/deckhouse/pull/14554)
  - **[control-plane-manager]** Used last_over_time to fetch the last available etcd DB size metric if it's missing. [#13682](https://github.com/deckhouse/deckhouse/pull/13682)
+ - **[deckhouse-controller]** fix deckhouse update accidentally minor skip [#16097](https://github.com/deckhouse/deckhouse/pull/16097)
  - **[deckhouse-controller]** Introduced a new mechanism for handling module readiness probes in Deckhouse. [#14226](https://github.com/deckhouse/deckhouse/pull/14226)
  - **[deckhouse-controller]** Added handling required module empty version for module dependency. [#14157](https://github.com/deckhouse/deckhouse/pull/14157)
  - **[deckhouse-controller]** Prevented module configuration errors from blocking the entire Deckhouse queue. [#13730](https://github.com/deckhouse/deckhouse/pull/13730)
@@ -100,6 +95,7 @@
  - **[extended-monitoring]** Fixed CVEs vulnerabilities image-availability-exporter. [#13802](https://github.com/deckhouse/deckhouse/pull/13802)
  - **[extended-monitoring]** Fixed CVEs vulnerabilities events-exporter. [#13801](https://github.com/deckhouse/deckhouse/pull/13801)
  - **[extended-monitoring]** Fixed CVEs vulnerabilities extended-monitoring-exporter. [#13798](https://github.com/deckhouse/deckhouse/pull/13798)
+ - **[istio]** Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway [#18116](https://github.com/deckhouse/deckhouse/pull/18116)
  - **[istio]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[kube-dns]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[kube-proxy]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
@@ -120,6 +116,7 @@
  - **[openvpn]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[operator-prometheus]** Fixed CVEs vulnerabilities operator-prometheus. [#13792](https://github.com/deckhouse/deckhouse/pull/13792)
  - **[operator-trivy]** Added startup probe to trivy-server. [#13731](https://github.com/deckhouse/deckhouse/pull/13731)
+ - **[pod-reloader]** Added probes for `kube-rbac-proxy` in pod-reloader components. [#13874](https://github.com/deckhouse/deckhouse/pull/13874)
  - **[prometheus]** fix securityContext indentation in the Prometheus main and longterm resources [#15116](https://github.com/deckhouse/deckhouse/pull/15116)
     main and longterm Prometheuses will be rollout-restarted
  - **[prometheus]** use the "deckhouse" ModuleSource as the default for the prompp ModuleConfig [#14612](https://github.com/deckhouse/deckhouse/pull/14612)
@@ -134,6 +131,8 @@
  - **[prometheus]** Fixed CVEs vulnerabilities  alerts receiver. [#13740](https://github.com/deckhouse/deckhouse/pull/13740)
  - **[prometheus]** Fixed CVEs vulnerabilities alertmanager. [#13739](https://github.com/deckhouse/deckhouse/pull/13739)
  - **[prometheus-metrics-adapter]** Fixed CVEs vulnerabilities prometheus-metrics-adapter. [#13794](https://github.com/deckhouse/deckhouse/pull/13794)
+ - **[runtime-audit-engine]** Improve memory footprint by switching to the stdlib memory allocator instead of jemalloc [#14673](https://github.com/deckhouse/deckhouse/pull/14673)
+ - **[runtime-audit-engine]** Added falco build fixes for CSE. [#14160](https://github.com/deckhouse/deckhouse/pull/14160)
  - **[service-with-healthchecks]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[service-with-healthchecks]** Fixed handling of pods without IP addresses and corrected initial readiness threshold evaluation. [#12390](https://github.com/deckhouse/deckhouse/pull/12390)
  - **[user-authn]** fix dex oidc connector insecureSkipVerify and rootCAData options [#14524](https://github.com/deckhouse/deckhouse/pull/14524)
