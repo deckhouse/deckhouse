@@ -75,7 +75,7 @@ apiVersions:
                     items:
                       type: string
                     description: |
-                      Список IP-адресов, которые нужно назначить интерфейсу.
+                      Список IP-адресов, которые нужно назначить интерфейсам (по адресу для каждого узла).
                   networkInterfaceNetmask:
                     type: string
                     description: |

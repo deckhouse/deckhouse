@@ -160,6 +160,15 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
       # <template: import_secrets>
       - name: Split repository name
         id: split

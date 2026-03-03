@@ -206,6 +206,11 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
+	s.logger.Debug("render nelm chart",
+		slog.String("path", pkg.GetPath()),
+		slog.String("name", pkg.GetName()),
+		slog.String("namespace", namespace))
+
 	// Render chart to get manifests for checksum calculation
 	renderedManifests, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		Path:        pkg.GetPath(),
