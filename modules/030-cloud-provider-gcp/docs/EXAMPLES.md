@@ -19,7 +19,7 @@ spec:
 
 To run virtual machine workloads (e.g., KVM-based VMs) inside GCP instances, enable nested virtualization.
 
-> **Note.** Only supported on specific machine types. See the [GCP documentation](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types) for the list of compatible types.
+> **Warning.** Only supported on specific machine types. See [the GCP documentation](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types) for the list of compatible types.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -33,7 +33,7 @@ spec:
 
 ## Adding additional disks
 
-To attach extra disks to instances (e.g., for LinStor, Ceph, NFS storage nodes):
+To attach additional disks to instances (for example, for LINSTOR, Ceph, NFS storage nodes, and similar solutions), specify them in the `additionalDisks` parameter:
 
 ```yaml
 apiVersion: deckhouse.io/v1
