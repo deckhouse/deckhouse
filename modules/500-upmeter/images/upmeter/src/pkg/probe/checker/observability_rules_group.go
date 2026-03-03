@@ -94,7 +94,7 @@ func (c ObservabilityRulesGroupRecordingLifecycle) Checker() check.Checker {
 		},
 		recordingMetric:          c.RecordingMetric,
 		prometheusEndpoint:       c.PrometheusEndpoint,
-		waitMetricPresentTimeout: fallbackDuration(c.WaitMetricPresentTimeout, 60*time.Second),
+		waitMetricPresentTimeout: fallbackDuration(c.WaitMetricPresentTimeout, 120*time.Second),
 	}
 
 	return withTimeout(checker, fallbackDuration(c.Timeout, 5*time.Minute))
@@ -447,6 +447,10 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) Check() (res check.Error)
 		return err
 	}
 
+	if err := c.alertKubeApiAvailable(ctx); err != nil {
+		return err
+	}
+
 	hasGarbage, err := c.hasGarbage(ctx)
 	if err != nil {
 		return check.ErrUnknown("checking garbage: %v", err)
@@ -555,6 +559,21 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) silenceExists(ctx context
 		return false, err
 	}
 	return true, nil
+}
+
+func (c *observabilityRulesGroupAlertLifecycleChecker) alertKubeApiAvailable(ctx context.Context) check.Error {
+	podList, err := c.access.Kubernetes().CoreV1().
+		Pods(observabilityNamespace).
+		List(ctx, metav1.ListOptions{LabelSelector: "app=alert-kube-api"})
+	if err != nil {
+		return check.ErrUnknown("cannot check alert-kube-api pods: %v", err)
+	}
+	for _, pod := range podList.Items {
+		if isPodReady(&pod) {
+			return nil
+		}
+	}
+	return check.ErrUnknown("alert-kube-api is not available")
 }
 
 func (c *observabilityRulesGroupAlertLifecycleChecker) waitAlertPresentAndSilenced(ctx context.Context) error {

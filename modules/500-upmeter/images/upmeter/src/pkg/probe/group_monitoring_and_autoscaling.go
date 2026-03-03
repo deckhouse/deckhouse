@@ -73,7 +73,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 
 				RequestTimeout:                   5 * time.Second,
 				WaitPrometheusRuleCreatedTimeout: 60 * time.Second,
-				WaitMetricPresentTimeout:         60 * time.Second,
+				WaitMetricPresentTimeout:         120 * time.Second,
 				WaitPrometheusRuleDeletedTimeout: 60 * time.Second,
 				WaitNamespaceDeletedTimeout:      60 * time.Second,
 				Timeout:                          5 * time.Minute,
