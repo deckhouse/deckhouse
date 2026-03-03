@@ -9,6 +9,6 @@ git:
 {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
-{{ include "candi_generic_imports" (dict "Env" $.Env) }}
+{{ include "candi_generic_imports" (dict "Env" .Env) }}
 
 ---
