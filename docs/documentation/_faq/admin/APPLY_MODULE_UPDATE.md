@@ -1,7 +1,5 @@
 ---
-title: How can I apply an update for a specific module immediately ?
-subsystems:
-  - deckhouse
+title: How can I apply an update for a specific module immediately?
 lang: en
 ---
 
