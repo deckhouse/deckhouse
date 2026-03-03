@@ -6,7 +6,7 @@ index a65a3855c..c5edcfe09 100644
  module k8s.io/ingress-nginx
  
 -go 1.22.6
-+go 1.25.7
++go 1.25
  
  require (
  	dario.cat/mergo v1.0.0
@@ -204,7 +204,7 @@ index ac741bb5a..f6cc0eb5a 100644
 +++ b/go.work
 @@ -1,4 +1,4 @@
 -go 1.22.6
-+go 1.25.7
++go 1.25
  
  use (
  	.
