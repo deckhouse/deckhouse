@@ -23,21 +23,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tidwall/gjson"
-
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 )
 
-const (
-	observabilityNamespace      = "d8-observability"
-	alertmanagerScopeHeaderName = "X-Scope-Orgid"
-)
+const observabilityNamespace = "d8-observability"
 
 var (
 	observabilityMetricsRulesGroupGVR = schema.GroupVersionResource{
@@ -54,6 +50,11 @@ var (
 		Group:    "monitoring.coreos.com",
 		Version:  "v1",
 		Resource: "prometheusrules",
+	}
+	observabilityAlertGVR = schema.GroupVersionResource{
+		Group:    "alerts.observability.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "observabilityalerts",
 	}
 )
 
@@ -114,8 +115,6 @@ type ObservabilityRulesGroupAlertLifecycle struct {
 	AlertLabelKey   string
 	AlertLabelValue string
 
-	AlertmanagerEndpoint string
-
 	RequestTimeout                   time.Duration
 	WaitPrometheusRuleCreatedTimeout time.Duration
 	WaitAlertPresentTimeout          time.Duration
@@ -143,7 +142,6 @@ func (c ObservabilityRulesGroupAlertLifecycle) Checker() check.Checker {
 		alertName:               c.AlertName,
 		alertLabelKey:           c.AlertLabelKey,
 		alertLabelValue:         c.AlertLabelValue,
-		alertmanagerEndpoint:    c.AlertmanagerEndpoint,
 		waitAlertPresentTimeout: fallbackDuration(c.WaitAlertPresentTimeout, 60*time.Second),
 	}
 
@@ -444,7 +442,6 @@ type observabilityRulesGroupAlertLifecycleChecker struct {
 	alertLabelKey   string
 	alertLabelValue string
 
-	alertmanagerEndpoint    string
 	waitAlertPresentTimeout time.Duration
 }
 
@@ -490,7 +487,7 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) Check() (res check.Error)
 		return lifecycleStepError("waiting for PrometheusRule creation", err)
 	}
 
-	if err := c.waitAlertPresentAndSilenced(); err != nil {
+	if err := c.waitAlertPresentAndSilenced(ctx); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: alert %q did not appear as silenced in Alertmanager", c.alertName)
 		}
@@ -568,29 +565,36 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) silenceExists(ctx context
 	return true, nil
 }
 
-func (c *observabilityRulesGroupAlertLifecycleChecker) waitAlertPresentAndSilenced() error {
+func (c *observabilityRulesGroupAlertLifecycleChecker) waitAlertPresentAndSilenced(ctx context.Context) error {
 	return waitForCondition(
 		c.waitAlertPresentTimeout,
 		pollingInterval(c.waitAlertPresentTimeout),
 		func() (bool, error) {
-			body, err := queryEndpointWithHeaders(
-				c.access,
-				c.alertmanagerEndpoint,
-				c.requestTimeout,
-				map[string]string{
-					alertmanagerScopeHeaderName: c.namespace,
-				},
-			)
+			list, err := c.access.Kubernetes().Dynamic().
+				Resource(observabilityAlertGVR).
+				Namespace(c.namespace).
+				List(ctx, metav1.ListOptions{})
 			if err != nil {
 				return false, err
 			}
 
-			found, silenced, err := hasAlertInAlertmanagerResponse(body, c.alertName, c.alertLabelKey, c.alertLabelValue)
-			if err != nil {
-				return false, err
+			for _, item := range list.Items {
+				labels, found, err := unstructured.NestedStringMap(item.Object, "alert", "labels")
+				if err != nil || !found {
+					continue
+				}
+				if labels["alertname"] != c.alertName {
+					continue
+				}
+				if labels[c.alertLabelKey] != c.alertLabelValue {
+					continue
+				}
+
+				silencedBy, _, _ := unstructured.NestedStringSlice(item.Object, "status", "silencedBy")
+				return len(silencedBy) > 0, nil
 			}
 
-			return found && silenced, nil
+			return false, nil
 		},
 	)
 }
@@ -633,32 +637,6 @@ func lifecycleStepError(step string, err error) check.Error {
 	}
 
 	return check.ErrUnknown("%s: %v", step, err)
-}
-
-func hasAlertInAlertmanagerResponse(body []byte, alertName, labelKey, labelValue string) (bool, bool, error) {
-	alerts := gjson.GetBytes(body, "list")
-	if !alerts.IsArray() {
-		return false, false, fmt.Errorf("cannot parse Alertmanager response: expected object with list array")
-	}
-
-	found := false
-	labelPath := "alert.labels." + labelKey
-
-	for _, item := range alerts.Array() {
-		if item.Get("alert.labels.alertname").String() != alertName {
-			continue
-		}
-		if item.Get(labelPath).String() != labelValue {
-			continue
-		}
-
-		found = true
-		silencedBy := item.Get("status.silencedBy")
-		if silencedBy.IsArray() && len(silencedBy.Array()) > 0 {
-			return true, true, nil
-		}
-	}
-	return found, false, nil
 }
 
 func expectedPrometheusRuleName(namespace, rulesGroupName string) string {
