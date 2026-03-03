@@ -84,7 +84,7 @@ properties:
         type: object
         default: {}
         properties:
-          enabled:
+          disabled:
             type: boolean
           subnetID:
             type: string

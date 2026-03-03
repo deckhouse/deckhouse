@@ -456,13 +456,13 @@ storageclass.kubernetes.io/is-default-class: "true"
 		})
 	})
 
-	Context("LoadBalancer enabled flag", func() {
+	Context("LoadBalancer disabled flag", func() {
 		Context("LoadBalancer disabled for k8s 1.32", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
-				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.loadBalancer.enabled", "false")
+				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.loadBalancer.disabled", "true")
 				f.HelmRender()
 			})
 
@@ -476,12 +476,12 @@ storageclass.kubernetes.io/is-default-class: "true"
 			})
 		})
 
-		Context("LoadBalancer enabled explicitly", func() {
+		Context("LoadBalancer enabled by default", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
-				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.loadBalancer.enabled", "true")
+				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.loadBalancer.disabled", "false")
 				f.HelmRender()
 			})
 

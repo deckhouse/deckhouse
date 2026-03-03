@@ -63,7 +63,7 @@ positive:
           tenantName: mytenantname
           region: myreg
         loadBalancer:
-          enabled: false
+          disabled: true
         podNetworkMode: VXLAN
         instances:
           sshKeyPairName: mysshkeypairname
