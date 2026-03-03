@@ -194,8 +194,9 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 
-			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-aws")
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-azure")
 			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+
 			expectedProviderRegistrationJSON := `{
         "additionalTags": {
           "tag": "zzz"
@@ -212,9 +213,28 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
         "urn": "zzz",
         "vnetName": "zzz"
       }`
+
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.azure").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			providerSpecificRegistrationData, err := base64.StdEncoding.DecodeString(providerSpecificRegistrationSecret.Field("data.azure").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(providerSpecificRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-azure-mcm")
+			Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
+			providerSpecificMCMSecretData := providerSpecificMCMSecret.Field("data").Map()
+			Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificMCMSecretData) == 3 ).To(BeTrue())
+			Expect(len(providerSpecificMCMSecretData["cloud-instance-manager/config-for-machine-controller-manager.yaml"].String()) > 0 ).To(BeTrue())
+
+			providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-azure-bashible")
+			Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
+			providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
+			Expect(providerSpecificBashibleSecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificBashibleSecretData) == 2 ).To(BeTrue())
+			Expect(len(providerSpecificBashibleSecretData["common-steps/all/000_discover_kubernetes_data_device_path.sh.tpl"].String()) > 0 ).To(BeTrue())
 
 			// user story #2
 			Expect(ccmVPA.Exists()).To(BeTrue())
