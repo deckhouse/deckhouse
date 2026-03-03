@@ -69,7 +69,7 @@ spec:
           {{- end }}
         {{- end }}
         {{- if eq .clusterConfiguration.clusterType "Cloud" }}
-        - --cloud-provider external
+        - --cloud-provider=external
         {{- end }}
       env:
         - name: GOGC

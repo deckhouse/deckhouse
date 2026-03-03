@@ -519,7 +519,7 @@ func testClusterTypesFull(t *testing.T) {
 					t.Fatalf("Failed to render kubeadm config: %v", err)
 				}
 				for name, manifest := range result {
-					cloudProviderFound := strings.Contains(manifest, "--cloud-provider")
+					cloudProviderFound := strings.Contains(manifest, "--cloud-provider=external")
 					if tt.expectCloud && !cloudProviderFound {
 						t.Errorf("Expected cloud-provider configuration not found in %s", name)
 					}
