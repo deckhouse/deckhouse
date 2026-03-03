@@ -67,7 +67,7 @@ func Test_ReadAuthConfig(t *testing.T) {
 }
 `
 		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
-		_, err := readAuthConfig("registry.example.com:8032/modules", cfg)
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "", "")
 		assert.NoError(t, err)
 	})
 
@@ -82,7 +82,7 @@ func Test_ReadAuthConfig(t *testing.T) {
 }
 `
 		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
-		_, err := readAuthConfig("registry.example.com:8032/modules", cfg)
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "", "")
 		assert.NoError(t, err)
 	})
 
@@ -97,7 +97,7 @@ func Test_ReadAuthConfig(t *testing.T) {
 }
 `
 		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
-		_, err := readAuthConfig("registry.example.com:8032/modules", cfg)
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "", "")
 		assert.Error(t, err)
 	})
 
@@ -112,8 +112,29 @@ func Test_ReadAuthConfig(t *testing.T) {
 }
 `
 		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
-		_, err := readAuthConfig("registry.example.com:8032/modules", cfg)
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "", "")
 		assert.Error(t, err)
+	})
+
+	t.Run("use credentials parse error", func(t *testing.T) {
+		_, err := readAuthConfig("registry.example.com:8032/modules", "", "", "", "dsdsd")
+		assert.EqualError(t, err, "decode credentials: illegal base64 data at input byte 4")
+	})
+
+	t.Run("use credentials parts error", func(t *testing.T) {
+		cr := base64.StdEncoding.EncodeToString([]byte("test"))
+		_, err := readAuthConfig("registry.example.com:8032/modules", "", "", "", cr)
+		assert.EqualError(t, err, "credentials must be in form of <username>:<password>")
+	})
+
+	t.Run("use credentials pass", func(t *testing.T) {
+		cr := base64.StdEncoding.EncodeToString([]byte("test:123"))
+		auth, err := readAuthConfig("registry.example.com:8032/modules", "", "", "", cr)
+		assert.NoError(t, err)
+		if assert.NotNil(t, auth) {
+			assert.Equal(t, auth.Username, "test")
+			assert.Equal(t, auth.Password, "123")
+		}
 	})
 }
 
@@ -167,7 +188,7 @@ func TestClient_Image(t *testing.T) {
 	t.Run("successful image fetch", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/test/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64),
+			WithDockerCfgAuth(testAuthBase64),
 			WithUserAgent("test-agent"))
 
 		require.NoError(t, err)
@@ -186,7 +207,7 @@ func TestClient_Image(t *testing.T) {
 	t.Run("image not found", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/test/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64))
+			WithDockerCfgAuth(testAuthBase64))
 
 		require.NoError(t, err)
 
@@ -198,8 +219,7 @@ func TestClient_Image(t *testing.T) {
 
 	t.Run("unauthorized access", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/test/repo",
-			WithInsecureSchema(true),
-			WithAuth(""))
+			WithInsecureSchema(true))
 
 		require.NoError(t, err)
 
@@ -212,7 +232,7 @@ func TestClient_Image(t *testing.T) {
 	t.Run("invalid reference", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/test/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64))
+			WithDockerCfgAuth(testAuthBase64))
 
 		require.NoError(t, err)
 
@@ -247,7 +267,7 @@ func TestClient_Image(t *testing.T) {
 
 		client, err := NewClient(registryHost+"/test/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64),
+			WithDockerCfgAuth(testAuthBase64),
 			WithCA(tmpCA))
 
 		require.NoError(t, err)
@@ -261,7 +281,7 @@ func TestClient_Image(t *testing.T) {
 	t.Run("with timeout", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/test/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64),
+			WithDockerCfgAuth(testAuthBase64),
 			WithTimeout(1*time.Second))
 
 		require.NoError(t, err)
@@ -281,7 +301,7 @@ func TestClient_Image(t *testing.T) {
 
 		client, err := NewClient(registryHost+"/test/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64))
+			WithDockerCfgAuth(testAuthBase64))
 
 		require.NoError(t, err)
 
@@ -293,7 +313,7 @@ func TestClient_Image(t *testing.T) {
 	t.Run("with cancelled context", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/test/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64))
+			WithDockerCfgAuth(testAuthBase64))
 
 		require.NoError(t, err)
 
@@ -308,7 +328,7 @@ func TestClient_Image(t *testing.T) {
 	t.Run("context should not be canceled inside function", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/test/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64),
+			WithDockerCfgAuth(testAuthBase64),
 			WithTimeout(1*time.Second))
 
 		require.NoError(t, err)
@@ -390,7 +410,7 @@ func TestClient_ListTags(t *testing.T) {
 	t.Run("successful tag listing", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/test/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64),
+			WithDockerCfgAuth(testAuthBase64),
 			WithUserAgent("test-agent"))
 
 		require.NoError(t, err)
@@ -405,7 +425,7 @@ func TestClient_ListTags(t *testing.T) {
 	t.Run("empty repository", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/empty/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64))
+			WithDockerCfgAuth(testAuthBase64))
 
 		require.NoError(t, err)
 
@@ -418,7 +438,7 @@ func TestClient_ListTags(t *testing.T) {
 	t.Run("repository not found", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/nonexistent/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64))
+			WithDockerCfgAuth(testAuthBase64))
 
 		require.NoError(t, err)
 
@@ -430,8 +450,7 @@ func TestClient_ListTags(t *testing.T) {
 
 	t.Run("unauthorized access", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/unauthorized/repo",
-			WithInsecureSchema(true),
-			WithAuth(""))
+			WithInsecureSchema(true))
 
 		require.NoError(t, err)
 
@@ -473,7 +492,7 @@ M/XWbYyHPEEhBR6l1lqRYLNQbGQDJph8aK4AZcxz
 
 		client, err := NewClient(registryHost+"/test/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64),
+			WithDockerCfgAuth(testAuthBase64),
 			WithCA(tmpCA))
 
 		require.NoError(t, err)
@@ -487,7 +506,7 @@ M/XWbYyHPEEhBR6l1lqRYLNQbGQDJph8aK4AZcxz
 	t.Run("with timeout", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/timeout/repo",
 			WithInsecureSchema(true),
-			WithAuth(testAuthBase64),
+			WithDockerCfgAuth(testAuthBase64),
 			WithTimeout(1*time.Second))
 
 		require.NoError(t, err)
@@ -506,7 +525,7 @@ M/XWbYyHPEEhBR6l1lqRYLNQbGQDJph8aK4AZcxz
 		os.Setenv("REGISTRY_TIMEOUT", "500ms")
 
 		client, err := NewClient(registryHost+"/timeout/repo",
-			WithAuth(testAuthBase64),
+			WithDockerCfgAuth(testAuthBase64),
 			WithInsecureSchema(true))
 
 		require.NoError(t, err)
@@ -518,7 +537,7 @@ M/XWbYyHPEEhBR6l1lqRYLNQbGQDJph8aK4AZcxz
 
 	t.Run("with cancelled context", func(t *testing.T) {
 		client, err := NewClient(registryHost+"/test/repo",
-			WithAuth(testAuthBase64),
+			WithDockerCfgAuth(testAuthBase64),
 			WithInsecureSchema(true))
 
 		require.NoError(t, err)

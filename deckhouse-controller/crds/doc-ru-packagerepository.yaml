@@ -20,6 +20,12 @@ spec:
                     dockerCfg:
                       description: |
                         Конфигурация Docker для аутентификации.
+                    login:
+                      description: |
+                        Логин для аутентификации в реестре.
+                    password:
+                      description: |
+                        Пароль для аутентификации в реестре.
                     repo:
                       description: |
                         Путь к репозиторию в реестре.
