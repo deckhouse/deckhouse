@@ -9,8 +9,4 @@ istio:
   fixes:
     - summary: Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway
       pull_request: https://github.com/deckhouse/deckhouse/pull/18116
-local-path-provisioner:
-  fixes:
-    - summary: Fix CVE in local-path-provisioner module
-      pull_request: https://github.com/deckhouse/deckhouse/pull/16042
 
