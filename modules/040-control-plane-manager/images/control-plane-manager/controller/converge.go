@@ -372,11 +372,11 @@ status: {}`
 		advertiseAddress := "10.12.1.32"
 		nodeName := "dkp-borovets-master-0"
 
-		if err := etcd.InitCluster([]byte(etcdManifest), "", &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName, false); err != nil {
+		if err := etcd.InitCluster([]byte(etcdManifest), nil, &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName); err != nil {
 			log.Error("failed to test etcd library InitCluster", log.Err(err))
 		}
 
-		if err := etcd.JoinCluster([]byte(etcdManifest), nil, &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName, false); err != nil {
+		if err := etcd.JoinCluster([]byte(etcdManifest), nil, &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName); err != nil {
 			log.Error("failed to test etcd library JoinCluster", log.Err(err))
 		}
 	}

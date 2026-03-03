@@ -660,9 +660,9 @@ func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints
 	return etcdClient, nil
 }
 
-func InitCluster(podManifest []byte, cfgPath string, endpoint *kubeadmapi.APIEndpoint, nodeName string, isDryRun bool) error {
+func InitCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string) error {
 
-	config := &etcdconfig.EtcdConfig{
+	config = &etcdconfig.EtcdConfig{
 		ManifestDir:       "/etc/kubernetes/manifests_mytest",
 		CertificatesDir:   "/etc/kubernetes/pki",
 		KubernetesVersion: "1.32.11",
