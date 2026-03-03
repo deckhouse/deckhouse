@@ -140,21 +140,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	logger.Info("ControlPlaneNode found")
 
-	checks := buildComponentChecks(controlPlaneNode)
+	states := buildComponentStates(controlPlaneNode)
 
-	if err := r.ensureOperationsExist(ctx, controlPlaneNode, checks, logger); err != nil {
+	if err := r.ensureOperationsExist(ctx, controlPlaneNode, states, logger); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusConditions(ctx, controlPlaneNode, checks); err != nil {
+	if err := r.updateStatusConditions(ctx, controlPlaneNode, states); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
 }
 
-// componentCheck holds spec and status checksums for a single component.
-type componentCheck struct {
+// componentState holds state (spec and status checksums) for a single component.
+type componentState struct {
 	component      controlplanev1alpha1.OperationComponent
 	specChecksum   string
 	statusChecksum string
@@ -162,7 +162,7 @@ type componentCheck struct {
 }
 
 // ensureOperationsExist compares spec vs status checksums and creates ControlPlaneOperation for each component where they differ.
-func (r *Reconciler) ensureOperationsExist(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, checks []componentCheck, logger *log.Logger) error {
+func (r *Reconciler) ensureOperationsExist(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, states []componentState, logger *log.Logger) error {
 	nodeName := cpn.Name
 
 	operations := &controlplanev1alpha1.ControlPlaneOperationList{}
@@ -184,34 +184,34 @@ func (r *Reconciler) ensureOperationsExist(ctx context.Context, cpn *controlplan
 		}
 	}
 
-	for _, check := range checks {
-		if check.specChecksum == check.statusChecksum {
+	for _, state := range states {
+		if state.specChecksum == state.statusChecksum {
 			continue
 		}
 
-		operationName := operationNameForNode(nodeName, check.component, check.specChecksum)
+		operationName := operationNameForNode(nodeName, state.component, state.specChecksum)
 		if ownerUID, exists := existingOwners[operationName]; exists && ownerUID == cpn.UID {
 			logger.Debug("ControlPlaneOperation already exists, skipping",
 				slog.String("operation", operationName),
-				slog.String("component", string(check.component)))
+				slog.String("component", string(state.component)))
 			continue
 		}
 
-		operation := newControlPlaneOperation(cpn, operationName, nodeName, check)
+		operation := newControlPlaneOperation(cpn, operationName, nodeName, state)
 
 		if err := r.client.Create(ctx, operation); err != nil {
 			return fmt.Errorf("create ControlPlaneOperation %s: %w", operationName, err)
 		}
 		logger.Info("ControlPlaneOperation created",
 			slog.String("operation", operationName),
-			slog.String("component", string(check.component)))
+			slog.String("component", string(state.component)))
 	}
 
 	return nil
 }
 
-func buildComponentChecks(cpn *controlplanev1alpha1.ControlPlaneNode) []componentCheck {
-	return []componentCheck{
+func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componentState {
+	return []componentState{
 		{
 			component:      controlplanev1alpha1.OperationComponentEtcd,
 			conditionType:  constants.ConditionEtcdReady,
@@ -251,13 +251,13 @@ func buildComponentChecks(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 	}
 }
 
-func newControlPlaneOperation(cpn *controlplanev1alpha1.ControlPlaneNode, operationName, nodeName string, check componentCheck) *controlplanev1alpha1.ControlPlaneOperation {
+func newControlPlaneOperation(cpn *controlplanev1alpha1.ControlPlaneNode, operationName, nodeName string, state componentState) *controlplanev1alpha1.ControlPlaneOperation {
 	return &controlplanev1alpha1.ControlPlaneOperation{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: operationName,
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey:  nodeName,
-				constants.ControlPlaneComponentLabelKey: string(check.component),
+				constants.ControlPlaneComponentLabelKey: string(state.component),
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -273,9 +273,9 @@ func newControlPlaneOperation(cpn *controlplanev1alpha1.ControlPlaneNode, operat
 		Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
 			ConfigVersion:   cpn.Spec.ConfigVersion,
 			NodeName:        nodeName,
-			Component:       check.component,
+			Component:       state.component,
 			Command:         controlplanev1alpha1.OperationCommandUpdate,
-			DesiredChecksum: check.specChecksum,
+			DesiredChecksum: state.specChecksum,
 			Approved:        false,
 		},
 	}
@@ -308,11 +308,11 @@ func newCondition(condType string, specChecksum, statusChecksum string, generati
 	}
 }
 
-func (r *Reconciler) updateStatusConditions(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, checks []componentCheck) error {
+func (r *Reconciler) updateStatusConditions(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, states []componentState) error {
 	original := cpn.DeepCopy()
 
-	for _, check := range checks {
-		cond := newCondition(check.conditionType, check.specChecksum, check.statusChecksum, cpn.Generation)
+	for _, state := range states {
+		cond := newCondition(state.conditionType, state.specChecksum, state.statusChecksum, cpn.Generation)
 		meta.SetStatusCondition(&cpn.Status.Conditions, cond)
 	}
 
