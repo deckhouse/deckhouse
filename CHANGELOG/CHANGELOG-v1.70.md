@@ -1,21 +1,5 @@
 # Changelog v1.70
 
-## [MALFORMED]
-
-
- - #12986 unknown section "operator-trivy"
- - #13228 unknown section "runtime-audit-engine"
- - #13318 unknown section "runtime-audit-engine"
- - #13337 unknown section "operator-trivy"
- - #13475 unknown section "runtime-audit-engine"
- - #13855 unknown section "operator-trivy"
- - #13974 unknown section "snapshot-controller"
- - #14688 unknown section "runtime-audit-engine"
- - #14818 unknown section "runtime-audit-engine"
- - #14984 unknown section "runtime-audit-engine"
- - #15113 unknown section "runtime-audit-engine"
- - #15410 unknown section "runtime-audit-engine"
-
 ## Know before update
 
 
@@ -220,5 +204,6 @@
  - **[openvpn]** The logic of clearing expired certificates has been changed. [#14103](https://github.com/deckhouse/deckhouse/pull/14103)
  - **[openvpn]** The logic of clearing expired certificates has been changed. [#14033](https://github.com/deckhouse/deckhouse/pull/14033)
  - **[openvpn]** Added e2e test for `OpenVPN`. [#13061](https://github.com/deckhouse/deckhouse/pull/13061)
+ - **[runtime-audit-engine]** Update CI file. [#15410](https://github.com/deckhouse/deckhouse/pull/15410)
  - **[user-authz]** Fix CVE-2025-22868 [#15120](https://github.com/deckhouse/deckhouse/pull/15120)
 
