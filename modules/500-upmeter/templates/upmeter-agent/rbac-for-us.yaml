@@ -47,6 +47,10 @@ rules:
   - apiGroups: ["monitoring.coreos.com"]
     resources: ["prometheusrules"]
     verbs: ["delete", "get", "list", "watch"]
+  # Observability check: query alerts via aggregated API
+  - apiGroups: ["alerts.observability.deckhouse.io"]
+    resources: ["observabilityalerts"]
+    verbs: ["get", "list"]
   # Metrics Adapter API
   - apiGroups: ["custom.metrics.k8s.io"]
     resources: ["metrics"]
