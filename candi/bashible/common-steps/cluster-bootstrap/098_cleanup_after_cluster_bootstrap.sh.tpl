@@ -13,6 +13,7 @@
 # limitations under the License.
 
 rm -rf /var/lib/bashible/kubeadm
+rm -rf /var/lib/bashible/control-plane
 bb-package-remove kubeadm
 
 rm -f /tmp/bootstrap.sh
