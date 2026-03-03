@@ -18,7 +18,6 @@ import (
 	"k8s.io/klog"
 
 	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/etcdconfig"
 	kubeadmapi "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapi"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
@@ -30,6 +29,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 )
+
+type EtcdConfig struct {
+	ManifestDir     string
+	CertificatesDir string
+}
 
 var logger = log.Default().Named("etcd")
 
@@ -515,7 +519,7 @@ func addMembersToPodManifest(podManifest []byte, initialCluster []Member) []byte
 	return []byte(podManifestString)
 }
 
-func prepareAndWriteEtcdStaticPod(podManifest []byte, config *etcdconfig.EtcdConfig, nodeName string, initialCluster []Member) error {
+func prepareAndWriteEtcdStaticPod(podManifest []byte, config *EtcdConfig, nodeName string, initialCluster []Member) error {
 	if len(initialCluster) > 0 {
 		podManifest = addMembersToPodManifest(podManifest, initialCluster)
 	}
@@ -537,9 +541,9 @@ func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints
 	return etcdClient, nil
 }
 
-func InitCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string) error {
+func InitCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string) error {
 
-	config = &etcdconfig.EtcdConfig{
+	config = &EtcdConfig{
 		ManifestDir:     "/etc/kubernetes/manifests_mytest",
 		CertificatesDir: "/etc/kubernetes/pki",
 	}
@@ -552,7 +556,7 @@ func InitCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *ku
 	return nil
 }
 
-func JoinCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string) error {
+func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string) error {
 
 	kubeClient, err := kubeadmapp.MyNewKubernetesClient()
 	if err != nil {
@@ -568,7 +572,7 @@ func JoinCluster(podManifest []byte, config *etcdconfig.EtcdConfig, endpoint *ku
 	logger.Info(fmt.Sprintf("TEST-ETCD KUBECLIENT: pods: %v", pods))
 	////////////////////////////////
 
-	config = &etcdconfig.EtcdConfig{
+	config = &EtcdConfig{
 		ManifestDir:     "/etc/kubernetes/manifests_mytest_join",
 		CertificatesDir: "/etc/kubernetes/pki",
 	}
