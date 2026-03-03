@@ -1,4 +1,4 @@
-global:
+global: 
   linters-settings:
     module:
       rules:
