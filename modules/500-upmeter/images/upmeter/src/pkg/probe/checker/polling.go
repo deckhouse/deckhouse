@@ -25,6 +25,7 @@ const maxConsecutiveErrors = 3
 
 var errConditionTimeout = errors.New("condition timeout")
 
+// waitForCondition polls condition until it returns true or the timeout expires.
 func waitForCondition(timeout, interval time.Duration, condition func() (bool, error)) error {
 	if interval <= 0 {
 		interval = time.Second

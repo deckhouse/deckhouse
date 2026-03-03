@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -148,6 +147,7 @@ func (c ObservabilityRulesGroupAlertLifecycle) Checker() check.Checker {
 	return withTimeout(checker, fallbackDuration(c.Timeout, 5*time.Minute))
 }
 
+// observabilityLifecycleBase contains shared fields and methods for observability lifecycle checkers.
 type observabilityLifecycleBase struct {
 	access           kubernetes.Access
 	preflightChecker check.Checker
@@ -313,21 +313,20 @@ func (b *observabilityLifecycleBase) hasBaseGarbage(ctx context.Context) (bool, 
 	return false, nil
 }
 
-// baseCleanup removes common resources and returns collected error strings.
-func (b *observabilityLifecycleBase) baseCleanup(ctx context.Context) []string {
-	errs := make([]string, 0)
+func (b *observabilityLifecycleBase) baseCleanup(ctx context.Context) error {
+	var errs []error
 
 	if err := b.deleteRulesGroup(ctx); err != nil && !apierrors.IsNotFound(err) {
-		errs = append(errs, fmt.Sprintf("delete ObservabilityMetricsRulesGroup: %v", err))
+		errs = append(errs, fmt.Errorf("delete ObservabilityMetricsRulesGroup: %w", err))
 	}
 	if err := b.deletePrometheusRule(ctx); err != nil && !apierrors.IsNotFound(err) {
-		errs = append(errs, fmt.Sprintf("delete PrometheusRule: %v", err))
+		errs = append(errs, fmt.Errorf("delete PrometheusRule: %w", err))
 	}
 	if err := b.waitPrometheusRuleAbsent(ctx); err != nil {
-		errs = append(errs, fmt.Sprintf("wait PrometheusRule deletion: %v", err))
+		errs = append(errs, fmt.Errorf("wait PrometheusRule deletion: %w", err))
 	}
 	if err := b.deleteNamespace(ctx); err != nil && !apierrors.IsNotFound(err) {
-		errs = append(errs, fmt.Sprintf("delete namespace: %v", err))
+		errs = append(errs, fmt.Errorf("delete namespace: %w", err))
 	}
 	if err := waitNamespaceAbsent(
 		ctx,
@@ -336,10 +335,10 @@ func (b *observabilityLifecycleBase) baseCleanup(ctx context.Context) []string {
 		b.waitNamespaceDeletedTimeout,
 		pollingInterval(b.waitNamespaceDeletedTimeout),
 	); err != nil {
-		errs = append(errs, fmt.Sprintf("wait namespace deletion: %v", err))
+		errs = append(errs, fmt.Errorf("wait namespace deletion: %w", err))
 	}
 
-	return errs
+	return errors.Join(errs...)
 }
 
 type observabilityRulesGroupRecordingLifecycleChecker struct {
@@ -410,11 +409,7 @@ func (c *observabilityRulesGroupRecordingLifecycleChecker) Check() (res check.Er
 }
 
 func (c *observabilityRulesGroupRecordingLifecycleChecker) cleanup(ctx context.Context) error {
-	errs := c.baseCleanup(ctx)
-	if len(errs) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errs, "; "))
+	return c.baseCleanup(ctx)
 }
 
 func (c *observabilityRulesGroupRecordingLifecycleChecker) waitRecordingMetricPresent() error {
@@ -516,15 +511,12 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) hasGarbage(ctx context.Co
 }
 
 func (c *observabilityRulesGroupAlertLifecycleChecker) cleanup(ctx context.Context) error {
-	errs := make([]string, 0)
+	baseErr := c.baseCleanup(ctx)
+	var silenceErr error
 	if err := c.deleteSilence(ctx); err != nil && !apierrors.IsNotFound(err) {
-		errs = append(errs, fmt.Sprintf("delete ObservabilityNotificationSilence: %v", err))
+		silenceErr = fmt.Errorf("delete ObservabilityNotificationSilence: %w", err)
 	}
-	errs = append(errs, c.baseCleanup(ctx)...)
-	if len(errs) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errs, "; "))
+	return errors.Join(baseErr, silenceErr)
 }
 
 func (c *observabilityRulesGroupAlertLifecycleChecker) createSilence(ctx context.Context) error {
@@ -599,6 +591,7 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) waitAlertPresentAndSilenc
 	)
 }
 
+// wrapCleanupResult combines the check result with cleanup error, preserving the original status.
 func wrapCleanupResult(res check.Error, cleanupErr error) check.Error {
 	if cleanupErr == nil {
 		return res
@@ -615,6 +608,7 @@ func wrapCleanupResult(res check.Error, cleanupErr error) check.Error {
 	return check.ErrUnknown("%s; cleanup: %v", res.Error(), cleanupErr)
 }
 
+// lifecycleStepError wraps an error with step context, mapping API errors to check.ErrFail.
 func lifecycleStepError(step string, err error) check.Error {
 	if err == nil {
 		return nil
