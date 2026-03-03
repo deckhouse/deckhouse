@@ -23,9 +23,9 @@ import (
 )
 
 const (
-	ConditionReasonRequirementsKubernetes status.ConditionReason = "RequirementsKubernetes"
-	ConditionReasonRequirementsDeckhouse  status.ConditionReason = "RequirementsDeckhouse"
-	ConditionReasonRequirementsBootstrap  status.ConditionReason = "RequirementsBootstrap"
+	ConditionReasonRequirementsKubernetes status.ConditionReason = "KubernetesRequirementsUnmet"
+	ConditionReasonRequirementsDeckhouse  status.ConditionReason = "DeckhouseRequirementsUnmet"
+	ConditionReasonRequirementsBootstrap  status.ConditionReason = "BootstrapRequirementsUnmet"
 )
 
 func newRequirementsErr(reason, msg string) error {

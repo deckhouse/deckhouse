@@ -41,7 +41,26 @@ func (s *Scheduler) Ch() <-chan Event {
 	return s.eventCh
 }
 
-// Stop closes the event channel. Call this when the scheduler is no longer needed.
+// send emits an event on eventCh unless the scheduler has been stopped.
+// Must be called with s.mu held (which all callers already guarantee).
+func (s *Scheduler) send(e Event) {
+	if s.eventCh == nil {
+		return
+	}
+
+	s.eventCh <- e
+}
+
+// Stop closes the event channel, preventing further events from being sent.
+// It is safe to call Stop concurrently and multiple times.
 func (s *Scheduler) Stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.eventCh == nil {
+		return
+	}
+
 	close(s.eventCh)
+	s.eventCh = nil
 }

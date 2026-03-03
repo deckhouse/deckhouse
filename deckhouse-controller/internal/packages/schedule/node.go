@@ -118,11 +118,15 @@ func (s *Scheduler) addNode(pkg Package) {
 	}
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
-		n.checkers = append(n.checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, ""))
+		n.checkers = append(n.checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, string(ConditionReasonRequirementsKubernetes)))
 	}
 
 	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		n.checkers = append(n.checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, ""))
+		n.checkers = append(n.checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, string(ConditionReasonRequirementsDeckhouse)))
+	}
+
+	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
+		n.checkers = append(n.checkers, condition.NewChecker(s.bootstrapCondition, string(ConditionReasonRequirementsBootstrap)))
 	}
 
 	if len(constraints.Dependencies) > 0 {
@@ -135,10 +139,6 @@ func (s *Scheduler) addNode(pkg Package) {
 		}
 
 		n.checkers = append(n.checkers, dependency.NewChecker(s.getVersion, deps))
-	}
-
-	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
-		n.checkers = append(n.checkers, condition.NewChecker(s.bootstrapCondition, ""))
 	}
 
 	s.nodes[pkg.GetName()] = n

@@ -211,7 +211,7 @@ func (s *Scheduler) Complete(completed string) {
 			enabled = append(enabled, n.name)
 		}
 
-		s.eventCh <- Event{Kind: EventGlobalDone, Enabled: enabled}
+		s.send(Event{Kind: EventGlobalDone, Enabled: enabled})
 	}
 
 	s.schedule()
@@ -287,7 +287,7 @@ func (s *Scheduler) schedule() {
 
 		if s.canSchedule(n) {
 			n.state = nodeStateScheduled
-			s.eventCh <- Event{Name: n.name, Kind: EventSchedule}
+			s.send(Event{Name: n.name, Kind: EventSchedule})
 		}
 	}
 }
@@ -306,7 +306,7 @@ func (s *Scheduler) compute() []*node {
 			changed = true
 
 			if !n.status.Enabled {
-				s.eventCh <- Event{Name: n.name, Kind: EventDisable}
+				s.send(Event{Name: n.name, Kind: EventDisable})
 			}
 		}
 	}

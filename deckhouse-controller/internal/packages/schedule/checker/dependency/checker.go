@@ -40,7 +40,7 @@ type Dependency struct {
 	Optional bool
 }
 
-type Getter func(version string) *semver.Version
+type Getter func(module string) *semver.Version
 
 func NewChecker(getter Getter, dependencies map[string]Dependency) *Checker {
 	return &Checker{
