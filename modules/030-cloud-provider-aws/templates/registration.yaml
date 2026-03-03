@@ -1,4 +1,4 @@
-{{- define "registration_data" }}
+{{- define "registration_values" }}
 {{- $context := index . 0 }}
 # obligatory
 type: {{ b64enc "aws" | quote }}
@@ -31,7 +31,7 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: Opaque
-data: {{- include "registration_data" (list . ) | nindent 2 }}
+data: {{- include "registration_values" (list . ) | nindent 2 }}
 ---
 apiVersion: v1
 kind: Secret
@@ -40,4 +40,4 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: Opaque
-data: {{- include "registration_data" (list . ) | nindent 2 }}
+data: {{- include "registration_values" (list . ) | nindent 2 }}
