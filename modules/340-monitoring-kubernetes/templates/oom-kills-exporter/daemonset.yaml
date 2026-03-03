@@ -89,8 +89,6 @@ spec:
           - name: kmsg
             mountPath: /dev/kmsg
             readOnly: true
-          - name: containerd
-            mountPath: /run/containerd/containerd.sock
         env:
         - name: NODE_NAME
           valueFrom:
@@ -156,7 +154,4 @@ spec:
       - name: kmsg
         hostPath:
           path: /dev/kmsg
-      - name: containerd
-        hostPath:
-          path: /run/containerd/containerd.sock
 {{- end }}

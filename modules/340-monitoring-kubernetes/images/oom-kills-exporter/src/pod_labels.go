@@ -22,10 +22,9 @@ import (
 
 func buildContainerLabelsFromPod(pod *corev1.Pod, containerName string) map[string]string {
 	return map[string]string{
-		"io.kubernetes.container.name": containerName,
-		"io.kubernetes.pod.namespace":  pod.Namespace,
-		"io.kubernetes.pod.uid":        string(pod.UID),
-		"io.kubernetes.pod.name":       pod.Name,
+		"container_name": containerName,
+		"namespace":      pod.Namespace,
+		"pod_name":       pod.Name,
 	}
 }
 

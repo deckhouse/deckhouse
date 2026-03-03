@@ -5,7 +5,7 @@
     for: 1m
     labels:
       severity_level: "4"
-      tier: cluster
+      tier: application
       d8_module: monitoring-kubernetes
       d8_component: oom-kills-exporter
     annotations:

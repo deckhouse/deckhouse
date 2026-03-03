@@ -46,27 +46,21 @@ func TestGetContainerIDFromLog(t *testing.T) {
 
 func TestPrometheusEnsureSeriesAndCount(t *testing.T) {
 	testApp := &app{
-		containerLabels: map[string]string{
-			"io.kubernetes.container.name": "container_name",
-			"io.kubernetes.pod.namespace":  "namespace",
-			"io.kubernetes.pod.uid":        "pod_uid",
-			"io.kubernetes.pod.name":       "pod_name",
-		},
-		nodeName: "test-node",
+		containerLabels: []string{"container_name", "namespace", "pod_name"},
+		nodeName:        "test-node",
 	}
 
 	counter := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "test_klog_pod_oomkill",
 		Help: "Test metric",
-	}, []string{"container_name", "namespace", "pod_uid", "pod_name", "node_name"})
+	}, []string{"container_name", "namespace", "pod_name", "node_name"})
 
 	testApp.kubernetesCounterVec = counter
 
 	labels := map[string]string{
-		"io.kubernetes.container.name": "test-container",
-		"io.kubernetes.pod.namespace":  "default",
-		"io.kubernetes.pod.uid":        "pod123",
-		"io.kubernetes.pod.name":       "mypod",
+		"container_name": "test-container",
+		"namespace":      "default",
+		"pod_name":       "mypod",
 	}
 
 	testApp.prometheusEnsureSeries(labels)
@@ -77,7 +71,6 @@ func TestPrometheusEnsureSeriesAndCount(t *testing.T) {
 	metric, err := testApp.kubernetesCounterVec.GetMetricWith(map[string]string{
 		"container_name": "test-container",
 		"namespace":      "default",
-		"pod_uid":        "pod123",
 		"pod_name":       "mypod",
 		"node_name":      "test-node",
 	})

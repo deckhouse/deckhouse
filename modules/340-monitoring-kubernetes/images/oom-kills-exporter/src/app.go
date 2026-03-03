@@ -15,7 +15,11 @@
 package main
 
 import (
+	"flag"
+	"maps"
+	"os"
 	"regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -35,7 +39,7 @@ type app struct {
 
 	kmesgRE              *regexp.Regexp
 	kubernetesCounterVec *prometheus.CounterVec
-	containerLabels      map[string]string
+	containerLabels      []string
 	nodeName             string
 
 	labelsMu            sync.RWMutex
@@ -44,6 +48,40 @@ type app struct {
 	podsMu            sync.Mutex
 	containerIDsByPod map[string]map[string]struct{}
 	podIndexer        cache.Indexer
+
+	pendingCleanupMu sync.Mutex
+	pendingCleanup   []prometheus.Labels
+
+	metricsAddr string
+}
+
+func newApp() *app {
+	var metricsAddr string
+	var newPattern string
+
+	flag.StringVar(&metricsAddr, "listen-address", "127.0.0.1:4205", "The address to listen on for HTTP requests.")
+	flag.StringVar(&newPattern, "regexp-pattern", defaultPattern, "Overwrites the default regexp pattern to match and extract Pod UID and Container ID.")
+	flag.Parse()
+
+	a := &app{
+		kmesgRE:         regexp.MustCompile(newPattern),
+		metricsAddr:     metricsAddr,
+		containerLabels: []string{"container_name", "namespace", "pod_name", "node_name"},
+	}
+
+	a.nodeName = os.Getenv("NODE_NAME")
+	if a.nodeName == "" {
+		a.nodeName = "unknown"
+	}
+
+	labels := prepareLabels(a)
+	a.kubernetesCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "klog_pod_oomkill",
+		Help: "Extract metrics for OOMKilled pods from kernel log",
+	}, labels)
+	prometheus.MustRegister(a.kubernetesCounterVec)
+
+	return a
 }
 
 func (a *app) prometheusEnsureSeries(containerLabels map[string]string) {
@@ -55,7 +93,7 @@ func (a *app) prometheusCount(containerLabels map[string]string) {
 
 	counter, err := a.kubernetesCounterVec.GetMetricWith(labels)
 	if err != nil {
-		glog.Warning(err)
+		glog.Warningf("Could not get metric with labels %v: %v", labels, err)
 		return
 	}
 
@@ -75,10 +113,7 @@ func (a *app) getContainerIDFromLog(log string) (podUID, containerID string) {
 }
 
 func (a *app) buildPrometheusLabels(containerLabels map[string]string) prometheus.Labels {
-	labels := make(prometheus.Labels)
-	for key, label := range a.containerLabels {
-		labels[label] = containerLabels[key]
-	}
+	labels := maps.Clone(containerLabels)
 	labels["node_name"] = a.nodeName
 	return labels
 }
@@ -95,14 +130,30 @@ func (a *app) trackContainerLabels(containerID string, labels map[string]string)
 func (a *app) getTrackedLabels(containerID string) (map[string]string, bool) {
 	a.labelsMu.RLock()
 	defer a.labelsMu.RUnlock()
+	var labels map[string]string
 	labels, ok := a.containerLabelsByID[containerID]
-	return labels, ok
+	return copyLabels(labels), ok
 }
 
 func (a *app) deleteTrackedLabels(containerID string) {
 	a.labelsMu.Lock()
 	defer a.labelsMu.Unlock()
 	delete(a.containerLabelsByID, containerID)
+}
+
+func (a *app) markForCleanup(labels prometheus.Labels) {
+	a.pendingCleanupMu.Lock()
+	defer a.pendingCleanupMu.Unlock()
+	a.pendingCleanup = append(a.pendingCleanup, labels)
+}
+
+func (a *app) flushPendingCleanup() {
+	a.pendingCleanupMu.Lock()
+	defer a.pendingCleanupMu.Unlock()
+	for _, labels := range a.pendingCleanup {
+		a.kubernetesCounterVec.Delete(labels)
+	}
+	a.pendingCleanup = nil
 }
 
 func copyLabels(labels map[string]string) map[string]string {
@@ -114,4 +165,13 @@ func copyLabels(labels map[string]string) map[string]string {
 		copied[key] = value
 	}
 	return copied
+}
+
+func prepareLabels(a *app) []string {
+	var labels []string
+	for _, label := range a.containerLabels {
+		labels = append(labels, strings.ReplaceAll(label, ".", "_"))
+	}
+
+	return labels
 }
