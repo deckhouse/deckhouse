@@ -36,7 +36,8 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeAll: &go_hook.OrderedConfig{Order: 15},
+	// Order 30: run after cloud provider discovery hooks (Order 25)
+	OnBeforeAll: &go_hook.OrderedConfig{Order: 30},
 
 	// watch for cluster's StorageClass changes
 	// in case, when there is NO StorageClass exists yet (which name in `global.defaultClusterStorageClass`)

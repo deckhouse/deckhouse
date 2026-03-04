@@ -89,6 +89,27 @@ reclaimPolicy: Delete
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 `
+
+	scCloudDefault = `
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: cloud-default
+  uid: '2c09c147-d4c8-4d48-b014-cb34d508eac5'
+  resourceVersion: '45632998'
+  creationTimestamp: '2023-06-01T06:11:25Z'
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: cloud-provider-dvp
+    meta.helm.sh/release-namespace: d8-system
+  selfLink: /apis/storage.k8s.io/v1/storageclasses/cloud-default
+provisioner: test.csi
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+`
 )
 
 var _ = Describe("Global hooks :: default_storage_class_name_test ::", func() {
@@ -258,10 +279,10 @@ var _ = Describe("Global hooks :: default_storage_class_name_test ::", func() {
 
 	Context("User NOT set global.defaultClusterStorageClass but cloud provider discovered default", func() {
 		BeforeEach(func() {
-			e.BindingContexts.Set(e.KubeStateSet(scDefault + scNonDefault))
+			e.BindingContexts.Set(e.KubeStateSet(scDefault + scNonDefault + scCloudDefault))
 
 			// create required storage classes in fake k8s cluster
-			for _, scYaml := range []string{scDefault, scNonDefault} {
+			for _, scYaml := range []string{scDefault, scNonDefault, scCloudDefault} {
 				var sc storage.StorageClass
 				_ = yaml.Unmarshal([]byte(scYaml), &sc)
 				_, err := dependency.TestDC.MustGetK8sClient().
@@ -271,23 +292,6 @@ var _ = Describe("Global hooks :: default_storage_class_name_test ::", func() {
 
 				Expect(err).To(BeNil())
 			}
-
-			// Create cloud-default storage class
-			cloudDefaultSC := `
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: cloud-default
-provisioner: test.csi
-reclaimPolicy: Delete
-`
-			var sc storage.StorageClass
-			_ = yaml.Unmarshal([]byte(cloudDefaultSC), &sc)
-			_, err := dependency.TestDC.MustGetK8sClient().
-				StorageV1().
-				StorageClasses().
-				Create(context.TODO(), &sc, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
 
 			e.RunHook()
 		})
