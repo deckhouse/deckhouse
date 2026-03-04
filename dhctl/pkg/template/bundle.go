@@ -104,6 +104,10 @@ func PrepareBundle(
 		return err
 	}
 
+	if err := PrepareControlPlaneManifests(templateController, kubeadmData); err != nil {
+		return err
+	}
+
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
 	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
