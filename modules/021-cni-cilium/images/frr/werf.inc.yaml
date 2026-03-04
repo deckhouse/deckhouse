@@ -8,7 +8,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch docker/{{ $frrVersion }} $(cat /run/secrets/SOURCE_REPO)/FRRouting/frr.git /src/rff
+  - git clone --depth 1 --branch frr-{{ $frrVersion }} $(cat /run/secrets/SOURCE_REPO)/FRRouting/frr.git /src/frr
   - cd /src/frr
   - echo $(git rev-parse --short=10 HEAD) > .GITREV
   - rm -rf /src/frr/.git
