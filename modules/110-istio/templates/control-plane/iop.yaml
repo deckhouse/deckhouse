@@ -128,7 +128,6 @@ spec:
       configValidation: false      # to deploy the ValidatingWebhookConfiguration resources by D8
       operatorManageWebhooks: true # to deploy the MutatingWebhookConfiguration resources by D8
       istioNamespace: d8-{{ $.Chart.Name }}
-      createClusterRoleBinding: {{ if (semverCompare "< 1.22.0" $fullVersion) }}false{{ else }}true{{ end }}
       meshID: d8-istio-mesh
       network: {{ include "istioNetworkName" $ }}
       multiCluster:
