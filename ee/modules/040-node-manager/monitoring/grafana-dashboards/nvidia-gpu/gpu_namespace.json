@@ -169,7 +169,7 @@
                 "value": [
                   {
                     "title": "",
-                    "url": "/d/gpu-namespace-pods?var-pod=${__data.fields.pod}&${namespace:queryparam}"
+                    "url": "/d/gpu-namespace-pod?var-pod=${__data.fields.pod}&${namespace:queryparam}"
                   }
                 ]
               }
