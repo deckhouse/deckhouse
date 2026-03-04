@@ -1,16 +1,35 @@
 {{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-25" $ ) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/ztunnel/bin/ztunnel
     to: /usr/local/bin/ztunnel
     before: install
+  - image: libs/glibc-v2.41
+    add: /lib64
+    to: /lib64
+    includePaths:
+    - libc.so.6
+    - libm.so.6
+    - ld-linux-x86-64.so.2
+    before: install
+  - image: libs/xz-v5.8.1
+    add: /usr/lib
+    to: /lib64
+    includePaths:
+    - libc.so
+    before: install
+  - image: tools/gcc-gnu-releases/gcc-14.2.0
+    add: /usr/lib/libgcc_s.so.1
+    to: /lib64/libgcc_s.so.1
+    before: install
 imageSpec:
   config:
     user: "1337:1337"
-    env: { "ISTIO_META_ISTIO_VERSION": "{{ $istioVersion }}" }
+    env:  
+      ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
     entrypoint: ["/usr/local/bin/ztunnel"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -39,11 +58,10 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/ztunnel.git /src/ztunnel
-  - rm -rf /src/ztunnel/.git
+git:
+- url: {{ .SOURCE_REPO }}/istio/ztunnel
+  tag: {{ $istioVersion }}
+  to: /src/ztunnel
+  excludePaths: 
+  - .git
 ---
