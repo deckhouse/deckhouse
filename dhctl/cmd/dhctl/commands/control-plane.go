@@ -62,6 +62,10 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
 
+		if err := kubernetes.CheckDeckhouseVersionCompatibility(ctx, kubeCl, kubernetes.DefaultVersionCheckOptions()); err != nil {
+			return err
+		}
+
 		checker := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl))
 		ready, err := checker.IsReady(ctx, app.ControlPlaneHostname)
 		if err != nil {
@@ -107,6 +111,10 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 		err = kubeCl.Init(client.AppKubernetesInitParams())
 		if err != nil {
 			return fmt.Errorf("open kubernetes connection: %v", err)
+		}
+
+		if err := kubernetes.CheckDeckhouseVersionCompatibility(ctx, kubeCl, kubernetes.DefaultVersionCheckOptions()); err != nil {
+			return err
 		}
 
 		nodeToHostForChecks := map[string]string{app.ControlPlaneHostname: app.ControlPlaneIP}
