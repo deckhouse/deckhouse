@@ -18,11 +18,11 @@ git:
   to: /src/kiali
   excludePaths: 
   - frontend
-- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
-  tag: {{ $kialiVersion }}
-  to: /src/kial-frontend-assets
-  excludePaths: 
-  - frontend
+#- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
+#  tag: {{ $kialiVersion }}
+#  to: /src/kial-frontend-assets
+#  excludePaths: 
+#  - frontend
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   stageDependencies:
@@ -35,6 +35,8 @@ shell:
   - git apply --verbose -p1 --directory=/src/istio < /patches/003-istio-server_fmtText.patch
 
   - git apply --verbose -p1 --directory=/src/kiali < /patches/001-kiali-go-mod.patch
+  
+  - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali-frontend-assets.git /src/kial-frontend-assets/
 
   - rm -rf /src/istio/.git
   - rm -rf /src/kiali/.git
