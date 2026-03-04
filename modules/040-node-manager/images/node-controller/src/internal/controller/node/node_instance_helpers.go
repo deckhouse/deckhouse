@@ -20,13 +20,15 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *NodeReconciler) deleteStaticInstanceIfExists(ctx context.Context, name string) (bool, error) {
+func (r *NodeReconciler) deleteNodeBasedInstanceIfExists(ctx context.Context, name string) (bool, error) {
 	instance := &deckhousev1alpha2.Instance{}
 	if err := r.Get(ctx, types.NamespacedName{Name: name}, instance); err != nil {
 		if client.IgnoreNotFound(err) == nil {
@@ -50,21 +52,11 @@ func (r *NodeReconciler) deleteStaticInstanceIfExists(ctx context.Context, name 
 	return true, nil
 }
 
-func (r *NodeReconciler) setInstancePhase(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-	phase deckhousev1alpha2.InstancePhase,
-) error {
-	if instance.Status.Phase == phase {
-		return nil
+func IsStaticNode(node *corev1.Node) bool {
+	if _, hasCAPIMachineAnnotation := node.Annotations[capiMachineAnnotationKey]; hasCAPIMachineAnnotation {
+		return false
 	}
 
-	updated := instance.DeepCopy()
-	updated.Status.Phase = phase
-	log.FromContext(ctx).V(4).Info("tick", "op", "node.instance.phase.patch")
-	if err := r.Status().Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
-		return fmt.Errorf("patch instance %q phase to %q: %w", instance.Name, phase, err)
-	}
-
-	return nil
+	nodeType := node.Labels[nodeTypeLabelKey]
+	return nodeType == staticNodeTypeValue || nodeType == cloudPermanentNodeTypeValue
 }

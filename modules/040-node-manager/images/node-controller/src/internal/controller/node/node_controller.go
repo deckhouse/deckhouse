@@ -19,6 +19,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"time"
 
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/controller/common"
@@ -53,6 +54,7 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx).WithValues("node", req.Name)
 	log.V(4).Info("tick", "op", "node.reconcile.start")
+	result := ctrl.Result{RequeueAfter: time.Minute}
 
 	node := &corev1.Node{}
 	if err := r.Get(ctx, req.NamespacedName, node); err != nil {
@@ -60,13 +62,13 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 
-		deleted, err := r.deleteStaticInstanceIfExists(ctx, req.Name)
+		deleted, err := r.deleteNodeBasedInstanceIfExists(ctx, req.Name)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
 		log.V(1).Info("node not found, static instance delete handled", "instance", req.Name, "deleted", deleted)
-		return ctrl.Result{}, nil
+		return result, nil
 	}
 
 	if IsStaticNode(node) {
@@ -77,14 +79,14 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := r.setInstancePhase(ctx, instance, deckhousev1alpha2.InstancePhaseRunning); err != nil {
+		if err := common.SetInstancePhase(ctx, r.Client, instance, deckhousev1alpha2.InstancePhaseRunning); err != nil {
 			return ctrl.Result{}, err
 		}
 
 		log.V(1).Info("instance ensured for static node")
-		return ctrl.Result{}, nil
+		return result, nil
 	}
 
 	log.V(1).Info("node is not static, skipping")
-	return ctrl.Result{}, nil
+	return result, nil
 }

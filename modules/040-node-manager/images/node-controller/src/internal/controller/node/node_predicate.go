@@ -27,6 +27,7 @@ const (
 	nodeTypeLabelKey            = "node.deckhouse.io/type"
 	staticNodeTypeValue         = "Static"
 	cloudPermanentNodeTypeValue = "CloudPermanent"
+	capiMachineAnnotationKey    = "cluster.x-k8s.io/machine"
 )
 
 func nodePredicate() predicate.Predicate {
@@ -50,9 +51,4 @@ func nodePredicate() predicate.Predicate {
 			return !apiequality.Semantic.DeepEqual(oldNode.Labels, newNode.Labels)
 		},
 	}
-}
-
-func IsStaticNode(node *corev1.Node) bool {
-	nodeType := node.Labels[nodeTypeLabelKey]
-	return nodeType == staticNodeTypeValue || nodeType == cloudPermanentNodeTypeValue
 }

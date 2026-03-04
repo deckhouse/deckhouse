@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func EnsureInstanceExists(
@@ -82,4 +83,24 @@ func GetInstanceConditionByType(
 	}
 
 	return deckhousev1alpha2.InstanceCondition{}, false
+}
+
+func SetInstancePhase(
+	ctx context.Context,
+	c client.Client,
+	instance *deckhousev1alpha2.Instance,
+	phase deckhousev1alpha2.InstancePhase,
+) error {
+	if instance.Status.Phase == phase {
+		return nil
+	}
+
+	updated := instance.DeepCopy()
+	updated.Status.Phase = phase
+	log.FromContext(ctx).V(4).Info("tick", "op", "instance.phase.patch")
+	if err := c.Status().Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
+		return fmt.Errorf("patch instance %q phase to %q: %w", instance.Name, phase, err)
+	}
+
+	return nil
 }
