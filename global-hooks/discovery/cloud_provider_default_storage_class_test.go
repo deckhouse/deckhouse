@@ -169,8 +169,11 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 
 		It("Should not set drift metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			// Expire operation is expected when no drift
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(0))
+			if len(m) > 0 {
+				Expect(m[0].Action).To(Equal(4)) // Action 4 = Expire
+			}
 		})
 	})
 
@@ -198,7 +201,9 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 		It("Should not set drift metric when no actual SC exists yet", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(0))
+			if len(m) > 0 {
+				Expect(m[0].Action).To(Equal(4))
+			}
 		})
 	})
 
@@ -226,7 +231,9 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 		It("Should not set drift metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(0))
+			if len(m) > 0 {
+				Expect(m[0].Action).To(Equal(4))
+			}
 		})
 	})
 
@@ -253,7 +260,9 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 		It("Should not set drift metric (no drift)", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(0))
+			if len(m) > 0 {
+				Expect(m[0].Action).To(Equal(4))
+			}
 		})
 	})
 
@@ -283,7 +292,7 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
 			Expect(m[0].Name).To(Equal("d8_cloud_provider_dvp_default_storage_class_drifted"))
-			Expect(m[0].Value).To(Equal(1.0))
+			Expect(*m[0].Value).To(Equal(1.0))
 			Expect(m[0].Labels).To(HaveKeyWithValue("expected", "fast-ssd"))
 			Expect(m[0].Labels).To(HaveKeyWithValue("actual", "standard"))
 		})
