@@ -42,9 +42,9 @@ shell:
   install:
   - chown -R builder /pkgs /src
   - cd /src/libyang
-  - sudo -u builder abuild checksum
-  - sudo -u builder git init
-  - sudo -u builder abuild -r -P /pkgs/apk
+  - su builder -c 'abuild checksum'
+  - su builder -c 'git init'
+  - su builder -c 'abuild -r -P /pkgs/apk'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-source-builder
 fromImage: builder/alpine
@@ -101,9 +101,9 @@ shell:
   - find /pkgs/apk -type f -name APKINDEX.tar.gz -delete
   - chown -R builder /dist /pkgs
   - cd /dist
-  - sudo -u builder abuild checksum
-  - sudo -u builder git init
-  - sudo -u builder abuild -r -P /pkgs/apk
+  - su builder -c 'abuild checksum'
+  - su builder -c 'git init'
+  - su builder -c 'abuild -r -P /pkgs/apk'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-final-origin
 fromImage: builder/alpine
