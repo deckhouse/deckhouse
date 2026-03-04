@@ -434,11 +434,13 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 // have the Deckhouse object prefix (d8-) when in a managed namespace.
 func normalizeManagedServicesPrefix(operations []sdkpkg.PatchCollectorOperation) {
 	for _, op := range operations {
-		ns := op.GetNamespace()
 		name := op.GetName()
-		if !needsManagedPrefix(ns) {
-			continue
-		}
+		/*
+			ns := op.GetNamespace()
+			name := op.GetName()
+			if !needsManagedPrefix(ns) {
+				continue
+			}*/
 		if strings.HasPrefix(name, "d8-") {
 			continue
 		}
