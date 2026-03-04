@@ -769,6 +769,41 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 	})
 
+	Context("Bashible apiserver PDB", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerValues)
+			setBashibleAPIServerTLSValues(f)
+		})
+
+		Context("HA disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.highAvailability", false)
+				f.HelmRender()
+			})
+
+			It("PDB does not exist", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				pdb := f.KubernetesResource("PodDisruptionBudget", "d8-cloud-instance-manager", "bashible-apiserver")
+				Expect(pdb.Exists()).To(BeFalse())
+			})
+		})
+
+		Context("HA enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.highAvailability", true)
+				f.HelmRender()
+			})
+
+			It("PDB exists", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				pdb := f.KubernetesResource("PodDisruptionBudget", "d8-cloud-instance-manager", "bashible-apiserver")
+				Expect(pdb.Exists()).To(BeTrue())
+			})
+		})
+	})
+
 	Context("Prometheus rules", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerValues)
