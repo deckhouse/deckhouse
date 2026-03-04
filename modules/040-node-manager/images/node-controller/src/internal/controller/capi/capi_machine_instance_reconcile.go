@@ -37,12 +37,12 @@ func (r *CAPIMachineReconciler) reconcileLinkedInstance(ctx context.Context, dat
 	logger := log.FromContext(ctx)
 	logger.V(4).Info("tick", "op", "capi.instance.reconcile")
 
-	instance, err := r.ensureInstanceExists(ctx, data.instanceName, data.machineRef)
+	instance, err := r.ensureInstanceExists(ctx, data.instanceName, data.nodeName, data.machineRef)
 	if err != nil {
 		return err
 	}
 
-	instance, specUpdated, err := r.syncInstanceSpec(ctx, instance, data.machineRef)
+	instance, specUpdated, err := r.syncInstanceSpec(ctx, instance, data.nodeName, data.machineRef)
 	if err != nil {
 		return err
 	}
@@ -68,10 +68,12 @@ func (r *CAPIMachineReconciler) reconcileLinkedInstance(ctx context.Context, dat
 func (r *CAPIMachineReconciler) ensureInstanceExists(
 	ctx context.Context,
 	name string,
+	nodeName string,
 	machineRef *deckhousev1alpha2.MachineRef,
 ) (*deckhousev1alpha2.Instance, error) {
-	spec := deckhousev1alpha2.InstanceSpec{
-		NodeRef: deckhousev1alpha2.NodeRef{Name: name},
+	spec := deckhousev1alpha2.InstanceSpec{}
+	if nodeName != "" {
+		spec.NodeRef = deckhousev1alpha2.NodeRef{Name: nodeName}
 	}
 	if machineRef != nil {
 		refCopy := *machineRef
@@ -84,9 +86,13 @@ func (r *CAPIMachineReconciler) ensureInstanceExists(
 func (r *CAPIMachineReconciler) syncInstanceSpec(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,
+	nodeName string,
 	machineRef *deckhousev1alpha2.MachineRef,
 ) (*deckhousev1alpha2.Instance, bool, error) {
 	updated := instance.DeepCopy()
+	if nodeName != "" {
+		updated.Spec.NodeRef = deckhousev1alpha2.NodeRef{Name: nodeName}
+	}
 	if machineRef == nil {
 		updated.Spec.MachineRef = nil
 	} else {

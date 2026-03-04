@@ -43,10 +43,19 @@ type CAPIMachineReconciler struct {
 type capiMachineReconcileData struct {
 	capiMachine   *capiv1beta2.Machine
 	instanceName  string
+	nodeName      string
 	machineRef    *deckhousev1alpha2.MachineRef
 	machineStatus machine.MachineStatus
 	nodeGroup     string
 }
+
+type capiReconcileState struct {
+	req         ctrl.Request
+	capiMachine *capiv1beta2.Machine
+	data        capiMachineReconcileData
+}
+
+type capiReconcileStep func(ctx context.Context, state *capiReconcileState) (done bool, result ctrl.Result, err error)
 
 const capiMachineRequeueInterval = time.Minute
 
@@ -81,49 +90,85 @@ func (r *CAPIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	ctx = ctrl.LoggerInto(ctx, log)
 	log.V(4).Info("tick", "op", "capi.reconcile.start")
 
-	capiMachine := &capiv1beta2.Machine{}
-	if err := r.Get(ctx, req.NamespacedName, capiMachine); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			log.V(4).Info("tick", "op", "capi.instance.delete.request")
-			deleted, delErr := r.deleteInstanceIfExists(ctx, req.Name)
-			if delErr != nil {
-				return ctrl.Result{}, delErr
-			}
-			log.V(1).Info("machine not found, linked instance delete handled", "instance", req.Name, "deleted", deleted)
-			return ctrl.Result{}, nil
+	state := &capiReconcileState{
+		req:         req,
+		capiMachine: &capiv1beta2.Machine{},
+	}
+
+	for _, step := range []capiReconcileStep{
+		r.reconcileCAPIMachineFetch,
+		r.reconcileCAPIMachineData,
+		r.reconcileCAPIMachineInstance,
+	} {
+		done, result, err := step(ctx, state)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, err
-	}
-
-	data, err := r.buildReconcileData(capiMachine)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("build reconcile data for capi machine %q: %w", capiMachine.Name, err)
-	}
-
-	if err := r.reconcileLinkedInstance(ctx, data); err != nil {
-		if apierrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
+		if done {
+			return result, nil
 		}
-		return ctrl.Result{}, err
 	}
 
-	log.V(1).Info("reconcile complete", "status", data.machineStatus, "nodeGroup", data.nodeGroup)
+	log.V(1).Info("reconcile complete", "status", state.data.machineStatus, "nodeGroup", state.data.nodeGroup)
 	return ctrl.Result{RequeueAfter: capiMachineRequeueInterval}, nil
 }
 
-func (r *CAPIMachineReconciler) buildReconcileData(capiMachine *capiv1beta2.Machine) (capiMachineReconcileData, error) {
-	machine, err := r.machineFactory.NewMachine(capiMachine)
-	if err != nil {
-		return capiMachineReconcileData{}, err
+func (r *CAPIMachineReconciler) reconcileCAPIMachineFetch(
+	ctx context.Context,
+	state *capiReconcileState,
+) (bool, ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	if err := r.Get(ctx, state.req.NamespacedName, state.capiMachine); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			log.V(4).Info("tick", "op", "capi.instance.delete.request")
+			deleted, delErr := r.deleteInstanceIfExists(ctx, state.req.Name)
+			if delErr != nil {
+				return false, ctrl.Result{}, delErr
+			}
+			log.V(1).Info("machine not found, linked instance delete handled", "instance", state.req.Name, "deleted", deleted)
+			return true, ctrl.Result{}, nil
+		}
+
+		return false, ctrl.Result{}, err
 	}
 
-	return capiMachineReconcileData{
-		capiMachine:   capiMachine,
-		instanceName:  machine.GetName(),
-		machineRef:    machine.GetMachineRef(),
-		machineStatus: machine.GetStatus(),
-		nodeGroup:     machine.GetNodeGroup(),
-	}, nil
+	return false, ctrl.Result{}, nil
+}
+
+func (r *CAPIMachineReconciler) reconcileCAPIMachineData(
+	_ context.Context,
+	state *capiReconcileState,
+) (bool, ctrl.Result, error) {
+	machineObj, err := r.machineFactory.NewMachine(state.capiMachine)
+	if err != nil {
+		return false, ctrl.Result{}, fmt.Errorf("build reconcile data for capi machine %q: %w", state.capiMachine.Name, err)
+	}
+	state.data = capiMachineReconcileData{
+		capiMachine:   state.capiMachine,
+		instanceName:  machineObj.GetName(),
+		nodeName:      machineObj.GetNodeName(),
+		machineRef:    machineObj.GetMachineRef(),
+		machineStatus: machineObj.GetStatus(),
+		nodeGroup:     machineObj.GetNodeGroup(),
+	}
+
+	return false, ctrl.Result{}, nil
+}
+
+func (r *CAPIMachineReconciler) reconcileCAPIMachineInstance(
+	ctx context.Context,
+	state *capiReconcileState,
+) (bool, ctrl.Result, error) {
+	if err := r.reconcileLinkedInstance(ctx, state.data); err != nil {
+		if apierrors.IsConflict(err) {
+			return true, ctrl.Result{Requeue: true}, nil
+		}
+
+		return false, ctrl.Result{}, err
+	}
+
+	return false, ctrl.Result{}, nil
 }
 
 func mapInstanceToCAPIMachine() handler.MapFunc {

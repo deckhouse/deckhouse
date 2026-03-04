@@ -79,7 +79,6 @@ func main() {
 	}
 	ctrl.SetLogger(klog.NewKlogr())
 	setupLog := ctrl.Log.WithName("setup")
-	setupLog.Info("logging configured", "v4Enabled", klog.V(4).Enabled(), "format", logOptions.Format)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,

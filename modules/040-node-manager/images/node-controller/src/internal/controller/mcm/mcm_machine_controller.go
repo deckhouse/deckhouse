@@ -48,6 +48,14 @@ type mcmMachineReconcileData struct {
 	nodeGroup     string
 }
 
+type mcmReconcileState struct {
+	req        ctrl.Request
+	mcmMachine *mcmv1alpha1.Machine
+	data       mcmMachineReconcileData
+}
+
+type mcmReconcileStep func(ctx context.Context, state *mcmReconcileState) (done bool, result ctrl.Result, err error)
+
 const (
 	mcmMachineRequeueInterval = time.Minute
 )
@@ -85,49 +93,84 @@ func (r *MCMMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	ctx = ctrl.LoggerInto(ctx, logger)
 	logger.V(4).Info("tick", "op", "mcm.reconcile.start")
 
-	mcmMachine := &mcmv1alpha1.Machine{}
-	if err := r.Get(ctx, req.NamespacedName, mcmMachine); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			logger.V(4).Info("tick", "op", "mcm.instance.delete.request")
-			deleted, delErr := r.deleteInstanceIfExists(ctx, req.Name)
-			if delErr != nil {
-				return ctrl.Result{}, delErr
-			}
-			logger.V(1).Info("machine not found, linked instance delete handled", "instance", req.Name, "deleted", deleted)
-			return ctrl.Result{}, nil
+	state := &mcmReconcileState{
+		req:        req,
+		mcmMachine: &mcmv1alpha1.Machine{},
+	}
+
+	for _, step := range []mcmReconcileStep{
+		r.reconcileMCMMachineFetch,
+		r.reconcileMCMMachineData,
+		r.reconcileMCMMachineInstance,
+	} {
+		done, result, err := step(ctx, state)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, err
-	}
-
-	data, err := r.buildReconcileData(mcmMachine)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("build reconcile data for mcm machine %q: %w", mcmMachine.Name, err)
-	}
-
-	if err := r.reconcileLinkedInstance(ctx, data); err != nil {
-		if apierrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
+		if done {
+			return result, nil
 		}
-		return ctrl.Result{}, err
 	}
 
-	logger.V(1).Info("reconcile complete", "status", data.machineStatus, "nodeGroup", data.nodeGroup)
+	logger.V(1).Info("reconcile complete", "status", state.data.machineStatus, "nodeGroup", state.data.nodeGroup)
 	return ctrl.Result{RequeueAfter: mcmMachineRequeueInterval}, nil
 }
 
-func (r *MCMMachineReconciler) buildReconcileData(mcmMachine *mcmv1alpha1.Machine) (mcmMachineReconcileData, error) {
-	machineObj, err := r.machineFactory.NewMachine(mcmMachine)
-	if err != nil {
-		return mcmMachineReconcileData{}, err
+func (r *MCMMachineReconciler) reconcileMCMMachineFetch(
+	ctx context.Context,
+	state *mcmReconcileState,
+) (bool, ctrl.Result, error) {
+	logger := ctrl.LoggerFrom(ctx)
+
+	if err := r.Get(ctx, state.req.NamespacedName, state.mcmMachine); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			logger.V(4).Info("tick", "op", "mcm.instance.delete.request")
+			deleted, delErr := r.deleteInstanceIfExists(ctx, state.req.Name)
+			if delErr != nil {
+				return false, ctrl.Result{}, delErr
+			}
+			logger.V(1).Info("machine not found, linked instance delete handled", "instance", state.req.Name, "deleted", deleted)
+			return true, ctrl.Result{}, nil
+		}
+
+		return false, ctrl.Result{}, err
 	}
 
-	return mcmMachineReconcileData{
-		mcmMachine:    mcmMachine,
+	return false, ctrl.Result{}, nil
+}
+
+func (r *MCMMachineReconciler) reconcileMCMMachineData(
+	_ context.Context,
+	state *mcmReconcileState,
+) (bool, ctrl.Result, error) {
+	machineObj, err := r.machineFactory.NewMachine(state.mcmMachine)
+	if err != nil {
+		return false, ctrl.Result{}, fmt.Errorf("build reconcile data for mcm machine %q: %w", state.mcmMachine.Name, err)
+	}
+	state.data = mcmMachineReconcileData{
+		mcmMachine:    state.mcmMachine,
 		instanceName:  machineObj.GetName(),
 		machineRef:    machineObj.GetMachineRef(),
 		machineStatus: machineObj.GetStatus(),
 		nodeGroup:     machineObj.GetNodeGroup(),
-	}, nil
+	}
+
+	return false, ctrl.Result{}, nil
+}
+
+func (r *MCMMachineReconciler) reconcileMCMMachineInstance(
+	ctx context.Context,
+	state *mcmReconcileState,
+) (bool, ctrl.Result, error) {
+	if err := r.reconcileLinkedInstance(ctx, state.data); err != nil {
+		if apierrors.IsConflict(err) {
+			return true, ctrl.Result{Requeue: true}, nil
+		}
+
+		return false, ctrl.Result{}, err
+	}
+
+	return false, ctrl.Result{}, nil
 }
 
 func mapInstanceToMCMMachine() handler.MapFunc {

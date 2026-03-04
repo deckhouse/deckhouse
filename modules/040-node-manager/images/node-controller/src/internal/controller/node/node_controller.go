@@ -33,6 +33,14 @@ type NodeReconciler struct {
 	client.Client
 }
 
+type nodeReconcileState struct {
+	req    ctrl.Request
+	node   *corev1.Node
+	result ctrl.Result
+}
+
+type nodeReconcileStep func(ctx context.Context, state *nodeReconcileState) (done bool, result ctrl.Result, err error)
+
 func SetupNodeController(mgr ctrl.Manager) error {
 	if err := (&NodeReconciler{
 		Client: mgr.GetClient(),
@@ -54,39 +62,74 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx).WithValues("node", req.Name)
 	log.V(4).Info("tick", "op", "node.reconcile.start")
-	result := ctrl.Result{RequeueAfter: time.Minute}
 
-	node := &corev1.Node{}
-	if err := r.Get(ctx, req.NamespacedName, node); err != nil {
+	state := &nodeReconcileState{
+		req:    req,
+		node:   &corev1.Node{},
+		result: ctrl.Result{RequeueAfter: time.Minute},
+	}
+
+	for _, step := range []nodeReconcileStep{
+		r.reconcileNodeFetch,
+		r.reconcileNodeInstance,
+	} {
+		done, result, err := step(ctx, state)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if done {
+			return result, nil
+		}
+	}
+
+	return state.result, nil
+}
+
+func (r *NodeReconciler) reconcileNodeFetch(
+	ctx context.Context,
+	state *nodeReconcileState,
+) (bool, ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	if err := r.Get(ctx, state.req.NamespacedName, state.node); err != nil {
 		if client.IgnoreNotFound(err) != nil {
-			return ctrl.Result{}, err
+			return false, ctrl.Result{}, err
 		}
 
-		deleted, err := r.deleteNodeBasedInstanceIfExists(ctx, req.Name)
-		if err != nil {
-			return ctrl.Result{}, err
+		deleted, delErr := r.deleteNodeBasedInstanceIfExists(ctx, state.req.Name)
+		if delErr != nil {
+			return false, ctrl.Result{}, delErr
 		}
 
-		log.V(1).Info("node not found, static instance delete handled", "instance", req.Name, "deleted", deleted)
-		return result, nil
+		log.V(1).Info("node not found, static instance delete handled", "instance", state.req.Name, "deleted", deleted)
+		return true, state.result, nil
 	}
 
-	if IsStaticNode(node) {
-		log.V(4).Info("tick", "op", "node.instance.ensure")
-		instance, err := common.EnsureInstanceExists(ctx, r.Client, node.Name, deckhousev1alpha2.InstanceSpec{
-			NodeRef: deckhousev1alpha2.NodeRef{Name: node.Name},
-		})
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if err := common.SetInstancePhase(ctx, r.Client, instance, deckhousev1alpha2.InstancePhaseRunning); err != nil {
-			return ctrl.Result{}, err
-		}
+	return false, ctrl.Result{}, nil
+}
 
-		log.V(1).Info("instance ensured for static node")
-		return result, nil
+func (r *NodeReconciler) reconcileNodeInstance(
+	ctx context.Context,
+	state *nodeReconcileState,
+) (bool, ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	if !IsStaticNode(state.node) {
+		log.V(1).Info("node is not static, skipping")
+		return true, state.result, nil
 	}
 
-	log.V(1).Info("node is not static, skipping")
-	return result, nil
+	log.V(4).Info("tick", "op", "node.instance.ensure")
+	instance, err := common.EnsureInstanceExists(ctx, r.Client, state.node.Name, deckhousev1alpha2.InstanceSpec{
+		NodeRef: deckhousev1alpha2.NodeRef{Name: state.node.Name},
+	})
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+	if err := common.SetInstancePhase(ctx, r.Client, instance, deckhousev1alpha2.InstancePhaseRunning); err != nil {
+		return false, ctrl.Result{}, err
+	}
+
+	log.V(1).Info("instance ensured for static node")
+	return true, state.result, nil
 }
