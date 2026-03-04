@@ -22,9 +22,11 @@ git:
   to: /src/kial-frontend-assets
   excludePaths: 
   - .git
-mount:
-  - fromPath: patches
-    to: /patches
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - patch -p1 -d /src/istio < /patches/001-istio-apply_go.patch
