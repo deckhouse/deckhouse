@@ -2,8 +2,106 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 11,
+  "version": 12,
   "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.35.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "OpenTelemetry SDK resource detection path hijacking vulnerability (macOS ioreg) - Уязвимость, связанная с потенциальным path hijacking в механизме определения ресурсов (resource detection) при использовании ioreg в среде macOS/Darwin, не применима в типичном сценарии эксплуатации webhook-handler в Kubernetes-окружении на базе Linux. Уязвимый участок кода задействуется исключительно при определении host id на macOS и не входит в исполняемый путь в целевой среде, что исключает возможность практической реализации угрозы.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-23831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Rekor COSE entry nil pointer dereference vulnerability - Уязвимость типа nil pointer dereference в Rekor, затрагивающая обработку записей формата COSE (COSE entry type), не достигается в рамках использования deckhouse-tools web. Соответствующий уязвимый путь выполнения не вызывается при текущих сценариях работы компонента и не используется в рамках функциональных спецификаций системы.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24117"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Rekor index retrieve endpoint SSRF vulnerability - Уязвимость SSRF в endpoint /api/v1/index/retrieve Rekor не применима к deckhouse-tools web, поскольку функционал компонента не использует указанный API и не инициирует обращения к данному endpoint. В результате отсутствует исполняемый путь, позволяющий задействовать уязвимый функционал.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24137"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/sigstore@v1.8.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Sigstore TUF client path traversal vulnerability - Уязвимость path traversal в TUF-клиенте библиотеки sigstore не затрагивает deckhouse-tools web, поскольку соответствующий функционал в рамках текущих сценариев эксплуатации не используется. Механизмы кэширования/загрузки данных из недоверенных TUF-репозиториев не применяются, что исключает достижимость уязвимого кода.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25934"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "go-git pack/index integrity verification bypass vulnerability - Уязвимость, связанная с проверкой целостности файлов .idx/.pack в go-git, формально присутствует в используемой версии зависимости. Однако реализация атаки требует подмены данных Git-репозитория на стороне источника. В типовой модели эксплуатации deckhouse-tools web источники репозиториев определяются и контролируются администратором, что не предоставляет нарушителю возможности управлять входными данными в необходимом объеме и существенно снижает применимость сценария эксплуатации.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-26958"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/filippo.io/edwards25519@v1.1.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "edwards25519 MultiScalarMult vulnerability - Уязвимость в реализации MultiScalarMult библиотеки filippo.io/edwards25519 относится к редко используемому API и не затрагивает типовые сценарии применения. В deckhouse-tools web зависимость от edwards25519 является транзитивной, при этом уязвимый метод не используется и не входит в исполняемый путь, что исключает возможность эксплуатации.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-1229"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/cloudflare/circl@v1.6.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Cloudflare CIRCL P-384 CombinedMult vulnerability - Уязвимость в функции CombinedMult (модуль ecc/p384) библиотеки github.com/cloudflare/circl не затрагивает используемые в deckhouse-tools web сценарии криптографических операций. Эксплуатируемые пути ECDH/ECDSA не проходят через уязвимую функцию, вследствие чего уязвимый код не достигается в рамках текущих функциональных спецификаций и эксплуатационных процессов системы.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
     {
       "vulnerability": {
         "name": "CVE-2024-9675"
@@ -173,6 +271,6 @@
       "timestamp": "2025-11-13T00:00:00Z"
     }
   ],
-  "timestamp": "2025-10-09T14:21:14Z",
-  "last_updated": "2026-01-20T00:00:00Z"
+  "timestamp": "2026-03-04T12:00:00Z",
+  "last_updated": "2026-03-04T12:00:00Z"
 }
