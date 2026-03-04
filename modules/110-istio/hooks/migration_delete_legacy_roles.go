@@ -35,9 +35,9 @@ import (
 const (
 	// istioRevLabel is the label on operator-created resources (e.g. ClusterRoleBinding) holding revision like "v1x21x6".
 	istioRevLabel = "istio.io/rev"
-	// maxIstioMinorVersionForClusterRoleBinding limits creation/deletion of ClusterRoleBinding to Istio > 1.21.
-	// For Istio 1.21 and below we do not attempt to create or touch ClusterRoleBinding (e.g. skip legacy deletion).
-	maxIstioMinorVersionForClusterRoleBinding = 21
+	// maxIstioMinorVersionForLegacyRBAC limits creation/deletion of operator-created RBAC to Istio > 1.21.
+	// For Istio 1.21 and below we do not attempt to create or touch these resources (e.g. skip legacy deletion).
+	maxIstioMinorVersionForLegacyRBAC = 21
 )
 
 // This hook deletes legacy roles and rolebindings created by operator (not DH) in both scopes
@@ -95,33 +95,63 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, deleteLegacyRBACs)
 
-func applyRoleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return objectInfo{
-		Name:      obj.GetName(),
-		Namespace: obj.GetNamespace(),
-	}, nil
+// roleLikeFilterResult is the result of applyRoleFilter and applyRoleBindingFilter.
+// ShouldDelete is false when the object belongs to Istio 1.21 or lower.
+type roleLikeFilterResult struct {
+	Name         string
+	Namespace    string
+	ShouldDelete bool
 }
 
-func applyRoleBindingFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return objectInfo{
-		Name:      obj.GetName(),
-		Namespace: obj.GetNamespace(),
-	}, nil
-}
-
-func applyClusterRoleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj.GetName(), nil
+// clusterRoleFilterResult is the result of applyClusterRoleFilter.
+// ShouldDelete is false when the object belongs to Istio 1.21 or lower.
+type clusterRoleFilterResult struct {
+	Name         string
+	ShouldDelete bool
 }
 
 // clusterRoleBindingFilterResult is the result of applyClusterRoleBindingFilter.
-// ShouldDelete is false when the object belongs to Istio 1.21 or lower (we do not create/touch ClusterRoleBinding for those versions).
+// ShouldDelete is false when the object belongs to Istio 1.21 or lower.
 type clusterRoleBindingFilterResult struct {
 	Name         string
 	ShouldDelete bool
 }
 
+func getIstioRevisionFromObject(obj *unstructured.Unstructured) string {
+	if labels := obj.GetLabels(); labels != nil {
+		return labels[istioRevLabel]
+	}
+	return ""
+}
+
+func applyRoleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	revision := getIstioRevisionFromObject(obj)
+	return roleLikeFilterResult{
+		Name:         obj.GetName(),
+		Namespace:    obj.GetNamespace(),
+		ShouldDelete: isIstioVersionAbove121(revision),
+	}, nil
+}
+
+func applyRoleBindingFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	revision := getIstioRevisionFromObject(obj)
+	return roleLikeFilterResult{
+		Name:         obj.GetName(),
+		Namespace:    obj.GetNamespace(),
+		ShouldDelete: isIstioVersionAbove121(revision),
+	}, nil
+}
+
+func applyClusterRoleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	revision := getIstioRevisionFromObject(obj)
+	return clusterRoleFilterResult{
+		Name:         obj.GetName(),
+		ShouldDelete: isIstioVersionAbove121(revision),
+	}, nil
+}
+
 // isIstioVersionAbove121 parses Istio revision (e.g. "v1x21x6") and returns true if version is above 1.21.
-// Returns false for 1.21.x and below so we do not attempt to create or delete ClusterRoleBinding for those versions.
+// Returns false for 1.21.x and below so we do not attempt to create or delete these RBAC resources for those versions.
 func isIstioVersionAbove121(revision string) bool {
 	if revision == "" {
 		return true // unknown revision: keep previous behaviour (consider for deletion)
@@ -139,50 +169,55 @@ func isIstioVersionAbove121(revision string) bool {
 	if errMinor != nil {
 		return true
 	}
-	return major > 1 || (major == 1 && minor > maxIstioMinorVersionForClusterRoleBinding)
+	return major > 1 || (major == 1 && minor > maxIstioMinorVersionForLegacyRBAC)
 }
 
 func applyClusterRoleBindingFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	revision := ""
-	if labels := obj.GetLabels(); labels != nil {
-		revision = labels[istioRevLabel]
-	}
-	shouldDelete := isIstioVersionAbove121(revision)
+	revision := getIstioRevisionFromObject(obj)
 	return clusterRoleBindingFilterResult{
 		Name:         obj.GetName(),
-		ShouldDelete: shouldDelete,
+		ShouldDelete: isIstioVersionAbove121(revision),
 	}, nil
 }
 
 func deleteLegacyRBACs(_ context.Context, input *go_hook.HookInput) error {
-	// remove legacy Roles
-	for role, err := range sdkobjectpatch.SnapshotIter[objectInfo](input.Snapshots.Get("role_for_delete")) {
+	// remove legacy Roles (only for Istio > 1.21; for 1.21 and below we do not touch)
+	for role, err := range sdkobjectpatch.SnapshotIter[roleLikeFilterResult](input.Snapshots.Get("role_for_delete")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'role_for_delete' snapshot: %w", err)
 		}
-
+		if !role.ShouldDelete {
+			input.Logger.Info("skip Role %s in %s (Istio 1.21 or below)", role.Name, role.Namespace)
+			continue
+		}
 		input.Logger.Info("remove legacy Role %s in %s namespace", role.Name, role.Namespace)
 		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "Role", role.Namespace, role.Name)
 	}
 
-	// remove legacy RoleBindings
-	for roleBinding, err := range sdkobjectpatch.SnapshotIter[objectInfo](input.Snapshots.Get("rolebinding_for_delete")) {
+	// remove legacy RoleBindings (only for Istio > 1.21; for 1.21 and below we do not touch)
+	for roleBinding, err := range sdkobjectpatch.SnapshotIter[roleLikeFilterResult](input.Snapshots.Get("rolebinding_for_delete")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'rolebinding_for_delete' snapshot: %w", err)
 		}
-
+		if !roleBinding.ShouldDelete {
+			input.Logger.Info("skip RoleBinding %s in %s (Istio 1.21 or below)", roleBinding.Name, roleBinding.Namespace)
+			continue
+		}
 		input.Logger.Info("remove legacy RoleBinding %s in %s namespace", roleBinding.Name, roleBinding.Namespace)
 		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", roleBinding.Namespace, roleBinding.Name)
 	}
 
-	// remove legacy ClusterRoles
-	for clusterRoleName, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("clusterrole_for_delete")) {
+	// remove legacy ClusterRoles (only for Istio > 1.21; for 1.21 and below we do not touch)
+	for cr, err := range sdkobjectpatch.SnapshotIter[clusterRoleFilterResult](input.Snapshots.Get("clusterrole_for_delete")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'clusterrole_for_delete' snapshot: %w", err)
 		}
-
-		input.Logger.Info("remove legacy ClusterRole %s", clusterRoleName)
-		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRole", "", clusterRoleName)
+		if !cr.ShouldDelete {
+			input.Logger.Info("skip ClusterRole %s (Istio 1.21 or below)", cr.Name)
+			continue
+		}
+		input.Logger.Info("remove legacy ClusterRole %s", cr.Name)
+		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRole", "", cr.Name)
 	}
 
 	// remove legacy ClusterRoleBindings (only for Istio > 1.21; for 1.21 and below we do not touch ClusterRoleBinding)
@@ -191,7 +226,7 @@ func deleteLegacyRBACs(_ context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("failed to iterate over 'clusterrolebinding_for_delete' snapshot: %w", err)
 		}
 		if !crb.ShouldDelete {
-			input.Logger.Info("skip ClusterRoleBinding %s (Istio 1.21 or below, do not create/delete CRB)", crb.Name)
+			input.Logger.Info("skip ClusterRoleBinding %s (Istio 1.21 or below)", crb.Name)
 			continue
 		}
 		input.Logger.Info("remove legacy ClusterRoleBinding %s", crb.Name)
@@ -199,9 +234,4 @@ func deleteLegacyRBACs(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	return nil
-}
-
-type objectInfo struct {
-	Name      string
-	Namespace string
 }
