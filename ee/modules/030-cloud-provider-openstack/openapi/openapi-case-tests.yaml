@@ -54,6 +54,23 @@ positive:
         tags:
           aaa: bbb
           ccc: ddd
+    - internal:
+        connection:
+          authURL: http://my.cloud.lalla/3/
+          username: myuser
+          password: myPaSs
+          domainName: mydomain
+          tenantName: mytenantname
+          region: myreg
+        loadBalancer:
+          disabled: true
+        podNetworkMode: VXLAN
+        instances:
+          sshKeyPairName: mysshkeypairname
+          securityGroups: [ "aaa","bbb" ]
+          mainNetwork: "aaa"
+          imageName: "bbb"
+        zones: [ "zonea" ]
 negative:
   configValues:
     - { somethingInConfig: yes }
