@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость path hijacking в resource detection (macOS/Darwin) в go.opentelemetry.io/otel/sdk не применима при эксплуатации deckhouse-tools web в типичном Linux-окружении.",
+      "impact_statement": "OpenTelemetry SDK resource detection path hijacking vulnerability (macOS ioreg) - Уязвимость, связанная с потенциальным path hijacking в механизме определения ресурсов (resource detection) при использовании ioreg в среде macOS/Darwin, не применима в типичном сценарии эксплуатации webhook-handler в Kubernetes-окружении на базе Linux. Уязвимый участок кода задействуется исключительно при определении host id на macOS и не входит в исполняемый путь в целевой среде, что исключает возможность практической реализации угрозы.",
       "timestamp": "2026-03-04T12:00:00Z"
     },
     {
@@ -29,7 +29,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость nil pointer dereference в Rekor (COSE entry type) не достигается в рамках использования deckhouse-tools web; уязвимый путь не вызывается при текущем сценарии работы.",
+      "impact_statement": "Rekor COSE entry nil pointer dereference vulnerability - Уязвимость типа nil pointer dereference в Rekor, затрагивающая обработку записей формата COSE (COSE entry type), не достигается в рамках использования deckhouse-tools web. Соответствующий уязвимый путь выполнения не вызывается при текущих сценариях работы компонента и не используется в рамках функциональных спецификаций системы.",
       "timestamp": "2026-03-04T12:00:00Z"
     },
     {
@@ -43,7 +43,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость SSRF в endpoint /api/v1/index/retrieve Rekor не используется в функционале deckhouse-tools web; компонент не обращается к данному API.",
+      "impact_statement": "Rekor index retrieve endpoint SSRF vulnerability - Уязвимость SSRF в endpoint /api/v1/index/retrieve Rekor не применима к deckhouse-tools web, поскольку функционал компонента не использует указанный API и не инициирует обращения к данному endpoint. В результате отсутствует исполняемый путь, позволяющий задействовать уязвимый функционал.",
       "timestamp": "2026-03-04T12:00:00Z"
     },
     {
@@ -57,7 +57,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Функционал TUF клиента с уязвимым path traversal в sigstore не используется в рамках текущих сценариев deckhouse-tools web; кэширование из ненадёжных TUF-репозиториев не применяется.",
+      "impact_statement": "Sigstore TUF client path traversal vulnerability - Уязвимость path traversal в TUF-клиенте библиотеки sigstore не затрагивает deckhouse-tools web, поскольку соответствующий функционал в рамках текущих сценариев эксплуатации не используется. Механизмы кэширования/загрузки данных из недоверенных TUF-репозиториев не применяются, что исключает достижимость уязвимого кода.",
       "timestamp": "2026-03-04T12:00:00Z"
     },
     {
@@ -71,7 +71,7 @@
       ],
       "status": "affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость проверки целостности .idx/.pack в go-git требует подмены данных репозитория. В типичном использовании deckhouse-tools web источники репозиториев контролируются администратором, что снижает применимость атаки.",
+      "impact_statement": "go-git pack/index integrity verification bypass vulnerability - Уязвимость, связанная с проверкой целостности файлов .idx/.pack в go-git, формально присутствует в используемой версии зависимости. Однако реализация атаки требует подмены данных Git-репозитория на стороне источника. В типовой модели эксплуатации deckhouse-tools web источники репозиториев определяются и контролируются администратором, что не предоставляет нарушителю возможности управлять входными данными в необходимом объеме и существенно снижает применимость сценария эксплуатации.",
       "timestamp": "2026-03-04T12:00:00Z"
     },
     {
@@ -85,7 +85,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в MultiScalarMult (edwards25519) затрагивает редко используемый API; в deckhouse-tools web зависимость от edwards25519 транзитивная, уязвимый метод не вызывается.",
+      "impact_statement": "edwards25519 MultiScalarMult vulnerability - Уязвимость в реализации MultiScalarMult библиотеки filippo.io/edwards25519 относится к редко используемому API и не затрагивает типовые сценарии применения. В deckhouse-tools web зависимость от edwards25519 является транзитивной, при этом уязвимый метод не используется и не входит в исполняемый путь, что исключает возможность эксплуатации.",
       "timestamp": "2026-03-04T12:00:00Z"
     },
     {
@@ -99,7 +99,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CombinedMult в ecc/p384 (circl) не затрагивает ECDH и ECDSA на используемых путях; в deckhouse-tools web задействованные сценарии не проходят через уязвимую функцию.",
+      "impact_statement": "Cloudflare CIRCL P-384 CombinedMult vulnerability - Уязвимость в функции CombinedMult (модуль ecc/p384) библиотеки github.com/cloudflare/circl не затрагивает используемые в deckhouse-tools web сценарии криптографических операций. Эксплуатируемые пути ECDH/ECDSA не проходят через уязвимую функцию, вследствие чего уязвимый код не достигается в рамках текущих функциональных спецификаций и эксплуатационных процессов системы.",
       "timestamp": "2026-03-04T12:00:00Z"
     },
     {
