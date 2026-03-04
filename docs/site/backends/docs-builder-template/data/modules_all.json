@@ -211,7 +211,9 @@
   },
   "managed-postgres": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
     "tags": [
       "database"
@@ -221,7 +223,9 @@
   },
   "managed-memcached": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
     "tags": [
       "database"
@@ -231,7 +235,9 @@
   },
   "managed-valkey": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
     "tags": [
       "database"
