@@ -33,6 +33,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/iancoleman/strcase"
 	"github.com/jonboulle/clockwork"
 	"github.com/spaolacci/murmur3"
@@ -484,6 +485,20 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	// If all releases are in sequence, use the last one as starting point
 	if isSequenceInCluster {
 		actual = releasesInCluster[len(releasesInCluster)-1]
+	}
+
+	// Verify release image for target version exists in registry before step-by-step validation.
+	// On mirror registries, release-channel repo may lack version tags (e.g., only ["beta"]).
+	// Treat missing image (404) as "not ready" (warn + retry) rather than "update failed" (alert).
+	// Other errors (network, auth) fall through to getNewVersions for normal error handling.
+	if _, err := f.registryClient.Digest(ctx, newSemver.Original()); err != nil {
+		var terr *transport.Error
+		if errors.As(err, &terr) && terr.StatusCode == 404 {
+			f.logger.Warn("release image for target version not found in registry, will retry",
+				slog.String("version", newSemver.Original()),
+				log.Err(err))
+			return nil, fmt.Errorf("release image %s not available in registry: %w", newSemver.Original(), err)
+		}
 	}
 
 	if actual.GetNotificationShift() &&
