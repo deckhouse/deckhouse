@@ -1,6 +1,5 @@
 {{- $defaultGateway := dict }}
 {{- include "helm_lib_default_gateway" (list . $defaultGateway) }}
-{{- if or $defaultGateway (and $app.httpRouteParentRefName $app.httpRouteParentRefNamespace) }}
 {{- $context := . }}
 {{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
 {{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
@@ -8,6 +7,7 @@
     {{- continue }}
   {{- end }}
   {{- range $idx, $app := $crd.spec.applications }}
+  {{- if or $defaultGateway $app.httpRouteParentRefName }}
   {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
   {{- $nameSuffix := "" }}
   {{- if ne $idx 0 }}
@@ -49,9 +49,13 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-  {{- if and $app.httpRouteParentRefName $app.httpRouteParentRefNamespace }}
+  {{- if $app.httpRouteParentRefName }}
     name: {{ $app.httpRouteParentRefName }}
+    {{- if $app.httpRouteParentRefNamespace }}
     namespace: {{ $app.httpRouteParentRefNamespace }}
+    {{- else }}
+    namespace: {{ $crd.namespace }}
+    {{- end }}
   {{- else }}
     name: d8-default-listener-set
     namespace: {{ $crd.namespace }}
@@ -101,9 +105,13 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-  {{- if and $app.httpRouteParentRefName $app.httpRouteParentRefNamespace }}
+  {{- if $app.httpRouteParentRefName }}
     name: {{ $app.httpRouteParentRefName }}
+    {{- if $app.httpRouteParentRefNamespace }}
     namespace: {{ $app.httpRouteParentRefNamespace }}
+    {{- else }}
+    namespace: {{ $crd.namespace }}
+    {{- end }}
   {{- else }}
     name: d8-default-listener-set
     namespace: {{ $crd.namespace }}
@@ -130,5 +138,5 @@ spec:
         value: {{ $app.signOutURL }}
   {{- end }}
   {{- end }}
-{{- end }}
+  {{- end }}
 {{- end }}
