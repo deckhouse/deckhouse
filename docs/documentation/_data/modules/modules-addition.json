@@ -50,13 +50,24 @@
     ],
     "external": "true",
     "path": "/modules/code/stable/"
-  }, 
+  },
   "managed-postgres": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
-    "editionsWithRestrictions": [
-      "ee"
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-postgres/"
+  },
+  "managed-memcached": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
     ],
     "editionsWithRestrictionsComments": {
       "all": {
@@ -68,7 +79,19 @@
       "database"
     ],
     "external": "true",
-    "path": "/modules/managed-postgres/stable/"
+    "path": "/modules/managed-memcached/"
+  },
+  "managed-valkey": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-valkey/"
   },
   "commander": {
     "editions": [

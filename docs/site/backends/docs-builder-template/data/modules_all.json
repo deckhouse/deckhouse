@@ -211,7 +211,9 @@
   },
   "managed-postgres": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
     "editionsWithRestrictions": [
       "ee"
@@ -230,10 +232,21 @@
   },
   "managed-memcached": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
-    "editionsWithRestrictions": [
-      "ee"
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-memcached/"
+  },
+  "managed-valkey": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
     ],
     "editionsWithRestrictionsComments": {
       "all": {
