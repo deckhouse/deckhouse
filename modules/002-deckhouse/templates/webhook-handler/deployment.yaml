@@ -82,7 +82,7 @@ spec:
           value: /certs/tls.key
         - name: VALIDATING_WEBHOOK_CA
           value: /certs/ca.crt
-        {{- if or (not .Values.global.clusterIsBootstrapped) .Values.global.internal.cniMigrationWebhooksDisable }}
+        {{- if not .Values.global.clusterIsBootstrapped }}
         - name: VALIDATING_WEBHOOK_FAILURE_POLICY
           value: Ignore
         {{- end }}

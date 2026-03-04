@@ -58,9 +58,8 @@ var CNIDaemonSetMap = map[string]string{
 // CNIMigrationReconciler reconciles a CNIMigration object
 type CNIMigrationReconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
-	MigrationName   string
-	WaitForWebhooks string
+	Scheme        *runtime.Scheme
+	MigrationName string
 }
 
 // Reconcile is the main manager loop
@@ -405,12 +404,58 @@ func (r *CNIMigrationReconciler) ensureEnvironmentPrepared(
 		return false, "", fmt.Errorf("target CNI (%s) is same as current CNI", m.Spec.TargetCNI)
 	}
 
-	// Also wait for webhooks to be disabled here, to ensure environment is ready before starting
-	if r.WaitForWebhooks != "" {
-		if disabled, msg, err := r.checkWebhooksDisabled(ctx); err != nil {
-			return false, "", err
-		} else if !disabled {
-			return false, msg, nil
+	// Wait for webhooks to be disabled globally by checking kube-apiserver pods
+	if disabled, msg, err := r.checkWebhooksDisabled(ctx); err != nil {
+		return false, "", err
+	} else if !disabled {
+		return false, msg, nil
+	}
+
+	// Wait for control-plane-manager DaemonSet to be fully rolled out and ready
+	// to ensure Deckhouse queue is not locked when we proceed.
+	if ready, msg, err := r.checkControlPlaneManagerReady(ctx); err != nil {
+		return false, "", err
+	} else if !ready {
+		return false, msg, nil
+	}
+
+	return true, "", nil
+}
+
+func (r *CNIMigrationReconciler) checkControlPlaneManagerReady(ctx context.Context) (bool, string, error) {
+	dsList := &appsv1.DaemonSetList{}
+	if err := r.List(
+		ctx,
+		dsList,
+		client.InNamespace("kube-system"),
+		client.MatchingLabels{"app": "d8-control-plane-manager"},
+	); err != nil {
+		return false, "", fmt.Errorf("failed to list control-plane-manager DaemonSets: %w", err)
+	}
+
+	if len(dsList.Items) == 0 {
+		return false, "Waiting for d8-control-plane-manager DaemonSets to be found", nil
+	}
+
+	for _, ds := range dsList.Items {
+		if ds.Status.DesiredNumberScheduled == 0 {
+			return false, fmt.Sprintf("Waiting for %s pods to be scheduled", ds.Name), nil
+		}
+		if ds.Status.UpdatedNumberScheduled != ds.Status.DesiredNumberScheduled {
+			return false, fmt.Sprintf(
+				"Waiting for %s DaemonSet to be updated (%d/%d)",
+				ds.Name,
+				ds.Status.UpdatedNumberScheduled,
+				ds.Status.DesiredNumberScheduled,
+			), nil
+		}
+		if ds.Status.NumberReady != ds.Status.DesiredNumberScheduled {
+			return false, fmt.Sprintf(
+				"Waiting for %s DaemonSet to be fully ready (%d/%d)",
+				ds.Name,
+				ds.Status.NumberReady,
+				ds.Status.DesiredNumberScheduled,
+			), nil
 		}
 	}
 
@@ -845,130 +890,43 @@ func (r *CNIMigrationReconciler) ensurePodsRestarted(
 		), nil
 	}
 
-	// After all pods are restarted, ensure that critical webhook pods are Ready
-	if ready, msg, err := r.checkWebhookPodsReady(ctx); err != nil {
+	// Wait for all webhook-related pods to be ready before declaring the migration as finished
+	if ok, msg, err := r.checkWebhookPodsReady(ctx); err != nil {
 		return false, "", err
-	} else if !ready {
+	} else if !ok {
 		return false, msg, nil
 	}
 
 	return true, "", nil
 }
 
-func (r *CNIMigrationReconciler) ensureSucceeded(
-	ctx context.Context,
-	m *cnimigrationv1alpha1.CNIMigration,
-) (bool, string, error) {
-	ctrl.Log.Info("Migration successfully completed", "migration", m.Name)
-	return true, "", nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *CNIMigrationReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&cnimigrationv1alpha1.CNIMigration{}).
-		Owns(&cnimigrationv1alpha1.CNINodeMigration{}).
-		Complete(r)
-}
-
-func (r *CNIMigrationReconciler) checkWebhooksDisabled(ctx context.Context) (bool, string, error) {
-	for name := range strings.SplitSeq(r.WaitForWebhooks, ",") {
-		name = strings.TrimSpace(name)
-		if name == "" {
-			continue
-		}
-
-		kinds := []string{"ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"}
-		for _, kind := range kinds {
-			obj := &unstructured.Unstructured{}
-			obj.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   "admissionregistration.k8s.io",
-				Version: "v1",
-				Kind:    kind,
-			})
-
-			err := r.Get(ctx, types.NamespacedName{Name: name}, obj)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					// Resource deleted - OK
-					continue
-				}
-				return false, "", fmt.Errorf("failed to check %s %s: %w", kind, name, err)
-			}
-
-			// Resource exists, check failurePolicy
-			webhooks, found, err := unstructured.NestedSlice(obj.Object, "webhooks")
-			if err != nil {
-				return false, "", fmt.Errorf("failed to parse webhooks for %s %s: %w", kind, name, err)
-			}
-			if !found {
-				// No webhooks defined - treat as safe
-				continue
-			}
-
-			for i, w := range webhooks {
-				webhookMap, ok := w.(map[string]any)
-				if !ok {
-					return false, "", fmt.Errorf("webhook #%d in %s %s has invalid format", i, kind, name)
-				}
-				failurePolicy, _, _ := unstructured.NestedString(webhookMap, "failurePolicy")
-				if failurePolicy != "Ignore" {
-					// Found a blocking webhook
-					return false, fmt.Sprintf(
-						"Waiting for %s %s (policy: %s) to be disabled",
-						strings.ToLower(kind),
-						name,
-						failurePolicy,
-					), nil
-				}
-			}
-		}
-	}
-
-	return true, "", nil
-}
-
 func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (bool, string, error) {
-	if r.WaitForWebhooks == "" {
-		return true, "", nil
-	}
+	kinds := []string{"ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"}
+	for _, kind := range kinds {
+		listObj := &unstructured.UnstructuredList{}
+		listObj.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "admissionregistration.k8s.io",
+			Version: "v1",
+			Kind:    kind + "List",
+		})
 
-	for name := range strings.SplitSeq(r.WaitForWebhooks, ",") {
-		name = strings.TrimSpace(name)
-		if name == "" {
-			continue
+		err := r.List(ctx, listObj)
+		if err != nil {
+			return false, "", fmt.Errorf("failed to list %s: %w", kind, err)
 		}
 
-		// Check both Validating and Mutating
-		kinds := []string{"ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"}
-		for _, kind := range kinds {
-			obj := &unstructured.Unstructured{}
-			obj.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   "admissionregistration.k8s.io",
-				Version: "v1",
-				Kind:    kind,
-			})
-
-			err := r.Get(ctx, types.NamespacedName{Name: name}, obj)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					continue
-				}
-				return false, "", fmt.Errorf("failed to get %s %s: %w", kind, name, err)
-			}
+		for _, obj := range listObj.Items {
+			name := obj.GetName()
 
 			webhooks, found, err := unstructured.NestedSlice(obj.Object, "webhooks")
-			if err != nil {
-				return false, "", fmt.Errorf("failed to parse webhooks for %s %s: %w", kind, name, err)
-			}
-			if !found {
+			if err != nil || !found {
 				continue
 			}
 
-			for i, w := range webhooks {
+			for _, w := range webhooks {
 				webhook, ok := w.(map[string]any)
 				if !ok {
-					return false, "", fmt.Errorf("webhook #%d in %s %s has invalid format", i, kind, name)
+					continue
 				}
 
 				clientConfig, found, _ := unstructured.NestedMap(webhook, "clientConfig")
@@ -978,7 +936,6 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 
 				svcRef, found, _ := unstructured.NestedMap(clientConfig, "service")
 				if !found {
-					// URL-based webhook, cannot check pod readiness
 					continue
 				}
 
@@ -986,10 +943,9 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 				svcName, _, _ := unstructured.NestedString(svcRef, "name")
 
 				if ns == "" || svcName == "" {
-					return false, "", fmt.Errorf("webhook #%d in %s %s has invalid service reference", i, kind, name)
+					continue
 				}
 
-				// Get Service to find selector
 				svc := &corev1.Service{}
 				if err := r.Get(ctx, types.NamespacedName{Name: svcName, Namespace: ns}, svc); err != nil {
 					if errors.IsNotFound(err) {
@@ -1005,11 +961,9 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 				}
 
 				if len(svc.Spec.Selector) == 0 {
-					// No selector
 					continue
 				}
 
-				// Check Pods
 				pods := &corev1.PodList{}
 				if err := r.List(
 					ctx,
@@ -1050,6 +1004,65 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 			}
 		}
 	}
+
+	return true, "", nil
+}
+
+func (r *CNIMigrationReconciler) ensureSucceeded(
+	ctx context.Context,
+	m *cnimigrationv1alpha1.CNIMigration,
+) (bool, string, error) {
+	ctrl.Log.Info("Migration successfully completed", "migration", m.Name)
+	return true, "", nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *CNIMigrationReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&cnimigrationv1alpha1.CNIMigration{}).
+		Owns(&cnimigrationv1alpha1.CNINodeMigration{}).
+		Complete(r)
+}
+
+func (r *CNIMigrationReconciler) checkWebhooksDisabled(ctx context.Context) (bool, string, error) {
+	podList := &corev1.PodList{}
+	if err := r.List(
+		ctx,
+		podList,
+		client.InNamespace("kube-system"),
+		client.MatchingLabels{"component": "kube-apiserver"},
+	); err != nil {
+		return false, "", fmt.Errorf("failed to list kube-apiserver pods: %w", err)
+	}
+
+	if len(podList.Items) == 0 {
+		return false, "Waiting for kube-apiserver pods to be found", nil
+	}
+
+	for _, pod := range podList.Items {
+		if !isPodReady(&pod) {
+			return false, fmt.Sprintf("Waiting for kube-apiserver pod %s to be ready", pod.Name), nil
+		}
+
+		hasFlag := false
+		for _, container := range pod.Spec.Containers {
+			if container.Name == "kube-apiserver" {
+				for _, arg := range container.Command {
+					if strings.Contains(arg, "disable-admission-plugins") &&
+						strings.Contains(arg, "MutatingAdmissionWebhook") &&
+						strings.Contains(arg, "ValidatingAdmissionWebhook") {
+						hasFlag = true
+						break
+					}
+				}
+			}
+		}
+
+		if !hasFlag {
+			return false, fmt.Sprintf("Waiting for kube-apiserver pod %s to apply disable flags", pod.Name), nil
+		}
+	}
+
 	return true, "", nil
 }
 

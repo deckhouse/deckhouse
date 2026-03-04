@@ -103,6 +103,9 @@ memory: 10Mi
   {{- if hasKey .Values.controlPlaneManager.apiserver "admissionPlugins" }}
     {{ $_ := set $tpl_context.apiserver "admissionPlugins" .Values.controlPlaneManager.apiserver.admissionPlugins }}
   {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.internal "disableAdmissionPlugins" }}
+    {{ $_ := set $tpl_context.apiserver "disableAdmissionPlugins" .Values.controlPlaneManager.internal.disableAdmissionPlugins }}
+  {{- end }}
   {{- if hasKey .Values.controlPlaneManager.apiserver "auditLog" }}
     {{ $_ := set $tpl_context.apiserver "auditLog" .Values.controlPlaneManager.apiserver.auditLog }}
   {{- end }}

@@ -1,10 +1,4 @@
 {{- if .Values.global.internal.cniMigrationEnabled }}
-{{- $webhooks := list
-  "d8-admission-policy-engine-config"
-  "d8-deckhouse-validating-webhook-handler-hooks"
-  "deckhouse-webhook"
-  "cert-manager-webhook"
-  | join "," }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -38,7 +32,6 @@ spec:
         args:
         - "--mode=manager"
         - "--migration-name={{ .Values.global.internal.cniMigrationName }}"
-        - "--wait-for-webhooks={{ $webhooks }}"
         env:
         - name: KUBERNETES_SERVICE_HOST
           value: "127.0.0.1"

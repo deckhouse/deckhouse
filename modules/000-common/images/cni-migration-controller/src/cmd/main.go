@@ -20,7 +20,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log/slog"
 	"os"
 
 	"github.com/go-logr/logr"
@@ -35,7 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	deckhouselog "github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	networkv1alpha1 "deckhouse.io/cni-migration/api/v1alpha1"
 	"deckhouse.io/cni-migration/internal/agent"
 	"deckhouse.io/cni-migration/internal/manager"
@@ -71,23 +71,14 @@ func (h *healthFileRunner) Start(ctx context.Context) error {
 func main() {
 	var mode string
 	var migrationName string
-	var waitForWebhooks string
 
 	flag.StringVar(&mode, "mode", "manager", "Mode to run the application in: 'manager', 'agent' or 'healthcheck'")
 	flag.StringVar(&migrationName, "migration-name", "", "Name of the CNIMigration resource to process")
-	flag.StringVar(&waitForWebhooks, "wait-for-webhooks", "", "Comma-separated list of webhooks to wait for deletion")
 
 	flag.Parse()
 
-	// Configure Deckhouse structured logger
-	logger := deckhouselog.NewLogger(
-		deckhouselog.WithLevel(slog.LevelInfo),
-		deckhouselog.WithHandlerType(deckhouselog.JSONHandlerType),
-	)
-	deckhouselog.SetDefault(logger)
-
-	// Set logger for controller-runtime
-	ctrl.SetLogger(logr.FromSlogHandler(logger.Handler()))
+	// Set Deckhouse standard logger for controller-runtime
+	ctrl.SetLogger(logr.FromSlogHandler(log.Default().Handler()))
 
 	config := ctrl.GetConfigOrDie()
 	config.QPS = 20.0
@@ -108,10 +99,9 @@ func main() {
 		}
 
 		if err := (&manager.CNIMigrationReconciler{
-			Client:          mgr.GetClient(),
-			Scheme:          mgr.GetScheme(),
-			MigrationName:   migrationName,
-			WaitForWebhooks: waitForWebhooks,
+			Client:        mgr.GetClient(),
+			Scheme:        mgr.GetScheme(),
+			MigrationName: migrationName,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create manager controller", "controller", "CNIMigration")
 			os.Exit(1)
