@@ -13,11 +13,11 @@ git:
 #  - samples
 #  - security/samples
 #  - security/tools/jwt/samples
-- url: {{ .SOURCE_REPO }}/istio/kiali
-  tag: {{ $kialiVersion }}
-  to: /src/kiali
-  excludePaths: 
-  - frontend
+#- url: {{ .SOURCE_REPO }}/istio/kiali
+#  tag: {{ $kialiVersion }}
+#  to: /src/kiali
+#  excludePaths: 
+#  - frontend
 #- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
 #  tag: {{ $kialiVersion }}
 #  to: /src/kial-frontend-assets
@@ -38,7 +38,7 @@ shell:
   - git apply --verbose --directory=/src/istio /patches/002-istio-gomod_gosum.patch
   - git apply --verbose --directory=/src/istio /patches/003-istio-server_fmtText.patch
 
-  - git apply --verbose --directory=/src/kiali < /patches/001-kiali-go-mod.patch
+ # - git apply --verbose --directory=/src/kiali < /patches/001-kiali-go-mod.patch
 
   - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali-frontend-assets.git /src/kial-frontend-assets/
 
