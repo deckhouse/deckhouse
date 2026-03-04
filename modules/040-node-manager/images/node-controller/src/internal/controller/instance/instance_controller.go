@@ -38,7 +38,7 @@ type InstanceReconciler struct {
 	machineFactory machine.MachineFactory
 }
 
-type reconcileStep func(ctx context.Context, instance *deckhousev1alpha2.Instance) (ctrl.Result, error)
+type reconcileStep func(ctx context.Context, instance *deckhousev1alpha2.Instance) (done bool, result ctrl.Result, err error)
 
 const (
 	instanceControllerFinalizer = "node-manager.hooks.deckhouse.io/instance-controller"
@@ -93,63 +93,98 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	for _, step := range []reconcileStep{
+		r.reconcileInstanceHeartbeat,
+		r.reconcileInstanceBashibleStatus,
 		r.reconcileInstanceDeletion,
-		r.reconcileInstance,
+		r.reconcileInstanceEnsureFinalizer,
+		r.reconcileInstanceSourceExistence,
 	} {
-		result, err := step(ctx, instance)
+		done, result, err := step(ctx, instance)
 		if err != nil {
 			return wrapReconcileError(err)
+		}
+		if !done {
+			continue
 		}
 		if result != (ctrl.Result{}) {
 			log.V(1).Info("instance reconcile step returned early")
 			return result, nil
 		}
+
+		break
 	}
 
 	log.V(1).Info("instance reconciled")
 	return ctrl.Result{RequeueAfter: instanceRequeueInterval}, nil
 }
 
-func (r *InstanceReconciler) reconcileInstance(ctx context.Context, instance *deckhousev1alpha2.Instance) (ctrl.Result, error) {
+func (r *InstanceReconciler) reconcileInstanceEnsureFinalizer(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+) (bool, ctrl.Result, error) {
 	ctrl.LoggerFrom(ctx).V(4).Info("tick", "op", "instance.reconcile.active")
+
 	if err := r.ensureInstanceFinalizer(ctx, instance); err != nil {
-		return ctrl.Result{}, err
+		return false, ctrl.Result{}, err
 	}
 
-	deleted, err := r.reconcileLinkedSourceExistence(ctx, instance)
-	if err != nil || deleted {
-		return ctrl.Result{}, err
-	}
-
-	if err := r.reconcileBashibleHeartbeat(ctx, instance); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if err := r.reconcileBashibleStatus(ctx, instance); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{RequeueAfter: instanceRequeueInterval}, nil
+	return false, ctrl.Result{}, nil
 }
 
-func (r *InstanceReconciler) reconcileInstanceDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) (ctrl.Result, error) {
+func (r *InstanceReconciler) reconcileInstanceSourceExistence(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+) (bool, ctrl.Result, error) {
+	deleted, err := r.reconcileLinkedSourceExistence(ctx, instance)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+	if deleted {
+		return true, ctrl.Result{}, nil
+	}
+
+	return false, ctrl.Result{}, nil
+}
+
+func (r *InstanceReconciler) reconcileInstanceHeartbeat(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+) (bool, ctrl.Result, error) {
+	if err := r.reconcileBashibleHeartbeat(ctx, instance); err != nil {
+		return false, ctrl.Result{}, err
+	}
+
+	return false, ctrl.Result{}, nil
+}
+
+func (r *InstanceReconciler) reconcileInstanceBashibleStatus(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+) (bool, ctrl.Result, error) {
+	if err := r.reconcileBashibleStatus(ctx, instance); err != nil {
+		return false, ctrl.Result{}, err
+	}
+
+	return false, ctrl.Result{}, nil
+}
+
+func (r *InstanceReconciler) reconcileInstanceDeletion(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+) (bool, ctrl.Result, error) {
 	isDeleting := instance.DeletionTimestamp != nil && !instance.DeletionTimestamp.IsZero()
 	if !isDeleting {
-		return ctrl.Result{}, nil
+		return false, ctrl.Result{}, nil
 	}
 	ctrl.LoggerFrom(ctx).V(4).Info("tick", "op", "instance.reconcile.deletion")
 
-	if err := r.reconcileBashibleStatus(ctx, instance); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	fastRequeue, err := r.reconcileInstanceFinalization(ctx, instance)
 	if err != nil {
-		return ctrl.Result{}, err
+		return false, ctrl.Result{}, err
 	}
 	if fastRequeue {
-		return ctrl.Result{RequeueAfter: time.Second}, nil
+		return true, ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
-	return ctrl.Result{RequeueAfter: instanceRequeueInterval}, nil
+	return true, ctrl.Result{RequeueAfter: instanceRequeueInterval}, nil
 }
