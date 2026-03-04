@@ -113,7 +113,7 @@ func appendLogEnvs(envs []string) []string {
 		providerEnv = "TF_LOG_PROVIDER"
 	)
 
-	coreVal := "TRACE"
+	coreVal := "INFO"
 	providerVal := "INFO"
 
 	for _, e := range envs {

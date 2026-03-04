@@ -17,7 +17,7 @@ to cloud provider dvp we should add this resource as dependency to data source, 
 opentofu reads not ready resource. In updating deckhouse, user could get destructive plan 
 with recreating all vm's. To avoid it, we patched opentofu.
 In this patch, we provide `TF_SKIP_DEPS_FOR_DATA_SOURCES_PROVIDER` for filter providers that
-use skipping depend ons in data sources (now we need it in dvp, and we should not affect anoter
+use skipping depend on's in data sources (now we need it in dvp, and we should not affect another
 providers). Also, we handle `TF_SKIP_DEPS_FOR_DATA_SOURCES` that contains `;` separated
 resources for skip in data sources. Unfortunately we cannot get full diff of data source
 in place when we check deps. Opentofu produce diff change (and re-read) for data source if depended on
