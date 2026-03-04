@@ -1,5 +1,23 @@
 Subject: [PATCH] add kubernetes_resource_ready_v1 resource
 ---
+Index: kubernetes/provider.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/kubernetes/provider.go b/kubernetes/provider.go
+--- a/kubernetes/provider.go	(revision e0e3ef30238cdb340b789046952cedc7a1b9e98b)
++++ b/kubernetes/provider.go	(date 1772625378033)
+@@ -373,6 +373,9 @@
+
+ 			// node
+ 			"kubernetes_runtime_class_v1": resourceKubernetesRuntimeClassV1(),
++
++			// readiness
++			"kubernetes_resource_ready_v1": resourceKubernetesResourceReadyV1(),
+ 		},
+ 	}
+
 Index: kubernetes/resource_kubernetes_resource_ready_v1_test.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -7,8 +25,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/kubernetes/resource_kubernetes_resource_ready_v1_test.go b/kubernetes/resource_kubernetes_resource_ready_v1_test.go
 new file mode 100644
---- /dev/null	(date 1772369749558)
-+++ b/kubernetes/resource_kubernetes_resource_ready_v1_test.go	(date 1772369749558)
+--- /dev/null	(date 1772625318978)
++++ b/kubernetes/resource_kubernetes_resource_ready_v1_test.go	(date 1772625318978)
 @@ -0,0 +1,3092 @@
 +package kubernetes
 +
@@ -3109,8 +3127,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/kubernetes/resource_kubernetes_resource_ready_v1.go b/kubernetes/resource_kubernetes_resource_ready_v1.go
 new file mode 100644
---- /dev/null	(date 1772383614931)
-+++ b/kubernetes/resource_kubernetes_resource_ready_v1.go	(date 1772383614931)
+--- /dev/null	(date 1772625318937)
++++ b/kubernetes/resource_kubernetes_resource_ready_v1.go	(date 1772625318937)
 @@ -0,0 +1,1692 @@
 +package kubernetes
 +
@@ -4811,8 +4829,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/run_resource_ready_tests.sh b/run_resource_ready_tests.sh
 new file mode 100755
---- /dev/null	(date 1772369328045)
-+++ b/run_resource_ready_tests.sh	(date 1772369328045)
+--- /dev/null	(date 1772625318998)
++++ b/run_resource_ready_tests.sh	(date 1772625318998)
 @@ -0,0 +1,93 @@
 +#!/usr/bin/env bash
 +
