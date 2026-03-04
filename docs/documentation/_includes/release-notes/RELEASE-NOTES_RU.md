@@ -4,7 +4,7 @@
 
 - Добавлена поддержка Kubernetes 1.34 и прекращена поддержка Kubernetes 1.29.
   В будущих релизах DKP будет прекращена поддержка Kubernetes 1.30.
-  Версия Kubernetes используемая по умолчанию ([параметр `kubernetesVersion`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.74/reference/api/cr.html#clusterconfiguration-kubernetesversion) установлен в `Automatic`) изменена на [1.32](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.74/reference/supported_versions.html#kubernetes).
+  Версия Kubernetes, используемая по умолчанию ([параметр `kubernetesVersion`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.74/reference/api/cr.html#clusterconfiguration-kubernetesversion) установлен в `Automatic`), изменена на [1.32](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.74/reference/supported_versions.html#kubernetes).
 
 ### Основные изменения
 
@@ -25,8 +25,9 @@
 - В ресурс HuaweiCloudInstanceClass облачного провайдера Huawei Cloud добавлен [параметр `vipAddress`](https://deckhouse.ru/modules/cloud-provider-huaweicloud/v1.74/cr.html#huaweicloudinstanceclass-v1-spec-vipaddress),
   позволяющий задавать виртуальный IP-адрес для всех узлов инстанс-класса.
 
-- В настройках провайдера Huawei Cloud добавлена возможность переопределять главную сеть для основного сетевого интерфейса ([параметр `mainNetwork`](https://deckhouse.ru/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-mainnetwork))
-  и указывать подсети для дополнительных сетевых интерфейсов ([параметр `additionalNetworks`](https://deckhouse.ru/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-additionalnetworks)) в CloudPermanent- и CloudEphemeral-узлах.
+- В настройках провайдера Huawei Cloud добавлена возможность переопределять главную сеть для основного сетевого интерфейса ([параметр `mainNetwork`](https://deckhouse.ru/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-mainnetwork)) и указывать подсети для дополнительных сетевых интерфейсов ([параметр `additionalNetworks`](https://deckhouse.ru/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-additionalnetworks)) в CloudPermanent- и CloudEphemeral-узлах.
+
+  **Важно.** При обновлении до DKP 1.74 на Huawei Cloud возможно массовое пересоздание CloudEphemeral-узлов. Из-за временной нехватки узлов часть подов может не запуститься.
 
 - Сборка архива с данными для отладки теперь выполняется с помощью [утилиты `d8`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.74/cli/d8/).
   При необходимости собрать данные воспользуйтесь [инструкцией](https://deckhouse.ru/modules/deckhouse/v1.74/faq.html#как-собрать-информацию-для-отладки).
