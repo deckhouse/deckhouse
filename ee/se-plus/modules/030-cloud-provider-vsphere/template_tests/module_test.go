@@ -270,8 +270,6 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
 			registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-
 			csiControllerPluginSS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "csi.vsphere.vmware.com")
 			csiNodePluginDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
@@ -301,7 +299,12 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
 
 			// user story #1
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-vsphere")
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+
 			expectedProviderRegistrationJSON := `{
           "server": "myhost",
           "insecure": true,
@@ -321,9 +324,29 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
           "vmFolderPath": "dev/test",
           "zoneTagCategory": "myzonetagcat"
         }`
-			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.vsphere").String())
+
+			actualProviderRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.vsphere").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+			Expect(string(actualProviderRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			actualProviderSpecificRegistrationData, err := base64.StdEncoding.DecodeString(providerSpecificRegistrationSecret.Field("data.vsphere").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(actualProviderSpecificRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-vsphere-mcm")
+			Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
+			providerSpecificMCMSecretData := providerSpecificMCMSecret.Field("data").Map()
+			Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificMCMSecretData) == 3 ).To(BeTrue())
+			Expect(len(providerSpecificMCMSecretData["cloud-instance-manager/config-for-machine-controller-manager.yaml"].String()) > 0 ).To(BeTrue())
+
+			providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-vsphere-bashible")
+			Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
+			providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
+			Expect(providerSpecificBashibleSecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificBashibleSecretData) == 1 ).To(BeTrue())
+			Expect(len(providerSpecificBashibleSecretData["bootstrap-networks.sh.tpl"].String()) > 0 ).To(BeTrue())
+
 
 			// user story #2
 			Expect(csiDriver.Exists()).To(BeTrue())

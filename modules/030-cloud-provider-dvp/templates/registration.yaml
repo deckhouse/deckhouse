@@ -1,7 +1,6 @@
-{{- $providerClusterConfiguration := .Values.cloudProviderDvp.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
 {{- define "registration_values" }}
 {{- $context := index . 0 }}
-{{- $providerClusterConfiguration := index . 1 }}
+{{- $providerClusterConfiguration := $context.Values.cloudProviderDvp.internal.providerClusterConfiguration }}
 type: {{ b64enc "dvp" | quote }}
 # DVP does not contain meaning regions and zones
 # but out machinery use them. we use default as region and as one zone
@@ -36,7 +35,7 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: Opaque
-data: {{- include "registration_values" (list . $providerClusterConfiguration) | nindent 2 }}
+data: {{- include "registration_values" (list . ) | nindent 2 }}
 ---
 apiVersion: v1
 kind: Secret
@@ -45,4 +44,4 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: Opaque
-data: {{- include "registration_values" (list . $providerClusterConfiguration) | nindent 2 }}
+data: {{- include "registration_values" (list . ) | nindent 2 }}
