@@ -6,27 +6,36 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+- url: {{ .SOURCE_REPO }}/istio/istio
+  tag: {{ $istioVersion }}
+  to: /src/istio
+  excludePaths: 
+  - samples
+  - security
+- url: {{ .SOURCE_REPO }}/istio/kiali
+  tag: {{ $kialiVersion }}
+  to: /src/kiali
+  excludePaths: 
+  - frontend
+- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets
+  tag: {{ $kialiVersion }}
+  to: /src/kial-frontend-assets
+  excludePaths: 
+  - .git
+mount:
+  - fromPath: patches
+    to: /patches
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/istio.git /src/istio/
-  - cd /src/istio/
-  - git apply --verbose /patches/001-istio-apply_go.patch /patches/002-istio-gomod_gosum.patch /patches/003-istio-server_fmtText.patch
-  - rm -rf /src/istio/.git
-  - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali.git /src/kiali/
-  - cd /src/kiali/
-  - git apply --verbose /patches/001-kiali-go-mod.patch
-  - rm -rf /src/kiali/.git
-  - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali-frontend-assets.git /src/kial-frontend-assets/
-  - rm -rf /src/kiali-frontend-assets/.git
+  - patch -p1 -d /src/istio < /patches/001-istio-apply_go.patch
+  - patch -p1 -d /src/istio < /patches/002-istio-gomod_gosum.patch
+  - patch -p1 -d /src/istio < /patches/003-istio-server_fmtText.patch
 
+  - patch -p1 -d /src/kiali < /patches/001-kiali-go-mod.patch
+
+  - rm -rf /src/istio/.git
+  - rm -rf /src/kiali/.git
+  
   # getting rid of unused vulnerable code
   - rm -rf /src/istio/samples
   - rm -rf /src/istio/security/samples
