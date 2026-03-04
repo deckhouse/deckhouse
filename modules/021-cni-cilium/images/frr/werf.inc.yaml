@@ -24,9 +24,9 @@ shell:
       abuild \
       alpine-conf \
       alpine-sdk
-	- setup-apkcache /var/cache/apk
-	- mkdir -p /pkgs/apk
-	- echo 'builder ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+  - setup-apkcache /var/cache/apk
+  - mkdir -p /pkgs/apk
+  - echo 'builder ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
   - adduser -D -G abuild builder
   - su builder -c 'abuild-keygen -a -n'
 ---
@@ -42,9 +42,9 @@ shell:
   install:
   - chown -R builder /pkgs /src
   - cd /src/libyang
-	- sudo -u builder abuild checksum
-	- sudo -u builder git init
-	- sudo -u builder abuild -r -P /pkgs/apk
+  - sudo -u builder abuild checksum
+  - sudo -u builder git init
+  - sudo -u builder abuild -r -P /pkgs/apk
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-source-builder
 fromImage: builder/alpine
@@ -67,17 +67,17 @@ shell:
   - cd /pkgs/apk
   - apk add --allow-untrusted */*.apk
   - source /src/alpine/APKBUILD.in
-	- apk add --no-cache --update-cache $makedepends
+  - apk add --no-cache --update-cache $makedepends
   - export GITREV="$(cat /src/frr/.GITREV)"
   - export PKGVER="$(printf '%u\n' 0x$GITREV)"
   - cd /src/frr
-	- ./bootstrap.sh
-	- |
+  - ./bootstrap.sh
+  - |
     ./configure \
-		  --enable-multipath=256 \
-		  --enable-numeric-version \
-		  --with-pkg-extra-version="_git$PKGVER"
-	- make dist
+      --enable-multipath=256 \
+      --enable-numeric-version \
+      --with-pkg-extra-version="_git$PKGVER"
+  - make dist
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-alpine-apk-builder
 fromImage: {{ .ModuleName }}/{{ .ImageName }}-artifact-alpine-builder
@@ -101,9 +101,9 @@ shell:
   - find /pkgs/apk -type f -name APKINDEX.tar.gz -delete
   - chown -R builder /dist /pkgs
   - cd /dist
-	- sudo -u builder abuild checksum
-	- sudo -u builder git init
-	- sudo -u builder abuild -r -P /pkgs/apk
+  - sudo -u builder abuild checksum
+  - sudo -u builder git init
+  - sudo -u builder abuild -r -P /pkgs/apk
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-final-origin
 fromImage: builder/alpine
@@ -121,8 +121,8 @@ shell:
   install:
   - mkdir -p /pkgs/apk
   - apk add --no-cache --update-cache tini
-	- apk add --no-cache --allow-untrusted /pkgs/apk/*/*.apk
-	- rm -rf /pkgs
+  - apk add --no-cache --allow-untrusted /pkgs/apk/*/*.apk
+  - rm -rf /pkgs
   - mkdir -p /var/run/frr
   - chown -R frr:frr /etc/frr /var/run/frr
 imageSpec:
