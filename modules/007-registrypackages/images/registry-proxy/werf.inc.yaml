@@ -1,4 +1,4 @@
-{{- $version := "08.04.25" }}
+{{- $version := "11.02.26" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: builder/scratch
@@ -7,13 +7,13 @@ import:
   add: /
   to: /
   includePaths:
-  - kubernetes-api-proxy.tar
+  - registry-proxy.tar
   - install
   - uninstall
   before: setup
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "kubernetes-api-proxy": "{{ $version }}" }
+    labels: {"distro": "all", "version": "all", "registry-proxy": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: builder/golang-alpine
@@ -33,7 +33,7 @@ import:
   add: /usr/bin/jq
   before: setup
 dependencies:
-- image: node-manager/kubernetes-api-proxy
+- image: registry/registry-proxy
   before: setup
   imports:
   - type: ImageDigest
@@ -51,6 +51,6 @@ shell:
   - /crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
   - /crane pull --format oci $IMAGE_REPO@$IMAGE_DIGEST $param /tmp/image
   - rm -f ~/.docker/config.json
-  - jq '.manifests[0].annotations = {"org.opencontainers.image.ref.name":"deckhouse.local/images:kubernetes-api-proxy"}' /tmp/image/index.json > /tmp/index.updated.json && mv /tmp/index.updated.json /tmp/image/index.json
-  - tar -C /tmp/image -cf /kubernetes-api-proxy.tar .
+  - jq '.manifests[0].annotations = {"org.opencontainers.image.ref.name":"deckhouse.local/images:registry-proxy"}' /tmp/image/index.json > /tmp/index.updated.json && mv /tmp/index.updated.json /tmp/image/index.json
+  - tar -C /tmp/image -cf /registry-proxy.tar .
   - rm -rf /tmp/image
