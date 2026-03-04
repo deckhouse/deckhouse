@@ -252,7 +252,7 @@
                 "value": [
                   {
                     "title": "",
-                    "url": "/d/gpu-node?var-node=${__data.fields.Hostname}"
+                    "url": "/d/gpu-node/gpu-node?var-node=${__data.fields.Hostname}"
                   }
                 ]
               }

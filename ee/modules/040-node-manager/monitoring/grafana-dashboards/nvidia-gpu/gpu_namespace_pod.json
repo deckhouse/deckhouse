@@ -1337,7 +1337,7 @@
   },
   "timezone": "",
   "title": "GPU Namespace / Pod",
-  "uid": "gpu-namespace-pod",
+  "uid": "gpu-pods",
   "version": 9,
   "weekStart": ""
 }

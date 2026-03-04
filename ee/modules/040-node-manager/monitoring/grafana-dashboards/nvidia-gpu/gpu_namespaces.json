@@ -169,7 +169,7 @@
                 "value": [
                   {
                     "title": "",
-                    "url": "/d/gpu-namespace?var-namespace=${__value.raw}"
+                    "url": "/d/gpu-namespace/gpu-namespace?var-namespace=${__value.raw}"
                   }
                 ]
               }
