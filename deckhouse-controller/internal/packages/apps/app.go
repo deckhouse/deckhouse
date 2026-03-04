@@ -46,7 +46,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 // Application represents a running instance of a package.
@@ -111,8 +110,7 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 
 	a.namespace = splits[0]
 
-	//a.instance = splits[1]
-	a.instance = "d8-" + splits[1]
+	a.instance = splits[1]
 	a.name = name
 
 	a.path = cfg.Path
@@ -405,7 +403,9 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {
-			normalizeManagedServicesPrefix(hookResult.ObjectPatcherOperations)
+			for _, op := range hookResult.ObjectPatcherOperations {
+				op.SetObjectPrefix(a.instance)
+			}
 			patchErr := a.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations)
 			if patchErr != nil {
 				return fmt.Errorf("exec hook: %w, and exec operations: %w", err, patchErr)
@@ -416,7 +416,9 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 	}
 
 	if len(hookResult.ObjectPatcherOperations) > 0 {
-		normalizeManagedServicesPrefix(hookResult.ObjectPatcherOperations)
+		for _, op := range hookResult.ObjectPatcherOperations {
+			op.SetObjectPrefix(a.instance)
+		}
 		if err = a.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations); err != nil {
 			return fmt.Errorf("exec operations: %w", err)
 		}
@@ -429,27 +431,4 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 	}
 
 	return nil
-}
-
-// NormalizeManagedServicesPrefix walks operations and ensures object names
-// have the Deckhouse object prefix (d8-) when in a managed namespace.
-func normalizeManagedServicesPrefix(operations []sdkpkg.PatchCollectorOperation) {
-	for _, op := range operations {
-		name := op.GetName()
-		/*
-			ns := op.GetNamespace()
-			name := op.GetName()
-			if !needsManagedPrefix(ns) {
-				continue
-			}*/
-		if strings.HasPrefix(name, "d8-") {
-			continue
-		}
-		op.SetNamePrefix("d8-")
-	}
-}
-
-// needsManagedPrefix returns true if the namespace is one where object names
-func needsManagedPrefix(namespace string) bool {
-	return strings.HasPrefix(namespace, "d8-") || strings.HasPrefix(namespace, "d8ms-")
 }

@@ -145,6 +145,7 @@ github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51 h1:fntxXW2hn5V
 github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.10.0 h1:VPhYvMVQ3pT32I2WL1ITtQyrYdpiUR0RocLw7S4TfNg=
 github.com/deckhouse/module-sdk v0.10.0/go.mod h1:Z1jfmd0fICoYww0daMijWAU+OZTxeJUXfMciKKuYAYA=
+github.com/deckhouse/module-sdk v0.10.2-0.20260304160619-6b32d3428382/go.mod h1:Z1jfmd0fICoYww0daMijWAU+OZTxeJUXfMciKKuYAYA=
 github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3 h1:Ho1eOS+y2q4ogphFgyIwIwG0AfTyYlSNUvdB0uoY5wk=
 github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3/go.mod h1:fFmOHeP+jqXhyEVftxMtsmBa5K8XTeVn3/AGVT9xcm8=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
@@ -213,6 +214,8 @@ github.com/flant/kube-client v1.6.0 h1:g6ksfIgTlrvLgp/Iu1a9c5aC4yPClLplq3w9e/qtY
 github.com/flant/kube-client v1.6.0/go.mod h1:dYJyx7aMldXR/F8hlhRxlcEhSkxKcMZV2Oz8d+o/Up4=
 github.com/flant/shell-operator v1.14.1 h1:Amdlolh9k+kjX0dPlJTqSPgxOfa3KXW1u60Gr8xKlX0=
 github.com/flant/shell-operator v1.14.1/go.mod h1:oTahEE1kHUd9vselz83qjZ1qLLh7Jq9dXORQ3kVJwks=
+github.com/flant/shell-operator v1.14.2-0.20260304161440-b4a6df535521 h1:OnNYsNnsN9G0GSHzRJ1bzbh/lWfpPdFdRtHTcryUpj4=
+github.com/flant/shell-operator v1.14.2-0.20260304161440-b4a6df535521/go.mod h1:uMDtzGImNjZuDXD3ZL/NZRP8YKM+CKgoWIVvDG4ViKI=
 github.com/flopp/go-findfont v0.1.0 h1:lPn0BymDUtJo+ZkV01VS3661HL6F4qFlkhcJN55u6mU=
 github.com/flopp/go-findfont v0.1.0/go.mod h1:wKKxRDjD024Rh7VMwoU90i6ikQRCr+JTHB5n4Ejkqvw=
 github.com/fluxcd/flagger v1.36.1 h1:X2PumtNwZz9YSGaOtZLFm2zAKLgHhFkbNv8beg7ifyc=
