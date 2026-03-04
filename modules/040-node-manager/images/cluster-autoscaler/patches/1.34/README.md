@@ -41,14 +41,14 @@ We set priority for machines and keep `node.machine.sapcloud.io/trigger-deletion
 but we need to clean deleted machines from annotation in refresh function for keeping up to date annotation value to avoid
 drizzling replicas count in machine deployment.
 
-### 005-set-priority-for-to-de-deleted-machines.patch
+### 005-report-all-machine-creation-errors-to-ca.patch
 
 Report all machine creation errors to Cluster Autoscaler, not only ResourceExhausted
 
 Previously, generateInstanceStatus only reported ErrorInfo to the Cluster Autoscaler when a Machine failed with ResourceExhausted error code (quota/stockout). 
 All other creation failures (invalid image, wrong credentials, network errors, etc.) returned InstanceStatus without ErrorInfo, making them invisible to CA's error handling.
 
-### 006- fix-upcoming-nodes-deadlock-for-failed-node-groups.patch
+### 006-fix-upcoming-nodes-deadlock-for-failed-node-groups.patch
 
 Exclude upcoming nodes for groups without active scale-up requests or are backed off in cluster state handling.
 
