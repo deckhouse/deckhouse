@@ -18,7 +18,7 @@
   {{- if eq (len ($context.Files.Glob $knownVulnPath)) 1 }}
     {{- $vexFile = true }}
   {{- end }}
-  {{- if false }}
+  {{- if $vexFile }}
 ---
 image: {{ $imageName }}-vex-artifact
 fromCacheVersion: {{ div $context.Commit.Date.Unix (mul 60 60) }}v1
