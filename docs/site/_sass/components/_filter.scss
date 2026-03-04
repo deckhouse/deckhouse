@@ -47,6 +47,7 @@
     }
 
     &--title {
+        margin-bottom: 28px;
         font-weight: 700;
         font-size: 24px;
         line-height: 32px;
@@ -56,6 +57,7 @@
     &__container {
 
         &--title {
+            margin-bottom: 12px;
             color: #00122C;
             font-size: 18px;
             font-weight: 600;
@@ -122,6 +124,7 @@
             input {
                 display: flex;
                 padding: 8px 40px 8px 12px;
+                margin-bottom: 28px;
                 justify-content: space-between;
                 align-items: center;
                 align-self: stretch;
@@ -205,7 +208,7 @@
         .filter__checkboxes {
             display: flex;
             flex-direction: column;
-            margin-bottom: 40px;
+            margin-bottom: 24px;
             font-weight: 400;
             font-size: 14px;
             line-height: 24px;
