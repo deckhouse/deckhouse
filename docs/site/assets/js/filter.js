@@ -105,11 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function capitalizeWords(value) {
-    return value
-      .trim()
-      .split(/\s+/)
-      .map(word => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
-      .join(' ');
+    return value.trim().split(/\s+/).map(word => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word)).join(' ');
   }
 
   function markEmptyCheckboxes() {
@@ -259,10 +255,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked:not([data-select-all="true"])');
     const query = filterSearch ? filterSearch.value.trim() : '';
 
-    if (checkedCheckboxes.length > 0) {
-      resetButton.classList.add('active');
-    } else {
-      resetButton.classList.remove('active');
+    if(resetButton) {
+      if (checkedCheckboxes.length > 0) {
+        resetButton.classList.add('active');
+      } else {
+        resetButton.classList.remove('active');
+      }
     }
 
     if (selectedFiltersList) {
@@ -283,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filterContainer = entry.checkboxes[0]?.closest('.filter__container');
         const isEditionsFilter = filterContainer?.classList.contains('filter__container--editions');
         const isStagesFilter = filterContainer?.classList.contains('filter__container--stages');
+        const isTagsFilter = filterContainer?.classList.contains('filter__container--tags');
         const totalSectionCheckboxes = filterContainer ? getFilterContainerCheckboxes(filterContainer).length : 0;
         const selectedCount = entry.values.size;
 
@@ -295,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
           valuesText = Array.from(entry.values).map(code => editionTitles[code] || code).join(', ');
         } else if (isStagesFilter) {
           valuesText = Array.from(entry.values).map(code => stageTitles[code] || code).join(', ');
-        } else {
+        } else if (isTagsFilter) {
           valuesText = Array.from(entry.values).map(value => capitalizeWords(value)).join(', ');
         }
 
@@ -434,10 +433,9 @@ document.addEventListener('DOMContentLoaded', () => {
     checkbox.addEventListener('change', filterArticles);
   });
 
-  initializeArticleFilter(Array.from(articles));
-  document.querySelectorAll('.filter__container').forEach(container => {
-    updateContainerTitleState(container);
-    syncSectionSelectAllState(container);
+  filterArticles();
+  window.addEventListener('pageshow', () => {
+    filterArticles();
   });
   markEmptyCheckboxes();
 
