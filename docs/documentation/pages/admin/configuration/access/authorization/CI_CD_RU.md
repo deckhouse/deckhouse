@@ -56,7 +56,7 @@ EOF
 
 ### Выдача прав
 
-Подробнее о выдаче прав см. в разделе [Выдача прав пользователям и сервисным аккаунтам](granting.html).
+Подробнее о выдаче прав — в разделе [«Выдача прав пользователям и сервисным аккаунтам»](granting.html).
 
 Назначьте необходимые для ServiceAccount права.
 
@@ -128,7 +128,7 @@ export USER_NAME=gitlab-runner-deploy
 export CONTEXT_NAME=${CLUSTER_NAME}-${USER_NAME}
 export FILE_NAME=kube.config
 
-# Для публичного CA уберите --certificate-authority и --embed-certs
+# Для публичного CA уберите --certificate-authority и --embed-certs.
 d8 k config set-cluster $CLUSTER_NAME \
   --server=https://${API_HOST} \
   --certificate-authority=/tmp/ca.crt \
@@ -199,11 +199,11 @@ d8 k --server=$KUBE_SERVER --token=$KUBE_TOKEN get ns
 
 ### Включение
 
-В DexProvider добавьте `enableBasicAuth: true`. Пример настройки DexProvider см. в [документации модуля user-authn](/modules/user-authn/usage.html).
+В DexProvider добавьте `enableBasicAuth: true`. Пример настройки DexProvider приведён [в документации модуля user-authn](/modules/user-authn/usage.html).
 
-### Получение endpoint API
+### Получение эндпоинта API
 
-Для получения endpoint API используйте команду:
+Для получения эндпоинта API используйте команду:
 
 ```shell
 API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
@@ -277,7 +277,7 @@ deploy:
 Рекомендуется для GitLab CI и GitHub Actions.
 {% endalert %}
 
-DKP/Dex не получает пароль пользователя. Способ получения `IDP_TOKEN` зависит от IdP: OIDC job token (GitLab/GitHub) или token endpoint IdP (client_credentials).
+DKP/Dex не получает пароль пользователя. Способ получения `IDP_TOKEN` зависит от IdP: OIDC job token (GitLab/GitHub) или эндпоинт токена IdP (client_credentials).
 
 ### Предварительные требования
 
@@ -332,7 +332,7 @@ DKP настраивает kube-apiserver на проверку токенов D
 
 Набор claims, которые требуются kube-apiserver для аутентификации, зависит от конфигурации. Если kube-apiserver требует `name`, добавьте scope `profile`.
 
-Подробнее о выдаче прав см. в разделе [Выдача прав пользователям и сервисным аккаунтам](granting.html).
+Подробнее о выдаче прав — в разделе [«Выдача прав пользователям и сервисным аккаунтам»](granting.html).
 
 Для текущей ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
@@ -388,10 +388,10 @@ DEX_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
 ```
 
 Параметры:
-- `subject_token` — токен от IdP
-- `subject_token_type` — `id_token` (GitLab/GitHub) или `access_token` (Keycloak)
-- `connector_id` — `metadata.name` ресурса DexProvider
-- `scope` — обязательно `audience:server:client_id:kubernetes` и `profile`
+- `subject_token` — токен от IdP.
+- `subject_token_type` — `id_token` (GitLab/GitHub) или `access_token` (Keycloak).
+- `connector_id` — `metadata.name` ресурса DexProvider.
+- `scope` — обязательно `audience:server:client_id:kubernetes` и `profile`.
 
 {% alert level="info" %}
 Ожидаемая audience всегда `kubernetes`. Если API возвращает 401 с ошибкой несоответствия audience, убедитесь что scope содержит `audience:server:client_id:kubernetes`.
@@ -458,7 +458,7 @@ DEX_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
 d8 k --server="https://${API_HOST}" --token="${DEX_TOKEN}" auth whoami
 ```
 
-### Диагностика
+### Устранение неполадок
 
 {% alert level="info" %}
 Используйте `d8 k auth whoami` для проверки под какой идентичностью выполняется запрос.
