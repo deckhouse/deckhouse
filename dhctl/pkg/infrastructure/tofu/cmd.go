@@ -80,7 +80,7 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 		"module.additional-disk.kubernetes_resource_ready_v1.additional_disk",
 		"module.ipv4-address.kubernetes_resource_ready_v1.ipv4_address",
 		"module.kubernetes-data-disk.kubernetes_resource_ready_v1.kubernetes-data-disk",
-		"module.kubernetes-data-disk.kubernetes_resource_ready_v1.vm",
+		"module.master.kubernetes_resource_ready_v1.vm",
 		"module.static-node.kubernetes_resource_ready_v1.vm",
 	}
 
