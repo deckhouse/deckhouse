@@ -173,16 +173,6 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 		}, {
 			group:  groupMonitoringAndAutoscaling,
 			probe:  "alertmanager",
-			check:  "health",
-			period: 10 * time.Second,
-			config: checker.HTTPEndpointAvailable{
-				Access:   access,
-				Timeout:  5 * time.Second,
-				Endpoint: "https://alertmanager.d8-observability:8443/health",
-			},
-		}, {
-			group:  groupMonitoringAndAutoscaling,
-			probe:  "alertmanager",
 			check:  "observability-rules-group-alert",
 			period: time.Minute,
 			config: checker.ObservabilityRulesGroupAlertLifecycle{
