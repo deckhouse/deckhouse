@@ -241,7 +241,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		return nil
 	}
 
-	reportCh := make(chan progrep.ProgressReport)
+	reportCh := make(chan progrep.ProgressReport, 1)
 	defer close(reportCh)
 
 	go func() {
