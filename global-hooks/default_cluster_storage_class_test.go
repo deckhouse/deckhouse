@@ -243,4 +243,73 @@ var _ = Describe("Global hooks :: default_storage_class_name_test ::", func() {
 		})
 	})
 
+	// cluster E: fallback to cloudProviderDefaultStorageClass
+	const initValuesWithCloudProviderDefault = `
+{
+  "global": {
+    "discovery": {
+      "cloudProviderDefaultStorageClass": "cloud-default"
+    }
+  }
+}
+`
+
+	e := HookExecutionConfigInit(initValuesWithCloudProviderDefault, `{}`)
+
+	Context("User NOT set global.defaultClusterStorageClass but cloud provider discovered default", func() {
+		BeforeEach(func() {
+			e.BindingContexts.Set(e.KubeStateSet(scDefault + scNonDefault))
+
+			// create required storage classes in fake k8s cluster
+			for _, scYaml := range []string{scDefault, scNonDefault} {
+				var sc storage.StorageClass
+				_ = yaml.Unmarshal([]byte(scYaml), &sc)
+				_, err := dependency.TestDC.MustGetK8sClient().
+					StorageV1().
+					StorageClasses().
+					Create(context.TODO(), &sc, metav1.CreateOptions{})
+
+				Expect(err).To(BeNil())
+			}
+
+			// Create cloud-default storage class
+			cloudDefaultSC := `
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: cloud-default
+provisioner: test.csi
+reclaimPolicy: Delete
+`
+			var sc storage.StorageClass
+			_ = yaml.Unmarshal([]byte(cloudDefaultSC), &sc)
+			_, err := dependency.TestDC.MustGetK8sClient().
+				StorageV1().
+				StorageClasses().
+				Create(context.TODO(), &sc, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			e.RunHook()
+		})
+
+		Context("`cloud-default` from discovery should become default", func() {
+			It("StorageClass `cloud-default` must be marked as default", func() {
+				Expect(e).To(ExecuteSuccessfully())
+
+				sc := e.KubernetesGlobalResource("StorageClass", "cloud-default")
+				Expect(sc.Exists()).To(BeTrue())
+				Expect(sc.Field(`metadata.annotations`).Exists()).To(BeTrue())
+				Expect(sc.Field(`metadata.annotations.storageclass\.kubernetes\.io\/is-default-class`).String()).To(Equal("true"))
+			})
+
+			It("StorageClass `default` should have default annotation removed", func() {
+				Expect(e).To(ExecuteSuccessfully())
+
+				sc := e.KubernetesGlobalResource("StorageClass", "default")
+				Expect(sc.Exists()).To(BeTrue())
+				Expect(sc.Field(`metadata.annotations.storageclass\.kubernetes\.io\/is-default-class`).Exists()).To(BeFalse())
+			})
+		})
+	})
+
 })
