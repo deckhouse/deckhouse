@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
-  "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 3,
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -101,8 +101,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
       "timestamp": "2026-01-12T13:21:27.133128Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
+      "timestamp": "2026-03-04T12:06:29.507711Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-01-12T13:21:27Z"
+  "last_updated": "2026-03-04T12:06:29Z"
 }
