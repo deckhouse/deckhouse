@@ -374,6 +374,8 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
+	result["nodeName"] = "$MY_NODENAME"
+
 	// Registry
 	result["registry"] = m.Registry.
 		Manifest().
