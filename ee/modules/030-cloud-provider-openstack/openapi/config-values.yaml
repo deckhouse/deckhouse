@@ -115,6 +115,11 @@ properties:
     description: |
       Load Balancer parameters.
     properties:
+      disabled:
+        type: boolean
+        description: |
+          Set to `true` to disable LoadBalancer support if the OpenStack cloud doesn't have Octavia (LBaaS) service available.
+        default: false
       subnetID:
         type: string
         description: |

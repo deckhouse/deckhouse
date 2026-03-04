@@ -247,6 +247,7 @@ internal-network-name = "myintnetname"
 internal-network-name = "myintnetname2"
 ipv6-support-disabled = true
 [LoadBalancer]
+enabled = true
 create-monitor = "true"
 monitor-delay = "2s"
 monitor-timeout = "1s"
@@ -423,6 +424,46 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 					assertConfigSecretIgnoreMicroVer(f, "true")
 				})
+			})
+		})
+	})
+
+	Context("LoadBalancer disabled flag", func() {
+		Context("LoadBalancer disabled for k8s 1.32", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.loadBalancer.disabled", "true")
+				f.HelmRender()
+			})
+
+			It("Should render 'enabled = false' in ccm config", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+				ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(ccmConfig).To(ContainSubstring("enabled = false"))
+			})
+		})
+
+		Context("LoadBalancer enabled by default", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.loadBalancer.disabled", "false")
+				f.HelmRender()
+			})
+
+			It("Should render 'enabled = true' in ccm config", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+				ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(ccmConfig).To(ContainSubstring("enabled = true"))
 			})
 		})
 	})
