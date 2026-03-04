@@ -15,26 +15,34 @@
 package nelm
 
 import (
+	"fmt"
+
 	"github.com/werf/nelm/pkg/legacy/progrep"
 	"gopkg.in/yaml.v3"
 )
 
-type Report struct {
-	Creating []objectReport `yaml:"Creating"`
+// TrackingEvent represents a helm release tracking event containing objects currently being created.
+type TrackingEvent struct {
+	Creating []objectReport `yaml:"Creating,omitempty"`
 }
 
+// objectReport describes a single Kubernetes object being tracked, along with
+// the resources it is waiting on before becoming ready.
 type objectReport struct {
 	Name    string   `yaml:"Name"`
-	Waiting []string `yaml:"Waiting"`
+	Waiting []string `yaml:"Waiting,omitempty"`
 }
 
-func eventToReport(event progrep.ProgressReport) Report {
-	if len(event.StageReports) == 0 {
-		return Report{}
+// reportToTrackingEvent converts a nelm ProgressReport into an Event by extracting
+// all readiness-tracking operations that are still progressing from the latest stage.
+func reportToTrackingEvent(report progrep.ProgressReport) TrackingEvent {
+	if len(report.StageReports) == 0 {
+		return TrackingEvent{}
 	}
 
-	report := Report{}
-	for _, op := range event.StageReports[len(event.StageReports)-1].Operations {
+	event := TrackingEvent{}
+	// Only inspect the most recent stage report.
+	for _, op := range report.StageReports[len(report.StageReports)-1].Operations {
 		if op.Type != progrep.OperationTypeTrackReadiness {
 			continue
 		}
@@ -43,21 +51,29 @@ func eventToReport(event progrep.ProgressReport) Report {
 			continue
 		}
 
-		waiting := make([]string, len(op.WaitingFor))
+		waiting := make([]string, 0, len(op.WaitingFor))
 		for _, obj := range op.WaitingFor {
 			waiting = append(waiting, obj.String())
 		}
 
-		report.Creating = append(report.Creating, objectReport{
-			Name:    op.ObjectRef.String(),
+		event.Creating = append(event.Creating, objectReport{
+			Name:    formatObjectRef(op.ObjectRef),
 			Waiting: waiting,
 		})
 	}
 
-	return report
+	return event
 }
 
-func (r Report) Marshal() []byte {
-	marshalled, _ := yaml.Marshal(r)
-	return marshalled
+func formatObjectRef(ref progrep.ObjectRef) string {
+	if ref.Group != "" {
+		return fmt.Sprintf("%s.%s/%s", ref.Kind, ref.Group, ref.Name)
+	}
+	return fmt.Sprintf("%s/%s", ref.Kind, ref.Name)
+}
+
+// String marshals the Event to YAML for human-readable output.
+func (e TrackingEvent) String() string {
+	marshalled, _ := yaml.Marshal(e)
+	return string(marshalled)
 }

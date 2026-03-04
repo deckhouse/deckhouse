@@ -166,6 +166,21 @@ func (s *Service) SetConditionTrue(name string, condition ConditionType) {
 	}
 }
 
+// SetConditionFalse marks a condition as false and notifies listeners if changed
+func (s *Service) SetConditionFalse(name string, condition ConditionType, reason ConditionReason, message string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.statuses[name]; !ok {
+		s.statuses[name] = newStatus()
+	}
+
+	// Notify only if the condition actually changed
+	if s.statuses[name].setCondition(Condition{Type: condition, Status: metav1.ConditionFalse, Reason: reason, Message: message}) {
+		s.ch <- name
+	}
+}
+
 // ClearRuntimeConditions sets runtime conditions to unknown
 func (s *Service) ClearRuntimeConditions(name string) {
 	s.mu.Lock()

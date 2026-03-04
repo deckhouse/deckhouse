@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/monitor"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -60,11 +61,13 @@ type Service struct {
 	client         *nelm.Client // nelm client for Helm operations
 	monitorManager *monitor.Manager
 
+	status *status.Service
+
 	logger *log.Logger
 }
 
 // NewService creates a new nelm service for managing Helm releases.
-func NewService(cache runtimecache.Cache, absentCallback monitor.AbsentCallback, logger *log.Logger) *Service {
+func NewService(cache runtimecache.Cache, callback monitor.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
 	nelmClient := nelm.New(logger, nelm.WithLabels(map[string]string{
 		"heritage": "deckhouse",
 	}))
@@ -72,7 +75,8 @@ func NewService(cache runtimecache.Cache, absentCallback monitor.AbsentCallback,
 	return &Service{
 		tmpDir:         os.TempDir(),
 		client:         nelmClient,
-		monitorManager: monitor.New(cache, nelmClient, absentCallback, logger),
+		status:         status,
+		monitorManager: monitor.New(cache, nelmClient, callback, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }
@@ -241,8 +245,9 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 
 	// Install or upgrade the release
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
-		Path:        pkg.GetPath(),
-		ValuesPaths: []string{valuesPath},
+		OnTrackingEvent: s.updateTrackingStatus,
+		Path:            pkg.GetPath(),
+		ValuesPaths:     []string{valuesPath},
 		ReleaseLabels: map[string]string{
 			nelm.LabelPackageChecksum: checksum,
 		},
@@ -256,6 +261,11 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	s.monitorManager.AddMonitor(namespace, pkg.GetName(), renderedManifests)
 
 	return nil
+}
+
+func (s *Service) updateTrackingStatus(name string, event nelm.TrackingEvent) {
+	s.logger.Debug("update tracking event", slog.String("name", name), event.String())
+	s.status.SetConditionFalse(name, status.ConditionHelmApplied, ConditionReasonInstallChart, event.String())
 }
 
 // shouldRunHelmUpgrade determines if a Helm upgrade is needed.
