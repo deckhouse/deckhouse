@@ -67,7 +67,7 @@ func Test_ReadAuthConfig(t *testing.T) {
 }
 `
 		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
-		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "", "")
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "")
 		assert.NoError(t, err)
 	})
 
@@ -82,7 +82,7 @@ func Test_ReadAuthConfig(t *testing.T) {
 }
 `
 		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
-		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "", "")
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "")
 		assert.NoError(t, err)
 	})
 
@@ -97,7 +97,7 @@ func Test_ReadAuthConfig(t *testing.T) {
 }
 `
 		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
-		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "", "")
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "")
 		assert.Error(t, err)
 	})
 
@@ -112,28 +112,38 @@ func Test_ReadAuthConfig(t *testing.T) {
 }
 `
 		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
-		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "", "")
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg, "", "")
 		assert.Error(t, err)
 	})
 
-	t.Run("use credentials parse error", func(t *testing.T) {
-		_, err := readAuthConfig("registry.example.com:8032/modules", "", "", "", "dsdsd")
-		assert.EqualError(t, err, "decode credentials: illegal base64 data at input byte 4")
-	})
-
-	t.Run("use credentials parts error", func(t *testing.T) {
-		cr := base64.StdEncoding.EncodeToString([]byte("test"))
-		_, err := readAuthConfig("registry.example.com:8032/modules", "", "", "", cr)
-		assert.EqualError(t, err, "credentials must be in form of <username>:<password>")
-	})
-
-	t.Run("use credentials pass", func(t *testing.T) {
-		cr := base64.StdEncoding.EncodeToString([]byte("test:123"))
-		auth, err := readAuthConfig("registry.example.com:8032/modules", "", "", "", cr)
+	t.Run("use login/password auth", func(t *testing.T) {
+		// when login is provided it should take precedence over dockerCfg
+		auth, err := readAuthConfig("registry.example.com:8032/modules", "", "user", "pass")
 		assert.NoError(t, err)
 		if assert.NotNil(t, auth) {
-			assert.Equal(t, auth.Username, "test")
-			assert.Equal(t, auth.Password, "123")
+			assert.Equal(t, auth.Username, "user")
+			assert.Equal(t, auth.Password, "pass")
+		}
+	})
+
+	t.Run("login/password override dockerCfg", func(t *testing.T) {
+		auths := `
+{
+	"auths": {
+		"registry.example.com:8032/modules": {
+			"username": "foo",
+			"password": "bar"
+		}
+	}
+}
+`
+		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
+		// even though dockerCfg contains credentials, login/password should be used
+		auth, err := readAuthConfig("registry.example.com:8032/modules", cfg, "user", "pass")
+		assert.NoError(t, err)
+		if assert.NotNil(t, auth) {
+			assert.Equal(t, auth.Username, "user")
+			assert.Equal(t, auth.Password, "pass")
 		}
 	})
 }
