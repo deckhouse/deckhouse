@@ -51,7 +51,7 @@ EOF
 ```
 
 {% alert level="info" %}
-Секрет типа `kubernetes.io/service-account-token` — уставревший подход. Рекомендуется использовать TokenRequest API (`d8 k create token ...`).
+Секрет типа `kubernetes.io/service-account-token` — устаревший подход. Рекомендуется использовать TokenRequest API (`d8 k create token ...`).
 {% endalert %}
 
 ### Выдача прав
@@ -158,14 +158,14 @@ d8 k create token gitlab-runner-deploy -n ci-deploy --duration=1h
 Команда `d8 k create token` сама требует доступа к Kubernetes API. Если CI-задача (job) не имеет начального доступа к кластеру, выполнить TokenRequest внутри задачи невозможно.
 {% endalert %}
 
-#### Паттерны использования в CI
+#### Типовые сценарии к использованию в CI
 
 **Bootstrap-токен с минимальными правами.** CI хранит долгоживущий kubeconfig/токен, который имеет право только на создание TokenRequest для конкретного ServiceAccount. В начале задачи bootstrap-токен выпускает короткоживущий токен, который используется для деплоя.
 
 **Внешний token broker.** Оператор, секрет-менеджер (Vault, External Secrets) или внешний сервис периодически выпускает короткоживущие токены и помещает их в CI-переменные или секреты. CI-задача только использует готовый токен.
 
 {% alert level="info" %}
-Bootstrap-токен должен иметь минимальные права: только `create` на ресурс `serviceaccounts/token` для конкретного ServiceAccount/namespace. Не используйте cluster-admin. Ограничивайте TTL выпускаемых токенов и оперативно отзывайте bootstrap-доступ при компрометации.
+Bootstrap-токен должен иметь минимальные права: только `create` на ресурс `serviceaccounts/token` для конкретного ServiceAccount/namespace. Не используйте cluster-admin. Ограничивайте TTL выпускаемых токенов и оперативно отзывайте bootstrap-доступ при его компрометации.
 {% endalert %}
 
 Пример использования без файла kubeconfig:
@@ -269,7 +269,7 @@ deploy:
 
 ---
 
-## Token Exchange
+## Обмен токена (token exchange)
 
 Пайплайн получает токен от IdP, обменивает его в Dex на токен с `aud=kubernetes` и обращается с ним к API.
 
