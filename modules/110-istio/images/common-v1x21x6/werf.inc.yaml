@@ -33,9 +33,9 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git apply --verbose -p1 --directory=/src/istio < /patches/001-istio-apply_go.patch
-  - git apply --verbose -p1 --directory=/src/istio < /patches/002-istio-gomod_gosum.patch
-  - git apply --verbose -p1 --directory=/src/istio < /patches/003-istio-server_fmtText.patch
+  - git apply --verbose --directory=/src/istio < /patches/001-istio-apply_go.patch
+  - git apply --verbose --directory=/src/istio < /patches/002-istio-gomod_gosum.patch
+  - git apply --verbose --directory=/src/istio < /patches/003-istio-server_fmtText.patch
 
   - git apply --verbose -p1 --directory=/src/kiali < /patches/001-kiali-go-mod.patch
 
