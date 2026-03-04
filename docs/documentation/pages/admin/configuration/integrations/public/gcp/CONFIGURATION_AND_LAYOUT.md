@@ -224,7 +224,9 @@ You can exclude unnecessary StorageClasses by specifying them in the [`exclude`]
 
 To run virtual machine workloads (e.g., KVM-based VMs) inside GCP instances, enable nested virtualization.
 
-> Only supported on specific machine types. See [the GCP documentation](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types) for the list of compatible types.
+{% alert %}
+Only specific machine types support nested virtualization. See [the GCP documentation](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types) for the list of compatible types.
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
