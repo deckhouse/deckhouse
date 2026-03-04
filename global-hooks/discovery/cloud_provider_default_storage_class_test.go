@@ -202,7 +202,7 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			if len(m) > 0 {
-				Expect(m[0].Action).To(Equal(4))
+				Expect(int(m[0].Action)).To(Equal(4)) // Action 4 = Expire
 			}
 		})
 	})
@@ -232,7 +232,7 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			if len(m) > 0 {
-				Expect(m[0].Action).To(Equal(4))
+				Expect(int(m[0].Action)).To(Equal(4)) // Action 4 = Expire
 			}
 		})
 	})
@@ -261,7 +261,7 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			if len(m) > 0 {
-				Expect(m[0].Action).To(Equal(4))
+				Expect(int(m[0].Action)).To(Equal(4)) // Action 4 = Expire
 			}
 		})
 	})
