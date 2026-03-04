@@ -13,10 +13,12 @@
 # limitations under the License.
 
 {{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
+{{ $manifestsDir := "/var/lib/bashible/control-plane" }}
 
 {{- if eq .runType "ClusterBootstrap" }}
-# Read previously discovered IP
+# Read previously discovered IP and hostname
 export MY_IP="$(</var/lib/bashible/discovered-node-ip)"
+export MY_NODENAME="$(</var/lib/bashible/discovered-node-name)"
 
 function subst_config() {
     tmpfile=$(mktemp /opt/deckhouse/tmp/kubeadm-config.XXXXXX)
@@ -26,6 +28,10 @@ function subst_config() {
 
 subst_config {{ $kubeadmDir }}/config.yaml
 for file in $(find {{ $kubeadmDir }}/patches/*.yaml); do
+  subst_config "$file"
+done
+
+for file in $(find {{ $manifestsDir }}/*.yaml); do
   subst_config "$file"
 done
 {{- end }}
