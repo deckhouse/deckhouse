@@ -8,7 +8,7 @@ Add RestMapper provider to provider metadata
 # 003-resource-owner-refs.patch
 Add kubernetes_owner_references_v1 resource.
 
-# 003-add-resource-ready-resource.patch
+# 004-add-resource-ready-resource.patch
 Add `kubernetes_resource_ready_v1` resource for checking another resource ready.
 kubernetes provider has `wait` block, but we have bad situation.
 Provider creates resource (resource now present in cluster) but if resource not 
