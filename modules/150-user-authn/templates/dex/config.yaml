@@ -281,11 +281,8 @@
       name: {{ $provider.displayName | quote }}
       config:
         ssoURL: {{ $provider.saml.ssoURL | quote }}
-        {{- if $provider.saml.ca }}
-        ca: {{ $provider.saml.ca | quote }}
-        {{- end }}
-        {{- if $provider.saml.caData }}
-        caData: {{ $provider.saml.caData | quote }}
+        {{- if $provider.saml.rootCAData }}
+        caData: {{ $provider.saml.rootCAData | b64enc }}
         {{- end }}
         {{- if $provider.saml.entityIssuer }}
         entityIssuer: {{ $provider.saml.entityIssuer | quote }}

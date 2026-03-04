@@ -421,7 +421,7 @@ spec:
   displayName: Корпоративный SAML
   saml:
     ssoURL: https://saml-idp.example.com/saml/sso
-    ca: |
+    rootCAData: |
       -----BEGIN CERTIFICATE-----
       MIIFaDC...
       -----END CERTIFICATE-----
@@ -442,7 +442,7 @@ spec:
 
 1. Настройте маппинг атрибутов в IdP для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
 
-1. Экспортируйте сертификат подписи IdP и укажите его в поле `ca` или `caData` ресурса DexProvider.
+1. Экспортируйте сертификат подписи IdP и укажите его в поле `rootCAData` ресурса DexProvider.
 
 {% alert level="info" %}
 SAML не поддерживает refresh tokens нативно. Dex кеширует identity пользователя из первичного SAML assertion и возвращает её при последующих запросах refresh. Время жизни сессии контролируется настройками `expiry.refreshTokens` в конфигурации модуля `user-authn`.

@@ -539,18 +539,18 @@ spec:
                       description: |
                         SSO URL used for POST value.
                       x-doc-examples: ['https://idp.example.com/saml/sso']
-                    ca:
+                    rootCAData:
                       type: string
                       description: |
-                        Path to a trusted root certificate file for the IdP server.
-                        
-                        Not required if the IdP certificate is signed by a well-known CA.
-                    caData:
-                      type: string
-                      description: |
-                        Base64-encoded PEM CA certificate of the IdP server.
-                        
-                        Not required if the IdP certificate is signed by a well-known CA.
+                        A CA chain to validate the provider in PEM format.
+                      x-doc-examples:
+                      - |
+                        ```yaml
+                        rootCAData: |
+                          -----BEGIN CERTIFICATE-----
+                          MIIFaDC...
+                          -----END CERTIFICATE-----
+                        ```
                     entityIssuer:
                       type: string
                       description: |

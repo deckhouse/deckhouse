@@ -418,7 +418,7 @@ spec:
   displayName: Corporate SAML
   saml:
     ssoURL: https://saml-idp.example.com/saml/sso
-    ca: |
+    rootCAData: |
       -----BEGIN CERTIFICATE-----
       MIIFaDC...
       -----END CERTIFICATE-----
@@ -439,7 +439,7 @@ To configure the SAML Identity Provider:
 
 1. Configure attribute mappings in the IdP to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
 
-1. Export the IdP signing certificate and specify it in the `ca` or `caData` field of the DexProvider resource.
+1. Export the IdP signing certificate and specify it in the `rootCAData` field of the DexProvider resource.
 
 {% alert level="info" %}
 SAML does not natively support refresh tokens. Dex caches the user identity from the initial SAML assertion and returns it on subsequent refresh requests. The session lifetime is controlled by the `expiry.refreshTokens` settings in the `user-authn` module configuration.

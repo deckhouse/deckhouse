@@ -129,7 +129,7 @@ spec:
   displayName: SAML Test Provider
   saml:
     ssoURL: "https://idp.example.com/saml/sso"
-    caData: "LS0tLS1CRUdJTi..."
+    rootCAData: "-----BEGIN CERTIFICATE-----\nMIIFaDC...\n-----END CERTIFICATE-----\n"
     entityIssuer: "https://dex.example.com"
     usernameAttr: "name"
     emailAttr: "email"
@@ -309,7 +309,7 @@ spec:
 "id": "saml-test",
 "saml": {
 		"ssoURL": "https://idp.example.com/saml/sso",
-		"caData": "LS0tLS1CRUdJTi...",
+		"rootCAData": "-----BEGIN CERTIFICATE-----\nMIIFaDC...\n-----END CERTIFICATE-----\n",
 		"entityIssuer": "https://dex.example.com",
 		"usernameAttr": "name",
 		"emailAttr": "email",

@@ -9,7 +9,6 @@ spec:
   saml:
     # Replace {{ __cluster__domain__ }} with your actual cluster domain
     ssoURL: https://keycloak.{{ __cluster__domain__ }}/realms/dex-demo/protocol/saml
-    ca: ""
     insecureSkipSignatureValidation: true
     entityIssuer: dex-saml-demo
     ssoIssuer: https://keycloak.{{ __cluster__domain__ }}/realms/dex-demo

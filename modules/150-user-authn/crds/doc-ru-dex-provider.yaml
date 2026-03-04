@@ -348,16 +348,9 @@ spec:
                     ssoURL:
                       description: |
                         URL для отправки SAML AuthnRequest (SSO URL провайдера).
-                    ca:
+                    rootCAData:
                       description: |
-                        Путь к файлу корневого сертификата IdP-сервера.
-                        
-                        Не требуется, если сертификат IdP подписан известным CA.
-                    caData:
-                      description: |
-                        CA-сертификат IdP-сервера в формате PEM, закодированный в Base64.
-                        
-                        Не требуется, если сертификат IdP подписан известным CA.
+                        Цепочка CA в формате PEM, используемая для валидации TLS.
                     entityIssuer:
                       description: |
                         Значение Issuer, ожидаемое в SAML-ответе. По умолчанию — URL callback.
