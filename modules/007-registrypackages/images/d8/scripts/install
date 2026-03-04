@@ -16,3 +16,4 @@
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
 cp -f d8 /opt/deckhouse/bin
+chmod u+s /opt/deckhouse/bin/d8 # this is needed to get access to plugins directory
