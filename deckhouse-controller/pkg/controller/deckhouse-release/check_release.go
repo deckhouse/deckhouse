@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"path"
 	"regexp"
 	"sort"
@@ -493,7 +494,7 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	// Other errors (network, auth) fall through to getNewVersions for normal error handling.
 	if _, err := f.registryClient.Digest(ctx, newSemver.Original()); err != nil {
 		var terr *transport.Error
-		if errors.As(err, &terr) && terr.StatusCode == 404 {
+		if errors.As(err, &terr) && terr.StatusCode == http.StatusNotFound {
 			f.logger.Warn("release image for target version not found in registry, will retry",
 				slog.String("version", newSemver.Original()),
 				log.Err(err))
