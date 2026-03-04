@@ -6,23 +6,6 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-#- url: {{ .SOURCE_REPO }}/istio/istio
-#  tag: {{ $istioVersion }}
-#  to: /src/istio
-#  excludePaths: 
-#  - samples
-#  - security/samples
-#  - security/tools/jwt/samples
-#- url: {{ .SOURCE_REPO }}/istio/kiali
-#  tag: {{ $kialiVersion }}
-#  to: /src/kiali
-#  excludePaths: 
-#  - frontend
-#- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
-#  tag: {{ $kialiVersion }}
-#  to: /src/kial-frontend-assets
-#  excludePaths: 
-#  - frontend
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   stageDependencies:
@@ -34,19 +17,20 @@ secrets:
 shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/istio.git /src/istio/
-  - git apply --verbose --directory=/src/istio /patches/001-istio-apply_go.patch
-  - git apply --verbose --directory=/src/istio /patches/002-istio-gomod_gosum.patch
-  - git apply --verbose --directory=/src/istio /patches/003-istio-server_fmtText.patch
-
- # - git apply --verbose --directory=/src/kiali < /patches/001-kiali-go-mod.patch
-
-  - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali-frontend-assets.git /src/kial-frontend-assets/
-
+  - cd /src/istio/
+  - git apply --verbose /patches/001-istio-apply_go.patch
+  - git apply --verbose /patches/002-istio-gomod_gosum.patch
+  - git apply --verbose /patches/003-istio-server_fmtText.patch
   - rm -rf /src/istio/.git
+  - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali.git /src/kiali/
+  - cd /src/kiali/
+  - git apply --verbose /patches/001-kiali-go-mod.patch
   - rm -rf /src/kiali/.git
-  
+  - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali-frontend-assets.git /src/kial-frontend-assets/
+  - rm -rf /src/kiali-frontend-assets/.git
+
   # getting rid of unused vulnerable code
-  #- rm -rf /src/istio/samples
-  #- rm -rf /src/istio/security/samples
-  #- rm -rf /src/istio/security/tools/jwt/samples
-  #- rm -rf /src/kiali/frontend
+  - rm -rf /src/istio/samples
+  - rm -rf /src/istio/security/samples
+  - rm -rf /src/istio/security/tools/jwt/samples
+  - rm -rf /src/kiali/frontend
