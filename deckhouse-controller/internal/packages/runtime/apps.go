@@ -16,7 +16,6 @@ package runtime
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"slices"
 
@@ -51,19 +50,6 @@ type App struct {
 	Namespace  string
 	Definition apps.Definition
 	Settings   addonutils.Values
-}
-
-// renderManifests renders the Helm chart for a loaded package. Used by the debug server.
-func (r *Runtime) renderManifests(ctx context.Context, name string) (string, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	app := r.apps[name]
-	if app == nil {
-		return "", fmt.Errorf("app %s not found", name)
-	}
-
-	return r.nelmService.Render(ctx, app.GetNamespace(), app)
 }
 
 // ValidateSettings checks settings against the package's OpenAPI schema.

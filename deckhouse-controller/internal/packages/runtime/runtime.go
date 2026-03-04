@@ -223,6 +223,25 @@ func (r *Runtime) registerDebugServer(sockerPath string) error {
 	return nil
 }
 
+// renderManifests renders the Helm chart for a loaded package. Used by the debug server.
+func (r *Runtime) renderManifests(ctx context.Context, name string) (string, error) {
+	r.mu.Lock()
+
+	if app := r.apps[name]; app != nil {
+		r.mu.Unlock()
+		return r.nelmService.Render(ctx, app.GetNamespace(), app)
+	}
+
+	if module := r.modules[name]; module != nil {
+		r.mu.Unlock()
+		return r.nelmService.Render(ctx, modulesNamespace, module)
+	}
+
+	r.mu.Unlock()
+
+	return "", errors.New("no package found")
+}
+
 // buildObjectPatcher creates a Kubernetes client optimized for patch operations.
 //
 // Uses dedicated rate limits (QPS and burst) tuned for batch resource patching.

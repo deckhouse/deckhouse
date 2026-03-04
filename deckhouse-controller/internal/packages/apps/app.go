@@ -362,7 +362,6 @@ func (a *Application) DisableHooks() {
 	}
 
 	a.running.Store(false)
-	a.hooks.Clear()
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events

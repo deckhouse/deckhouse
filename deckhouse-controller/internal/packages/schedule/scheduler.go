@@ -35,6 +35,10 @@ const (
 	// It is higher than any critical package order, ensuring functional packages are
 	// scheduled only after all critical packages have been processed.
 	FunctionalOrder = 999
+
+	// defaultBufferSize is the capacity of the scheduler's notification channel
+	// used to signal enable/disable events to consumers without blocking callers.
+	defaultBufferSize = 1000
 )
 
 // Scheduler manages a dependency graph of packages and their lifecycle.
@@ -84,7 +88,7 @@ func WithBootstrapCondition(cond condition.Condition) Option {
 func NewScheduler(opts ...Option) *Scheduler {
 	s := &Scheduler{
 		nodes:   make(map[string]*node),
-		eventCh: make(chan Event, 100),
+		eventCh: make(chan Event, defaultBufferSize),
 	}
 
 	for _, opt := range opts {
@@ -313,6 +317,16 @@ func (s *Scheduler) compute() []*node {
 
 	if changed {
 		s.reconverge()
+	}
+
+	// Disabled nodes have nothing to wait for — mark them active so they
+	// do not block higher-order or dependent nodes. If a node later becomes
+	// enabled, the status change above triggers reconverge (resetting all
+	// states to idle), so it will go through normal scheduling.
+	for _, n := range sorted {
+		if n.state == nodeStateIdle && !n.status.Enabled {
+			n.state = nodeStateActive
+		}
 	}
 
 	return sorted

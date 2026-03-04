@@ -137,12 +137,3 @@ func (s *Storage) GetHookByName(name string) Hook {
 
 	return s.byName[name]
 }
-
-// Clear removes all hooks from storage, resetting it to empty state.
-func (s *Storage) Clear() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.byBinding = make(map[shtypes.BindingType][]Hook)
-	s.byName = make(map[string]Hook)
-}
