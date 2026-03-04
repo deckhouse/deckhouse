@@ -342,7 +342,7 @@ func (r *Runtime) buildNelmService() error {
 		return fmt.Errorf("cache sync failed")
 	}
 
-	r.nelmService = nelm.NewService(cache, r.scheduler.Reschedule, r.logger)
+	r.nelmService = nelm.NewService(cache, r.scheduler.Reschedule, r.status, r.logger)
 
 	return nil
 }
