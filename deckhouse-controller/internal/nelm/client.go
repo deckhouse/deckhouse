@@ -190,8 +190,6 @@ type InstallOptions struct {
 	ExtraValues string   // Extra values in json format
 
 	ReleaseLabels map[string]string // Labels to apply to the release
-
-	ReportCh chan<- progrep.ProgressReport
 }
 
 // Install installs a Helm chart as a release
@@ -209,8 +207,17 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		valuesSet = append(valuesSet, opts.ExtraValues)
 	}
 
+	reportCh := make(chan progrep.ProgressReport, 1)
+	defer close(reportCh)
+
+	go func() {
+		for event := range reportCh {
+			c.logger.Info(fmt.Sprintf("report: %s", eventToReport(event).Marshal()))
+		}
+	}()
+
 	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
-		LegacyProgressReportCh: opts.ReportCh,
+		LegacyProgressReportCh: reportCh,
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},

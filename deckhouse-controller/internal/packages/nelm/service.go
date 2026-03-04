@@ -16,7 +16,6 @@ package nelm
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -26,7 +25,6 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/google/uuid"
-	"github.com/werf/nelm/pkg/legacy/progrep"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -241,19 +239,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		return nil
 	}
 
-	reportCh := make(chan progrep.ProgressReport, 1)
-	defer close(reportCh)
-
-	go func() {
-		for report := range reportCh {
-			marshalled, _ := json.Marshal(report)
-			s.logger.Info(fmt.Sprintf("report %s", marshalled))
-		}
-	}()
-
 	// Install or upgrade the release
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
-		ReportCh:    reportCh,
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
 		ReleaseLabels: map[string]string{
