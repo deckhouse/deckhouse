@@ -53,33 +53,40 @@ spec:
               properties:
                 nodeRef:
                   type: object
-                  description: Reference to the Kubernetes Node object.
+                  description: Reference to the kubernetes node object.
                   properties:
                     name:
                       type: string
-                      description: Name of the Node.
+                      description: Node name
                 machineRef:
                   type: object
-                  description: Reference to the infrastructure machine (CAPI or MCM).
+                  description: Reference to instance in the cloud.
                   properties:
                     apiVersion:
                       type: string
+                      description: APIVersion defines the versioned schema of this representation of an reference object.
                     kind:
                       type: string
+                      description: Kind is a string value representing the REST resource referenced object represents.
                     name:
                       type: string
+                      description: Name of referenced object.
                     namespace:
                       type: string
+                      description: Namespace of referenced object.
                 classReference:
-                  description: Reference to the InstanceClass object (e.g., AWSInstanceClass, YandexInstanceClass).
+                  description: |
+                    The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
                   type: object
                   properties:
                     kind:
                       type: string
-                      description: The kind of the InstanceClass (e.g., OpenStackInstanceClass, AWSInstanceClass).
+                      description: |
+                        The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
                     name:
                       type: string
-                      description: The name of the InstanceClass.
+                      description: |
+                        The name of the required `InstanceClass` object (e.g., `finland-medium`).
             status:
               type: object
               description: Most recently observed status of the Instance.
