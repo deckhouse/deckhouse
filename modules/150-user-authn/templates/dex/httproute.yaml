@@ -1,3 +1,6 @@
+{{- $defaultGateway := dict }}
+{{- include "helm_lib_default_gateway" (list . $defaultGateway) }}
+{{- if and $defaultGateway }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -60,4 +63,5 @@ spec:
     - path:
         type: PathPrefix
         value: /
+{{- end }}
 {{- end }}
