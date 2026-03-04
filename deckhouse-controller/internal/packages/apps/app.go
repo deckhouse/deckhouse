@@ -110,8 +110,9 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	}
 
 	a.namespace = splits[0]
-	a.instance = splits[1]
 
+	//a.instance = splits[1]
+	a.instance = "d8-" + splits[1]
 	a.name = name
 
 	a.path = cfg.Path
