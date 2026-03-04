@@ -12601,7 +12601,6 @@
             }
           },
           "mappings": [],
-          "max": 1,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -12616,7 +12615,7 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "ops"
         },
         "overrides": [
           {
@@ -12670,12 +12669,12 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom",
+          "placement": "right",
           "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "desc"
+          "sort": "none"
         }
       },
       "pluginVersion": "10.4.14",
@@ -12688,7 +12687,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$alt_legend_format",
-          "refId": "B"
+          "refId": "A"
         }
       ],
       "title": "Requests per $alt_name",
@@ -12736,7 +12735,6 @@
             }
           },
           "mappings": [],
-          "max": 100,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -12803,12 +12801,7 @@
       "id": 41,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "lastNotNull",
-            "max",
-            "min"
-          ],
+          "calcs": [],
           "displayMode": "list",
           "placement": "right",
           "showLegend": false
@@ -12828,8 +12821,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$alt_legend_format",
-          "refId": "B",
-          "step": 20
+          "refId": "A"
         }
       ],
       "title": "Incoming Traffic per $alt_name",
@@ -12877,7 +12869,6 @@
             }
           },
           "mappings": [],
-          "max": 1,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -12892,7 +12883,7 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "bps"
         },
         "overrides": [
           {
@@ -12946,7 +12937,7 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom",
+          "placement": "right",
           "showLegend": false
         },
         "tooltip": {
@@ -12964,7 +12955,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$alt_legend_format",
-          "refId": "B"
+          "refId": "A"
         }
       ],
       "title": "Outgoing Traffic per $alt_name",
