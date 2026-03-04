@@ -285,8 +285,8 @@ The following requirements must be met to configure Token Exchange:
 - [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) enabled.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) configured as **OIDC type**.
 
-{% alert level="info" %}
-Token exchange is guaranteed to work with OIDC connectors. For `type: GitLab` or `type: GitHub`, verify support in your DKP version.
+{% alert level="warning" %}
+Token exchange does not work with `type: GitLab` or `type: GitHub` connectors. Configure GitLab/GitHub as OIDC providers instead.
 {% endalert %}
 
 ### Create DexClient
@@ -393,7 +393,7 @@ Parameters:
 - `scope` — must include `audience:server:client_id:kubernetes` and `profile`
 
 {% alert level="info" %}
-If the API returns 401 with an audience error, use `audience:server:client_id:<expected audience>`. Usually this is `kubernetes`.
+The expected audience is always `kubernetes`. If the API returns 401 with an audience mismatch error, verify that the scope includes `audience:server:client_id:kubernetes`.
 {% endalert %}
 
 ### GitLab CI
@@ -419,7 +419,7 @@ deploy:
         -d "scope=openid profile email groups audience:server:client_id:kubernetes" \
         -d "requested_token_type=urn:ietf:params:oauth:token-type:id_token")
       DEX_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
-      d8 k --server="${K8S_SERVER}" --token="${DEX_TOKEN}" get ns
+      d8 k --server="${K8S_SERVER}" --token="${DEX_TOKEN}" auth whoami
 ```
 
 {% endraw %}
@@ -454,10 +454,22 @@ RESPONSE=$(curl -q -s -X POST "https://${DEX_HOST}/token" \
   -d "requested_token_type=urn:ietf:params:oauth:token-type:id_token")
 
 DEX_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
-d8 k --server="https://${API_HOST}" --token="${DEX_TOKEN}" get ns
+d8 k --server="https://${API_HOST}" --token="${DEX_TOKEN}" auth whoami
 ```
 
 ### Diagnostics
+
+{% alert level="info" %}
+Use `d8 k auth whoami` to verify which identity is being used.
+{% endalert %}
+
+**`--token` flag may not work** — kubeconfig with `auth-provider`, `exec`, or `tokenFile` overrides the token from the flag. Use `-v=8` for debugging:
+
+```shell
+d8 k --server="https://${API_HOST}" --token="${DEX_TOKEN}" auth whoami -v=8
+```
+
+The output shows which Authorization header is sent. For reliable token usage, use a minimal kubeconfig with only `server` and `token`, without `auth-provider`/`exec`.
 
 **Dex 400** — invalid `subject_token`, `subject_token_type`, or `connector_id`.
 
