@@ -81,22 +81,29 @@ func NewService(cache runtimecache.Cache, callback monitor.AbsentCallback, statu
 	}
 }
 
+// HasMonitor checks if a release monitor exists for the given name.
 func (s *Service) HasMonitor(name string) bool {
 	return s.monitorManager.HasMonitor(name)
 }
 
+// RemoveMonitor stops and removes a release monitor. No-op if the monitor doesn't exist.
 func (s *Service) RemoveMonitor(name string) {
 	s.monitorManager.RemoveMonitor(name)
 }
 
+// PauseMonitor pauses resource readiness checks for a release monitor.
+// Requires an equal number of ResumeMonitor calls to unpause.
 func (s *Service) PauseMonitor(name string) {
 	s.monitorManager.PauseMonitor(name)
 }
 
+// ResumeMonitor decrements the pause counter for a release monitor.
+// The monitor resumes checking resources when the counter reaches zero.
 func (s *Service) ResumeMonitor(name string) {
 	s.monitorManager.ResumeMonitor(name)
 }
 
+// StopMonitors gracefully shuts down all release monitors.
 func (s *Service) StopMonitors() {
 	s.monitorManager.Stop()
 }
@@ -264,7 +271,6 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 }
 
 func (s *Service) updateTrackingStatus(name string, event nelm.TrackingEvent) {
-	s.logger.Debug("update tracking event", slog.String("name", name), event.String())
 	s.status.SetConditionFalse(name, status.ConditionHelmApplied, ConditionReasonInstallChart, event.String())
 }
 
@@ -282,7 +288,7 @@ func (s *Service) updateTrackingStatus(name string, event nelm.TrackingEvent) {
 //   - bool: true if upgrade is needed
 //   - error: if checking conditions fails
 func (s *Service) shouldRunHelmUpgrade(ctx context.Context, namespace, releaseName string, checksum string) (bool, error) {
-	revision, status, err := s.client.LastStatus(ctx, namespace, releaseName)
+	revision, releaseStatus, err := s.client.LastStatus(ctx, namespace, releaseName)
 	if err != nil {
 		return false, err
 	}
@@ -293,7 +299,7 @@ func (s *Service) shouldRunHelmUpgrade(ctx context.Context, namespace, releaseNa
 	}
 
 	// Release exists but not deployed - need to upgrade to fix
-	if strings.ToLower(status) != "deployed" {
+	if strings.ToLower(releaseStatus) != "deployed" {
 		return true, nil
 	}
 
