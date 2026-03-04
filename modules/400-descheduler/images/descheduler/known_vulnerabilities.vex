@@ -2,8 +2,22 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-95caeb00c03a501857d0b423a0bc2296ad7048120f6cf4f12510866919a323d5",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 3,
+  "version": 4,
   "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
+      "timestamp": "2026-03-04T12:32:12.341089Z"
+    },
     {
       "vulnerability": {
         "name": "CVE-2025-47914"
@@ -34,5 +48,5 @@
     }
   ],
   "timestamp": "2026-01-12T11:51:20Z",
-  "last_updated": "2026-01-12T11:54:06Z"
+  "last_updated": "2026-03-04T12:32:12Z"
 }
