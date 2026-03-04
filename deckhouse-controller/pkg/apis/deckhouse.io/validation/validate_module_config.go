@@ -106,7 +106,7 @@ func moduleConfigValidationHandler(
 					return rejectResult("delete the ModulePullOverride before deleting the module config")
 				}
 
-				metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, 0, map[string]string{"module": cfg.GetName()})
+				metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, 0, map[string]string{metrics.LabelModule: cfg.GetName()})
 				// if module is already disabled - we don't need to warn user about disabling module
 				return allowResult(nil)
 			}
@@ -264,7 +264,7 @@ func moduleConfigValidationHandler(
 			warnings = append(warnings, res.Warning)
 		}
 
-		metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
+		metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, allowedToDisableMetric, map[string]string{metrics.LabelModule: cfg.GetName()})
 
 		module, err := moduleStorage.GetModuleByName(cfg.Name)
 		if err != nil {
