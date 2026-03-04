@@ -115,7 +115,7 @@ function bb-disruption-approval-not-required() {
 
 
 function bb-event-create() {
-  local event_type="$1" # info или error
+  local event_type="$1"
   local step="$2"
   local log_note="${3:-}"
   local nodeName
