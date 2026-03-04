@@ -23,7 +23,7 @@ index 0f42b56866..419dd26b66 100644
    tag: latest
  
 +  # When false, ClusterRoleBinding for the operator is not created (e.g. when the installer lacks cluster-scoped RBAC permissions).
-+  createClusterRoleBinding: false
++  createClusterRoleBinding: true
 +
    # ImagePullSecrets for operator ServiceAccount, list of secrets in the same namespace
    # used to pull operator image. Must be set for any cluster configured with private docker registry.
@@ -63,7 +63,7 @@ index d7b86b87e1..e1fd54c6db 100644
      # Configure a remote cluster as the config cluster for an external istiod.
      configCluster: false
 +    # When false, ClusterRoleBinding resources are not created (e.g. when the installer lacks cluster-scoped RBAC permissions).
-+    createClusterRoleBinding: false
++    createClusterRoleBinding: true
      # Configure the policy for validating JWT.
      # Currently, two options are supported: "third-party-jwt" and "first-party-jwt".
      jwtPolicy: "third-party-jwt"
