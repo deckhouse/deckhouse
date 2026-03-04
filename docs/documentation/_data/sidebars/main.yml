@@ -873,10 +873,6 @@ entries:
                 en: Updating Kubernetes and versioning
                 ru: Обновление Kubernetes и управление версиями
               url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /admin/configuration/update/faq.html
         - title:
             en: Platform uninstalling
             ru: Удаление платформы
