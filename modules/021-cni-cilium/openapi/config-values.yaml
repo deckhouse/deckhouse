@@ -332,21 +332,11 @@ properties:
         default: false
         description: |
           Enable EVPN/VXLAN with BGP Route Reflector functionality.
-      image:
-        type: string
-        default: "quay.io/frrouting/frr:10.5.1"
-        description: |
-          Docker image for FRRouting (FRR) used for EVPN Route Reflector servers and clients.
       bgpAsn:
         type: integer
         default: 65000
         description: |
           BGP Autonomous System Number (ASN) used for EVPN BGP sessions.
-      routerId:
-        type: string
-        default: "0.0.0.1"
-        description: |
-          BGP Router ID for EVPN Route Reflector servers.
       nodeNetworkCIDRs:
         type: array
         items:
