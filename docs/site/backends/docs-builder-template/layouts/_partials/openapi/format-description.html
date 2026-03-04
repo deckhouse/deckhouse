@@ -1,12 +1,22 @@
 {{/*
-  Renders description HTML: if source contains backticks, use markdownify + escape inside <code> only.
-  Otherwise, in the source replace only placeholder-like <word> with &lt;word&gt; (so "> **bold**" and
-  other markdown stay intact), then markdownify.
+  Renders description HTML: if source contains backticks, first escape <word> only outside backticks,
+  then markdownify + escape inside <code>. Otherwise, escape <word> in source, then markdownify.
+  Use printf "&lt;%s&gt;" "$1" so Hugo passes literal $1 to the regex (not template var $1).
 */}}
 {{- $desc := default "" . }}
+{{- $repl := printf "&lt;%s&gt;" "$1" }}
 {{- if in $desc "`" }}
-  {{- partial "openapi/escape-code-blocks" ($desc | markdownify) }}
+  {{- $backtickBlocks := findRE "`[^`]+`" $desc }}
+  {{- $work := $desc }}
+  {{- range $idx, $block := $backtickBlocks }}
+    {{- $work = replace $work $block (printf "{{BT%d}}" $idx) }}
+  {{- end }}
+  {{- $work = replaceRE `<([a-zA-Z][a-zA-Z0-9-]*)>` $repl $work }}
+  {{- range $idx, $block := $backtickBlocks }}
+    {{- $work = replace $work (printf "{{BT%d}}" $idx) $block }}
+  {{- end }}
+  {{- partial "openapi/escape-code-blocks" ($work | markdownify) }}
 {{- else }}
-  {{- $withEscapedPlaceholders := replaceRE `<([a-zA-Z][a-zA-Z0-9-]*)>` "&lt;$1&gt;" $desc }}
+  {{- $withEscapedPlaceholders := replaceRE `<([a-zA-Z][a-zA-Z0-9-]*)>` $repl $desc }}
   {{- $withEscapedPlaceholders | markdownify }}
 {{- end }}
