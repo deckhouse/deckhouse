@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -91,12 +91,12 @@ func (r *CAPIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	log.V(4).Info("tick", "op", "capi.reconcile.start")
 
 	state := &capiReconcileState{
-		req:         req,
-		capiMachine: &capiv1beta2.Machine{},
+		req: req,
 	}
 
 	for _, step := range []capiReconcileStep{
 		r.reconcileCAPIMachineFetch,
+		r.reconcileCAPIMachineMissingInstanceDeletion,
 		r.reconcileCAPIMachineData,
 		r.reconcileCAPIMachineInstance,
 	} {
@@ -117,29 +117,47 @@ func (r *CAPIMachineReconciler) reconcileCAPIMachineFetch(
 	ctx context.Context,
 	state *capiReconcileState,
 ) (bool, ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
-
-	if err := r.Get(ctx, state.req.NamespacedName, state.capiMachine); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			log.V(4).Info("tick", "op", "capi.instance.delete.request")
-			deleted, delErr := r.deleteInstanceIfExists(ctx, state.req.Name)
-			if delErr != nil {
-				return false, ctrl.Result{}, delErr
-			}
-			log.V(1).Info("machine not found, linked instance delete handled", "instance", state.req.Name, "deleted", deleted)
-			return true, ctrl.Result{}, nil
+	capiMachine := &capiv1beta2.Machine{}
+	if err := r.Get(ctx, state.req.NamespacedName, capiMachine); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return false, ctrl.Result{}, err
 		}
 
+		state.capiMachine = nil
+		return false, ctrl.Result{}, nil
+	}
+
+	state.capiMachine = capiMachine
+	return false, ctrl.Result{}, nil
+}
+
+func (r *CAPIMachineReconciler) reconcileCAPIMachineMissingInstanceDeletion(
+	ctx context.Context,
+	state *capiReconcileState,
+) (bool, ctrl.Result, error) {
+	if state.capiMachine != nil {
+		return false, ctrl.Result{}, nil
+	}
+
+	log := ctrl.LoggerFrom(ctx)
+	log.V(4).Info("tick", "op", "capi.instance.delete.request")
+	deleted, err := r.deleteInstanceIfExists(ctx, state.req.Name)
+	if err != nil {
 		return false, ctrl.Result{}, err
 	}
 
-	return false, ctrl.Result{}, nil
+	log.V(1).Info("machine not found, linked instance delete handled", "instance", state.req.Name, "deleted", deleted)
+	return true, ctrl.Result{}, nil
 }
 
 func (r *CAPIMachineReconciler) reconcileCAPIMachineData(
 	_ context.Context,
 	state *capiReconcileState,
 ) (bool, ctrl.Result, error) {
+	if state.capiMachine == nil {
+		return false, ctrl.Result{}, fmt.Errorf("capi machine is nil in data step")
+	}
+
 	machineObj, err := r.machineFactory.NewMachine(state.capiMachine)
 	if err != nil {
 		return false, ctrl.Result{}, fmt.Errorf("build reconcile data for capi machine %q: %w", state.capiMachine.Name, err)

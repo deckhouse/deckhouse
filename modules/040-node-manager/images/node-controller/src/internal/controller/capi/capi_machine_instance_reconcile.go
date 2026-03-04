@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -238,6 +238,12 @@ func (r *CAPIMachineReconciler) deleteInstanceIfExists(ctx context.Context, name
 		}
 		return false, fmt.Errorf("delete instance %q: %w", name, err)
 	}
+	log.FromContext(ctx).V(1).Info(
+		"instance deleted",
+		"instance", name,
+		"deletedBy", "capi-machine-controller",
+		"reason", "linked-machine-not-found",
+	)
 
 	return true, nil
 }

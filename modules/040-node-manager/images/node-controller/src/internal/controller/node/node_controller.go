@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -65,12 +65,12 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	state := &nodeReconcileState{
 		req:    req,
-		node:   &corev1.Node{},
 		result: ctrl.Result{RequeueAfter: time.Minute},
 	}
 
 	for _, step := range []nodeReconcileStep{
 		r.reconcileNodeFetch,
+		r.reconcileNodeMissingInstanceDeletion,
 		r.reconcileNodeInstance,
 	} {
 		done, result, err := step(ctx, state)
@@ -89,29 +89,45 @@ func (r *NodeReconciler) reconcileNodeFetch(
 	ctx context.Context,
 	state *nodeReconcileState,
 ) (bool, ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
-
-	if err := r.Get(ctx, state.req.NamespacedName, state.node); err != nil {
+	node := &corev1.Node{}
+	if err := r.Get(ctx, state.req.NamespacedName, node); err != nil {
 		if client.IgnoreNotFound(err) != nil {
 			return false, ctrl.Result{}, err
 		}
 
-		deleted, delErr := r.deleteNodeBasedInstanceIfExists(ctx, state.req.Name)
-		if delErr != nil {
-			return false, ctrl.Result{}, delErr
-		}
-
-		log.V(1).Info("node not found, static instance delete handled", "instance", state.req.Name, "deleted", deleted)
-		return true, state.result, nil
+		state.node = nil
+		return false, ctrl.Result{}, nil
 	}
 
+	state.node = node
 	return false, ctrl.Result{}, nil
+}
+
+func (r *NodeReconciler) reconcileNodeMissingInstanceDeletion(
+	ctx context.Context,
+	state *nodeReconcileState,
+) (bool, ctrl.Result, error) {
+	if state.node != nil {
+		return false, ctrl.Result{}, nil
+	}
+
+	deleted, err := r.deleteNodeBasedInstanceIfExists(ctx, state.req.Name)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+
+	ctrl.LoggerFrom(ctx).V(1).Info("node not found, node based instance delete handled", "instance", state.req.Name, "deleted", deleted)
+	return true, state.result, nil
 }
 
 func (r *NodeReconciler) reconcileNodeInstance(
 	ctx context.Context,
 	state *nodeReconcileState,
 ) (bool, ctrl.Result, error) {
+	if state.node == nil {
+		return false, ctrl.Result{}, fmt.Errorf("node is nil in instance step")
+	}
+
 	log := ctrl.LoggerFrom(ctx)
 
 	if !IsStaticNode(state.node) {

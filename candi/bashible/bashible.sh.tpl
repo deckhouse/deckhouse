@@ -314,9 +314,9 @@ function main() {
 
   if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
     bb-bashible-ready-initial-run "Initial run is in progress"
+    bb-waiting-approval-not-required
+    bb-disruption-approval-not-required
   fi
-  bb-waiting-approval-not-required
-  bb-disruption-approval-not-required
   local configuration_checksum="${CONFIGURATION_CHECKSUM:0:8}"
 
   mkdir -p "$BUNDLE_STEPS_DIR" "$TMPDIR"
@@ -371,7 +371,7 @@ function main() {
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
     current_uptime > $UPTIME_FILE
 
-    local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}."
+    local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}"
     bb-bashible-ready-steps-completed "noop" "${converge_completion_message}"
 
     exit 0
@@ -443,7 +443,7 @@ function main() {
     bb-bashible-ready-steps-completed "$last_successful_step" "${steps_completed_message}"
   done
 
-  local converge_completion_message="Bashible converge cycle finished. Last applied configuration checksum: ${configuration_checksum}."
+  local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}"
   bb-bashible-ready-steps-completed "noop" "${converge_completion_message}"
 
   {{- if ne .runType "ClusterBootstrap" }}

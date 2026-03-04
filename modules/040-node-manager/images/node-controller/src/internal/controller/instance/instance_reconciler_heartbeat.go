@@ -89,6 +89,10 @@ func desiredBashibleHeartbeatCondition(
 	if !hasBashibleReady {
 		return nil, false
 	}
+	if bashibleReady.Status == metav1.ConditionFalse {
+		// Skip heartbeat when bashible is already in error state to preserve the original failure reason
+		return nil, false
+	}
 	probeTime := effectiveHeartbeatTime(bashibleReady)
 	if probeTime == nil {
 		return nil, false

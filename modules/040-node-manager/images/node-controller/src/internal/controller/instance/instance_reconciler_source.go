@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
-	nodecontroller "github.com/deckhouse/node-controller/internal/controller/node"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,53 +28,103 @@ import (
 )
 
 func (r *InstanceReconciler) reconcileLinkedSourceExistence(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
-	var err error
-	var exists bool
 	source := getInstanceSource(instance)
+	logger := log.FromContext(ctx)
 
-	switch source.Type {
-	case instanceSourceMachine:
-		if _, machineErr := r.machineFactory.NewMachineFromRef(ctx, r.Client, source.MachineRef); machineErr != nil {
-			if apierrors.IsNotFound(machineErr) {
-				exists = false
-				break
-			}
-			return false, machineErr
-		}
-		exists = true
-	case instanceSourceNode:
-		exists, err = r.linkedNodeExists(ctx, source.NodeName)
-	default:
-		return false, nil
-	}
-
+	machineExists, machineNotFound, err := r.linkedMachineExists(ctx, source.MachineRef)
 	if err != nil {
 		return false, err
 	}
-	if exists {
+	if machineExists {
 		return false, nil
+	}
+	nodeExists, nodeNotFound, err := r.linkedNodeExists(ctx, source.NodeName)
+	if err != nil {
+		return false, err
+	}
+	if nodeExists {
+		return false, nil
+	}
+	if !machineNotFound || !nodeNotFound {
+		logger.V(1).Info(
+			"linked resources are not confirmed missing, skip delete",
+			"instance", instance.Name,
+			"machineNotFound", machineNotFound,
+			"nodeNotFound", nodeNotFound,
+			"machineRefName", source.MachineRef.Name,
+			"nodeName", source.NodeName,
+		)
+		return false, nil
+	}
+
+	// Safety net: this delete path is best-effort garbage collection for orphaned instances.
+	// Remove finalizer first to avoid machine deletion side-effects on an erroneous source miss.
+	if err := r.removeInstanceFinalizer(ctx, instance); err != nil {
+		return false, fmt.Errorf("remove finalizer before deleting instance %q with missing source: %w", instance.Name, err)
 	}
 
 	if err := r.Delete(ctx, instance); err != nil && !apierrors.IsNotFound(err) {
 		return false, fmt.Errorf("delete instance %q with missing source: %w", instance.Name, err)
 	}
-	log.FromContext(ctx).V(4).Info("tick", "op", "instance.source.delete")
+	logger.V(1).Info(
+		"instance deleted",
+		"instance", instance.Name,
+		"sourceType", source.Type,
+		"machineRefName", source.MachineRef.Name,
+		"nodeName", source.NodeName,
+		"finalizerRemoved", true,
+		"deletedBy", "instance-controller",
+		"reason", "linked-source-not-found",
+	)
+	logger.V(4).Info("tick", "op", "instance.source.delete")
 
 	return true, nil
 }
 
-func (r *InstanceReconciler) linkedNodeExists(ctx context.Context, nodeName string) (bool, error) {
+func (r *InstanceReconciler) linkedMachineExists(
+	ctx context.Context,
+	ref *deckhousev1alpha2.MachineRef,
+) (exists bool, notFound bool, err error) {
+	if ref == nil || ref.Name == "" {
+		return false, false, nil
+	}
+	logger := log.FromContext(ctx)
+
+	if _, machineErr := r.machineFactory.NewMachineFromRef(ctx, r.Client, ref); machineErr != nil {
+		if apierrors.IsNotFound(machineErr) {
+			logger.V(1).Info(
+				"linked source is missing",
+				"sourceType", instanceSourceMachine,
+				"missingObject", "machine",
+				"machineRefName", ref.Name,
+			)
+			return false, true, nil
+		}
+		return false, false, machineErr
+	}
+
+	return true, false, nil
+}
+
+func (r *InstanceReconciler) linkedNodeExists(ctx context.Context, nodeName string) (exists bool, notFound bool, err error) {
+	logger := log.FromContext(ctx)
+	if nodeName == "" {
+		return false, false, nil
+	}
+
 	node := &corev1.Node{}
 	if err := r.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
 		if apierrors.IsNotFound(err) {
-			return false, nil
+			logger.V(1).Info(
+				"linked source is missing",
+				"sourceType", instanceSourceNode,
+				"missingObject", "node",
+				"nodeName", nodeName,
+			)
+			return false, true, nil
 		}
-		return false, fmt.Errorf("get node %q: %w", nodeName, err)
+		return false, false, fmt.Errorf("get node %q: %w", nodeName, err)
 	}
 
-	if !nodecontroller.IsStaticNode(node) {
-		return false, nil
-	}
-
-	return true, nil
+	return true, false, nil
 }

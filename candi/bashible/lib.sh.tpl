@@ -151,8 +151,7 @@ function bb-event-create() {
 
   local now
   now="$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")"
-  bb-kubectl-exec apply --server-side --field-manager=bashible \
-    --namespace=default -f - <<EOF || true
+  bb-kubectl-exec replace --force --namespace=default -f - <<EOF || true
 apiVersion: events.k8s.io/v1
 kind: Event
 metadata:

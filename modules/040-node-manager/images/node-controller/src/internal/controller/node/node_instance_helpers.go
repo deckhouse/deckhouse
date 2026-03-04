@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,7 +37,9 @@ func (r *NodeReconciler) deleteNodeBasedInstanceIfExists(ctx context.Context, na
 		return false, fmt.Errorf("get instance %q: %w", name, err)
 	}
 
-	if instance.Spec.MachineRef != nil {
+	// Delete only instances that are explicitly sourced from Node.
+	// This protects machine-backed instances and malformed objects.
+	if instance.Spec.MachineRef != nil || instance.Spec.NodeRef.Name != name {
 		return false, nil
 	}
 
@@ -45,8 +47,14 @@ func (r *NodeReconciler) deleteNodeBasedInstanceIfExists(ctx context.Context, na
 		if client.IgnoreNotFound(err) == nil {
 			return false, nil
 		}
-		return false, fmt.Errorf("delete static instance %q: %w", name, err)
+		return false, fmt.Errorf("delete node based instance %q: %w", name, err)
 	}
+	log.FromContext(ctx).V(1).Info(
+		"instance deleted",
+		"instance", name,
+		"deletedBy", "node-controller",
+		"reason", "node-not-found-for-node-source",
+	)
 	log.FromContext(ctx).V(4).Info("tick", "op", "node.instance.delete")
 
 	return true, nil

@@ -17,9 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	v1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
+
+const instanceConversionDataAnnotation = "node-controller.deckhouse.io/conversion-data"
 
 // ConvertTo converts this Instance (v1alpha1) to the hub version (v1alpha2).
 func (src *Instance) ConvertTo(dstRaw conversion.Hub) error {
@@ -28,6 +33,23 @@ func (src *Instance) ConvertTo(dstRaw conversion.Hub) error {
 	dst.TypeMeta = src.TypeMeta
 	dst.Spec = convertInstanceSpecToV1Alpha2(src.Status)
 	dst.Status = convertInstanceStatusToV1Alpha2(src.Status)
+
+	// Restore hub-only data preserved during a previous down-conversion.
+	restored := &v1alpha2.Instance{}
+	if ok, err := unmarshalInstanceHubData(src, restored); err != nil || !ok {
+		return err
+	}
+
+	// Fields below do not exist in v1alpha1 and are otherwise lost on round-trip.
+	dst.Spec = restored.Spec
+	dst.Status.MachineStatus = restored.Status.MachineStatus
+	dst.Status.BashibleStatus = restored.Status.BashibleStatus
+	dst.Status.Message = restored.Status.Message
+	dst.Status.Conditions = restored.Status.Conditions
+	if restored.Status.Phase != "" {
+		dst.Status.Phase = restored.Status.Phase
+	}
+
 	return nil
 }
 
@@ -51,7 +73,55 @@ func (dst *Instance) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.ObjectMeta = src.ObjectMeta
 	dst.TypeMeta = src.TypeMeta
 	dst.Status = convertInstanceStatusFromV1Alpha2(src.Spec, src.Status)
+
+	// Preserve hub-only data in annotation to avoid lossy down-conversion.
+	if err := marshalInstanceHubData(src, dst); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func marshalInstanceHubData(src *v1alpha2.Instance, dst *Instance) error {
+	u, err := runtime.DefaultUnstructuredConverter.ToUnstructured(src)
+	if err != nil {
+		return err
+	}
+	delete(u, "metadata")
+
+	data, err := json.Marshal(u)
+	if err != nil {
+		return err
+	}
+
+	if dst.Annotations == nil {
+		dst.Annotations = map[string]string{}
+	}
+	dst.Annotations[instanceConversionDataAnnotation] = string(data)
+
+	return nil
+}
+
+func unmarshalInstanceHubData(src *Instance, dst *v1alpha2.Instance) (bool, error) {
+	if src.Annotations == nil {
+		return false, nil
+	}
+
+	data, ok := src.Annotations[instanceConversionDataAnnotation]
+	if !ok {
+		return false, nil
+	}
+
+	if err := json.Unmarshal([]byte(data), dst); err != nil {
+		return false, err
+	}
+
+	delete(src.Annotations, instanceConversionDataAnnotation)
+	if len(src.Annotations) == 0 {
+		src.Annotations = nil
+	}
+
+	return true, nil
 }
 
 // ConvertFrom converts from the hub version (v1alpha2) to this version (v1alpha1).

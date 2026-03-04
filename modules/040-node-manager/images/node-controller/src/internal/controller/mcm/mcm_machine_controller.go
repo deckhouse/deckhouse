@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -94,12 +94,12 @@ func (r *MCMMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	logger.V(4).Info("tick", "op", "mcm.reconcile.start")
 
 	state := &mcmReconcileState{
-		req:        req,
-		mcmMachine: &mcmv1alpha1.Machine{},
+		req: req,
 	}
 
 	for _, step := range []mcmReconcileStep{
 		r.reconcileMCMMachineFetch,
+		r.reconcileMCMMachineMissingInstanceDeletion,
 		r.reconcileMCMMachineData,
 		r.reconcileMCMMachineInstance,
 	} {
@@ -120,29 +120,47 @@ func (r *MCMMachineReconciler) reconcileMCMMachineFetch(
 	ctx context.Context,
 	state *mcmReconcileState,
 ) (bool, ctrl.Result, error) {
-	logger := ctrl.LoggerFrom(ctx)
-
-	if err := r.Get(ctx, state.req.NamespacedName, state.mcmMachine); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			logger.V(4).Info("tick", "op", "mcm.instance.delete.request")
-			deleted, delErr := r.deleteInstanceIfExists(ctx, state.req.Name)
-			if delErr != nil {
-				return false, ctrl.Result{}, delErr
-			}
-			logger.V(1).Info("machine not found, linked instance delete handled", "instance", state.req.Name, "deleted", deleted)
-			return true, ctrl.Result{}, nil
+	mcmMachine := &mcmv1alpha1.Machine{}
+	if err := r.Get(ctx, state.req.NamespacedName, mcmMachine); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return false, ctrl.Result{}, err
 		}
 
+		state.mcmMachine = nil
+		return false, ctrl.Result{}, nil
+	}
+
+	state.mcmMachine = mcmMachine
+	return false, ctrl.Result{}, nil
+}
+
+func (r *MCMMachineReconciler) reconcileMCMMachineMissingInstanceDeletion(
+	ctx context.Context,
+	state *mcmReconcileState,
+) (bool, ctrl.Result, error) {
+	if state.mcmMachine != nil {
+		return false, ctrl.Result{}, nil
+	}
+
+	logger := ctrl.LoggerFrom(ctx)
+	logger.V(4).Info("tick", "op", "mcm.instance.delete.request")
+	deleted, err := r.deleteInstanceIfExists(ctx, state.req.Name)
+	if err != nil {
 		return false, ctrl.Result{}, err
 	}
 
-	return false, ctrl.Result{}, nil
+	logger.V(1).Info("machine not found, linked instance delete handled", "instance", state.req.Name, "deleted", deleted)
+	return true, ctrl.Result{}, nil
 }
 
 func (r *MCMMachineReconciler) reconcileMCMMachineData(
 	_ context.Context,
 	state *mcmReconcileState,
 ) (bool, ctrl.Result, error) {
+	if state.mcmMachine == nil {
+		return false, ctrl.Result{}, fmt.Errorf("mcm machine is nil in data step")
+	}
+
 	machineObj, err := r.machineFactory.NewMachine(state.mcmMachine)
 	if err != nil {
 		return false, ctrl.Result{}, fmt.Errorf("build reconcile data for mcm machine %q: %w", state.mcmMachine.Name, err)
