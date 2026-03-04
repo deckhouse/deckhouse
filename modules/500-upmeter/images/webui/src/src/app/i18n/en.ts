@@ -255,13 +255,13 @@ const langPack: LangPack = {
       "alertmanager": {
         title: "Observability Alertmanager",
         description: "Alertmanager from the Observability module processes and routes alerts.",
-        reasonUp: "at least one Pod is in <code>Ready</code> state and /health endpoint responds with 200 OK",
-        reasonDown: "either no ready Pods present, or /health endpoint returns a non-200 response",
+        reasonUp: "at least one Pod is in <code>Ready</code> state",
+        reasonDown: "no ready Pods present",
         reasonUnknown: REASON_APISERVER_UNAVAILABLE,
         reasonNodata: REASON_AGENTS_STOPPED,
       },
       "observability-recording": {
-        title: "Observability Recording Rules",
+        title: "Observability Recording",
         description: "Mini e2e test: creates an ObservabilityMetricsRulesGroup with a recording rule, waits for the corresponding PrometheusRule and metric in Prometheus, then cleans up.",
         reasonUp: "ObservabilityMetricsRulesGroup is reconciled into a PrometheusRule and the recording metric appears in Prometheus",
         reasonDown: "PrometheusRule was not created, or recording metric did not appear, or PrometheusRule was not deleted after cleanup",
@@ -345,29 +345,25 @@ const langPack: LangPack = {
       "label-proxy": {
         title: "Observability Label Proxy",
         description: "Label Proxy provides secured and filtered access to metrics backends.",
-        reasonUp: "at least one Pod is in <code>Ready</code> state and /health endpoint responds with 200 OK",
-        reasonDown: "either no ready Pods present, or /health endpoint returns a non-200 response",
-        reasonUnknown:
-          "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonUp: "at least one Pod is in <code>Ready</code> state",
+        reasonDown: "no ready Pods present",
+        reasonUnknown: REASON_APISERVER_UNAVAILABLE,
         reasonNodata: REASON_AGENTS_STOPPED,
       },
       "observability-webhook": {
         title: "Observability Webhook",
         description: "Validating and mutating webhook for Observability CRDs.",
-        reasonUp:
-          "at least one Pod is in <code>Ready</code> state and /v1alpha1/health endpoint responds with 200 OK",
-        reasonDown: "either no ready Pods present, or health endpoint returns a non-200 response",
-        reasonUnknown:
-          "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonUp: "at least one Pod is in <code>Ready</code> state",
+        reasonDown: "no ready Pods present",
+        reasonUnknown: REASON_APISERVER_UNAVAILABLE,
         reasonNodata: REASON_AGENTS_STOPPED,
       },
       "alert-kube-api": {
         title: "Observability Alert Kube API",
         description: "Kubernetes API for alert objects backed by Alertmanager state.",
-        reasonUp: "at least one Pod is in <code>Ready</code> state and /healthz endpoint responds with 200 OK",
-        reasonDown: "either no ready Pods present, or /healthz endpoint returns a non-200 response",
-        reasonUnknown:
-          "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonUp: "at least one Pod is in <code>Ready</code> state",
+        reasonDown: "no ready Pods present",
+        reasonUnknown: REASON_APISERVER_UNAVAILABLE,
         reasonNodata: REASON_AGENTS_STOPPED,
       },
       "grafana": {

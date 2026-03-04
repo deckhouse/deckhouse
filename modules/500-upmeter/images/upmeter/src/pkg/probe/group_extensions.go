@@ -140,16 +140,6 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 			},
 		}, {
 			group:  groupExtensions,
-			probe:  "label-proxy",
-			check:  "health",
-			period: 10 * time.Second,
-			config: checker.HTTPEndpointAvailable{
-				Access:   access,
-				Timeout:  5 * time.Second,
-				Endpoint: "https://label-proxy.d8-observability:8443/health",
-			},
-		}, {
-			group:  groupExtensions,
 			probe:  "observability-webhook",
 			check:  "pod",
 			period: 10 * time.Second,
@@ -162,16 +152,6 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 			},
 		}, {
 			group:  groupExtensions,
-			probe:  "observability-webhook",
-			check:  "health",
-			period: 10 * time.Second,
-			config: checker.HTTPEndpointAvailable{
-				Access:   access,
-				Timeout:  5 * time.Second,
-				Endpoint: "https://observability-webhook.d8-observability:8443/v1alpha1/health",
-			},
-		}, {
-			group:  groupExtensions,
 			probe:  "alert-kube-api",
 			check:  "pod",
 			period: 10 * time.Second,
@@ -181,16 +161,6 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 				Namespace:        "d8-observability",
 				LabelSelector:    "app=alert-kube-api",
 				PreflightChecker: controlPlanePinger,
-			},
-		}, {
-			group:  groupExtensions,
-			probe:  "alert-kube-api",
-			check:  "health",
-			period: 10 * time.Second,
-			config: checker.HTTPEndpointAvailable{
-				Access:   access,
-				Timeout:  5 * time.Second,
-				Endpoint: "https://alert-kube-api.d8-observability:8443/healthz",
 			},
 		}, {
 			group:  groupExtensions,
