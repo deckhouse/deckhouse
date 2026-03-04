@@ -6,13 +6,13 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- url: {{ .SOURCE_REPO }}/istio/istio
-  tag: {{ $istioVersion }}
-  to: /src/istio
-  excludePaths: 
-  - samples
-  - security/samples
-  - security/tools/jwt/samples
+#- url: {{ .SOURCE_REPO }}/istio/istio
+#  tag: {{ $istioVersion }}
+#  to: /src/istio
+#  excludePaths: 
+#  - samples
+#  - security/samples
+#  - security/tools/jwt/samples
 - url: {{ .SOURCE_REPO }}/istio/kiali
   tag: {{ $kialiVersion }}
   to: /src/kiali
@@ -33,6 +33,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
+  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/istio.git /src/istio/
   - git apply --verbose --directory=/src/istio /patches/001-istio-apply_go.patch
   - git apply --verbose --directory=/src/istio /patches/002-istio-gomod_gosum.patch
   - git apply --verbose --directory=/src/istio /patches/003-istio-server_fmtText.patch
