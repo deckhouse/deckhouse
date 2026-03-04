@@ -82,6 +82,8 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 		"module.kubernetes-data-disk.kubernetes_resource_ready_v1.kubernetes-data-disk",
 		"module.master.kubernetes_resource_ready_v1.vm",
 		"module.static-node.kubernetes_resource_ready_v1.vm",
+		// module.root-disk.kubernetes_resource_ready_v1.root-disk was not added because
+		// it does not contain data source for disk
 	}
 
 	envs = append(
