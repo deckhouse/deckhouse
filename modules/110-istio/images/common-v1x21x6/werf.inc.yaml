@@ -33,11 +33,11 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git apply --verbose --directory=/src/istio < /patches/001-istio-apply_go.patch
-  - git apply --verbose --directory=/src/istio < /patches/002-istio-gomod_gosum.patch
-  - git apply --verbose --directory=/src/istio < /patches/003-istio-server_fmtText.patch
+  - git apply --verbose --directory=/src/istio /patches/001-istio-apply_go.patch
+  - git apply --verbose --directory=/src/istio /patches/002-istio-gomod_gosum.patch
+  - git apply --verbose --directory=/src/istio /patches/003-istio-server_fmtText.patch
 
-  - git apply --verbose -p1 --directory=/src/kiali < /patches/001-kiali-go-mod.patch
+  - git apply --verbose --directory=/src/kiali < /patches/001-kiali-go-mod.patch
 
   - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali-frontend-assets.git /src/kial-frontend-assets/
 
