@@ -69,7 +69,7 @@ spec:
       args:
         - "--listen-address=127.0.0.1"
         - "--listen-port=6445"
-        - "--health-listen=127.0.0.1:4300"
+        - "--health-listen=127.0.0.1:6480"
         - "--log-level=debug"
         - "--as-static-pod=true"
         - "--fallback-file=/var/run/kubernetes.io/kubernetes-api-proxy/upstreams.json"
@@ -79,7 +79,7 @@ spec:
           hostPort: 6445
           protocol: TCP
         - name: health
-          containerPort: 4300
+          containerPort: 6480
           protocol: TCP
       readinessProbe:
         httpGet:

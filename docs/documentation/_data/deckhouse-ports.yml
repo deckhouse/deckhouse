@@ -521,24 +521,3 @@ groups:
     description:
       en: Container registry
       ru: Container registry
-
-- group: NodesLoopback
-  description:
-    en: Internal node traffic - Loopback addresses
-    ru: Внутренний трафик ноды - Loopback адреса
-  destinations:
-    - ports: "6445"
-      protocol: TCP
-      description:
-        en: Kubernetes apiserver proxy - loadbalancing service to available kubernetes apiservers in cluster
-        ru: Прикладной порт для Kubernetes apiserver proxy - сервиса балансировки запросов к доступным kubernetes apiserver-ам кластера
-    - ports: "4300"
-      protocol: TCP
-      description:
-        en: Healtcheck for Kubernetes apiserver proxy
-        ru: Healtcheck-порт для Kubernetes apiserver proxy
-    - ports: "5001"
-      protocol: TCP
-      description:
-        en: Registry proxy
-        ru: Registry proxy
