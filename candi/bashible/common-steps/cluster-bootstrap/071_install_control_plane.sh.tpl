@@ -13,6 +13,7 @@
 # limitations under the License.
 
 {{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
+{{ $manifestsDir := "/var/lib/bashible/control-plane" }}
 
 check_container_running() {
   local container_name=$1
@@ -42,7 +43,7 @@ mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
 cp {{ $kubeadmDir}}/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
 kubeadm init phase certs all --config {{ $kubeadmDir}}/config.yaml
 kubeadm init phase kubeconfig all --config {{ $kubeadmDir}}/config.yaml
-kubeadm init phase etcd local --config {{ $kubeadmDir}}/config.yaml
+cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd"
 
 mkdir -p /etc/kubernetes/deckhouse/extra-files
@@ -57,7 +58,10 @@ anonymous:
   - path: /healthz
 EOF
 
-kubeadm init phase control-plane all --config {{ $kubeadmDir}}/config.yaml
+cp {{ $manifestsDir}}/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
+cp {{ $manifestsDir}}/kube-scheduler.yaml /etc/kubernetes/manifests/kube-scheduler.yaml
+cp {{ $manifestsDir}}/kube-controller-manager.yaml /etc/kubernetes/manifests/kube-controller-manager.yaml
+
 check_container_running "kube-apiserver"
 check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"

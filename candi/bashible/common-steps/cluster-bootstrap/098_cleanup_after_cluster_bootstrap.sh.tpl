@@ -13,6 +13,7 @@
 # limitations under the License.
 
 rm -rf /var/lib/bashible/kubeadm
+rm -rf /var/lib/bashible/control-plane
 bb-package-remove kubeadm
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
