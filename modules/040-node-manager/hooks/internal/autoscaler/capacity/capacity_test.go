@@ -193,18 +193,11 @@ func TestCapacityExtractor(t *testing.T) {
 		assert.Equal(t, "8", capac.CPU.String())
 	})
 
-	t.Run("DVPSpecWorker", func(t *testing.T) {
+	t.Run("DVPSpec", func(t *testing.T) {
 		t.Parallel()
 		var instanceClass map[string]interface{}
-		err := yaml.Unmarshal([]byte(dvpSpecWorker), &instanceClass)
+		err := yaml.Unmarshal([]byte(dvpSpec), &instanceClass)
 		require.NoError(t, err)
-		//catalog := NewInstanceTypesCatalog([]v1alpha1.InstanceType{
-		//	{
-		//		Name:   "amd-epyc-gen-3",
-		//		CPU:    resource.MustParse("8"),
-		//		Memory: resource.MustParse(strconv.FormatInt(16384, 10) + "Mi"),
-		//	},
-		//})
 		catalog := NewInstanceTypesCatalog(make([]v1alpha1.InstanceType, 0))
 		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
 		require.NoError(t, err)
@@ -339,7 +332,7 @@ spec:
   mainNetwork: ndev
 `
 
-	dvpSpecWorker = `
+	dvpSpec = `
 apiVersion: deckhouse.io/v1alpha1
 kind: DVPInstanceClass
 metadata:
