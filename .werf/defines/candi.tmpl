@@ -23,9 +23,7 @@
 
 # render shell scripts for preparing candi image
 # . is dict with keys:
-#   rootContext - context with .Files
 #   CI_COMMIT_TAG - CI_COMMIT_TAG env
-#   Env - edition set up from ci
 {{- define "candi_prepare_with_shell" }}
 {{- $context := . -}}
 
