@@ -1,4 +1,5 @@
 {{- $istioVersion := "1.25.2" }}
+
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
