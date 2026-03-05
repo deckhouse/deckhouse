@@ -262,7 +262,7 @@ func prepareConverge(componentName string, isTemp bool) error {
 	var err error
 	var out []byte
 
-	// next block just for testing etcd library
+	////DELETE THIS BLOCK//////////////// test etcd library ///////////////////////
 	if componentName == "etcd" {
 		etcdManifest := `apiVersion: v1
 kind: Pod
@@ -382,6 +382,7 @@ status: {}`
 			log.Error("failed to test etcd library JoinCluster", log.Err(err))
 		}
 	}
+	/////////////////////////////////////////////////////////////////////
 	c := exec.Command(kubeadmPath, args...)
 	out, err = c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
