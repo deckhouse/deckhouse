@@ -39,7 +39,7 @@ spec:
     - group: ""
       kind: Service
       name: prometheus
-      port: 443
+      port: 9090
       weight: 1
     matches:
     - path:
@@ -50,7 +50,7 @@ spec:
     - group: ""
       kind: Service
       name: prometheus-main-0
-      port: 443
+      port: 9090
       weight: 1
     matches:
     - path:
@@ -60,7 +60,7 @@ spec:
     - group: ""
       kind: Service
       name: prometheus-main-1
-      port: 443
+      port: 9090
       weight: 1
     matches:
     - path:
