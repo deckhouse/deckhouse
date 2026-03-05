@@ -3,9 +3,11 @@ package etcd
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -110,7 +112,7 @@ func New(endpoints []string, ca, cert, key string) (*Client, error) {
 // NewFromCluster creates an etcd client for the etcd endpoints present in etcd member list. In order to compose this information,
 // it will first discover at least one etcd endpoint to connect to. Once created, the client synchronizes client's endpoints with
 // the known endpoints from the etcd membership API, since it is the authoritative source of truth for the list of available members.
-func NewFromCluster(client clientset.Interface, certificatesDir string) (*Client, error) {
+func NewFromCluster(client clientset.Interface, certificatesDir string) (*clientv3.Client, error) {
 	// Discover at least one etcd endpoint to connect to by inspecting the existing etcd pods
 
 	// Get the list of etcd endpoints
@@ -121,22 +123,44 @@ func NewFromCluster(client clientset.Interface, certificatesDir string) (*Client
 	klog.V(1).Infof("etcd endpoints read from pods: %s", strings.Join(endpoints, ","))
 
 	// Creates an etcd client
-	etcdClient, err := New(
-		endpoints,
-		filepath.Join(certificatesDir, constants.EtcdCACertName),
-		filepath.Join(certificatesDir, constants.EtcdHealthcheckClientCertName),
-		filepath.Join(certificatesDir, constants.EtcdHealthcheckClientKeyName),
-	)
+	// etcdClient, err := New(
+	// 	endpoints,
+	// 	filepath.Join(certificatesDir, constants.EtcdCACertName),
+	// 	filepath.Join(certificatesDir, constants.EtcdHealthcheckClientCertName),
+	// 	filepath.Join(certificatesDir, constants.EtcdHealthcheckClientKeyName),
+	// )
+	// if err != nil {
+	// 	return nil, errors.Wrapf(err, "error creating etcd client for %v endpoints", endpoints)
+	// }
+	cert, err := tls.LoadX509KeyPair(filepath.Join(certificatesDir, constants.EtcdHealthcheckClientCertName), filepath.Join(certificatesDir, constants.EtcdHealthcheckClientKeyName))
 	if err != nil {
-		return nil, errors.Wrapf(err, "error creating etcd client for %v endpoints", endpoints)
+		return nil, err
+	}
+	caData, err := os.ReadFile(filepath.Join(certificatesDir, constants.EtcdCACertName))
+	if err != nil {
+		return nil, err
+	}
+	caPool := x509.NewCertPool()
+	caPool.AppendCertsFromPEM(caData)
+
+	etcdClient, err := clientv3.New(clientv3.Config{
+		Endpoints:   endpoints,
+		DialTimeout: 5 * time.Second,
+		TLS: &tls.Config{
+			RootCAs:      caPool,
+			Certificates: []tls.Certificate{cert},
+		},
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	// synchronizes client's endpoints with the known endpoints from the etcd membership.
-	err = etcdClient.Sync()
-	if err != nil {
-		return nil, errors.Wrap(err, "error syncing endpoints with etcd")
-	}
-	klog.V(1).Infof("update etcd endpoints: %s", strings.Join(etcdClient.Endpoints, ","))
+	// err = etcdClient.Sync()
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "error syncing endpoints with etcd")
+	// }
+	// klog.V(1).Infof("update etcd endpoints: %s", strings.Join(etcdClient.Endpoints, ","))
 
 	return etcdClient, nil
 }
