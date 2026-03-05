@@ -15,7 +15,6 @@ import (
 	"time"
 
 	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
-	cp_errors "github.com/deckhouse/deckhouse/go_lib/controlplane/client/errors"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapi"
 	"github.com/pkg/errors"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
@@ -520,9 +519,9 @@ func getRawEtcdEndpointsFromPodAnnotation(client clientset.Interface, interval, 
 	if err != nil {
 		const message = "could not retrieve the list of etcd endpoints"
 		if lastErr != nil {
-			return []string{}, cp_errors.Wrap(lastErr, message)
+			return []string{}, fmt.Errorf("%s: %w", message, lastErr)
 		}
-		return []string{}, cp_errors.Wrap(err, message)
+		return []string{}, fmt.Errorf("%s: %w", message, err)
 	}
 	return etcdEndpoints, nil
 }
