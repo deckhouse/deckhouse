@@ -187,8 +187,6 @@ func openstackCheck(f *Config, k8sVer string) {
 		namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
 		registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
-		providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-
 		cinderControllerPluginSS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 		cinderCSIDriver := f.KubernetesGlobalResource("CSIDriver", "cinder.csi.openstack.org")
 		cinderNodePluginDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
@@ -219,7 +217,12 @@ func openstackCheck(f *Config, k8sVer string) {
 		Expect(registrySecret.Exists()).To(BeTrue())
 
 		// user story #1
+		providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 		Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+
+		providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-openstack")
+		Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+
 		expectedProviderRegistrationJSON := `{
           "connection": {
             "authURL": "http://my.cloud.lalla/123/",
@@ -243,9 +246,27 @@ func openstackCheck(f *Config, k8sVer string) {
           },
           "podNetworkMode": "VXLAN"
         }`
-		providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.openstack").String())
+
+		providerRegistrationSecretData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.openstack").String())
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+		Expect(string(providerRegistrationSecretData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+		providerSpecificRegistrationSecretData, err := base64.StdEncoding.DecodeString(providerSpecificRegistrationSecret.Field("data.openstack").String())
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(string(providerSpecificRegistrationSecretData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+		providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-openstack-bashible")
+		Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
+		providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
+		Expect(len(providerSpecificBashibleSecretData) >= 1).To(BeTrue())
+		Expect(len(providerSpecificBashibleSecretData["bootstrap-networks.sh.tpl"].String()) > 0 ).To(BeTrue())
+
+		providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-openstack-mcm")
+		Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
+		providerSpecificMCMSecretData := providerSpecificMCMSecret.Field("data").Map()
+		Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
+		Expect(len(providerSpecificMCMSecretData) >= 1 ).To(BeTrue())
+		Expect(len(providerSpecificMCMSecretData["cloud-instance-manager/config-for-machine-controller-manager.yaml"].String()) > 0 ).To(BeTrue())
 
 		// user story #2
 		Expect(cinderCSIDriver.Exists()).To(BeTrue())
