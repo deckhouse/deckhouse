@@ -108,6 +108,9 @@ spec:
           - name: run-nvidia
             mountPath: /run/nvidia
             mountPropagation: HostToContainer
+          - name: nvidia-caps-dev
+            mountPath: /dev/nvidia-caps
+            readOnly: true
           - name: tmp
             mountPath: /tmp
           - name: dcgm-run
@@ -116,6 +119,10 @@ spec:
         - name: run-nvidia
           hostPath:
             path: "/run/nvidia"
+            type: Directory
+        - name: nvidia-caps-dev
+          hostPath:
+            path: "/dev/nvidia-caps"
             type: Directory
         - name: tmp
           emptyDir: {}

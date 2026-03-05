@@ -120,6 +120,12 @@ spec:
         - name: "metrics"
           containerPort: 9400
         volumeMounts:
+        - name: run-nvidia
+          mountPath: /run/nvidia
+          mountPropagation: HostToContainer
+        - name: nvidia-caps-dev
+          mountPath: /dev/nvidia-caps
+          readOnly: true
         - name: "pod-gpu-resources"
           readOnly: true
           mountPath: "/var/lib/kubelet/pod-resources"
@@ -127,6 +133,14 @@ spec:
           mountPath: /etc/dcgm-exporter/dcp-metrics-included.csv
           subPath: dcp-metrics-included.csv
       volumes:
+      - name: run-nvidia
+        hostPath:
+          path: "/run/nvidia"
+          type: Directory
+      - name: nvidia-caps-dev
+        hostPath:
+          path: "/dev/nvidia-caps"
+          type: Directory
       - name: "pod-gpu-resources"
         hostPath:
           path: "/var/lib/kubelet/pod-resources"
