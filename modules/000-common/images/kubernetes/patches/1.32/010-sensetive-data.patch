@@ -1,0 +1,1512 @@
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
+index 61efeae69ca..30b55c8ab95 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
+@@ -149,6 +149,13 @@ type JSONSchemaProps struct {
+ 	// +listType=map
+ 	// +listMapKey=rule
+ 	XValidations ValidationRules
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++	XSensitiveData bool
+ }
+ 
+ // ValidationRules describes a list of validation rules written in the CEL expression language.
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
+index 1bbd0ce13e1..1e4c551b58b 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
+@@ -578,6 +578,13 @@ message JSONSchemaProps {
+   // +listType=map
+   // +listMapKey=rule
+   repeated ValidationRule xKubernetesValidations = 44;
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++  optional bool xKubernetesSensitiveData = 45
+ }
+ 
+ // JSONSchemaPropsOrArray represents a value that can either be a JSONSchemaProps
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
+index 197bd1b7a88..cdcaaf84c5c 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
+@@ -194,6 +194,13 @@ type JSONSchemaProps struct {
+ 	// +listType=map
+ 	// +listMapKey=rule
+ 	XValidations ValidationRules `json:"x-kubernetes-validations,omitempty" patchStrategy:"merge" patchMergeKey:"rule" protobuf:"bytes,44,rep,name=xKubernetesValidations"`
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++	XSensitiveData bool `json:"x-kubernetes-sensitive-data,omitempty" protobuf:"bytes,45,opt,name=xKubernetesSensitiveData"`
+ }
+ 
+ // ValidationRules describes a list of validation rules written in the CEL expression language.
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
+index bb1d7e01429..7fa45006e09 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
+@@ -912,6 +912,7 @@ func autoConvert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(in *JSONSch
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*apiextensions.ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+@@ -1101,6 +1102,7 @@ func autoConvert_apiextensions_JSONSchemaProps_To_v1_JSONSchemaProps(in *apiexte
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
+index f9e5600345a..37fc3603a5c 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
+@@ -639,6 +639,13 @@ message JSONSchemaProps {
+   // +listType=map
+   // +listMapKey=rule
+   repeated ValidationRule xKubernetesValidations = 44;
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++  optional bool xKubernetesSensitiveData = 45
+ }
+ 
+ // JSONSchemaPropsOrArray represents a value that can either be a JSONSchemaProps
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
+index 3ed584dd9de..b723c134253 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
+@@ -194,6 +194,13 @@ type JSONSchemaProps struct {
+ 	// +listType=map
+ 	// +listMapKey=rule
+ 	XValidations ValidationRules `json:"x-kubernetes-validations,omitempty" patchStrategy:"merge" patchMergeKey:"rule" protobuf:"bytes,44,rep,name=xKubernetesValidations"`
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++	XSensitiveData bool `json:"x-kubernetes-sensitive-data,omitempty" protobuf:"bytes,45,opt,name=xKubernetesSensitiveData"`
+ }
+ 
+ // ValidationRules describes a list of validation rules written in the CEL expression language.
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
+index d59274e8da6..f964ae93fe3 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
+@@ -961,6 +961,7 @@ func autoConvert_v1beta1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(in *JS
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*apiextensions.ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+@@ -1150,6 +1151,7 @@ func autoConvert_apiextensions_JSONSchemaProps_To_v1beta1_JSONSchemaProps(in *ap
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive.go
+new file mode 100644
+index 00000000000..2759577200c
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive.go
+@@ -0,0 +1,194 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package apiserver
++
++import (
++	"encoding/json"
++	"strings"
++
++	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apiserver/pkg/audit"
++	"k8s.io/klog/v2"
++	"sigs.k8s.io/yaml"
++)
++
++// newSensitiveMaskingTransformer returns an ObjectTransformer that masks sensitive fields
++// in Unstructured objects using the provided structural schema.
++func newSensitiveMaskingTransformer(schema *structuralschema.Structural) audit.ObjectTransformer {
++	return func(obj runtime.Object) runtime.Object {
++		defer func() {
++			if r := recover(); r != nil {
++				klog.Errorf("Recovered from panic in sensitive masking transformer: %v", r)
++			}
++		}()
++
++		obj = obj.DeepCopyObject()
++
++		switch t := obj.(type) {
++		case *unstructured.Unstructured:
++			sensitive.MaskSensitiveFields(t.Object, schema, true)
++		case *unstructured.UnstructuredList:
++			for i := range t.Items {
++				sensitive.MaskSensitiveFields(t.Items[i].Object, schema, true)
++			}
++		}
++		return obj
++	}
++}
++
++// newSensitivePatchTransformer returns a PatchTransformer that masks sensitive fields
++// in patch payloads using the provided structural schema.
++func newSensitivePatchTransformer(schema *structuralschema.Structural) audit.PatchTransformer {
++	sensitivePaths := sensitive.CollectSensitivePaths(schema)
++
++	return func(patchBytes []byte, contentType string) []byte {
++		defer func() {
++			if r := recover(); r != nil {
++				klog.Errorf("Recovered from panic in sensitive patch transformer: %v", r)
++			}
++		}()
++
++		switch contentType {
++		case "application/json-patch+json":
++			return maskJSONPatch(patchBytes, sensitivePaths)
++		case "application/merge-patch+json":
++			return maskMergePatch(patchBytes, schema)
++		case "application/apply-patch+yaml":
++			return maskSSAPatchYAML(patchBytes, schema)
++		case "application/apply-patch+cbor":
++			return maskSSAPatchCBOR(patchBytes, schema)
++		default:
++			// Unknown content type, attempt merge-patch masking as fallback
++			return maskMergePatch(patchBytes, schema)
++		}
++	}
++}
++
++// maskJSONPatch masks values in JSON Patch operations whose paths target sensitive fields.
++func maskJSONPatch(patchBytes []byte, sensitivePaths []string) []byte {
++	var ops []map[string]interface{}
++	if err := json.Unmarshal(patchBytes, &ops); err != nil {
++		return redactedPatchBytes()
++	}
++
++	// Build a set of sensitive JSON Pointer prefixes from the dot-notation paths.
++	sensitivePointers := make(map[string]bool, len(sensitivePaths))
++	for _, p := range sensitivePaths {
++		// Convert ".spec.password" → "/spec/password"
++		pointer := dotPathToJSONPointer(p)
++		sensitivePointers[pointer] = true
++	}
++
++	modified := false
++	for i, op := range ops {
++		path, ok := op["path"].(string)
++		if !ok {
++			continue
++		}
++		if isSensitiveJSONPointer(path, sensitivePointers) {
++			if _, hasValue := op["value"]; hasValue {
++				ops[i]["value"] = sensitive.MaskedValue
++				modified = true
++			}
++		}
++	}
++
++	if !modified {
++		return patchBytes
++	}
++
++	result, err := json.Marshal(ops)
++	if err != nil {
++		return redactedPatchBytes()
++	}
++	return result
++}
++
++// maskMergePatch masks sensitive fields in a JSON merge patch.
++func maskMergePatch(patchBytes []byte, schema *structuralschema.Structural) []byte {
++	var patch map[string]interface{}
++	if err := json.Unmarshal(patchBytes, &patch); err != nil {
++		return redactedPatchBytes()
++	}
++
++	sensitive.MaskSensitiveFields(patch, schema, true)
++
++	result, err := json.Marshal(patch)
++	if err != nil {
++		return redactedPatchBytes()
++	}
++	return result
++}
++
++// maskSSAPatchYAML masks sensitive fields in an SSA (server-side apply) YAML patch.
++func maskSSAPatchYAML(patchBytes []byte, schema *structuralschema.Structural) []byte {
++	var patch map[string]interface{}
++	if err := yaml.Unmarshal(patchBytes, &patch); err != nil {
++		return redactedPatchBytes()
++	}
++
++	sensitive.MaskSensitiveFields(patch, schema, true)
++
++	result, err := json.Marshal(patch)
++	if err != nil {
++		return redactedPatchBytes()
++	}
++	return result
++}
++
++// maskSSAPatchCBOR masks sensitive fields in an SSA (server-side apply) CBOR patch.
++// Since CBOR decoding into map[string]interface{} requires specific handling,
++// we attempt to decode the CBOR data first, then mask and re-encode as JSON.
++func maskSSAPatchCBOR(patchBytes []byte, schema *structuralschema.Structural) []byte {
++	// CBOR patches in audit are rare; for safety, redact them entirely
++	// rather than introducing a CBOR dependency here.
++	return redactedPatchBytes()
++}
++
++// redactedPatchBytes returns a JSON fallback indicating the patch was redacted.
++func redactedPatchBytes() []byte {
++	return []byte(`{"redacted":"patch contains sensitive fields"}`)
++}
++
++// dotPathToJSONPointer converts a dot-notation path (e.g. ".spec.password")
++// to a JSON Pointer (e.g. "/spec/password").
++func dotPathToJSONPointer(dotPath string) string {
++	// Remove leading dot
++	dotPath = strings.TrimPrefix(dotPath, ".")
++	if dotPath == "" {
++		return "/"
++	}
++	return "/" + strings.ReplaceAll(dotPath, ".", "/")
++}
++
++// isSensitiveJSONPointer checks if the given JSON Pointer targets a sensitive field.
++// It checks both exact match and prefix match (for nested operations).
++func isSensitiveJSONPointer(pointer string, sensitivePointers map[string]bool) bool {
++	if sensitivePointers[pointer] {
++		return true
++	}
++	// Check if the pointer is a child of a sensitive path
++	for sp := range sensitivePointers {
++		if strings.HasPrefix(pointer, sp+"/") {
++			return true
++		}
++	}
++	return false
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
+index 55d31fc8eda..7adf7f0258d 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
+@@ -35,7 +35,9 @@ import (
+ 	structuraldefaulting "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
+ 	schemaobjectmeta "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/objectmeta"
+ 	structuralpruning "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/pruning"
++	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive"
+ 	apiservervalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
++	apiextensionsfeatures "k8s.io/apiextensions-apiserver/pkg/features"
+ 	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1"
+ 	listers "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
+ 	"k8s.io/apiextensions-apiserver/pkg/controller/establish"
+@@ -65,6 +67,7 @@ import (
+ 	utilwaitgroup "k8s.io/apimachinery/pkg/util/waitgroup"
+ 	"k8s.io/apimachinery/pkg/version"
+ 	"k8s.io/apiserver/pkg/admission"
++	"k8s.io/apiserver/pkg/audit"
+ 	"k8s.io/apiserver/pkg/authorization/authorizer"
+ 	"k8s.io/apiserver/pkg/endpoints/handlers"
+ 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
+@@ -158,6 +161,12 @@ type crdInfo struct {
+ 	// storageVersion is the CRD version used when storing the object in etcd.
+ 	storageVersion string
+ 
++	// hasSensitiveFields indicates whether any version of this CRD has sensitive fields.
++	hasSensitiveFields bool
++	// sensitiveSchemas maps version names to their structural schemas, but only
++	// for versions that contain sensitive fields (x-kubernetes-sensitive-data).
++	sensitiveSchemas map[string]*structuralschema.Structural
++
+ 	waitGroup *utilwaitgroup.SafeWaitGroup
+ }
+ 
+@@ -313,6 +322,16 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+ 		return
+ 	}
+ 
++	if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData) && crdInfo.hasSensitiveFields {
++		if ac := audit.AuditContextFrom(req.Context()); ac != nil {
++			version := requestInfo.APIVersion
++			if schema, ok := crdInfo.sensitiveSchemas[version]; ok && schema != nil {
++				ac.SetObjectTransformer(newSensitiveMaskingTransformer(schema))
++				ac.SetPatchTransformer(newSensitivePatchTransformer(schema))
++			}
++		}
++	}
++
+ 	deprecated := crdInfo.deprecated[requestInfo.APIVersion]
+ 	for _, w := range crdInfo.warnings[requestInfo.APIVersion] {
+ 		warning.AddWarning(req.Context(), "", w)
+@@ -679,6 +698,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+ 		structuralSchemas[v.Name] = s
+ 	}
+ 
++	hasSensitive := false
++	sensitiveSchemas := map[string]*structuralschema.Structural{}
++	if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData) {
++		for vName, s := range structuralSchemas {
++			if sensitive.HasSensitiveFields(s) {
++				hasSensitive = true
++				sensitiveSchemas[vName] = s
++			}
++		}
++	}
++
+ 	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
+ 	if err != nil {
+ 		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
+@@ -1036,6 +1066,8 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+ 		deprecated:          deprecated,
+ 		warnings:            warnings,
+ 		storageVersion:      storageVersion,
++		hasSensitiveFields:  hasSensitive,
++		sensitiveSchemas:    sensitiveSchemas,
+ 		waitGroup:           &utilwaitgroup.SafeWaitGroup{},
+ 	}
+ 
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
+index 78350c135fc..01c1f3bfd3f 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
+@@ -272,6 +272,7 @@ func newExtensions(s *apiextensions.JSONSchemaProps) (*Extensions, error) {
+ 		XListMapKeys:      s.XListMapKeys,
+ 		XListType:         s.XListType,
+ 		XMapType:          s.XMapType,
++		XSensitiveData:    s.XSensitiveData,
+ 	}
+ 
+ 	if s.XPreserveUnknownFields != nil {
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
+index df78ba77e61..56e0c94ca95 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
+@@ -87,6 +87,9 @@ func (x *Extensions) toKubeOpenAPI(ret *spec.Schema) {
+ 	if x.XMapType != nil {
+ 		ret.VendorExtensible.AddExtension("x-kubernetes-map-type", *x.XMapType)
+ 	}
++	if x.XSensitiveData {
++		ret.VendorExtensible.AddExtension("x-kubernetes-sensitive-data", true)
++	}
+ }
+ 
+ func (x *ValidationExtensions) toKubeOpenAPI(ret *spec.Schema) {
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
+new file mode 100644
+index 00000000000..c5f23df2b1a
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
+@@ -0,0 +1,175 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package sensitive
++
++import (
++	"sort"
++
++	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++)
++
++// MaskedValue is the replacement string used by MaskSensitiveFields.
++const MaskedValue = "******"
++
++var metaFields = map[string]bool{
++	"apiVersion": true,
++	"kind":       true,
++	"metadata":   true,
++}
++
++// HasSensitiveFields returns true if the schema contains at least one field
++// with XSensitiveData == true anywhere in the tree.
++func HasSensitiveFields(s *structuralschema.Structural) bool {
++	if s == nil {
++		return false
++	}
++	if s.XSensitiveData {
++		return true
++	}
++	if s.Items != nil && HasSensitiveFields(s.Items) {
++		return true
++	}
++	for _, prop := range s.Properties {
++		if HasSensitiveFields(&prop) {
++			return true
++		}
++	}
++	if s.AdditionalProperties != nil && s.AdditionalProperties.Structural != nil {
++		if HasSensitiveFields(s.AdditionalProperties.Structural) {
++			return true
++		}
++	}
++	return false
++}
++
++// CollectSensitivePaths returns a sorted list of JSON paths for all fields in the
++// schema that have XSensitiveData == true (e.g. ".spec.password", ".spec.tls.key").
++func CollectSensitivePaths(s *structuralschema.Structural) []string {
++	paths := collectSensitivePaths(s, "")
++	sort.Strings(paths)
++	return paths
++}
++
++// StripSensitiveFields removes all sensitive fields from the unstructured object in-place.
++// It skips TypeMeta and ObjectMeta fields if XEmbeddedResource is set to true, or for the
++// root if isResourceRoot=true, following the same convention as pruning.Prune.
++func StripSensitiveFields(obj interface{}, s *structuralschema.Structural, isResourceRoot bool) {
++	s = withResourceRoot(s, isResourceRoot)
++	processSensitive(obj, s, true)
++}
++
++// MaskSensitiveFields replaces all sensitive field values with MaskedValue ("******") in-place.
++// It skips TypeMeta and ObjectMeta fields if XEmbeddedResource is set to true, or for the
++// root if isResourceRoot=true, following the same convention as pruning.Prune.
++func MaskSensitiveFields(obj interface{}, s *structuralschema.Structural, isResourceRoot bool) {
++	s = withResourceRoot(s, isResourceRoot)
++	processSensitive(obj, s, false)
++}
++
++// withResourceRoot normalizes isResourceRoot into XEmbeddedResource on the schema,
++// following the same pattern as pruning.PruneWithOptions.
++func withResourceRoot(s *structuralschema.Structural, isResourceRoot bool) *structuralschema.Structural {
++	if !isResourceRoot {
++		return s
++	}
++	if s == nil {
++		s = &structuralschema.Structural{}
++	}
++	if !s.XEmbeddedResource {
++		clone := *s
++		clone.XEmbeddedResource = true
++		s = &clone
++	}
++	return s
++}
++
++func collectSensitivePaths(s *structuralschema.Structural, path string) []string {
++	if s == nil {
++		return nil
++	}
++	var paths []string
++	if s.XSensitiveData {
++		if path == "" {
++			paths = append(paths, ".")
++		} else {
++			paths = append(paths, path)
++		}
++	}
++	for name, prop := range s.Properties {
++		paths = append(paths, collectSensitivePaths(&prop, path+"."+name)...)
++	}
++	if s.Items != nil {
++		paths = append(paths, collectSensitivePaths(s.Items, path+"[]")...)
++	}
++	if s.AdditionalProperties != nil && s.AdditionalProperties.Structural != nil {
++		paths = append(paths, collectSensitivePaths(s.AdditionalProperties.Structural, path+"[*]")...)
++	}
++	return paths
++}
++
++func processSensitive(obj interface{}, s *structuralschema.Structural, strip bool) {
++	if s == nil || obj == nil {
++		return
++	}
++	switch x := obj.(type) {
++	case map[string]interface{}:
++		for k, v := range x {
++			if s.XEmbeddedResource && metaFields[k] {
++				continue
++			}
++			if prop, ok := s.Properties[k]; ok {
++				if prop.XSensitiveData {
++					if strip {
++						delete(x, k)
++					} else {
++						x[k] = MaskedValue
++					}
++					continue
++				}
++				processSensitive(v, &prop, strip)
++			} else if s.AdditionalProperties != nil && s.AdditionalProperties.Structural != nil {
++				ap := s.AdditionalProperties.Structural
++				if ap.XSensitiveData {
++					if strip {
++						delete(x, k)
++					} else {
++						x[k] = MaskedValue
++					}
++					continue
++				}
++				processSensitive(v, ap, strip)
++			}
++		}
++	case []interface{}:
++		if s.Items == nil {
++			return
++		}
++		if s.Items.XSensitiveData {
++			for i := range x {
++				if strip {
++					x[i] = nil
++				} else {
++					x[i] = MaskedValue
++				}
++			}
++			return
++		}
++		for _, v := range x {
++			processSensitive(v, s.Items, strip)
++		}
++	}
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
+new file mode 100644
+index 00000000000..52ff4cbc20a
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
+@@ -0,0 +1,684 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package sensitive
++
++import (
++	"reflect"
++	"testing"
++
++	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++)
++
++func TestHasSensitiveFields(t *testing.T) {
++	tests := []struct {
++		name     string
++		schema   *structuralschema.Structural
++		expected bool
++	}{
++		{
++			name:     "nil schema",
++			schema:   nil,
++			expected: false,
++		},
++		{
++			name:     "empty schema",
++			schema:   &structuralschema.Structural{},
++			expected: false,
++		},
++		{
++			name: "root marked sensitive",
++			schema: &structuralschema.Structural{
++				Extensions: structuralschema.Extensions{XSensitiveData: true},
++			},
++			expected: true,
++		},
++		{
++			name: "sensitive property",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++					"name":     {Generic: structuralschema.Generic{Type: "string"}},
++				},
++			},
++			expected: true,
++		},
++		{
++			name: "no sensitive properties",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"name": {Generic: structuralschema.Generic{Type: "string"}},
++				},
++			},
++			expected: false,
++		},
++		{
++			name: "sensitive in items",
++			schema: &structuralschema.Structural{
++				Items: &structuralschema.Structural{
++					Extensions: structuralschema.Extensions{XSensitiveData: true},
++				},
++			},
++			expected: true,
++		},
++		{
++			name: "sensitive in additionalProperties",
++			schema: &structuralschema.Structural{
++				AdditionalProperties: &structuralschema.StructuralOrBool{
++					Structural: &structuralschema.Structural{
++						Extensions: structuralschema.Extensions{XSensitiveData: true},
++					},
++				},
++			},
++			expected: true,
++		},
++		{
++			name: "sensitive deeply nested",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"spec": {
++						Properties: map[string]structuralschema.Structural{
++							"tls": {
++								Properties: map[string]structuralschema.Structural{
++									"key": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++								},
++							},
++						},
++					},
++				},
++			},
++			expected: true,
++		},
++		{
++			name: "sensitive in nested items properties",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"list": {
++						Items: &structuralschema.Structural{
++							Properties: map[string]structuralschema.Structural{
++								"token": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++			expected: true,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			if got := HasSensitiveFields(tt.schema); got != tt.expected {
++				t.Errorf("HasSensitiveFields() = %v, want %v", got, tt.expected)
++			}
++		})
++	}
++}
++
++func TestCollectSensitivePaths(t *testing.T) {
++	tests := []struct {
++		name     string
++		schema   *structuralschema.Structural
++		expected []string
++	}{
++		{
++			name:     "nil schema",
++			schema:   nil,
++			expected: nil,
++		},
++		{
++			name:     "no sensitive fields",
++			schema:   &structuralschema.Structural{},
++			expected: nil,
++		},
++		{
++			name: "root marked sensitive",
++			schema: &structuralschema.Structural{
++				Extensions: structuralschema.Extensions{XSensitiveData: true},
++			},
++			expected: []string{"."},
++		},
++		{
++			name: "flat properties",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++					"name":     {Generic: structuralschema.Generic{Type: "string"}},
++					"token":    {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++				},
++			},
++			expected: []string{".password", ".token"},
++		},
++		{
++			name: "nested properties",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"spec": {
++						Properties: map[string]structuralschema.Structural{
++							"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							"tls": {
++								Properties: map[string]structuralschema.Structural{
++									"key": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++								},
++							},
++						},
++					},
++				},
++			},
++			expected: []string{".spec.password", ".spec.tls.key"},
++		},
++		{
++			name: "sensitive array items",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"secrets": {
++						Items: &structuralschema.Structural{
++							Properties: map[string]structuralschema.Structural{
++								"value": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++			expected: []string{".secrets[].value"},
++		},
++		{
++			name: "sensitive additionalProperties",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"data": {
++						AdditionalProperties: &structuralschema.StructuralOrBool{
++							Structural: &structuralschema.Structural{
++								Extensions: structuralschema.Extensions{XSensitiveData: true},
++							},
++						},
++					},
++				},
++			},
++			expected: []string{".data[*]"},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			got := CollectSensitivePaths(tt.schema)
++			if !reflect.DeepEqual(got, tt.expected) {
++				t.Errorf("CollectSensitivePaths() = %v, want %v", got, tt.expected)
++			}
++		})
++	}
++}
++
++func TestStripSensitiveFields(t *testing.T) {
++	tests := []struct {
++		name           string
++		obj            interface{}
++		schema         *structuralschema.Structural
++		isResourceRoot bool
++		expected       interface{}
++	}{
++		{
++			name:     "nil object",
++			obj:      nil,
++			schema:   &structuralschema.Structural{},
++			expected: nil,
++		},
++		{
++			name:     "nil schema",
++			obj:      map[string]interface{}{"a": "b"},
++			schema:   nil,
++			expected: map[string]interface{}{"a": "b"},
++		},
++		{
++			name: "strip flat property",
++			obj: map[string]interface{}{
++				"password": "secret",
++				"name":     "public",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++					"name":     {Generic: structuralschema.Generic{Type: "string"}},
++				},
++			},
++			expected: map[string]interface{}{
++				"name": "public",
++			},
++		},
++		{
++			name: "strip nested property",
++			obj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"token":  "abc-def",
++					"normal": "value",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"spec": {
++						Properties: map[string]structuralschema.Structural{
++							"token":  {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							"normal": {Generic: structuralschema.Generic{Type: "string"}},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"normal": "value",
++				},
++			},
++		},
++		{
++			name: "preserves meta fields at resource root",
++			obj: map[string]interface{}{
++				"apiVersion": "v1",
++				"kind":       "Foo",
++				"metadata":   map[string]interface{}{"name": "test"},
++				"password":   "secret",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++				},
++			},
++			isResourceRoot: true,
++			expected: map[string]interface{}{
++				"apiVersion": "v1",
++				"kind":       "Foo",
++				"metadata":   map[string]interface{}{"name": "test"},
++			},
++		},
++		{
++			name: "preserves meta fields in embedded resource",
++			obj: map[string]interface{}{
++				"embedded": map[string]interface{}{
++					"apiVersion": "v1",
++					"kind":       "Bar",
++					"metadata":   map[string]interface{}{"name": "inner"},
++					"secret":     "hidden",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"embedded": {
++						Extensions: structuralschema.Extensions{XEmbeddedResource: true},
++						Properties: map[string]structuralschema.Structural{
++							"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"embedded": map[string]interface{}{
++					"apiVersion": "v1",
++					"kind":       "Bar",
++					"metadata":   map[string]interface{}{"name": "inner"},
++				},
++			},
++		},
++		{
++			name: "strip additionalProperties values",
++			obj: map[string]interface{}{
++				"data": map[string]interface{}{
++					"key1": "secret1",
++					"key2": "secret2",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"data": {
++						AdditionalProperties: &structuralschema.StructuralOrBool{
++							Structural: &structuralschema.Structural{
++								Extensions: structuralschema.Extensions{XSensitiveData: true},
++							},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"data": map[string]interface{}{},
++			},
++		},
++		{
++			name: "strip sensitive array items replaces with nil",
++			obj: map[string]interface{}{
++				"tokens": []interface{}{"token1", "token2"},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"tokens": {
++						Items: &structuralschema.Structural{
++							Extensions: structuralschema.Extensions{XSensitiveData: true},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"tokens": []interface{}{nil, nil},
++			},
++		},
++		{
++			name: "strip sensitive fields inside array objects",
++			obj: map[string]interface{}{
++				"items": []interface{}{
++					map[string]interface{}{"name": "a", "secret": "s1"},
++					map[string]interface{}{"name": "b", "secret": "s2"},
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"items": {
++						Items: &structuralschema.Structural{
++							Properties: map[string]structuralschema.Structural{
++								"name":   {Generic: structuralschema.Generic{Type: "string"}},
++								"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"items": []interface{}{
++					map[string]interface{}{"name": "a"},
++					map[string]interface{}{"name": "b"},
++				},
++			},
++		},
++		{
++			name: "fields not in schema are left untouched",
++			obj: map[string]interface{}{
++				"password": "secret",
++				"unknown":  "value",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++				},
++			},
++			expected: map[string]interface{}{
++				"unknown": "value",
++			},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			StripSensitiveFields(tt.obj, tt.schema, tt.isResourceRoot)
++			if !reflect.DeepEqual(tt.obj, tt.expected) {
++				t.Errorf("StripSensitiveFields() result = %v, want %v", tt.obj, tt.expected)
++			}
++		})
++	}
++}
++
++func TestMaskSensitiveFields(t *testing.T) {
++	tests := []struct {
++		name           string
++		obj            interface{}
++		schema         *structuralschema.Structural
++		isResourceRoot bool
++		expected       interface{}
++	}{
++		{
++			name:     "nil object",
++			obj:      nil,
++			schema:   &structuralschema.Structural{},
++			expected: nil,
++		},
++		{
++			name:     "nil schema",
++			obj:      map[string]interface{}{"a": "b"},
++			schema:   nil,
++			expected: map[string]interface{}{"a": "b"},
++		},
++		{
++			name: "mask flat property",
++			obj: map[string]interface{}{
++				"password": "secret",
++				"name":     "public",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++					"name":     {Generic: structuralschema.Generic{Type: "string"}},
++				},
++			},
++			expected: map[string]interface{}{
++				"password": MaskedValue,
++				"name":     "public",
++			},
++		},
++		{
++			name: "mask nested property",
++			obj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"token":  "abc-def",
++					"normal": "value",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"spec": {
++						Properties: map[string]structuralschema.Structural{
++							"token":  {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							"normal": {Generic: structuralschema.Generic{Type: "string"}},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"token":  MaskedValue,
++					"normal": "value",
++				},
++			},
++		},
++		{
++			name: "preserves meta fields at resource root",
++			obj: map[string]interface{}{
++				"apiVersion": "v1",
++				"kind":       "Foo",
++				"metadata":   map[string]interface{}{"name": "test"},
++				"password":   "secret",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++				},
++			},
++			isResourceRoot: true,
++			expected: map[string]interface{}{
++				"apiVersion": "v1",
++				"kind":       "Foo",
++				"metadata":   map[string]interface{}{"name": "test"},
++				"password":   MaskedValue,
++			},
++		},
++		{
++			name: "preserves meta fields in embedded resource",
++			obj: map[string]interface{}{
++				"embedded": map[string]interface{}{
++					"apiVersion": "v1",
++					"kind":       "Bar",
++					"metadata":   map[string]interface{}{"name": "inner"},
++					"secret":     "hidden",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"embedded": {
++						Extensions: structuralschema.Extensions{XEmbeddedResource: true},
++						Properties: map[string]structuralschema.Structural{
++							"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"embedded": map[string]interface{}{
++					"apiVersion": "v1",
++					"kind":       "Bar",
++					"metadata":   map[string]interface{}{"name": "inner"},
++					"secret":     MaskedValue,
++				},
++			},
++		},
++		{
++			name: "mask additionalProperties values",
++			obj: map[string]interface{}{
++				"data": map[string]interface{}{
++					"key1": "secret1",
++					"key2": "secret2",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"data": {
++						AdditionalProperties: &structuralschema.StructuralOrBool{
++							Structural: &structuralschema.Structural{
++								Extensions: structuralschema.Extensions{XSensitiveData: true},
++							},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"data": map[string]interface{}{
++					"key1": MaskedValue,
++					"key2": MaskedValue,
++				},
++			},
++		},
++		{
++			name: "mask sensitive array items",
++			obj: map[string]interface{}{
++				"tokens": []interface{}{"token1", "token2"},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"tokens": {
++						Items: &structuralschema.Structural{
++							Extensions: structuralschema.Extensions{XSensitiveData: true},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"tokens": []interface{}{MaskedValue, MaskedValue},
++			},
++		},
++		{
++			name: "mask sensitive fields inside array objects",
++			obj: map[string]interface{}{
++				"items": []interface{}{
++					map[string]interface{}{"name": "a", "secret": "s1"},
++					map[string]interface{}{"name": "b", "secret": "s2"},
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"items": {
++						Items: &structuralschema.Structural{
++							Properties: map[string]structuralschema.Structural{
++								"name":   {Generic: structuralschema.Generic{Type: "string"}},
++								"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"items": []interface{}{
++					map[string]interface{}{"name": "a", "secret": MaskedValue},
++					map[string]interface{}{"name": "b", "secret": MaskedValue},
++				},
++			},
++		},
++		{
++			name: "deeply nested three levels",
++			obj: map[string]interface{}{
++				"level1": map[string]interface{}{
++					"level2": map[string]interface{}{
++						"level3": map[string]interface{}{
++							"secret": "deep-value",
++							"public": "visible",
++						},
++					},
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"level1": {
++						Properties: map[string]structuralschema.Structural{
++							"level2": {
++								Properties: map[string]structuralschema.Structural{
++									"level3": {
++										Properties: map[string]structuralschema.Structural{
++											"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++											"public": {Generic: structuralschema.Generic{Type: "string"}},
++										},
++									},
++								},
++							},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"level1": map[string]interface{}{
++					"level2": map[string]interface{}{
++						"level3": map[string]interface{}{
++							"secret": MaskedValue,
++							"public": "visible",
++						},
++					},
++				},
++			},
++		},
++		{
++			name: "fields not in schema are left untouched",
++			obj: map[string]interface{}{
++				"password": "secret",
++				"unknown":  "value",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++				},
++			},
++			expected: map[string]interface{}{
++				"password": MaskedValue,
++				"unknown":  "value",
++			},
++		},
++		{
++			name:     "empty map with nil schema",
++			obj:      map[string]interface{}{},
++			schema:   nil,
++			expected: map[string]interface{}{},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			MaskSensitiveFields(tt.obj, tt.schema, tt.isResourceRoot)
++			if !reflect.DeepEqual(tt.obj, tt.expected) {
++				t.Errorf("MaskSensitiveFields() result = %v, want %v", tt.obj, tt.expected)
++			}
++		})
++	}
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
+index 5688c2ac40b..24eff61025a 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
+@@ -129,6 +129,12 @@ type Extensions struct {
+ 	//      Atomic maps will be entirely replaced when updated.
+ 	// +optional
+ 	XMapType *string
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	XSensitiveData bool
+ }
+ 
+ // +k8s:deepcopy-gen=true
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
+index c562263f32c..1272d2fd277 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
+@@ -40,6 +40,11 @@ const (
+ 	// CustomResourceDefinitions may include SelectableFields to declare which fields
+ 	// may be used as field selectors.
+ 	CustomResourceFieldSelectors featuregate.Feature = "CustomResourceFieldSelectors"
++
++	// owner: @team-deckhouse-kubernetes
++	//
++	// Hide and protect sensitive data fields in etcd for CRDs marked as x-kubernetes-sensitive-data
++	CRDSensitiveData featuregate.Feature = "CRDSensitiveData"
+ )
+ 
+ func init() {
+@@ -62,4 +67,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
+ 		{Version: version.MustParse("1.31"), Default: true, PreRelease: featuregate.Beta},
+ 		{Version: version.MustParse("1.32"), Default: true, LockToDefault: true, PreRelease: featuregate.GA},
+ 	},
++	CRDSensitiveData: {
++		{Version: version.MustParse("1.31"), Default: false, PreRelease: featuregate.Alpha},
++	},
+ }
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
+index 0d7157096e8..88ee55338c4 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
+@@ -2313,6 +2313,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
+ 							},
+ 						},
+ 					},
++					"x-kubernetes-sensitive-data": {
++						SchemaProps: spec.SchemaProps{
++							Description: "x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys). When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets) hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource and unconditionally mask the value in audit logs.",
++							Type:        []string{"boolean"},
++							Format:      "",
++						},
++					},
+ 				},
+ 			},
+ 		},
+@@ -3868,6 +3875,13 @@ func schema_pkg_apis_apiextensions_v1beta1_JSONSchemaProps(ref common.ReferenceC
+ 							},
+ 						},
+ 					},
++					"x-kubernetes-sensitive-data": {
++						SchemaProps: spec.SchemaProps{
++							Description: "x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys). When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets) hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource and unconditionally mask the value in audit logs.",
++							Type:        []string{"boolean"},
++							Format:      "",
++						},
++					},
+ 				},
+ 			},
+ 		},
+diff --git a/staging/src/k8s.io/apiserver/pkg/audit/context.go b/staging/src/k8s.io/apiserver/pkg/audit/context.go
+index 9648587378e..f4ef2603cc7 100644
+--- a/staging/src/k8s.io/apiserver/pkg/audit/context.go
++++ b/staging/src/k8s.io/apiserver/pkg/audit/context.go
+@@ -20,12 +20,21 @@ import (
+ 	"context"
+ 	"sync"
+ 
++	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/apimachinery/pkg/types"
+ 	auditinternal "k8s.io/apiserver/pkg/apis/audit"
+ 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
+ 	"k8s.io/klog/v2"
+ )
+ 
++// ObjectTransformer is a function that transforms a runtime.Object before it is
++// recorded in an audit event (e.g. to mask sensitive fields).
++type ObjectTransformer func(obj runtime.Object) runtime.Object
++
++// PatchTransformer is a function that transforms patch bytes before they are
++// recorded in an audit event (e.g. to mask sensitive fields in the patch payload).
++type PatchTransformer func(patchBytes []byte, contentType string) []byte
++
+ // The key type is unexported to prevent collisions
+ type key int
+ 
+@@ -44,6 +53,13 @@ type AuditContext struct {
+ 
+ 	// annotationMutex guards event.Annotations
+ 	annotationMutex sync.Mutex
++
++	// objectTransformer, if set, is applied to request/response objects before
++	// they are encoded into audit events.
++	objectTransformer ObjectTransformer
++	// patchTransformer, if set, is applied to patch bytes before they are
++	// recorded into audit events.
++	patchTransformer PatchTransformer
+ }
+ 
+ // Enabled checks whether auditing is enabled for this audit context.
+@@ -53,6 +69,34 @@ func (ac *AuditContext) Enabled() bool {
+ 	return ac != nil && ac.RequestAuditConfig.Level != auditinternal.LevelNone
+ }
+ 
++// SetObjectTransformer sets the transformer that will be applied to request/response
++// objects before they are encoded into audit events.
++func (ac *AuditContext) SetObjectTransformer(fn ObjectTransformer) {
++	ac.objectTransformer = fn
++}
++
++// SetPatchTransformer sets the transformer that will be applied to patch bytes
++// before they are recorded into audit events.
++func (ac *AuditContext) SetPatchTransformer(fn PatchTransformer) {
++	ac.patchTransformer = fn
++}
++
++// TransformObject applies the objectTransformer if set, otherwise returns obj unchanged.
++func (ac *AuditContext) TransformObject(obj runtime.Object) runtime.Object {
++	if ac.objectTransformer != nil {
++		return ac.objectTransformer(obj)
++	}
++	return obj
++}
++
++// TransformPatch applies the patchTransformer if set, otherwise returns patchBytes unchanged.
++func (ac *AuditContext) TransformPatch(patchBytes []byte, contentType string) []byte {
++	if ac.patchTransformer != nil {
++		return ac.patchTransformer(patchBytes, contentType)
++	}
++	return patchBytes
++}
++
+ // AddAuditAnnotation sets the audit annotation for the given key, value pair.
+ // It is safe to call at most parts of request flow that come after WithAuditAnnotations.
+ // The notable exception being that this function must not be called via a
+diff --git a/staging/src/k8s.io/apiserver/pkg/audit/request.go b/staging/src/k8s.io/apiserver/pkg/audit/request.go
+index 9185278f06f..9550a22c289 100644
+--- a/staging/src/k8s.io/apiserver/pkg/audit/request.go
++++ b/staging/src/k8s.io/apiserver/pkg/audit/request.go
+@@ -150,6 +150,10 @@ func LogRequestObject(ctx context.Context, obj runtime.Object, objGV schema.Grou
+ 		}
+ 	}
+ 
++	if ac := AuditContextFrom(ctx); ac != nil {
++		obj = ac.TransformObject(obj)
++	}
++
+ 	// TODO(audit): hook into the serializer to avoid double conversion
+ 	var err error
+ 	ae.RequestObject, err = encodeObject(obj, objGV, s)
+@@ -161,12 +165,17 @@ func LogRequestObject(ctx context.Context, obj runtime.Object, objGV schema.Grou
+ }
+ 
+ // LogRequestPatch fills in the given patch as the request object into an audit event.
+-func LogRequestPatch(ctx context.Context, patch []byte) {
++// contentType is type of the patch content (e.g. "application/json-patch+json") for TransformPatch function.
++func LogRequestPatch(ctx context.Context, patch []byte, contentType string) {
+ 	ae := AuditEventFrom(ctx)
+ 	if ae == nil || ae.Level.Less(auditinternal.LevelRequest) {
+ 		return
+ 	}
+ 
++	if ac := AuditContextFrom(ctx); ac != nil {
++		patch = ac.TransformPatch(patch, contentType)
++	}
++
+ 	ae.RequestObject = &runtime.Unknown{
+ 		Raw:         patch,
+ 		ContentType: runtime.ContentTypeJSON,
+@@ -205,6 +214,10 @@ func LogResponseObject(ctx context.Context, obj runtime.Object, gv schema.GroupV
+ 		}
+ 	}
+ 
++	if ac := AuditContextFrom(ctx); ac != nil {
++		obj = ac.TransformObject(obj)
++	}
++
+ 	// TODO(audit): hook into the serializer to avoid double conversion
+ 	var err error
+ 	ae.ResponseObject, err = encodeObject(obj, gv, s)
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
+index acfff1961c9..440f7694301 100644
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
+@@ -130,7 +130,7 @@ func PatchResource(r rest.Patcher, scope *RequestScope, admit admission.Interfac
+ 
+ 		admit = admission.WithAudit(admit)
+ 
+-		audit.LogRequestPatch(req.Context(), patchBytes)
++		audit.LogRequestPatch(req.Context(), patchBytes, string(patchType))
+ 		span.AddEvent("Recorded the audit event")
+ 
+ 		var baseContentType string
