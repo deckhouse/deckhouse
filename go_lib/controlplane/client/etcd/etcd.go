@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	kubeadmapp "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapp"
+	kubeclient "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeclient"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 
@@ -102,7 +102,7 @@ func InitCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 
 func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string) error {
 
-	kubeClient, err := kubeadmapp.MyNewKubernetesClient()
+	kubeClient, err := kubeclient.MyNewKubernetesClient()
 	if err != nil {
 		return err
 	}
@@ -117,10 +117,10 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	////////////////////////////////
 
 	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
-	etcdPeerAddress := GetPeerURL(endpoint)
+	// etcdPeerAddress := GetPeerURL(endpoint)
 	/////////////////////////////////////////////////////////////////////
 
-	var cluster []*clientv3.Member
+	var cluster []*etcdserverpb.Member
 	var etcdClient *clientv3.Client
 
 	etcdClient, err = NewFromCluster(kubeClient, config.CertificatesDir)
@@ -143,16 +143,16 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	/////////////////////////////////////////////////////////////////////
 
 	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
-	logger.Info("[etcd] Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
-	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
-	clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), []string{etcdPeerAddress})
-	if err != nil {
-		return err
-	}
+	// logger.Info("[etcd] Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
+	// // cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
+	// clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), []string{etcdPeerAddress})
+	// if err != nil {
+	// 	return err
+	// }
 	/////////////////////////////////////////////////////////////////////
 
 	////DELETE THIS BLOCK//////////////// test cluster ///////////////////////
-	cluster = []*clientv3.Member{
+	cluster = []*etcdserverpb.Member{
 		{Name: "borovets-multi-master-master-0", PeerURLs: []string{"https://10.241.32.26:2380"}},
 		{Name: "borovets-multi-master-master-1", PeerURLs: []string{"https://10.241.36.19:2380"}},
 		{Name: "borovets-multi-master-master-2", PeerURLs: []string{"https://10.241.44.16:2380"}},
@@ -166,7 +166,7 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	// if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, cluster); err != nil {
 	// 	return err
 	// }
-	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, clusterResponse.Members); err != nil {
+	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName /*clusterResponse.Members*/, cluster); err != nil {
 		return err
 	}
 
@@ -175,15 +175,15 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	// if err != nil {
 	// 	return err
 	// }
-	_, err = etcdClient.MemberPromote(context.Background(), clusterResponse.Member.ID)
-	if err != nil {
-		return err
-	}
+	// _, err = etcdClient.MemberPromote(context.Background(), clusterResponse.Member.ID)
+	// if err != nil {
+	// 	return err
+	// }
 
-	logger.Info("[etcd] Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
-	if _, err := WaitForClusterAvailable(etcdClient, etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
-		return err
-	}
+	// logger.Info("[etcd] Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
+	// if _, err := WaitForClusterAvailable(etcdClient, etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
+	// 	return err
+	// }
 	/////////////////////////////////////////////////////////////////////
 
 	return nil
