@@ -16,7 +16,7 @@ metadata:
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   rules:
-  - host: {{ if .Values.customMetadataExporterDomain }}{{ .Values.customMetadataExporterDomain }}{{ else }}{{ include "helm_lib_module_public_domain" (list . "istio") }}{{ end }} 
+  - host: {{ if .Values.istio.customMetadataExporterDomain }}{{ .Values.istio.customMetadataExporterDomain }}{{ else }}{{ include "helm_lib_module_public_domain" (list . "istio") }}{{ end }} 
     http:
       paths:
       - backend:
@@ -29,7 +29,7 @@ spec:
     {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
     - hosts:
-        - {{ include "helm_lib_module_public_domain" (list . "istio") }}
+        - {{ if .Values.istio.customMetadataExporterDomain }}{{ .Values.istio.customMetadataExporterDomain }}{{ else }}{{ include "helm_lib_module_public_domain" (list . "istio") }}{{ end }}
       secretName: {{ include "helm_lib_module_https_secret_name" (list . "istio-ingress-tls") }}
     {{- end }}
   {{- end }}
