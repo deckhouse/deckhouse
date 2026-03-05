@@ -7,7 +7,7 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -77,6 +77,11 @@ type ZvirtMachineStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// initialization provides observations of the Cluster initialization process.
+	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+	// +optional
+	Initialization ZvirtMachineInitializationStatus `json:"initialization,omitempty,omitzero"`
+
 	// Ready indicates the VM has been provisioned and is ready.
 	// +optional
 	Ready bool `json:"ready"`
@@ -98,6 +103,13 @@ type ZvirtMachineStatus struct {
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
+// ZvirtMachineInitializationStatus provides observations of the Cluster initialization process.
+// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+// +kubebuilder:validation:MinProperties=1
+type ZvirtMachineInitializationStatus struct {
+	Provisioned *bool `json:"provisioned,omitempty"`
+}
+
 type VMAddress struct {
 	Type    clusterv1.MachineAddressType `json:"type"`
 	Address string                       `json:"address"`
@@ -105,6 +117,7 @@ type VMAddress struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Namespaced
 
 // ZvirtMachine is the Schema for the zvirtmachines API
 type ZvirtMachine struct {
