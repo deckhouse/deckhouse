@@ -61,10 +61,14 @@ var (
 		// disk types: pd-standard, pd-ssd, ...
 		"candi/cloud-providers/gcp/openapi/instance_class.yaml": {
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
+			// disk types for additionalDisks: pd-standard, pd-ssd, pd-balanced, ...
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.additionalDisks.items.properties.type",
 		},
 		// disk types: pd-standard, pd-ssd, ...
 		"modules/030-cloud-provider-gcp/candi/openapi/instance_class.yaml": {
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
+			// disk types for additionalDisks: pd-standard, pd-ssd, pd-balanced, ...
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.additionalDisks.items.properties.type",
 		},
 		"modules/030-cloud-provider-gcp/openapi/values.yaml": {
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",

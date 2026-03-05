@@ -1,4 +1,4 @@
-module kubernetes-api-proxy-reloader
+module registry-proxy-reloader
 
 go 1.20
 

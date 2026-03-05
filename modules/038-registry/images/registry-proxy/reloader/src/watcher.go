@@ -50,6 +50,9 @@ func nginxReload() error {
 		log.Printf("%s and %s are equal, skipping reload...", nginxConf, nginxNewConf)
 		return nil
 	}
+	if err != nil {
+		log.Printf("failed to check file equality: %s", err.Error())
+	}
 
 	log.Printf("%s differs from %s, validating and reloading nginx...", nginxNewConf, nginxConf)
 
@@ -121,12 +124,13 @@ func WatchNginxConf() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer watcher.Close()
 
 	err = watcher.Add(filepath.Dir(nginxNewConf))
 	if err != nil {
+		watcher.Close()
 		log.Fatal(err)
 	}
+	defer watcher.Close()
 
 	for {
 		select {

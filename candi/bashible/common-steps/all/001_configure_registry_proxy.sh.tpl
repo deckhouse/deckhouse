@@ -1,0 +1,64 @@
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{{- with .registry.proxyEndpoints }}
+
+mkdir -p /etc/kubernetes/registry-proxy
+# Read previously discovered IP
+
+bb-sync-file /etc/kubernetes/registry-proxy/nginx_new.conf - << EOF
+user deckhouse;
+
+error_log stderr notice;
+
+pid /tmp/registry-proxy.pid;
+
+worker_processes 2;
+worker_rlimit_nofile 130048;
+worker_shutdown_timeout 10s;
+
+events {
+  multi_accept on;
+  use epoll;
+  worker_connections 16384;
+}
+
+stream {
+  upstream registry {
+    least_conn;
+    {{- range $proxy_endpoint := . }}
+    server {{ $proxy_endpoint }};
+    {{- end }}
+  }
+
+  server {
+    listen 127.0.0.1:5001;
+    proxy_pass registry;
+    # 1h timeout for very log pull/push operations
+    proxy_timeout 1h;
+    proxy_connect_timeout 1s;
+  }
+}
+EOF
+
+if [[ ! -f /etc/kubernetes/registry-proxy/nginx.conf ]]; then
+  cp /etc/kubernetes/registry-proxy/nginx_new.conf /etc/kubernetes/registry-proxy/nginx.conf
+fi
+
+chown -R 0:64535 /etc/kubernetes/registry-proxy
+chmod g+s /etc/kubernetes/registry-proxy
+chmod 750 /etc/kubernetes/registry-proxy
+chmod 640 /etc/kubernetes/registry-proxy/*
+
+{{- end }}
