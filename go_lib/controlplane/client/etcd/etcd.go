@@ -117,25 +117,28 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 
 	var cluster []Member
 	var etcdClient *Client
-	////////////////////////////////////////////
-	// Creates an etcd client that connects to all the local/stacked etcd members.
-	logger.Info("TEST-ETCD client: creating etcd client that connects to etcd pods")
+
 	etcdClient, err = NewFromCluster(kubeClient, config.CertificatesDir)
 	if err != nil {
 		return err
 	}
+
+	////DELETE THIS BLOCK//////////////// test etcdClient ///////////////////////
 	logger.Info(fmt.Sprintf("TEST-ETCD client: etcdClient: %v", etcdClient))
 	clusterStatus, err := etcdClient.getClusterStatus()
 	if err != nil {
 		return err
 	}
 	logger.Info(fmt.Sprintf("TEST-ETCD client: clusterStatus: %v", clusterStatus))
+	/////////////////////////////////////////////////////////////////////
 
-	logger.Info(fmt.Sprintf("[etcd] Adding etcd member: %s", etcdPeerAddress))
-	cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
-	if err != nil {
-		return err
-	}
+	// logger.Info(fmt.Sprintf("[etcd] Adding etcd member: %s", etcdPeerAddress))
+	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
+	// if err != nil {
+	// 	return err
+	// }
+
+	////DELETE THIS BLOCK//////////////// test cluster ///////////////////////
 	cluster = []Member{
 		{Name: "borovets-multi-master-master-0", PeerURL: "https://10.241.32.26:2380"},
 		{Name: "borovets-multi-master-master-1", PeerURL: "https://10.241.36.19:2380"},
@@ -143,7 +146,7 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	}
 	logger.Info(fmt.Sprintf("TEST-ETCD client: [etcd] Announced new etcd member joining to the existing etcd cluster"))
 	logger.Info(fmt.Sprintf("TEST-ETCD client: Updated etcd member list: %v", cluster))
-	////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////
 
 	logger.Info(fmt.Sprintf("[etcd] Creating static Pod manifest for %q during join cluster", constants.Etcd))
 
@@ -151,19 +154,20 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 		return err
 	}
 
-	learnerID, err := etcdClient.GetMemberID(etcdPeerAddress)
-	if err != nil {
-		return err
-	}
-	err = etcdClient.MemberPromote(learnerID)
-	if err != nil {
-		return err
-	}
+	// UNCOMMENT THIS BLOCK
+	// learnerID, err := etcdClient.GetMemberID(etcdPeerAddress)
+	// if err != nil {
+	// 	return err
+	// }
+	// err = etcdClient.MemberPromote(learnerID)
+	// if err != nil {
+	// 	return err
+	// }
 
-	logger.Info(fmt.Sprintf("[etcd] Waiting for the new etcd member to join the cluster. This can take up to %v\n", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
-	if _, err := etcdClient.WaitForClusterAvailable(etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
-		return err
-	}
+	// logger.Info(fmt.Sprintf("[etcd] Waiting for the new etcd member to join the cluster. This can take up to %v\n", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
+	// if _, err := etcdClient.WaitForClusterAvailable(etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
