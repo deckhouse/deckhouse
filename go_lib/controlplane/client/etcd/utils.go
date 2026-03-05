@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/url"
 	"os"
@@ -26,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/klog"
 )
 
 type Member struct {
@@ -120,7 +120,7 @@ func NewFromCluster(client clientset.Interface, certificatesDir string) (*client
 	if err != nil {
 		return nil, err
 	}
-	klog.V(1).Infof("etcd endpoints read from pods: %s", strings.Join(endpoints, ","))
+	logger.Info("etcd endpoints read from pods", slog.String("endpoints", strings.Join(endpoints, ",")))
 
 	// Creates an etcd client
 	// etcdClient, err := New(
@@ -160,7 +160,7 @@ func NewFromCluster(client clientset.Interface, certificatesDir string) (*client
 	// if err != nil {
 	// 	return nil, errors.Wrap(err, "error syncing endpoints with etcd")
 	// }
-	// klog.V(1).Infof("update etcd endpoints: %s", strings.Join(etcdClient.Endpoints, ","))
+	// logger.Info("update etcd endpoints", slog.String("endpoints", strings.Join(etcdClient.Endpoints, ",")))
 
 	return etcdClient, nil
 }
@@ -184,14 +184,14 @@ func (c *Client) Sync() error {
 			if err == nil {
 				return true, nil
 			}
-			klog.V(5).Infof("Failed to sync etcd endpoints: %v", err)
+			logger.Debug("Failed to sync etcd endpoints", slog.Any("error", err))
 			lastError = err
 			return false, nil
 		})
 	if err != nil {
 		return lastError
 	}
-	klog.V(1).Infof("etcd endpoints read from etcd: %s", strings.Join(cli.Endpoints(), ","))
+	logger.Info("etcd endpoints read from etcd", slog.String("endpoints", strings.Join(cli.Endpoints(), ",")))
 
 	c.Endpoints = cli.Endpoints()
 	return nil
@@ -219,7 +219,7 @@ func (c *Client) listMembers(timeout time.Duration) (*clientv3.MemberListRespons
 			if err == nil {
 				return true, nil
 			}
-			klog.V(5).Infof("Failed to get etcd member list: %v", err)
+			logger.Debug("Failed to get etcd member list", slog.Any("error", err))
 			lastError = err
 			return false, nil
 		})
@@ -261,7 +261,7 @@ func (c *Client) addMember(name string, peerAddrs string, isLearner bool) ([]Mem
 			// List members and quickly return if the member already exists.
 			listResp, err := cli.MemberList(ctx)
 			if err != nil {
-				klog.V(5).Infof("Failed to check whether the member %q exists: %v", peerAddrs, err)
+				logger.Debug("Failed to check whether the member exists", slog.String("peerAddress", peerAddrs), slog.Any("error", err))
 				lastError = err
 				return false, nil
 			}
@@ -273,16 +273,16 @@ func (c *Client) addMember(name string, peerAddrs string, isLearner bool) ([]Mem
 				}
 			}
 			if found {
-				klog.V(5).Infof("The peer URL %q for the added etcd member already exists. Skipping etcd member addition", peerAddrs)
+				logger.Debug("The peer URL for the added etcd member already exists. Skipping etcd member addition", slog.String("peerAddress", peerAddrs))
 				respMembers = listResp.Members
 				return true, nil
 			}
 
 			if isLearner {
-				klog.V(1).Infof("[etcd] Adding etcd member %q as learner", peerAddrs)
+				logger.Info("[etcd] Adding etcd member as learner", slog.String("peerAddress", peerAddrs))
 				resp, err = cli.MemberAddAsLearner(ctx, []string{peerAddrs})
 			} else {
-				klog.V(1).Infof("[etcd] Adding etcd member %q", peerAddrs)
+				logger.Info("[etcd] Adding etcd member", slog.String("peerAddress", peerAddrs))
 				resp, err = cli.MemberAdd(ctx, []string{peerAddrs})
 			}
 			if err == nil {
@@ -293,7 +293,7 @@ func (c *Client) addMember(name string, peerAddrs string, isLearner bool) ([]Mem
 			// If the error indicates that the peer already exists, exit early. In this situation, resp is nil, so
 			// call out to MemberList to fetch all the members before returning.
 			if errors.Is(err, rpctypes.ErrPeerURLExist) {
-				klog.V(5).Info("The peer URL for the added etcd member already exists. Fetching the existing etcd members")
+				logger.Debug("The peer URL for the added etcd member already exists. Fetching the existing etcd members")
 				listResp, err = cli.MemberList(ctx)
 				if err == nil {
 					respMembers = listResp.Members
@@ -301,7 +301,7 @@ func (c *Client) addMember(name string, peerAddrs string, isLearner bool) ([]Mem
 				}
 			}
 
-			klog.V(5).Infof("Failed to add etcd member: %v", err)
+			logger.Debug("Failed to add etcd member", slog.Any("error", err))
 			lastError = err
 			return false, nil
 		})
@@ -367,11 +367,11 @@ func (c *Client) MemberPromote(learnerID uint64) error {
 		return err
 	}
 	if !isLearner {
-		klog.V(1).Infof("[etcd] Member %s already promoted.", strconv.FormatUint(learnerID, 16))
+		logger.Info("[etcd] Member already promoted.", slog.String("learnerID", strconv.FormatUint(learnerID, 16)))
 		return nil
 	}
 
-	klog.V(1).Infof("[etcd] Promoting a learner as a voting member: %s", strconv.FormatUint(learnerID, 16))
+	logger.Info("[etcd] Promoting a learner as a voting member", slog.String("learnerID", strconv.FormatUint(learnerID, 16)))
 	cli, err := c.newEtcdClient(c.Endpoints)
 	if err != nil {
 		return err
@@ -397,16 +397,16 @@ func (c *Client) MemberPromote(learnerID uint64) error {
 				return false, err
 			}
 			if !isLearner {
-				klog.V(1).Infof("[etcd] Member %s was already promoted.", strconv.FormatUint(learnerID, 16))
+				logger.Info("[etcd] Member was already promoted.", slog.String("learnerID", strconv.FormatUint(learnerID, 16)))
 				return true, nil
 			}
 
 			_, err = cli.MemberPromote(ctx, learnerID)
 			if err == nil {
-				klog.V(1).Infof("[etcd] The learner was promoted as a voting member: %s", strconv.FormatUint(learnerID, 16))
+				logger.Info("[etcd] The learner was promoted as a voting member", slog.String("learnerID", strconv.FormatUint(learnerID, 16)))
 				return true, nil
 			}
-			klog.V(5).Infof("[etcd] Promoting the learner %s failed: %v", strconv.FormatUint(learnerID, 16), err)
+			logger.Debug("[etcd] Promoting the learner failed", slog.String("learnerID", strconv.FormatUint(learnerID, 16)), slog.Any("error", err))
 			lastError = err
 			return false, nil
 		})
@@ -435,17 +435,17 @@ func (c *Client) isLearner(memberID uint64) (bool, error) {
 func (c *Client) WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error) {
 	for i := 0; i < retries; i++ {
 		if i > 0 {
-			klog.V(1).Infof("[etcd] Waiting %v until next retry\n", retryInterval)
+			logger.Info("[etcd] Waiting until next retry", slog.Duration("retryInterval", retryInterval))
 			time.Sleep(retryInterval)
 		}
-		klog.V(2).Infof("[etcd] attempting to see if all cluster endpoints (%s) are available %d/%d", c.Endpoints, i+1, retries)
+		logger.Info("[etcd] attempting to see if all cluster endpoints are available", slog.Any("endpoints", c.Endpoints), slog.Int("attempt", i+1), slog.Int("retries", retries))
 		_, err := c.getClusterStatus()
 		if err != nil {
 			switch err {
 			case context.DeadlineExceeded:
-				klog.V(1).Infof("[etcd] Attempt timed out")
+				logger.Info("[etcd] Attempt timed out")
 			default:
-				klog.V(1).Infof("[etcd] Attempt failed with error: %v\n", err)
+				logger.Info("[etcd] Attempt failed with error", slog.Any("error", err))
 			}
 			continue
 		}
@@ -476,7 +476,7 @@ func (c *Client) getClusterStatus() (map[string]*clientv3.StatusResponse, error)
 				if err == nil {
 					return true, nil
 				}
-				klog.V(5).Infof("Failed to get etcd status for %s: %v", ep, err)
+				logger.Debug("Failed to get etcd status", slog.String("endpoint", ep), slog.Any("error", err))
 				lastError = err
 				return false, nil
 			})
@@ -512,8 +512,7 @@ func getRawEtcdEndpointsFromPodAnnotation(client clientset.Interface, interval, 
 				return false, nil
 			}
 			if len(etcdEndpoints) == 0 || overallEtcdPodCount != len(etcdEndpoints) {
-				klog.V(4).Infof("found a total of %d etcd pods and the following endpoints: %v; retrying",
-					overallEtcdPodCount, etcdEndpoints)
+				logger.Info("found etcd pods and endpoints; retrying", slog.Int("etcdPodCount", overallEtcdPodCount), slog.Any("endpoints", etcdEndpoints))
 				return false, nil
 			}
 			return true, nil
@@ -532,7 +531,7 @@ func getRawEtcdEndpointsFromPodAnnotation(client clientset.Interface, interval, 
 // along with the number of global etcd pods. This allows for callers to tell the difference between "no endpoints found",
 // and "no endpoints found and pods were listed", so they can skip retrying.
 func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface) ([]string, int, error) {
-	klog.V(3).Infof("retrieving etcd endpoints from %q annotation in etcd Pods", constants.EtcdAdvertiseClientUrlsAnnotationKey)
+	logger.Info("retrieving etcd endpoints from annotation in etcd Pods", slog.String("annotation", constants.EtcdAdvertiseClientUrlsAnnotationKey))
 	podList, err := client.CoreV1().Pods(metav1.NamespaceSystem).List(
 		context.TODO(),
 		metav1.ListOptions{
@@ -552,11 +551,11 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 			}
 		}
 		if !podIsReady {
-			klog.V(3).Infof("etcd pod %q is not ready", pod.ObjectMeta.Name)
+			logger.Info("etcd pod is not ready", slog.String("pod", pod.ObjectMeta.Name))
 		}
 		etcdEndpoint, ok := pod.ObjectMeta.Annotations[constants.EtcdAdvertiseClientUrlsAnnotationKey]
 		if !ok {
-			klog.V(3).Infof("etcd Pod %q is missing the %q annotation; cannot infer etcd advertise client URL using the Pod annotation", pod.ObjectMeta.Name, constants.EtcdAdvertiseClientUrlsAnnotationKey)
+			logger.Info("etcd Pod is missing the annotation; cannot infer etcd advertise client URL using the Pod annotation", slog.String("pod", pod.ObjectMeta.Name), slog.String("annotation", constants.EtcdAdvertiseClientUrlsAnnotationKey))
 			continue
 		}
 		etcdEndpoints = append(etcdEndpoints, etcdEndpoint)
