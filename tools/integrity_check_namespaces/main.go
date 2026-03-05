@@ -150,7 +150,7 @@ func parseEditionsFile(p string) editionsFile {
 	return editions
 }
 
-func getAvailableModulesForEdition(editions editionsFile, edition string) enabledModules {
+func parseEnabledModulesConfig(editions editionsFile, edition string) enabledModules {
 	res := make(enabledModules)
 	for _, ed := range editions.Editions {
 		if ed.Name == edition {
@@ -342,7 +342,7 @@ func collectNamespaces(workDir string, config Config, modulesForFilter enabledMo
 }
 
 func render(editions editionsFile, workDir string, config Config, edition string) {
-	modulesForFilter := getAvailableModulesForEdition(editions, edition)
+	modulesForFilter := parseEnabledModulesConfig(editions, edition)
 	namespacesMap := collectNamespaces(workDir, config, modulesForFilter)
 	outPath := buildIncludesOutputPath(workDir, edition)
 	out, err := os.Create(outPath)
