@@ -30,13 +30,13 @@ import (
 func SyncSecretToTmp(secret *corev1.Secret, tmpDir string) error {
 	pkiDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.KubernetesPkiPath))
 	etcdPkiDir := filepath.Join(pkiDir, "etcd")
-	patchesDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.PatchesPath))
+	ControlPlaneManifestsDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.ControlPlaneManifestsPath))
 	extraFilesDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.ExtraFilesPath))
 
 	if err := os.MkdirAll(etcdPkiDir, 0o700); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(patchesDir, 0o700); err != nil {
+	if err := os.MkdirAll(ControlPlaneManifestsDir, 0o700); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(extraFilesDir, 0o700); err != nil {
@@ -50,7 +50,7 @@ func SyncSecretToTmp(secret *corev1.Secret, tmpDir string) error {
 			expandedContent := []byte(os.ExpandEnv(string(content)))
 			name := strings.TrimSuffix(key, ".tpl")
 			if err := os.WriteFile(
-				filepath.Join(patchesDir, name),
+				filepath.Join(ControlPlaneManifestsDir, name),
 				expandedContent,
 				0o600,
 			); err != nil {
