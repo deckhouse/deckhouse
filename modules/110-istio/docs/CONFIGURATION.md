@@ -21,4 +21,6 @@ Delete the Secret to re-generate password:
 d8 k -n d8-istio delete secret/kiali-basic-auth
 ```
 
-> **Note!** The `auth.password` parameter is deprecated.
+{% alert level="warning" %}
+The `auth.password` parameter is deprecated.
+{% endalert %}
