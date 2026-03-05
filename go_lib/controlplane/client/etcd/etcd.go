@@ -141,11 +141,13 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	logger.Info("TEST-ETCD client: clusterMembers", slog.Any("clusterMembers", clusterMembers))
 	/////////////////////////////////////////////////////////////////////
 
+	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
 	// logger.Info("[etcd] Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
 	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
 	// if err != nil {
 	// 	return err
 	// }
+	/////////////////////////////////////////////////////////////////////
 
 	////DELETE THIS BLOCK//////////////// test cluster ///////////////////////
 	cluster = []Member{
@@ -163,7 +165,7 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 		return err
 	}
 
-	// UNCOMMENT THIS BLOCK
+	/////UNCOMMENT THIS BLOCK ///////// test etcdPeerAddress ///////////////////////
 	// learnerID, err := etcdClient.GetMemberID(etcdPeerAddress)
 	// if err != nil {
 	// 	return err
@@ -177,6 +179,7 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	// if _, err := etcdClient.WaitForClusterAvailable(etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
 	// 	return err
 	// }
+	/////////////////////////////////////////////////////////////////////
 
 	return nil
 }
