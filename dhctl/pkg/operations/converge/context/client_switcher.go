@@ -46,9 +46,10 @@ type KubeClientSwitcher struct {
 }
 
 type KubeClientSwitcherParams struct {
-	TmpDir  string
-	IsDebug bool
-	Logger  log.Logger
+	TmpDir        string
+	IsDebug       bool
+	Logger        log.Logger
+	DisableSwitch bool
 }
 
 func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params KubeClientSwitcherParams) *KubeClientSwitcher {
@@ -66,6 +67,11 @@ func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params K
 }
 
 func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState map[string][]byte) error {
+	if s.params.DisableSwitch {
+		s.logger.LogWarnLn("Switch to node user skipped. Switch disabled")
+		return nil
+	}
+
 	if s.ctx.CommanderMode() {
 		s.logger.LogDebugLn("Switch to node user skipped. In commander mode")
 		return nil
@@ -158,7 +164,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeStat
 		}
 		statePath := filepath.Join(tmpDir, fmt.Sprintf("%s.tfstate", nodeName))
 
-		s.logger.LogDebugLn("for extracting statePath: %s", statePath)
+		s.logger.LogDebugF("for extracting statePath: %s", statePath)
 
 		err = os.WriteFile(statePath, stateBytes, 0o644)
 		if err != nil {
@@ -263,6 +269,11 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeStat
 }
 
 func (s *KubeClientSwitcher) CleanupNodeUser() error {
+	if s.params.DisableSwitch {
+		s.logger.LogDebugLn("Cleanup node user skipped. Switch disabled")
+		return nil
+	}
+
 	if s.ctx.CommanderMode() {
 		s.logger.LogDebugLn("Cleanup node user skipped. In commander mode")
 		return nil

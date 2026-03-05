@@ -36,6 +36,7 @@ runs-on: [self-hosted, large]
 outputs:
   tests_image_name: ${{ steps.build.outputs.tests_image_name }}
 steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
 {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
 {!{ end }!}
@@ -84,6 +85,7 @@ steps:
   - name: Build and push deckhouse images
     id: build
     env:
+      WERF_PARALLEL_TASKS_LIMIT: 3
 {!{- if eq $buildType "dev" }!}
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}

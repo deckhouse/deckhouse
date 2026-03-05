@@ -1,4 +1,4 @@
-{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+{%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <link href='../assets/css/supported_versions.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
 {%- assign osVersions = site.data.supported_versions.osDistributions | sort %}

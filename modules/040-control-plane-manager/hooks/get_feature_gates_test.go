@@ -25,31 +25,7 @@ import (
 
 func init() {
 	FeatureGatesMap = map[string]ComponentFeatures{
-		"1.30": {
-			Kubelet: []string{
-				"CPUManager",
-				"MemoryManager",
-			},
-			APIServer: []string{
-				"APIServerIdentity",
-				"StorageVersionAPI",
-				"DynamicResourceAllocation",
-				"TestDeprecatedGate",
-			},
-			KubeControllerManager: []string{
-				"CronJobsScheduledAnnotation",
-			},
-			KubeScheduler: []string{
-				"SchedulerQueueingHints",
-			},
-		},
 		"1.31": {
-			Deprecated: []string{
-				"DynamicResourceAllocation",
-			},
-			Forbidden: []string{
-				"SomeProblematicFeature",
-			},
 			Kubelet: []string{
 				"CPUManager",
 				"MemoryManager",
@@ -69,6 +45,30 @@ func init() {
 		},
 		"1.32": {
 			Deprecated: []string{
+				"DynamicResourceAllocation",
+			},
+			Forbidden: []string{
+				"SomeProblematicFeature",
+			},
+			Kubelet: []string{
+				"CPUManager",
+				"MemoryManager",
+			},
+			APIServer: []string{
+				"APIServerIdentity",
+				"StorageVersionAPI",
+				"DynamicResourceAllocation",
+				"TestDeprecatedGate",
+			},
+			KubeControllerManager: []string{
+				"CronJobsScheduledAnnotation",
+			},
+			KubeScheduler: []string{
+				"SchedulerQueueingHints",
+			},
+		},
+		"1.33": {
+			Deprecated: []string{
 				"TestDeprecatedGate",
 			},
 			Forbidden: []string{
@@ -90,7 +90,7 @@ func init() {
 				"SchedulerQueueingHints",
 			},
 		},
-		"1.33": {
+		"1.34": {
 			Forbidden: []string{
 				"SomeProblematicFeature",
 			},
@@ -203,9 +203,9 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 		})
 	})
 
-	Context("Forbidden feature gates for Kubernetes 1.33", func() {
+	Context("Forbidden feature gates for Kubernetes 1.34", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.33")
+			setClusterConfigWithVersion("1.34")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"SomeProblematicFeature",
 				"CPUManager",
@@ -292,7 +292,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Feature gates deprecated in future versions", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.30")
+			setClusterConfigWithVersion("1.31")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"DynamicResourceAllocation",
 				"TestDeprecatedGate",
@@ -321,15 +321,15 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 				case "DynamicResourceAllocation":
 					Expect(metric.Name).To(Equal("d8_control_plane_manager_problematic_feature_gate"))
 					Expect(*metric.Value).To(BeNumerically("==", 1.0))
-					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", "1.31"))
-					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.30"))
+					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", "1.32"))
+					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.31"))
 					Expect(metric.Labels).To(HaveKeyWithValue("status", "will_be_deprecated"))
 					foundDynamicResourceAllocation = true
 				case "TestDeprecatedGate":
 					Expect(metric.Name).To(Equal("d8_control_plane_manager_problematic_feature_gate"))
 					Expect(*metric.Value).To(BeNumerically("==", 1.0))
-					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", "1.32"))
-					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.30"))
+					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", "1.33"))
+					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.31"))
 					Expect(metric.Labels).To(HaveKeyWithValue("status", "will_be_deprecated"))
 					foundTestDeprecatedGate = true
 				}
@@ -342,7 +342,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Feature gates already deprecated in current version", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.31")
+			setClusterConfigWithVersion("1.32")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"DynamicResourceAllocation",
 				"APIServerIdentity",
@@ -366,8 +366,8 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 				if metric.Labels["feature_gate"] == "DynamicResourceAllocation" {
 					Expect(metric.Name).To(Equal("d8_control_plane_manager_problematic_feature_gate"))
 					Expect(*metric.Value).To(BeNumerically("==", 1.0))
-					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", "1.31"))
-					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.31"))
+					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", "1.32"))
+					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.32"))
 					Expect(metric.Labels).To(HaveKeyWithValue("status", "deprecated"))
 				}
 			}
@@ -376,7 +376,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("No deprecated feature gates in use", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.32")
+			setClusterConfigWithVersion("1.34")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"APIServerIdentity",
 				"CPUManager",
@@ -399,14 +399,14 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 			Expect(*m[0].Value).To(BeNumerically("==", 0.0))
 			Expect(m[0].Labels).To(HaveKeyWithValue("feature_gate", ""))
 			Expect(m[0].Labels).To(HaveKeyWithValue("deprecated_version", ""))
-			Expect(m[0].Labels).To(HaveKeyWithValue("current_version", "1.32"))
+			Expect(m[0].Labels).To(HaveKeyWithValue("current_version", "1.34"))
 			Expect(m[0].Labels).To(HaveKeyWithValue("status", ""))
 		})
 	})
 
 	Context("Forbidden feature gates in current version", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.31")
+			setClusterConfigWithVersion("1.32")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"SomeProblematicFeature",
 				"APIServerIdentity",
@@ -431,7 +431,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 					Expect(metric.Name).To(Equal("d8_control_plane_manager_problematic_feature_gate"))
 					Expect(*metric.Value).To(BeNumerically("==", 1.0))
 					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", ""))
-					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.31"))
+					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.32"))
 					Expect(metric.Labels).To(HaveKeyWithValue("status", "forbidden"))
 				}
 			}

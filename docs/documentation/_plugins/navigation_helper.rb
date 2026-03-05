@@ -1,5 +1,63 @@
 module Jekyll
   class NavigationHelper
+    def self.normalize_sidebar_url(url)
+      return nil if url.nil?
+      normalized = url.to_s.strip
+      return nil if normalized.empty?
+      normalized = normalized.sub(%r{^/(en|ru)/}, '/')
+      normalized = normalized.sub(%r{/index\.html?$}, '/')
+      normalized
+    end
+
+    def self.find_breadcrumb_titles(entries, target_url, lang = 'en', parent_titles = [])
+      return nil if entries.nil? || !entries.is_a?(Array)
+
+      normalized_target = normalize_sidebar_url(target_url)
+      return nil if normalized_target.nil?
+
+      entries.each do |entry|
+        next if entry['draft'] == true
+
+        title = entry.dig('title', lang) || entry['title']
+        next if title.nil? || title.to_s.strip.empty?
+
+        entry_url = normalize_sidebar_url(entry['url'])
+        return parent_titles if entry_url && entry_url == normalized_target
+
+        if entry['folders'].is_a?(Array)
+          found = find_breadcrumb_titles(entry['folders'], normalized_target, lang, parent_titles + [title])
+          return found if found
+        end
+      end
+
+      nil
+    end
+
+    def self.find_breadcrumb_titles_for_page(site, page, sidebar_name = 'main')
+      return [] unless site.data['sidebars'][sidebar_name]
+
+      lang = page['lang'] || 'en'
+      entries = site.data['sidebars'][sidebar_name]['entries']
+      target_url = page['url']
+
+      breadcrumbs = find_breadcrumb_titles(entries, target_url, lang, []) || []
+
+      # Remove adjacent duplicates.
+      deduplicated = []
+      breadcrumbs.each do |item|
+        next if deduplicated.last == item
+        deduplicated << item
+      end
+
+      # If last breadcrumb matches current page title, skip it.
+      page_title = (page['title'] || '').to_s.strip.downcase
+      if !deduplicated.empty? && deduplicated.last.to_s.strip.downcase == page_title
+        deduplicated.pop
+      end
+
+      deduplicated
+    end
+
     def self.flatten_sidebar_entries(entries, lang = 'en', parent_titles = [])
       flattened = []
 
@@ -92,6 +150,11 @@ module Jekyll
     def get_navigation_pages(page, sidebar_name = 'main')
       site = @context.registers[:site]
       Jekyll::NavigationHelper.find_navigation_pages(site, page, sidebar_name)
+    end
+
+    def get_breadcrumb_titles(page, sidebar_name = 'main')
+      site = @context.registers[:site]
+      Jekyll::NavigationHelper.find_breadcrumb_titles_for_page(site, page, sidebar_name)
     end
   end
 end

@@ -247,7 +247,7 @@ func (lb *LoadBalancerService) pollLoadBalancer(ctx context.Context, name string
 		LBCreationPollInterval,
 		LBCreationPollTimeout,
 		true,
-		func(context.Context) (done bool, err error) {
+		func(context.Context) (bool, error) {
 			if len(svc.Status.LoadBalancer.Ingress) > 0 {
 				return true, nil
 			}
@@ -367,7 +367,7 @@ func lbLabelKey(lbName string) string {
 	return DVPLoadBalancerLabelPrefix + prittyfied
 }
 
-func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *corev1.Service, nodes []*corev1.Node) ([]*corev1.Node, error) {
+func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *corev1.Service, nodes []*corev1.Node) ([]*corev1.Node, error) { // nolint:unparam
 	if svc.Spec.ExternalTrafficPolicy != corev1.ServiceExternalTrafficPolicyTypeLocal ||
 		svc.Spec.HealthCheckNodePort == 0 {
 		return nodes, nil

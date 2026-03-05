@@ -41,9 +41,10 @@ import (
 )
 
 const (
-	dbExtension    = ".tar.gz"
-	maxmindURL     = "https://download.maxmind.com/app/geoip_download?license_key=%v&edition_id=%v&suffix=tar.gz"
-	lockTimeLayout = time.RFC3339Nano
+	dbExtension           = ".tar.gz"
+	maxmindURL            = "https://download.maxmind.com/app/geoip_download?license_key=%v&edition_id=%v&suffix=tar.gz"
+	lockTimeLayout        = time.RFC3339Nano
+	legacyDownloadTimeout = 1 * time.Minute
 
 	headlessServiceName = "geoproxy-headless"
 	kubeRBACProxyPort   = "7475" // kube-rbac-proxy serves HTTPS on 7475
@@ -67,7 +68,7 @@ func NewDownloader(watcher *GeoUpdaterSecret, leader *LeaderElection) *Downloade
 func (d *Downloader) Download(ctx context.Context, dstPathRoot string, cfg *Config, force bool) error {
 	mapLicenseAndEditions := d.watcher.GetLicenseEditions()
 	if len(mapLicenseAndEditions) == 0 {
-		klog.Infof("License editions is emty, skip downloading...")
+		klog.Infof("License editions is empty, skip downloading...")
 		GeoIPDownloadError.Reset()
 		return nil
 	}
@@ -238,7 +239,7 @@ func downloadDB(ctx context.Context, url string, skipTLSverify bool, caPEM strin
 		transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
 	}
 
-	client := &http.Client{Transport: transport, Timeout: time.Second * 3}
+	client := &http.Client{Transport: transport, Timeout: legacyDownloadTimeout}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {

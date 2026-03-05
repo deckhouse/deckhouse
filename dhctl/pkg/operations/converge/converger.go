@@ -64,6 +64,8 @@ type Params struct {
 	Logger  log.Logger
 	IsDebug bool
 
+	NoSwitchToNodeUser bool
+
 	CheckHasTerraformStateBeforeMigration bool
 }
 
@@ -236,7 +238,13 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		inLockRunner = lock.NewInLockLocalRunner(convergeCtx, "local-converger")
 	}
 
-	r := newRunner(inLockRunner, nil).
+	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, nil, convergectx.KubeClientSwitcherParams{
+		TmpDir:        c.TmpDir,
+		Logger:        c.Logger,
+		DisableSwitch: true,
+	})
+
+	r := newRunner(inLockRunner, switcher).
 		WithCommanderUUID(c.CommanderUUID)
 
 	err = r.RunConvergeMigration(convergeCtx, c.Params.CheckHasTerraformStateBeforeMigration)
@@ -426,9 +434,10 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}
 
 	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
-		TmpDir:  c.TmpDir,
-		Logger:  c.Logger,
-		IsDebug: c.IsDebug,
+		TmpDir:        c.TmpDir,
+		Logger:        c.Logger,
+		IsDebug:       c.IsDebug,
+		DisableSwitch: c.NoSwitchToNodeUser,
 	})
 
 	phasesToSkip := make([]phases.OperationPhase, 0)

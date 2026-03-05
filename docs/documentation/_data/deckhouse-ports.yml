@@ -372,6 +372,11 @@ groups:
     description:
       en: "`sds-replicated-volume` CSI controller metrics"
       ru: "Метрики CSI-контроллера модуля `sds-replicated-volume`"
+  - ports: "4280"
+    protocol: TCP
+    description:
+      en: "`virtualization` USB over IP (usb/ip) protocol for sharing USB devices between cluster nodes"
+      ru: "Протокол USB over IP (usb/ip) модуля `virtualization` для проброса USB-устройств между узлами кластера"
   - ports: "4286"
     protocol: TCP
     description:

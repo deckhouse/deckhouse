@@ -144,7 +144,7 @@ EOF
     <p>Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
 ```bash
-ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 ```
 </div>
   </li>

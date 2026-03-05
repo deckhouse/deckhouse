@@ -4,7 +4,7 @@ permalink: ru/installing/
 description: |
  Установка Deckhouse Kubernetes Platform (DKP), подготовка инфраструктуры установки, запуск установщика.
 lang: ru
-search: deckhouse installation, kubernetes installation, platform setup, infrastructure preparation, installer configuration, установка Deckhouse, установка Kubernetes, настройка платформы, подготовка инфраструктуры, конфигурация инсталлятора, конфигурация установщика, dhctl, dhctl bootstrap
+search: требования, системные требования, installation, platform setup, infrastructure preparation, installer configuration, настройка платформы, подготовка инфраструктуры, конфигурация инсталлятора, конфигурация установщика, dhctl, dhctl bootstrap
 extractedLinksMax: 2
 relatedLinks:
   - title: "Быстрый старт"
@@ -568,7 +568,7 @@ docker run -it --pull=always \
 
 ```shell
 dhctl bootstrap \
-  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
   --config=/config.yml
 ```
 
@@ -577,6 +577,7 @@ dhctl bootstrap \
 - `/config.yml` — файл конфигурации установки;
 - `<SSH_USER>` — имя пользователя для подключения по SSH к серверу;
 - `--ssh-agent-private-keys` — файл приватного SSH-ключа для подключения по SSH.
+- `<SSH_PRIVATE_KEY_FILE>` — имя приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 ### Проверки перед началом установки
 
@@ -663,10 +664,12 @@ dhctl bootstrap \
 
 ```shell
     dhctl bootstrap \
-    --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+    --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
     --config=/config.yml \
     --preflight-skip-all-checks
 ```
+
+> Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 {% endofftopic %}
 

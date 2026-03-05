@@ -1,6 +1,6 @@
 {{ $controllerBranch := "controller-v1.12.1" }}
-{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.26.1-modsecurity-v1.0.4" }}
-{{ $nginxVersion := "1.26.1" }}
+{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.29.5-modsecurity-v1.0.4" }}
+{{ $nginxVersion := "1.29.5" }}
 {{ $nlohmannJsonBranch := "v3.11.3" }}
 {{ $ngxBrotliCommit := "63ca02abdcf79c9e788d2eedcc388d2335902e52" }}
 {{ $modSecurityBranch := "v3.0.14" }}
@@ -16,7 +16,7 @@
 {{ $icuVersion := "release-77-1" }}
 {{ $pcreVersion := "8.45" }}
 {{ $libmaxminddbVersion := "1.12.2" }}
-{{ $curlVersion := "curl-8_17_0" }}
+{{ $curlVersion := "curl-8_18_0" }}
 {{ $zlibVersion := "v1.3.1" }}
 {{ $cAresVersion := "v1.34.5" }}
 {{ $opensslVersion := "3.6.0" }}
@@ -131,7 +131,7 @@ shell:
   - rm -rf /src/owasp-modsecurity-crs/.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine-1.24
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

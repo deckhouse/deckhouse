@@ -6,9 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"k8s.io/apimachinery/pkg/util/wait"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/cloud-provider/app"
@@ -52,8 +49,7 @@ func main() {
 	)
 
 	if err := command.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+		klog.Fatalf("error: %v\n", err)
 	}
 }
 

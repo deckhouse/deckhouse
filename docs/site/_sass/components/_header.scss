@@ -57,13 +57,17 @@ font-family: 'Noto Sans', sans-serif;
 
 &__nav {
   &.nav {
+    @include breakpoints.min-w(l) {
+      gap: .75rem 1rem;
+    }
+
     @include breakpoints.min-w(xl) {
       display: flex;
       gap: .75rem;
     }
 
-    @include breakpoints.min-w(l) {
-      gap: .75rem 1rem;
+    @include breakpoints.min-w(xxxl) {
+      gap: .75rem 1.25rem
     }
   }
 
@@ -99,12 +103,8 @@ font-family: 'Noto Sans', sans-serif;
 
 
     > a {
-      font-size: .87em;
+      font-size: 0.745em;
       position: relative;
-
-      @include breakpoints.min-w(xl) {
-        font-size: 14px;
-      }
 
       @include breakpoints.min-w(xxl) {
         font-size: 15px;

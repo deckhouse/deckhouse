@@ -55,13 +55,14 @@ To delete a cluster, several steps need to be followed:
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
-      --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+      --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
       --yes-i-am-sane-and-i-understand-what-i-am-doing \
       --ssh-host=<MASTER_IP>
    ```
 
    where:
    - `<USER>` — the user of the remote machine from which the installation was performed. If `<USER>` needs to perform actions via `sudo`, add the `--ask-become-pass` flag;
-   - `<MASTER_IP>` — IP address of the master node in the cluster.
+   - `<MASTER_IP>` — IP address of the master node in the cluster;
+   - `<SSH_PRIVATE_KEY_FILE>`: Name of private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
 
    The installer will connect to the master node and remove all Deckhouse components and the Kubernetes cluster from it.

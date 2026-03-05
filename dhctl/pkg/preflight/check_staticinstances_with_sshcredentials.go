@@ -26,6 +26,7 @@ import (
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
@@ -40,6 +41,11 @@ type staticInstance struct {
 }
 
 func (pc *Checker) CheckStaticInstancesSSH(ctx context.Context) error {
+	if app.PreflightSkipStaticInstancesWithSSHCredentials {
+		log.InfoLn("SSHCredentials for StaticInstances preflight check was skipped (via skip flag)")
+		return nil
+	}
+
 	docs := input.YAMLSplitRegexp.Split(pc.metaConfig.ResourcesYAML, -1)
 	instances, creds, err := parseResources(docs)
 	if err != nil {

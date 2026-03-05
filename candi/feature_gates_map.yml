@@ -1,49 +1,3 @@
-"1.30":
-  forbidden: []
-  deprecated: []
-  kubelet:
-    - InPlacePodVerticalScaling
-    - KubeletPodResourcesGet
-    - KubeletSeparateDiskGC
-    - MemoryQoS
-    - MutatingAdmissionPolicy
-    - SELinuxMount
-    - RecoverVolumeExpansionFailure
-    - RecursiveReadOnlyMounts
-  apiserver:
-    - CrossNamespaceVolumeDataSource
-    - HPAScaleToZero
-    - InPlacePodVerticalScaling
-    - JobManagedBy
-    - MaxUnavailableStatefulSet
-    - MutatingAdmissionPolicy
-    - PortForwardWebsockets
-    - ProcMountType
-    - SELinuxMount
-    - ConsistentListFromCache
-    - CustomResourceFieldSelectors
-    - JobSuccessPolicy
-    - LoadBalancerIPMode
-    - MatchLabelKeysInPodAffinity
-    - OrderedNamespaceDeletion
-    - RecoverVolumeExpansionFailure
-    - RecursiveReadOnlyMounts
-    - RelaxedEnvironmentVariableValidation
-    - RetryGenerateName
-    - ServiceAccountTokenNodeBinding
-    - StrictCostEnforcementForVAP
-  kubeControllerManager:
-    - CrossNamespaceVolumeDataSource
-    - InPlacePodVerticalScaling
-    - JobManagedBy
-    - MaxUnavailableStatefulSet
-    - SELinuxMount
-    - HonorPVReclaimPolicy
-    - JobSuccessPolicy
-    - RecoverVolumeExpansionFailure
-  kubeScheduler:
-    - InPlacePodVerticalScaling
-    - SchedulerQueueingHints
 "1.31":
   forbidden: []
   deprecated:
@@ -262,3 +216,53 @@
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
     - ContainerRestartRules
+"1.35":
+  forbidden: []
+  deprecated:
+    - ChangeContainerStatusOnKubeletRestart
+  kubelet:
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - ContainerStopSignals
+    - MemoryQoS
+    - MutablePVNodeAffinity
+    - MutatingAdmissionPolicy
+    - NodeDeclaredFeatures
+    - PodLogsQuerySplitStreams
+    - ResourceHealthStatus
+    - RestartAllContainersOnContainerExits
+    - SELinuxMount
+  apiserver:
+    - AllowUnsafeMalformedObjectDeletion
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - ConstrainedImpersonation
+    - ContainerStopSignals
+    - CRDObservedGenerationTracking
+    - CrossNamespaceVolumeDataSource
+    - HPAScaleToZero
+    - MutablePodResourcesForSuspendedJobs
+    - MutablePVNodeAffinity
+    - MutableSchedulingDirectivesForSuspendedJobs
+    - MutatingAdmissionPolicy
+    - NodeDeclaredFeatures
+    - PodLogsQuerySplitStreams
+    - ResourceHealthStatus
+    - RestartAllContainersOnContainerExits
+    - SELinuxMount
+    - StrictIPCIDRValidation
+    - TaintTolerationComparisonOperators
+  kubeControllerManager:
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - CrossNamespaceVolumeDataSource
+    - SELinuxMount
+  kubeScheduler:
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - NodeDeclaredFeatures
+    - TaintTolerationComparisonOperators

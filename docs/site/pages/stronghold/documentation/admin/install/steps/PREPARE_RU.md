@@ -17,7 +17,7 @@ lang: ru
    - Сгенерируйте SSH-ключ, который будет использоваться при установке узлов кластера. Пример генерации ключа:
 
      ```bash
-     ssh-keygen -t rsa -b 4096 -f cluster-node -N "" -C "cluster-node" -v
+     ssh-keygen -t ed25519 -b 4096 -f cluster-node -N "" -C "cluster-node" -v
      ```
 
 4. **Создание технического пользователя:**

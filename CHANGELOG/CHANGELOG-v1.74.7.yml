@@ -1,0 +1,19 @@
+admission-policy-engine:
+  fixes:
+    - summary: Convert constraints multi-line output to single-line
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18028
+candi:
+  fixes:
+    - summary: >-
+        Added a Netplan override to force the secondary NIC to use the main routing table, fixing
+        cloud-init PBR conflicts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16625
+dhctl:
+  fixes:
+    - summary: Fix panic in dhctl config render kubeadm-config command.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17934
+istio:
+  fixes:
+    - summary: Correction of an useless error in the Istio CNI workflow
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17787
+

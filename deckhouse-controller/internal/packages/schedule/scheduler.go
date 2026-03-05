@@ -149,7 +149,7 @@ func (s *Scheduler) Check(checks Checks) error {
 	return nil
 }
 
-// Add registers a package with the scheduler and creates checkers based on its constraints.
+// Register registers a package with the scheduler and creates checkers based on its constraints.
 // If scheduler is not paused and checks pass, onEnable callback is invoked immediately.
 //
 // Checker evaluation order:
@@ -158,10 +158,7 @@ func (s *Scheduler) Check(checks Checks) error {
 //  3. Bootstrap condition
 //
 // Thread-safety: Acquires mutex to add node, releases before invoking callbacks to avoid deadlock.
-func (s *Scheduler) Add(pkg Package) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+func (s *Scheduler) Register(pkg Package) {
 	if pkg == nil {
 		return
 	}
@@ -187,13 +184,19 @@ func (s *Scheduler) Add(pkg Package) {
 		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, string(ConditionReasonRequirementsBootstrap)))
 	}
 
-	s.nodes[pkg.GetName()] = &node{
+	n := &node{
 		name:     pkg.GetName(),
 		checkers: checkers,
 	}
 
+	s.mu.Lock()
+	s.nodes[pkg.GetName()] = n
+	s.mu.Unlock()
+
 	if !s.pause.Load() {
-		s.schedule(s.nodes[pkg.GetName()])
+		if n.check() && n.enabled {
+			s.onEnable(n.name)
+		}
 	}
 }
 
@@ -220,39 +223,40 @@ func (s *Scheduler) Resume() {
 		return // Already running, no-op
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// Re-evaluate all packages and invoke callbacks for state changes
-	for _, n := range s.nodes {
-		s.schedule(n)
-	}
+	s.schedule()
 }
 
-// schedule evaluates a node's checkers and invokes callbacks if state changed.
+// schedule evaluates all nodes and invokes callbacks for state changes.
 //
-// Logic:
-//  1. Check current state against all checkers
-//  2. If no state change, return early
-//  3. If state changed to enabled, call onEnable
-//  4. If state changed to disabled, call onDisable
-//
-// WARNING: Called while holding mutex from Resume(), callbacks must not deadlock.
-func (s *Scheduler) schedule(n *node) {
-	stateChanged := n.check()
-	if !stateChanged {
-		return // No state change, nothing to do
+// Callbacks are invoked after releasing the mutex to prevent deadlock
+// with Store.mu (callbacks acquire Store.mu via HandleEvent).
+func (s *Scheduler) schedule() {
+	var toEnabled []string
+	var toDisabled []string
+
+	s.mu.Lock()
+	for _, n := range s.nodes {
+		if !n.check() {
+			continue
+		}
+
+		if n.enabled {
+			toEnabled = append(toEnabled, n.name)
+		} else {
+			toDisabled = append(toDisabled, n.name)
+		}
+	}
+	s.mu.Unlock()
+
+	for _, name := range toEnabled {
+		if s.onEnable != nil {
+			s.onEnable(name)
+		}
 	}
 
-	// State changed - invoke appropriate callback
-	switch n.enabled {
-	case true:
-		if s.onEnable != nil {
-			s.onEnable(n.name)
-		}
-	case false:
+	for _, name := range toDisabled {
 		if s.onDisable != nil {
-			s.onDisable(n.name)
+			s.onDisable(name)
 		}
 	}
 }

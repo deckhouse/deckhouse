@@ -5,18 +5,12 @@ metadata:
   creationTimestamp: null
   name: test-app
   namespace: foobar
-  resourceVersion: "2"
+  resourceVersion: "1"
 spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: v1.0.0
-status:
-  conditions:
-  - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: ApplicationPackageVersion '' not found
-    reason: VersionNotFound
-    status: "False"
-    type: Processed
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage

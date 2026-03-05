@@ -304,7 +304,7 @@ nodeGroup:
     containerLogMaxSize: 50Mi
     resourceReservation:
       mode: "Off"
-  kubernetesVersion: "1.30"
+  kubernetesVersion: "1.31"
   manualRolloutID: ""
   name: master
   nodeTemplate:
@@ -387,7 +387,7 @@ rm /var/lib/bashible/configuration_checksum
 
 ### Какую информацию собирает Prometheus?
 
-Все метрики групп узлов имеют префикс `d8_node_group_` в названии, и метку с именем группы `node_group_name`.
+Все метрики групп узлов имеют префикс `d8_node_group_` в названии, и лейбл с именем группы `node_group_name`.
 
 Следующие метрики собираются для каждой группы узлов:
 

@@ -494,7 +494,7 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	}
 
 	metricLabels := map[string]string{
-		"version": releaseForUpdate.GetVersion().Original(),
+		metrics.LabelVersion: releaseForUpdate.GetVersion().Original(),
 	}
 
 	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)

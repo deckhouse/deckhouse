@@ -20,18 +20,12 @@ metadata:
     kind: ApplicationPackage
     name: test
     uid: ""
-  resourceVersion: "3"
+  resourceVersion: "2"
 spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: v1.0.2
-status:
-  conditions:
-  - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: ""
-    reason: Reconciled
-    status: "True"
-    type: Processed
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage

@@ -4,7 +4,7 @@ permalink: en/reference/release-channels.html
 toc: false
 ---
 
-{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+{%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <link href='../assets/css/releases.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}

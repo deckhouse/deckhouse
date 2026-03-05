@@ -258,7 +258,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 			f.HelmRender()
@@ -369,7 +369,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
 			f.HelmRender()
@@ -432,7 +432,7 @@ labels:
 
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -450,7 +450,7 @@ labels:
 
 	Context("Vsphere with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `mydsname2`)
@@ -476,7 +476,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Vsphere with NSX-T specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesC)
 			f.HelmRender()
@@ -525,7 +525,7 @@ nodes:
 
 	Context("Vsphere with NSX-T with LoadBalancerClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesD)
 			f.HelmRender()

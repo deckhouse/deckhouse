@@ -110,7 +110,9 @@ func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
-		templateData, err := config.ParseBashibleConfig(app.ConfigPaths, kubeadmTemplateOpenAPI)
+		templateData := make(map[string]interface{})
+		var err error
+		templateData["clusterConfiguration"], err = config.ParseBashibleConfig(app.ConfigPaths, kubeadmTemplateOpenAPI)
 		if err != nil {
 			return err
 		}

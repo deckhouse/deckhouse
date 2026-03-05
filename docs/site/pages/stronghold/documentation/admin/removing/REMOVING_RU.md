@@ -55,13 +55,14 @@ lang: ru
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
-   --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+   --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
    --yes-i-am-sane-and-i-understand-what-i-am-doing \
    --ssh-host=<MASTER_IP>
    ```
 
    где:
    - `<USER>` — пользователь удалённой машины, из-под которого производилась установка. Если для `<USER>` требуется выполнять действия через `sudo`, добавьте флаг `--ask-become-pass`;
-   - `<MASTER_IP>` — IP-адрес master-узла кластера.
+   - `<MASTER_IP>` — IP-адрес master-узла кластера;
+   - `<SSH_PRIVATE_KEY_FILE>` — имя приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 Инсталлятор подключится к master-узлу и удалит на нём все компоненты платформы и кластера Kubernetes.

@@ -284,22 +284,26 @@ func (c *huaweiCloudInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog
 }
 
 type dvpInstanceClass struct {
-	CPU struct {
-		Cores int `json:"cores"`
-	} `json:"cpu"`
+	VirtualMachine struct {
+		CPU struct {
+			Cores int `json:"cores"`
+		} `json:"cpu"`
 
-	Memory int `json:"memory"`
+		Memory struct {
+			Size string `json:"size"`
+		} `json:"memory"`
+	} `json:"virtualMachine"`
 }
 
 func (d dvpInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
-	cpuStr := strconv.FormatInt(int64(d.CPU.Cores), 10)
-	memStr := strconv.FormatInt(int64(d.Memory), 10)
+	cpuStr := strconv.FormatInt(int64(d.VirtualMachine.CPU.Cores), 10)
 
 	cpuRes, err := resource.ParseQuantity(cpuStr)
 	if err != nil {
 		return nil, err
 	}
-	memRes, err := resource.ParseQuantity(memStr + "Mi")
+
+	memRes, err := resource.ParseQuantity(d.VirtualMachine.Memory.Size)
 	if err != nil {
 		return nil, err
 	}

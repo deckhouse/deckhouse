@@ -134,7 +134,7 @@ func (s *NodeStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) erro
 			return err
 		},
 		PatchData: func() interface{} {
-			return manifests.PatchWithInfrastructureState(outputs.InfrastructureState)
+			return manifests.PatchWithNodeInfrastructureState(outputs.InfrastructureState)
 		},
 		PatchFunc: func(patchData []byte) error {
 			secretName := manifests.SecretNameForNodeInfrastructureState(s.nodeName)

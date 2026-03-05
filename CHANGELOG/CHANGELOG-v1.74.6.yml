@@ -1,0 +1,22 @@
+cni-cilium:
+  fixes:
+    - summary: Fix issue in generating CiliumEgressGatewayPolicy CR.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17949
+      impact: All current connections powered by EgressGateways will be terminated.
+docs:
+  features:
+    - summary: >-
+        Added info from `csi-ceph` module about Ceph storage system integration in DKP
+        documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16164
+ingress-nginx:
+  fixes:
+    - summary: A false-positive trigger of alert GeoIPDownloadErrorDetectedFromMaxMind is fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17741
+node-manager:
+  fixes:
+    - summary: >-
+        Fix panic in cluster-autoscaler caused by nil pointer dereference during node removal
+        simulation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17924
+

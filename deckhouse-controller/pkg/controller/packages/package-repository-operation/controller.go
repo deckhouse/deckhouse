@@ -282,7 +282,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 		r.SetConditionFalse(
 			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			v1alpha1.PackageRepositoryOperationConditionCompleted,
 			reason,
 			message,
 		)
@@ -310,7 +310,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 		r.SetConditionFalse(
 			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			v1alpha1.PackageRepositoryOperationConditionCompleted,
 			v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
 			message,
 		)
@@ -345,7 +345,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 	// Check if operation already has a failed condition - skip processing if so
 	for _, cond := range operation.Status.Conditions {
-		if cond.Type == v1alpha1.PackageRepositoryOperationConditionProcessed && cond.Status == corev1.ConditionFalse {
+		if cond.Type == v1alpha1.PackageRepositoryOperationConditionCompleted && cond.Status == corev1.ConditionFalse {
 			logger.Debug("operation already has failed condition, skipping processing")
 			return res, nil
 		}
@@ -380,7 +380,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 		r.SetConditionFalse(
 			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			v1alpha1.PackageRepositoryOperationConditionCompleted,
 			reason,
 			message,
 		)
@@ -416,7 +416,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 		r.SetConditionTrue(
 			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			v1alpha1.PackageRepositoryOperationConditionCompleted,
 		)
 
 		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
@@ -668,7 +668,7 @@ func (r *reconciler) setOperationTruePhase(ctx context.Context, operation *v1alp
 
 	r.SetConditionTrue(
 		operation,
-		v1alpha1.PackageRepositoryOperationConditionProcessed,
+		v1alpha1.PackageRepositoryOperationConditionCompleted,
 	)
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {

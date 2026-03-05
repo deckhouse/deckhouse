@@ -30,7 +30,7 @@ status:
       assert.AnError general error for testing'
     reason: PackageListingFailed
     status: "False"
-    type: Processed
+    type: Completed
   phase: Processing
   startTime: "2025-10-31T12:00:00Z"
 ---

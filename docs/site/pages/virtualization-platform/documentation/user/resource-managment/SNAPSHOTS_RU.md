@@ -10,17 +10,16 @@ lang: ru
 
 Снимки могут быть консистентными и неконсистентными. За это отвечает параметр `requiredConsistency`, по умолчанию его значение равно `true`, что означает требование консистентного снимка.
 
-Консистентный снимок гарантирует согласованное и целостное состояние дисков виртуальной машины. Такой снимок можно создать при выполнении одного из следующих условий:
+Консистентный снимок фиксирует согласованное и целостное состояние данных диска. Такой снимок можно создать при выполнении одного из следующих условий:
 
+- диск не подключён ни к одной виртуальной машине — снимок всегда будет консистентным;
 - виртуальная машина выключена;
-- в гостевой системе установлен [`qemu-guest-agent`](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#guest-os-agent), который на момент создания снимка временно приостанавливает работу файловой системы для обеспечения её согласованности.
+- в гостевой ОС установлен и запущен [`qemu-guest-agent`](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#агент-гостевой-ос). При создании снимка он временно приостанавливает («замораживает») работу файловой системы, чтобы обеспечить согласованность данных.
 
-QEMU Guest Agent поддерживает скрипты hooks, которые позволяют подготовить приложения к созданию снимка без остановки сервисов, обеспечивая согласованное состояние на уровне приложений. Подробнее о настройке скриптов hooks см. в разделе [«Агент гостевой ОС»](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#guest-os-agent).
+Неконсистентный снимок может не отражать согласованное состояние дисков виртуальной машины и её компонентов. Такой снимок создаётся, если ВМ запущена, и в гостевой ОС не установлен или не запущен `qemu-guest-agent`.
+Если в манифесте снимка явно указан параметр `requiredConsistency: false`, но `qemu-guest-agent` при этом запущен, будет также предпринята попытка заморозки файловой системы, чтобы снимок получился консистентным.
 
-Неконсистентный снимок может не отражать согласованное состояние дисков виртуальной машины и её компонентов. Такой снимок создаётся в следующих случаях:
-
-- ВМ запущена, и в гостевой ОС не установлен или не запущен `qemu-guest-agent`;
-- в манифесте снимка явно указан параметр `requiredConsistency: false`, и требуется избежать приостановки работы файловой системы.
+QEMU Guest Agent поддерживает скрипты hooks, которые позволяют подготовить приложения к созданию снимка без остановки сервисов, обеспечивая согласованное состояние на уровне приложений. Подробнее о настройке скриптов hooks см. в разделе [«Агент гостевой ОС»](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#агент-гостевой-ос).
 
 {% alert level="warning" %}
 При восстановлении из такого снимка возможны проблемы с целостностью файловой системы, поскольку состояние данных может быть не согласовано.
@@ -76,6 +75,8 @@ NAME                   PHASE     CONSISTENT   AGE
 linux-vm-root-snapshot Ready     true         3m2s
 ```
 
+Поле `CONSISTENT` показывает, является ли снимок консистентным (`true`) или нет (`false`). Значение определяется автоматически на основе условий создания снимка и не может быть изменено.
+
 После создания `VirtualDiskSnapshot` может находиться в следующих состояниях (фазах):
 
 - `Pending` — ожидание готовности всех зависимых ресурсов, требующихся для создания снимка.
@@ -115,7 +116,7 @@ spec:
     # Укажем размер больше чем значение .
     size: 10Gi
     # Подставьте ваше название StorageClass.
-    storageClassName: i-sds-replicated-thin-r2
+    storageClassName: rv-thin-r2
   # Источник из которого создается диск.
   dataSource:
     type: ObjectRef
@@ -276,21 +277,34 @@ d8 k get vmop <vmop-name> -o json | jq '.status.resources'
 - `nameReplacements` — позволяет заменить имена существующих ресурсов на новые, чтобы избежать конфликтов;
 - `customization` — задает префикс или суффикс для имен всех клонируемых ресурсов ВМ (дисков, IP-адресов и т. д.).
 
-Пример конфигурации:
+Пример переименования конкретных ресурсов:
 
 ```yaml
 nameReplacements:
   - from:
-      kind: <resource type>
-      name: <old name>
+      kind: VirtualMachine
+      name: <old-vm-name>
     to:
-      name: <new name>
+      name: <new-vm-name>
+  - from:
+      kind: VirtualDisk
+      name: <old-disk-name>
+    to:
+      name: <new-disk-name>
+# ...
+```
+
+В результате будет создана ВМ с именем `<new-vm-name>`, а указанные ресурсы будут переименованы согласно правилам замены.
+
+Пример добавления префикса или суффикса ко всем ресурсам:
+
+```yaml
 customization:
   namePrefix: <prefix>
   nameSuffix: <suffix>
 ```
 
-В результате будет создана ВМ с именем <prefix><new name><suffix>.
+В результате будет создана ВМ с именем `<prefix><original-vm-name><suffix>`, а все ресурсы (диски, IP-адреса и т. д.) получат префикс и суффикс.
 
 Для операции клонирования возможно использовать один из трех режимов:
 
@@ -311,9 +325,9 @@ d8 k get vmsop <vmsop-name> -o json | jq '.status.resources'
 
 Клонирование ВМ выполняется с использованием ресурса VirtualMachineOperation с типом операции `Clone`.
 
-{% alert level="warning" %}
-Перед клонированием ВМ должна быть [выключена](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#политика-запуска-и-управление-состоянием-вм).
+Клонирование поддерживается как для выключенных, так и для работающих виртуальных машин. При клонировании работающей ВМ автоматически создаётся консистентный снимок, из которого затем формируется клон.
 
+{% alert level="info" %}
 Рекомендуется задавать параметр `.spec.runPolicy: AlwaysOff` в конфигурации клонируемой ВМ, чтобы предотвратить автоматический запуск клона ВМ. Это связано с тем, что клон наследует поведение родительской ВМ.
 {% endalert %}
 
@@ -330,7 +344,7 @@ Windows:
 
 - выполнить генерализацию с помощью `sysprep` с параметром `/generalize` или использовать инструменты для очистки уникальных идентификаторов (SID, hostname и так далее).
 
-Пример создания клона ВМ:
+Для создания клона ВМ используйте следующий ресурс:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -352,11 +366,59 @@ spec:
 В процессе клонирования для виртуальной машины и всех её дисков автоматически создаются временные снимки. Именно из этих снимков затем собирается новая ВМ. После завершения процесса клонирования временные снимки автоматически удаляются — их не будет видно в списке ресурсов. Однако внутри спецификации клонируемых дисков будет оставаться ссылка (`dataSource`) на соответствующий снимок, даже если самого снимка уже не существует. Это ожидаемое поведение и не свидетельствует о проблемах: такие ссылки корректны, потому что к моменту запуска клона все необходимые данные уже были перенесены на новые диски.
 {% endalert %}
 
+В следующем примере показано клонирование ВМ с именем `database` и подключенного к ней диска `database-root`:
+
+Пример с переименованием конкретных ресурсов:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineOperation
+metadata:
+  name: clone-database
+spec:
+  type: Clone
+  virtualMachineName: database
+  clone:
+    mode: Strict
+    nameReplacements:
+      - from:
+          kind: VirtualMachine
+          name: database
+        to:
+          name: database-clone
+      - from:
+          kind: VirtualDisk
+          name: database-root
+        to:
+          name: database-clone-root
+```
+
+В результате будет создана ВМ с именем `database-clone` и диск с именем `database-clone-root`.
+
+Пример с использованием префикса для всех ресурсов:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineOperation
+metadata:
+  name: clone-database
+spec:
+  type: Clone
+  virtualMachineName: database
+  clone:
+    mode: Strict
+    customization:
+      namePrefix: clone-
+      nameSuffix: -prod
+```
+
+В результате будет создана ВМ с именем `clone-database-prod` и диск с именем `clone-database-root-prod`.
+
 ### Создание клона из снимка ВМ
 
 Клонирование ВМ из снимка выполняется с использованием ресурса VirtualMachineSnapshotOperation с типом операции `CreateVirtualMachine`.
 
-Пример создания клона ВМ из снимка:
+Для создания клона ВМ из снимка используйте следующий ресурс:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -374,9 +436,63 @@ spec:
 
 Параметры `nameReplacements` и `customization` настраиваются в блоке `.spec.createVirtualMachine` (см. [общее описание](#создание-клона-вм) выше).
 
+Чтобы посмотреть список ресурсов, сохранённых в снимке, используйте команду:
+
+```bash
+d8 k get vmsnapshot <snapshot-name> -o jsonpath='{.status.resources}' | jq
+```
+
 {% alert level="info" %}
 При клонировании ВМ из снимка связанные с ней диски также создаются из соответствующих снимков, поэтому в спецификации диска будет указан параметр `dataSource` со ссылкой на нужный снимок диска.
 {% endalert %}
+
+В следующем примере показано клонирование из снимка ВМ с именем `database-snapshot`, который содержит ВМ `database` и диск `database-root`:
+
+Пример с переименованием конкретных ресурсов:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineSnapshotOperation
+metadata:
+  name: clone-database-from-snapshot
+spec:
+  type: CreateVirtualMachine
+  virtualMachineSnapshotName: database-snapshot
+  createVirtualMachine:
+    mode: Strict
+    nameReplacements:
+      - from:
+          kind: VirtualMachine
+          name: database
+        to:
+          name: database-clone
+      - from:
+          kind: VirtualDisk
+          name: database-root
+        to:
+          name: database-clone-root
+```
+
+В результате будет создана ВМ с именем `database-clone` и диск с именем `database-clone-root`.
+
+Пример с использованием префикса для всех ресурсов:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineSnapshotOperation
+metadata:
+  name: clone-database-from-snapshot
+spec:
+  type: CreateVirtualMachine
+  virtualMachineSnapshotName: database-snapshot
+  createVirtualMachine:
+    mode: Strict
+    customization:
+      namePrefix: clone-
+      nameSuffix: -prod
+```
+
+В результате будет создана ВМ с именем `clone-database-prod` и диск с именем `clone-database-root-prod`.
 
 ## Экспорт данных
 
@@ -389,13 +505,13 @@ spec:
 Пример: экспорт диска (выполняется на узле кластера):
 
 ```bash
-d8 data download -n <namespace> vd/<virtual-disk-name> -o file.img
+d8 data export download -n <namespace> vd/<virtual-disk-name> -o file.img
 ```
 
 Пример: экспорт снимка диска (выполняется на узле кластера):
 
 ```bash
-d8 data download -n <namespace> vds/<virtual-disksnapshot-name> -o file.img
+d8 data export download -n <namespace> vd/<virtual-disk-name> -o file.img
 ```
 
 Если вы выполняете экспорт данных не с узла кластера (например, с вашей локальной машины), используйте флаг `--publish`.
