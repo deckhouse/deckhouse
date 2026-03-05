@@ -351,20 +351,26 @@ git:
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+- url: {{ .SOURCE_REPO }}/istio/proxy.git
+  tag: {{ $istioVersion }}
+  add: /
+  to: /src/proxy
+  stageDependencies:
+    install:
+    - '**/*'
+- url: {{ .SOURCE_REPO }}/llvm/llvm-project.git
+  tag: {{ $llvmRev }}
+  add: /
+  to: /src/llvm
+  excludePaths:
+  - llvm/utils/git
+  - mlir/utils/vscode
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
-  - cd /src/proxy/
-  - git apply --verbose /patches/*.patch
-  - git clone --branch "{{ $llvmRev }}" $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-project.git /src/llvm
-  - rm -rf /src/llvm/.git
-
-  # getting rid of unused vulnerable code
-  - rm -rf /src/llvm/llvm/utils/git
-  - rm -rf /src/llvm/mlir/utils/vscode
+  - cd /src/proxy/ && git apply --verbose /patches/*.patch
   - rm -rf /src/llvm/third-party/benchmark && mkdir /src/llvm/third-party/benchmark
   - touch /src/llvm/third-party/benchmark/placeholder.txt
 ---
