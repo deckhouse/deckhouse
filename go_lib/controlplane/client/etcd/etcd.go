@@ -113,7 +113,9 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	logger.Info(fmt.Sprintf("TEST-ETCD KUBECLIENT: pods: %v", pods))
 	////////////////////////////////
 
-	etcdPeerAddress := GetPeerURL(endpoint)
+	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
+	// etcdPeerAddress := GetPeerURL(endpoint)
+	/////////////////////////////////////////////////////////////////////
 
 	var cluster []Member
 	var etcdClient *Client
