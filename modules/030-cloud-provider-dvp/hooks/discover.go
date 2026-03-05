@@ -194,6 +194,7 @@ func handleDiscoveryDataStorageClasses(
 			VolumeBindingMode:    sc.VolumeBindingMode,
 			ReclaimPolicy:        sc.ReclaimPolicy,
 			AllowVolumeExpansion: sc.AllowVolumeExpansion,
+			IsDefault:            sc.IsDefault,
 		}
 		storageClasses = append(storageClasses, sc)
 	}
@@ -239,6 +240,7 @@ type storageClass struct {
 	VolumeBindingMode    string `json:"volumeBindingMode"`
 	ReclaimPolicy        string `json:"reclaimPolicy"`
 	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
+	IsDefault            bool   `json:"isDefault"`
 }
 
 func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {
@@ -257,11 +259,21 @@ func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {
 		allowVolumeExpansion = *sc.AllowVolumeExpansion
 	}
 
+	isDefault := false
+	if sc.Annotations != nil {
+		if val, ok := sc.Annotations["storageclass.kubernetes.io/is-default-class"]; ok && strings.ToLower(val) == "true" {
+			isDefault = true
+		} else if val, ok := sc.Annotations["storageclass.beta.kubernetes.io/is-default-class"]; ok && strings.ToLower(val) == "true" {
+			isDefault = true
+		}
+	}
+
 	return storageClass{
 		Name:                 sc.Name,
 		DVPStorageClass:      sc.Parameters["dvpStorageClass"],
 		VolumeBindingMode:    string(volumeBindingMode),
 		ReclaimPolicy:        string(reclaimPolicy),
 		AllowVolumeExpansion: allowVolumeExpansion,
+		IsDefault:            isDefault,
 	}
 }
