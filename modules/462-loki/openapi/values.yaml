@@ -24,10 +24,10 @@ properties:
         properties:
           cert:
             type: string
-            default: ""
           key:
             type: string
-            default: ""
+          ca: 
+            type: string
       pvcSize:
         type: integer
         format: int64

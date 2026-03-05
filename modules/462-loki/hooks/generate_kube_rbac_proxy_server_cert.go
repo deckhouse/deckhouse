@@ -155,7 +155,7 @@ func generateOrRotateLokiKubeRbacProxyServerCert(_ context.Context, input *go_ho
 		return fmt.Errorf("generate loki kube-rbac-proxy server certificate: %w", err)
 	}
 
-	input.Values.Set("loki.internal.kubeRbacProxyTLS", map[string]string{"cert": issued.Cert, "key": issued.Key})
+	input.Values.Set("loki.internal.kubeRbacProxyTLS", map[string]string{"cert": issued.Cert, "key": issued.Key, "ca": caAuthority.Cert})
 
 	return nil
 }
