@@ -177,9 +177,26 @@ var _ = Describe("Module :: cloud-provider-huaweicloud :: helm template ::", fun
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-			Expect(regSecret.Exists()).To(BeTrue())
-			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("huaweicloud"))))
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerRegistrationSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("huaweicloud"))))
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-huaweicloud")
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificRegistrationSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("huaweicloud"))))
+
+			providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-huaweicloud-bashible")
+			Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
+			providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
+			Expect(len(providerSpecificBashibleSecretData) == 0).To(BeTrue())
+
+			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-huaweicloud-capi")
+			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+			providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
+			Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificCAPISecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["crds/external/huaweicloudclusters.yaml"].String()) > 0).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["capi/instance-class.checksum"].String()) > 0).To(BeTrue())
 
 			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-huaweicloud", "cloud-controller-manager")
 			Expect(ccmDeployment.Exists()).To(BeTrue())
