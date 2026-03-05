@@ -45,17 +45,17 @@ type Package interface {
 // Constraints defines the scheduling requirements for a Package:
 // ordering priority, version bounds, and inter-package dependencies.
 type Constraints struct {
-	Order        Order
-	Kubernetes   *semver.Constraints // Kubernetes version constraint (e.g., ">=1.21")
-	Deckhouse    *semver.Constraints // Deckhouse version constraint
-	Dependencies map[string]Dependency
+	Order        Order                 // Scheduling priority; lower values run first.
+	Kubernetes   *semver.Constraints   // Kubernetes version constraint (e.g., ">=1.21")
+	Deckhouse    *semver.Constraints   // Deckhouse version constraint (e.g., ">=1.60")
+	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name.
 }
 
 // Dependency describes a requirement on another package, with an optional
 // semver constraint and a flag to skip the check when the target is absent.
 type Dependency struct {
-	Constraint *semver.Constraints // Semver constraint the dependency must satisfy
-	Optional   bool                // If true, the check is skipped when the dependency is absent
+	Constraint *semver.Constraints `json:"constraint" yaml:"constraint"` // Semver constraint the dependency must satisfy
+	Optional   bool                `json:"optional" yaml:"optional"`     // If true, the check is skipped when the dependency is absent
 }
 
 // Order is a numeric priority for scheduling: lower values are processed first.
