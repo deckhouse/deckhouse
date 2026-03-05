@@ -41,9 +41,8 @@ func TestNodeManager(t *testing.T) {
 	t.Run("Test NewNodeManager", TestNewNodeManager)
 }
 
-// TestNodeManager_MarkAsControlPlane_Success tests successful marking of node as control plane
 func ExistingLabelsWithEmptyTaints(t *testing.T) {
-	// Given
+
 	nodeName := "test-node"
 	initialNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -58,31 +57,25 @@ func ExistingLabelsWithEmptyTaints(t *testing.T) {
 	client := fake.NewClientset(initialNode)
 	nodeManager := NewNodeManager(client)
 
-	// When
 	err := nodeManager.MarkAsControlPlane(nodeName)
 
-	// Then
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 
-	// Verify node was updated
 	updatedNode, err := client.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Failed to get updated node: %v", err)
 	}
 
-	// Verify control plane label was added
 	if val, exists := updatedNode.Labels[constants.ControlPlaneLabelKey]; !exists || val != "" {
 		t.Errorf("Expected label %s='' to be added, got labels: %v", constants.ControlPlaneLabelKey, updatedNode.Labels)
 	}
 
-	// Verify existing labels are preserved
 	if val, exists := updatedNode.Labels["existing-label"]; !exists || val != "value" {
 		t.Errorf("Expected existing label to be preserved, got: %v", val)
 	}
 
-	// Verify control plane taint was added
 	foundTaint := false
 	for _, taint := range updatedNode.Spec.Taints {
 		if taint.Key == constants.ControlPlaneTaintKey &&
@@ -97,10 +90,8 @@ func ExistingLabelsWithEmptyTaints(t *testing.T) {
 	}
 }
 
-// TestNodeManager_MarkAsControlPlane_NodeWithNoTaintsWasTaintedSuccessfullyWithNewTaint
-// This is the specific test case requested
 func NoExistingTaints(t *testing.T) {
-	// Given: Node with no existing taints
+
 	nodeName := "clean-node"
 	initialNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -108,22 +99,19 @@ func NoExistingTaints(t *testing.T) {
 			Labels: map[string]string{},
 		},
 		Spec: corev1.NodeSpec{
-			Taints: []corev1.Taint{}, // Empty taints slice
+			Taints: []corev1.Taint{},
 		},
 	}
 
 	client := fake.NewClientset(initialNode)
 	nodeManager := NewNodeManager(client)
 
-	// When
 	err := nodeManager.MarkAsControlPlane(nodeName)
 
-	// Then
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 
-	// Verify the node now has exactly one taint
 	updatedNode, err := client.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Failed to get updated node: %v", err)
@@ -134,7 +122,6 @@ func NoExistingTaints(t *testing.T) {
 			len(updatedNode.Spec.Taints), updatedNode.Spec.Taints)
 	}
 
-	// Verify it's the correct control plane taint
 	taint := updatedNode.Spec.Taints[0]
 	if taint.Key != constants.ControlPlaneTaintKey {
 		t.Errorf("Expected taint key %s, got %s",
@@ -149,9 +136,8 @@ func NoExistingTaints(t *testing.T) {
 	}
 }
 
-// TestNodeManager_MarkAsControlPlane_NodeWithExistingTaints tests merging with existing taints
 func ExistingTaint(t *testing.T) {
-	// Given: Node with existing taints
+
 	nodeName := "node-with-taints"
 	existingTaintKey := "existing-taint"
 	initialNode := &corev1.Node{
@@ -173,15 +159,12 @@ func ExistingTaint(t *testing.T) {
 	client := fake.NewClientset(initialNode)
 	nodeManager := NewNodeManager(client)
 
-	// When
 	err := nodeManager.MarkAsControlPlane(nodeName)
 
-	// Then
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 
-	// Verify both taints exist
 	updatedNode, err := client.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Failed to get updated node: %v", err)
@@ -192,7 +175,6 @@ func ExistingTaint(t *testing.T) {
 			len(updatedNode.Spec.Taints), updatedNode.Spec.Taints)
 	}
 
-	// Verify both taints are present
 	foundControlPlaneTaint := false
 	foundExistingTaint := false
 
@@ -213,24 +195,20 @@ func ExistingTaint(t *testing.T) {
 	}
 }
 
-// TestNodeManager_MarkAsControlPlane_NodeNotFound tests error when node doesn't exist
 func NodeDoesNotExist(t *testing.T) {
-	// Given: No node in the fake client
+
 	client := fake.NewClientset()
 	nodeManager := NewNodeManager(client)
 
-	// When
 	err := nodeManager.MarkAsControlPlane("non-existent-node")
 
-	// Then
 	if err == nil {
 		t.Fatal("Expected error when node doesn't exist")
 	}
 }
 
-// TestNodeManager_MarkAsControlPlane_LabelUpdateFails tests label update failure
 func LabelUpdateFail(t *testing.T) {
-	// Given: Mock client that fails on update
+
 	nodeName := "test-node"
 	initialNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -242,7 +220,6 @@ func LabelUpdateFail(t *testing.T) {
 		},
 	}
 
-	// Create a failing mock client
 	mockClient := &mockFailingClient{
 		Clientset:  fake.NewClientset(initialNode),
 		failUpdate: true,
@@ -250,18 +227,15 @@ func LabelUpdateFail(t *testing.T) {
 
 	nodeManager := NewNodeManager(mockClient)
 
-	// When
 	err := nodeManager.MarkAsControlPlane(nodeName)
 
-	// Then
 	if err == nil {
 		t.Fatal("Expected error when label update fails")
 	}
 }
 
-// TestNodeManager_MarkAsControlPlane_TaintUpdateFails tests taint update failure
 func TaintsUpdateFail(t *testing.T) {
-	// Given: Mock client that fails on second update (taint update)
+
 	nodeName := "test-node"
 	initialNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -273,7 +247,6 @@ func TaintsUpdateFail(t *testing.T) {
 		},
 	}
 
-	// Create a mock that fails on the second Update call
 	mockClient := &mockFailingClient{
 		Clientset:        fake.NewClientset(initialNode),
 		failSecondUpdate: true,
@@ -282,18 +255,15 @@ func TaintsUpdateFail(t *testing.T) {
 
 	nodeManager := NewNodeManager(mockClient)
 
-	// When
 	err := nodeManager.MarkAsControlPlane(nodeName)
 
-	// Then
 	if err == nil {
 		t.Fatal("Expected error when taint update fails")
 	}
 }
 
-// TestNodeManager_MarkAsControlPlane_OverwritesExistingControlPlaneTaint tests taint replacement
 func OverwriteExistingTaint(t *testing.T) {
-	// Given: Node with existing control plane taint with different effect
+
 	nodeName := "node-with-existing-cp-taint"
 	initialNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -305,7 +275,7 @@ func OverwriteExistingTaint(t *testing.T) {
 				{
 					Key:    constants.ControlPlaneTaintKey,
 					Value:  "old-value",
-					Effect: corev1.TaintEffectNoExecute, // Different effect
+					Effect: corev1.TaintEffectNoExecute,
 				},
 			},
 		},
@@ -314,15 +284,12 @@ func OverwriteExistingTaint(t *testing.T) {
 	client := fake.NewClientset(initialNode)
 	nodeManager := NewNodeManager(client)
 
-	// When
 	err := nodeManager.MarkAsControlPlane(nodeName)
 
-	// Then
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 
-	// Verify only one control plane taint exists with correct values
 	updatedNode, err := client.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Failed to get updated node: %v", err)
@@ -347,9 +314,8 @@ func OverwriteExistingTaint(t *testing.T) {
 	}
 }
 
-// TestNodeManager_MarkAsControlPlane_PreservesExistingLabels tests label preservation
 func PreservesExistingLabels(t *testing.T) {
-	// Given: Node with multiple existing labels
+
 	nodeName := "node-with-labels"
 	initialNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -368,15 +334,12 @@ func PreservesExistingLabels(t *testing.T) {
 	client := fake.NewClientset(initialNode)
 	nodeManager := NewNodeManager(client)
 
-	// When
 	err := nodeManager.MarkAsControlPlane(nodeName)
 
-	// Then
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 
-	// Verify all existing labels are preserved plus control plane label
 	updatedNode, err := client.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Failed to get updated node: %v", err)
@@ -405,7 +368,6 @@ func PreservesExistingLabels(t *testing.T) {
 	}
 }
 
-// Mock client for testing failures
 type mockFailingClient struct {
 	*fake.Clientset
 	failUpdate       bool
@@ -448,7 +410,6 @@ func (m *mockNodeInterface) Update(ctx context.Context, node *corev1.Node, opts 
 	return m.NodeInterface.Update(ctx, node, opts)
 }
 
-// Test helpers
 func TestNewNodeManager(t *testing.T) {
 	client := fake.NewClientset()
 	nodeManager := NewNodeManager(client)
