@@ -1,10 +1,10 @@
 package kubeadmapp
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/errors"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -15,12 +15,12 @@ func ToClientSet(config *clientcmdapi.Config) (clientset.Interface, error) {
 	overrides := clientcmd.ConfigOverrides{Timeout: "10s"}
 	clientConfig, err := clientcmd.NewDefaultClientConfig(*config, &overrides).ClientConfig()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create API client configuration from kubeconfig")
+		return nil, fmt.Errorf("failed to create API client configuration from kubeconfig: %w", err)
 	}
 
 	client, err := clientset.NewForConfig(clientConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create API client")
+		return nil, fmt.Errorf("failed to create API client: %w", err)
 	}
 	return client, nil
 }
@@ -29,7 +29,7 @@ func ToClientSet(config *clientcmdapi.Config) (clientset.Interface, error) {
 func ClientSetFromFile(path string) (clientset.Interface, error) {
 	config, err := clientcmd.LoadFromFile(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to load admin kubeconfig")
+		return nil, fmt.Errorf("failed to load admin kubeconfig: %w", err)
 	}
 	return ToClientSet(config)
 }
@@ -40,7 +40,7 @@ func MyNewKubernetesClient() (clientset.Interface, error) {
 
 	client, err := ClientSetFromFile(pathAdmin)
 	if err != nil {
-		return nil, errors.Wrap(err, "[preflight] couldn't create Kubernetes client")
+		return nil, fmt.Errorf("[preflight] couldn't create Kubernetes client: %w", err)
 	}
 	return client, nil
 }
