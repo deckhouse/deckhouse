@@ -139,7 +139,7 @@ func generateOrRotateLokiKubeRbacProxyServerCert(_ context.Context, input *go_ho
 			break
 		}
 
-		input.Values.Set("loki.internal.kubeRbacProxyTLS", map[string]string{"cert": existing.Cert, "key": existing.Key})
+		input.Values.Set("loki.internal.kubeRbacProxyTLS", map[string]string{"cert": existing.Cert, "key": existing.Key, "ca": caAuthority.Cert})
 		return nil
 	}
 

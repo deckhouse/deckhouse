@@ -29,7 +29,7 @@ properties:
             default: ""
           ca: 
             type: string
-            default: "ß"
+            default: ""
       pvcSize:
         type: integer
         format: int64
