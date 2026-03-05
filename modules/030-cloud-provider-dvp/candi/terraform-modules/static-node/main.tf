@@ -132,6 +132,7 @@ locals {
   not_running_fail_re_messages = [
     "exceeded quota",
     "Preemption is not helpful for scheduling",
+    "(?:F|f)orbidden",
   ]
 }
 
