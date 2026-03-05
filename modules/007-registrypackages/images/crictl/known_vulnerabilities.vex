@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -45,7 +45,36 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость CVE-2025-13281 затрагивает серверный компонент kube-controller-manager при работе с Portworx StorageClass. Сrictl не содержит активного кода, выполняющего уязвимые операции управления хранилищами в control plane.",
       "timestamp": "2026-01-21T10:25:02Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.25.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
+      "timestamp": "2026-03-04T09:38:17.737566Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
+      "timestamp": "2026-03-04T09:38:39.451994Z"
     }
   ],
-  "timestamp": "2026-01-21T10:25:02Z"
+  "timestamp": "2026-01-21T10:25:02Z",
+  "last_updated": "2026-03-04T09:38:39Z"
 }
