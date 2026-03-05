@@ -39,7 +39,7 @@ spec:
                   description: |
                     Название Gateway API ListenerSet-ресурса, который будет использоваться для обслуживания HTTPRoute-ресурса.
                 applicationHTTPRouteParentRefNamespace:
-                  description:
+                  description: |
                     Название пространства имен, в котором располагается Gateway API ListenerSet-ресурс обслуживающий HTTPRoute-ресурс.
                 applicationHTTPRouteParentRefSectionName:
                   description: |
