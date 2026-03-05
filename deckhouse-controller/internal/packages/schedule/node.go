@@ -15,6 +15,8 @@
 package schedule
 
 import (
+	"maps"
+
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
@@ -63,16 +65,17 @@ type Order uint
 // It tracks lifecycle state, dependency edges, and the checker chain
 // used to evaluate eligibility on each scheduling pass.
 type node struct {
-	name    string
-	version *semver.Version
+	name    string          // Unique package name; also used as the graph vertex key.
+	version *semver.Version // Current installed version; used by dependency checkers of followers.
 
-	state nodeState
-	order Order
+	state nodeState // Lifecycle phase: idle → scheduled → active.
+	order Order     // Scheduling priority; lower values run before higher ones.
 
-	status checker.Result
+	status checker.Result // Last computed enabled/disabled result from the checker chain.
 
-	followees map[string]struct{}
-	followers map[string]struct{}
+	followees    map[string]struct{}   // Packages this node waits for before it can be scheduled.
+	followers    map[string]struct{}   // Packages that are waiting on this node to become active.
+	dependencies map[string]Dependency // Declared dependency constraints (version bounds, optional flag).
 
 	checkers []checker.Checker // Ordered list of checkers to evaluate
 }
@@ -81,13 +84,29 @@ type node struct {
 // directions, attaches version/condition/dependency checkers, and inserts the
 // node into the graph. It does NOT trigger a scheduling pass — the caller is
 // responsible for that.
+//
+// If a node with the same name already exists (version update), its stale
+// reverse edges are cleaned up before the new node is inserted. This prevents
+// old followees from keeping the package as a follower after its constraints change.
 func (s *Scheduler) addNode(pkg Package) {
+	// Clean up stale reverse edges from the previous node (if any).
+	// Without this, a dependency dropped in the new version would still
+	// hold a followers["name"] reference and spuriously trigger this node.
+	if old, ok := s.nodes[pkg.GetName()]; ok {
+		for dep := range old.followees {
+			if parent, ok := s.nodes[dep]; ok {
+				delete(parent.followers, old.name)
+			}
+		}
+	}
+
 	n := &node{
-		name:      pkg.GetName(),
-		version:   pkg.GetVersion(),
-		state:     nodeStateIdle,
-		followees: make(map[string]struct{}),
-		followers: make(map[string]struct{}),
+		name:         pkg.GetName(),
+		version:      pkg.GetVersion(),
+		state:        nodeStateIdle,
+		followees:    make(map[string]struct{}),
+		followers:    make(map[string]struct{}),
+		dependencies: maps.Clone(pkg.GetConstraints().Dependencies),
 	}
 
 	constraints := pkg.GetConstraints()
