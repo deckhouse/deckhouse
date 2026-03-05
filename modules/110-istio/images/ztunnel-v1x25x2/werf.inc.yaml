@@ -10,11 +10,6 @@ import:
   - image: libs/glibc-v2.41
     add: /lib64
     to: /lib64
-    includePaths:
-    - libc.so.6
-    - libm.so.6
-    - ld-linux-x86-64.so.2
-    - libc.musl-x86_64.so.1
     before: install
   - image: libs/xz-v5.8.1
     add: /usr/lib
