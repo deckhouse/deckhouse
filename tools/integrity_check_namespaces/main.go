@@ -130,6 +130,18 @@ func initFlags() {
 	}
 }
 
+func parseEnabledModulesConfig(editions editionsFile, edition string) enabledModules {
+	res := make(enabledModules)
+	for _, ed := range editions.Editions {
+		if ed.Name == edition {
+			for _, module := range ed.AvailableModules {
+				res[module] = struct{}{}
+			}
+		}
+	}
+	return res
+}
+
 // editionsFile is used to read availableModules from editions.yaml.
 type editionsFile struct {
 	Editions []struct {
@@ -148,18 +160,6 @@ func parseEditionsFile(p string) editionsFile {
 		panic(fmt.Errorf("cannot parse editions file: %v", err))
 	}
 	return editions
-}
-
-func parseEnabledModulesConfig(editions editionsFile, edition string) enabledModules {
-	res := make(enabledModules)
-	for _, ed := range editions.Editions {
-		if ed.Name == edition {
-			for _, module := range ed.AvailableModules {
-				res[module] = struct{}{}
-			}
-		}
-	}
-	return res
 }
 
 func parseConfig(p string) Config {
