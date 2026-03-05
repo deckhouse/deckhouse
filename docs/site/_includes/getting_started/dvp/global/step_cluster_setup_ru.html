@@ -3,7 +3,89 @@
 ## Укажите параметры кластера
 
 <div class="form">
-{%- if page.platform_type == 'baremetal' %}
+{%- if page.platform_type == 'dvp' %}
+  <h3>Сетевые настройки кластера</h3>
+
+  <div class="form__row">
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label" title="Укажите подсеть узлов кластера">
+          Подсеть узлов кластера (internalNetworkCIDRs) <span style="color: red;">*</span>
+        </label>
+        <input class="textfield"
+          type="text" id="internalnetworkcidrs"
+          name="internalnetworkcidrs" placeholder="Например, 10.10.0.0/16"
+          autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">Введите подсеть в формате CIDR (например, <code>10.10.0.0/16</code>). Это обязательное поле.</span>
+        <span class="info">
+          Подсеть, используемая для узлов кластера. Должна покрывать все IP-адреса узлов кластера. Это обязательное поле. Убедитесь, что подсеть не пересекается с другими подсетями (подсетями подов, сервисов и виртуальных машин).
+        </span>
+      </div>
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label" title="Укажите подсеть виртуальных машин">
+          Подсеть виртуальных машин (virtualMachineCIDRs) <span style="color: red;">*</span>
+        </label>
+        <input class="textfield"
+          type="text" id="virtualmachinecidrs"
+          name="virtualmachinecidrs" placeholder="Например, 10.10.0.0/16"
+          autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">Введите подсеть в формате CIDR (например, <code>10.20.0.0/16</code>). Это обязательное поле.</span>
+        <span class="info">
+          Подсеть, используемая для виртуальных машин в кластере. Это обязательное поле. Убедитесь, что подсеть не пересекается с другими подсетями.
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="form__row">
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label" title="Укажите подсеть подов кластера">
+          Подсеть подов (podSubnetCIDR)
+        </label>
+        <input class="textfield"
+          type="text" id="podsubnetcidr"
+          name="podsubnetcidr" placeholder="10.115.0.0/16"
+          autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">Введите подсеть в формате CIDR (например, <code>10.115.0.0/16</code>).</span>
+        <span class="info">
+          Подсеть, используемая для назначения IP-адресов подам (контейнерам) в кластере. По умолчанию: <code>10.115.0.0/16</code>. Если не указано, будет использовано значение по умолчанию.
+        </span>
+      </div>
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label" title="Укажите подсеть сервисов кластера">
+          Подсеть сервисов (serviceSubnetCIDR)
+        </label>
+        <input class="textfield"
+          type="text" id="servicesubnetcidr"
+          name="servicesubnetcidr" placeholder="10.225.0.0/16"
+          autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">Введите подсеть в формате CIDR (например, <code>10.225.0.0/16</code>).</span>
+        <span class="info">
+          Подсеть, используемая для назначения IP-адресов сервисам Kubernetes (ClusterIP). По умолчанию: <code>10.225.0.0/16</code>. Если не указано, будет использовано значение по умолчанию.
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="form__row">
+    <div style="flex: 1; min-width: 250px;">
+      <label class="label" title="Укажите IP-адрес worker-узла">
+        IP-адрес worker-узла <span style="color: red;">*</span>
+      </label>
+      <input class="textfield"
+        type="text" id="workernodeip"
+        name="workernodeip" placeholder="192.168.1.11"
+        autocomplete="off" />
+      <span class="info invalid-message invalid-message-main">Введите IP-адрес worker-узла. Это обязательное поле.</span>
+      <span class="info">
+        IP-адрес worker-узла кластера. Это обязательное поле.
+      </span>
+    </div>
+  </div>
+
+  <h3>Настройки DNS</h3>
+
   <div class="form__row">
     <label class="label" title="Укажите шаблон DNS, который будет использовать кластер">
       Шаблон для DNS-имен кластера
@@ -22,148 +104,89 @@
       Если у вас нет возможности завести wildcard-записи DNS, для тестирования вы можете воспользоваться, например, сервисом <a href="https://sslip.io/">sslip.io</a> или аналогами.
     </span>
   </div>
-{%- endif %}
 
-{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
-  <div class="form__row">
-    <label class="label" title="Укажите публичную часть SSH-ключа доступа к узлам кластера">
-      Публичная часть SSH-ключа доступа к узлам кластера
-    </label>
-    <input
-      class="textfield"
-      type="text" id="sshkey"
-      name="sshkey" placeholder="ssh-ed25519 ..."
-      autocomplete="off" />
-    <span class="info">
-       Этот ключ передается cloud-провайдеру в процессе создания виртуальной машины.
-    </span>
-  </div>
-{%- endunless %}
-{%- if page.platform_code == 'bm-private' %}
-
-<!-- proxy block -->
-  <div class="form__row">
-    <label class="label" title="Укажите адрес proxy-сервера для HTTP-трафика">
-      Адрес proxy-сервера для HTTP-трафика (примеры: <code>http://proxy.company.my</code>, <code>https://user1:p@ssword@proxy.company.my:8443</code>)
-    </label>
-    <input
-      class="textfield"
-      type="text" id="proxyHttpURI"
-      name="proxyHttpURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
-      autocomplete="off"/>
-    <span class="info invalid-message invalid-message-main">Адрес прокси-сервера должен совпадать с шаблоном <code>http://proxy.company.my</code> или <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
-    <span class="info invalid-message invalid-message-example-com">Пожалуйста, не используйте домен <code>proxy.company.my</code>.</span>
-    <span class="info">
-         Оставьте пустым, если proxy-сервер для HTTP-трафика не используется.
-      </span>
-  </div>
+  <h3>Настройки NFS-хранилища</h3>
 
   <div class="form__row">
-    <label class="label" title="Укажите адрес proxy-сервера для HTTPS-трафика">
-      Адрес proxy-сервера для HTTPS-трафика (примеры: <code>http://proxy.company.my</code>, <code>https://user1:p@ssword@proxy.company.my:8443</code>)
-    </label>
-    <input
-      class="textfield"
-      type="text" id="proxyHttpsURI"
-      name="proxyHttpsURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
-      autocomplete="off"/>
-    <span class="info invalid-message invalid-message-main">Адрес прокси-сервера должен совпадать с шаблоном <code>http://proxy.company.my</code> или <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
-    <span class="info invalid-message invalid-message-example-com">Пожалуйста, не используйте домен <code>proxy.company.my</code>.</span>
-    <span class="info">
-        Оставьте пустым, если proxy-сервер для HTTPS-трафика не используется.
-      </span>
-  </div>
-
-  <div class="form__row">
-    <label class="label" title="Список IP-адресов и доменных имен для которых проксирование не применяется">
-      Список IP-адресов и доменных имен для которых проксирование не применяется (через запятую). Также укажите здесь подсеть узлов кластера.
-    </label>
-    <input
-      class="textfield"
-      type="text" id="noProxyAddressList"
-      name="noProxyAddressList" placeholder=""
-      autocomplete="off"/>
-    <span class="info invalid-message invalid-message-main">Адреса должны совпадать с шаблоном <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>.</span>
-    <span class="info invalid-message invalid-message-example-com">Пожалуйста, не используйте домен <code>example.com</code>.</span>
-    <span class="info">
-         Укажите список IP-адресов, сетей и доменных имен, к которым есть доступ напрямую, без использования proxy-сервера. В том числе укажите все подсети узлов кластера, если кластере предполагается взаимодействие подов с сервисами, расположенными в сети узлов. Для настройки wildcard-доменов используйте написание вида ".example.com" (пример: <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>).
-      </span>
-  </div>
-
-  <!-- registry block -->
-<div markdown="1">
-### Параметры доступа к хранилищу образов контейнеров (или проксирующему registry)
-
-> Не используйте учетную запись администратора registry для доступа Deckhouse Virtualization Platform к registry. Создайте для Deckhouse Virtualization Platform отдельную учетную запись с правами только на чтение и только в пределах нужного репозитория в registry. Ознакомьтесь с [примером создания](/products/kubernetes-platform/documentation/v1/installing/#особенности-настройки-nexus) такой учетной записи.
->
-> За подробностями об особенностях настройки стороннего container registry обратитесь к [документации по установке](/products/kubernetes-platform/documentation/v1/installing/#установка-deckhouse-kubernetes-platform-из-стороннего-registry).
-</div>
-
-  <div class="form__row">
-    <label class="label" title="Укажите префикс имени образов контейнеров Deckhouse">
-      Префикс имени образов контейнеров Deckhouse (например, для публичных образов Deckhouse EE — <code>registry.deckhouse.ru/deckhouse/ee</code>).
-    </label>
-    <input
-      class="textfield"
-      type="text" id="registryImagesRepo"
-      name="registryImagesRepo" placeholder=""
-      autocomplete="off" />
-    <span class="info">
-       По указанному адресу и пути должны быть доступны образы Deckhouse.
-    </span>
-  </div>
-
-  <div class="form__row">
-    <label class="label" title="Права доступа к хранилищу образов контейнеров в Base64">
-      Права доступа к хранилищу образов контейнеров <strong>в Base64</strong>.
-    </label>
-    <input
-      class="textfield"
-      type="text" id="registryDockerCfg"
-      name="registryDockerCfg" placeholder=""
-      autocomplete="off" />
-    <span class="info">
-      Строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это <code>$HOME/.docker/config.json</code>), закодированная в Base64.<br />Подробнее про этот параметр читайте в <a href="/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg">документации ресурса InitConfiguration</a>.
-    </span>
-    <span class="info">
-      В случае использования анонимного доступа к хранилищу образов контейнеров не заполняйте это поле.
-    </span>
-  </div>
-
-  <div class="form__row">
-    <div class="form__row--wrap">
-      <label for="registryScheme" class="label" title="Отметьте, если хранилище образов контейнеров использует протокол HTTP, а не HTTPS">
-        Хранилище образов контейнеров использует протокол <code>HTTP</code>.
-      </label>
-      <input
-        type="checkbox" id="registryScheme"
-        name="registryScheme" />
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 300px;">
+        <label class="label" title="Укажите путь к экспортируемому каталогу на NFS-сервере, который будет использоваться для хранения данных">
+          Путь к экспортируемому каталогу на NFS-сервере
+        </label>
+        <input class="textfield"
+          type="text" id="nfsshare"
+          name="nfsshare" placeholder="/srv/nfs/dvp"
+          autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">Введите абсолютный путь к каталогу на NFS-сервере. Путь должен начинаться с <code>/</code> и содержать только буквы, цифры, дефисы, подчеркивания и слэши.</span>
+        <span class="info">
+          Абсолютный путь к экспортируемому каталогу на NFS-сервере. Используется для хранения метрик компонентов кластера (Prometheus) и дисков виртуальных машин. Пример: <code>/srv/nfs/dvp</code>. Каталог должен быть экспортирован через NFS и доступен для записи.
+        </span>
+      </div>
+      <div style="flex: 1; min-width: 300px;">
+        <label class="label" title="Укажите IP-адрес или hostname NFS-сервера">
+          IP-адрес или hostname NFS-сервера
+        </label>
+        <input class="textfield"
+          type="text" id="nfshost"
+          name="nfshost" placeholder="192.168.1.100"
+          autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">Введите IP-адрес (например, <code>192.168.1.100</code>) или hostname (например, <code>nfs.example.com</code>) NFS-сервера.</span>
+        <span class="info">
+          IP-адрес или доменное имя NFS-сервера, доступное из всех узлов кластера. Убедитесь, что сервер доступен по сети и порт NFS (обычно 2049) не заблокирован файрволом.
+        </span>
+      </div>
     </div>
-    <span class="info">
-       Отметьте, если указанное хранилище образов контейнеров работает по протоколу HTTP, а не HTTPS.
-    </span>
   </div>
 
-  <div class="form__row registryca-block" >
-    <label class="label" title="Корневой сертификат, которым можно проверить сертификат хранилища образов контейнеров (например, если хранилище использует самоподписанный сертификат)">
-      Корневой SSL-сертификат, которым можно проверить SSL-сертификат хранилища образов контейнеров (например, если хранилище использует самоподписанный сертификат).
+  <h3>Настройки доступа</h3>
+
+  <div class="form__row">
+    <label class="label" title="Укажите публичный SSH ключ пользователя caps для установки кластера">
+      Публичный SSH ключ пользователя caps для установки кластера <span style="color: red;">*</span>
     </label>
-    <textarea
-      id="registryCA"
-      class="textfield"
-      name="registryCA" placeholder="" rows="10" cols="80" placeholder="-----BEGIN CERTIFICATE-----
-.....
-.....
-.....
------END CERTIFICATE-----" autocomplete="off"></textarea>
+    <input class="textfield"
+      type="text" id="capssshkey"
+      name="capssshkey" placeholder="ssh-rsa ..."
+      autocomplete="off" />
+    <span class="info invalid-message invalid-message-main">Введите публичный SSH ключ пользователя caps. Это обязательное поле.</span>
     <span class="info">
-       Оставьте пустым, если хранилище образов контейнеров использует SSL-сертификат публичных центров сертификации.
+      Публичный SSH ключ пользователя caps, который будет использоваться для установки кластера. Ключ должен быть в формате OpenSSH (например, <code>ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB...</code>).
     </span>
   </div>
 
-{% endif %}
+  <div class="form__row">
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label" title="Укажите имя администратора по умолчанию">
+          Имя администратора по умолчанию <span style="color: red;">*</span>
+        </label>
+        <input class="textfield"
+          type="text" id="adminusername"
+          name="adminusername" placeholder="admin"
+          autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">Введите имя администратора по умолчанию. Это обязательное поле.</span>
+        <span class="info">
+          Имя пользователя администратора, который будет создан в кластере по умолчанию.
+        </span>
+      </div>
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label" title="Укажите пароль администратора по умолчанию">
+          Пароль администратора по умолчанию <span style="color: red;">*</span>
+        </label>
+        <input class="textfield"
+          type="password" id="adminpassword"
+          name="adminpassword" placeholder=""
+          autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">Введите пароль администратора по умолчанию. Это обязательное поле. Пароль должен содержать не менее 8 символов.</span>
+        <span class="info">
+          Пароль для пользователя администратора, который будет создан в кластере по умолчанию. Пароль должен быть достаточно надежным.
+        </span>
+      </div>
+    </div>
+  </div>
+{%- endif %}
 </div>
 
 <script type="text/javascript">
-{% include getting_started/global/partials/getting-started-setup.js.liquid %}
+{% include getting_started/dvp/global/partials/getting-started-setup.js.liquid %}
 </script>
