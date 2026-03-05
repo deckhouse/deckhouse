@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/controller/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -33,7 +34,7 @@ func (r *InstanceReconciler) reconcileInstanceFinalization(ctx context.Context, 
 		return false, err
 	}
 
-	if !controllerutil.ContainsFinalizer(instance, instanceControllerFinalizer) {
+	if !controllerutil.ContainsFinalizer(instance, common.InstanceControllerFinalizer) {
 		return false, nil
 	}
 	if !machineGone {
@@ -44,13 +45,13 @@ func (r *InstanceReconciler) reconcileInstanceFinalization(ctx context.Context, 
 }
 
 func (r *InstanceReconciler) ensureInstanceFinalizer(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
-	if controllerutil.ContainsFinalizer(instance, instanceControllerFinalizer) {
+	if controllerutil.ContainsFinalizer(instance, common.InstanceControllerFinalizer) {
 		return nil
 	}
 	log.FromContext(ctx).V(4).Info("tick", "op", "instance.finalizer.add.patch")
 
 	updated := instance.DeepCopy()
-	controllerutil.AddFinalizer(updated, instanceControllerFinalizer)
+	controllerutil.AddFinalizer(updated, common.InstanceControllerFinalizer)
 	if err := r.Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
 		return fmt.Errorf("ensure finalizer on instance %q: %w", instance.Name, err)
 	}
@@ -60,19 +61,7 @@ func (r *InstanceReconciler) ensureInstanceFinalizer(ctx context.Context, instan
 }
 
 func (r *InstanceReconciler) removeInstanceFinalizer(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
-	if !controllerutil.ContainsFinalizer(instance, instanceControllerFinalizer) {
-		return nil
-	}
-	log.FromContext(ctx).V(4).Info("tick", "op", "instance.finalizer.remove.patch")
-
-	updated := instance.DeepCopy()
-	controllerutil.RemoveFinalizer(updated, instanceControllerFinalizer)
-	if err := r.Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
-		return fmt.Errorf("remove finalizer from instance %q: %w", instance.Name, err)
-	}
-
-	*instance = *updated
-	return nil
+	return common.RemoveInstanceControllerFinalizer(ctx, r.Client, instance)
 }
 
 func (r *InstanceReconciler) reconcileLinkedMachineDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {

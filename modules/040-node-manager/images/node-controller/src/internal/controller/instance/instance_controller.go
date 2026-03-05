@@ -41,8 +41,7 @@ type InstanceReconciler struct {
 type reconcileStep func(ctx context.Context, instance *deckhousev1alpha2.Instance) (done bool, result ctrl.Result, err error)
 
 const (
-	instanceControllerFinalizer = "node-manager.hooks.deckhouse.io/instance-controller"
-	instanceRequeueInterval     = time.Minute
+	instanceRequeueInterval = time.Minute
 )
 
 func SetupInstanceController(mgr ctrl.Manager) error {

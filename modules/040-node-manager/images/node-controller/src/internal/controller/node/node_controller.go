@@ -134,7 +134,7 @@ func (r *NodeReconciler) reconcileNodeInstance(
 	log := ctrl.LoggerFrom(ctx)
 
 	if !IsStaticNode(state.node) {
-		log.V(1).Info("node is not static, skipping")
+		log.V(4).Info("reconcileNodeInstance: node is not static, skipping")
 		return true, state.result, nil
 	}
 

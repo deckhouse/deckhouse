@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/controller/common"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,8 +40,17 @@ func (r *NodeReconciler) deleteNodeBasedInstanceIfExists(ctx context.Context, na
 
 	// Delete only instances that are explicitly sourced from Node.
 	// This protects machine-backed instances and malformed objects.
-	if instance.Spec.MachineRef != nil || instance.Spec.NodeRef.Name != name {
+	isNodeBased := instance.Spec.MachineRef == nil
+	pointsToThisNode := instance.Spec.NodeRef.Name == name
+	if !isNodeBased || !pointsToThisNode {
 		return false, nil
+	}
+
+	if err := common.RemoveInstanceControllerFinalizer(ctx, r.Client, instance); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return false, nil
+		}
+		return false, fmt.Errorf("remove finalizer from node based instance %q: %w", name, err)
 	}
 
 	if err := r.Delete(ctx, instance); err != nil {

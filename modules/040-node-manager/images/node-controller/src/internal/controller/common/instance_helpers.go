@@ -25,8 +25,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+const InstanceControllerFinalizer = "node-manager.hooks.deckhouse.io/instance-controller"
 
 func EnsureInstanceExists(
 	ctx context.Context,
@@ -102,5 +105,25 @@ func SetInstancePhase(
 		return fmt.Errorf("patch instance %q phase to %q: %w", instance.Name, phase, err)
 	}
 
+	return nil
+}
+
+func RemoveInstanceControllerFinalizer(
+	ctx context.Context,
+	c client.Client,
+	instance *deckhousev1alpha2.Instance,
+) error {
+	if !controllerutil.ContainsFinalizer(instance, InstanceControllerFinalizer) {
+		return nil
+	}
+	log.FromContext(ctx).V(4).Info("tick", "op", "instance.finalizer.remove.patch")
+
+	updated := instance.DeepCopy()
+	controllerutil.RemoveFinalizer(updated, InstanceControllerFinalizer)
+	if err := c.Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
+		return fmt.Errorf("remove finalizer from instance %q: %w", instance.Name, err)
+	}
+
+	*instance = *updated
 	return nil
 }
