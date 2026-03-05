@@ -95,9 +95,13 @@ func (r *CAPIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	for _, step := range []capiReconcileStep{
+		// fetch current capi machine object from api server
 		r.reconcileCAPIMachineFetch,
+		// delete linked instance when capi machine object is gone
 		r.reconcileCAPIMachineMissingInstanceDeletion,
+		// build reconcile data from machine adapter
 		r.reconcileCAPIMachineData,
+		// reconcile linked instance spec and status from machine data
 		r.reconcileCAPIMachineInstance,
 	} {
 		done, result, err := step(ctx, state)

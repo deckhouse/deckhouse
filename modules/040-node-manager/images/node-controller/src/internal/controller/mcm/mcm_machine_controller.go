@@ -98,9 +98,13 @@ func (r *MCMMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	for _, step := range []mcmReconcileStep{
+		// fetch current mcm machine object from api server
 		r.reconcileMCMMachineFetch,
+		// delete linked instance when mcm machine object is gone
 		r.reconcileMCMMachineMissingInstanceDeletion,
+		// build reconcile data from machine adapter
 		r.reconcileMCMMachineData,
+		// reconcile linked instance spec and status from machine data
 		r.reconcileMCMMachineInstance,
 	} {
 		done, result, err := step(ctx, state)

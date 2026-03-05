@@ -93,10 +93,15 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	for _, step := range []reconcileStep{
+		// refresh bashible heartbeat condition by timeout rules
 		r.reconcileInstanceHeartbeat,
+		// derive bashible status and message from current conditions
 		r.reconcileInstanceBashibleStatus,
+		// handle deleting instance and run finalization flow
 		r.reconcileInstanceDeletion,
+		// ensure controller finalizer exists on active object
 		r.reconcileInstanceEnsureFinalizer,
+		// remove instance when both linked sources are confirmed missing
 		r.reconcileInstanceSourceExistence,
 	} {
 		done, result, err := step(ctx, instance)

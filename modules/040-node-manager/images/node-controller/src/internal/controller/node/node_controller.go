@@ -69,8 +69,11 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	for _, step := range []nodeReconcileStep{
+		// fetch current node object from api server
 		r.reconcileNodeFetch,
+		// delete node based instance when node object is gone
 		r.reconcileNodeMissingInstanceDeletion,
+		// ensure instance for static node and set running phase
 		r.reconcileNodeInstance,
 	} {
 		done, result, err := step(ctx, state)
