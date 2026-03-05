@@ -424,7 +424,23 @@ entries:
         - title:
             en: API
             ru: API
-          url: /stronghold/documentation/api/openapi.html
+          folders:
+            - title:
+                en: auth
+                ru: auth
+              url: /stronghold/documentation/api/openapi-auth.html
+            - title:
+                en: secrets
+                ru: secrets
+              url: /stronghold/documentation/api/openapi-secrets.html
+            - title:
+                en: identity
+                ru: identity
+              url: /stronghold/documentation/api/openapi-identity.html
+            - title:
+                en: system
+                ru: system
+              url: /stronghold/documentation/api/openapi-system.html
         - title:
             en: Console utilities
             ru: Консольные утилиты
