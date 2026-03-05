@@ -17,4 +17,4 @@ The Deckhouse subsystem includes the following modules:
 * [`registry`](/modules/registry/): Manages the configuration of DKP components
   responsible for working with the container registry and provides an internal image storage.
 
-At the moment, this subsection describes the [Direct mode architecture](../registry-direct-mode.html) of the `registry` module.
+At the moment, this subsection describes the [Direct mode architecture](registry-direct-mode.html) of the `registry` module.

@@ -10,7 +10,7 @@ description: Обзор архитектуры Deckhouse Kubernetes Platform.
 
 Раздел состоит из следующих подразделов:
 
-* [Модель C4](c4-model/) — обзор модели С4, используемой для визуализации архитектуры платформы, а также описание архитектуры DKP на уровнях 1 и 2 модели C4.
+* [Модель C4](c4-model.html) — обзор модели С4, используемой для визуализации архитектуры платформы, а также описание архитектуры DKP на уровнях 1 и 2 модели C4.
 * [Модули](module-development/) — описание архитектуры модулей DKP.
 * [Катастрофоустойчивость](disaster-resilience/) — описание реализованных в DKP подходов к обеспечению катастрофоустойчивости.
 * [Обновление](updating.html) — описание механизмов обновления DKP.
@@ -34,11 +34,11 @@ DKP — это платформа для управления кластерам
 
 * кластер Kubernetes;
 * контроллер Deckhouse и управляемые им модули;
-* [Bashible](cluster-and-infrastructure/bashible/) — агент, работающий на узлах кластера в виде службы, который запускает bash-скрипты для управления узлами.
+* [Bashible](cluster-and-infrastructure/bashible.html) — агент, работающий на узлах кластера в виде службы, который запускает bash-скрипты для управления узлами.
 
 Модули объединены в подсистемы в соответствии с их функциональным назначением. Контроллер Deckhouse тоже реализован в виде модуля и является единственным модулем, без которого не может функционировать платформа.
 
-Архитектура DKP в масштабе подсистем и модулей описана в подразделе [Модель C4](c4-model/).
+Архитектура DKP в масштабе подсистем и модулей описана в подразделе [Модель C4](c4-model.html).
 
 ## Модули
 
@@ -47,8 +47,8 @@ DKP — это платформа для управления кластерам
 Ключевые модули:
 
 * [`deckhouse`](/modules/deckhouse/) — контроллер Deckhouse;
-* [`control-plane-manager`](kubernetes-and-scheduling/control-plane-management/) — управляет компонентами control plane кластера;
-* [`node-manager`](cluster-and-infrastructure/node-manager/) — управляет узлами кластера.
+* [`control-plane-manager`](kubernetes-and-scheduling/control-plane-management.html) — управляет компонентами control plane кластера;
+* [`node-manager`](cluster-and-infrastructure/node-manager.html) — управляет узлами кластера.
 
 {% alert level="info" %}
 Модули [`control-plane-manager`](/modules/control-plane-manager/) и [`node-manager`](/modules/node-manager/) отсутствуют при установке платформы в существующий Managed Kubernetes-кластер.

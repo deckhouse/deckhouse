@@ -1,20 +1,22 @@
 ---
 title: "Node management"
-permalink: en/architecture/node.html
+permalink: en/architecture/cluster-and-infrastructure/node.html
+search: node management architecture, node lifecycle
+description: Node management in Deckhouse Kubernetes Platform — node types, provisioning mechanics, automatic deployment.
 ---
 
 ## Node types and addition mechanics
 
-In Deckhouse, nodes are divided into the following types:
+In Deckhouse Kubernetes Platform (DKP), nodes are divided into the following types:
 
-- **CloudEphemeral**: The nodes are automatically ordered, created, and deleted in the configured cloud provider.
-- **CloudPermanent**: Persistent nodes created and updated by [node-manager](/modules/node-manager/). The nodes differ in that their configuration is not taken from the custom resource [nodeGroup](/modules/node-manager/cr.html#nodegroup), but from a special resource `<PROVIDER>ClusterConfiguration` (for example, [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply node configuration, you need to run `dhctl converge` (by running Deckhouse installer). An example of a CloudPermanent node of a cloud cluster is a cluster master node.
+- **CloudEphemeral**: Nodes are automatically provisioned, created, and deleted in the configured cloud provider.
+- **CloudPermanent**: Persistent nodes created and updated by the [`node-manager`](/modules/node-manager/) module. The nodes differ in that their configuration comes not from the [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resource, but from a special resource &lt;PROVIDER&gt;ClusterConfiguration (for example, [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply a node configuration, you need to run `dhctl converge` (by running the DKP installer). An example of a CloudPermanent node in a cloud cluster is a cluster master node.
 - **CloudStatic**: Created manually or by any external tools, located in the same cloud that is integrated with one of the cloud provider modules:
   - CloudStatic nodes have several features related to integration with the cloud provider. These nodes are managed by the `cloud-controller-manager` component, resulting in:
     - Zone and region metadata being automatically added to the Node object.
     - When the virtual machine is deleted in the cloud, the corresponding Node object is also removed from the cluster.
     - CSI driver can be used to attach cloud volumes.
-- **Static**: a static node hosted on a bare metal or virtual machine. In the case of a cloud environment, the `cloud-controller-manager` does not manage the node even if one of the cloud providers is enabled. [Learn more about working with static nodes...](/modules/node-manager/#working-with-static-nodes).
+- **Static**: Static node hosted on a bare-metal server or a virtual machine. In the case of a cloud environment, the `cloud-controller-manager` component does not manage such a node — even if one of the cloud providers is enabled. To learn more about working with static nodes, refer to the [`node-manager` documentation](/modules/node-manager/#working-with-static-nodes).
 
 Nodes are added to the cluster by creating a NodeGroup object, which describes the type, parameters, and configuration of the node group. For CloudEphemeral groups, DKP interprets this object and automatically creates the corresponding nodes, registering them in the Kubernetes cluster. For other types (e.g., CloudPermanent or Static), node creation and registration must be done manually or via external tools.
 
@@ -26,7 +28,7 @@ Automatic deployment (in *static/hybrid* — partial), configuration, and softwa
 
 ### Kubernetes node deployment
 
-Deckhouse automatically deploys cluster nodes by performing the following **idempotent** operations:
+DKP automatically deploys cluster nodes by performing the following **idempotent** operations:
 
 - OS setup and optimization for working with `containerd` and Kubernetes:
   - Required packages are installed from distribution repositories.
@@ -70,7 +72,7 @@ Two node scaling modes are available:
 
 - **Fixed node count.**
 
-  Deckhouse will maintain the specified number of nodes (for example, by provisioning new nodes to replace failed ones).
+  DKP will maintain the specified number of nodes (for example, by provisioning new nodes to replace failed ones).
 
   To disable auto-scaling and maintain a fixed count, use the same value for `minPerZone` and `maxPerZone`.
 
@@ -79,7 +81,7 @@ Two node scaling modes are available:
 When working with static nodes, [node-manager](/modules/node-manager/) functions are limited as follows:
 
 - **No node provisioning.** Resource allocation (bare-metal servers, VMs, etc.) is manual. Further configuration (joining the cluster, monitoring, etc.) can be fully or partially automated.
-- **No auto-scaling.** Maintaining node count in a group is available using Cluster API Provider Static (via the `staticInstances.count` parameter). Deckhouse tries to keep the specified node count in the group, removing excessive nodes and configuring the new ones (from StaticInstance resources in *Pending* state).
+- **No auto-scaling.** Maintaining node count in a group is available using Cluster API Provider Static (via the `staticInstances.count` parameter). DKP tries to keep the specified node count in the group, removing excessive nodes and configuring the new ones (from StaticInstance resources in *Pending* state).
 
 Node configuration, draining, adding to the cluster and removal can be performed in one of the following ways:
 
@@ -97,7 +99,7 @@ Node configuration, draining, adding to the cluster and removal can be performed
 
 - **Manually, with transition to automatic management** via CAPS.
 
-  > Available since Deckhouse 1.63.
+  > Available since DKP 1.63.
 
   To transfer an existing cluster node under CAPS control, prepare StaticInstance and SSHCredentials as for automatic management described above, and annotate the StaticInstance resource with `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
@@ -150,6 +152,6 @@ For example, a node reboot is needed after modifying `sysctl` parameters like `k
 
 For full details, see the [NodeGroup custom resource](/modules/node-manager/cr.html#nodegroup) documentation.
 
-If InstanceClass or `instancePrefix` values change in the Deckhouse configuration, no `RollingUpdate` will occur. Instead, new MachineDeployment objects will be created and old ones removed. The number of simultaneously provisioned MachineDeployments is defined by the `cloudInstances.maxSurgePerZone` parameter.
+If InstanceClass or `instancePrefix` values change in the DKP configuration, no `RollingUpdate` will occur. Instead, new MachineDeployment objects will be created and old ones removed. The number of simultaneously provisioned MachineDeployments is defined by the `cloudInstances.maxSurgePerZone` parameter.
 
 When an update requires a node disruption, a pod eviction process is initiated. If a pod cannot be evicted, the eviction attempt is retried every 20 seconds for up to 5 minutes global timeout. After that, pods that have not been evicted are forcefully removed.

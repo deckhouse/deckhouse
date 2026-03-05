@@ -1,13 +1,14 @@
 ---
 title: "Архитектура мониторинга в Deckhouse Kubernetes Platform"
-permalink: ru/architecture/monitoring/
+permalink: ru/architecture/observability/monitoring.html
 lang: ru
 search: monitoring architecture, prometheus architecture, monitoring components, observability architecture, архитектура мониторинга, компоненты мониторинга
+description: Архитектура мониторинга в Deckhouse Kubernetes Platform.
 ---
 
 ## Состав и схема взаимодействия компонентов мониторинга
 
-![Схема взаимодействия](../../images/prometheus/prometheus_monitoring.svg)
+![Схема взаимодействия](../../../images/prometheus/prometheus_monitoring.svg)
 
 ### Компоненты, устанавливаемые DKP
 
@@ -55,7 +56,7 @@ Prometheus устанавливается модулем `prometheus-operator` D
 
 ### Что в поде с Prometheus?
 
-![Что в поде с Prometheus](../../images/operator-prometheus/pod.png)
+![Что в поде с Prometheus](../../../images/operator-prometheus/pod.png)
 
 * Два контейнера:
   * `prometheus` — сам Prometheus;
@@ -86,7 +87,7 @@ Prometheus устанавливается модулем `prometheus-operator` D
 
 * В целом Prometheus работает следующим образом:
 
-  ![Работа Prometheus](../../images/operator-prometheus/targets.png)
+  ![Работа Prometheus](../../../images/operator-prometheus/targets.png)
 
   * **(1)** Prometheus читает секцию конфига `scrape_configs`, согласно которой настраивает свой внутренний механизм Service Discovery;
   * **(2)** Механизм Service Discovery взаимодействует с API Kubernetes (в основном — получает endpoint`ы);
@@ -158,7 +159,7 @@ Prometheus устанавливается модулем `prometheus-operator` D
 
 ### Как обрабатываются Service Monitor'ы?
 
-![Как обрабатываются Service Monitor'ы](../../images/operator-prometheus/servicemonitors.png)
+![Как обрабатываются Service Monitor'ы](../../../images/operator-prometheus/servicemonitors.png)
 
 1. Prometheus Operator читает (а также следит за добавлением/удалением/изменением) Service Monitor'ы (какие именно Service Monitor'ы — указано в самом ресурсе `prometheus`, см. подробней [официальную документацию](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md)).
 1. Для каждого Service Monitor'а, если в нем НЕ указан конкретный список namespace'ов (указано `any: true`), Prometheus Operator вычисляет (обращаясь к API Kubernetes) список namespace'ов, в которых есть Service'ы (подходящие под указанные в Service Monitor'е label'ы).
@@ -169,7 +170,7 @@ Prometheus устанавливается модулем `prometheus-operator` D
 
 ### Как обрабатываются кастомные ресурсы с *rule'ами*?
 
-![Как обрабатываются кастомные ресурсы с rule'ами](../../images/operator-prometheus/rules.png)
+![Как обрабатываются кастомные ресурсы с rule'ами](../../../images/operator-prometheus/rules.png)
 
 1. Prometheus Operator следит за PrometheusRule'ами (подходящими под указанный в ресурсе `prometheus` `ruleSelector`).
 1. Если появился новый (или был удален существующий) PrometheusRule — Prometheus Operator обновляет `prometheus.yaml` (а дальше срабатывает логика в точности соответствующая обработке Service Monitor'ов, которая описана выше).

@@ -1,7 +1,9 @@
 ---
 title: Multitenancy
-permalink: en/architecture/multitenancy/
+permalink: en/architecture/iam/multitenancy.html
 lang: en
+search: multitenancy, ProjectTemplate, Project, project isolation
+description: How multitenancy works in Deckhouse Kubernetes Platform.
 ---
 
 ## Internal logic
@@ -18,7 +20,7 @@ The following custom resources are used to create a project:
 When a Project is created from a specified ProjectTemplate, the following occurs:
 
 1. The provided [parameters](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) are validated against the OpenAPI specification
-   (defined in the [`openAPI`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema) parameter of the [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) resource).
+   (defined in the [`openAPIV3Schema`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) parameter of the [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) resource).
 1. The [resource template](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is rendered using [Helm](https://helm.sh/docs/).
    The rendering values are taken from the [`parameters`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) field of the [Project](/modules/multitenancy-manager/cr.html#project) resource.
 1. A namespace is created with the same name as the [Project](/modules/multitenancy-manager/cr.html#project).

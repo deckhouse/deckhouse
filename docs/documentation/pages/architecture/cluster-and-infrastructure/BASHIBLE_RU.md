@@ -1,52 +1,54 @@
 ---
 title: Bashible
-permalink: ru/architecture/cluster-and-infrastructure/bashible/
+permalink: ru/architecture/cluster-and-infrastructure/bashible.html
 lang: ru
-search: bashible
+search: архитектура bashible, bashible-api-server
+description: Архитектура bashible в Deckhouse Kubernetes Platform — выполнение bash-скриптов для настройки узлов, работа bashible-api-server.
 ---
 
-## Bashible-скрипты/служба bashible
+## Bashible-скрипты и служба bashible
 
-Функции управления узлами реализуются при помощи запуска специальным образом написанных bash-скриптов, называемых **bashible**. Так же называется служба, которая работает на узлах кластера и используется для запуска данных скриптов. Набор скриптов называется бандлом.
+Функции управления узлами реализуются с помощью специально подготовленных bash-скриптов, называемых **bashible**. Так же называется служба, которая работает на узлах кластера и используется для запуска данных скриптов. Набор скриптов называется бандлом (bundle).
 
 Используются 4 бандла:
 
-* [скрипты, устанавливающие сам bashible](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bootstrap)
-* [скрипты, которые нужны для бутстрапа первого узла](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/cluster-bootstrap)
-* [скрипты, необходимые для настройки узла для определенного облачного провайдера (например, AWS)](https://github.com/deckhouse/deckhouse/tree/main/candi/cloud-providers/aws/bashible)
+* [скрипты установки bashible](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bootstrap);
+* [скрипты бутстрапа первого узла](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/cluster-bootstrap);
+* скрипты настройки узла для определенного облачного провайдера (например, [AWS](https://github.com/deckhouse/deckhouse/tree/main/candi/cloud-providers/aws/bashible));
 * [основные (common) скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all).
 
-Скрипты представляют собой *gotemplate*-шаблоны, что позволяет гибко настраивать узел в зависимости от нодгруппы. Сами скрипты должны быть написаны идемпотентно (так, чтобы без проблем могли быть перезапущены в случае ошибки и при повторном прогоне). Отдельный скрипт также называется степом (шагом).  
+Скрипты представляют собой *gotemplate*-шаблоны, что позволяет гибко настраивать узел в зависимости от группы. Сами скрипты должны быть написаны так, чтобы они могли корректно выполняться при повторном запуске в случае ошибки и при повторном прогоне. Отдельный скрипт называется степом (шагом).
 
-Основные этапы:
+Основные этапы настройки узла:
 
-* Конфигурируется NodeUser's для того, чтобы иметь сразу же возможность попасть на узел.
-* Устанавливаются CA-сертификаты.
-* Создаются и добавляется в PATH каталог `/opt/deckhouse/bin`, в котором хранятся бинарники.
-* Скачиваются необходимые пакеты из **registrypackages**.
-* Устанавливается и конфигурируется CRI **containerd**.
-* Скачивается и настраивается **kubernetes-api-proxy**. Компонент отвечает за доступ к API Kubernetes, представляет собой NGINX с набором апстримов до мастер-узлов. Это обеспечивает HA-доступ к API на случай, если один мастер недоступен, а также балансировку нагрузки к API.
-* Устанавливается, конфигурируется и запускается [kubelet](../../kubernetes-and-scheduling/kubelet/).
-* Запускается служба **bashible**, которая выполняет `bashible.sh` каждую минуту.
-* Перезагружается узел при необходимости.
+* Настройка NodeUser для обеспечения доступа к узлу.
+* Установка CA-сертификатов.
+* Создание и добавление в `PATH` каталога `/opt/deckhouse/bin`, в котором хранятся бинарные файлы.
+* Скачивание необходимых пакетов из `registrypackages`.
+* Установка и настройка CRI containerd.
+* Скачивание и настройка **kubernetes-api-proxy**. Компонент отвечает за доступ к API Kubernetes, представляет собой NGINX с набором upstream-серверов к master-узлам. Это обеспечивает HA-доступ к API на случай, если один master-узел недоступен, а также балансировку нагрузки к API.
+* Установка, настройка и запуск [kubelet](../kubernetes-and-scheduling/kubelet.html).
+* Запуск службы bashible, которая выполняет `bashible.sh` каждую минуту.
+* Перезагрузка узла при необходимости.
 
-## bashible-apiserver
+## Bashible-api-server
 
-Количество модификаций bashible-скриптов для разных поддерживаемых ОС очень велико, хранить их все в базе **etcd** не представляется возможным из-за ограничения на размер ключа **etcd**, также это создает нагрузку на **etcd**. По этой причине был разработан **bashible-api-server**, который генерирует bashible-скрипты из шаблонов, которые хранятся в Custom Resources.
+Учитывая большое количество модификаций bashible-скриптов для разных поддерживаемых ОС, хранить все варианты в базе etcd невозможно из-за ограничения на размер ключа, а также избыточной нагрузки на etcd. По этой причине был разработан компонент **bashible-api-server**, который генерирует bashible-скрипты из шаблонов, хранящихся в кастомных ресурсах.
 
-**bashible-api-server** представляет собой [Kubernetes Extension APIServer](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), который деплоится на Master-узлы.
-При обращении к **kube-apiserver** за ресурсами, содержащими бандлы **bashible**, **kube-apiserver** обращается к **bashible-api-server** и возвращает результат от него. Взаимодействия **bashible** и **bashible-api-server** показаны на схемах архитектуры модуля **node-manager**, например, на [схеме для Cloud Ephemeral узлов](../cloud-ephemeral-nodes/).
+Bashible-api-server представляет собой [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), который развертывается на master-узлах.
 
-**bashible-api-server** возвращает следующие ресурсы:
+При обращении к kube-apiserver за ресурсами, содержащими бандлы bashible, kube-apiserver перенаправляет запрос в bashible-api-server и возвращает сформированный результат. Взаимодействия bashible и bashible-api-server показаны на схемах архитектуры модуля `node-manager` (например, на [схеме для CloudEphemeral-узлов](cloud-ephemeral-nodes.html)).
 
-* **bootstrap-скрипт** второй фазы, который загружается из первой фазы,
-* **bashibles** - сам скрипт `bashible.sh`,
-* **nodegroupbundles** - в нем рендерится сам бандл, то есть набор скриптов для бутстрапа и конфигурирования узла.
+Bashible-api-server возвращает следующие ресурсы:
 
-Все эти ресурсы можно получить как через API, так и с помощью kubectl с указанием имени нодгруппы:
+* **bootstrap-скрипт** второй фазы, который загружается из первой фазы;
+* **bashibles** — скрипт `bashible.sh`;
+* **nodegroupbundles** — в нем рендерится бандл, включающий набор скриптов для бутстрапа и настройки узла.
 
-* `kubectl get bootstrap.bashible.deckhouse.io master -o yaml`,
-* `kubectl get bashibles.bashible.deckhouse.io master -o yaml`,
+Все эти ресурсы можно получить как через API, так и с помощью команды `kubectl`, указав имя группы узлов:
+
+* `kubectl get bootstrap.bashible.deckhouse.io master -o yaml`;
+* `kubectl get bashibles.bashible.deckhouse.io master -o yaml`;
 * `kubectl get nodegroupbundles.bashible.deckhouse.io master -o yaml`.
 
-Также **bashible-api-server** вычисляет контрольную сумму всех скриптов нодгруппы. Это необходимо для обеспечения механизма обновления и для обеспечения обновления статусов нодгруппы. Контрольные суммы записываются в секрет `d8-cloud-instance-manager/configuration-checksums`. Контрольная сумма служит для инициализации перезапуска **bashible**-скриптов на узлах в случае изменения конфигурации. Также контрольная сумма службы **bashible** сбрасывается каждые 4 часа для принудительного перезапуска **bashible**.
+Также bashible-api-server вычисляет контрольную сумму всех скриптов группы узлов. Это необходимо для реализации механизма обновления и корректного обновления статуса группы. Контрольные суммы записываются в секрет `d8-cloud-instance-manager/configuration-checksums`. Изменение контрольной суммы инициирует перезапуск bashible-скриптов на узлах при изменении конфигурации. Кроме того, контрольная сумма службы bashible сбрасывается каждые 4 часа для принудительного перезапуска bashible.

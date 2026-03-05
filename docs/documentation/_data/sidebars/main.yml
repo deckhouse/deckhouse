@@ -1101,7 +1101,7 @@ entries:
         - title:
             en: C4 model
             ru: Модель C4
-          url: /architecture/c4-model/
+          url: /architecture/c4-model.html
         - title:
             en: Modules
             ru: Модули
@@ -1169,7 +1169,7 @@ entries:
             - title:
                 en: Direct mode of registry module
                 ru: Режим Direct модуля registry
-              url: /architecture/registry-direct-mode.html
+              url: /architecture/deckhouse/registry-direct-mode.html
         - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
@@ -1181,19 +1181,19 @@ entries:
             - title:
                 en: Cluster control plane
                 ru: Control plane кластера
-              url: /architecture/kubernetes-and-scheduling/control-plane/
+              url: /architecture/kubernetes-and-scheduling/control-plane.html
             - title:
                 en: Kubelet
                 ru: Kubelet
-              url: /architecture/kubernetes-and-scheduling/kubelet/
+              url: /architecture/kubernetes-and-scheduling/kubelet.html
             - title:
                 en: Cluster control plane management
                 ru: Управление компонентами control plane кластера
-              url: /architecture/kubernetes-and-scheduling/control-plane-management/
+              url: /architecture/kubernetes-and-scheduling/control-plane-management.html
             - title:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
-              url: /architecture/vpa.html
+              url: /architecture/kubernetes-and-scheduling/vpa.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1205,43 +1205,43 @@ entries:
             - title:
                 en: Node management
                 ru: Управление узлами
-              url: /architecture/node.html
+              url: /architecture/cluster-and-infrastructure/node.html
             - title:
                 en: Bashible
                 ru: Bashible
-              url: /architecture/cluster-and-infrastructure/bashible/
+              url: /architecture/cluster-and-infrastructure/bashible.html
             - title:
-                en: node-manager module
+                en: Node-manager module
                 ru: Модуль node-manager
-              url: /architecture/cluster-and-infrastructure/node-manager/
+              url: /architecture/cluster-and-infrastructure/node-manager.html
             - title:
-                en: CloudEphemeral nodes management
+                en: CloudEphemeral node management
                 ru: Управление CloudEphemeral-узлами
-              url: /architecture/cluster-and-infrastructure/cloud-ephemeral-nodes/
+              url: /architecture/cluster-and-infrastructure/cloud-ephemeral-nodes.html
             - title:
-                en: CloudPermanent nodes management
+                en: CloudPermanent node management
                 ru: Управление CloudPermanent-узлами
-              url: /architecture/cluster-and-infrastructure/cloud-permanent-nodes/
+              url: /architecture/cluster-and-infrastructure/cloud-permanent-nodes.html
             - title:
-                en: CloudStatic nodes management
+                en: CloudStatic node management
                 ru: Управление CloudStatic-узлами
-              url: /architecture/cluster-and-infrastructure/cloud-static-nodes/
+              url: /architecture/cluster-and-infrastructure/cloud-static-nodes.html
             - title:
-                en: Static nodes management
+                en: Static node management
                 ru: Управление Static-узлами
-              url: /architecture/cluster-and-infrastructure/static-nodes/
+              url: /architecture/cluster-and-infrastructure/static-nodes.html
             - title:
-                en: Hybrid nodegroups and clusters management
+                en: Hybrid node group and cluster management
                 ru: Управление гибридными группами узлов и кластерами
-              url: /architecture/cluster-and-infrastructure/hybrid-nodegroups-and-clusters/
+              url: /architecture/cluster-and-infrastructure/hybrid-nodegroups-and-clusters.html
             - title:
-                en: terraform-manager module
+                en: Terraform-manager module
                 ru: Модуль terraform-manager
-              url: /architecture/cluster-and-infrastructure/terraform-manager/
+              url: /architecture/cluster-and-infrastructure/terraform-manager.html
             - title:
-                en: CSI-driver
+                en: CSI driver
                 ru: CSI-драйвер
-              url: /architecture/cluster-and-infrastructure/csi-driver/
+              url: /architecture/cluster-and-infrastructure/csi-driver.html
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1253,15 +1253,15 @@ entries:
             - title:
                 en: Authentication
                 ru: Аутентификация
-              url: /architecture/authentication.html
+              url: /architecture/iam/authentication.html
             - title:
                 en: Multitenancy
                 ru: Мультитенантность
-              url: /architecture/multitenancy/
+              url: /architecture/iam/multitenancy.html
             - title:
-                en: user-authn module
+                en: User-authn module
                 ru: Модуль user-authn
-              url: /architecture/iam/user-authn/
+              url: /architecture/iam/user-authn.html
         - title:
             en: Security subsystem
             ru: Подсистема Security
@@ -1287,16 +1287,16 @@ entries:
                 ru: Обзор
               url: /architecture/network/
             - title:
-                en: ingress-nginx module
+                en: Ingress-nginx module
                 ru: Модуль ingress-nginx
-              url: /architecture/network/ingress-nginx/
+              url: /architecture/network/ingress-nginx.html
             - title:
-                en: metallb module
+                en: Metallb module
                 ru: Модуль metallb
-              url: /architecture/network/metallb/
+              url: /architecture/network/metallb.html
             - title:
-                en: Cluster architecture with Istio enabled
-                ru: Архитектура кластера с включенным Istio
+                en: Cluster-level Istio architecture
+                ru: Архитектура Istio на уровне кластера
               url: /architecture/network/cluster-with-istio.html
             - title:
                 en: Application service architecture with Istio enabled
@@ -1317,15 +1317,11 @@ entries:
             - title:
                 en: Monitoring
                 ru: Мониторинг
-              url: /architecture/monitoring/
-            - title:
-                en: Log collection and delivery
-                ru: Сбор и доставка логов
-              url: /architecture/logging/delivery.html
+              url: /architecture/observability/monitoring.html
             - title:
                 en: Logging modules
                 ru: Модули логирования
-              url: /architecture/observability/logging/
+              url: /architecture/observability/logging.html
     - title:
         en: Reference
         ru: Справка

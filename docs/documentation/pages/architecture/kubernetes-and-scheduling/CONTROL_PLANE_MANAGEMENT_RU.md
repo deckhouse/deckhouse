@@ -1,6 +1,6 @@
 ---
 title: Управление компонентами control plane кластера
-permalink: ru/architecture/kubernetes-and-scheduling/control-plane-management/
+permalink: ru/architecture/kubernetes-and-scheduling/control-plane-management.html
 lang: ru
 search: control-plane-manager, управление control plane
 description: Архитектура и функции модуля control-plane-manager в Deckhouse Kubernetes Platform.
@@ -30,7 +30,7 @@ description: Архитектура и функции модуля control-plane
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
 
-* На схеме показано, что контейнеры подов взаимодействуют друг с другом напрямую. Фактически они взаимодействуют через соответствующие сервисы Kubernetes (внутренние балансировщики). Если используется конкретный сервис, его название указано над стрелкой.
+* На схеме показано, что контейнеры разных подов взаимодействуют друг с другом напрямую. Фактически они взаимодействуют через соответствующие сервисы Kubernetes (внутренние балансировщики). Если используется конкретный сервис, его название указано над стрелкой.
 * Поды могут быть запущены в нескольких репликах. однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 

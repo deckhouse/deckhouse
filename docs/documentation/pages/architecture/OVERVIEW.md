@@ -9,7 +9,7 @@ This section describes the architecture of Deckhouse Kubernetes Platform (DKP).
 
 The section consists of the following subsections:
 
-* [C4 model](c4-model/): Overview of the C4 model used to visualize the platform architecture,
+* [C4 model](c4-model.html): Overview of the C4 model used to visualize the platform architecture,
   as well as a description of the DKP architecture at levels 1 and 2 of the C4 model.
 * [Modules](module-development/): Description of the DKP module architecture.
 * [Disaster resilience](disaster-resilience/): Description of the disaster resilience approaches implemented in DKP.
@@ -35,13 +35,13 @@ The platform includes:
 
 * A Kubernetes cluster.
 * The Deckhouse controller and the modules it manages.
-* [Bashible](cluster-and-infrastructure/bashible/),
+* [Bashible](cluster-and-infrastructure/bashible.html),
   an agent running as a service on cluster nodes that executes bash scripts to manage nodes.
 
 Modules are grouped into subsystems according to their functional purpose.
 The Deckhouse controller is also implemented as a module and is the only mandatory module required for the platform to function.
 
-The DKP architecture at the subsystem and module level is described in the [C4 model](c4-model/) subsection.
+The DKP architecture at the subsystem and module level is described in the [C4 model](c4-model.html) subsection.
 
 ## Modules
 
@@ -50,8 +50,8 @@ A module is a set of resources and applications designed to extend DKP functiona
 Key modules:
 
 * [`deckhouse`](/modules/deckhouse/): The Deckhouse controller.
-* [`control-plane-manager`](kubernetes-and-scheduling/control-plane-management/): Manages cluster control plane components.
-* [`node-manager`](cluster-and-infrastructure/node-manager/): Manages cluster nodes.
+* [`control-plane-manager`](kubernetes-and-scheduling/control-plane-management.html): Manages cluster control plane components.
+* [`node-manager`](cluster-and-infrastructure/node-manager.html): Manages cluster nodes.
 
 {% alert level="info" %}
 The [`control-plane-manager`](/modules/control-plane-manager/) and [`node-manager`](/modules/node-manager/) modules

@@ -1,6 +1,6 @@
 ---
 title: Cluster control plane
-permalink: en/architecture/kubernetes-and-scheduling/control-plane/
+permalink: en/architecture/kubernetes-and-scheduling/control-plane.html
 search: control plane architecture
 description: Architecture of the cluster control plane in Deckhouse Kubernetes Platform.
 ---
@@ -18,4 +18,4 @@ Deckhouse Kubernetes Platform (DKP) uses a standard ("vanilla") Kubernetes clust
 
 4. **kube-controller-manager**: Kubernetes controller manager. It runs controller loops that monitor and reconcile the state of standard Kubernetes resources to match the desired state. Examples of controllers shipped with Kubernetes: replication controller, endpoints controller, namespace controller, and ServiceAccount controller.
 
-Interactions between the Kubernetes control plane components are shown in the [architecture diagram of the `control-plane-manager` module](../control-plane-management/).
+Interactions between the Kubernetes control plane components are shown in the [architecture diagram of the `control-plane-manager` module](control-plane-management.html).

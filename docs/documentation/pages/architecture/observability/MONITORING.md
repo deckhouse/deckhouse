@@ -1,11 +1,13 @@
 ---
 title: "Architecture of monitoring in the Deckhouse Kubernetes Platform"
-permalink: en/architecture/monitoring/
+permalink: en/architecture/observability/monitoring.html
+search: monitoring architecture, prometheus architecture, monitoring components, observability architecture
+description: Architecture of the monitoring in Deckhouse Kubernetes Platform.
 ---
 
 ## Composition and interaction scheme of monitoring components
 
-![Interaction diagram](../../images/prometheus/prometheus_monitoring.svg)
+![Interaction diagram](../../../images/prometheus/prometheus_monitoring.svg)
 
 ### Components installed by DKP
 
@@ -53,7 +55,7 @@ Prometheus is installed by the `prometheus-operator` module of DKP, which perfor
 
 ### What's in the Prometheus pod?
 
-![What's in the Prometheus pod](../../images/operator-prometheus/pod.png)
+![What's in the Prometheus pod](../../../images/operator-prometheus/pod.png)
 
 * Two containers:
   * `prometheus`: Prometheus itself;
@@ -84,7 +86,7 @@ Prometheus is installed by the `prometheus-operator` module of DKP, which perfor
 
 * In general, Prometheus works as follows:
 
-  ![Prometheus operation](../../images/operator-prometheus/targets.png)
+  ![Prometheus operation](../../../images/operator-prometheus/targets.png)
 
   * **(1)** Prometheus reads the `scrape_configs` section of the config, according to which it configures its internal Service Discovery mechanism.
   * **(2)** The Service Discovery mechanism interacts with the Kubernetes API (mainly — gets endpoints).
@@ -156,7 +158,7 @@ Prometheus is installed by the `prometheus-operator` module of DKP, which perfor
 
 ### How are Service Monitors processed?
 
-![How Service Monitors are processed](../../images/operator-prometheus/servicemonitors.png)
+![How Service Monitors are processed](../../../images/operator-prometheus/servicemonitors.png)
 
 1. Prometheus Operator reads (and also monitors addition/removal/changes) Service Monitors (which specific Service Monitors — specified in the `prometheus` resource itself, see more details in [official documentation](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md)).
 1. For each Service Monitor, if it does NOT specify a specific list of namespaces (specified `any: true`), Prometheus Operator calculates (by accessing the Kubernetes API) a list of namespaces where there are Services (matching the labels specified in the Service Monitor).
@@ -167,7 +169,7 @@ Prometheus is installed by the `prometheus-operator` module of DKP, which perfor
 
 ### How are custom resources with *rules* processed?
 
-![How custom resources with rules are processed](../../images/operator-prometheus/rules.png)
+![How custom resources with rules are processed](../../../images/operator-prometheus/rules.png)
 
 1. Prometheus Operator monitors PrometheusRules (matching the `ruleSelector` specified in the `prometheus` resource).
 1. If a new PrometheusRule appears (or an existing one is deleted) — Prometheus Operator updates `prometheus.yaml` (and then the logic exactly corresponding to Service Monitor processing, which is described above, is triggered).

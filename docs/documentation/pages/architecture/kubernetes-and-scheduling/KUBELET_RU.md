@@ -1,6 +1,6 @@
 ---
 title: Kubelet
-permalink: ru/architecture/kubernetes-and-scheduling/kubelet/
+permalink: ru/architecture/kubernetes-and-scheduling/kubelet.html
 lang: ru
 search: kubelet, агент kubelet, архитектура kubelet, взаимодействия kubelet
 description: Архитектура и роль kubelet в Deckhouse Kubernetes Platform.
@@ -12,7 +12,7 @@ Kubelet — это агент, который работает на каждом
 
 ## Взаимодействия kubelet
 
-Взаимодействия kubelet изображены на [схеме архитектуры модуля `control-plane-manager`](../control-plane-management/).
+Взаимодействия kubelet изображены на [схеме архитектуры модуля `control-plane-manager`](control-plane-management.html).
 
 Kubelet взаимодействует со следующими компонентами:
 

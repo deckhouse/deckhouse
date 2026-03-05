@@ -1,6 +1,6 @@
 ---
 title: "Direct mode architecture"
-permalink: en/architecture/registry-direct-mode.html
+permalink: en/architecture/deckhouse/registry-direct-mode.html
 search: Direct mode, registry architecture, internal registry
 description: Direct mode architecture of the registry module in DKP — accessing the container registry without intermediate caching.
 relatedLinks:

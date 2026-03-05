@@ -9,8 +9,8 @@ This subsection describes the architecture of the modules that are part of the K
 
 The Kubernetes & Scheduling subsystem includes the following modules:
 
-* [`control-plane-manager`](/modules/control-plane-manager/): Main module of the subsystem, responsible for [managing cluster control plane components](control-plane-management/).
+* [`control-plane-manager`](/modules/control-plane-manager/): Main module of the subsystem, responsible for [managing cluster control plane components](control-plane-management.html).
 * [`descheduler`](/modules/descheduler/): Analyzes the cluster state and evicts pods in accordance with the [active strategies](/modules/descheduler/#strategies).
-* [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/): Automatically adjusts container resource requests and limits in pods based on actual consumption. The module architecture is described on the [corresponding page](../vpa.html).
+* [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/): Automatically adjusts container resource requests and limits in pods based on actual consumption. The module architecture is described on the [corresponding page](vpa.html).
 
-This subsection also describes the architecture of the [control plane](control-plane/) and the [kubelet agent](kubelet/).
+This subsection also describes the architecture of the [control plane](control-plane.html) and the [kubelet agent](kubelet.html).

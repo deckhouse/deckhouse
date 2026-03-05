@@ -1,6 +1,6 @@
 ---
 title: Kubelet
-permalink: en/architecture/kubernetes-and-scheduling/kubelet/
+permalink: en/architecture/kubernetes-and-scheduling/kubelet.html
 search: kubelet, kubelet agent, kubelet architecture, kubelet interactions
 description: Architecture and role of kubelet in Deckhouse Kubernetes Platform.
 ---
@@ -11,7 +11,7 @@ Kubelet is an agent that runs on every node in a Kubernetes cluster. It ensures 
 
 ## Kubelet interactions
 
-Kubelet interactions are shown in the [architecture diagram of the `control-plane-manager` module](../control-plane-management/).
+Kubelet interactions are shown in the [architecture diagram of the `control-plane-manager` module](control-plane-management.html).
 
 Kubelet interacts with the following components:
 

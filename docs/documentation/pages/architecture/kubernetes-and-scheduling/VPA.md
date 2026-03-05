@@ -1,6 +1,6 @@
 ---
 title: "VPA"
-permalink: en/architecture/vpa.html
+permalink: en/architecture/kubernetes-and-scheduling/vpa.html
 search: autoscaler architecture, vertical scaling, resource optimization, pod scaling
 description: VPA operating modes and limitations in Deckhouse Kubernetes Platform.
 relatedLinks:
@@ -28,7 +28,7 @@ VPA can operate in two modes:
 
   - **Off**: VPA does not change resources automatically. However, it still provides resource recommendations, which can be viewed using the `d8 k describe vpa` command.
 
-When VPA is enabled and configured, resource requests are set automatically based on Prometheus data. You can also configure the system to only provide recommendations without applying any changes. For details on enabling and configuring the VPA, refer to [Administration](../admin/configuration/app-scaling/vpa.html).
+When VPA is enabled and configured, resource requests are set automatically based on Prometheus data. You can also configure the system to only provide recommendations without applying any changes. For details on enabling and configuring the VPA, refer to [Administration](../../admin/configuration/app-scaling/vpa.html).
 
 ## VPA limitations
 
@@ -62,4 +62,4 @@ VPA consists of three components:
 
 When the Updater changes resources, it uses the Eviction API, so the Pod Disruption Budget is respected for the updated pods.
 
-![VPA Architecture](../images/vpa/vpa-architecture-en.png)
+![VPA Architecture](../../images/vpa/vpa-architecture-en.png)

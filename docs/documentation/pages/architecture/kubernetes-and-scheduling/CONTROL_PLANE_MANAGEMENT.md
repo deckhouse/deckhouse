@@ -1,6 +1,6 @@
 ---
 title: Cluster control plane management
-permalink: en/architecture/kubernetes-and-scheduling/control-plane-management/
+permalink: en/architecture/kubernetes-and-scheduling/control-plane-management.html
 search: control-plane-manager, control plane management
 description: Architecture and functions of the control-plane-manager module in Deckhouse Kubernetes Platform.
 ---
@@ -29,7 +29,7 @@ For detailed configuration options and usage examples, refer to the [`control-pl
 {% alert level="info" %}
 The following simplifications are made in the diagram:
 
-* The diagram shows pod containers interacting directly with each other. In reality, they communicate via the corresponding Kubernetes Services (internal load balancers). If a specific Service is used, its name is indicated above the arrow.
+* The diagram shows containers in different pods interacting directly with each other. In reality, they communicate via the corresponding Kubernetes Services (internal load balancers). If a specific Service is used, its name is indicated above the arrow.
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 

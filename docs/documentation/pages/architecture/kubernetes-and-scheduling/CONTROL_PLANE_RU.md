@@ -1,6 +1,6 @@
 ---
 title: Control plane кластера
-permalink: ru/architecture/kubernetes-and-scheduling/control-plane/
+permalink: ru/architecture/kubernetes-and-scheduling/control-plane.html
 lang: ru
 search: архитектура control plane
 description: Архитектура control plane кластера в Deckhouse Kubernetes Platform.
@@ -19,4 +19,4 @@ description: Архитектура control plane кластера в Deckhouse 
 
 4. **kube-controller-manager** — диспетчер контроллеров Kubernetes. Запускает циклы контроллеров, которые отслеживают и корректируют состояние стандартных ресурсов Kubernetes, приводя их к желаемому состоянию. Примеры контроллеров, которые поставляются с Kubernetes: replication controller, endpoints controller, namespace controller и ServiceAccount controller.
 
-Взаимодействие компонентов control plane Kubernetes изображено на [схеме архитектуры модуля `control-plane-manager`](../control-plane-management/).
+Взаимодействие компонентов control plane Kubernetes изображено на [схеме архитектуры модуля `control-plane-manager`](control-plane-management.html).

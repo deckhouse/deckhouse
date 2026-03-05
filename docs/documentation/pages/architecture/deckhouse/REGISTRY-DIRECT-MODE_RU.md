@@ -1,6 +1,6 @@
 ---
 title: "Архитектура режима Direct"
-permalink: ru/architecture/registry-direct-mode.html
+permalink: ru/architecture/deckhouse/registry-direct-mode.html
 lang: ru
 search: режим Direct, архитектура registry, внутренний registry
 description: Архитектура режима Direct модуля registry в DKP — обработка запросов к хранилищу образов без промежуточного кэширования.
