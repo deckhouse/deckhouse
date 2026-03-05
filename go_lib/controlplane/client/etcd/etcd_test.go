@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
+	"go.etcd.io/etcd/api/v3/etcdserverpb"
 )
 
 func TestAddMembersToPodManifest(t *testing.T) {
 	tests := []struct {
 		name           string
 		podManifest    string
-		initialCluster []Member
+		initialCluster []*etcdserverpb.Member
 		want           string
 	}{
 		{
@@ -25,8 +26,8 @@ spec:
     - etcd
     - --initial-cluster=node1=https://1.1.1.1:2380
 `,
-			initialCluster: []Member{
-				{Name: "node1", PeerURL: "https://1.1.1.1:2380"},
+			initialCluster: []*etcdserverpb.Member{
+				{Name: "node1", PeerURLs: []string{"https://1.1.1.1:2380"}},
 			},
 			want: `
 spec:
@@ -45,9 +46,9 @@ spec:
     - etcd
     - --initial-cluster=node1=https://1.1.1.1:2380
 `,
-			initialCluster: []Member{
-				{Name: "node1", PeerURL: "https://1.1.1.1:2380"},
-				{Name: "node2", PeerURL: "https://2.2.2.2:2380"},
+			initialCluster: []*etcdserverpb.Member{
+				{Name: "node1", PeerURLs: []string{"https://1.1.1.1:2380"}},
+				{Name: "node2", PeerURLs: []string{"https://2.2.2.2:2380"}},
 			},
 			want: `
 spec:
@@ -66,9 +67,9 @@ spec:
     - etcd
     - --initial-cluster=old1=https://1.1.1.1:2380,old2=https://2.2.2.2:2380
 `,
-			initialCluster: []Member{
-				{Name: "node1", PeerURL: "https://10.0.0.1:2380"},
-				{Name: "node2", PeerURL: "https://10.0.0.2:2380"},
+			initialCluster: []*etcdserverpb.Member{
+				{Name: "node1", PeerURLs: []string{"https://10.0.0.1:2380"}},
+				{Name: "node2", PeerURLs: []string{"https://10.0.0.2:2380"}},
 			},
 			want: `
 spec:
@@ -104,9 +105,9 @@ spec:
     - --initial-cluster=node1=https://1.1.1.1:2380
 `)
 	nodeName := "node1"
-	initialCluster := []Member{
-		{Name: "node1", PeerURL: "https://1.1.1.1:2380"},
-		{Name: "node2", PeerURL: "https://2.2.2.2:2380"},
+	initialCluster := []*etcdserverpb.Member{
+		{Name: "node1", PeerURLs: []string{"https://1.1.1.1:2380"}},
+		{Name: "node2", PeerURLs: []string{"https://2.2.2.2:2380"}},
 	}
 
 	err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, initialCluster)
