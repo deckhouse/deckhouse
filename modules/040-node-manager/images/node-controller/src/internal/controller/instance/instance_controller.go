@@ -64,8 +64,11 @@ func (r *InstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("instance").
 		For(&deckhousev1alpha2.Instance{}).
+		// watch CAPI Machine to refresh linked Instance status and source checks by shared name
 		Watches(&capiv1beta2.Machine{}, handler.EnqueueRequestsFromMapFunc(mapObjectNameToInstance)).
+		// watch MCM Machine to refresh linked Instance status and source checks by shared name
 		Watches(&mcmv1alpha1.Machine{}, handler.EnqueueRequestsFromMapFunc(mapObjectNameToInstance)).
+		// watch static Node to refresh linked Instance when node labels or existence change
 		Watches(
 			&corev1.Node{},
 			handler.EnqueueRequestsFromMapFunc(mapObjectNameToInstance),

@@ -80,6 +80,7 @@ func (r *MCMMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("mcm-machine-controller").
 		For(&mcmv1alpha1.Machine{}).
+		// watch Instance to trigger MCM Machine reconcile when machineRef or deletion intent changes
 		Watches(
 			&deckhousev1alpha2.Instance{},
 			handler.EnqueueRequestsFromMapFunc(mapInstanceToMCMMachine()),

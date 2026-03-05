@@ -77,6 +77,7 @@ func (r *CAPIMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("capi-machine-controller").
 		For(&capiv1beta2.Machine{}).
+		// watch Instance to trigger CAPI Machine reconcile when machineRef or deletion intent changes
 		Watches(
 			&deckhousev1alpha2.Instance{},
 			handler.EnqueueRequestsFromMapFunc(mapInstanceToCAPIMachine()),
