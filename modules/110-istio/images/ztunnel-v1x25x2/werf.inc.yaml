@@ -58,6 +58,4 @@ git:
 - url: {{ .SOURCE_REPO }}/istio/ztunnel
   tag: {{ $istioVersion }}
   to: /src/ztunnel
-  excludePaths: 
-  - .git
 ---
