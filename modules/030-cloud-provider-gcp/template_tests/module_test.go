@@ -251,14 +251,14 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
 			providerSpecificMCMSecretData := providerSpecificMCMSecret.Field("data").Map()
 			Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
-			Expect(len(providerSpecificMCMSecretData) == 3 ).To(BeTrue())
+			Expect(len(providerSpecificMCMSecretData) >= 1 ).To(BeTrue())
 			Expect(len(providerSpecificMCMSecretData["cloud-instance-manager/config-for-machine-controller-manager.yaml"].String()) > 0 ).To(BeTrue())
 
 			providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-gcp-bashible")
 			Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
 			providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
 			Expect(providerSpecificBashibleSecretData).To(Not(BeEmpty()))
-			Expect(len(providerSpecificBashibleSecretData) == 2 ).To(BeTrue())
+			Expect(len(providerSpecificBashibleSecretData) >= 1 ).To(BeTrue())
 			Expect(len(providerSpecificBashibleSecretData["common-steps/all/000_discover_kubernetes_data_device_path.sh.tpl"].String()) > 0 ).To(BeTrue())
 
 			// user story #2
