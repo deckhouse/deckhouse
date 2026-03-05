@@ -49,7 +49,9 @@ spec:
 
 ## gRPC balancing
 
-**Caution!** Assign a name with the `grpc` prefix or value to the port in the corresponding Service to make gRPC service balancing start automatically.
+{% alert level="warning" %}
+Assign a name with the `grpc` prefix or value to the port in the corresponding Service to make gRPC service balancing start automatically.
+{% endalert %}
 
 ## Locality Failover
 
@@ -63,7 +65,9 @@ Istio allows you to configure a priority-based locality (geographic location) fa
 
 This comes in handy for inter-cluster failover when used together with a [multicluster](#setting-up-multicluster-for-two-clusters-using-the-istiomulticluster-cr).
 
-> **Caution!** The Locality Failover can be enabled using the DestinationRule CR. Note that you also have to configure the outlierDetection.
+{% alert level="warning" %}
+The Locality Failover can be enabled using the DestinationRule CR. Note that you also have to configure the outlierDetection.
+{% endalert %}
 
 Example:
 
@@ -88,7 +92,9 @@ spec:
 
 You can use the [VirtualService](istio-cr.html#virtualservice) resource to configure Retry for requests.
 
-> **Caution!** All requests (including POST ones) are retried three times by default.
+{% alert level="warning" %}
+All requests (including POST ones) are retried three times by default.
+{% endalert %}
 
 Example:
 
@@ -112,7 +118,9 @@ spec:
 
 ## Canary
 
-> **Caution!** Istio is only responsible for flexible request routing that relies on special request headers (such as cookies) or simply randomness. The CI/CD system is responsible for customizing this routing and "switching" between canary versions.
+{% alert level="warning" %}
+Istio is only responsible for flexible request routing that relies on special request headers (such as cookies) or simply randomness. The CI/CD system is responsible for customizing this routing and "switching" between canary versions.
+{% endalert %}
 
 The idea is that two Deployments with different versions of the application are deployed in the same namespace. The Pods of different versions have different labels (`version: v1` and `version: v2`).
 
@@ -345,7 +353,9 @@ The following algorithm for deciding the fate of a request becomes active after 
 
 In other words, if you explicitly deny something, then only this restrictive rule will work. If you explicitly allow something, only explicitly authorized requests will be allowed (however, restrictions will stay in force and have precedence).
 
-> **Caution!** The policies based on high-level parameters like namespace or principal require enabling Istio for all involved applications. Also, there must be organized Mutual TLS between applications.
+{% alert level="warning" %}
+The policies based on high-level parameters like namespace or principal require enabling Istio for all involved applications. Also, there must be organized Mutual TLS between applications.
+{% endalert %}
 
 Examples:
 * Let's deny POST requests for the myapp application. Since a policy is defined, only POST requests to the application are denied (as per the algorithm above).
@@ -530,7 +540,9 @@ spec:
 
 ### Allow from any cluster (via mTLS)
 
-> **Caution!** The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
+{% alert level="warning" %}
+he denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
+{% endalert %}
 
 Example:
 
