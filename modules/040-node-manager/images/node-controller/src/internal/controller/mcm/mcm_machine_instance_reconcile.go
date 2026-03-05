@@ -20,15 +20,16 @@ import (
 	"context"
 	"fmt"
 
-	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
-	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
-	"github.com/deckhouse/node-controller/internal/controller/common"
-	"github.com/deckhouse/node-controller/internal/controller/common/machine"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/controller/common"
+	"github.com/deckhouse/node-controller/internal/controller/common/machine"
 )
 
 const mcmInstanceStatusFieldOwner = "node-controller-instancestatus"

@@ -17,12 +17,13 @@ limitations under the License.
 package controller
 
 import (
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	capicontroller "github.com/deckhouse/node-controller/internal/controller/capi"
 	machinecontroller "github.com/deckhouse/node-controller/internal/controller/common/machine"
 	instancecontroller "github.com/deckhouse/node-controller/internal/controller/instance"
 	mcmcontroller "github.com/deckhouse/node-controller/internal/controller/mcm"
 	nodecontroller "github.com/deckhouse/node-controller/internal/controller/node"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const MachineNamespace = machinecontroller.MachineNamespace

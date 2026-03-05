@@ -20,12 +20,13 @@ import (
 	"context"
 	"fmt"
 
-	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
-	"github.com/deckhouse/node-controller/internal/controller/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/controller/common"
 )
 
 func (r *InstanceReconciler) reconcileInstanceFinalization(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {

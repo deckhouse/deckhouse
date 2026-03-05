@@ -25,8 +25,6 @@ var (
 	// SchemeBuilder used to register the Machine resource.
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 
-	localSchemeBuilder = &SchemeBuilder
-
 	// AddToScheme is a pointer to SchemeBuilder.AddToScheme.
 	AddToScheme = SchemeBuilder.AddToScheme
 )

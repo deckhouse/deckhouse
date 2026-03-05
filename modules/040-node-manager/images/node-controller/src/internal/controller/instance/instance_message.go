@@ -19,8 +19,9 @@ package instance
 import (
 	"strings"
 
-	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
 
 const (
@@ -43,7 +44,7 @@ var messagePriorityMatchers = []messagePriorityMatcher{
 				return false
 			}
 
-			return !(c.Status == metav1.ConditionTrue && c.Reason == "Ready")
+			return c.Status != metav1.ConditionTrue || c.Reason != "Ready"
 		},
 		prefix: machineMessagePrefix,
 	},

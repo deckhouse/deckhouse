@@ -19,24 +19,25 @@ package v1alpha1
 import (
 	"encoding/json"
 
-	v1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
+
+	v1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
 
 const instanceConversionDataAnnotation = "node-controller.deckhouse.io/conversion-data"
 
 // ConvertTo converts this Instance (v1alpha1) to the hub version (v1alpha2).
-func (src *Instance) ConvertTo(dstRaw conversion.Hub) error {
+func (obj *Instance) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1alpha2.Instance)
-	dst.ObjectMeta = src.ObjectMeta
-	dst.TypeMeta = src.TypeMeta
-	dst.Spec = convertInstanceSpecToV1Alpha2(src.Status)
-	dst.Status = convertInstanceStatusToV1Alpha2(src.Status)
+	dst.ObjectMeta = obj.ObjectMeta
+	dst.TypeMeta = obj.TypeMeta
+	dst.Spec = convertInstanceSpecToV1Alpha2(obj.Status)
+	dst.Status = convertInstanceStatusToV1Alpha2(obj.Status)
 
 	// Restore hub-only data preserved during a previous down-conversion.
 	restored := &v1alpha2.Instance{}
-	if ok, err := unmarshalInstanceHubData(src, restored); err != nil || !ok {
+	if ok, err := unmarshalInstanceHubData(obj, restored); err != nil || !ok {
 		return err
 	}
 
@@ -54,13 +55,13 @@ func (src *Instance) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 // ConvertTo converts this InstanceList (v1alpha1) to the hub version (v1alpha2).
-func (src *InstanceList) ConvertTo(dstRaw conversion.Hub) error {
+func (obj *InstanceList) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1alpha2.InstanceList)
-	dst.TypeMeta = src.TypeMeta
-	dst.ListMeta = src.ListMeta
-	dst.Items = make([]v1alpha2.Instance, len(src.Items))
-	for i := range src.Items {
-		if err := src.Items[i].ConvertTo(&dst.Items[i]); err != nil {
+	dst.TypeMeta = obj.TypeMeta
+	dst.ListMeta = obj.ListMeta
+	dst.Items = make([]v1alpha2.Instance, len(obj.Items))
+	for i := range obj.Items {
+		if err := obj.Items[i].ConvertTo(&dst.Items[i]); err != nil {
 			return err
 		}
 	}
@@ -68,14 +69,14 @@ func (src *InstanceList) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 // ConvertFrom converts from the hub version (v1alpha2) to this version (v1alpha1).
-func (dst *Instance) ConvertFrom(srcRaw conversion.Hub) error {
+func (obj *Instance) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*v1alpha2.Instance)
-	dst.ObjectMeta = src.ObjectMeta
-	dst.TypeMeta = src.TypeMeta
-	dst.Status = convertInstanceStatusFromV1Alpha2(src.Spec, src.Status)
+	obj.ObjectMeta = src.ObjectMeta
+	obj.TypeMeta = src.TypeMeta
+	obj.Status = convertInstanceStatusFromV1Alpha2(src.Spec, src.Status)
 
 	// Preserve hub-only data in annotation to avoid lossy down-conversion.
-	if err := marshalInstanceHubData(src, dst); err != nil {
+	if err := marshalInstanceHubData(src, obj); err != nil {
 		return err
 	}
 
@@ -125,13 +126,13 @@ func unmarshalInstanceHubData(src *Instance, dst *v1alpha2.Instance) (bool, erro
 }
 
 // ConvertFrom converts from the hub version (v1alpha2) to this version (v1alpha1).
-func (dst *InstanceList) ConvertFrom(srcRaw conversion.Hub) error {
+func (obj *InstanceList) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*v1alpha2.InstanceList)
-	dst.TypeMeta = src.TypeMeta
-	dst.ListMeta = src.ListMeta
-	dst.Items = make([]Instance, len(src.Items))
+	obj.TypeMeta = src.TypeMeta
+	obj.ListMeta = src.ListMeta
+	obj.Items = make([]Instance, len(src.Items))
 	for i := range src.Items {
-		if err := dst.Items[i].ConvertFrom(&src.Items[i]); err != nil {
+		if err := obj.Items[i].ConvertFrom(&src.Items[i]); err != nil {
 			return err
 		}
 	}

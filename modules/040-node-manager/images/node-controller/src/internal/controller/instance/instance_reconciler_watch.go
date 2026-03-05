@@ -19,7 +19,6 @@ package instance
 import (
 	"context"
 
-	nodecontroller "github.com/deckhouse/node-controller/internal/controller/node"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	nodecontroller "github.com/deckhouse/node-controller/internal/controller/node"
 )
 
 func mapObjectNameToInstance(_ context.Context, obj client.Object) []reconcile.Request {

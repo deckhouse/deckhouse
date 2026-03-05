@@ -21,12 +21,12 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-
-	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
-	"github.com/deckhouse/node-controller/internal/controller/common"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/controller/common"
 )
 
 func (r *NodeReconciler) deleteNodeBasedInstanceIfExists(ctx context.Context, name string) (bool, error) {

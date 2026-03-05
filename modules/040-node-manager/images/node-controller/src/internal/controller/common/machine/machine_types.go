@@ -19,8 +19,9 @@ package machine
 import (
 	"context"
 
-	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
 
 const (

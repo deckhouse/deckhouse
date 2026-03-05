@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 
-	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
 
 func (r *InstanceReconciler) reconcileLinkedSourceExistence(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
@@ -84,7 +85,7 @@ func (r *InstanceReconciler) reconcileLinkedSourceExistence(ctx context.Context,
 func (r *InstanceReconciler) linkedMachineExists(
 	ctx context.Context,
 	ref *deckhousev1alpha2.MachineRef,
-) (exists bool, notFound bool, err error) {
+) (bool, bool, error) {
 	if ref == nil || ref.Name == "" {
 		return false, false, nil
 	}
@@ -106,7 +107,7 @@ func (r *InstanceReconciler) linkedMachineExists(
 	return true, false, nil
 }
 
-func (r *InstanceReconciler) linkedNodeExists(ctx context.Context, nodeName string) (exists bool, notFound bool, err error) {
+func (r *InstanceReconciler) linkedNodeExists(ctx context.Context, nodeName string) (bool, bool, error) {
 	logger := log.FromContext(ctx)
 	if nodeName == "" {
 		return false, false, nil

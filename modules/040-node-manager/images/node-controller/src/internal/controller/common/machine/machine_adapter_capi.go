@@ -20,10 +20,11 @@ import (
 	"context"
 	"fmt"
 
-	capi "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
-	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	capi "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
 
 type capiMachine struct {
