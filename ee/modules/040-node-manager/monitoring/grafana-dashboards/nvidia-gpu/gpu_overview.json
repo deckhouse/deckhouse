@@ -130,7 +130,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "avg(max by (Hostname, gpu) (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$node\", gpu=~\"$gpu\"}))",
+          "expr": "avg(max by (Hostname, gpu) (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$node\"}))",
           "interval": "",
           "legendFormat": "GPU {{gpu}}",
           "range": true,
@@ -204,7 +204,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(max by (Hostname, gpu) (DCGM_FI_DEV_POWER_USAGE{Hostname=~\"$node\", gpu=~\"$gpu\"}))",
+          "expr": "sum(max by (Hostname, gpu) (DCGM_FI_DEV_POWER_USAGE{Hostname=~\"$node\"}))",
           "instant": true,
           "interval": "",
           "legendFormat": "GPU {{gpu}}",
@@ -308,7 +308,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(max by (Hostname, gpu) (increase(DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION{Hostname=~\"$node\", gpu=~\"$gpu\"}[1h]) / 3600000))",
+          "expr": "sum(max by (Hostname, gpu) (increase(DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION{Hostname=~\"$node\"}[1h]) / 3600000))",
           "instant": false,
           "interval": "",
           "legendFormat": "Last 1h",
@@ -321,7 +321,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(max by (Hostname, gpu) (increase(DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION{Hostname=~\"$node\", gpu=~\"$gpu\"}[24h]) / 3600000))",
+          "expr": "sum(max by (Hostname, gpu) (increase(DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION{Hostname=~\"$node\"}[24h]) / 3600000))",
           "hide": false,
           "instant": false,
           "legendFormat": "Last 24h",
@@ -428,7 +428,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (Hostname, gpu) (DCGM_FI_DEV_POWER_USAGE{Hostname=~\"$node\", gpu=~\"$gpu\"})",
+          "expr": "max by (Hostname, gpu) (DCGM_FI_DEV_POWER_USAGE{Hostname=~\"$node\"})",
           "interval": "",
           "legendFormat": "{{Hostname}} - GPU {{gpu}} (full)",
           "range": true,
@@ -533,7 +533,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "(max by (Hostname, gpu) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE!~\".+\"})) or on(Hostname, gpu) (sum by (Hostname, gpu) (max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})))",
+          "expr": "(max by (Hostname, gpu) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", GPU_I_PROFILE!~\".+\"})) or on(Hostname, gpu) (sum by (Hostname, gpu) (max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"})))",
           "interval": "",
           "legendFormat": "{{Hostname}} - GPU {{gpu}} (full)",
           "range": true,
@@ -545,7 +545,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "avg by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})",
+          "expr": "avg by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"})",
           "interval": "",
           "legendFormat": "{{Hostname}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
           "range": true,
@@ -652,7 +652,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "((max by (Hostname, gpu) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE!~\".+\"})) or on(Hostname, gpu) (sum by (Hostname, gpu) (max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})))) / (((max by (Hostname, gpu) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE!~\".+\"})) or on(Hostname, gpu) (sum by (Hostname, gpu) (max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})))) + ((max by (Hostname, gpu) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE!~\".+\"})) or on(Hostname, gpu) (sum by (Hostname, gpu) (max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})))))",
+          "expr": "((max by (Hostname, gpu) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", GPU_I_PROFILE!~\".+\"})) or on(Hostname, gpu) (sum by (Hostname, gpu) (max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"})))) / (((max by (Hostname, gpu) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", GPU_I_PROFILE!~\".+\"})) or on(Hostname, gpu) (sum by (Hostname, gpu) (max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"})))) + ((max by (Hostname, gpu) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", GPU_I_PROFILE!~\".+\"})) or on(Hostname, gpu) (sum by (Hostname, gpu) (max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"})))))",
           "interval": "",
           "legendFormat": "{{Hostname}} - GPU {{gpu}} (full)",
           "range": true,
@@ -664,7 +664,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "avg by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"}) / (avg by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"}) + avg by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"}))",
+          "expr": "avg by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"}) / (avg by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"}) + avg by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"}))",
           "interval": "",
           "legendFormat": "{{Hostname}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
           "range": true,
@@ -771,7 +771,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (Hostname, gpu) (DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$node\", gpu=~\"$gpu\"}) or max by (Hostname, gpu) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{Hostname=~\"$node\", gpu=~\"$gpu\"}) * 100",
+          "expr": "max by (Hostname, gpu) (DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$node\"}) or max by (Hostname, gpu) (DCGM_FI_PROF_SM_ACTIVE{Hostname=~\"$node\"}) * 100 or max by (Hostname, gpu) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{Hostname=~\"$node\"}) * 100",
           "interval": "",
           "legendFormat": "{{Hostname}} - GPU {{gpu}} (full)",
           "range": true,
@@ -783,15 +783,16 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"}) or max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"}) * 100",
+          "expr": "max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"}) or max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_PROF_SM_ACTIVE{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"}) * 100 or max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"}) * 100",
           "interval": "",
           "legendFormat": "{{Hostname}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "GPU Utilization",
-      "type": "timeseries"
+      "title": "Compute Utilization",
+      "type": "timeseries",
+      "description": "Uses DCGM_FI_DEV_GPU_UTIL, then falls back to DCGM_FI_PROF_SM_ACTIVE and DCGM_FI_PROF_GR_ENGINE_ACTIVE."
     },
     {
       "datasource": {
@@ -890,7 +891,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (Hostname, gpu) (DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{Hostname=~\"$node\", gpu=~\"$gpu\"}) * 100",
+          "expr": "max by (Hostname, gpu) (DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{Hostname=~\"$node\"})",
           "interval": "",
           "legendFormat": "{{Hostname}} - GPU {{gpu}} (full)",
           "range": true,
@@ -902,7 +903,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"}) * 100",
+          "expr": "max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"})",
           "interval": "",
           "legendFormat": "{{Hostname}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
           "range": true,
@@ -1007,7 +1008,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (Hostname, gpu) (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$node\", gpu=~\"$gpu\"})",
+          "expr": "max by (Hostname, gpu) (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$node\"})",
           "instant": false,
           "interval": "",
           "legendFormat": "{{Hostname}} - GPU {{gpu}} (full)",
@@ -1112,7 +1113,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (Hostname, gpu) (DCGM_FI_DEV_SM_CLOCK{Hostname=~\"$node\", gpu=~\"$gpu\"}) * 1000000",
+          "expr": "max by (Hostname, gpu) (DCGM_FI_DEV_SM_CLOCK{Hostname=~\"$node\"}) * 1000000",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1126,7 +1127,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_SM_CLOCK{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"}) * 1000000",
+          "expr": "max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_SM_CLOCK{Hostname=~\"$node\", GPU_I_PROFILE=~\".+\"}) * 1000000",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1186,28 +1187,6 @@
           "type": "prometheus",
           "uid": "${ds_prometheus}"
         }
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${ds_prometheus}"
-        },
-        "definition": "label_values(DCGM_FI_DEV_POWER_USAGE,gpu)",
-        "includeAll": true,
-        "label": "GPU ID",
-        "multi": true,
-        "name": "gpu",
-        "options": [],
-        "query": "label_values(DCGM_FI_DEV_POWER_USAGE,gpu)",
-        "refresh": 1,
-        "regex": "",
-        "sort": 3,
-        "type": "query"
       }
     ]
   },

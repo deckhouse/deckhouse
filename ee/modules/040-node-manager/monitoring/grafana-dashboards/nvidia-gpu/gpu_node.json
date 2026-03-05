@@ -85,11 +85,15 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "GPU Utilization"
+                "value": "Compute Utilization"
               },
               {
                 "id": "unit",
                 "value": "percent"
+              },
+              {
+                "id": "noValue",
+                "value": "N/A"
               }
             ]
           },
@@ -296,11 +300,11 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_GPU_UTIL{Hostname=\"$node\", gpu=~\"$gpu\"})) by (Hostname, gpu)",
+          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_GPU_UTIL{Hostname=\"$node\", gpu=~\"$gpu\"})) by (Hostname, gpu) or sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_PROF_SM_ACTIVE{Hostname=\"$node\", gpu=~\"$gpu\"}) * 100) by (Hostname, gpu) or sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{Hostname=\"$node\", gpu=~\"$gpu\"}) * 100) by (Hostname, gpu)",
           "format": "table",
           "hide": false,
           "instant": true,
-          "legendFormat": "GPU {{gpu}}",
+          "legendFormat": "Compute Utilization",
           "range": false,
           "refId": "B"
         },
@@ -341,7 +345,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_MEM_COPY_UTIL{Hostname=\"$node\", gpu=~\"$gpu\"})) by (Hostname, gpu)",
+          "expr": "100 * sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=\"$node\", gpu=~\"$gpu\"})) by (Hostname, gpu) / clamp_min(sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=\"$node\", gpu=~\"$gpu\"})) by (Hostname, gpu) + sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_FREE{Hostname=\"$node\", gpu=~\"$gpu\"})) by (Hostname, gpu), 1)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -691,7 +695,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Утилизация вычислительных едениц",
+      "description": "Uses DCGM_FI_DEV_GPU_UTIL, then falls back to DCGM_FI_PROF_SM_ACTIVE and DCGM_FI_PROF_GR_ENGINE_ACTIVE.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -777,15 +781,15 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu) ",
+          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu) or sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_PROF_SM_ACTIVE{Hostname=~\"$node\", gpu=~\"$gpu\"}) * 100) by(Hostname, gpu) or sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{Hostname=~\"$node\", gpu=~\"$gpu\"}) * 100) by(Hostname, gpu)",
           "hide": false,
           "interval": "",
-          "legendFormat": "GPU {{gpu}}",
+          "legendFormat": "Compute Utilization",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "GPU Utilization: ${node}",
+      "title": "Compute Utilization: ${node}",
       "type": "timeseries"
     },
     {
@@ -979,11 +983,24 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_MEM_COPY_UTIL{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname,device) ",
+          "expr": "100 * sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu) / clamp_min(sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu) + sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu), 1)",
           "interval": "",
           "legendFormat": "GPU {{gpu}}",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "100 * max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})) / clamp_min(max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})) + max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})), 1)",
+          "interval": "",
+          "legendFormat": "GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
+          "range": true,
+          "refId": "B"
         }
       ],
       "title": "GPU Memory Utilization: ${node}",
@@ -1114,6 +1131,19 @@
           "legendFormat": "GPU {{gpu}}",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"}))",
+          "interval": "",
+          "legendFormat": "GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
+          "range": true,
+          "refId": "B"
         }
       ],
       "title": "GPU Framebuffer Memory Used: ${node}",
@@ -1316,7 +1346,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_MEM_COPY_UTIL{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu) /  count(sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_MEM_COPY_UTIL{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu)) by(Hostname, gpu)",
+          "expr": "100 * avg(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_PROF_DRAM_ACTIVE{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu)",
           "interval": "",
           "legendFormat": "GPU {{gpu}}",
           "range": true,
@@ -1453,14 +1483,14 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu)",
+          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (rate(DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL{Hostname=~\"$node\", gpu=~\"$gpu\"}[$__rate_interval]))) by(Hostname, gpu)",
           "interval": "",
           "legendFormat": "GPU {{gpu}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "GPU NVLink Bandwidth: ${node}",
+      "title": "GPU NVLink Activity: ${node}",
       "transformations": [
         {
           "id": "calculateField",
