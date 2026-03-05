@@ -244,6 +244,37 @@ func (s *PackageVersionService) ReadPackageDefinition(ctx context.Context, tag s
 	}
 }
 
+// HasModuleDefinition checks whether the version image contains a module.yaml (or module.yml) file.
+// This is used as a fallback to identify legacy modules when neither type labels nor package.yaml are present.
+//
+// Returns (false, nil) if the image does not exist.
+func (s *PackageVersionService) HasModuleDefinition(ctx context.Context, tag string) (bool, error) {
+	img, err := s.GetImage(ctx, tag)
+	if err != nil {
+		if errors.Is(err, client.ErrImageNotFound) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get version image: %w", err)
+	}
+
+	rc := img.Extract()
+	defer rc.Close()
+
+	tr := tar.NewReader(rc)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return false, nil
+		}
+		if err != nil {
+			return false, fmt.Errorf("read version image tar: %w", err)
+		}
+		if hdr.Name == "module.yaml" || hdr.Name == "module.yml" {
+			return true, nil
+		}
+	}
+}
+
 type PackageVersionMetadata struct {
 	Version string
 

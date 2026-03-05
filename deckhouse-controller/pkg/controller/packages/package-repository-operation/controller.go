@@ -475,7 +475,7 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 			log.Err(err))
 	}
 
-	// Processing failed entirely — record error and move to next package
+	// Processing failed entirely - record error and move to next package
 	if processResult == nil {
 		return r.dequeuePackageWithError(ctx, operation, currentPackage.Name, err)
 	}
