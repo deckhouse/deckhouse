@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 13,
+  "version": 14,
   "statements": [
     {
       "vulnerability": {
@@ -59,8 +59,66 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Helm Chart JSON Schema denial of service - Функционал обработки JSON схем в программном продукте helm версии 3.17.4 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы без предварительной проверки линтером. Все чарты проходят обязательную валидацию на отсутствие ссылок $ref, указывающих на /dev/zero, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2025-11-19T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-15558"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/cli@v25.0.6+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v27.1.1+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.0.1+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.0.2+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.2.2+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.3.3+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.5.1+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker CLI uncontrolled search path vulnerability - Функционал, связанный с уязвимым путём поиска (CWE-427) в библиотеке github.com/docker/cli, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все взаимодействия с Docker CLI осуществляются через промежуточные компоненты, не предоставляющие доступа к уязвимому коду, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-05T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47914"
+      },
+      "products": [
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.36.0"},
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.38.0"},
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.43.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "golang.org/x/crypto SSH Agent panic vulnerability - Функционал SSH Agent сервера библиотеки golang.org/x/crypto, подверженный панике при обработке сформированных сообщений (out-of-bounds read), не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все операции с криптографией проходят через иные компоненты, не использующие уязвимый код обработки идентификаторов агента, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-05T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58181"
+      },
+      "products": [
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.36.0"},
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.38.0"},
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.43.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "golang.org/x/crypto SSH GSSAPI unbounded memory vulnerability - Функционал GSSAPI-аутентификации SSH в библиотеке golang.org/x/crypto не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Аутентификация осуществляется без задействования уязвимого кода неограниченного потребления памяти, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-05T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25934"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "go-git data integrity verification vulnerability - Функционал приёма и проверки целостности .pack и .idx файлов в библиотеке github.com/go-git/go-git/v5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы в контексте, допускающем подмену данных. Все взаимодействия с Git-репозиториями осуществляются по защищённым каналам и через доверенные источники, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-05T00:00:00Z"
     }
   ],
   "timestamp": "2025-10-09T14:31:31Z",
-  "last_updated": "2026-01-19T00:00:00Z"
+  "last_updated": "2026-03-05T00:00:00Z"
 }
