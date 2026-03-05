@@ -141,7 +141,7 @@
                 "value": [
                   {
                     "title": "",
-                    "url": "/d/gpu-namespace-pod/gpu-namespace-pod?var-ds_prometheus=${ds_prometheus}&var-pod=${__data.fields.pod}&${namespace:queryparam}&${__url_time_range}"
+                    "url": "/d/gpu-namespace-pod/gpu-namespace-pod?var-ds_prometheus=${ds_prometheus}&var-pod=${__value.raw}&${namespace:queryparam}&${__url_time_range}"
                   }
                 ]
               }
