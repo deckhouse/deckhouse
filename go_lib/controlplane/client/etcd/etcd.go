@@ -11,6 +11,7 @@ import (
 	"time"
 
 	kubeadmapp "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapp"
+	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +50,7 @@ func WriteStaticPodToDisk(podManifest []byte, componentName, manifestDir string)
 	return nil
 }
 
-func addMembersToPodManifest(podManifest []byte, initialCluster []Member) []byte {
+func addMembersToPodManifest(podManifest []byte, initialCluster []*etcdserverpb.Member) []byte {
 	// podManifest == static pod manifest
 	// change --initial-cluster=... into
 	// --initial-cluster=borovets-multi-master-master-2=https://10.241.44.16:2380,borovets-multi-master-master-0=https://10.241.32.26:2380,borovets-multi-master-master-1=https://10.241.36.19:2380
@@ -57,7 +58,7 @@ func addMembersToPodManifest(podManifest []byte, initialCluster []Member) []byte
 	podManifestString := string(podManifest)
 	var endpoints []string
 	for _, member := range initialCluster {
-		endpoints = append(endpoints, fmt.Sprintf("%s=%s", member.Name, member.PeerURL))
+		endpoints = append(endpoints, fmt.Sprintf("%s=%s", member.Name, member.PeerURLs[0]))
 	}
 	initialClusterString := strings.Join(endpoints, ",")
 
@@ -67,7 +68,7 @@ func addMembersToPodManifest(podManifest []byte, initialCluster []Member) []byte
 	return []byte(podManifestString)
 }
 
-func prepareAndWriteEtcdStaticPod(podManifest []byte, config *EtcdConfig, nodeName string, initialCluster []Member) error {
+func prepareAndWriteEtcdStaticPod(podManifest []byte, config *EtcdConfig, nodeName string, initialCluster []*etcdserverpb.Member) error {
 	if len(initialCluster) > 0 {
 		podManifest = addMembersToPodManifest(podManifest, initialCluster)
 	}
@@ -93,7 +94,7 @@ func InitCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 
 	logger.Info("[etcd] Creating static Pod manifest during init cluster", slog.String("component", constants.Etcd))
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, []Member{}); err != nil {
+	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, []*etcdserverpb.Member{}); err != nil {
 		return err
 	}
 	return nil
@@ -116,10 +117,10 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	////////////////////////////////
 
 	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
-	// etcdPeerAddress := GetPeerURL(endpoint)
+	etcdPeerAddress := GetPeerURL(endpoint)
 	/////////////////////////////////////////////////////////////////////
 
-	var cluster []Member
+	var cluster []*clientv3.Member
 	var etcdClient *clientv3.Client
 
 	etcdClient, err = NewFromCluster(kubeClient, config.CertificatesDir)
@@ -142,18 +143,19 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	/////////////////////////////////////////////////////////////////////
 
 	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
-	// logger.Info("[etcd] Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
+	logger.Info("[etcd] Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
 	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
-	// if err != nil {
-	// 	return err
-	// }
+	clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), []string{etcdPeerAddress})
+	if err != nil {
+		return err
+	}
 	/////////////////////////////////////////////////////////////////////
 
 	////DELETE THIS BLOCK//////////////// test cluster ///////////////////////
-	cluster = []Member{
-		{Name: "borovets-multi-master-master-0", PeerURL: "https://10.241.32.26:2380"},
-		{Name: "borovets-multi-master-master-1", PeerURL: "https://10.241.36.19:2380"},
-		{Name: "borovets-multi-master-master-2", PeerURL: "https://10.241.44.16:2380"},
+	cluster = []*clientv3.Member{
+		{Name: "borovets-multi-master-master-0", PeerURLs: []string{"https://10.241.32.26:2380"}},
+		{Name: "borovets-multi-master-master-1", PeerURLs: []string{"https://10.241.36.19:2380"}},
+		{Name: "borovets-multi-master-master-2", PeerURLs: []string{"https://10.241.44.16:2380"}},
 	}
 	logger.Info("TEST-ETCD client: [etcd] Announced new etcd member joining to the existing etcd cluster")
 	logger.Info("TEST-ETCD client: Updated etcd member list", slog.Any("cluster", cluster))
@@ -161,24 +163,27 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 
 	logger.Info("[etcd] Creating static Pod manifest during join cluster", slog.String("component", constants.Etcd))
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, cluster); err != nil {
+	// if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, cluster); err != nil {
+	// 	return err
+	// }
+	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, clusterResponse.Members); err != nil {
 		return err
 	}
 
 	/////UNCOMMENT THIS BLOCK ///////// test etcdPeerAddress ///////////////////////
-	// learnerID, err := etcdClient.GetMemberID(etcdPeerAddress)
+	//learnerID, err := etcdClient.GetMemberID(etcdPeerAddress)
 	// if err != nil {
 	// 	return err
 	// }
-	// err = etcdClient.MemberPromote(learnerID)
-	// if err != nil {
-	// 	return err
-	// }
+	_, err = etcdClient.MemberPromote(context.Background(), clusterResponse.Member.ID)
+	if err != nil {
+		return err
+	}
 
-	// logger.Info("[etcd] Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
-	// if _, err := etcdClient.WaitForClusterAvailable(etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
-	// 	return err
-	// }
+	logger.Info("[etcd] Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
+	if _, err := WaitForClusterAvailable(etcdClient, etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
+		return err
+	}
 	/////////////////////////////////////////////////////////////////////
 
 	return nil

@@ -431,14 +431,14 @@ func (c *Client) isLearner(memberID uint64) (bool, error) {
 }
 
 // WaitForClusterAvailable returns true if all endpoints in the cluster are available after retry attempts, an error is returned otherwise
-func (c *Client) WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error) {
+func WaitForClusterAvailable(c *clientv3.Client, retries int, retryInterval time.Duration) (bool, error) {
 	for i := 0; i < retries; i++ {
 		if i > 0 {
 			logger.Info("[etcd] Waiting until next retry", slog.Duration("retryInterval", retryInterval))
 			time.Sleep(retryInterval)
 		}
 		logger.Info("[etcd] attempting to see if all cluster endpoints are available", slog.Any("endpoints", c.Endpoints), slog.Int("attempt", i+1), slog.Int("retries", retries))
-		_, err := c.getClusterStatus()
+		_, err := c.Status(context.Background(), c.Endpoints()[0])
 		if err != nil {
 			switch err {
 			case context.DeadlineExceeded:
