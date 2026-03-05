@@ -97,24 +97,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 // roleLikeFilterResult is the result of applyRoleFilter and applyRoleBindingFilter.
 // ShouldDelete is false when the object belongs to Istio 1.21 or lower.
+// JSON tags are required so snapshot serialization matches the structure expected by SnapshotIter.
 type roleLikeFilterResult struct {
-	Name         string
-	Namespace    string
-	ShouldDelete bool
+	Name         string `json:"name"`
+	Namespace    string `json:"namespace"`
+	ShouldDelete bool   `json:"shouldDelete"`
 }
 
 // clusterRoleFilterResult is the result of applyClusterRoleFilter.
 // ShouldDelete is false when the object belongs to Istio 1.21 or lower.
 type clusterRoleFilterResult struct {
-	Name         string
-	ShouldDelete bool
+	Name         string `json:"name"`
+	ShouldDelete bool   `json:"shouldDelete"`
 }
 
 // clusterRoleBindingFilterResult is the result of applyClusterRoleBindingFilter.
 // ShouldDelete is false when the object belongs to Istio 1.21 or lower.
 type clusterRoleBindingFilterResult struct {
-	Name         string
-	ShouldDelete bool
+	Name         string `json:"name"`
+	ShouldDelete bool   `json:"shouldDelete"`
 }
 
 func getIstioRevisionFromObject(obj *unstructured.Unstructured) string {
