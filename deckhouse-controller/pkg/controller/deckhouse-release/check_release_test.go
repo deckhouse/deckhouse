@@ -204,7 +204,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 		suite.setupController("no-version-tags-in-registry.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.Error(suite.T(), err)
-		assert.Contains(suite.T(), err.Error(), "not available in registry")
+		assert.Contains(suite.T(), err.Error(), "not found in registry")
 	})
 
 	suite.Run("New release suspended", func() {

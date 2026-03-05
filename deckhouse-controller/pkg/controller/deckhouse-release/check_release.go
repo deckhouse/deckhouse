@@ -491,15 +491,18 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	// Verify release image for target version exists in registry before step-by-step validation.
 	// On mirror registries, release-channel repo may lack version tags (e.g., only ["beta"]).
 	// Treat missing image (404) as "not ready" (warn + retry) rather than "update failed" (alert).
-	// Other errors (network, auth) fall through to getNewVersions for normal error handling.
+	// Other errors (network, auth, 5xx) is an anomaly, return early and retry after 3 minutes.
 	if _, err := f.registryClient.Digest(ctx, newSemver.Original()); err != nil {
 		var terr *transport.Error
 		if errors.As(err, &terr) && terr.StatusCode == http.StatusNotFound {
-			f.logger.Warn("release image for target version not found in registry, will retry",
+			f.logger.Warn(
+				"release image for target version not found in registry, will retry",
 				slog.String("version", newSemver.Original()),
-				log.Err(err))
-			return nil, fmt.Errorf("release image %s not available in registry: %w", newSemver.Original(), err)
+				log.Err(err),
+			)
+			return nil, fmt.Errorf("release image %s not found in registry: %w", newSemver.Original(), err)
 		}
+		return nil, fmt.Errorf("checking release image %s digest: %w", newSemver.Original(), err)
 	}
 
 	if actual.GetNotificationShift() &&
