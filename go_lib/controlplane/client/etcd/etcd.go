@@ -10,6 +10,7 @@ import (
 	"time"
 
 	kubeadmapp "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapp"
+	clientv3 "go.etcd.io/etcd/client/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -78,8 +79,8 @@ func prepareAndWriteEtcdStaticPod(podManifest []byte, config *EtcdConfig, nodeNa
 	return nil
 }
 
-func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints []string, tlsConfig *tls.Config) (*Client, error) {
-	var etcdClient *Client
+func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints []string, tlsConfig *tls.Config) (*clientv3.Client, error) {
+	var etcdClient *clientv3.Client
 	etcdClient, err := NewFromCluster(client, certificatesDir)
 	if err != nil {
 		return nil, err
@@ -118,7 +119,7 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	/////////////////////////////////////////////////////////////////////
 
 	var cluster []Member
-	var etcdClient *Client
+	var etcdClient *clientv3.Client
 
 	etcdClient, err = NewFromCluster(kubeClient, config.CertificatesDir)
 	if err != nil {
@@ -127,11 +128,16 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 
 	////DELETE THIS BLOCK//////////////// test etcdClient ///////////////////////
 	logger.Info(fmt.Sprintf("TEST-ETCD client: etcdClient: %v", etcdClient))
-	clusterStatus, err := etcdClient.getClusterStatus()
+	clusterAuthStatus, err := etcdClient.AuthStatus(context.Background())
 	if err != nil {
 		return err
 	}
-	logger.Info(fmt.Sprintf("TEST-ETCD client: clusterStatus: %v", clusterStatus))
+	logger.Info(fmt.Sprintf("TEST-ETCD client: clusterAuthStatus: %v", clusterAuthStatus))
+	clusterMembers, err := etcdClient.MemberList(context.Background())
+	if err != nil {
+		return err
+	}
+	logger.Info(fmt.Sprintf("TEST-ETCD client: clusterMembers: %v", clusterMembers))
 	/////////////////////////////////////////////////////////////////////
 
 	// logger.Info(fmt.Sprintf("[etcd] Adding etcd member: %s", etcdPeerAddress))
