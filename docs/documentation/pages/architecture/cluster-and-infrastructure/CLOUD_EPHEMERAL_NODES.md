@@ -73,7 +73,7 @@ The module managing CloudEphemeral nodes consists of the following components:
 
    The pod consists of a single container:
 
-   * **reserve-resources**: A **pause-type** container used to reserve a network namespace (hidden from users in pods).
+   * **reserve-resources**: Container used in all pods to reserve a network namespace (hidden from users in pods).
 
 ## Module interactions
 
@@ -94,7 +94,7 @@ The module interacts with the following components:
    * `/dev/watchdog`: Sends signals to reset the Watchdog timer.
 
 {% alert level="info" %}
-The module interacts with the `cloud-provider` module via kube-apiserver using the `kube-system/d8-node-manager-cloud-provider` Secret to obtain cloud connection settings and create CloudEphemeral instances. The `cloud-provider` module also provides provider-specific Cluster API custom resource templates to `node-manager`.
+The module interacts with the `cloud-provider` module via kube-apiserver using the `kube-system/d8-node-manager-cloud-provider` Secret to obtain cloud connection settings and create CloudEphemeral nodes. The `cloud-provider` module also provides provider-specific Cluster API custom resource templates to `node-manager`.
 {% endalert %}
 
 The following external components interact with the module:

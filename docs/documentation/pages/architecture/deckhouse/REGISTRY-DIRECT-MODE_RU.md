@@ -15,6 +15,6 @@ relatedLinks:
 В случае таких компонентов, как [`operator-trivy`](/modules/operator-trivy/), `image-availability-exporter`, `deckhouse-controller` и ряда других, обращающихся к хранилищу образов напрямую, запросы будут идти через внутрикластерный прокси-сервер, расположенный на master-узлах.
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
-![Режим Direct модуля registry](../images/registry-module/direct-ru.png)
+![Режим Direct модуля registry](../../images/registry-module/direct-ru.png)
 
-Подробнее о режиме `Direct` читайте в [разделе об управлении внутренним хранилищем образов](../admin/configuration/registry/internal.html).
+Подробнее о режиме `Direct` читайте в [разделе об управлении внутренним хранилищем образов](../../admin/configuration/registry/internal.html).
