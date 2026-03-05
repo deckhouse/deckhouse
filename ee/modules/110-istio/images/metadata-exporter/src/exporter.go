@@ -59,10 +59,7 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 	// Get environments
 
 	inlet := os.Getenv("INLET")
-	clusterDomain := os.Getenv("CUSTOM_METADATA_EXPORTER_DOMAIN")
-	if clusterDomain == "" {
-		clusterDomain = os.Getenv("CLUSTER_DOMAIN")
-	}
+	clusterDomain := os.Getenv("CLUSTER_DOMAIN")
 	clusterUUID := os.Getenv("CLUSTER_UUID")
 	multicluserNetworkName := os.Getenv("MULTICLUSTER_NETWORK_NAME")
 	multiclusterAPIHost := os.Getenv("MULTICLUSTER_API_HOST")

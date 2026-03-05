@@ -65,10 +65,6 @@ spec:
           value: {{ .Values.global.discovery.clusterUUID }}
         - name: CLUSTER_DOMAIN
           value: {{ $.Values.global.discovery.clusterDomain | quote }}
-        {{- if .Values.istio.customMetadataExporterDomain }}
-        - name: CUSTOM_METADATA_EXPORTER_DOMAIN
-          value: {{ .Values.istio.customMetadataExporterDomain | quote }}
-        {{- end }}
         - name: INLET
           value: {{ $.Values.istio.alliance.ingressGateway.inlet | quote }}
   {{- if .Values.istio.federation.enabled }}
