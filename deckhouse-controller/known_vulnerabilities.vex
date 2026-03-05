@@ -2,8 +2,26 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 12,
+  "version": 13,
   "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-15558"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/cli@v25.0.6+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v27.1.1+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.0.1+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.0.2+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.2.2+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.3.3+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.5.1+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker CLI Windows plugin search path vulnerability - Уязвимость CWE-427 (Uncontrolled Search Path Element) в Docker CLI затрагивает исключительно среду Microsoft Windows: поиск бинарных плагинов в каталоге C:\\ProgramData\\Docker\\cli-plugins может позволить подмену исполняемых файлов. Компонент deckhouse-controller эксплуатируется в среде Kubernetes на базе Linux; официальное описание CVE указывает, что уязвимость не затрагивает бинарные файлы под платформы, отличные от Windows (non-Windows binaries). Таким образом, в рамках текущей эксплуатационной модели уязвимый код не входит в исполняемый путь и возможность эксплуатации исключена.",
+      "timestamp": "2026-03-05T12:00:00Z"
+    },
     {
       "vulnerability": {
         "name": "CVE-2026-24051"
@@ -23,9 +41,9 @@
         "name": "CVE-2025-47914"
       },
       "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
-        }
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.36.0"},
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.38.0"},
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.43.0"}
       ],
       "status": "affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
@@ -37,9 +55,9 @@
         "name": "CVE-2025-58181"
       },
       "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
-        }
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.36.0"},
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.38.0"},
+        {"@id": "pkg:golang/golang.org/x/crypto@v0.43.0"}
       ],
       "status": "affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
@@ -187,6 +205,6 @@
       "timestamp": "2026-02-17T12:00:00Z"
     }
   ],
-  "timestamp": "2026-03-04T12:00:00Z",
-  "last_updated": "2026-03-04T12:00:00Z"
+  "timestamp": "2026-03-05T12:00:00Z",
+  "last_updated": "2026-03-05T12:00:00Z"
 }
