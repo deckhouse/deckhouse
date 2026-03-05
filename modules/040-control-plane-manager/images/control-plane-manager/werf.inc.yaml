@@ -7,12 +7,6 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 fromCacheVersion: "2025-07-25-3"
 import:
-- image: common/kubernetes-artifact-{{ $image_version }}
-  add: /src/_output/bin
-  to: /
-  includePaths:
-  - kubeadm
-  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /control-plane-manager
   to: /control-plane-manager

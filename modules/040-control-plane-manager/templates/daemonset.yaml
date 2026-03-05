@@ -45,7 +45,6 @@ memory: 10Mi
 {{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
-{{- $_ := set $tpl_context "kubeadmDir" "kubeadm/v1beta4" -}}
 {{- $_ := set $tpl_context "controlPlaneTemplatesDir" "control-plane-templates" -}}
 {{- $_ := set $tpl_context "nodesCount" .Values.controlPlaneManager.internal.nodesCount }}
 {{- $_ := set $tpl_context "apiserver" dict }}

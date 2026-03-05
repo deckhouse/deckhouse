@@ -72,6 +72,7 @@ git:
   - bootstrap
   - bashible.sh.tpl
   - bb_node_name.sh.tpl
+  - bb_node_ip.sh.tpl
   {{- if eq .Env "CE" }}
   - detect_bundle.sh
   {{- end }}

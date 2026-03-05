@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
 {{ $manifestsDir := "/var/lib/bashible/control-plane" }}
+{{ $kubeconfigDir := "/var/lib/bashible/control-plane/kubeconfig" }}
 
 check_container_running() {
   local container_name=$1
@@ -39,10 +39,8 @@ check_container_running() {
 }
 
 check_container_running "kubernetes-api-proxy"
-mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
-cp {{ $kubeadmDir}}/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
-kubeadm init phase certs all --config {{ $kubeadmDir}}/config.yaml
-kubeadm init phase kubeconfig all --config {{ $kubeadmDir}}/config.yaml
+cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
+cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super-admin.conf} /etc/kubernetes/
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd"
 
@@ -65,17 +63,13 @@ cp {{ $manifestsDir}}/kube-controller-manager.yaml /etc/kubernetes/manifests/kub
 check_container_running "kube-apiserver"
 check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
-kubeadm init phase mark-control-plane --config {{ $kubeadmDir}}/config.yaml
 
-# CIS becnhmark purposes
+kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
+kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane=""
+kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane:NoSchedule
+
+# CIS benchmark purposes
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
-
-# This phase add 'node.kubernetes.io/exclude-from-external-load-balancers' label to node
-# with this label we cannot use target load balancers to control-plane nodes, so we manually remove them
-if ! bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(hostname)" node.kubernetes.io/exclude-from-external-load-balancers-; then
-  echo "Cannot remove node.kubernetes.io/exclude-from-external-load-balancers label from node" 1>&2
-  exit 1
-fi
 
 # Upload pki for deckhouse
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system delete secret d8-pki || true

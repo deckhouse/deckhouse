@@ -23,7 +23,6 @@
 **/007-registrypackages/images/erofs                             @name212 @090809 @sprait
 **/007-registrypackages/images/growpart                          @name212 @090809
 **/007-registrypackages/images/jq                                @name212 @090809
-**/007-registrypackages/images/kubeadm                           @sprait
 **/007-registrypackages/images/kubectl                           @sprait
 **/007-registrypackages/images/kubelet                           @sprait
 **/007-registrypackages/images/lsblk                             @name212 @090809
