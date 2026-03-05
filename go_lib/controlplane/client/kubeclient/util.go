@@ -1,4 +1,4 @@
-package kubeadmapp
+package kubeclient
 
 import (
 	"fmt"
