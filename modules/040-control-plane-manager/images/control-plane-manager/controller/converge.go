@@ -261,6 +261,8 @@ func prepareConverge(componentName string, isTemp bool) error {
 
 	var err error
 	var out []byte
+
+	// next block just for testing etcd library
 	if componentName == "etcd" {
 		etcdManifest := `apiVersion: v1
 kind: Pod
