@@ -84,39 +84,23 @@ func main() {
 	config := parseConfig(configPath)
 
 	if len(config.ExcludeNamespaces) > 0 && config.ExcludeNamespaces[0] == "all" {
-		logToStdErr("WARNING: All namespaces are excluded from integrity check.")
+		logToStdErr("WARNING: All namespaces are excluded from integrity check.\n")
 	}
 
 	isEditionsYaml := enabledModulesConfigPath != "" && strings.HasSuffix(filepath.Clean(enabledModulesConfigPath), "editions.yaml")
+	if !isEditionsYaml {
+		panic("-edition all requires -enabled-modules-config pointing to editions.yaml")
+	}
+	editions := parseEditionsFile(enabledModulesConfigPath)
 
 	if editionName == "all" {
-		if !isEditionsYaml {
-			panic("-edition all requires -enabled-modules-config pointing to editions.yaml")
-		}
-		editions := parseEditionsFile(enabledModulesConfigPath)
 		for _, ed := range editions.Editions {
-			modulesForFilter := getAvailableModulesForEdition(enabledModulesConfigPath, ed.Name)
-			namespacesMap := collectNamespaces(workDir, config, modulesForFilter)
-			outPath := buildIncludesOutputPath(workDir, ed.Name)
-			out, err := os.Create(outPath)
-			if err != nil {
-				panic(fmt.Errorf("cannot create output %s: %v", outPath, err))
-			}
-			writeNamespaces(out, namespacesMap)
-			out.Close()
+			render(editions, workDir, config, ed.Name)
 		}
-		return
+	} else {
+		render(editions, workDir, config, editionName)
 	}
 
-	modulesForFilter := parseEnabledModulesConfig(enabledModulesConfigPath)
-	namespacesMap := collectNamespaces(workDir, config, modulesForFilter)
-	outPath := buildIncludesOutputPath(workDir, editionName)
-	out, err := os.Create(outPath)
-	if err != nil {
-		panic(fmt.Errorf("cannot create output: %v", err))
-	}
-	defer out.Close()
-	writeNamespaces(out, namespacesMap)
 }
 
 func logToStdErr(f string, args ...any) {
@@ -166,58 +150,13 @@ func parseEditionsFile(p string) editionsFile {
 	return editions
 }
 
-func getAvailableModulesForEdition(editionsPath, edition string) enabledModules {
+func getAvailableModulesForEdition(editions editionsFile, edition string) enabledModules {
 	res := make(enabledModules)
-	editions := parseEditionsFile(editionsPath)
 	for _, ed := range editions.Editions {
 		if ed.Name == edition {
 			for _, module := range ed.AvailableModules {
 				res[module] = struct{}{}
 			}
-			return res
-		}
-	}
-	return res
-}
-
-func parseEnabledModulesConfig(p string) enabledModules {
-	res := make(enabledModules)
-	if p == "" {
-		return res
-	}
-
-	content, err := os.ReadFile(p)
-	if err != nil {
-		panic(fmt.Errorf("cannot read config: %v", err))
-	}
-
-	// When path points to editions.yaml, read availableModules from the edition specified by -edition.
-	if strings.HasSuffix(filepath.Clean(p), "editions.yaml") {
-		if editionName == "" {
-			panic("-edition is required when enabled-modules-config is editions.yaml")
-		}
-		var editions editionsFile
-		if err := yaml.Unmarshal(content, &editions); err != nil {
-			panic(fmt.Errorf("cannot parse editions file: %v", err))
-		}
-		for _, ed := range editions.Editions {
-			if ed.Name == editionName {
-				for _, module := range ed.AvailableModules {
-					res[module] = struct{}{}
-				}
-				return res
-			}
-		}
-		panic(fmt.Sprintf("edition %q not found in editions.yaml", editionName))
-	}
-
-	config := make(map[string]bool)
-	if err := yaml.Unmarshal(content, &config); err != nil {
-		panic(fmt.Errorf("cannot parse config: %v", err))
-	}
-	for module, enabled := range config {
-		if enabled {
-			res[module] = struct{}{}
 		}
 	}
 	return res
@@ -400,4 +339,16 @@ func collectNamespaces(workDir string, config Config, modulesForFilter enabledMo
 		namespacesMap[ns] = struct{}{}
 	}
 	return namespacesMap
+}
+
+func render(editions editionsFile, workDir string, config Config, edition string) {
+	modulesForFilter := getAvailableModulesForEdition(editions, edition)
+	namespacesMap := collectNamespaces(workDir, config, modulesForFilter)
+	outPath := buildIncludesOutputPath(workDir, edition)
+	out, err := os.Create(outPath)
+	if err != nil {
+		panic(fmt.Errorf("cannot create output: %v", err))
+	}
+	defer out.Close()
+	writeNamespaces(out, namespacesMap)
 }
