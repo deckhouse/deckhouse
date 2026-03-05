@@ -675,38 +675,6 @@ modules:
     namespace: kube-system
     subsystems:
     - kubernetes
-  dashboard:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:dashboard:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - dashboard
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:dashboard:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - dashboard
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: d8-dashboard
-    subsystems:
-    - observability
   deckhouse:
     capabilities:
       manage:
@@ -2572,7 +2540,6 @@ subsystems:
     - okmeter
     - upmeter
     namespaces:
-    - d8-dashboard
     - d8-log-shipper
     - d8-monitoring
     - d8-okmeter
