@@ -193,6 +193,8 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 
 			providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-dvp-bashible")
 			Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
+			providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
+			Expect(len(providerSpecificBashibleSecretData) == 0).To(BeTrue())
 
 			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-dvp-capi")
 			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
