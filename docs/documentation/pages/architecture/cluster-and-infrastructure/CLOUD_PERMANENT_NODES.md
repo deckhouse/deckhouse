@@ -21,7 +21,7 @@ The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) modu
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
 ![Node-manager architecture for CloudPermanent nodes](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-permanent-nodes.png)
 
-## Компоненты модуля
+## Module components
 
 {% alert level="info" %}
 Bashible is a key component of the Cluster & Infrastructure subsystem that enables the operation of the `node-manager` module. However, it is not part of the module itself, as it runs at the OS level as a system service. For Bashible details, refer to the [corresponding documentation section](bashible.html).
