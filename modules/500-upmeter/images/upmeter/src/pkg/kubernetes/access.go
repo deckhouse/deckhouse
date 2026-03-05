@@ -25,9 +25,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	kube "github.com/flant/kube-client/client"
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -83,7 +82,7 @@ type Config struct {
 	Context     string
 	Config      string
 	Server      string
-	ClientQps   float32
+	ClientQPS   float32
 	ClientBurst int
 
 	SchedulerProbeImage ProbeImageConfig
@@ -112,7 +111,7 @@ func (a *Accessor) Init(config *Config, userAgent string) error {
 	a.client = kube.New()
 	a.client.WithContextName(config.Context)
 	a.client.WithConfigPath(config.Config)
-	a.client.WithRateLimiterSettings(config.ClientQps, config.ClientBurst)
+	a.client.WithRateLimiterSettings(config.ClientQPS, config.ClientBurst)
 	// TODO(nabokihms): add kubernetes client metrics
 	err := a.client.Init()
 	// first start
