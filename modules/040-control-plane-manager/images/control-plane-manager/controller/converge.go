@@ -34,7 +34,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/etcd"
-	kubeadmapi "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapi"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -374,11 +373,11 @@ status: {}`
 		advertiseAddress := "10.12.1.32"
 		nodeName := "dkp-borovets-master-0"
 
-		if err := etcd.InitCluster([]byte(etcdManifest), &etcd.EtcdConfig{ManifestDir: "/etc/kubernetes/manifests_mytest", CertificatesDir: "/etc/kubernetes/pki"}, &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName); err != nil {
+		if err := etcd.InitCluster([]byte(etcdManifest), &etcd.EtcdConfig{ManifestDir: "/etc/kubernetes/manifests_mytest", CertificatesDir: "/etc/kubernetes/pki"}, &etcd.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName); err != nil {
 			log.Error("failed to test etcd library InitCluster", log.Err(err))
 		}
 
-		if err := etcd.JoinCluster([]byte(etcdManifest), &etcd.EtcdConfig{ManifestDir: "/etc/kubernetes/manifests_mytest_join", CertificatesDir: "/etc/kubernetes/pki"}, &kubeadmapi.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName); err != nil {
+		if err := etcd.JoinCluster([]byte(etcdManifest), &etcd.EtcdConfig{ManifestDir: "/etc/kubernetes/manifests_mytest_join", CertificatesDir: "/etc/kubernetes/pki"}, &etcd.APIEndpoint{AdvertiseAddress: advertiseAddress}, nodeName); err != nil {
 			log.Error("failed to test etcd library JoinCluster", log.Err(err))
 		}
 	}
