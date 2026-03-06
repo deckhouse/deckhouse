@@ -508,6 +508,22 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 				FullVersion:        "1.42.42",
 				DesiredFullVersion: "1.42.42",
 			}),
+		Entry("NS without labels, pod with istio.io/rev=default gets globalRevision as desired",
+			[]string{
+				generateIstioNsYAML(nsParams{}),
+				generateIstioPodYAML(podParams{
+					DefiniteRevision: "default",
+					CurrentRevision:  "v1x42",
+					FullVersion:      "1.42.42",
+				}),
+			}, &wantedMetric{
+				Revision:           "v1x42",
+				DesiredRevision:    "v1x42",
+				Version:            "1.42",
+				DesiredVersion:     "1.42",
+				FullVersion:        "1.42.42",
+				DesiredFullVersion: "1.42.42",
+			}),
 		Entry("NS without any revisions, pod with istio.io/rev label",
 			[]string{
 				generateIstioNsYAML(nsParams{
