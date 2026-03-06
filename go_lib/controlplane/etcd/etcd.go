@@ -32,7 +32,7 @@ const (
 func InitCluster(podManifest []byte, nodeName string, options ...option) error {
 	opt := prepareOptions(options...)
 
-	logger.Info("[etcd] Creating static Pod manifest during init cluster", slog.String("component", constants.Etcd))
+	logger.Info("Creating static Pod manifest during init cluster", slog.String("component", constants.Etcd))
 
 	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName, []*etcdserverpb.Member{}); err != nil {
 		return err
@@ -84,7 +84,7 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 	/////////////////////////////////////////////////////////////////////
 
 	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
-	// logger.Info("[etcd] Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
+	// logger.Info("Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
 	// // cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
 	// clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), []string{etcdPeerAddress})
 	// if err != nil {
@@ -102,7 +102,7 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 	logger.Info("TEST-ETCD client: Updated etcd member list", slog.Any("cluster", cluster))
 	/////////////////////////////////////////////////////////////////////
 
-	logger.Info("[etcd] Creating static Pod manifest during join cluster", slog.String("component", constants.Etcd))
+	logger.Info("Creating static Pod manifest during join cluster", slog.String("component", constants.Etcd))
 
 	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName /*clusterResponse.Members*/, cluster); err != nil {
 		return err
@@ -118,7 +118,7 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 	// 	return err
 	// }
 
-	// logger.Info("[etcd] Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
+	// logger.Info("Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
 	// if _, err := WaitForClusterAvailable(etcdClient, etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
 	// 	return err
 	// }
