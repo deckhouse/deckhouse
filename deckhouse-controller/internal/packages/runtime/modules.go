@@ -24,6 +24,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
@@ -47,6 +49,23 @@ type Module struct {
 	Name       string
 	Definition modules.Definition
 	Settings   addonutils.Values
+}
+
+// ValidateModuleSettings checks settings against the package's OpenAPI schema.
+// Returns valid if the package is not loaded yet (settings validated on load).
+func (r *Runtime) ValidateModuleSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "ValidateModuleSettings")
+	defer span.End()
+
+	r.mu.Lock()
+	module := r.modules[name]
+	if module == nil {
+		r.mu.Unlock()
+		return settingscheck.Result{Valid: true}, nil
+	}
+	r.mu.Unlock()
+
+	return module.ValidateSettings(ctx, settings)
 }
 
 // UpdateModule handles module creation and version changes from the module controller.
@@ -73,11 +92,6 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	ctx := r.packages.Update(name, version, module.Settings)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
-		return
-	}
-
-	if err := r.scheduler.CheckConstraints(module.Definition.Constraints()); err != nil {
-		r.status.HandleError(name, err)
 		return
 	}
 
