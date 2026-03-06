@@ -91,7 +91,7 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.18.1
 )
 
-require k8s.io/klog v1.0.0
+require k8s.io/klog v1.0.0 // indirect
 
 require (
 	cel.dev/expr v0.19.1 // indirect
@@ -192,7 +192,7 @@ require (
 	github.com/fluxcd/flagger v1.36.1 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/go-chi/chi/v5 v5.2.3
-	github.com/go-errors/errors v1.5.1
+	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -319,7 +319,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zmap/zcrypto v0.0.0-20231219022726-a1f61fb1661c // indirect
 	github.com/zmap/zlint/v3 v3.6.0 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.5.16
+	go.etcd.io/etcd/client/pkg/v3 v3.5.16 // indirect
 	go.mongodb.org/mongo-driver v1.17.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.28.0 // indirect
