@@ -33,6 +33,14 @@ properties:
       The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
 
       Optional. By default, the `modules.ingressClass` global value is used.
+  customMetadataExporterDomain:
+    type: string
+    pattern: '^([a-z0-9]([-a-z0-9]*[a-z0-9])?\.)+[a-z]{2,}$'
+    description: |
+      Custom domain for metadata-exporter
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
   federation:
     type: object
     x-doc-d8Editions:
