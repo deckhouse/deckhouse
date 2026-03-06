@@ -18,7 +18,6 @@ import (
 
 	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/pkg/errors"
 )
 
 var logger = log.Default().Named("etcd")
@@ -162,7 +161,7 @@ func writeStaticPodToDisk(podManifest []byte, componentName, manifestDir string)
 	filename := GetStaticPodFilepath(componentName, manifestDir)
 
 	if err := os.WriteFile(filename, podManifest, 0600); err != nil {
-		return errors.Wrapf(err, "failed to write static pod manifest file for %q (%q)", componentName, filename)
+		return fmt.Errorf("failed to write static pod manifest file for %q (%q): %w", componentName, filename, err)
 	}
 
 	return nil
