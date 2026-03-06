@@ -926,20 +926,40 @@ spec:
 
                         Можно указать число узлов или процент от общего количества узлов в данной группе.
                 fencing:
+                  type: object
                   description: |
-                    Включить fencing для этой группы.
+                    Включение fencing-контроллер для группы узлов.
+                  required: [ mode ]
                   properties:
                     mode:
+                      type: string
+                      enum:
+                        - "Watchdog"
+                        - "Dryrun"
                       description: |
-                        Fencing поддерживает единственный режим работы: `Watchdog`. В этом режиме используется модуль ядра watchdog (сторожевой таймер).
+                        Режимы работы fencing:
+                          - `Watchdog` — использует модуль ядра watchdog для автоматической перезагрузки узлов, потерявших связь с кластером.
+                          - `Dryrun` — запускает fencing-агент, но не активирует watchdog (режим проверки, без перезагрузок).
 
-                        Реализация Watchdog включает в себя следующие компоненты:
+                        При включении fencing скрипт NodeGroupConfiguration загружает модуль ядра softdog с параметрами `soft_margin=<timeout>` и `soft_panic=1`.
 
-                        - Fencing-agent — DaemonSet, который разворачивается на определенной группе узлов (NodeGroup).
-
-                          После запуска агент активирует Watchdog и устанавливает специальный лейбл `node-manager.deckhouse.io/fencing-enabled` на узле, где он функционирует. Агент регулярно проверяет доступность Kubernetes API. Если API доступен, агент отправляет сигнал в Watchdog, что сбрасывает сторожевой таймер. Также агент отслеживает специальные лейблы обслуживания на узле и, в зависимости от их наличия, включает или отключает Watchdog.
-
-                          В качестве Watchdog используется модуль ядра softdog с параметрами `soft_margin=60` и `soft_panic=1`. Это означает, что время таймаута сторожевого таймера составляет 60 секунд. По истечении этого времени происходит kernel-panic, и узел остается в этом состоянии до тех пор, пока пользователь не выполнит его перезагрузку.
-
-                        - Fencing-controller — контроллер, который отслеживает все узлы с установленным лейблом `node-manager.deckhouse.io/fencing-enabled`. Если какой-либо из узлов становится недоступным на протяжении более 60 секунд, контроллер удаляет все поды с этого узла и затем удаляет сам узел.
-
+                        Как работает fencing-агент:
+                          - Открывает устройство `/dev/watchdog` и устанавливает на узле лейбл `node-manager.deckhouse.io/fencing-enabled`.
+                          - Объединяется с агентами этой же NodeGroup в gossip-кластер (`memberlist`).
+                          - Регулярно проверяет кворум (доступность большинства узлов NodeGroup).
+                          - Если кворума нет (`quorum=false`), выполняет резервную проверку доступности Kubernetes API.
+                          - Если кворум есть или Kubernetes API доступен, агент сбрасывает таймер watchdog.
+                          - Если ни кворума, ни доступа к Kubernetes API нет, watchdog перестает сбрасываться, таймер истекает, что приводит к kernel panic и перезагрузке узла.
+                          - Учитывает аннотации обслуживания `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, `update.node.deckhouse.io/disruption-approved`, чтобы временно отключать watchdog на время плановых операций.
+                    watchdog:
+                      type: object
+                      properties:
+                        timeout:
+                          type: string
+                          pattern: "^[0-9]+[smh]{1}$"
+                          default: 60s
+                          description: |
+                            Длительность таймаута watchdog. Указывается в секундах, минутах или часах.
+                          x-doc-default: 60s
+                      required:
+                        - timeout
