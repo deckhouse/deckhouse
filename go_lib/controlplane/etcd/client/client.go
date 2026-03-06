@@ -79,21 +79,11 @@ func NewFromCluster(client clientset.Interface, certificatesDir string) (*client
 
 // getEtcdEndpoints returns the list of etcd endpoints.
 func getEtcdEndpoints(client clientset.Interface) ([]string, error) {
-	return getEtcdEndpointsWithRetry(client,
-		KubernetesAPICallRetryInterval, KubernetesAPICallTimeout)
-}
-
-func getEtcdEndpointsWithRetry(client clientset.Interface, interval, timeout time.Duration) ([]string, error) {
-	return getRawEtcdEndpointsFromPodAnnotation(client, interval, timeout)
-}
-
-// getRawEtcdEndpointsFromPodAnnotation returns the list of endpoints as reported on etcd's pod annotations using the given backoff
-func getRawEtcdEndpointsFromPodAnnotation(client clientset.Interface, interval, timeout time.Duration) ([]string, error) {
 	etcdEndpoints := []string{}
 	var lastErr error
 	// Let's tolerate some unexpected transient failures from the API server or load balancers. Also, if
 	// static pods were not yet mirrored into the API server we want to wait for this propagation.
-	err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true,
+	err := wait.PollUntilContextTimeout(context.Background(), KubernetesAPICallRetryInterval, KubernetesAPICallTimeout, true,
 		func(_ context.Context) (bool, error) {
 			var overallEtcdPodCount int
 			if etcdEndpoints, overallEtcdPodCount, lastErr = getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client); lastErr != nil {
