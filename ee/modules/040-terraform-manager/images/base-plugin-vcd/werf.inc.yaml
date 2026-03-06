@@ -1,0 +1,13 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/scratch
+git:
+- add: /{{ .ModulePath }}modules/030-cloud-provider-vcd/candi
+  to: /deckhouse/candi/cloud-providers/vcd
+import:
+{{- range $version := .TF.vcd.versions }}
+- image: cloud-provider-vcd/terraform-manager
+  add: /terraform-manager/terraform-provider-vcd-v{{ $version }}
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" $.TF "providerName" "vcd") }}/{{ $.TF.vcd.namespace }}/{{ $.TF.vcd.type }}/{{ $version }}/linux_amd64/terraform-provider-vcd
+  before: setup
+{{- end }}

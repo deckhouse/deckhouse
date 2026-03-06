@@ -1,0 +1,11 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/scratch
+git:
+- add: /{{ .ModulePath }}modules/030-cloud-provider-yandex/candi
+  to: /deckhouse/candi/cloud-providers/yandex
+import:
+- image: cloud-provider-yandex/terraform-manager
+  add: /terraform-manager/terraform-provider-yandex
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "yandex") }}/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
+  before: setup

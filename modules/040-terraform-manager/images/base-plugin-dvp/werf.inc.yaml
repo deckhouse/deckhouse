@@ -1,0 +1,11 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/scratch
+git:
+- add: /{{ .ModulePath }}modules/030-cloud-provider-dvp/candi
+  to: /deckhouse/candi/cloud-providers/dvp
+import:
+- image: cloud-provider-dvp/terraform-manager
+  add: /terraform-manager/terraform-provider-kubernetes
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "kubernetes") }}/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes
+  before: setup

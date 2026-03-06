@@ -1,0 +1,11 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/scratch
+git:
+- add: /{{ .ModulePath }}modules/030-cloud-provider-vsphere/candi
+  to: /deckhouse/candi/cloud-providers/vsphere
+import:
+- image: cloud-provider-vsphere/terraform-manager
+  add: /terraform-manager/terraform-provider-vsphere
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "vsphere") }}/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64/terraform-provider-vsphere
+  before: setup

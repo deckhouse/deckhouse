@@ -1,0 +1,11 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/scratch
+git:
+  - add: /{{ .ModulePath }}modules/030-cloud-provider-dynamix/candi
+    to: /deckhouse/candi/cloud-providers/dynamix
+import:
+  - image: cloud-provider-dynamix/terraform-manager
+    add: /terraform-manager/terraform-provider-decort
+    to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "decort") }}/{{ .TF.decort.namespace }}/{{ .TF.decort.type }}/{{ .TF.decort.version }}/linux_amd64/terraform-provider-decort
+    before: setup
