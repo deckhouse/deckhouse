@@ -126,11 +126,7 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-			Expect(regSecret.Exists()).To(BeTrue())
-			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("zvirt"))))
-
-			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "cloud-controller-manager")
+  		ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "cloud-controller-manager")
 			Expect(ccmDeployment.Exists()).To(BeTrue())
 			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
 - --leader-elect=true
@@ -154,6 +150,27 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 			Expect(cddDeployment.Exists()).To(BeTrue())
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerRegistrationSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("zvirt"))))
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-zvirt")
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificRegistrationSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("zvirt"))))
+
+			providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-zvirt-bashible")
+			Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
+			providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
+			Expect(len(providerSpecificBashibleSecretData) == 0).To(BeTrue())
+
+			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-zvirt-capi")
+			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+			providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
+			Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificCAPISecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["crds/external/zvirtclusters.yaml"].String()) > 0).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["capi/instance-class.checksum"].String()) > 0).To(BeTrue())
 
 		})
 	})

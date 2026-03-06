@@ -241,9 +241,27 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-			Expect(regSecret.Exists()).To(BeTrue())
-			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("v1rtual-app"))))
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerRegistrationSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("v1rtual-app"))))
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-vcd")
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificRegistrationSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("v1rtual-app"))))
+
+			providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-vcd-bashible")
+			Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
+			providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
+			Expect(len(providerSpecificBashibleSecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificBashibleSecretData["bootstrap-networks.sh.tpl"].String()) > 0 ).To(BeTrue())
+
+			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-vcd-capi")
+			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+			providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
+			Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificCAPISecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["crds/external/vcdclusters.yaml"].String()) > 0).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["capi/instance-class.checksum"].String()) > 0).To(BeTrue())
 
 			masterAffinityRule := f.KubernetesGlobalResource("VCDAffinityRule", "sandbox-master")
 			Expect(masterAffinityRule.Exists()).To(BeTrue())
