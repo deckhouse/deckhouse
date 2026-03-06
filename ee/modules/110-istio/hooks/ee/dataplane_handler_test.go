@@ -490,7 +490,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 				FullVersion:        "1.42.42",
 				DesiredFullVersion: "1.42.42",
 			}),
-		Entry("Pod with istio.io/rev=default (normalized to global string), metric has desired_revision=global",
+		Entry("Pod with istio.io/rev=default (normalized to global string), metric has desired_revision=<global one>",
 			[]string{
 				generateIstioNsYAML(nsParams{
 					GlobalRevision: true,
