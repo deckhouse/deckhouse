@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
-	kubeadmapi "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapi"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	clientset "k8s.io/client-go/kubernetes"
@@ -90,7 +89,7 @@ func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints
 	return etcdClient, nil
 }
 
-func InitCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string) error {
+func InitCluster(podManifest []byte, config *EtcdConfig, endpoint *APIEndpoint, nodeName string) error {
 
 	logger.Info("[etcd] Creating static Pod manifest during init cluster", slog.String("component", constants.Etcd))
 
@@ -100,7 +99,7 @@ func InitCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.AP
 	return nil
 }
 
-func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *kubeadmapi.APIEndpoint, nodeName string) error {
+func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *APIEndpoint, nodeName string) error {
 
 	kubeClient, err := kubeclient.MyNewKubernetesClient()
 	if err != nil {

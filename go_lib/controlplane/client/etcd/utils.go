@@ -14,7 +14,6 @@ import (
 	"time"
 
 	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeadmapi"
 	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +21,16 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 )
+
+// APIEndpoint struct contains elements of API server instance deployed on a node.
+type APIEndpoint struct {
+	// AdvertiseAddress sets the IP address for the API server to advertise.
+	AdvertiseAddress string
+
+	// BindPort sets the secure port for the API Server to bind to.
+	// Defaults to 6443.
+	BindPort int32
+}
 
 // NewFromCluster creates an etcd client for the etcd endpoints present in etcd member list. In order to compose this information,
 // it will first discover at least one etcd endpoint to connect to. Once created, the client synchronizes client's endpoints with
@@ -105,7 +114,7 @@ func WaitForClusterAvailable(c *clientv3.Client, retries int, retryInterval time
 // getEtcdEndpoints returns the list of etcd endpoints.
 func getEtcdEndpoints(client clientset.Interface) ([]string, error) {
 	return getEtcdEndpointsWithRetry(client,
-		constants.KubernetesAPICallRetryInterval, kubeadmapi.GetActiveTimeouts().KubernetesAPICall.Duration)
+		constants.KubernetesAPICallRetryInterval, constants.KubernetesAPICallTimeout)
 }
 
 func getEtcdEndpointsWithRetry(client clientset.Interface, interval, timeout time.Duration) ([]string, error) {
@@ -178,7 +187,7 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 
 // GetPeerURL creates an HTTPS URL that uses the configured advertise
 // address and peer port for the API controller
-func GetPeerURL(localEndpoint *kubeadmapi.APIEndpoint) string {
+func GetPeerURL(localEndpoint *APIEndpoint) string {
 	return "https://" + net.JoinHostPort(localEndpoint.AdvertiseAddress, strconv.Itoa(constants.EtcdListenPeerPort))
 }
 
