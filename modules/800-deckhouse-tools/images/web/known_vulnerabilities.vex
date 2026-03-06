@@ -83,7 +83,7 @@
           "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
         }
       ],
-      "status": "affected",
+      "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "go-git pack/index integrity verification bypass vulnerability - Уязвимость, связанная с проверкой целостности файлов .idx/.pack в go-git, формально присутствует в используемой версии зависимости. Однако реализация атаки требует подмены данных Git-репозитория на стороне источника. В типовой модели эксплуатации deckhouse-tools web источники репозиториев определяются и контролируются администратором, что не предоставляет нарушителю возможности управлять входными данными в необходимом объеме и существенно снижает применимость сценария эксплуатации.",
       "timestamp": "2026-03-04T12:00:00Z"
