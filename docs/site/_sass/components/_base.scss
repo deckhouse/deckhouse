@@ -19,13 +19,17 @@ ul {
 }
 
 ul.nav {
-  display: flex;
+  display: none;
   margin: 0;
   padding: 0;
   gap: 12px 32px;
   align-items: center;
   font-size: 16px;
   list-style: none;
+
+  &.hidden {
+    display: none;
+  }
 
   ul {
     list-style: none;
@@ -48,6 +52,14 @@ ul.nav {
     line-height: 1.75;
     text-transform: uppercase;
     @include mixins.color(mixins.$ntrl-400);
+
+    @include breakpoints.min-w(s) {
+      font-size: 1em;
+    }
+
+    @include breakpoints.min-w(m) {
+      font-size: 1.143em;
+    }
   }
 
   &--medium {
