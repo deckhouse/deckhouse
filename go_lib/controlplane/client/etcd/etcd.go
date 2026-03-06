@@ -89,7 +89,7 @@ func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints
 	return etcdClient, nil
 }
 
-func InitCluster(podManifest []byte, config *EtcdConfig, endpoint *APIEndpoint, nodeName string) error {
+func InitCluster(podManifest []byte, config *EtcdConfig, nodeName string) error {
 
 	logger.Info("[etcd] Creating static Pod manifest during init cluster", slog.String("component", constants.Etcd))
 
@@ -99,7 +99,7 @@ func InitCluster(podManifest []byte, config *EtcdConfig, endpoint *APIEndpoint, 
 	return nil
 }
 
-func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *APIEndpoint, nodeName string) error {
+func JoinCluster(podManifest []byte, config *EtcdConfig, ip string, nodeName string) error {
 
 	kubeClient, err := kubeclient.MyNewKubernetesClient()
 	if err != nil {
@@ -116,7 +116,7 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, endpoint *APIEndpoint, 
 	////////////////////////////////
 
 	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
-	// etcdPeerAddress := GetPeerURL(endpoint)
+	// etcdPeerAddress := GetPeerURL(ip)
 	/////////////////////////////////////////////////////////////////////
 
 	var cluster []*etcdserverpb.Member
