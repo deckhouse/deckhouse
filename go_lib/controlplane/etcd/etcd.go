@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	kubeclient "github.com/deckhouse/deckhouse/go_lib/controlplane/kubeclient"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
+	kubeclient "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 
@@ -63,7 +64,7 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 	var cluster []*etcdserverpb.Member
 	var etcdClient *clientv3.Client
 
-	etcdClient, err = NewFromCluster(kubeClient, opt.CertificatesDir)
+	etcdClient, err = client.NewFromCluster(kubeClient, opt.CertificatesDir)
 	if err != nil {
 		return err
 	}
