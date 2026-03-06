@@ -40,6 +40,9 @@ data:
 
   enable-ipv4: "true"
   enable-ipv6: "false"
+  {{- if .Values.cniCilium.LoadBalancerICMPReplyEnabled }}
+  enable-loadbalancer-icmp-reply: "true"
+  {{- end }}
 
   enable-bpf-tproxy: "true"
 
