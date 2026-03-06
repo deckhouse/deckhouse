@@ -31,8 +31,9 @@ status:
   packages:
     failed:
     - errors:
-      - error: no release images found for package "test-package" in /version path
-        version: unknown
+      - error: 'package has no type labels and no package.yaml, processed as the legacy
+          module (v1alpha1): test-package'
+        version: ""
       name: test-package
     processed:
     - name: test-package

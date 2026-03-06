@@ -183,6 +183,8 @@ spec:
               value: {{ .Values.deckhouse.logLevel }}
             - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
               value: "false"
+            - name: DECKHOUSE_ENABLE_MODULE_PACKAGES
+              value: "false"
             - name: USE_NELM
               value: "true"
             - name: LOG_TYPE
