@@ -34,10 +34,10 @@ const (
 	KubernetesAPICallRetryInterval = 500 * time.Millisecond
 )
 
-// NewFromCluster creates an etcd client for the etcd endpoints present in etcd member list. In order to compose this information,
+// New creates an etcd client for the etcd endpoints present in etcd member list. In order to compose this information,
 // it will first discover at least one etcd endpoint to connect to. Once created, the client synchronizes client's endpoints with
 // the known endpoints from the etcd membership API, since it is the authoritative source of truth for the list of available members.
-func NewFromCluster(client clientset.Interface, certificatesDir string) (*clientv3.Client, error) {
+func New(client clientset.Interface, certificatesDir string) (*clientv3.Client, error) {
 	// Discover at least one etcd endpoint to connect to by inspecting the existing etcd pods
 
 	// Get the list of etcd endpoints
