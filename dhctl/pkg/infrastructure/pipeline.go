@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -54,7 +55,10 @@ func equalArray(a, b []string) bool {
 }
 
 func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor OutputExecutor) (string, error) {
-	result, err := executor.Output(ctx, statePath, "master_ip_address_for_ssh")
+	result, err := executor.Output(ctx, OutputOpts{
+		StatePath: statePath,
+		OutFields: []string{"master_ip_address_for_ssh"},
+	})
 
 	if err != nil {
 		var ee *exec.ExitError
@@ -150,6 +154,9 @@ func CheckPipeline(
 		return nil
 	}
 	err := log.Process("infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+
+	logDebugPlanIfNeed(ctx, r, name, destroy)
+
 	return isChange, infrastructurePlan, destructiveChanges, err
 }
 
@@ -249,6 +256,9 @@ func CheckBaseInfrastructurePipeline(
 		return nil
 	}
 	err := log.Process("infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+
+	logDebugPlanIfNeed(ctx, r, name, false)
+
 	return isChange, pl, destructiveChanges, err
 }
 
@@ -422,4 +432,161 @@ func matchNoOutput(err string) bool {
 	}
 
 	return false
+}
+
+func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, destroy bool) {
+	const (
+		stepEnv = "DHCTL_CLI_DEBUG_PLAN_STEP"
+		// targetEnv
+		// should be
+		// module.$STEP.resource.resource_name like
+		// module.static-node.kubernetes_manifest.vm
+		// separated by ;
+		targetsEnv = "DHCTL_CLI_DEBUG_PLAN_TARGETS"
+	)
+
+	debugPlanStep := os.Getenv(stepEnv)
+	debugPlanTargetsStr := os.Getenv(targetsEnv)
+
+	targetsStr := fmt.Sprintf("%s - %s: %s", name, debugPlanStep, debugPlanTargetsStr)
+
+	skipMessage := func(f string, args ...any) string {
+		m := fmt.Sprintf(f, args...)
+		return fmt.Sprintf("Skip debug plan for %s: %s", targetsStr, m)
+	}
+
+	skipDebug := func(f string, args ...any) {
+		log.DebugF("%s\n", skipMessage(f, args...))
+	}
+
+	skipInfo := func(f string, args ...any) {
+		log.InfoF("%s\n", skipMessage(f, args...))
+	}
+
+	if debugPlanStep == "" {
+		skipDebug("step env %s not set", stepEnv)
+		return
+	}
+
+	targetsRaw := strings.Split(debugPlanTargetsStr, ";")
+	targets := make([]string, 0, len(targetsRaw))
+	for _, target := range targetsRaw {
+		t := strings.TrimSpace(target)
+		if t != "" {
+			targets = append(targets, t)
+		}
+	}
+
+	if len(targets) == 0 {
+		skipDebug("pass empty targets with env %s", targetsEnv)
+		return
+	}
+
+	if destroy {
+		skipInfo("no out destroy plan, because it is produce only destroy changes")
+		return
+	}
+
+	executorStep := string(r.GetStep())
+
+	if debugPlanStep != executorStep {
+		skipInfo("passed step %s not match with executor step %s", debugPlanStep, executorStep)
+		return
+	}
+
+	results := make(map[string]string, len(targets))
+	resultsErrs := make(map[string]error, len(targets))
+
+	// always return nil
+	_ = log.Process("infrastructure", "Getting debug plans", func() error {
+		for _, target := range targets {
+			res, err := r.DebugPlanTarget(ctx, destroy, debugPlanStep, target)
+			if err != nil {
+				resultsErrs[target] = err
+				continue
+			}
+			results[target] = res
+		}
+
+		return nil
+	})
+
+	targetStr := func(t string) string {
+		return fmt.Sprintf("%s - %s/%s", name, debugPlanStep, t)
+	}
+
+	for target, targetErr := range resultsErrs {
+		log.WarnF("Cannot get plan output for %s: %v\n", targetStr(target), targetErr)
+	}
+
+	for target, output := range results {
+		fullPretty, forTarget := extractChangesStrings(target, output)
+		log.DebugF("Full debug output plan for %s:\n%s\n", targetStr(target), fullPretty)
+		log.InfoF("Changes in plan for %s:\n%s\n", targetStr(target), forTarget)
+	}
+}
+
+func extractChangesStrings(target string, planOutput string) (string, string) {
+	var mapOut map[string]any
+	err := json.Unmarshal([]byte(planOutput), &mapOut)
+	if err != nil {
+		return planOutput, ""
+	}
+
+	changesForTarget := extractChanges(target, mapOut)
+
+	prettyOutput, err := json.MarshalIndent(mapOut, "", "  ")
+	if err != nil {
+		return planOutput, changesForTarget
+	}
+
+	return string(prettyOutput), changesForTarget
+}
+
+func extractChanges(target string, mapOut map[string]any) string {
+	changesRaw, ok := mapOut["resource_changes"]
+	if !ok {
+		return "Plan does not contain resource_changes key"
+	}
+
+	changes, ok := changesRaw.([]any)
+	if !ok {
+		return fmt.Sprintf("Plan resource_changes key is not []any it is %T", changesRaw)
+	}
+
+	for i, changeRaw := range changes {
+		change, ok := changeRaw.(map[string]any)
+		if !ok {
+			msg := fmt.Sprintf("Plan resource_changes key index %d for %s is not map[string]any it is %T", i, target, changesRaw)
+			log.DebugF("%s\n", msg)
+			continue
+		}
+
+		address, ok := change["address"]
+		if !ok {
+			msg := fmt.Sprintf("Plan resource_changes key index %d for %s does not contain address key", i, target)
+			log.DebugF("%s\n", msg)
+			continue
+		}
+
+		addressStr, ok := address.(string)
+		if !ok {
+			msg := fmt.Sprintf("Plan resource_changes key index %d for %s address is not string it is %T", i, target, address)
+			log.DebugF("%s\n", msg)
+			continue
+		}
+
+		if addressStr != target {
+			continue
+		}
+
+		changeBytes, err := json.MarshalIndent(change, "", "  ")
+		if err != nil {
+			return fmt.Sprintf("Cannot marshal changes: %v", err)
+		}
+
+		return string(changeBytes)
+	}
+
+	return "Changes not found"
 }
