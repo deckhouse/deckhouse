@@ -24,7 +24,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	// Order 25: run after module discovery hooks (which are typically Order 20)
+	// Order 25: run after module discovery hooks (typically Order 20)
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 25},
 }, discoverCloudProviderDefaultStorageClass)
 
