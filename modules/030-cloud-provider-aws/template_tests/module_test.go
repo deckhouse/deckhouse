@@ -232,7 +232,7 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(len(providerSpecificMCMSecretData) >= 1).To(BeTrue())
 			Expect(len(providerSpecificMCMSecretData["config-for-machine-controller-manager.yaml"].String()) > 0).To(BeTrue())
 
-			providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", "d8-cloud-provider-aws-bashible-steps")
+			providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
 			Expect(providerSpecificBashibleStepsSecret.Exists()).To(BeTrue())
 			Expect(providerSpecificBashibleStepsSecret.Field(fmt.Sprintf("metadata.labels.%s", bashibleLabelKey)).String()).To(Equal("steps"))
 			Expect(providerSpecificBashibleStepsSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
@@ -240,7 +240,7 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(len(providerSpecificBashibleStepsSecretData) >= 1).To(BeTrue())
 			Expect(len(providerSpecificBashibleStepsSecretData["000_set_cloud_variables.sh.tpl"].String()) > 0).To(BeTrue())
 
-			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", "d8-cloud-provider-aws-bashible-bootstrap")
+			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
 			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeTrue())
 			Expect(providerSpecificBashibleBootstrapSecret.Field(fmt.Sprintf("metadata.labels.%s", bashibleLabelKey)).String()).To(Equal("bootstrap"))
 			Expect(providerSpecificBashibleBootstrapSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
