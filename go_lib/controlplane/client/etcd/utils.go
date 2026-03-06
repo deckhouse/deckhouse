@@ -45,16 +45,6 @@ func NewFromCluster(client clientset.Interface, certificatesDir string) (*client
 	}
 	logger.Info("etcd endpoints read from pods", slog.String("endpoints", strings.Join(endpoints, ",")))
 
-	// Creates an etcd client
-	// etcdClient, err := New(
-	// 	endpoints,
-	// 	filepath.Join(certificatesDir, constants.EtcdCACertName),
-	// 	filepath.Join(certificatesDir, constants.EtcdHealthcheckClientCertName),
-	// 	filepath.Join(certificatesDir, constants.EtcdHealthcheckClientKeyName),
-	// )
-	// if err != nil {
-	// 	return nil, errors.Wrapf(err, "error creating etcd client for %v endpoints", endpoints)
-	// }
 	cert, err := tls.LoadX509KeyPair(filepath.Join(certificatesDir, constants.EtcdHealthcheckClientCertName), filepath.Join(certificatesDir, constants.EtcdHealthcheckClientKeyName))
 	if err != nil {
 		return nil, err
@@ -78,12 +68,9 @@ func NewFromCluster(client clientset.Interface, certificatesDir string) (*client
 		return nil, err
 	}
 
+	// was this block
 	// synchronizes client's endpoints with the known endpoints from the etcd membership.
 	// err = etcdClient.Sync()
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "error syncing endpoints with etcd")
-	// }
-	// logger.Info("update etcd endpoints", slog.String("endpoints", strings.Join(etcdClient.Endpoints, ",")))
 
 	return etcdClient, nil
 }
