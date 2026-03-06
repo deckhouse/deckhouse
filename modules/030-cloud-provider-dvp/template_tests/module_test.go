@@ -113,6 +113,24 @@ internal:
       name: sds-local-storage
     - dvpStorageClass: xxx
       name: xxx
+  capdvpControllerManagerWebhookCert:
+    ca: |
+      -----BEGIN CERTIFICATE-----
+      MIIBkTCB+wIJAKHBfpEgcMFvMA0GCSqGSIb3DQEBCwUAMBExDzANBgNVBAMMBnRl
+      c3RDQTAeFw0yMzAxMDEwMDAwMDBaFw0yNDAxMDEwMDAwMDBaMBExDzANBgNVBAMM
+      BnRlc3RDQTBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQC7o96HtiXPWvKqLHHFLPCL
+      -----END CERTIFICATE-----
+    crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIBkTCB+wIJAKHBfpEgcMFvMA0GCSqGSIb3DQEBCwUAMBExDzANBgNVBAMMBnRl
+      c3RDUlQwHhcNMjMwMTAxMDAwMDAwWhcNMjQwMTAxMDAwMDAwWjARMQ8wDQYDVQQD
+      DAZ0ZXN0Q1JUMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALuj3oe2Jc9a8qosccUs
+      -----END CERTIFICATE-----
+    key: |
+      -----BEGIN RSA PRIVATE KEY-----
+      MIIBOgIBAAJBALuj3oe2Jc9a8qosccUs8IvDe+6wSeaK7e+JMkNBAOxpe0HJeBpb
+      K4VCgQhRGoHB8MCP8FMJK0IfoyukVEHNtdkCAwEAAQJAYm9cTg2RHGfVLlKvJxqS
+      -----END RSA PRIVATE KEY-----
 `
 
 const tolerationsAnyNodeWithUninitialized = `
