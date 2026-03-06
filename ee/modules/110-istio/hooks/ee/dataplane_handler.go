@@ -553,11 +553,6 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
-		// istioPod.Revision normalized for pod in getIstioCurrentRevision
-		if desiredRevision == istioRevsionAbsent && istioPod.Revision == "global" {
-			desiredRevision = globalRevision
-		}
-
 		desiredFullVersion := versionMap.GetFullVersionByRevision(desiredRevision)
 		if desiredFullVersion == "" {
 			desiredFullVersion = istioVersionUnknown
