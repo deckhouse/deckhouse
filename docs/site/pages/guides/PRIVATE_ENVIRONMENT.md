@@ -1384,14 +1384,14 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 Create the `ingress-nginx-controller.yml` file on the master node containing the Ingress controller configuration:
 
 ```yaml
-# NGINX Ingress controller parameters.
+# Ingress NGINX controller parameters.
 # https://deckhouse.io/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
-  # The name of the IngressClass served by the NGINX Ingress controller.
+  # The name of the IngressClass served by the Ingress NGINX controller.
   ingressClass: nginx
   # How traffic enters from outside the cluster.
   inlet: HostPort
