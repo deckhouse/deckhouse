@@ -1,0 +1,81 @@
+{{- $version := "1.6.5" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /src/scripts
+    stageDependencies:
+      install:
+        - '**/*'
+secrets:
+  - id: SOURCE_REPO
+    value: "{{ $.SOURCE_REPO }}"
+shell:
+  install:
+    - mkdir -m 1777 /src/tmp
+    - chmod +x /src/scripts/*
+    - git config --global advice.detachedHead false
+    - git clone --depth 1 --single-branch --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/cloudflare/cfssl.git /src/cfssl
+    - rm -rf /src/cfssl/.git
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
+    add: /src/cfssl
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: "{{ $.GOPROXY }}"
+shell:
+  beforeInstall:
+    {{- include "alpine packages proxy" . | nindent 4 }}
+    - apk add --no-cache make
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - export GOOS=linux
+    - export GOARCH=amd64
+    - export CGO_ENABLED=0
+    - cd /src/cfssl
+    - make
+    - chmod +x ./bin/*
+    - mv ./bin/* /
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}"
+fromImage: common/distroless
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
+    add: /src/scripts
+    to: /
+    includePaths:
+    - install
+    - uninstall
+    before: setup
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
+    add: /
+    to: /
+    includePaths:
+    - cfssl
+    - cfssl-bundle
+    - cfssl-certinfo
+    - cfssl-newkey
+    - cfssl-scan
+    - cfssljson
+    before: setup
+imageSpec:
+  config:
+    labels:
+      distro: all
+      version: all
+      cfssl: {{ $version }}
+      cfssl-bundle: {{ $version }}
+      cfssl-certinfo: {{ $version }}
+      cfssl-newkey: {{ $version }}
+      cfssl-scan: {{ $version }}
+      cfssljson: {{ $version }}
