@@ -36,6 +36,21 @@ discovery:
     system: 1
     master: 1
 `
+	const globalValuesWithDefaultGateway = `
+enabledModules: ["vertical-pod-autoscaler", "dashboard"]
+modules:
+  https:
+    mode: CustomCertificate
+  publicDomainTemplate: "%s.example.com"
+  gatewayAPIDefaultGateway:
+    name: default
+    namespace: d8-alb-istio
+  placement: {}
+discovery:
+  d8SpecificNodeCountByRole:
+    system: 1
+    master: 1
+`
 	const customCertificatePresent = `
 https:
   mode: CustomCertificate
@@ -64,6 +79,26 @@ auth: {}
 			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
 		})
 
+	})
+
+	Context("With default gateway", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesWithDefaultGateway)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("dashboard", customCertificatePresent)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly for cluster with default gateway", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			createdSecret := f.KubernetesResource("Secret", "d8-dashboard", "ingress-tls-customcertificate")
+			Expect(createdSecret.Exists()).To(BeTrue())
+			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
+
+			createdHTTPRouteSecret := f.KubernetesResource("Secret", "d8-dashboard", "httproute-tls-customcertificate")
+			Expect(createdHTTPRouteSecret.Exists()).To(BeTrue())
+			Expect(createdHTTPRouteSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
+		})
 	})
 
 })
