@@ -25,6 +25,7 @@ fi
 
 bb-deckhouse-get-disruptive-update-approval
 bb-log-info "Rebooting machine"
+bb-bashible-ready-machine-reboot "Machine reboot requested by bashible reboot step"
 bb-flag-unset reboot
 
 # If it is first run bashible on bootstrap simple reboot node

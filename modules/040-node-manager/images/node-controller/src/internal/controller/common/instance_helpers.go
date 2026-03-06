@@ -19,7 +19,9 @@ package common
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,8 +31,6 @@ import (
 
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
-
-const InstanceControllerFinalizer = "node-manager.hooks.deckhouse.io/instance-controller"
 
 func EnsureInstanceExists(
 	ctx context.Context,
@@ -127,4 +127,47 @@ func RemoveInstanceControllerFinalizer(
 
 	*instance = *updated
 	return nil
+}
+
+func GetInstanceRebootingState(
+	ctx context.Context,
+	c client.Reader,
+	instance *deckhousev1alpha2.Instance,
+) (bool, string, error) {
+	bashibleReady, hasBashibleReady := GetInstanceConditionByType(
+		instance.Status.Conditions,
+		deckhousev1alpha2.InstanceConditionTypeBashibleReady,
+	)
+	if !hasBashibleReady ||
+		bashibleReady.Status != metav1.ConditionUnknown ||
+		bashibleReady.Reason != deckhousev1alpha2.InstanceConditionReasonMachineReboot {
+		return false, "", nil
+	}
+	if instance.Spec.NodeRef.Name == "" {
+		return false, "", nil
+	}
+
+	node := &corev1.Node{}
+	if err := c.Get(ctx, types.NamespacedName{Name: instance.Spec.NodeRef.Name}, node); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, "", nil
+		}
+		return false, "", fmt.Errorf("get node %q for rebooting state: %w", instance.Spec.NodeRef.Name, err)
+	}
+	if IsNodeReady(node) {
+		return false, "", nil
+	}
+
+	return true, strings.TrimSpace(bashibleReady.Message), nil
+}
+
+func IsNodeReady(node *corev1.Node) bool {
+	for i := range node.Status.Conditions {
+		condition := node.Status.Conditions[i]
+		if condition.Type == corev1.NodeReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+
+	return false
 }
