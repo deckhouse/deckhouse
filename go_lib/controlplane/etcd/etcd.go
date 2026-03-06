@@ -63,7 +63,7 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 	var cluster []*etcdserverpb.Member
 	var etcdClient *clientv3.Client
 
-	etcdClient, err = client.NewFromCluster(kubeClient, opt.CertificatesDir)
+	etcdClient, err = client.New(kubeClient, opt.CertificatesDir)
 	if err != nil {
 		return err
 	}
