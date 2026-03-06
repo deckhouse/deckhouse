@@ -374,7 +374,7 @@ index 00000000000..325088774fc
 +	return false
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 55d31fc8eda..b09dfdaeff0 100644
+index 55d31fc8eda..4d003b39c5b 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -35,7 +35,9 @@ import (
@@ -440,7 +440,23 @@ index 55d31fc8eda..b09dfdaeff0 100644
  	deprecated := crdInfo.deprecated[requestInfo.APIVersion]
  	for _, w := range crdInfo.warnings[requestInfo.APIVersion] {
  		warning.AddWarning(req.Context(), "", w)
-@@ -679,6 +713,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -655,6 +689,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+ 		if val == nil {
+ 			continue
+ 		}
++		// DEBUG: check v1 schema before conversion
++		if val.OpenAPIV3Schema != nil {
++			for propName, prop := range val.OpenAPIV3Schema.Properties {
++				klog.Infof("[DEBUG-SENSITIVE] v1 schema property %q: XSensitiveData=%v", propName, prop.XSensitiveData)
++				for subName, subProp := range prop.Properties {
++					klog.Infof("[DEBUG-SENSITIVE]   v1 sub-property %q.%q: XSensitiveData=%v", propName, subName, subProp.XSensitiveData)
++				}
++			}
++		}
+ 		internalValidation := &apiextensionsinternal.CustomResourceValidation{}
+ 		if err := apiextensionsv1.Convert_v1_CustomResourceValidation_To_apiextensions_CustomResourceValidation(val, internalValidation, nil); err != nil {
+ 			return nil, fmt.Errorf("failed converting CRD validation to internal version: %v", err)
+@@ -679,6 +722,31 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		structuralSchemas[v.Name] = s
  	}
  
@@ -448,7 +464,21 @@ index 55d31fc8eda..b09dfdaeff0 100644
 +	sensitiveSchemas := map[string]*structuralschema.Structural{}
 +	if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData) {
 +		for vName, s := range structuralSchemas {
-+			if sensitive.HasSensitiveFields(s) {
++			hasSF := sensitive.HasSensitiveFields(s)
++			klog.Infof("[DEBUG-SENSITIVE] getOrCreateServingInfoFor: CRD=%s version=%s HasSensitiveFields=%v", crd.Name, vName, hasSF)
++			// Dump top-level properties to check XSensitiveData
++			if s != nil {
++				for propName, prop := range s.Properties {
++					klog.Infof("[DEBUG-SENSITIVE]   property %q: XSensitiveData=%v", propName, prop.XSensitiveData)
++					for subPropName, subProp := range prop.Properties {
++						klog.Infof("[DEBUG-SENSITIVE]     sub-property %q.%q: XSensitiveData=%v", propName, subPropName, subProp.XSensitiveData)
++						for subSubName, subSubProp := range subProp.Properties {
++							klog.Infof("[DEBUG-SENSITIVE]       sub-sub-property %q.%q.%q: XSensitiveData=%v", propName, subPropName, subSubName, subSubProp.XSensitiveData)
++						}
++					}
++				}
++			}
++			if hasSF {
 +				hasSensitive = true
 +				sensitiveSchemas[vName] = s
 +			}
@@ -458,7 +488,7 @@ index 55d31fc8eda..b09dfdaeff0 100644
  	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
  	if err != nil {
  		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
-@@ -1036,6 +1081,8 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1036,6 +1104,8 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		deprecated:          deprecated,
  		warnings:            warnings,
  		storageVersion:      storageVersion,
