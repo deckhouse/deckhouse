@@ -1,7 +1,6 @@
 package constants
 
 import (
-	"path/filepath"
 	"time"
 )
 
@@ -43,8 +42,3 @@ const (
 	// AdminKubeConfigFileName defines name for the kubeconfig aimed to be used by the admin of the cluster
 	AdminKubeConfigFileName = "admin.conf"
 )
-
-// GetStaticPodFilepath returns the location on the disk where the Static Pod should be present
-func GetStaticPodFilepath(componentName, manifestsDir string) string {
-	return filepath.Join(manifestsDir, componentName+".yaml")
-}

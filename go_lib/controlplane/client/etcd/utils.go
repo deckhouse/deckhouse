@@ -167,3 +167,8 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 func GetPeerURL(ip string) string {
 	return "https://" + net.JoinHostPort(ip, strconv.Itoa(constants.EtcdListenPeerPort))
 }
+
+// GetStaticPodFilepath returns the location on the disk where the Static Pod should be present
+func GetStaticPodFilepath(componentName, manifestsDir string) string {
+	return filepath.Join(manifestsDir, componentName+".yaml")
+}

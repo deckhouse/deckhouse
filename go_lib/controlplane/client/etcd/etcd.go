@@ -36,7 +36,7 @@ func WriteStaticPodToDisk(podManifest []byte, componentName, manifestDir string)
 		return errors.Wrapf(err, "failed to create directory %q", manifestDir)
 	}
 
-	filename := constants.GetStaticPodFilepath(componentName, manifestDir)
+	filename := GetStaticPodFilepath(componentName, manifestDir)
 
 	if err := os.WriteFile(filename, podManifest, 0600); err != nil {
 		return errors.Wrapf(err, "failed to write static pod manifest file for %q (%q)", componentName, filename)
