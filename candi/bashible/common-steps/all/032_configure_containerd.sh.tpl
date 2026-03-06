@@ -489,6 +489,11 @@ check_additional_configs /etc/containerd/conf.d "v1"
 containerd_toml=$(additional_configs conf.d conf2.d)
 {{- end }}
 
+if ! bb-ctrd-validate-toml "${containerd_toml}"; then
+  bb-log-error "containerd config validation failed, refusing to apply"
+  exit 1
+fi
+
 bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"
 
 bb-sync-file /etc/crictl.yaml - << "EOF"
