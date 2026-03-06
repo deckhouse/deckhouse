@@ -82,3 +82,30 @@ bb-ctrd-v2-has-registry-fields() {
   fi
   echo "$has_registry" | grep -q "true"
 }
+
+# bb-ctrd-validate-toml:
+# Validate containerd config content before writing to disk using containerd's own parser.
+#
+# Arguments:
+#   $1 — Config content string
+#
+# Returns:
+#   0 — Config is valid
+#   1 — Config is invalid; containerd's error is printed to stderr
+bb-ctrd-validate-toml() {
+  local config_content="$1"
+  local tmp_file
+  tmp_file=$(mktemp -t containerd-validate-XXXXXX.toml)
+  trap "rm -f '$tmp_file'" RETURN
+
+  printf '%s' "$config_content" > "$tmp_file"
+
+  local validate_output
+  if ! validate_output=$(/opt/deckhouse/bin/containerd --config "${tmp_file}" config dump 2>&1); then
+    >&2 echo "ERROR: containerd config validation failed:"
+    >&2 echo "${validate_output}"
+    return 1
+  fi
+
+  return 0
+}
