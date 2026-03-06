@@ -12,3 +12,6 @@ git:
 shell:
   install:
   - apt-get install -y glibc-utils
+  - rm -f /var/lib/rpm/__db*
+  - rpm --rebuilddb
+  - apt-get update -y
