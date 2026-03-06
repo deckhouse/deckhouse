@@ -18,11 +18,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -292,9 +290,20 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	}
 
 	logger.Debug("registry application to operator")
-	if err := r.updateOperatorPackage(ctx, app, apv); err != nil {
-		return err
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
+		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
 	}
+
+	r.operator.UpdateApp(registry.BuildRemote(repo), packageoperator.App{
+		Name:      app.Name,
+		Namespace: app.Namespace,
+		Definition: apps.Definition{
+			Name:    app.Spec.PackageName,
+			Version: app.Spec.PackageVersion,
+		},
+		Settings: app.Spec.Settings.GetMap(),
+	})
 
 	// TODO: Completed = "true"
 
@@ -312,65 +321,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch application '%s': %w", app.Name, err)
 	}
-
-	return nil
-}
-
-func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Application, apv *v1alpha1.ApplicationPackageVersion) error {
-	repo := new(v1alpha1.PackageRepository)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
-		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
-	}
-
-	var requirements apps.Requirements
-	if apv.Status.PackageMetadata != nil && apv.Status.PackageMetadata.Requirements != nil {
-		var err error
-
-		var kubernetesConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Kubernetes) > 0 {
-			if kubernetesConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Kubernetes); err != nil {
-				return fmt.Errorf("parse kubernetes requirement: %w", err)
-			}
-		}
-
-		var deckhouseConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Deckhouse) > 0 {
-			if deckhouseConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Deckhouse); err != nil {
-				return fmt.Errorf("parse deckhouse requirement: %w", err)
-			}
-		}
-
-		modules := make(map[string]apps.Dependency)
-		for module, rawConstraint := range apv.Status.PackageMetadata.Requirements.Modules {
-			raw, optional := strings.CutSuffix(rawConstraint, "!optional")
-			constraint, err := semver.NewConstraint(raw)
-			if err != nil {
-				return fmt.Errorf("parse module requirement '%s': %w", module, err)
-			}
-
-			modules[module] = apps.Dependency{
-				Constraints: constraint,
-				Optional:    optional,
-			}
-		}
-
-		requirements = apps.Requirements{
-			Kubernetes: kubernetesConstraint,
-			Deckhouse:  deckhouseConstraint,
-			Modules:    modules,
-		}
-	}
-
-	r.operator.UpdateApp(registry.BuildRemote(repo), packageoperator.App{
-		Name:      app.Name,
-		Namespace: app.Namespace,
-		Definition: apps.Definition{
-			Name:         app.Spec.PackageName,
-			Version:      app.Spec.PackageVersion,
-			Requirements: requirements,
-		},
-		Settings: app.Spec.Settings.GetMap(),
-	})
 
 	return nil
 }

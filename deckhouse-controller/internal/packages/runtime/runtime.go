@@ -557,3 +557,8 @@ func (r *Runtime) Status() *status.Service {
 func (r *Runtime) Scheduler() *schedule.Scheduler {
 	return r.scheduler
 }
+
+// CheckConstraints checks constraints in scheduler
+func (r *Runtime) CheckConstraints(constraints schedule.Constraints) error {
+	return r.scheduler.CheckConstraints(constraints)
+}
