@@ -1,0 +1,37 @@
+cloud-provider-aws:
+  fixes:
+    - summary: fix CVE in cloud-provider-aws
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18057
+cloud-provider-azure:
+  fixes:
+    - summary: fix CVEs in cloud-provider-azure
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18240
+cloud-provider-zvirt:
+  features:
+    - summary: add customNetworkConfig
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18227
+    - summary: add customNetworkConfig
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17879
+  fixes:
+    - summary: fix CVEs in cloud-provider-zvirt
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18257
+    - summary: docs fox
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18242
+docs:
+  fixes:
+    - summary: Fix alerts rendering.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18204
+    - summary: Moving the platform update section to the top in the sidebar.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18176
+    - summary: Changing the term metka to label in Russian-language documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18164
+    - summary: Added info about using update-observer according to
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18100
+registry:
+  fixes:
+    - summary: fixed path in images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18245
+    - summary: Updated auth image Go dependencies to fix Go CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18233
+      impact: Registry pods will be restarted.
+
