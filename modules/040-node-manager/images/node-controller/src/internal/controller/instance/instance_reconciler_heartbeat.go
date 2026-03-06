@@ -30,8 +30,6 @@ import (
 )
 
 const (
-	instanceBashibleHeartbeatFieldOwner = "node-controller-instance-bashible-heartbeat"
-
 	bashibleHeartbeatReason                   = "HeartBeat"
 	bashibleHeartbeatWaitingApprovalReason    = deckhousev1alpha2.InstanceConditionTypeWaitingApproval
 	bashibleHeartbeatWaitingDisruptionReason  = deckhousev1alpha2.InstanceConditionTypeWaitingDisruptionApproval
@@ -68,7 +66,7 @@ func (r *InstanceReconciler) reconcileBashibleHeartbeat(ctx context.Context, ins
 		ctx,
 		applyObj,
 		client.Apply,
-		client.FieldOwner(instanceBashibleHeartbeatFieldOwner),
+		client.FieldOwner(common.InstanceBashibleHeartbeatFieldOwner),
 		client.ForceOwnership,
 	); err != nil {
 		return fmt.Errorf("apply heartbeat condition for instance %q: %w", instance.Name, err)
@@ -92,6 +90,11 @@ func desiredBashibleHeartbeatCondition(
 	}
 	if bashibleReady.Status == metav1.ConditionFalse {
 		// Skip heartbeat when bashible is already in error state to preserve the original failure reason
+		return nil, false
+	}
+	if bashibleReady.Status == metav1.ConditionUnknown &&
+		bashibleReady.Reason == deckhousev1alpha2.InstanceConditionReasonMachineReboot {
+		// Preserve explicit reboot state until node becomes ready again
 		return nil, false
 	}
 	probeTime := effectiveHeartbeatTime(bashibleReady)

@@ -29,6 +29,7 @@ const (
 	MachineStatusReady       = "Ready"
 	MachineStatusBlocked     = "Blocked"
 	MachineStatusError       = "Error"
+	MachineStatusRebooting   = "Rebooting"
 )
 
 const MachineNamespace = "d8-cloud-instance-manager"

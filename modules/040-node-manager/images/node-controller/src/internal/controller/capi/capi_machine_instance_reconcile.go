@@ -32,8 +32,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/common/machine"
 )
 
-const instanceStatusFieldOwner = "node-controller-instancestatus"
-
 func (r *CAPIMachineReconciler) reconcileLinkedInstance(ctx context.Context, data capiMachineReconcileData) error {
 	logger := log.FromContext(ctx)
 	logger.V(4).Info("tick", "op", "capi.instance.reconcile")
@@ -117,6 +115,14 @@ func (r *CAPIMachineReconciler) syncInstanceStatus(
 	instance *deckhousev1alpha2.Instance,
 	machineStatus machine.MachineStatus,
 ) error {
+	rebooting, _, err := common.GetInstanceRebootingState(ctx, r.Client, instance)
+	if err != nil {
+		return err
+	}
+	if rebooting {
+		return nil
+	}
+
 	if machineStatus.MachineReadyCondition == nil {
 		return fmt.Errorf("build desired MachineReady condition for instance %q: condition is nil", instance.Name)
 	}
@@ -169,7 +175,7 @@ func (r *CAPIMachineReconciler) applyInstanceStatus(
 		ctx,
 		applyObj,
 		client.Apply,
-		client.FieldOwner(instanceStatusFieldOwner),
+		client.FieldOwner(common.InstanceMachineStatusFieldOwner),
 		client.ForceOwnership,
 	); err != nil {
 		return fmt.Errorf("apply instance status for %q: %w", instanceName, err)

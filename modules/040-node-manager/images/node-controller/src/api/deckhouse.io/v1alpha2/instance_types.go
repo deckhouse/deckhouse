@@ -91,10 +91,8 @@ const (
 	InstanceConditionTypeBashibleReady             = "BashibleReady"
 	InstanceConditionTypeWaitingApproval           = "WaitingApproval"
 	InstanceConditionTypeWaitingDisruptionApproval = "WaitingDisruptionApproval"
-)
-
-const (
-	InstanceConditionReasonUpdateApprovalTimeout = "UpdateApprovalTimeout"
+	InstanceConditionReasonUpdateApprovalTimeout   = "UpdateApprovalTimeout"
+	InstanceConditionReasonMachineReboot           = "MachineReboot"
 )
 
 // InstanceCondition describes one raw condition entry.

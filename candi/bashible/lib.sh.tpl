@@ -44,6 +44,26 @@ ${messageYamlLine}
 EOF
 }
 
+function bb-patch-instance-machine-status() {
+  local machine_status="$1"
+
+  if ! type kubectl >/dev/null 2>&1 || ! test -f /etc/kubernetes/kubelet.conf ; then
+    return 0
+  fi
+
+  local instanceName
+  instanceName="$(bb-d8-machine-name)"
+  bb-kubectl-exec apply --server-side --force-conflicts --field-manager="bashible-machine-status" \
+    --subresource=status -f - <<EOF || true
+apiVersion: deckhouse.io/v1alpha2
+kind: Instance
+metadata:
+  name: ${instanceName}
+status:
+  machineStatus: "${machine_status}"
+EOF
+}
+
 
 function bb-bashible-ready-steps-completed() {
   local last_step="$1"
@@ -84,6 +104,12 @@ function bb-bashible-ready-error() {
 function bb-bashible-ready-initial-run() {
   local message="${1:-}"
   bb-patch-instance-condition "BashibleReady" "Unknown" "InitialRunInProgress" "${message}"
+}
+
+function bb-bashible-ready-machine-reboot() {
+  local message="${1:-Machine reboot requested by bashible}"
+  bb-patch-instance-condition "BashibleReady" "Unknown" "MachineReboot" "${message}"
+  bb-patch-instance-machine-status "Rebooting"
 }
 
 

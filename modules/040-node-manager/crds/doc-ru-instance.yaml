@@ -9,7 +9,7 @@ spec:
   group: deckhouse.io
   scope: Cluster
   names:
-    plural: instanceinstances
+    plural: instances
     singular: instance
     kind: Instance
   preserveUnknownFields: false
