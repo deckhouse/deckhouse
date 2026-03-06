@@ -93,9 +93,7 @@ spec:
 
 func TestPrepareAndWriteEtcdStaticPod(t *testing.T) {
 	tmpDir := t.TempDir()
-	config := &EtcdConfig{
-		ManifestDir: tmpDir,
-	}
+	config := PrepareConfig(WithManifestDir(tmpDir))
 
 	podManifest := []byte(`
 spec:

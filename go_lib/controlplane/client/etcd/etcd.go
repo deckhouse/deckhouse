@@ -22,16 +22,12 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 )
 
-type EtcdConfig struct {
-	ManifestDir     string
-	CertificatesDir string
-}
-
 var logger = log.Default().Named("etcd")
 
 const (
 	etcdHealthyCheckInterval = 5 * time.Second
 	etcdHealthyCheckRetries  = 8
+	KubernetesAPICallTimeout = 1 * time.Minute
 )
 
 func WriteStaticPodToDisk(podManifest []byte, componentName, manifestDir string) error {
@@ -102,14 +98,14 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, ip string, nodeName str
 		return err
 	}
 
-	///////////////////////////// test kubeClient
+	//////DELETE THIS BLOCK/////////// test kubeClient ///////////////////////////////////////
 	logger.Info("TEST-ETCD KUBECLIENT: kubeClient", slog.Any("kubeClient", kubeClient))
 	pods, err := kubeClient.CoreV1().Pods("d8-chrony").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 	logger.Info("TEST-ETCD KUBECLIENT: pods:", slog.String("pods", pods.Items[0].Name))
-	////////////////////////////////
+	/////////////////////////////////////////////////////////////////////
 
 	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
 	// etcdPeerAddress := GetPeerURL(ip)
@@ -158,9 +154,6 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, ip string, nodeName str
 
 	logger.Info("[etcd] Creating static Pod manifest during join cluster", slog.String("component", constants.Etcd))
 
-	// if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, cluster); err != nil {
-	// 	return err
-	// }
 	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName /*clusterResponse.Members*/, cluster); err != nil {
 		return err
 	}
