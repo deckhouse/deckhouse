@@ -65,7 +65,7 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- url: git@{{ .DECKHOUSE_PRIVATE_REPO }}:deckhouse/network/sail-operator.git
+- url: {{ .SOURCE_REPO }}/deckhouse/network/sail-operator.git
   tag: tag-{{ $istioVersion }}
   add: /
   to: /src/operator
@@ -74,5 +74,6 @@ git:
     - '**/*'
 shell:
   install:
-  - cd /src/operator && git apply --verbose /patches/001-istio-go-mod.patch /patches/002-istio-operato-cni_status_restrict.patch
+  - cd /src/operator && git apply --verbose /patches/001-istio-go-mod.patch
+  - cd /src/operator && git apply --verbose /patches/002-istio-operato-cni_status_restrict.patch
 ---
