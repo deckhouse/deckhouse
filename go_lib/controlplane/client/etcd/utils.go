@@ -91,7 +91,7 @@ func WaitForClusterAvailable(c *clientv3.Client, retries int, retryInterval time
 // getEtcdEndpoints returns the list of etcd endpoints.
 func getEtcdEndpoints(client clientset.Interface) ([]string, error) {
 	return getEtcdEndpointsWithRetry(client,
-		constants.KubernetesAPICallRetryInterval, constants.KubernetesAPICallTimeout)
+		constants.KubernetesAPICallRetryInterval, KubernetesAPICallTimeout)
 }
 
 func getEtcdEndpointsWithRetry(client clientset.Interface, interval, timeout time.Duration) ([]string, error) {
