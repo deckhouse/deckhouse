@@ -1,0 +1,21 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
+{{- if include "nvidia_gpu_enabled" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nvidia-dcgm
+  name: nvidia-dcgm
+  namespace: d8-nvidia-gpu
+spec:
+  internalTrafficPolicy: Local
+  ports:
+  - name: "dcgm"
+    port: 5555
+    targetPort: dcgm
+    protocol: TCP
+  selector:
+    app: nvidia-dcgm
+  type: ClusterIP
+{{- end }}
+{{- end }}
