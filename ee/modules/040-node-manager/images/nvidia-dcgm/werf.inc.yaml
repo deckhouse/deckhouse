@@ -1,4 +1,5 @@
 {{- $dcgm_version := "4.2.3" }}
+{{- $libs := "libc.so.6 libresolv.so.2 libpthread.so.0 librt.so.1 libdl.so.2 libm.so.6 libgcc_s.so.1 ld-linux-x86-64.so.2" }}
 {{- $dcgm_deb_base := "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -169,6 +170,11 @@ shell:
     cd /out
     tar xzf datacenter-gpu-manager-4-{{ $dcgm_version }}-amd64.tar.gz
     rm -f datacenter-gpu-manager-4-{{ $dcgm_version }}-amd64.tar.gz
+    mkdir -p /out/usr/lib64/
+    for i in {{ $libs }}
+      do
+        cp /usr/lib/x86_64-linux-gnu/${i} /out/usr/lib64/
+    done
     for i in /out/usr/bin/*
       do
         strip $i
@@ -188,20 +194,15 @@ shell:
     test -f /out/usr/lib/x86_64-linux-gnu/libdcgmmoduleprofiling.so.4
     test -f /out/usr/lib/x86_64-linux-gnu/libnvperf_dcgm_host.so
     test -f /out/usr/libexec/datacenter-gpu-manager-4/plugins/cudaless/libEud.so.4
+    mkdir -p /out/usr/lib/x86_64-linux-gnu/
+    for i in libc.so.6 libresolv.so.2 libpthread.so.0 librt.so.1 libdl.so.2 libm.so.6 libgcc_s.so.1
+      do
+        ln -sf /usr/lib64/${i} /out/usr/lib/x86_64-linux-gnu/${i}
+    done
     rm -rf /tmp/dcgm-proprietary /tmp/${DCGM_PROPRIETARY_DEB}
     cp -a /tmp/glibc/* /out/
-    mkdir -p /out/usr/lib /out/lib64
-    for lib in libc.so.6 libresolv.so.2 libpthread.so.0 librt.so.1 libdl.so.2 libm.so.6 libutil.so.1
-      do
-        src=/usr/lib/x86_64-linux-gnu/${lib}
-        if [ ! -e "${src}" ]
-          then
-            src=/lib/x86_64-linux-gnu/${lib}
-        fi
-        cp -L "${src}" /out/usr/lib/
-    done
-    cp -L "$(gcc -print-file-name=libgcc_s.so.1)" /out/usr/lib/
-    cp -L /lib64/ld-linux-x86-64.so.2 /out/lib64/
+    ln -s /usr/lib64 /out/lib64
+    ln -s /usr/lib /out/lib
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
