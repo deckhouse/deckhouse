@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 )
 
@@ -93,7 +93,7 @@ spec:
 
 func TestPrepareAndWriteEtcdStaticPod(t *testing.T) {
 	tmpDir := t.TempDir()
-	config := PrepareConfig(WithManifestDir(tmpDir))
+	config := prepareOptions(WithManifestDir(tmpDir))
 
 	podManifest := []byte(`
 spec:

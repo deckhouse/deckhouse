@@ -2,7 +2,6 @@ package etcd
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,16 +9,15 @@ import (
 	"strings"
 	"time"
 
-	kubeclient "github.com/deckhouse/deckhouse/go_lib/controlplane/client/kubeclient"
+	kubeclient "github.com/deckhouse/deckhouse/go_lib/controlplane/kubeclient"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
+	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
-	clientset "k8s.io/client-go/kubernetes"
 )
 
 var logger = log.Default().Named("etcd")
@@ -30,68 +28,19 @@ const (
 	KubernetesAPICallTimeout = 1 * time.Minute
 )
 
-func WriteStaticPodToDisk(podManifest []byte, componentName, manifestDir string) error {
-
-	if err := os.MkdirAll(manifestDir, 0700); err != nil {
-		return errors.Wrapf(err, "failed to create directory %q", manifestDir)
-	}
-
-	filename := GetStaticPodFilepath(componentName, manifestDir)
-
-	if err := os.WriteFile(filename, podManifest, 0600); err != nil {
-		return errors.Wrapf(err, "failed to write static pod manifest file for %q (%q)", componentName, filename)
-	}
-
-	return nil
-}
-
-func addMembersToPodManifest(podManifest []byte, initialCluster []*etcdserverpb.Member) []byte {
-	podManifestString := string(podManifest)
-	var endpoints []string
-	for _, member := range initialCluster {
-		endpoints = append(endpoints, fmt.Sprintf("%s=%s", member.Name, member.PeerURLs[0]))
-	}
-	initialClusterString := strings.Join(endpoints, ",")
-
-	re := regexp.MustCompile(`--initial-cluster=[^\s\n\r]*`)
-	podManifestString = re.ReplaceAllString(podManifestString, "--initial-cluster="+initialClusterString)
-
-	return []byte(podManifestString)
-}
-
-func prepareAndWriteEtcdStaticPod(podManifest []byte, config *EtcdConfig, nodeName string, initialCluster []*etcdserverpb.Member) error {
-	if len(initialCluster) > 0 {
-		podManifest = addMembersToPodManifest(podManifest, initialCluster)
-	}
-
-	if err := WriteStaticPodToDisk(podManifest, constants.Etcd, config.ManifestDir); err != nil {
-		return err
-	}
-	logger.Info("[etcd] podManifest is written to disk")
-
-	return nil
-}
-
-func NewEtcdClient(client clientset.Interface, certificatesDir string, endpoints []string, tlsConfig *tls.Config) (*clientv3.Client, error) {
-	var etcdClient *clientv3.Client
-	etcdClient, err := NewFromCluster(client, certificatesDir)
-	if err != nil {
-		return nil, err
-	}
-	return etcdClient, nil
-}
-
-func InitCluster(podManifest []byte, config *EtcdConfig, nodeName string) error {
+func InitCluster(podManifest []byte, nodeName string, options ...option) error {
+	opt := prepareOptions(options...)
 
 	logger.Info("[etcd] Creating static Pod manifest during init cluster", slog.String("component", constants.Etcd))
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, []*etcdserverpb.Member{}); err != nil {
+	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName, []*etcdserverpb.Member{}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func JoinCluster(podManifest []byte, config *EtcdConfig, ip string, nodeName string) error {
+func JoinCluster(podManifest []byte, ip string, nodeName string, options ...option) error {
+	opt := prepareOptions(options...)
 
 	kubeClient, err := kubeclient.MyNewKubernetesClient()
 	if err != nil {
@@ -114,7 +63,7 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, ip string, nodeName str
 	var cluster []*etcdserverpb.Member
 	var etcdClient *clientv3.Client
 
-	etcdClient, err = NewFromCluster(kubeClient, config.CertificatesDir)
+	etcdClient, err = NewFromCluster(kubeClient, opt.CertificatesDir)
 	if err != nil {
 		return err
 	}
@@ -154,7 +103,7 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, ip string, nodeName str
 
 	logger.Info("[etcd] Creating static Pod manifest during join cluster", slog.String("component", constants.Etcd))
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName /*clusterResponse.Members*/, cluster); err != nil {
+	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName /*clusterResponse.Members*/, cluster); err != nil {
 		return err
 	}
 
@@ -173,6 +122,47 @@ func JoinCluster(podManifest []byte, config *EtcdConfig, ip string, nodeName str
 	// 	return err
 	// }
 	/////////////////////////////////////////////////////////////////////
+
+	return nil
+}
+
+func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, nodeName string, initialCluster []*etcdserverpb.Member) error {
+	if len(initialCluster) > 0 {
+		podManifest = addMembersToPodManifest(podManifest, initialCluster)
+	}
+
+	if err := writeStaticPodToDisk(podManifest, constants.Etcd, options.ManifestDir); err != nil {
+		return err
+	}
+	logger.Info("podManifest is written to disk")
+
+	return nil
+}
+
+func addMembersToPodManifest(podManifest []byte, initialCluster []*etcdserverpb.Member) []byte {
+	podManifestString := string(podManifest)
+	var endpoints []string
+	for _, member := range initialCluster {
+		endpoints = append(endpoints, fmt.Sprintf("%s=%s", member.Name, member.PeerURLs[0]))
+	}
+	initialClusterString := strings.Join(endpoints, ",")
+
+	re := regexp.MustCompile(`--initial-cluster=[^\s\n\r]*`)
+	podManifestString = re.ReplaceAllString(podManifestString, "--initial-cluster="+initialClusterString)
+
+	return []byte(podManifestString)
+}
+
+func writeStaticPodToDisk(podManifest []byte, componentName, manifestDir string) error {
+	if err := os.MkdirAll(manifestDir, 0700); err != nil {
+		return fmt.Errorf("failed to create directory %q: %w", manifestDir, err)
+	}
+
+	filename := GetStaticPodFilepath(componentName, manifestDir)
+
+	if err := os.WriteFile(filename, podManifest, 0600); err != nil {
+		return errors.Wrapf(err, "failed to write static pod manifest file for %q (%q)", componentName, filename)
+	}
 
 	return nil
 }
