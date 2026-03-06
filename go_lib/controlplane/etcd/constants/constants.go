@@ -1,16 +1,6 @@
 package constants
 
-import (
-	"time"
-)
-
 const (
-	// EtcdAPICallRetryInterval defines how long etcd should wait before retrying a failed API operation
-	EtcdAPICallRetryInterval = 500 * time.Millisecond
-
-	// KubernetesAPICallRetryInterval defines how long kubeadm should wait before retrying a failed API operation
-	KubernetesAPICallRetryInterval = 500 * time.Millisecond
-
 	// Etcd defines variable used internally when referring to etcd component
 	Etcd = "etcd"
 
