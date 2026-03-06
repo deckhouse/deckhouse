@@ -14,8 +14,6 @@ import (
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -47,20 +45,8 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 		return err
 	}
 
-	//////DELETE THIS BLOCK/////////// test kubeClient ///////////////////////////////////////
-	logger.Info("TEST-ETCD KUBECLIENT: kubeClient", slog.Any("kubeClient", kubeClient))
-	pods, err := kubeClient.CoreV1().Pods("d8-chrony").List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	logger.Info("TEST-ETCD KUBECLIENT: pods:", slog.String("pods", pods.Items[0].Name))
-	/////////////////////////////////////////////////////////////////////
+	etcdPeerAddress := GetPeerURL(ip)
 
-	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
-	// etcdPeerAddress := GetPeerURL(ip)
-	/////////////////////////////////////////////////////////////////////
-
-	var cluster []*etcdserverpb.Member
 	var etcdClient *clientv3.Client
 
 	etcdClient, err = client.New(kubeClient, opt.CertificatesDir)
@@ -68,60 +54,30 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 		return err
 	}
 
-	////DELETE THIS BLOCK//////////////// test etcdClient ///////////////////////
-	logger.Info("TEST-ETCD client: etcdClient", slog.Any("etcdClient", etcdClient))
-	clusterAuthStatus, err := etcdClient.AuthStatus(context.Background())
+	logger.Info("Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
+	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
+	clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), []string{etcdPeerAddress})
 	if err != nil {
 		return err
 	}
-	logger.Info("TEST-ETCD client: clusterAuthStatus", slog.Any("clusterAuthStatus", clusterAuthStatus))
-	clusterMembers, err := etcdClient.MemberList(context.Background())
-	if err != nil {
-		return err
-	}
-	logger.Info("TEST-ETCD client: clusterMembers", slog.Any("clusterMembers", clusterMembers))
-	/////////////////////////////////////////////////////////////////////
-
-	////UNCOMMENT THIS BLOCK//////////////// test etcdPeerAddress ///////////////////////
-	// logger.Info("Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
-	// // cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
-	// clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), []string{etcdPeerAddress})
-	// if err != nil {
-	// 	return err
-	// }
-	/////////////////////////////////////////////////////////////////////
-
-	////DELETE THIS BLOCK//////////////// test cluster ///////////////////////
-	cluster = []*etcdserverpb.Member{
-		{Name: "borovets-multi-master-master-0", PeerURLs: []string{"https://10.241.32.26:2380"}},
-		{Name: "borovets-multi-master-master-1", PeerURLs: []string{"https://10.241.36.19:2380"}},
-		{Name: "borovets-multi-master-master-2", PeerURLs: []string{"https://10.241.44.16:2380"}},
-	}
-	logger.Info("TEST-ETCD client: [etcd] Announced new etcd member joining to the existing etcd cluster")
-	logger.Info("TEST-ETCD client: Updated etcd member list", slog.Any("cluster", cluster))
-	/////////////////////////////////////////////////////////////////////
 
 	logger.Info("Creating static Pod manifest during join cluster", slog.String("component", constants.Etcd))
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName /*clusterResponse.Members*/, cluster); err != nil {
+	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName, clusterResponse.Members); err != nil {
 		return err
 	}
 
-	/////UNCOMMENT THIS BLOCK ///////// test etcdPeerAddress ///////////////////////
-	//learnerID, err := etcdClient.GetMemberID(etcdPeerAddress)
-	// if err != nil {
-	// 	return err
-	// }
-	// _, err = etcdClient.MemberPromote(context.Background(), clusterResponse.Member.ID)
-	// if err != nil {
-	// 	return err
-	// }
+	ctx, cancel := context.WithTimeout(context.Background(), KubernetesAPICallTimeout)
+	defer cancel()
+	_, err = etcdClient.MemberPromote(ctx, clusterResponse.Member.ID)
+	if err != nil {
+		return err
+	}
 
-	// logger.Info("Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
-	// if _, err := WaitForClusterAvailable(etcdClient, etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
-	// 	return err
-	// }
-	/////////////////////////////////////////////////////////////////////
+	logger.Info("Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
+	if _, err := client.WaitForClusterAvailable(etcdClient, etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
+		return err
+	}
 
 	return nil
 }
