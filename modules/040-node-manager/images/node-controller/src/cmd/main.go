@@ -38,7 +38,6 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/controller"
 	"github.com/deckhouse/node-controller/internal/webhook"
-	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 var (
