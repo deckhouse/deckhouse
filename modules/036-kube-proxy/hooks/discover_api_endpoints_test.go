@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Modules :: kube-proxy :: hooks :: discover_apiserver_endpoints ::", func() {
 	const (
-		stateSingleAddress = `
+		stateSingleEndpointSliceWithOneIPAndOnePort = `
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
 metadata:
@@ -42,7 +42,7 @@ ports:
   protocol: TCP
 `
 
-		stateMultipleAddressesWithOnePort = `
+		stateSingleEndpointSliceWithThreeIPAndOnePort = `
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
 metadata:
@@ -62,7 +62,7 @@ ports:
   port: 6443
   protocol: TCP
 `
-		stateMultipleAddressesWithMultiplePorts = `
+		stateSingleEndpointSliceWithTwoIPAndTwoPorts = `
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
 metadata:
@@ -83,7 +83,7 @@ ports:
   port: 8443
   protocol: TCP
 `
-		stateMultipleSlicesWithMultipleAddressesWithMultiplePorts = `
+		stateThreeEndpointSlicesWithDublicatedAndMultipleIPPorts = `
 ---
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
@@ -142,9 +142,9 @@ ports:
 
 	f := HookExecutionConfigInit(`{"kubeProxy":{"internal": {}}}`, `{}`)
 
-	Context("Endpoint default/kubernetes has single address in .endpoints[]", func() {
+	Context("Single EndpointSlice resource with one IP and one port", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateSingleAddress))
+			f.BindingContexts.Set(f.KubeStateSet(stateSingleEndpointSliceWithOneIPAndOnePort))
 			f.RunHook()
 		})
 
@@ -152,46 +152,11 @@ ports:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443"]`))
 		})
-
-		Context("Someone added additional addresses to .endpoints[]", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddressesWithOnePort))
-				f.RunHook()
-			})
-
-			It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443','10.0.1.193:6443','10.0.1.194:6443']", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443","10.0.1.193:6443","10.0.1.194:6443"]`))
-			})
-
-			Context("Someone added another port", func() {
-				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddressesWithMultiplePorts))
-					f.RunHook()
-				})
-
-				It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443','10.0.1.193:8443','10.0.1.193:6443','10.0.1.193:8443']", func() {
-					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443","10.0.1.192:8443","10.0.1.193:6443","10.0.1.193:8443"]`))
-				})
-				Context("Someone added another addresses with different ports", func() {
-					BeforeEach(func() {
-						f.BindingContexts.Set(f.KubeStateSet(stateMultipleSlicesWithMultipleAddressesWithMultiplePorts))
-						f.RunHook()
-					})
-
-					It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443','10.0.1.193:6443','10.0.1.193:8443','10.0.1.195:6443','10.0.1.195:8443']", func() {
-						Expect(f).To(ExecuteSuccessfully())
-						Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443","10.0.1.193:8443","10.0.1.194:8443","10.0.1.195:6443","10.0.1.195:8443"]`))
-					})
-				})
-			})
-		})
 	})
 
-	Context("Endpoint default/kubernetes has multiple addresses in .endpoints[]", func() {
+	Context("Single EndpointSlice resource with three IP and one port", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddressesWithOnePort))
+			f.BindingContexts.Set(f.KubeStateSet(stateSingleEndpointSliceWithThreeIPAndOnePort))
 			f.RunHook()
 		})
 
@@ -199,17 +164,29 @@ ports:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443","10.0.1.193:6443","10.0.1.194:6443"]`))
 		})
+	})
 
-		Context("Someone set number of addresses in .endpoints[] to one", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateSingleAddress))
-				f.RunHook()
-			})
+	Context("Single EndpointSlice resource two IP and two ports", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateSingleEndpointSliceWithTwoIPAndTwoPorts))
+			f.RunHook()
+		})
 
-			It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443']", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443"]`))
-			})
+		It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443','10.0.1.192:8443','10.0.1.193:6443','10.0.1.193:8443']", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443","10.0.1.192:8443","10.0.1.193:6443","10.0.1.193:8443"]`))
+		})
+	})
+
+	Context("Three EndpointSlice resources with mixed combination and dublicated IP", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateThreeEndpointSlicesWithDublicatedAndMultipleIPPorts))
+			f.RunHook()
+		})
+
+		It("`kubeProxy.internal.clusterMasterAddresses` must be ['10.0.1.192:6443','10.0.1.193:6443','10.0.1.193:8443','10.0.1.195:6443','10.0.1.195:8443']", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("kubeProxy.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.1.192:6443","10.0.1.193:8443","10.0.1.194:8443","10.0.1.195:6443","10.0.1.195:8443"]`))
 		})
 	})
 })
