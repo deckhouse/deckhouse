@@ -967,7 +967,7 @@
     },
     {
       "title": "The ingress-nginx module",
-      "description": "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using NGINX Ingress controller.",
+      "description": "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using Ingress NGINX controller.",
       "module": "ingress-nginx",
       "embedded": "true",
       "tags": [
@@ -979,7 +979,7 @@
       "url": "ingress-nginx/",
       "ru": {
         "title": "Модуль ingress-nginx",
-        "description": "Балансировка и терминация трафика HTTP/HTTPS в кластере Deckhouse Kubernetes Platform с помощью NGINX Ingress controller."
+        "description": "Балансировка и терминация трафика HTTP/HTTPS в кластере Deckhouse Kubernetes Platform с помощью Ingress NGINX controller."
       },
       "metadata": {
         "name": "ingress-nginx",
@@ -994,7 +994,7 @@
         },
         "oss": [
           {
-            "name": "NGINX Ingress Controller",
+            "name": "Ingress NGINX Controller",
             "link": "https://github.com/kubernetes/ingress-nginx",
             "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
             "logo": "/images/logos/kubernetes.svg",
