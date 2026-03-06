@@ -15,6 +15,7 @@
 package schedule
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 
@@ -39,6 +40,10 @@ const (
 	// defaultBufferSize is the capacity of the scheduler's notification channel
 	// used to signal enable/disable events to consumers without blocking callers.
 	defaultBufferSize = 1000
+
+	reasonRequirementsKubernetes = "KubernetesRequirementsUnmet"
+	reasonRequirementsDeckhouse  = "DeckhouseRequirementsUnmet"
+	reasonRequirementsBootstrap  = "BootstrapRequirementsUnmet"
 )
 
 // Scheduler manages a dependency graph of packages and their lifecycle.
@@ -128,15 +133,15 @@ func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 	var checkers []checker.Checker
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, string(ConditionReasonRequirementsKubernetes)))
+		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
 	}
 
 	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, string(ConditionReasonRequirementsDeckhouse)))
+		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
 	}
 
 	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
-		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, string(ConditionReasonRequirementsBootstrap)))
+		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, reasonRequirementsBootstrap))
 	}
 
 	if len(constraints.Dependencies) > 0 {
@@ -152,7 +157,7 @@ func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 	}
 
 	if res := checker.Check(checkers...); !res.Enabled {
-		return newRequirementsErr(res.Reason, res.Message)
+		return errors.New(res.Message)
 	}
 
 	return nil

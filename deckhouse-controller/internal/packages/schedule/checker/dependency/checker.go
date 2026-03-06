@@ -25,8 +25,8 @@ import (
 // Reason constants for checker results.
 // Must match Kubernetes condition reason pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
 const (
-	ReasonDependencyNotEnabled      = "DependencyNotEnabled"
-	ReasonDependencyVersionMismatch = "DependencyVersionMismatch"
+	reasonDependencyNotEnabled      = "DependencyNotEnabled"
+	reasonDependencyVersionMismatch = "DependencyVersionMismatch"
 )
 
 type Checker struct {
@@ -58,14 +58,14 @@ func (c *Checker) Check() checker.Result {
 			}
 
 			return checker.Result{
-				Reason:  ReasonDependencyNotEnabled,
+				Reason:  reasonDependencyNotEnabled,
 				Message: fmt.Sprintf("dependency '%s' not enabled", name),
 			}
 		}
 
 		if dep.Constraint != nil && !dep.Constraint.Check(version) {
 			return checker.Result{
-				Reason:  ReasonDependencyVersionMismatch,
+				Reason:  reasonDependencyVersionMismatch,
 				Message: fmt.Sprintf("dependency '%s' unmet requirements", name),
 			}
 		}
