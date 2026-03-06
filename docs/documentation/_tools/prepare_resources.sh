@@ -22,9 +22,13 @@ if [ -d /src/global ]; then
   cp -f /src/global/config-values.yaml _data/schemas/modules/global/
   echo -e "\ni18n:\n  ru:" >>_data/schemas/modules/global/config-values.yaml
   cat /src/global/doc-ru-config-values.yaml | sed 's/^/    /' >>_data/schemas/modules/global/config-values.yaml
-  for i in /src/global/crds/module* /src/global/crds/ssh_* /src/global/crds/deckhouse-release.yaml /src/global/cluster_configuration.yaml /src/global/init_configuration.yaml /src/global/static_cluster_configuration.yaml; do
-    cp -v $i /srv/jekyll-data/documentation/_data/schemas/crds/
-    echo -e "\ni18n:\n  ru:" >>/srv/jekyll-data/documentation/_data/schemas/crds/$(echo $i | sed -E 's#/src/global(/crds)?/##' )
-    cat $(echo $i | sed -E 's#(.+)/([^/]+\.ya?ml)#\1/doc-ru-\2#' ) | sed 's/^/    /' >>_data/schemas/crds/$(echo $i | sed -E 's#/src/global(/crds)?/##' )
+  for i in /src/global/crds/module* /src/global/crds/ssh_* /src/global/crds/deckhouse-release.yaml /src/global/crds/cni-migration.yaml /src/global/crds/cni-node-migration.yaml /src/global/cluster_configuration.yaml /src/global/init_configuration.yaml /src/global/static_cluster_configuration.yaml; do
+    if [ -f "$i" ]; then
+      cp -v $i /srv/jekyll-data/documentation/_data/schemas/crds/
+      echo -e "\ni18n:\n  ru:" >>/srv/jekyll-data/documentation/_data/schemas/crds/$(echo $i | sed -E 's#/src/global(/crds)?/##' )
+      if [ -f "$(echo $i | sed -E 's#(.+)/([^/]+\.ya?ml)#\1/doc-ru-\2#' )" ]; then
+        cat $(echo $i | sed -E 's#(.+)/([^/]+\.ya?ml)#\1/doc-ru-\2#' ) | sed 's/^/    /' >>_data/schemas/crds/$(echo $i | sed -E 's#/src/global(/crds)?/##' )
+      fi
+    fi
   done
 fi
