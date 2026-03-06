@@ -11,6 +11,14 @@ document.addEventListener('DOMContentLoaded', function () {
     let mobileSidebarInited = false;
     let cloneSidebar = null;
 
+    const menuItemChildren = document.querySelectorAll('.menu-item-has-children');
+    menuItemChildren.forEach(item => {
+        item.addEventListener('click', () => {
+            const subMenu = item.querySelector('.sub-menu-container');
+            subMenu.classList.toggle('sub-menu_open');
+        })
+    })
+
     function getNavItemTitle(item) {
         if (!item) return '';
         const link = item.querySelector('a');

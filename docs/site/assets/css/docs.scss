@@ -1483,12 +1483,13 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-radius: 4px;
 
     .code__transfer {
+      scrollbar-color: #CFD2D8 #f1f1f1;
       padding-right: 70px;
-      padding-left: 48px;
+      margin-left: 48px;
 
       @include breakpoints.max-w(xl) {
         padding-right: 50px;
-        padding-left: 40px;
+        margin-left: 40px;
       }
     }
 }
