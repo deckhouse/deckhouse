@@ -134,6 +134,8 @@ spec:
         clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
       externalIstiod: false
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
+      # For Istio 1.21 and below do not create ClusterRoleBinding (version-aware RBAC).
+      # createClusterRoleBinding: true # {{ if semverCompare ">= 1.21.0" $fullVersion }}true{{ else }}false{{ end }}
 
   {{- if $.Values.istio.multicluster.enabled }}
       meshNetworks:
