@@ -69,7 +69,7 @@ data:
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "Instance", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "Instance", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -1103,7 +1103,7 @@ metadata:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/rolling-update: ""
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Instance
 metadata:
   name: worker-1
@@ -1155,7 +1155,7 @@ metadata:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/rolling-update: ""
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Instance
 metadata:
   name: worker-1
@@ -1207,7 +1207,7 @@ metadata:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/rolling-update: ""
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Instance
 metadata:
   name: worker-1

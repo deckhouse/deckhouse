@@ -15,9 +15,6 @@
 # limitations under the License.
 */}}
 
-{{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
-{{- tpl $bbnn . }}
-
 bb-d8-node-name() {
   echo $(</var/lib/bashible/discovered-node-name)
 }

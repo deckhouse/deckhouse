@@ -51,6 +51,37 @@ Custom conversion handler (not using standard `conversion.NewWebhookHandler()`) 
 
 Reads provider config from Secret `kube-system/d8-provider-cluster-configuration` to check if a NodeGroup name is listed in provider's node groups (→ CloudPermanent) or not (→ CloudStatic).
 
+### Controllers
+
+#### Instance Controller
+
+- Owns active lifecycle of `Instance`
+- Reconciles bashible heartbeat and bashible status
+- Ensures controller finalizer on active objects
+- Handles delete flow for `Instance`
+- Deletes orphan `Instance` only when linked `Machine` and linked `Node` are both confirmed missing
+- Watches `Instance` `CAPI Machine` `MCM Machine` `static Node`
+
+#### CAPI Machine Controller
+
+- Owns sync from `cluster.x-k8s.io Machine` to linked `Instance`
+- Reconciles `Instance` spec and status fields from CAPI machine state
+- Handles linked `Instance` cleanup when CAPI machine is gone
+- Watches `CAPI Machine` and related `Instance` updates
+
+#### MCM Machine Controller
+
+- Owns sync from `machine.sapcloud.io Machine` to linked `Instance`
+- Reconciles `Instance` spec and status fields from MCM machine state
+- Handles linked `Instance` cleanup when MCM machine is gone
+- Watches `MCM Machine` and related `Instance` updates
+
+#### Node Controller
+
+- Owns static node path for `Node` to `Instance`
+- Ensures `Instance` exists for static node and sets `phase` to `Running`
+- Handles cleanup when node object is gone
+
 ## Request Flow
 
 ### Validation Flow
