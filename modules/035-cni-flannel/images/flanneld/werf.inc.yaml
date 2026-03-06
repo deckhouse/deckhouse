@@ -1,3 +1,4 @@
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 fromImage: builder/golang-alpine
 final: false
