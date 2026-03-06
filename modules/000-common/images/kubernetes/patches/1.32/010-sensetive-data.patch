@@ -1381,6 +1381,20 @@ index 5688c2ac40b..24eff61025a 100644
  }
  
  // +k8s:deepcopy-gen=true
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
+index 85f1ffca7fd..64c5af1cc9e 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
+@@ -393,6 +393,9 @@ func ConvertJSONSchemaPropsWithPostProcess(in *apiextensions.JSONSchemaProps, ou
+ 	if in.XMapType != nil {
+ 		out.VendorExtensible.AddExtension("x-kubernetes-map-type", *in.XMapType)
+ 	}
++	if in.XSensitiveData {
++		out.VendorExtensible.AddExtension("x-kubernetes-sensitive-data", true)
++	}
+ 	if len(in.XValidations) != 0 {
+ 		var serializationValidationRules apiextensionsv1.ValidationRules
+ 		if err := apiextensionsv1.Convert_apiextensions_ValidationRules_To_v1_ValidationRules(&in.XValidations, &serializationValidationRules, nil); err != nil {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
 index c562263f32c..1272d2fd277 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
