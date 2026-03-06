@@ -4,7 +4,6 @@ go 1.25.1
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
-	github.com/pkg/errors v0.9.1
 	go.etcd.io/etcd/api/v3 v3.5.16
 	go.etcd.io/etcd/client/v3 v3.5.16
 	k8s.io/api v0.35.2
