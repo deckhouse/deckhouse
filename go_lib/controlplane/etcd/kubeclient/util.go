@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"

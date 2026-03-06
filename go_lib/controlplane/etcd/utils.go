@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/client/constants"
+	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	corev1 "k8s.io/api/core/v1"
