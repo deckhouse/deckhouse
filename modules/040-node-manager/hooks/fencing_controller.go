@@ -38,6 +38,10 @@ import (
 const (
 	nodesSnapshot            = "nodes"
 	fencingControllerTimeout = time.Duration(60) * time.Second
+	dryRunMode               = "Dryrun"
+	watchdogMode             = "Watchdog"
+	nodeTypeStatic           = "Static"
+	nodeTypeCloudStatic      = "CloudStatic"
 )
 
 var maintenanceAnnotations = []string{
@@ -73,8 +77,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(fencingControllerHandler))
 
 type fencingControllerNodeResult struct {
-	Name          string
-	NodeGroupName string
+	Name        string
+	FencingMode string
+	Type        string
 }
 
 func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -88,6 +93,11 @@ func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}
 
 	res.Name = obj.GetName()
+
+	labels := obj.GetLabels()
+	res.FencingMode = labels["node-manager.deckhouse.io/fencing-mode"]
+	res.Type = labels["node.deckhouse.io/type"]
+
 	return res, nil
 }
 
@@ -104,8 +114,8 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 		return err
 	}
 
-	// make map with nodes to kill
 	nodesToKill := set.New()
+	nodesToEvictPod := set.New()
 	for node, err := range sdkobjectpatch.SnapshotIter[fencingControllerNodeResult](input.Snapshots.Get(nodesSnapshot)) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
@@ -124,20 +134,25 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 				slog.String("current time", time.Now().String()),
 				slog.String("node lease time", nodeLease.Spec.RenewTime.Time.String()),
 			)
-			nodesToKill.Add(node.Name)
+			nodesToEvictPod.Add(node.Name)
+			if node.FencingMode != dryRunMode &&
+				node.Type != nodeTypeStatic &&
+				node.Type != nodeTypeCloudStatic {
+				nodesToKill.Add(node.Name)
+			}
 		}
 	}
 
-	nodeToKillCount := nodesToKill.Size()
-	if nodeToKillCount == 0 {
-		// nothing to kill -> skip
+	if nodesToEvictPod.Size() == 0 {
+		// nothing to evict and kill -> skip
 		return nil
 	}
 
-	input.Logger.Warn("Going to kill nodes", slog.Int("count", nodeToKillCount))
+	input.Logger.Warn("Going to evict pods from nodes", slog.Int("count", nodesToEvictPod.Size()))
+	input.Logger.Warn("Going to kill nodes", slog.Int("count", nodesToKill.Size()))
 
-	// kill nodes
-	for _, node := range nodesToKill.Slice() {
+	// evict pods
+	for _, node := range nodesToEvictPod.Slice() {
 		input.Logger.Warn("Delete all pods from node", slog.String("name", node))
 		podsToDelete, err := kubeClient.CoreV1().Pods("").List(
 			context.TODO(),
@@ -160,7 +175,10 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 				input.Logger.Error("Can't delete pod", slog.String("name", pod.Name), log.Err(err))
 			}
 		}
+	}
 
+	// kill nodes
+	for _, node := range nodesToKill.Slice() {
 		input.Logger.Warn("Delete node", slog.String("name", node))
 		input.PatchCollector.DeleteInBackground("v1", "Node", "", node)
 	}
