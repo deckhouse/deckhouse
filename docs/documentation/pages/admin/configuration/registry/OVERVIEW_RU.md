@@ -14,7 +14,6 @@ search: container registry, registry configuration, edition management, registry
 
 В разделе [«Хранилище образов в Managed Kubernetes кластере»](../registry/third-party.html) описано управление хранилищем образов в Managed Kubernetes кластере.
 В разделе [«Хранилище образов в кластере, управляемом DKP»](../registry/internal.html) рассматривается управление хранилищем образов в кластере, полностью управляемом DKP: режимы работы с хранилищем и переключение между ними.
-В разделе [«Восстановление подключения к хранилищу образов»](../registry/restore-token.html) описан процесс восстановления загрузки образов Deckhouse Kubernetes Platform при истекшем лицензионном токене.
 
 ## Работа с редакциями
 

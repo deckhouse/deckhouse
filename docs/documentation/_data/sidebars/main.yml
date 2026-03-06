@@ -38,10 +38,6 @@ entries:
                     ru: Хранилище образов в Managed Kubernetes кластере
                   url: /admin/configuration/registry/third-party.html
                 - title:
-                    en: Restoring registry access
-                    ru: Восстановление подключения к хранилищу образов
-                  url: /admin/configuration/registry/restore-token.html
-                - title:
                     en: Switching editions
                     ru: Переключение редакций
                   url: /admin/configuration/registry/switching-editions.html

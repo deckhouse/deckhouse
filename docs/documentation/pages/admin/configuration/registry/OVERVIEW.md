@@ -12,7 +12,6 @@ This section describes working with image registries in a running cluster. If yo
 
 The section [Registry in Managed Kubernetes clusters](../registry/third-party.html) describes how to manage registry in a Managed Kubernetes cluster.
 The section [Registry in clusters managed by DKP](../registry/internal.html) describes managing registry in a cluster that is fully managed by DKP: registry modes and switching between them.
-The section [Restoring registry access](../registry/restore-token.html) describes the process for resuming Deckhouse Kubernetes Platform image downloads after a license token has expired is described.
 
 ## Working with editions
 
