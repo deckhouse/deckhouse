@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	istioRevLabel                    = "istio.io/rev"
+	istioRevLabel                     = "istio.io/rev"
 	maxIstioMinorVersionForLegacyRBAC = 21
 )
 
