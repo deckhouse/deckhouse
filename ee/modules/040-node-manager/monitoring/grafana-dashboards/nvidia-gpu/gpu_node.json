@@ -695,7 +695,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Uses DCGM_FI_DEV_GPU_UTIL, then falls back to DCGM_FI_PROF_SM_ACTIVE and DCGM_FI_PROF_GR_ENGINE_ACTIVE.",
+      "description": "Утилизация вычислительных ресурсов GPU (в %).",
       "fieldConfig": {
         "defaults": {
           "color": {

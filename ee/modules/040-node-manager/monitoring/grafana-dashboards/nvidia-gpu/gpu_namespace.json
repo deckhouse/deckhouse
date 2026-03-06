@@ -86,7 +86,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Avg Compute Utilization per device"
+                "value": "Compute Utilization"
               },
               {
                 "id": "unit",
@@ -273,7 +273,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Uses DCGM_FI_DEV_GPU_UTIL, then falls back to DCGM_FI_PROF_SM_ACTIVE and DCGM_FI_PROF_GR_ENGINE_ACTIVE.",
+      "description": "Утилизация вычислительных ресурсов GPU (в %).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -330,7 +330,7 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 8
       },
@@ -353,9 +353,22 @@
       "pluginVersion": "8.2.1",
       "targets": [
         {
-          "expr": "(avg(DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\"}) by (exported_pod)) or (avg(DCGM_FI_PROF_SM_ACTIVE{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\"}) by (exported_pod) * 100) or (avg(DCGM_FI_PROF_GR_ENGINE_ACTIVE{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\"}) by (exported_pod) * 100)",
-          "legendFormat": "Compute Utilization",
+          "expr": "(avg(DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\", GPU_I_PROFILE=~\".+\"}) by (exported_pod, gpu, GPU_I_PROFILE, GPU_I_ID)) or (avg(DCGM_FI_PROF_SM_ACTIVE{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\", GPU_I_PROFILE=~\".+\"}) by (exported_pod, gpu, GPU_I_PROFILE, GPU_I_ID) * 100) or (avg(DCGM_FI_PROF_GR_ENGINE_ACTIVE{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\", GPU_I_PROFILE=~\".+\"}) by (exported_pod, gpu, GPU_I_PROFILE, GPU_I_ID) * 100)",
+          "legendFormat": "{{exported_pod}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
           "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "interval": "",
+          "range": true
+        },
+        {
+          "expr": "(avg(DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\", GPU_I_PROFILE!~\".+\"}) by (exported_pod, gpu)) or (avg(DCGM_FI_PROF_SM_ACTIVE{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\", GPU_I_PROFILE!~\".+\"}) by (exported_pod, gpu) * 100) or (avg(DCGM_FI_PROF_GR_ENGINE_ACTIVE{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\", GPU_I_PROFILE!~\".+\"}) by (exported_pod, gpu) * 100)",
+          "legendFormat": "{{exported_pod}} - GPU {{gpu}}",
+          "refId": "B",
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
@@ -366,7 +379,7 @@
           "range": true
         }
       ],
-      "title": "Avg Compute Utilization per device",
+      "title": "Compute Utilization",
       "type": "timeseries"
     },
     {
@@ -691,7 +704,7 @@
       ],
       "title": "GPU PCIe Receive",
       "type": "timeseries",
-      "description": "Profiling metric. On some MIG-capable GPUs/drivers this metric may be unavailable and panel can be empty."
+      "description": "Скорость обмена данными по шине PCIe (байт/с)."
     },
     {
       "datasource": {
@@ -788,7 +801,7 @@
       ],
       "title": "GPU PCIe Transmit",
       "type": "timeseries",
-      "description": "Profiling metric. On some MIG-capable GPUs/drivers this metric may be unavailable and panel can be empty."
+      "description": "Скорость обмена данными по шине PCIe (байт/с)."
     },
     {
       "collapsed": false,
@@ -1058,7 +1071,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 51
       },
@@ -1094,6 +1107,223 @@
         }
       ],
       "title": "MIG Partitions Memory Used (GiB)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
+      "description": "Утилизация тензорных ядер (Tensor Cores) по подам (в %).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": 60000,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 40,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "expr": "(avg(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\", GPU_I_PROFILE=~\".+\"}) by (exported_pod, gpu, GPU_I_PROFILE, GPU_I_ID) * 100)",
+          "legendFormat": "{{exported_pod}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "interval": "",
+          "range": true
+        },
+        {
+          "expr": "(avg(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{exported_namespace=~\"$namespace\", exported_pod=~\"$pod\", GPU_I_PROFILE!~\".+\"}) by (exported_pod, gpu) * 100)",
+          "legendFormat": "{{exported_pod}} - GPU {{gpu}}",
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "interval": "",
+          "range": true
+        }
+      ],
+      "title": "Tensor Utilization",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
+      "description": "Утилизация SM по MIG-партициям (в %).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 51
+      },
+      "id": 41,
+      "options": {
+        "legend": {
+          "calcs": [
+            "last",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "(max by(exported_pod, gpu, GPU_I_PROFILE, GPU_I_ID) (max without (exported_container, container) (DCGM_FI_PROF_SM_ACTIVE{exported_namespace=\"$namespace\", exported_pod=~\"$pod\", GPU_I_PROFILE=~\".+\"})) * 100) or (max by(exported_pod, gpu, GPU_I_PROFILE, GPU_I_ID) (max without (exported_container, container) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{exported_namespace=\"$namespace\", exported_pod=~\"$pod\", GPU_I_PROFILE=~\".+\"})) * 100)",
+          "legendFormat": "{{exported_pod}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "interval": "",
+          "range": true
+        }
+      ],
+      "title": "SM Partitions Used (%)",
       "type": "timeseries"
     }
   ],
