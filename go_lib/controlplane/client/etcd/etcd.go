@@ -50,10 +50,6 @@ func WriteStaticPodToDisk(podManifest []byte, componentName, manifestDir string)
 }
 
 func addMembersToPodManifest(podManifest []byte, initialCluster []*etcdserverpb.Member) []byte {
-	// podManifest == static pod manifest
-	// change --initial-cluster=... into
-	// --initial-cluster=borovets-multi-master-master-2=https://10.241.44.16:2380,borovets-multi-master-master-0=https://10.241.32.26:2380,borovets-multi-master-master-1=https://10.241.36.19:2380
-
 	podManifestString := string(podManifest)
 	var endpoints []string
 	for _, member := range initialCluster {
