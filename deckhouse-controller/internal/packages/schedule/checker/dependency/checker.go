@@ -51,7 +51,7 @@ func NewChecker(getter Getter, dependencies map[string]Dependency) *Checker {
 
 func (c *Checker) Check() checker.Result {
 	for name, dep := range c.dependencies {
-		version := c.getter(name)
+		version := removePrereleaseAndMetadata(c.getter(name))
 		if version == nil {
 			if dep.Optional {
 				continue // Optional dependency - skip validation
@@ -72,4 +72,25 @@ func (c *Checker) Check() checker.Result {
 	}
 
 	return checker.Result{Enabled: true}
+}
+
+// removePrereleaseAndMetadata returns a version without prerelease and metadata parts
+func removePrereleaseAndMetadata(version *semver.Version) *semver.Version {
+	if len(version.Prerelease()) > 0 {
+		clearVersion, err := version.SetPrerelease("")
+		if err != nil {
+			return version
+		}
+		version = &clearVersion
+	}
+
+	if len(version.Metadata()) > 0 {
+		clearVersion, err := version.SetMetadata("")
+		if err != nil {
+			return version
+		}
+		version = &clearVersion
+	}
+
+	return version
 }

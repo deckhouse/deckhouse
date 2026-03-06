@@ -167,7 +167,6 @@ func (s *Scheduler) AddNode(pkg Package) {
 
 	s.addNode(pkg)
 
-	s.reconverge()
 	s.schedule()
 }
 
@@ -191,7 +190,6 @@ func (s *Scheduler) RemoveNode(name string) {
 
 	delete(s.nodes, name)
 
-	s.reconverge()
 	s.schedule()
 }
 
