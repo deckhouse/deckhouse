@@ -135,7 +135,7 @@ spec:
       externalIstiod: false
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
       # For Istio 1.21 and below do not create ClusterRoleBinding (version-aware RBAC).
-      # createClusterRoleBinding: {{ if semverCompare ">= 1.22.0" $fullVersion }}true{{ else }}false{{ end }}
+      createClusterRoleBinding: {{ if semverCompare ">= 1.21.0" $fullVersion }}true{{ else }}false{{ end }}
 
   {{- if $.Values.istio.multicluster.enabled }}
       meshNetworks:
