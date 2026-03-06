@@ -12,6 +12,9 @@ const (
 	// KubernetesAPICallRetryInterval defines how long kubeadm should wait before retrying a failed API operation
 	KubernetesAPICallRetryInterval = 500 * time.Millisecond
 
+	// KubernetesAPICallTimeout defines the amount of time to wait for the kubeadm client to complete a request to the API server
+	KubernetesAPICallTimeout = 1 * time.Minute
+
 	// Etcd defines variable used internally when referring to etcd component
 	Etcd = "etcd"
 
