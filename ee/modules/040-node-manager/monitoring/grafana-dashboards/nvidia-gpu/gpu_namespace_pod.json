@@ -256,7 +256,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Утилизация вычислительных ресурсов GPU (в %).",
+      "description": "GPU compute utilization (%).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -685,7 +685,7 @@
           ],
           "title": "GPU PCIe Receive",
           "type": "timeseries",
-          "description": "Скорость обмена данными по шине PCIe (байт/с)."
+          "description": "PCIe throughput (bytes/s)."
         },
         {
           "datasource": {
@@ -783,7 +783,7 @@
           ],
           "title": "GPU PCIe Transmit",
           "type": "timeseries",
-          "description": "Скорость обмена данными по шине PCIe (байт/с)."
+          "description": "PCIe throughput (bytes/s)."
         }
       ],
       "title": "PCIe ",
@@ -1103,7 +1103,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Утилизация тензорных ядер (Tensor Cores) по поду (в %).",
+      "description": "Tensor Core utilization by pod (%).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1217,7 +1217,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Утилизация SM по MIG-партициям (в %).",
+      "description": "SM utilization by MIG partitions (%).",
       "fieldConfig": {
         "defaults": {
           "color": {

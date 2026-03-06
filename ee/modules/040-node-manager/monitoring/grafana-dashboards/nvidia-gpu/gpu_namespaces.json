@@ -258,7 +258,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Утилизация вычислительных ресурсов GPU (в %).",
+      "description": "GPU compute utilization (%).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -576,7 +576,7 @@
       ],
       "title": "GPU PCIe Receive",
       "type": "timeseries",
-      "description": "Скорость обмена данными по шине PCIe (байт/с)."
+      "description": "PCIe throughput (bytes/s)."
     },
     {
       "datasource": {
@@ -674,7 +674,7 @@
       ],
       "title": "GPU PCIe Transmit",
       "type": "timeseries",
-      "description": "Скорость обмена данными по шине PCIe (байт/с)."
+      "description": "PCIe throughput (bytes/s)."
     },
     {
       "collapsed": false,
@@ -886,7 +886,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Утилизация тензорных ядер (Tensor Cores) по namespace (в %).",
+      "description": "Tensor Core utilization by namespace (%).",
       "fieldConfig": {
         "defaults": {
           "color": {

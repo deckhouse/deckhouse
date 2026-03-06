@@ -792,7 +792,7 @@
       ],
       "title": "Compute Utilization",
       "type": "timeseries",
-      "description": "Утилизация вычислительных ресурсов GPU (в %)."
+      "description": "GPU compute utilization (%)."
     },
     {
       "datasource": {
