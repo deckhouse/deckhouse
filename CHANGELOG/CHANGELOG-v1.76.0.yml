@@ -1,0 +1,188 @@
+candi:
+  fixes:
+    - summary: fix CVE in cloud-provider-azure
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18067
+ci:
+  features:
+    - summary: Added the ability to use a .trivyignore file when checking DKP components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17793
+  fixes:
+    - summary: Increase e2e bootstrap timeouts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17942
+    - summary: >-
+        Convert Docker authorization configuration parsing to the jq utility to avoid relying on
+        quotes and spaces.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17912
+    - summary: wait for bastion SSH before provisioning
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17818
+cloud-provider-azure:
+  fixes:
+    - summary: fix CVE in cloud-provider-azure
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18067
+cloud-provider-dvp:
+  features:
+    - summary: Add readiness check resource to prevent lost OpenTofu state if resource is not ready.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18212
+      impact: >-
+        A new resource, `kubernetes_resource_ready_v1`, has been introduced to perform readiness
+        checks for cloud resources. It replaces the previously used `wait` blocks.
+
+        After updating to this version, the OpenTofu plan will include the creation of
+        `kubernetes_resource_ready_v1` resources and the removal of `wait` blocks. To apply these
+        changes, you must run `converge`.
+
+        The converge operation is safe and does not modify existing cloud resources. In a normal
+        case, the plan should only contain resource creation operations (for example, `Plan: N to
+        add`) and should not include `to change` or `to destroy` actions unless other configuration
+        changes are present.
+
+        During migration, readiness checks are automatically skipped for existing resources older
+        than 5 days. In this case, converge may produce a warning such as the following:
+
+
+        Warning: Resource is too old for checking ready. Skip readiness check.
+
+
+        with module.static-node.kubernetes_resource_ready_v1.vm,
+
+        on ../../../terraform-modules/static-node/main.tf line 138, in resource
+        "kubernetes_resource_ready_v1" "vm":
+
+        138: resource "kubernetes_resource_ready_v1" "vm" {
+
+
+        Resource lifetime is 130h2m20.906973419s. Lifetime for skipping is 120h0m0s.
+
+
+        This warning is expected and does not indicate a problem.
+    - summary: >-
+        Fail fast on dhctl operations if resources has incorrect status or conditions (like quota
+        exceeded) with some limitations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18212
+cloud-provider-gcp:
+  features:
+    - summary: add nestedVirtualization and additionalDisks options to GCPInstanceClass
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18023
+  fixes:
+    - summary: fix CVEs in cloud-provider-gcp
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18095
+cloud-provider-huaweicloud:
+  features:
+    - summary: migrate CAPI provider to cluster-api v1beta2 contract
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17989
+  fixes:
+    - summary: fix CVEs in cloud-provider-huaweicloud
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18096
+cloud-provider-openstack:
+  fixes:
+    - summary: fix CVE in cloud-provider-openstack module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18099
+cloud-provider-vcd:
+  fixes:
+    - summary: fix CVE in cloud-provider-vcd module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18113
+cloud-provider-zvirt:
+  fixes:
+    - summary: fix CVE in cloud-provider-zvirt module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18115
+cni-cilium:
+  features:
+    - summary: new import/export conntrack http endpoints
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17429
+deckhouse:
+  fixes:
+    - summary: Fix race in ModuleConfig processing at the start.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18280
+    - summary: Remove json parsing from batchhook error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18277
+deckhouse-controller:
+  fixes:
+    - summary: Fix problem when creating the config for the global.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18161
+dhctl:
+  features:
+    - summary: >-
+        Add ability for change default opentofu backend core and provider log levels with
+        TF_LOG_CORE and TF_LOG_PROVIDER envs on run dhctl operations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18212
+    - summary: >-
+        Add output debug plan changes if DHCTL_CLI_DEBUG_PLAN_STEP and DHCTL_CLI_DEBUG_PLAN_TARGETS
+        was passed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18212
+    - summary: Add conversions for ModuleConfigs to dhctl.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17917
+  fixes:
+    - summary: Change infra-executor Show and Output methods contract.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18212
+docs:
+  features:
+    - summary: >-
+        Add CI/CD access documentation for Kubernetes API (ServiceAccount, Basic Auth, Token
+        Exchange)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18172
+    - summary: Add section for Ldap manual synchronization
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18160
+  fixes:
+    - summary: Updated "Requirements" section in Deckhouse Virtualization Platform.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18094
+node-manager:
+  features:
+    - summary: replace nginx implementation of apiserver-proxy to native go application with discovery
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17619
+      impact: >-
+        During migration to new implementation of apiserver-proxy, it's possible to flapping
+        connections for apiserver usage.
+
+        Added new exposed hostPort: 6480 for healthchecks and upstreams statistics
+  fixes:
+    - summary: fix go lint errors in node-controller
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18187
+    - summary: >-
+        Fix cluster-autoscaler deadlock when machine creation fails with a non-ResourceExhausted
+        error, preventing scale-up to alternative node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18154
+    - summary: Fix capacity parsing logic for DVPInstanceClass and add test case for DVPSpecWorker
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17935
+      impact: >-
+        Capacity values (CPU/memory) for DVPInstanceClass are now correctly extracted according to
+        spec shape. Nested `virtualMachine` fields are used and memory quantities like `Gi` are
+        properly parsed.
+registry:
+  fixes:
+    - summary: Updated auth image Go dependencies to fix Go CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18346
+      impact: Registry pods will be restarted.
+    - summary: Updated auth image Go dependencies to fix Go CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18234
+      impact: Registry pods will be restarted.
+registrypackages:
+  fixes:
+    - summary: Fixed vulnerability CVE-2026-24051.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18292
+terraform-manager:
+  features:
+    - summary: Skip depends_on meta-argument changes for data sources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18212
+      impact: >-
+        Changes were introduced in the OpenTofu integration to support the new
+        `kubernetes_resource_ready_v1` resource used by the `cloud-provider-dvp`.
+
+        These changes prevent unnecessary or destructive plan updates that could occur when data
+        sources depend on readiness-check resources. The behavior of other cloud providers is not
+        affected.
+
+        If you encounter unexpected converge plans or cluster bootstrap issues when using
+        OpenTofu-based providers (such as dvp, dynamics, zvirt, or yandex), please report them to
+        Deckhouse Technical Support.
+tools:
+  fixes:
+    - summary: remove deprecated logger methods
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17495
+user-authn:
+  features:
+    - summary: Add SAML authentication provider support with refresh tokens and Single Logout (SLO)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18002
+  fixes:
+    - summary: Disable implicit flow due to security concerns.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18288
+
