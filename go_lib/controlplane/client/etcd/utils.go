@@ -167,9 +167,3 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 func GetPeerURL(ip string) string {
 	return "https://" + net.JoinHostPort(ip, strconv.Itoa(constants.EtcdListenPeerPort))
 }
-
-// GetClientURLByIP creates an HTTPS URL based on an IP address
-// and the client listening port.
-func GetClientURLByIP(ip string) string {
-	return "https://" + net.JoinHostPort(ip, strconv.Itoa(constants.EtcdListenClientPort))
-}
