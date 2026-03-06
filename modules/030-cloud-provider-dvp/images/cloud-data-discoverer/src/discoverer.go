@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"dvp-common/api"
 	"dvp-common/config"
@@ -176,8 +177,35 @@ func mergeStorageDomains(
 		return result[i].Name < result[j].Name
 	})
 
-	if len(result) > 0 {
-		result[0].IsDefault = true
+	for i := range result {
+		result[i].IsDefault = false
 	}
+
+	for _, sc := range cloudSds {
+		annotations := sc.GetAnnotations()
+		annotToCheck := []string{
+			"storageclass.kubernetes.io/is-default-class",
+			"storageclass.beta.kubernetes.io/is-default-class",
+		}
+
+		isDefault := false
+		for _, annot := range annotToCheck {
+			if v, ok := annotations[annot]; ok && strings.ToLower(v) == "true" {
+				isDefault = true
+				break
+			}
+		}
+
+		if isDefault {
+			for i := range result {
+				if result[i].Name == sc.Name {
+					result[i].IsDefault = true
+					break
+				}
+			}
+			break
+		}
+	}
+
 	return result
 }

@@ -1,0 +1,24 @@
+- name: d8.cloud-provider-dvp.default-storage-class
+  rules:
+  - alert: D8CloudProviderDVPDefaultStorageClassDrifted
+    expr: |
+      max(d8_cloud_provider_dvp_default_storage_class_drifted) > 0
+    for: 10m
+    labels:
+      severity_level: "7"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cloud_provider_dvp_health: "D8CloudProviderDvpHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cloud_provider_dvp_health: "D8CloudProviderDvpHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Default StorageClass has been changed manually and differs from cloud provider configuration
+      description: |
+        The default StorageClass in the cluster ({{ $labels.actual }}) differs from the one configured by the cloud provider ({{ $labels.expected }}).
+
+        This may have been changed manually by a user. The cloud provider will not automatically revert this change.
+
+        To resolve this alert, either:
+        1. Revert the default StorageClass annotation back to {{ $labels.expected }}
+        2. Update the cloud provider configuration to use {{ $labels.actual }} as the default
+        3. Accept the drift and acknowledge that the default StorageClass has been intentionally changed
