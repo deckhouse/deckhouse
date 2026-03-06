@@ -266,13 +266,13 @@ spec:
 Для настройки SAML Identity Provider:
 
 1. Зарегистрируйте Dex как Service Provider (SP) в вашем IdP со следующими параметрами:
-   - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
-   - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
-   - **Формат NameID**: `persistent` или `emailAddress`
+   - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`;
+   - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`;
+   - **Формат NameID**: `persistent` или `emailAddress`.
 
 1. Настройте маппинг атрибутов в IdP для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
 
-1. Экспортируйте сертификат подписи IdP и укажите его в поле `rootCAData` ресурса DexProvider.
+1. Экспортируйте сертификат подписи IdP и укажите его в поле `rootCAData` ресурса [DexProvider](/modules/user-authn/cr.html#dexprovider).
 
 {% alert level="info" %}
 SAML не поддерживает refresh tokens нативно. Dex кеширует identity пользователя из первичного SAML assertion и возвращает её при последующих запросах refresh. Время жизни сессии контролируется настройками `expiry.refreshTokens` в конфигурации модуля [`user-authn`](/modules/user-authn/).
