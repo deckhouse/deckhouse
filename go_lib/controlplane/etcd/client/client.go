@@ -70,10 +70,6 @@ func New(client clientset.Interface, certificatesDir string) (*clientv3.Client, 
 		return nil, err
 	}
 
-	// was this block
-	// synchronizes client's endpoints with the known endpoints from the etcd membership.
-	// err = etcdClient.Sync()
-
 	return etcdClient, nil
 }
 
