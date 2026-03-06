@@ -65,7 +65,7 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- url: {{ .SOURCE_REPO }}/deckhouse/network/sail-operator.git
+- url: git@{{ .DECKHOUSE_PRIVATE_REPO }}:deckhouse/network/sail-operator.git
   tag: tag-{{ $istioVersion }}
   add: /
   to: /src/operator
