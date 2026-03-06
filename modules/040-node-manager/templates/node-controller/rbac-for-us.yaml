@@ -91,6 +91,16 @@ rules:
   - get
   - list
   - watch
+# Instances - read and delete for RollingUpdate flow
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instances
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
 # ConfigMaps - read for cluster configuration
 - apiGroups:
   - ""
