@@ -138,7 +138,7 @@ func New(moduleManager moduleManagerI, dc dependency.Container, logger *log.Logg
 	}
 
 	// Initialize scheduler with enabling/disabling callbacks
-	r.buildScheduler(moduleManager)
+	r.buildScheduler()
 
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
@@ -361,9 +361,9 @@ func (r *Runtime) buildNelmService() error {
 //   - onDisable: Stops hooks and transitions package back to Loaded state
 //
 // The scheduler starts paused and is resumed after initial package loading completes.
-func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
+func (r *Runtime) buildScheduler() {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		discovery := moduleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
 		if len(discovery) == 0 {
 			return nil, fmt.Errorf("discovery section not found in global values")
 		}
@@ -382,7 +382,7 @@ func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
 	}
 
 	kubernetesVersionGetter := func() (*semver.Version, error) {
-		discovery := moduleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
 		if len(discovery) == 0 {
 			return nil, fmt.Errorf("discovery section not found in global values")
 		}
@@ -402,7 +402,7 @@ func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
 
 	// Bootstrap condition checks if cluster initialization is complete
 	bootstrapCondition := func() bool {
-		value, ok := moduleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
+		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
 		if !ok {
 			return false
 		}
