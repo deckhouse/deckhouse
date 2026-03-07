@@ -26,7 +26,7 @@ description: "Управление конфигурацией registry комп�
 
 ### Ограничения при установке кластера
 
-- Bootstrap кластера DKP поддерживается только в `Direct` и `Unmanaged` режимах (`Local` и `Proxy` режимы не поддерживаются). Registry во время установки кластера настраивается через [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry).
+- Bootstrap кластера DKP поддерживается только в `Direct`, `Unmanaged` и `Proxy` режимах (bootstrap в `Local` режиме не поддерживается). Registry во время установки кластера настраивается через [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry).
 - Для запуска кластера в неконфигурируемом `Unmanaged` режиме (Legacy), необходимо указать параметры registry в [`initConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
 ### Ограничения по условиям работы

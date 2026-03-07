@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- with (.registry).init }}
+{{- with ((.registry).bootstrap).init }}
 
 # Create init registry config file
 INIT_CONFIG_PATH="$(bb-tmp-file)"
