@@ -1,0 +1,48 @@
+{{- $defaultGateway := dict }}
+{{- include "helm_lib_default_gateway" (list . $defaultGateway) }}
+{{- if and $defaultGateway .Values.prometheus.internal.grafana.enabled .Values.global.modules.publicDomainTemplate .Values.prometheus.longtermRetentionDays }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: prometheus-longterm
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
+  annotations:
+    alb-istio.network.deckhouse.io/auto-create-xlistenerset: "true"
+    alb-istio.network.deckhouse.io/rewrite-target: /\2
+    alb-istio.network.deckhouse.io/session-affinity: '{"mode": "cookie", "path": "/", "ttl": 0}'
+    alb-istio.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
+    alb-istio.network.deckhouse.io/tls-secrets: d8-monitoring/{{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    alb-istio.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+  {{- end }}
+  {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.auth.externalAuthentication }}
+    alb-istio.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "grafana")) .Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
+    alb-istio.network.deckhouse.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | quote }}
+  {{- else }}
+    alb-istio.network.deckhouse.io/basic-auth-secret: d8-monitoring/basic-auth
+  {{- end }}
+  {{- if .Values.prometheus.auth.whitelistSourceRanges }}
+    alb-istio.network.deckhouse.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," }}
+  {{- end }}
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-default-listener-set
+    namespace: d8-monitoring
+    sectionName: grafana
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: prometheus-longterm
+      port: 443
+      weight: 1
+    matches:
+    - path:
+        type: RegularExpression
+        value: /prometheus/longterm(/|$)(.*)
+{{- end }}

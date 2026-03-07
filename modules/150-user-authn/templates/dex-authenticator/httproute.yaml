@@ -1,0 +1,142 @@
+{{- $defaultGateway := dict }}
+{{- include "helm_lib_default_gateway" (list . $defaultGateway) }}
+{{- $context := . }}
+{{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- if not .spec.applications }}
+    {{- continue }}
+  {{- end }}
+  {{- range $idx, $app := $crd.spec.applications }}
+  {{- if or $defaultGateway $app.httpRouteParentRefName }}
+  {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
+  {{- $nameSuffix := "" }}
+  {{- if ne $idx 0 }}
+    {{- $nameSuffix = printf "-%s" $hashedDomain }}
+  {{- end }}
+  {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
+  {{- $info := index $dexAuthenticatorNames $id | default dict }}
+  {{- $svcName := $info.name }}
+  {{- $ingInfo := (index $info.ingressNames (printf "%d" $idx)) }}
+  {{- $routeName := (default (printf "%s%s-dex-authenticator" $crd.name $nameSuffix) (index $ingInfo "name")) }}
+  {{- $ingTruncated := (index $ingInfo "truncated") }}
+  {{- $ingHash := (index $ingInfo "hash") }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    alb-istio.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context) }}
+  {{- if $app.httpRouteCertificateSecretName }}
+    alb-istio.network.deckhouse.io/tls-secrets: {{ $crd.namespace }}/{{ $app.httpRouteCertificateSecretName }}
+  {{- end }}
+  {{- end }}
+  {{- if $app.whitelistSourceRanges }}
+    alb-istio.network.deckhouse.io/whitelist-source-range: {{ $app.whitelistSourceRanges | join "," }}
+  {{- end }}
+    alb-istio.network.deckhouse.io/auto-create-xlistenerset: "true"
+  name: {{ $routeName }}
+  namespace: {{ $crd.namespace }}
+  {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $ingTruncated }}
+  {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $labels "deckhouse.io/name-hash" $ingHash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $labels) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ $app.domain }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+  {{- if $app.httpRouteParentRefName }}
+    name: {{ $app.httpRouteParentRefName }}
+    {{- if $app.httpRouteParentRefNamespace }}
+    namespace: {{ $app.httpRouteParentRefNamespace }}
+    {{- else }}
+    namespace: {{ $crd.namespace }}
+    {{- end }}
+  {{- else }}
+    name: d8-default-listener-set
+    namespace: {{ $crd.namespace }}
+  {{- end }}
+  {{- if $app.httpRouteParentRefSectionName }}
+    sectionName: {{ $app.httpRouteParentRefSectionName }}
+  {{- end }}
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: {{ $svcName }}
+      port: 443
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /dex-authenticator
+  {{- if $app.signOutURL }}
+  {{- $signOutIngInfo := (index $info.signOutIngressNames (printf "%d" $idx)) }}
+  {{- $signOutIngressName := (default (printf "%s%s-dex-authenticator-sign-out" $crd.name $nameSuffix) (index $signOutIngInfo "name")) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    alb-istio.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context) }}
+  {{- if $app.httpRouteCertificateSecretName }}
+    alb-istio.network.deckhouse.io/tls-secrets: {{ $crd.namespace }}/{{ $app.httpRouteCertificateSecretName }}
+  {{- end }}
+  {{- end }}
+    alb-istio.network.deckhouse.io/auto-create-xlistenerset: "true"
+  name: {{ $signOutIngressName }}
+  namespace: {{ $crd.namespace }}
+  {{- $signOutLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- $signOutIngTruncated := (index $signOutIngInfo "truncated") }}
+  {{- $signOutIngHash := (index $signOutIngInfo "hash") }}
+  {{- if $signOutIngTruncated }}
+  {{- $_ := set $signOutLabels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $signOutLabels "deckhouse.io/name-hash" $signOutIngHash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $signOutLabels) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ $app.domain }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+  {{- if $app.httpRouteParentRefName }}
+    name: {{ $app.httpRouteParentRefName }}
+    {{- if $app.httpRouteParentRefNamespace }}
+    namespace: {{ $app.httpRouteParentRefNamespace }}
+    {{- else }}
+    namespace: {{ $crd.namespace }}
+    {{- end }}
+  {{- else }}
+    name: d8-default-listener-set
+    namespace: {{ $crd.namespace }}
+  {{- end }}
+  {{- if $app.httpRouteParentRefSectionName }}
+    sectionName: {{ $app.httpRouteParentRefSectionName }}
+  {{- end }}
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: {{ $svcName }}
+      port: 443
+      weight: 1
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: /dex-authenticator/sign_out
+    matches:
+    - path:
+        type: PathPrefix
+        value: {{ $app.signOutURL }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}

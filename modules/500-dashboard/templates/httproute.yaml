@@ -1,0 +1,125 @@
+{{- $defaultGateway := dict }}
+{{- include "helm_lib_default_gateway" (list . $defaultGateway) }}
+{{- $externalAuth := dig "auth" "externalAuthentication" nil .Values.dashboard }}
+{{- $useBearerTokens := dig "auth" "externalAuthentication" "useBearerTokens" false .Values.dashboard }}
+{{- if and $defaultGateway .Values.global.modules.publicDomainTemplate }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: dashboard
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | nindent 2 }}
+  annotations:
+    web.deckhouse.io/export-name: "dashboard"
+    web.deckhouse.io/export-icon: "/public/img/dashboard.png"
+    alb-istio.network.deckhouse.io/auto-create-xlistenerset: "true"
+    alb-istio.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
+    alb-istio.network.deckhouse.io/session-affinity: '{"mode": "cookie", "path": "/", "cookieName": "d8-dashboard-affinity", "ttl": 0}'
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+    alb-istio.network.deckhouse.io/tls-secrets: d8-{{ .Chart.Name }}/{{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
+  {{- end }}
+  {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") $externalAuth $externalAuth.authSignInURL $externalAuth.authURL }}
+    alb-istio.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "dashboard")) $externalAuth.authSignInURL | quote }}
+    alb-istio.network.deckhouse.io/auth-url: {{ $externalAuth.authURL | quote }}
+    {{- if $useBearerTokens }}
+    alb-istio.network.deckhouse.io/auth-response-headers: "authorization"
+    {{- end }}
+  {{- end }}
+  {{- if dig "auth" "whitelistSourceRanges" nil .Values.dashboard }}
+    alb-istio.network.deckhouse.io/whitelist-source-range: {{ .Values.dashboard.auth.whitelistSourceRanges | join "," }}
+  {{- end }}
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    alb-istio.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+  {{- end }}
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-default-listener-set
+    namespace: d8-{{ .Chart.Name }}
+    sectionName: dashboard
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: auth
+      port: 8443
+      weight: 1
+    matches:
+    - path:
+        type: Exact
+        value: /api/v1/login
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: auth
+      port: 8443
+      weight: 1
+    matches:
+    - path:
+        type: Exact
+        value: /api/v1/csrftoken/login
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: auth
+      port: 8443
+      weight: 1
+    matches:
+    - path:
+        type: Exact
+        value: /api/v1/me
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: api
+      port: 8443
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /api
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: web
+      port: 8443
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+{{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: dashboard-redirect
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | nindent 2 }}
+  annotations:
+    alb-istio.network.deckhouse.io/auto-create-xlistenerset: "true"
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-default-listener-set
+    namespace: d8-{{ .Chart.Name }}
+    sectionName: dashboard-redirect
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+{{- end }}
+{{- end }}

@@ -91,6 +91,30 @@ spec:
                     The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
                   x-doc-examples: ['nginx']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                applicationHTTPRouteCertificateSecretName:
+                  type: string
+                  description: |
+                    The name of the Secret containing the TLS certificate for the application domain (is used in the HTTPRoute resource).
+                  x-doc-examples: ['httproute-tls']
+                  pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
+                applicationHTTPRouteParentRefName:
+                  type: string
+                  description: |
+                    The name of the Gateway API ListenerSet resource to be used to serve the HTTPRoute resource.
+                  x-doc-examples: ['shared-gateway']
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                applicationHTTPRouteParentRefNamespace:
+                  type: string
+                  description: |
+                    The namespace where the Gateway API ListenerSet resource is deployed to serve the HTTPRoute resource.
+                  x-doc-examples: ['d8-alb-istio']
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                applicationHTTPRouteParentRefSectionName:
+                  type: string
+                  description: |
+                    The listener name in the Gateway API ListenerSet resource the HTTPRoute resource refers to.
+                  x-doc-examples: ['http']
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 signOutURL:
                   type: string
                   description: |-
@@ -330,6 +354,30 @@ spec:
                           The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                           It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+                      httpRouteCertificateSecretName:
+                        type: string
+                        description: |-
+                          The name of the Secret containing the TLS certificate for the application domain (is used in the HTTPRoute resource).
+                        x-doc-examples: ['httproute-tls']
+                        pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
+                      httpRouteParentRefName:
+                        type: string
+                        description: |
+                          The name of the Gateway API ListenerSet resource to be used to serve the HTTPRoute resource.
+                        x-doc-examples: ['shared-gateway']
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      httpRouteParentRefNamespace:
+                        type: string
+                        description: |
+                          The namespace name where the Gateway API ListenerSet resource is deployed to serve the HTTPRoute resource.
+                        x-doc-examples: ['d8-alb-istio']
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      httpRouteParentRefSectionName:
+                        type: string
+                        description: |
+                          The listener name in the Gateway API ListenerSet resource the HTTPRoute resource refers to.
+                        x-doc-examples: ['http']
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       whitelistSourceRanges:
                         type: array
                         description: |
