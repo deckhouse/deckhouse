@@ -134,3 +134,7 @@ CVE-2026-24512
 CVE-2026-24513
 CVE-2026-24514
 https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
+
+### 021-stable-config-hash-metric.patch
+
+This patch updates the way config_hash controller metric is calculated so that it all pods of a controller report the same value
