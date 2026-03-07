@@ -15,6 +15,7 @@ metadata:
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.auth.externalAuthentication }}
     alb-istio.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "grafana")) .Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
     alb-istio.network.deckhouse.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | quote }}
+    alb-istio.network.deckhouse.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
   {{- else }}
     alb-istio.network.deckhouse.io/basic-auth-secret: d8-monitoring/basic-auth
   {{- end }}
