@@ -107,6 +107,7 @@ func newStatus() *Status {
 			{Type: ConditionHelmApplied, Status: metav1.ConditionUnknown},
 			{Type: ConditionReadyInCluster, Status: metav1.ConditionUnknown},
 			{Type: ConditionSettingsValid, Status: metav1.ConditionUnknown},
+			{Type: ConditionWaitConverge, Status: metav1.ConditionUnknown},
 		},
 	}
 }
