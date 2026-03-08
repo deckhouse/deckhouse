@@ -313,7 +313,7 @@ func (s *Scheduler) compute() []*node {
 			changed = true
 
 			if !n.status.Enabled {
-				s.send(Event{Name: n.name, Kind: EventDisable})
+				s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
 			}
 		}
 	}

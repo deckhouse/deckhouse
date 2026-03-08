@@ -449,7 +449,7 @@ func (r *Runtime) Run() {
 			case schedule.EventSchedule:
 				r.schedulePackage(event.Name)
 			case schedule.EventDisable:
-				r.disablePackage(event.Name)
+				r.disablePackage(event.Name, event.Reason, event.Message)
 			default:
 			}
 		}
@@ -481,6 +481,8 @@ func (r *Runtime) schedulePackage(name string) {
 		return
 	}
 
+	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
+
 	settings := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
@@ -501,7 +503,7 @@ func (r *Runtime) schedulePackage(name string) {
 //
 // Both disablePackage and schedulePackage use EventSchedule, so enqueueing the disable
 // task here implicitly cancels any in-flight startup/run context for the same package.
-func (r *Runtime) disablePackage(name string) {
+func (r *Runtime) disablePackage(name, reason, msg string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -509,6 +511,8 @@ func (r *Runtime) disablePackage(name string) {
 	if ctx == nil {
 		return
 	}
+
+	r.status.SetConditionFalse(name, status.ConditionRequirementsMet, reason, msg)
 
 	if pkg := r.apps[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
