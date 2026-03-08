@@ -76,6 +76,10 @@ func (c *Checker) Check() checker.Result {
 
 // removePrereleaseAndMetadata returns a version without prerelease and metadata parts
 func removePrereleaseAndMetadata(version *semver.Version) *semver.Version {
+	if version == nil {
+		return nil
+	}
+
 	if len(version.Prerelease()) > 0 {
 		clearVersion, err := version.SetPrerelease("")
 		if err != nil {
