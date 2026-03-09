@@ -30,12 +30,12 @@ description: Описание архитектуры Deckhouse Kubernetes Platfo
 Для элементов диаграмм используется следующие графические символы:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
-![Условные обозначения на диаграммах DKP](../../images/architecture/c4-legend.png)
+![Условные обозначения на диаграммах DKP](../../images/architecture/c4-legend.ru.png)
 
 ## Диаграмма контекста
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
-![Диаграмма контекста DKP](../../images/architecture/c4-l1-context.png)
+![Диаграмма контекста DKP](../../images/architecture/c4-l1-context.ru.png)
 
 С DKP взаимодействуют:
 
@@ -55,7 +55,7 @@ description: Описание архитектуры Deckhouse Kubernetes Platfo
 {% endalert %}
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
-![Диаграмма подсистем DKP](../../images/architecture/c4-subsystems.png)
+![Диаграмма подсистем DKP](../../images/architecture/c4-subsystems.ru.png)
 
 ## Диаграмма модулей
 
@@ -66,4 +66,4 @@ description: Описание архитектуры Deckhouse Kubernetes Platfo
 {% endalert %}
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
-![Диаграмма модулей DKP](../../images/architecture/c4-modules.png)
+![Диаграмма модулей DKP](../../images/architecture/c4-modules.ru.png)

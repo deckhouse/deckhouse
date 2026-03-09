@@ -26,7 +26,7 @@ CSI-драйвер входит в состав модулей `cloud-provider-*
 Типовая архитектура CSI-драйвера на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
-![Типовая архитектура CSI-драйвера](../../../images/architecture/cluster-and-infrastructure/c4-l2-csi-driver.png)
+![Типовая архитектура CSI-драйвера](../../../images/architecture/cluster-and-infrastructure/c4-l2-csi-driver-common.ru.png)
 
 ## Компоненты драйвера
 
