@@ -292,7 +292,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		// VM is stopped, this is unexpected as we use "AlwaysOn" run policy for VM's here.
 		// Let's wait and see what happens as this may be a part of migration process or this is a bug in the DVP VM controller.
 		logger.Info("VM is in Stopped state, waiting for DVP to bring it back up", "state", vm.Status.Phase)
-		//dvpMachine.Status.Ready = false
+		// dvpMachine.Status.Ready = false
 		infraReady := false
 		dvpMachine.Status.Initialization.Provisioned = &infraReady
 
@@ -354,7 +354,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		// The other states are normal (for example, migration or shutdown) but we don't want to proceed until it's up
 		// due to potential conflict or unexpected actions
 		logger.Info("Waiting for VM state to become Running", "state", vm.Status.Phase)
-		//dvpMachine.Status.Ready = false
+		// dvpMachine.Status.Ready = false
 		infraReady := false
 		dvpMachine.Status.Initialization.Provisioned = &infraReady
 		conditions.Set(dvpMachine, metav1.Condition{
