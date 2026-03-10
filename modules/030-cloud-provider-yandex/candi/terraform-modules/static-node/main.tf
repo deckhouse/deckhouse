@@ -34,23 +34,23 @@ locals {
 }
 
 data "yandex_vpc_subnet" "existing" {
-  for_each = local.mapping
+  for_each  = local.mapping
   subnet_id = each.value
 }
 
 data "yandex_vpc_subnet" "kube_a" {
   count = length(local.mapping) == 0 ? 1 : 0
-  name = "${local.prefix}-a"
+  name  = "${local.prefix}-a"
 }
 
 data "yandex_vpc_subnet" "kube_b" {
   count = length(local.mapping) == 0 ? 1 : 0
-  name = "${local.prefix}-b"
+  name  = "${local.prefix}-b"
 }
 
 data "yandex_vpc_subnet" "kube_d" {
   count = length(local.mapping) == 0 ? 1 : 0
-  name = "${local.prefix}-d"
+  name  = "${local.prefix}-d"
 }
 
 resource "yandex_vpc_address" "addr" {
@@ -63,10 +63,11 @@ resource "yandex_vpc_address" "addr" {
 }
 
 locals {
-  # null if var.nodeIndex < length(local.external_ip_addresses)
-  # yandex_vpc_address.addr[0].external_ipv4_address[0].address if local.external_ip_addresses == Auto
-  # local.external_ip_addresses[var.nodeIndex] if local.external_ip_addresses contain IP-addresses
-  external_ip = var.nodeIndex < length(local.external_ip_addresses) ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? yandex_vpc_address.addr[0].external_ipv4_address[0].address : local.external_ip_addresses[var.nodeIndex] : null
+  external_ip = var.nodeIndex < length(local.external_ip_addresses) ? (
+    local.external_ip_addresses[var.nodeIndex] == "Auto" ? (
+      try(yandex_vpc_address.addr[0].external_ipv4_address[0].address, null)
+    ) : local.external_ip_addresses[var.nodeIndex]
+  ) : null
 }
 
 resource "yandex_compute_instance" "static" {
@@ -115,6 +116,7 @@ resource "yandex_compute_instance" "static" {
       metadata,
       secondary_disk,
     ]
+    create_before_destroy = true
   }
 
   timeouts {

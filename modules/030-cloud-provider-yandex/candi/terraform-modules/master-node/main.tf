@@ -57,29 +57,29 @@ data "yandex_vpc_subnet" "kube_d" {
 resource "yandex_vpc_address" "addr" {
   count = (var.nodeIndex < length(local.external_ip_addresses)
     ? (local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0)
-    : (length(local.external_ip_addresses) > 0 ? 1 : 0))
-  name  = join("-", [local.prefix, "master", var.nodeIndex])
+  : (length(local.external_ip_addresses) > 0 ? 1 : 0))
+  name = join("-", [local.prefix, "master", var.nodeIndex])
 
   external_ipv4_address {
     zone_id = local.internal_subnet.zone
   }
 
-#   If we specify this flag and change the zone_id, terraform will exit with an error.
-#   lifecycle {
-#     create_before_destroy = true
-#   }
+  #   If we specify this flag and change the zone_id, terraform will exit with an error.
+  #   lifecycle {
+  #     create_before_destroy = true
+  #   }
 }
 
 locals {
   external_ip_address = (var.nodeIndex < length(local.external_ip_addresses)
     ? (local.external_ip_addresses[var.nodeIndex] == "Auto"
-      ? yandex_vpc_address.addr[0].external_ipv4_address[0].address
-      : local.external_ip_addresses[var.nodeIndex])
+      ? try(yandex_vpc_address.addr[0].external_ipv4_address[0].address, null)
+    : local.external_ip_addresses[var.nodeIndex])
     : (length(local.external_ip_addresses) > 0
-      ? yandex_vpc_address.addr[0].external_ipv4_address[0].address
+      ? try(yandex_vpc_address.addr[0].external_ipv4_address[0].address, null)
       : null
-      )
     )
+  )
 }
 
 resource "yandex_compute_disk" "kubernetes_data" {
@@ -150,6 +150,7 @@ resource "yandex_compute_instance" "master" {
       metadata,
       secondary_disk,
     ]
+    create_before_destroy = true
   }
 
   timeouts {
