@@ -17,10 +17,12 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -69,17 +71,25 @@ func (m *NodeManager) MarkAsControlPlane(nodeName string) error {
 func (m *NodeManager) setLabels(nodeName string, labels map[string]string) error {
 	ctx := context.Background()
 
-	node, err := m.kubeClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	patchData := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"labels": labels,
+		},
+	}
+
+	patchBytes, err := json.Marshal(patchData)
 	if err != nil {
-		log.Error("failed to get node", slog.String("node", nodeName), slog.Any("error", err))
-		return err
+		log.Error("failed to marshal label patch data", slog.Any("error", err))
 	}
 
-	for k, v := range labels {
-		node.Labels[k] = v
-	}
+	_, err = m.kubeClient.CoreV1().Nodes().Patch(
+		ctx,
+		nodeName,
+		types.StrategicMergePatchType,
+		patchBytes,
+		metav1.PatchOptions{},
+	)
 
-	_, err = m.kubeClient.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
 	return err
 }
 
@@ -92,7 +102,7 @@ func (m *NodeManager) setTaints(nodeName string, taints []corev1.Taint) error {
 		return err
 	}
 
-	// Create a map for quick lookup of existing taints by key
+	// Compare new and existing taints by key via making a map
 	existingTaints := make(map[string]corev1.Taint)
 	for _, taint := range node.Spec.Taints {
 		existingTaints[taint.Key] = taint
@@ -103,11 +113,29 @@ func (m *NodeManager) setTaints(nodeName string, taints []corev1.Taint) error {
 	}
 
 	// Convert back to slice
-	node.Spec.Taints = make([]corev1.Taint, 0, len(existingTaints))
+	newTaints := make([]corev1.Taint, 0, len(existingTaints))
 	for _, taint := range existingTaints {
-		node.Spec.Taints = append(node.Spec.Taints, taint)
+		newTaints = append(newTaints, taint)
 	}
 
-	_, err = m.kubeClient.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+	patchData := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"taints": newTaints,
+		},
+	}
+
+	patchBytes, err := json.Marshal(patchData)
+	if err != nil {
+		return err
+	}
+
+	_, err = m.kubeClient.CoreV1().Nodes().Patch(
+		ctx,
+		nodeName,
+		types.StrategicMergePatchType,
+		patchBytes,
+		metav1.PatchOptions{},
+	)
+
 	return err
 }

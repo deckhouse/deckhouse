@@ -23,9 +23,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestNodeManager(t *testing.T) {
@@ -220,45 +222,76 @@ func LabelUpdateFail(t *testing.T) {
 		},
 	}
 
-	mockClient := &mockFailingClient{
-		Clientset:  fake.NewClientset(initialNode),
-		failUpdate: true,
-	}
+	client := fake.NewClientset(initialNode)
 
-	nodeManager := NewNodeManager(mockClient)
+	// Track patch calls to fail only label patches
+	patchCount := 0
+	client.PrependReactor("patch", "nodes",
+		func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			patchCount++
+			// Fail only the first patch (label patch)
+			if patchCount == 1 {
+				return true, nil, errors.New("simulated label patch error")
+			}
+			// Allow subsequent patches to succeed
+			return false, nil, nil
+		})
+
+	nodeManager := NewNodeManager(client)
 
 	err := nodeManager.MarkAsControlPlane(nodeName)
-
 	if err == nil {
-		t.Fatal("Expected error when label update fails")
+		t.Fatal("Expected error when label patch fails")
+	}
+
+	// Verify no taint patch was attempted
+	if patchCount > 1 {
+		t.Error("Taint patch should not have been attempted after label patch failed")
 	}
 }
 
 func TaintsUpdateFail(t *testing.T) {
-
+	// Given: Node with existing labels
 	nodeName := "test-node"
 	initialNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   nodeName,
-			Labels: map[string]string{},
+			Labels: map[string]string{"existing": "label"},
 		},
 		Spec: corev1.NodeSpec{
 			Taints: []corev1.Taint{},
 		},
 	}
 
-	mockClient := &mockFailingClient{
-		Clientset:        fake.NewClientset(initialNode),
-		failSecondUpdate: true,
-		updateCount:      0,
-	}
+	client := fake.NewClientset(initialNode)
 
-	nodeManager := NewNodeManager(mockClient)
+	// Track patch calls
+	patchCount := 0
+	client.PrependReactor("patch", "nodes",
+		func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			patchCount++
+			// First patch (label update) succeeds
+			// Second patch (taint update) fails
+			if patchCount == 2 {
+				return true, nil, errors.New("simulated taint patch error")
+			}
+			// Allow first patch to succeed
+			return false, nil, nil
+		})
 
+	nodeManager := NewNodeManager(client)
+
+	// When
 	err := nodeManager.MarkAsControlPlane(nodeName)
 
+	// Then
 	if err == nil {
-		t.Fatal("Expected error when taint update fails")
+		t.Fatal("Expected error when taint patch fails")
+	}
+
+	// Verify exactly 2 patches were attempted
+	if patchCount != 2 {
+		t.Errorf("Expected 2 patch attempts, got %d", patchCount)
 	}
 }
 
