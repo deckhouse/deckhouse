@@ -292,7 +292,7 @@ To assign a specific static IP address to an additional pod interface, follow th
          image: nginx
    ```
 
-### How to verify that the IP was assigned
+### Verification of IP address assignment to an Interface
 
 To verify that an IP address is assigned to the interface, follow these steps:
 
