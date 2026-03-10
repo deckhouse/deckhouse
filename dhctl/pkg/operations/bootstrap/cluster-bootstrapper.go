@@ -236,6 +236,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	log.DebugLn("MetaConfig was loaded")
 
+	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
 	// Check if static cluster without ssh-host
 	if metaConfig.IsStatic() && len(app.SSHHosts) == 0 {
 		if input.IsTerminal() {
