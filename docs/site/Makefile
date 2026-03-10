@@ -41,6 +41,14 @@ regenerate-menu: ## Regenerate navigation menu from API (requires DOC_API_URL an
 # Regenerate embedded modules metadata file (for local development purposes)
 regenerate-metadata: ## Regenerate embedded modules metadata file
 		METADATA_SOURCE_DIR=../../ METADATA_TARGET_FILE=backends/docs-builder-template/data/dkp/embedded_modules_metadata.json ../documentation/_tools/modules_generate_metadata.sh
+		werf build d8-docs-artifacts --env development --repo localhost:4999/docs
+		docker rm -f d8-docs-artifacts
+		IMAGE=$$(werf stage image d8-docs-artifacts --env development --repo localhost:4999/docs) && \
+		docker create --name d8-docs-artifacts $$IMAGE && \
+		docker cp d8-docs-artifacts:/export/editions.json backends/docs-builder-template/data/dkp/ && \
+		docker cp d8-docs-artifacts:/export/embedded_modules.json backends/docs-builder-template/data/dkp/ && \
+		docker cp d8-docs-artifacts:/export/embedded_modules_metadata.json backends/docs-builder-template/data/dkp/
+		docker rm -f d8-docs-artifacts
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
