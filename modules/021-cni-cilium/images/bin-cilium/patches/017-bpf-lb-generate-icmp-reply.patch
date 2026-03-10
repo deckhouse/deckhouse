@@ -30,10 +30,10 @@ index c34db87997..42f074f3c1 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 8873f05e86..a73aaaaf53 100644
+index 8873f05e86..04e1395943 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
-@@ -2677,6 +2677,63 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+@@ -2677,6 +2677,61 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
  				  ext_err);
  }
  
@@ -41,16 +41,16 @@ index 8873f05e86..a73aaaaf53 100644
 +/* ICMP reply packets construction code for LoadBalancer services
 + */
 +static __always_inline
-+int make_icmp_responce_lb4(struct __ctx_buff *ctx,
++int make_icmp_response_lb4(struct __ctx_buff *ctx,
 +					struct iphdr *ip4)
 +{
-+		void *data, *data_end;
++	void *data, *data_end;
 +	struct ethhdr *ethhdr;
 +	struct icmphdr *icmphdr;
 +	union macaddr smac = {};
 +	union macaddr dmac = {};
 +	__be32 tmp_addr;
-+	__be16 ccsum = 0;
++	__u32 ccsum = 0;
 +	/* changing size invalidates pointers, so we need to re-fetch them. */
 +	data = ctx_data(ctx);
 +	data_end = ctx_data_end(ctx);
@@ -66,9 +66,6 @@ index 8873f05e86..a73aaaaf53 100644
 +		return DROP_INVALID;
 +
 +	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
-+
-+	if (icmphdr < 0)
-+		return CTX_ACT_OK;
 +
 +	if (icmphdr->type != ICMP_ECHO)
 +		return CTX_ACT_OK;
@@ -87,8 +84,9 @@ index 8873f05e86..a73aaaaf53 100644
 +	icmphdr->type = ICMP_ECHOREPLY;
 +
 +	ccsum = bpf_ntohs(icmphdr->checksum);
-+	ccsum += (0x08) << 8;
-+	icmphdr->checksum = bpf_htons(ccsum);
++	ccsum += 0x0800;
++	ccsum = (ccsum & 0xFFFF) + (ccsum >> 16);
++	icmphdr->checksum = bpf_htons((__u16)ccsum);
 +
 +	return redirect_self(ctx);
 +}
@@ -97,18 +95,18 @@ index 8873f05e86..a73aaaaf53 100644
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2714,7 +2771,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2714,7 +2769,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	lb4_fill_key(&key, &tuple);
  
  	svc = lb4_lookup_service(&key, false);
 +
  	if (svc) {
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
-+		/* If the packet is an ICMP echo request, we need to check if special 
++		/* If the packet is an ICMP echo request, we need to check if special
 +		port=0 service exists and if so, create a reply packet and send it back
 +		to the original source.	This is only supported for LoadBalancer services. */
 +		if (ip4->protocol == IPPROTO_ICMP) {
-+			ret = make_icmp_responce_lb4(ctx, ip4);
++			ret = make_icmp_response_lb4(ctx, ip4);
 +			if (ret != CTX_ACT_REDIRECT)
 +				goto skip_service_lookup;
 +			return ret;
@@ -146,20 +144,22 @@ index 8bbb2b654d..61421310b1 100644
  			cDefinesMap["NODEPORT_NEIGH4"] = neighborsmap.Map4Name
  			cDefinesMap["NODEPORT_NEIGH4_SIZE"] = fmt.Sprintf("%d", option.Config.NeighMapEntriesGlobal)
 diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
-index 87623dbed9..8db9bba793 100644
+index 87623dbed9..879d1097f8 100644
 --- a/pkg/defaults/defaults.go
 +++ b/pkg/defaults/defaults.go
-@@ -290,6 +290,8 @@ const (
+@@ -290,6 +290,10 @@ const (
  	// EnableHealthCheckNodePort
  	EnableHealthCheckNodePort = true
  
++	// EnableLoadBalancerICMPReply is the default value for
++	// EnableLoadBalancerICMPReply
 +	EnableLoadBalancerICMPReply = false
 +
  	// EnableHealthCheckLoadBalancerIP is the default value for
  	// EnableHealthCheckLoadBalancerIP
  	EnableHealthCheckLoadBalancerIP = false
 diff --git a/pkg/maps/lbmap/lbmap.go b/pkg/maps/lbmap/lbmap.go
-index 70d220b69c..be21c979ad 100644
+index 70d220b69c..3547764fe4 100644
 --- a/pkg/maps/lbmap/lbmap.go
 +++ b/pkg/maps/lbmap/lbmap.go
 @@ -15,6 +15,7 @@ import (
@@ -170,7 +170,17 @@ index 70d220b69c..be21c979ad 100644
  	"github.com/cilium/cilium/pkg/ip"
  	"github.com/cilium/cilium/pkg/loadbalancer"
  	"github.com/cilium/cilium/pkg/logging"
-@@ -613,6 +614,114 @@ func (*LBBPFMap) IsMaglevLookupTableRecreated(ipv6 bool) bool {
+@@ -26,6 +27,9 @@ import (
+ 
+ const DefaultMaxEntries = 65536
+ 
++// ICMPProto is the ICMP protocol number used for LoadBalancerICMPReply port=0 keys.
++const ICMPProto = u8proto.U8proto(1)
++
+ var log = logging.DefaultLogger.WithField(logfields.LogSubsys, "map-lb")
+ 
+ var (
+@@ -613,6 +617,114 @@ func (*LBBPFMap) IsMaglevLookupTableRecreated(ipv6 bool) bool {
  	return maglevRecreatedIPv4
  }
  
@@ -184,9 +194,9 @@ index 70d220b69c..be21c979ad 100644
 +	// Create a special instance of loadbalancer with port=0 key with same IP, protocol ICMP (1), and scope
 +	var portZeroKey ServiceKey
 +	if ipv6 {
-+		portZeroKey = NewService6Key(svc.AddrCluster.AsNetIP(), 0, u8proto.U8proto(1), svc.Scope, 0)
++		portZeroKey = NewService6Key(svc.AddrCluster.AsNetIP(), 0, ICMPProto, svc.Scope, 0)
 +	} else {
-+		portZeroKey = NewService4Key(svc.AddrCluster.AsNetIP(), 0, u8proto.U8proto(1), svc.Scope, 0)
++		portZeroKey = NewService4Key(svc.AddrCluster.AsNetIP(), 0, ICMPProto, svc.Scope, 0)
 +	}
 +
 +	// Lookup for the existing port=0 key in the map
@@ -246,10 +256,10 @@ index 70d220b69c..be21c979ad 100644
 +	var portZeroKey ServiceKey
 +	var portZeroValue ServiceValue
 +	if fe.IsIPv6() {
-+		portZeroKey = NewService6Key(fe.GetAddress(), 0, u8proto.U8proto(1), fe.GetScope(), 0)
++		portZeroKey = NewService6Key(fe.GetAddress(), 0, ICMPProto, fe.GetScope(), 0)
 +		portZeroValue = &Service6Value{}
 +	} else {
-+		portZeroKey = NewService4Key(fe.GetAddress(), 0, u8proto.U8proto(1), fe.GetScope(), 0)
++		portZeroKey = NewService4Key(fe.GetAddress(), 0, ICMPProto, fe.GetScope(), 0)
 +		portZeroValue = &Service4Value{}
 +	}
 +
@@ -285,7 +295,7 @@ index 70d220b69c..be21c979ad 100644
  func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quarantinedBackends int, revNATID int,
  	svcType loadbalancer.SVCType, svcForwardingMode loadbalancer.SVCForwardingMode, svcExtLocal, svcIntLocal bool,
  	svcNatPolicy loadbalancer.SVCNatPolicy, sessionAffinity bool, sessionAffinityTimeoutSec uint32,
-@@ -652,6 +761,16 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
+@@ -652,6 +764,16 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
  		deleteLeastConnServiceMap(fe)
  	}
  
@@ -335,7 +345,7 @@ index b2abedec59..1cec05394d 100644
  	c.EnableHostLegacyRouting = vp.GetBool(EnableHostLegacyRouting)
  	c.NodePortBindProtection = vp.GetBool(NodePortBindProtection)
 diff --git a/pkg/service/service.go b/pkg/service/service.go
-index fb2494991c..26c0c553dc 100644
+index fb2494991c..a5259b50ea 100644
 --- a/pkg/service/service.go
 +++ b/pkg/service/service.go
 @@ -1963,6 +1963,111 @@ func (s *Service) restoreServicesLocked(svcBackendsById map[lb.BackendID]struct{
@@ -426,10 +436,10 @@ index fb2494991c..26c0c553dc 100644
 +		var portZeroValue lbmap.ServiceValue
 +		ipv6 := svc.Frontend.IsIPv6()
 +		if ipv6 {
-+			portZeroKey = lbmap.NewService6Key(svc.Frontend.AddrCluster.AsNetIP(), 0, u8proto.U8proto(1), svc.Frontend.Scope, 0)
++			portZeroKey = lbmap.NewService6Key(svc.Frontend.AddrCluster.AsNetIP(), 0, lbmap.ICMPProto, svc.Frontend.Scope, 0)
 +			portZeroValue = &lbmap.Service6Value{}
 +		} else {
-+			portZeroKey = lbmap.NewService4Key(svc.Frontend.AddrCluster.AsNetIP(), 0, u8proto.U8proto(1), svc.Frontend.Scope, 0)
++			portZeroKey = lbmap.NewService4Key(svc.Frontend.AddrCluster.AsNetIP(), 0, lbmap.ICMPProto, svc.Frontend.Scope, 0)
 +			portZeroValue = &lbmap.Service4Value{}
 +		}
 +
