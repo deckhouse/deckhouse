@@ -334,6 +334,7 @@ featureGates:
   DRADeviceBindingConditions: true
   DRAResourceClaimDeviceStatus: true
   DRAConsumableCapacity: true
+  DRAPartitionableDevices: true
 {{- end }}
 {{- range .allowedKubeletFeatureGates }}
   {{ . }}: true
