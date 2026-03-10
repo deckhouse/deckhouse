@@ -305,6 +305,28 @@ properties:
                         type: string
                         description: |
                           The name of the existing StorageClass will be used to create the ETCD data disk.
+
+                  additionalDisks:
+                    type: array
+                    description: |
+                      Additional data disks settings.
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required:
+                        - size
+                      properties:
+                        size:
+                          type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          description: |
+                            Additional disk size.
+                          example: 10Gi
+                        storageClass:
+                          type: string
+                          description: |
+                            The name of the existing StorageClass will be used to create the additional data disk.
+
                   additionalLabels:
                     type: object
                     description: |
@@ -384,6 +406,27 @@ properties:
                   properties:
                     virtualMachine: *instanceClassVirtualMachine
                     rootDisk: *instanceClassRootDisk
+
+                    additionalDisks:
+                      type: array
+                      description: |
+                        Additional data disks settings.
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - size
+                        properties:
+                          size:
+                            type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            description: |
+                              Additional disk size.
+                            example: 10Gi
+                          storageClass:
+                            type: string
+                            description: |
+                              The name of the existing StorageClass will be used to create the additional data disk.
           layout:
             type: string
             description: |
