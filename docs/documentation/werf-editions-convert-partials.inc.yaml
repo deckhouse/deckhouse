@@ -1,0 +1,25 @@
+echo '[] Converting editions structure...'
+yq e -o json editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' |
+jq -Ms '.[0] as $f1 | .[1] as $f2
+  | ($f1 + $f2)  # Start with combination of both
+  | with_entries(
+  .key as $k
+  | .value = if $f1[$k] and $f2[$k] then
+  # Merge objects
+  ($f1[$k] * $f2[$k])
+  # Handle array merges
+  | if $f1[$k].excludeModules and $f2[$k].excludeModules then
+  .excludeModules = ($f1[$k].excludeModules + $f2[$k].excludeModules | unique)
+  else
+  .
+  end
+  | if $f1[$k].includeModules and $f2[$k].includeModules then
+  .includeModules = ($f1[$k].includeModules + $f2[$k].includeModules | unique)
+  else
+  .
+  end
+  else
+  $f2[$k] // $f1[$k]
+  end
+  )
+  ' - modules/editions-addition.json > editions.json
