@@ -19,10 +19,6 @@ Fix use expfmt library in pilot-agent. This library used for format metrics.
 
 Fix clusterrole request from operator
 
-## 005-istio-discovery-skip-gateway-crb-for-1x21.patch
-
-For Istio 1.21 (revision 1x21) do not emit `istiod-gateway-controller` ClusterRoleBinding from the discovery chart so the operator does not attempt to create/patch cluster-scoped RBAC (which would fail and can block reconciliation, e.g. ingressgateway stuck in ContainerCreating).
-
 ## 001-kiali-go-mod.patch
 
 Fix CVE
