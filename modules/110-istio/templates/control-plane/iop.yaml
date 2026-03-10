@@ -134,8 +134,11 @@ spec:
         clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
       externalIstiod: false
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
-      # For Istio 1.21 and below do not create ClusterRoleBinding (version-aware RBAC).
-      # createClusterRoleBinding: true # {{ if semverCompare ">= 1.21.0" $fullVersion }}true{{ else }}false{{ end }}
+      # Emit createClusterRoleBinding only for Istio 1.22+: its presence in values.global can break
+      # operator/config parsing in 1.21 and lead to ingressgateway stuck in ContainerCreating.
+  {{- if semverCompare ">= 1.22.0" $fullVersion }}
+      createClusterRoleBinding: true
+  {{- end }}
 
   {{- if $.Values.istio.multicluster.enabled }}
       meshNetworks:
