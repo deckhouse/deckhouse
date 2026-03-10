@@ -1402,14 +1402,14 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 Создайте на master-узле файл `ingress-nginx-controller.yml`, содержащий конфигурацию Ingress-контроллера:
 
 ```yaml
-# Секция, описывающая параметры NGINX Ingress controller.
+# Секция, описывающая параметры Ingress NGINX controller.
 # https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
-  # Имя Ingress-класса для обслуживания NGINX Ingress controller.
+  # Имя Ingress-класса для обслуживания Ingress NGINX controller.
   ingressClass: nginx
   # Способ поступления трафика из внешнего мира.
   inlet: HostPort
