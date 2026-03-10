@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"time"
 
@@ -52,6 +53,17 @@ type IstioMulticlusterMergeCrdInfo struct {
 	APIJWT               string                               `json:"apiJWT"`
 	IngressGateways      *[]eeCrd.MulticlusterIngressGateways `json:"ingressGateways"`
 	Public               *eeCrd.AlliancePublicMetadata        `json:"public,omitempty"`
+}
+
+type PublicServiceEndpoint struct {
+	Address string `json:"address"`
+	Port    uint   `json:"port"`
+}
+
+type PublicService struct {
+	Hostname  string                              `json:"hostname"`
+	Ports     []eeCrd.FederationPublicServicePort `json:"ports"`
+	Endpoints []PublicServiceEndpoint             `json:"endpoints"`
 }
 
 func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -364,6 +376,43 @@ federationsLoop:
 		properFederations = append(properFederations, federationInfo)
 	}
 
+	// Merge public services by hostname across all federations.
+	// Ports use first-wins: the first federation to declare a hostname defines the ports.
+	// Endpoints are aggregated from all federations' ingress gateways that expose the hostname.
+	mergedServicesMap := make(map[string]*PublicService)
+	for _, fed := range properFederations {
+		if fed.PublicServices == nil {
+			continue
+		}
+		for _, ps := range *fed.PublicServices {
+			existing, ok := mergedServicesMap[ps.Hostname]
+			if !ok {
+				existing = &PublicService{
+					Hostname:  ps.Hostname,
+					Ports:     ps.Ports,
+					Endpoints: make([]PublicServiceEndpoint, 0),
+				}
+				mergedServicesMap[ps.Hostname] = existing
+			}
+			if fed.IngressGateways != nil {
+				for _, ig := range *fed.IngressGateways {
+					existing.Endpoints = append(existing.Endpoints, PublicServiceEndpoint{
+						Address: ig.Address,
+						Port:    ig.Port,
+					})
+				}
+			}
+		}
+	}
+
+	mergedServices := make([]PublicService, 0, len(mergedServicesMap))
+	for _, svc := range mergedServicesMap {
+		mergedServices = append(mergedServices, *svc)
+	}
+	sort.Slice(mergedServices, func(i, j int) bool {
+		return mergedServices[i].Hostname < mergedServices[j].Hostname
+	})
+
 multiclustersLoop:
 	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterMergeCrdInfo](input.Snapshots.Get("multiclusters")) {
 		if err != nil {
@@ -439,6 +488,7 @@ multiclustersLoop:
 	}
 
 	input.Values.Set("istio.internal.federations", properFederations)
+	input.Values.Set("istio.internal.federationsMergedPublicServices", mergedServices)
 	input.Values.Set("istio.internal.multiclusters", properMulticlusters)
 	input.Values.Set("istio.internal.multiclustersNeedIngressGateway", multiclustersNeedIngressGateway)
 	input.Values.Set("istio.internal.remotePublicMetadata", remotePublicMetadata)

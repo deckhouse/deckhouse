@@ -49,6 +49,7 @@ var _ = Describe("Istio hooks :: alliance_metadata_merge ::", func() {
 			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`[]`))
+			Expect(f.ValuesGet("istio.internal.federationsMergedPublicServices").String()).To(MatchJSON(`[]`))
 			Expect(f.ValuesGet("istio.internal.multiclusters").String()).To(MatchJSON(`[]`))
 			Expect(f.ValuesGet("istio.internal.remotePublicMetadata").String()).To(MatchJSON(`{}`))
 			Expect(f.ValuesGet("istio.internal.multiclustersNeedIngressGateway").Bool()).To(BeFalse())
@@ -430,6 +431,49 @@ status:
 		  "aaa-bbb-m6": {"clusterUUID": "aaa-bbb-m6", "rootCA": "abc-m6", "authnKeyPub": "xyz-m6"}
 		}
 `))
+
+			// federationsMergedPublicServices should contain deduplicated services sorted by hostname.
+			// federation-only-full-0 has hostname "bbb" with ingress bbb:222
+			// federation-only-full-1 has hostnames "ccc","ddd","eee","fff","ggg","hhh" with ingress ccc:222
+			// No overlapping hostnames, so 7 entries total.
+			Expect(f.ValuesGet("istio.internal.federationsMergedPublicServices").String()).To(MatchJSON(`[
+				{
+					"hostname": "bbb",
+					"ports": [{"name": "ppp", "port": 123, "protocol": "TCP"},{"name": "zzz", "port": 777, "protocol": "TCP"},{"name": "https-xxx", "port": 555, "protocol": "TLS"}],
+					"endpoints": [{"address": "bbb", "port": 222}]
+				},
+				{
+					"hostname": "ccc",
+					"ports": [{"name": "ppp", "port": 123, "protocol": "TCP"}],
+					"endpoints": [{"address": "ccc", "port": 222}]
+				},
+				{
+					"hostname": "ddd",
+					"ports": [{"name": "xxx", "port": 555, "protocol": "TCP"}],
+					"endpoints": [{"address": "ccc", "port": 222}]
+				},
+				{
+					"hostname": "eee",
+					"ports": [{"name": "http-xxx", "port": 555, "protocol": "HTTP"}],
+					"endpoints": [{"address": "ccc", "port": 222}]
+				},
+				{
+					"hostname": "fff",
+					"ports": [{"name": "https-xxx", "port": 555, "protocol": "TLS"}],
+					"endpoints": [{"address": "ccc", "port": 222}]
+				},
+				{
+					"hostname": "ggg",
+					"ports": [{"name": "grpc-xxx", "port": 555, "protocol": "HTTP2"}],
+					"endpoints": [{"address": "ccc", "port": 222}]
+				},
+				{
+					"hostname": "hhh",
+					"ports": [{"name": "tls-xxx", "port": 555, "protocol": "TLS"}],
+					"endpoints": [{"address": "ccc", "port": 222}]
+				}
+			]`))
+
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"public metadata for IstioFederation wasn't fetched yet\",\"name\":\"federation-empty\""))
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"private metadata for IstioFederation wasn't fetched yet\",\"name\":\"federation-full-empty-ig-0\""))
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"public metadata for IstioFederation wasn't fetched yet\",\"name\":\"federation-only-ingress\""))
@@ -443,6 +487,90 @@ status:
 
 			// there should be 16 log messages (including 2 new "starting token reuse logic" messages)
 			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(16))
+		})
+	})
+
+	Context("Two federations expose the same public service hostname", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-a
+spec:
+  trustDomain: "cluster.local"
+  metadataEndpoint: "https://cluster-a.example.com/metadata/"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "1.1.1.1", "port": 15443}
+      publicServices:
+      - {"hostname": "my-svc.my-ns.svc.cluster.local", "ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}]}
+    public:
+      clusterUUID: uuid-a
+      rootCA: root-ca-a
+      authnKeyPub: pub-key-a
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-b
+spec:
+  trustDomain: "cluster.local"
+  metadataEndpoint: "https://cluster-b.example.com/metadata/"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "2.2.2.2", "port": 15443}
+      publicServices:
+      - {"hostname": "my-svc.my-ns.svc.cluster.local", "ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}]}
+    public:
+      clusterUUID: uuid-b
+      rootCA: root-ca-b
+      authnKeyPub: pub-key-b
+`))
+			f.RunHook()
+		})
+
+		It("should merge public services by hostname with endpoints from both federations", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Both federations should still be listed individually in internal.federations
+			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`[
+				{
+					"name": "cluster-a",
+					"trustDomain": "cluster.local",
+					"spiffeEndpoint": "https://cluster-a.example.com/metadata/public/spiffe-bundle-endpoint",
+					"ingressGateways": [{"address": "1.1.1.1", "port": 15443}],
+					"ca": "",
+					"insecureSkipVerify": false,
+					"publicServices": [{"hostname": "my-svc.my-ns.svc.cluster.local", "ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}]}]
+				},
+				{
+					"name": "cluster-b",
+					"trustDomain": "cluster.local",
+					"spiffeEndpoint": "https://cluster-b.example.com/metadata/public/spiffe-bundle-endpoint",
+					"ingressGateways": [{"address": "2.2.2.2", "port": 15443}],
+					"ca": "",
+					"insecureSkipVerify": false,
+					"publicServices": [{"hostname": "my-svc.my-ns.svc.cluster.local", "ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}]}]
+				}
+			]`))
+
+			// federationsMergedPublicServices should have ONE entry with endpoints from BOTH federations
+			Expect(f.ValuesGet("istio.internal.federationsMergedPublicServices").String()).To(MatchJSON(`[
+				{
+					"hostname": "my-svc.my-ns.svc.cluster.local",
+					"ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}],
+					"endpoints": [
+						{"address": "1.1.1.1", "port": 15443},
+						{"address": "2.2.2.2", "port": 15443}
+					]
+				}
+			]`))
 		})
 	})
 

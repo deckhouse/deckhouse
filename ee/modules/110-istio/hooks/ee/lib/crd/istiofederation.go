@@ -49,11 +49,13 @@ type FederationIngressGateways struct {
 	Port    uint   `json:"port"`
 }
 
+type FederationPublicServicePort struct {
+	Name     string `json:"name"`
+	Port     uint   `json:"port"`
+	Protocol string `json:"protocol"`
+}
+
 type FederationPublicServices struct {
-	Hostname string `json:"hostname"`
-	Ports    []struct {
-		Name     string `json:"name"`
-		Port     uint   `json:"port"`
-		Protocol string `json:"protocol"`
-	} `json:"ports"`
+	Hostname string                        `json:"hostname"`
+	Ports    []FederationPublicServicePort `json:"ports"`
 }

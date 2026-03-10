@@ -1,44 +1,42 @@
 {{- if .Values.istio.federation.enabled }}
-  {{- range $federation := .Values.istio.internal.federations }}
-    {{- range $publicService := $federation.publicServices }}
+{{- range $svc := .Values.istio.internal.federationsMergedPublicServices }}
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
 metadata:
-  name: {{ $federation.name }}-{{ $publicService.hostname | replace "." "-" }}
+  name: {{ $svc.hostname | replace "." "-" }}
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 spec:
   hosts:
-  - {{ $publicService.hostname | quote }}
+  - {{ $svc.hostname | quote }}
   location: MESH_INTERNAL
   ports:
-      {{- range $port := $publicService.ports }}
+  {{- range $port := $svc.ports }}
   - name: {{ $port.name }}
     number: {{ $port.port }}
     protocol: {{ $port.protocol }}
-      {{- end }}
+  {{- end }}
   resolution: STATIC
   endpoints:
-      {{- range $ingressGateway := $federation.ingressGateways }}
-  - address: {{ $ingressGateway.address | quote }}
+  {{- range $endpoint := $svc.endpoints }}
+  - address: {{ $endpoint.address | quote }}
     ports:
-        {{- range $port := $publicService.ports }}
-      {{ $port.name }}: {{ $ingressGateway.port }}
-        {{- end }}
-      {{- end }}
+    {{- range $port := $svc.ports }}
+      {{ $port.name }}: {{ $endpoint.port }}
+    {{- end }}
+  {{- end }}
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: {{ $federation.name }}-{{ $publicService.hostname | replace "." "-" }}
+  name: {{ $svc.hostname | replace "." "-" }}
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 spec:
-  host: {{ $publicService.hostname | quote }}
+  host: {{ $svc.hostname | quote }}
   trafficPolicy:
     tls:
       mode: ISTIO_MUTUAL
-    {{- end }}
-  {{- end }}
+{{- end }}
 {{- end }}
