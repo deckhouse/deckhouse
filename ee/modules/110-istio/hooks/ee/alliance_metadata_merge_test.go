@@ -626,6 +626,71 @@ status:
 		})
 	})
 
+	Context("Two federations expose the same hostname with different port definitions", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-x
+spec:
+  trustDomain: "cluster.local"
+  metadataEndpoint: "https://cluster-x.example.com/metadata/"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "10.0.0.1", "port": 15443}
+      publicServices:
+      - {"hostname": "svc.ns.svc.cluster.local", "ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}]}
+    public:
+      clusterUUID: uuid-x
+      rootCA: root-ca-x
+      authnKeyPub: pub-key-x
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-y
+spec:
+  trustDomain: "cluster.local"
+  metadataEndpoint: "https://cluster-y.example.com/metadata/"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "10.0.0.2", "port": 15443}
+      publicServices:
+      - {"hostname": "svc.ns.svc.cluster.local", "ports": [{"name": "grpc", "port": 9090, "protocol": "HTTP2"}]}
+    public:
+      clusterUUID: uuid-y
+      rootCA: root-ca-y
+      authnKeyPub: pub-key-y
+`))
+			f.RunHook()
+		})
+
+		It("should keep first federation's ports and log a warning about the conflict", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Ports should be from cluster-x (first-wins)
+			Expect(f.ValuesGet("istio.internal.federationsMergedPublicServices").String()).To(MatchJSON(`[
+				{
+					"hostname": "svc.ns.svc.cluster.local",
+					"ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}],
+					"endpoints": [
+						{"address": "10.0.0.1", "port": 15443},
+						{"address": "10.0.0.2", "port": 15443}
+					]
+				}
+			]`))
+
+			// Warning should be logged about the port mismatch
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("federation declares different ports for already known hostname"))
+		})
+	})
+
 	Context("JWT Token Integration Tests", func() {
 		It("Check whether a new token is being created when no secret exists.", func() {
 			f.BindingContexts.Set(f.KubeStateSet(`

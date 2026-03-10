@@ -66,6 +66,18 @@ type PublicService struct {
 	Endpoints []PublicServiceEndpoint             `json:"endpoints"`
 }
 
+func portsEqual(a, b []eeCrd.FederationPublicServicePort) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var federation eeCrd.IstioFederation
 	err := sdk.FromUnstructured(obj, &federation)
@@ -391,6 +403,11 @@ federationsLoop:
 					Ports:     ps.Ports,
 					Endpoints: make([]PublicServiceEndpoint, 0),
 				}
+			} else if !portsEqual(mergedServicesMap[ps.Hostname].Ports, ps.Ports) {
+				input.Logger.Warn("federation declares different ports for already known hostname, keeping first definition",
+					slog.String("federation", fed.Name),
+					slog.String("hostname", ps.Hostname),
+				)
 			}
 		}
 
