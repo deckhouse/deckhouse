@@ -522,7 +522,7 @@
       },
       "oss": [
         {
-          "name": "NGINX Ingress Controller",
+          "name": "Ingress NGINX Controller",
           "link": "https://github.com/kubernetes/ingress-nginx",
           "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
           "logo": "/images/logos/kubernetes.svg",
@@ -1555,7 +1555,7 @@
         "prometheus"
       ]
     },
-    "NGINX Ingress Controller": {
+    "Ingress NGINX Controller": {
       "link": "https://github.com/kubernetes/ingress-nginx",
       "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
       "logo": "/images/logos/kubernetes.svg",
