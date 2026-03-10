@@ -1,25 +1,22 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-c2167a7b3cc90a41182606ceaec2db0b24311690a9a2f974d6190b35c543bd2e",
+  "@id": "merged-vex-109a90b59040acbba41452f1e851c471df32c71d6196969d7e68b4b71c7eb9f6",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
   "version": 1,
   "statements": [
-      {
-        "vulnerability": {
-          "name": "CVE-2026-24051"
-        },
-        "products": [
-          {
-            "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.21.0"
-          },
-          {
-            "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
-          }
-        ],
-        "status": "not_affected",
-        "justification": "vulnerable_code_not_in_execute_path",
-        "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
-        "timestamp": "2026-03-04T14:17:12.341089Z"
+    {
+      "vulnerability": {
+        "name": "CVE-2023-45142"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2023-45142 - уязвимость серверного otelhttp, которая осуществляется через отправклу запросов с высококардинальными HTTP-метаданными. Функциональность OpenTelemetry в cluster-autoscaler отсутствует, в коде отсутствуют вызовы otelhttp",
+      "timestamp": "2025-10-10T11:41:31.811482Z"
     },
     {
       "vulnerability": {
@@ -37,6 +34,20 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2025-47914"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-03-10T07:25:25.946857809Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2025-5187"
       },
       "products": [
@@ -51,20 +62,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2023-45142"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "CVE-2023-45142 - уязвимость серверного otelhttp, которая осуществляется через отправклу запросов с высококардинальными HTTP-метаданными. Функциональность OpenTelemetry в cluster-autoscaler отсутствует, в коде отсутствуют вызовы otelhttp",
-      "timestamp": "2025-10-10T11:41:31.811482Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2025-52881"
       },
       "products": [
@@ -76,7 +73,38 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость затрагивает runc при запуске контейнеров, позволяя перенаправление записей в /proc на другие файлы через специальные условия. Cluster-autoscaler не использует runc для запуска контейнеров и управляет только масштабированием узлов Kubernetes через API, уязвимый код не исполняется.",
       "timestamp": "2025-11-07T09:55:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58181"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-03-10T07:26:06.833098043Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.21.0"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
+      "timestamp": "2026-03-04T14:17:12.341089Z"
     }
   ],
-  "timestamp": "2025-10-10T14:17:12Z"
+  "timestamp": "2026-03-10T07:30:39Z"
 }
