@@ -77,11 +77,6 @@ type ZvirtMachineStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// initialization provides observations of the Cluster initialization process.
-	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
-	// +optional
-	Initialization ZvirtMachineInitializationStatus `json:"initialization,omitempty,omitzero"`
-
 	// Ready indicates the VM has been provisioned and is ready.
 	// +optional
 	Ready bool `json:"ready"`
@@ -100,7 +95,12 @@ type ZvirtMachineStatus struct {
 
 	// Conditions defines current service state of the ZvirtMachine.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// initialization provides observations of the Cluster initialization process.
+	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+	// +optional
+	Initialization ZvirtMachineInitializationStatus `json:"initialization,omitempty,omitzero"`
 }
 
 // ZvirtMachineInitializationStatus provides observations of the Cluster initialization process.
@@ -138,12 +138,12 @@ type ZvirtMachineList struct {
 }
 
 // GetConditions gets the ZvirtInstance status conditions
-func (r *ZvirtMachine) GetConditions() clusterv1.Conditions {
+func (r *ZvirtMachine) GetConditions() []metav1.Condition {
 	return r.Status.Conditions
 }
 
 // SetConditions sets the ZvirtInstance status conditions
-func (r *ZvirtMachine) SetConditions(conditions clusterv1.Conditions) {
+func (r *ZvirtMachine) SetConditions(conditions []metav1.Condition) {
 	r.Status.Conditions = conditions
 }
 
