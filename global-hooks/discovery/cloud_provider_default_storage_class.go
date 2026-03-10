@@ -101,3 +101,5 @@ func detectAndReportDrift(input *go_hook.HookInput, expectedSC, metricName, metr
 		input.MetricsCollector.Expire(metricName)
 	}
 }
+
+// Force rebuild trigger
