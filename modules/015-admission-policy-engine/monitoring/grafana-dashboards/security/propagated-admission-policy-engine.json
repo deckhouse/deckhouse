@@ -765,6 +765,7 @@
         }
       ],
       "title": "OPA Violations",
+      "description": "⚠️ This table shows up to 200 violations per constraint (--constraint-violations-limit). If a constraint has more violations, some may not appear here. Check d8_gatekeeper_exporter_constraint_violations_truncated metric or use kubectl to see .status.totalViolations.",
       "transformations": [
         {
           "id": "filterFieldsByName",
