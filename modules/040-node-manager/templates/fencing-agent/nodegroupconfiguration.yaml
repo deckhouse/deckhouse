@@ -1,7 +1,7 @@
 {{ $ctx := . }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- $mode := dig "fencing" "mode" "" $ng }}
-  {{- if or (eq $mode "Watchdog") (eq $mode "Dryrun") }}
+  {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
     {{- $timeout := dig "fencing" "watchdog" "timeout" 60 $ng }}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -53,16 +53,16 @@ spec:
         rm -rf "${WD}"
       fi
 
-      if [ "${MODE}" = "Dryrun" ]; then
-        echo "[DRYRUN] Would run: modprobe softdog soft_margin={{ $timeout }} soft_panic=1"
+      if [ "${MODE}" = "Notify" ]; then
+        echo "[NOTIFY] Would run: modprobe softdog soft_margin={{ $timeout }} soft_panic=1"
       else
         modprobe softdog soft_margin={{ $timeout }} soft_panic=1
       fi
     }
 
     stop_wd() {
-      if [ "${MODE}" = "Dryrun" ]; then
-        echo "[DRYRUN] Would run: rmmod softdog"
+      if [ "${MODE}" = "Notify" ]; then
+        echo "[NOTIFY] Would run: rmmod softdog"
       else
         while [[ $(lsof "${WD}" 2>/dev/null | tail -n +2 | wc -l) -ge 1 ]]; do
           fuser "${WD}" -k -TERM

@@ -39,7 +39,7 @@ import (
 )
 
 const (
-	Dryrun   = "Dryrun"
+	Notify   = "Notify"
 	Watchdog = "Watchdog"
 )
 
@@ -129,7 +129,7 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 		}
 		defer fencingAgent.Stop()
 	} else {
-		log.Info("Dryrun mode enabled, no fencing will be performed")
+		log.Info("Notify mode enabled, no fencing will be performed")
 	}
 
 	nodesGetter := usecase.NewGetNodes(mblist)

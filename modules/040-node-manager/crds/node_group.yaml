@@ -2379,11 +2379,11 @@ spec:
                       type: string
                       enum:
                         - "Watchdog"
-                        - "Dryrun"
+                        - "Notify"
                       description: |
                         Fencing operating modes:
-                        - `Watchdog`: uses the kernel watchdog module to automatically reboot nodes that have lost connectivity to the cluster.
-                        - `Dryrun`: runs the fencing-agent but does not activate the watchdog (validation mode, no reboots).
+                        - `Watchdog`: uses the kernel watchdog module to automatically reboot nodes that have lost connectivity to the cluster. Also in this mode, the fencing agent monitors the nodes available in the cluster.
+                        - `Notify`: runs the fencing-agent but does not activate the watchdog (validation mode, no reboots). In this mode, the fencing agent monitors the nodes available in the cluster.
 
                         When fencing is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin=<timeout>` and `soft_panic=1` parameters.
 
