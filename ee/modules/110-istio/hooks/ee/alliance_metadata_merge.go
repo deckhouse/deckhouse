@@ -379,28 +379,33 @@ federationsLoop:
 	// Merge public services by hostname across all federations.
 	// Ports use first-wins: the first federation to declare a hostname defines the ports.
 	// Endpoints are aggregated from all federations' ingress gateways that expose the hostname.
+	// Each federation contributes its ingress gateways at most once per hostname, even if the
+	// hostname appears multiple times in the federation's publicServices list.
 	mergedServicesMap := make(map[string]*PublicService)
 	for _, fed := range properFederations {
-		if fed.PublicServices == nil {
-			continue
-		}
+		// First pass: register hostnames with ports (first-wins).
 		for _, ps := range *fed.PublicServices {
-			existing, ok := mergedServicesMap[ps.Hostname]
-			if !ok {
-				existing = &PublicService{
+			if _, ok := mergedServicesMap[ps.Hostname]; !ok {
+				mergedServicesMap[ps.Hostname] = &PublicService{
 					Hostname:  ps.Hostname,
 					Ports:     ps.Ports,
 					Endpoints: make([]PublicServiceEndpoint, 0),
 				}
-				mergedServicesMap[ps.Hostname] = existing
 			}
-			if fed.IngressGateways != nil {
-				for _, ig := range *fed.IngressGateways {
-					existing.Endpoints = append(existing.Endpoints, PublicServiceEndpoint{
-						Address: ig.Address,
-						Port:    ig.Port,
-					})
-				}
+		}
+
+		// Second pass: append this federation's ingress gateways once per unique hostname.
+		seenHostnames := make(map[string]struct{})
+		for _, ps := range *fed.PublicServices {
+			if _, already := seenHostnames[ps.Hostname]; already {
+				continue
+			}
+			seenHostnames[ps.Hostname] = struct{}{}
+			for _, ig := range *fed.IngressGateways {
+				mergedServicesMap[ps.Hostname].Endpoints = append(
+					mergedServicesMap[ps.Hostname].Endpoints,
+					PublicServiceEndpoint{Address: ig.Address, Port: ig.Port},
+				)
 			}
 		}
 	}

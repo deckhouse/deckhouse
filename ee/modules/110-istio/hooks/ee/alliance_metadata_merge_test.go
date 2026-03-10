@@ -574,6 +574,58 @@ status:
 		})
 	})
 
+	Context("Federation with duplicate hostname in its own publicServices list", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-dup
+spec:
+  trustDomain: "cluster.local"
+  metadataEndpoint: "https://cluster-dup.example.com/metadata/"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "3.3.3.3", "port": 15443}
+      publicServices:
+      - {"hostname": "dup-svc.ns.svc.cluster.local", "ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}]}
+      - {"hostname": "dup-svc.ns.svc.cluster.local", "ports": [{"name": "grpc", "port": 9090, "protocol": "HTTP2"}]}
+      - {"hostname": "unique-svc.ns.svc.cluster.local", "ports": [{"name": "http", "port": 80, "protocol": "HTTP"}]}
+    public:
+      clusterUUID: uuid-dup
+      rootCA: root-ca-dup
+      authnKeyPub: pub-key-dup
+`))
+			f.RunHook()
+		})
+
+		It("should not duplicate endpoints for the repeated hostname", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			// The merged list should have 2 entries (2 unique hostnames), not 3.
+			// The duplicate hostname should use first-wins ports and have endpoints only once.
+			Expect(f.ValuesGet("istio.internal.federationsMergedPublicServices").String()).To(MatchJSON(`[
+				{
+					"hostname": "dup-svc.ns.svc.cluster.local",
+					"ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}],
+					"endpoints": [
+						{"address": "3.3.3.3", "port": 15443}
+					]
+				},
+				{
+					"hostname": "unique-svc.ns.svc.cluster.local",
+					"ports": [{"name": "http", "port": 80, "protocol": "HTTP"}],
+					"endpoints": [
+						{"address": "3.3.3.3", "port": 15443}
+					]
+				}
+			]`))
+		})
+	})
+
 	Context("JWT Token Integration Tests", func() {
 		It("Check whether a new token is being created when no secret exists.", func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
