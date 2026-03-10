@@ -277,10 +277,10 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.24
+      - name: Set up Go 1.25
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache: false
 
       - name: Run go generate
@@ -772,7 +772,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:38ad74c3c7830c587e549a76edd0d5e23edfb741e1a602f93e0c8b8b91056394"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:a1bab0365c4328100e80e450037912aa8641c406d965032808b7df5e2baec080"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
