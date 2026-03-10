@@ -1,0 +1,124 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-d2a6e388d354698e1b1acd4d3508b57408c2bf9da5d566c75729a133feba1b4b",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2023-45142"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2023-45142 - уязвимость серверного otelhttp, которая осуществляется через отправклу запросов с высококардинальными HTTP-метаданными. Функциональность OpenTelemetry в cluster-autoscaler отсутствует, в коде отсутствуют вызовы otelhttp",
+      "timestamp": "2025-10-10T11:41:31.811482Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-13281"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость SSRF в kube-controller-manager при использовании in-tree Portworx StorageClass; cluster-autoscaler не содержит и не использует код kube-controller-manager или Portworx, библиотека k8s.io/kubernetes используется только как зависимость для клиентских типов и утилит, уязвимый код не исполняется",
+      "timestamp": "2026-03-10T11:10:04.780518263Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-1767"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость связана с поведением kubelet при работе с GitRepo volume, cluster-autoscaler не запускает kubelet и не инициирует монтирование gitRepo, библиотека k8s.io/kubernetes используется только для типов/утилит, уязвимый код не используется в провайдере.",
+      "timestamp": "2025-10-16T07:13:22.026446Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47914"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-03-10T11:10:19.465468714Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-5187"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "cluster-autoscaler не запускает kube-apiserver и не экспонирует API, позволяющие нодам удалять сами себя, k8s.io/kubernetes используется только как библиотечная зависимость для клиентских операций, уязвимый код не исполняется.",
+      "timestamp": "2025-10-16T07:20:22.663692Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/selinux"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость затрагивает runc при запуске контейнеров, позволяя перенаправление записей в /proc на другие файлы через специальные условия. Cluster-autoscaler не использует runc для запуска контейнеров и управляет только масштабированием узлов Kubernetes через API, уязвимый код не исполняется.",
+      "timestamp": "2025-11-07T09:55:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58181"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-03-10T10:45:48.455277482Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.21.0"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
+      "timestamp": "2026-03-04T14:17:12.341089Z"
+    }
+  ],
+  "timestamp": "2026-03-10T11:10:46Z"
+}
