@@ -13,12 +13,12 @@
 
 - Начиная с Kubernetes 1.35, на узлах кластера DKP должен использоваться механизм cgroup v2.
   Предыдущая версия (cgroup v1) [объявлена устаревшей](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1).
-  В случае, если на узле не поддерживается cgroup v2, сработает алерт [D8NodeCgroupV2NotSupported](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.75/reference/alerts.html#node-manager-d8nodecgroupv2notsupported).
+  В случае, если на узле не поддерживается cgroup v2, появится алерт [D8NodeCgroupV2NotSupported](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.75/reference/alerts.html#node-manager-d8nodecgroupv2notsupported).
   Подробнее о переходе на cgroup v2 можно почитать в [документации Kubernetes](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
 
 - Начиная с Kubernetes 1.36, на узлах кластера DKP должен использоваться container runtime containerd v2.
   Поддержка containerd v1 [будет прекращена](https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/#kubernetes-to-end-containerd-1-x-support-in-v1-36).
-  В случае, если на узле не поддерживается containerd v2, сработает алерт [D8NodeContainerdV2NotSupported](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.75/reference/alerts.html#node-manager-d8nodecontainerdv2notsupported).
+  В случае, если на узле не поддерживается containerd v2, появится алерт [D8NodeContainerdV2NotSupported](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.75/reference/alerts.html#node-manager-d8nodecontainerdv2notsupported).
 
 - Модуль [`vertical-pod-autoscaler`](https://deckhouse.ru/modules/vertical-pod-autoscaler/v1.75/) обновлен с версии 1.4.1 до [1.5.1](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.5.1).
   Начиная с версии 1.5.0, режим обновления `updateMode: Auto` [объявлен устаревшим](https://github.com/kubernetes/autoscaler/pull/8426).
