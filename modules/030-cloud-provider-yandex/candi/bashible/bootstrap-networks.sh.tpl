@@ -93,7 +93,7 @@ network:
         macaddress: $mac
       routing-policy:
         - from: "$ip"
-          table: 0
+          table: 254
           priority: 100
       $route_settings
 BOOTSTRAP_NETWORK_EOF
