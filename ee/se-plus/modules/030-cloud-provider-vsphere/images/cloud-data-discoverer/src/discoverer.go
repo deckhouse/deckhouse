@@ -134,7 +134,7 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 
 	config := &vsphere.ProviderClusterConfiguration{
 		Region:            region,
-		Zones: 			   zones,
+		Zones:             zones,
 		RegionTagCategory: regionTagCategory,
 		ZoneTagCategory:   zoneTagCategory,
 		Provider: vsphere.Provider{
