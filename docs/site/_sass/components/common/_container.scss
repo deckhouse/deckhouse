@@ -35,9 +35,4 @@
     padding-left: 20px;
     padding-right: 20px;
   }
-
-  @include breakpoints.max-w(xs) {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
 }

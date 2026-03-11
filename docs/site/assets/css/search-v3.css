@@ -1,7 +1,7 @@
 /* Search Container Styles */
 .searchV3 {
   position: relative;
-  z-index: 100;
+  z-index: 99;
 }
 
 .searchV3 .container {

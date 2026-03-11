@@ -50,8 +50,31 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function updateMobileNavScrollState() {
+        if (!headerNavList) return;
+
+        if (window.innerWidth >= 1024 || !headerNavList.classList.contains('active')) {
+            headerNavList.style.maxHeight = '';
+            headerNavList.style.overflowY = '';
+            headerNavList.style.overflowX = '';
+            headerNavList.style.webkitOverflowScrolling = '';
+            return;
+        }
+
+        const navRect = headerNavList.getBoundingClientRect();
+        const viewportPadding = 12;
+        const availableHeight = Math.floor(window.innerHeight - navRect.top - viewportPadding);
+        const maxHeight = Math.max(140, availableHeight);
+
+        headerNavList.style.maxHeight = `${maxHeight}px`;
+        headerNavList.style.overflowY = 'auto';
+        headerNavList.style.overflowX = 'hidden';
+        headerNavList.style.webkitOverflowScrolling = 'touch';
+    }
+
     function openBurgerSidebar() {
         if (!headerSidebar) return;
+        hamburgerCollapse.classList.add('show');
         headerSidebar.classList.add('show');
         burgerOverlay.classList.add('sidebar-overlay');
         content.appendChild(burgerOverlay);
@@ -62,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (headerSidebar) headerSidebar.classList.remove('show');
         if (burgerOverlay.parentNode) burgerOverlay.parentNode.removeChild(burgerOverlay);
         if (body) body.classList.remove('sidebar-opened');
+        if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
     }
 
     function initBurger() {
@@ -95,6 +119,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (activeNavMobile) activeNavMobile.classList.remove('header__navigation-item--open');
 
         if (headerNavList) headerNavList.classList.remove('active', 'header__nav--doc-modal');
+        updateMobileNavScrollState();
         if (body) body.classList.remove('sidebar-opened');
         if (navTrigger) navTrigger.classList.remove('rotated');
 
@@ -160,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (willOpen) {
                     body.classList.add('sidebar-opened');
                     ensureOverlay();
+                    window.requestAnimationFrame(updateMobileNavScrollState);
                 } else {
                     closeNavModal();
                 }
@@ -191,6 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
             activeMobileItem();
             initBurger();
             initMobileSidebar();
+            updateMobileNavScrollState();
             return;
         }
 

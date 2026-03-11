@@ -53,12 +53,8 @@ ul.nav {
     text-transform: uppercase;
     @include mixins.color(mixins.$ntrl-400);
 
-    @include breakpoints.min-w(s) {
-      font-size: 1em;
-    }
-
-    @include breakpoints.min-w(m) {
-      font-size: 1.143em;
+    @include breakpoints.max-w(m) {
+      font-size: 14px;
     }
   }
 

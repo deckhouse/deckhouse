@@ -13,11 +13,11 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  max-height: 200px;
+  // max-height: 200px;
   opacity: 1;
   margin: 0 0 25px;
   z-index: 50;
-  height: 69px;
+  height: 100%;
   background-color: #fff;
   transition: top .15s ease-in-out;
 
@@ -232,6 +232,10 @@
 .breadcrumbs__item:not(:last-child)::after {
     content: '/';
     margin: 0 15px;
+
+    @include breakpoints.max-w(xl) {
+      margin: 0 5px;
+    }
 }
 
 .breadcrumbs__item > a {
@@ -898,8 +902,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .sidebar__submenu-item > a {
     position: relative;
     display: block;
-    //display: inline-flex;
-    //align-items: center;
     font-size: 14px;
     color: #00122C;
     letter-spacing: -0.26px;

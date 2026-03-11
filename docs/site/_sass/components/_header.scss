@@ -61,11 +61,15 @@ html {
     &__nav {
         &.nav {
             @include breakpoints.min-w(l) {
-                display: flex;
                 gap: .75rem 1rem;
             }
 
-            @include breakpoints.min-w(xxl) {
+            @include breakpoints.min-w(xl) {
+                display: flex;
+                gap: .75rem;
+            }
+
+            @include breakpoints.min-w(xxxl) {
                 gap: .75rem 1.25rem;
             }
         }
@@ -108,15 +112,17 @@ html {
                 width: 100%;
                 cursor: pointer;
 
-                &::after {
-                    content: '';
-                    position: absolute;
-                    right: 0;
-                    top: 5px;
-                    width: 8px;
-                    height: 5px;
-                    background:url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") bottom / contain no-repeat ;
-                    transition: .15s;
+                > a:first-child  {
+                    &::after {
+                        content: '';
+                        position: absolute;
+                        right: 0;
+                        top: 5px;
+                        width: 8px;
+                        height: 5px;
+                        background:url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") bottom / contain no-repeat ;
+                        transition: .15s;
+                    }
                 }
 
                 &.header__navigation-item--open {
@@ -126,17 +132,18 @@ html {
                     margin: 0 -20px;
 
                     ul {
-                        max-width: 254px;
+                        max-width: 285px;
                     }
 
                     > a:first-child {
-                        color: #0064FF;
-                        font-weight: 700;
                         line-height: 20px;
+                        margin-bottom: 16px;
                     }
 
                     a {
-                        margin-bottom: 20px;
+                        &:not(:last-of-type) {
+                            margin-bottom: 20px;
+                        }
 
                         &::after {
                             transform: rotate(-180deg);
@@ -154,7 +161,6 @@ html {
 
                 a {
                     position: relative;
-                    padding: 0;
 
                     ul {
                         padding: 0;
@@ -167,12 +173,8 @@ html {
             }
                 
             > a {
-                // font-size: 0.745em;
                 position: relative;
-
-                @include breakpoints.max-w(l) {
-                    font-size: 14px;
-                }
+                font-size: 12px;
 
                 @include breakpoints.min-w(xxl) {
                     font-size: 15px;
@@ -185,10 +187,12 @@ html {
         }
 
         .sub-menu {
+            font-size: 12px;
+
             @include breakpoints.min-w(l) {
                 display: flex;
                 margin: 0;
-                padding: 1.5rem;
+                padding: 1.125rem;
                 min-width: 180px;
                 gap: .6rem;
                 flex-direction: column;
@@ -197,7 +201,7 @@ html {
                 @include mixins.box-shadow;
 
                 @include breakpoints.min-w(xl) {
-                    gap: 1rem;
+                    gap: .75rem;
                 }
 
                 &-container {
@@ -263,12 +267,16 @@ html {
 
         a {
             @include mixins.color(mixins.$ntrl-800);
-            white-space: nowrap;
+
+            @include breakpoints.min-w(l) {
+                white-space: nowrap;
+            }
         }
 
         .menu-item-has-children {
             position: relative;
             display: inline-block;
+            cursor: pointer;
 
             > a {
                 pointer-events: none;
@@ -291,6 +299,10 @@ html {
                     transition: .15s;
                 }
 
+                &:has(.sub-menu_open)::after {
+                    transform: rotate(-180deg);
+                }
+
                 > .sub-menu-container {
                     display: none;
                     flex-direction: column;
@@ -304,6 +316,11 @@ html {
 
                     > .sub-menu {
                         padding: 0;
+                        font-size: 13px;
+
+                        li {
+                            margin-bottom: 16px;
+                        }
                     }
 
                     &.sub-menu_open {
@@ -545,7 +562,7 @@ html {
             }
         }
 
-        body.sidebar-opened & {
+        &.show {
             transition: .2s cubic-bezier(.8, .5, .2, 1.4);
 
             span {
@@ -596,6 +613,7 @@ html {
             align-items: center;
             flex-direction: row;
             justify-content: space-between;
+            padding-right: 45px;
 
             @include breakpoints.min-w(l) {
                 gap: 1.25rem 2rem;
@@ -707,22 +725,36 @@ html {
                     align-items: flex-start;
                     background: #fff;
                     border-radius: .25rem;
+                    box-sizing: border-box;
                     box-shadow: 0 4px 8px -2px rgba(16, 24, 40, .1), 0 2px 4px -2px rgba(16, 24, 40, .06);
                     display: none;
                     flex-direction: column;
+                    flex-wrap: nowrap;
                     list-style: none;
                     margin-top: .75rem;
-                    min-width: 254px;
+                    max-height: calc(100dvh - 120px);
+                    max-width: calc(100vw - 2rem);
+                    min-width: 268px;
+                    overflow-x: hidden;
+                    overflow-y: auto;
                     padding: 1.25rem;
                     position: absolute;
                     right: 1rem;
                     row-gap: 1.25rem;
                     top: 100%;
-                    width: max-content;
+                    -webkit-overflow-scrolling: touch;
+                    width: min(100%, 320px);
 
                     &.active {
-                        z-index: 61;
+                        z-index: 11111;
                     }
+                }
+
+                @include breakpoints.max-w(xxs) {
+                    top: 59px;
+                    right: 0;
+                    border-radius: 0;
+                    min-width: 100%;
                 }
             }
         }
@@ -734,7 +766,7 @@ html {
                 align-items: flex-start;
                 padding-right: 0;
                 overflow: visible;
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 400;
                 line-height: 20px;
                 color: #222A5D;
@@ -753,7 +785,7 @@ html {
 
                     li {
                         width: 100%;
-                        margin: 0;
+                        // margin: 0;
                     }
                 }
 
