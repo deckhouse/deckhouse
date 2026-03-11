@@ -19,8 +19,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/Masterminds/semver/v3"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
@@ -56,6 +54,7 @@ type Scheduler struct {
 
 	eventCh chan Event
 
+	dependencyGetter       dependency.Getter
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
@@ -84,6 +83,13 @@ func WithDeckhouseVersionGetter(deckhouseVersionGetter version.Getter) Option {
 func WithBootstrapCondition(cond condition.Condition) Option {
 	return func(s *Scheduler) {
 		s.bootstrapCondition = cond
+	}
+}
+
+// WithDependencyGetter sets the provider for the current dependency version.
+func WithDependencyGetter(getter dependency.Getter) Option {
+	return func(s *Scheduler) {
+		s.dependencyGetter = getter
 	}
 }
 
@@ -144,7 +150,7 @@ func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, reasonRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 {
+	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
 		deps := make(map[string]dependency.Dependency)
 		for name, dep := range constraints.Dependencies {
 			deps[name] = dependency.Dependency{
@@ -153,7 +159,7 @@ func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 			}
 		}
 
-		checkers = append(checkers, dependency.NewChecker(s.getVersion, deps))
+		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, deps))
 	}
 
 	if res := checker.Check(checkers...); !res.Enabled {
@@ -360,14 +366,4 @@ func (s *Scheduler) canSchedule(n *node) bool {
 	}
 
 	return true
-}
-
-// getVersion returns the semver version of the named node, or nil if not found.
-func (s *Scheduler) getVersion(name string) *semver.Version {
-	n, ok := s.nodes[name]
-	if !ok || !n.status.Enabled {
-		return nil
-	}
-
-	return n.version
 }

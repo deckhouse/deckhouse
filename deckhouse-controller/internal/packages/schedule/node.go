@@ -148,7 +148,7 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.checkers = append(n.checkers, condition.NewChecker(s.bootstrapCondition, reasonRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 {
+	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
 		deps := make(map[string]dependency.Dependency)
 		for name, dep := range constraints.Dependencies {
 			deps[name] = dependency.Dependency{
@@ -157,7 +157,7 @@ func (s *Scheduler) addNode(pkg Package) {
 			}
 		}
 
-		n.checkers = append(n.checkers, dependency.NewChecker(s.getVersion, deps))
+		n.checkers = append(n.checkers, dependency.NewChecker(s.dependencyGetter, deps))
 	}
 
 	s.nodes[pkg.GetName()] = n
