@@ -77,7 +77,7 @@ spec:
                       description: Пространство имён, в котором находится объект.
                 classReference:
                   description: |
-                    Ссылка на InstanceClass (уникален для каждого cloud-provider-* модуля).
+                    Ссылка на InstanceClass (уникален для каждого `cloud-provider-*` модуля).
                   type: object
                   properties:
                     kind:
