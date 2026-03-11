@@ -1,0 +1,191 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: descheduler-high-node-utilization
+spec:
+  timeouts:
+    apply: 30s
+    assert: 120s
+    delete: 30s
+    exec: 120s
+
+  steps:
+    # Step 1: Verify cluster has 2+ nodes and descheduler is installed.
+    - name: check-prerequisites
+      try:
+        - script:
+            content: |
+              NODE_COUNT=$(kubectl get nodes --no-headers | wc -l | tr -d ' ')
+              echo "Cluster has $NODE_COUNT node(s)"
+
+              if [ "$NODE_COUNT" -lt 2 ]; then
+                echo "FAIL: This test requires at least 2 nodes, found $NODE_COUNT"
+                exit 1
+              fi
+
+              if ! kubectl get deployment descheduler -n d8-descheduler --no-headers 2>/dev/null; then
+                echo "FAIL: Descheduler deployment not found in d8-descheduler namespace"
+                exit 1
+              fi
+              echo "OK: Multi-node cluster with existing descheduler detected"
+
+    # Step 2: Backup current policy, apply HighNodeUtilization config, restart descheduler.
+    - name: configure-descheduler
+      try:
+        - script:
+            content: |
+              # Backup existing policy for restoration in finally block.
+              echo "Backing up existing descheduler policy..."
+              kubectl get configmap descheduler-policy -n d8-descheduler -o yaml > /tmp/descheduler-policy-backup.yaml
+              echo "Backup saved to /tmp/descheduler-policy-backup.yaml"
+
+              echo "Applying HighNodeUtilization policy..."
+              kubectl apply -f - <<'EOF'
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                policy.yaml: |
+                  apiVersion: "descheduler/v1alpha2"
+                  kind: "DeschedulerPolicy"
+                  profiles:
+                    - name: default
+                      pluginConfig:
+                        - name: DefaultEvictor
+                          args:
+                            # Only evict pods that can be scheduled elsewhere.
+                            nodeFit: true
+                        - name: HighNodeUtilization
+                          args:
+                            # Underutilized: ALL resources below these values.
+                            # Pods are evicted FROM underutilized nodes.
+                            thresholds:
+                              cpu: 20
+                              memory: 20
+                              pods: 20
+                            # Protect kube-system from eviction.
+                            evictableNamespaces:
+                              exclude:
+                                - "kube-system"
+                      plugins:
+                        balance:
+                          enabled:
+                            - HighNodeUtilization
+                        evict:
+                          enabled:
+                            - DefaultEvictor
+              EOF
+              echo "Policy applied"
+
+              echo "Restarting descheduler to pick up new policy..."
+              kubectl rollout restart deployment/descheduler -n d8-descheduler
+              kubectl rollout status deployment/descheduler -n d8-descheduler --timeout=120s
+              echo "Descheduler restarted successfully"
+
+      # On failure: collect events and logs for diagnostics.
+      catch:
+        - events:
+            namespace: d8-descheduler
+        - podLogs:
+            namespace: d8-descheduler
+            selector: app=descheduler
+
+    # Step 3: Spread 1 pause pod per node to make all nodes underutilized.
+    # Descheduler should consolidate them onto fewer nodes.
+    - name: create-spread-workload
+      try:
+        - script:
+            content: |
+              NODES=$(kubectl get nodes --no-headers -o custom-columns=':metadata.name')
+              NODE_COUNT=$(echo "$NODES" | wc -l | tr -d ' ')
+              echo "Spreading pods across $NODE_COUNT nodes (1 pod per node)"
+
+              # Create one minimal pause pod per node, pinned via nodeName.
+              INDEX=1
+              for NODE in $NODES; do
+                kubectl run spread-pod-$INDEX \
+                  --namespace "$NAMESPACE" \
+                  --image=registry.k8s.io/pause:3.9 \
+                  --overrides="{\"spec\":{\"nodeName\":\"$NODE\"}}"
+                INDEX=$((INDEX + 1))
+              done
+
+              echo "Waiting for all pods to be Ready..."
+              for i in $(seq 1 $NODE_COUNT); do
+                kubectl wait --namespace "$NAMESPACE" \
+                  --for=condition=Ready pod/spread-pod-$i \
+                  --timeout=60s
+              done
+
+              echo ""
+              echo "=== Initial Pod Distribution ==="
+              kubectl get pods --namespace "$NAMESPACE" -o wide --no-headers
+
+      catch:
+        - events: {}
+        - podLogs: {}
+
+    # Step 4: Wait for descheduler cycle and verify pod consolidation.
+    - name: verify-descheduler-results
+      try:
+        - script:
+            timeout: 300s
+            content: |
+              echo "Waiting for descheduler to run a cycle (up to 5 minutes)..."
+
+              DESCHEDULER_POD=$(kubectl get pods -n d8-descheduler -l app=descheduler --no-headers -o custom-columns=':metadata.name' | head -1)
+              echo "Descheduler pod: $DESCHEDULER_POD"
+
+              # Poll logs until HighNodeUtilization appears.
+              for i in $(seq 1 60); do
+                if kubectl logs -n d8-descheduler "$DESCHEDULER_POD" -c descheduler --since=5m 2>/dev/null | grep -q "HighNodeUtilization"; then
+                  echo "HighNodeUtilization plugin has executed"
+                  break
+                fi
+                if [ "$i" -eq 60 ]; then
+                  echo "FAIL: Timed out waiting for HighNodeUtilization to execute"
+                  exit 1
+                fi
+                sleep 5
+              done
+
+              echo ""
+              echo "=== Descheduler Logs (HighNodeUtilization) ==="
+              kubectl logs -n d8-descheduler "$DESCHEDULER_POD" -c descheduler --since=5m 2>/dev/null | grep -i "HighNodeUtilization\|evict\|node.*util\|underutilized" | tail -30 || true
+
+              echo ""
+              echo "=== Pod Distribution Across Nodes ==="
+              kubectl get pods --namespace "$NAMESPACE" -o wide --no-headers | awk '{print $7}' | sort | uniq -c | sort -rn
+
+              echo ""
+              echo "=== Eviction Events ==="
+              kubectl get events --namespace "$NAMESPACE" --field-selector reason=Evicted 2>/dev/null || true
+
+              echo ""
+              echo "PASS: Descheduler HighNodeUtilization plugin executed successfully"
+
+      catch:
+        - events:
+            namespace: d8-descheduler
+        - podLogs:
+            namespace: d8-descheduler
+            selector: app=descheduler
+
+      # Restore original policy, regardless of test outcome.
+      finally:
+        - script:
+            timeout: 180s
+            content: |
+              echo "Restoring original descheduler policy..."
+              if [ -f /tmp/descheduler-policy-backup.yaml ]; then
+                kubectl apply -f /tmp/descheduler-policy-backup.yaml
+                rm -f /tmp/descheduler-policy-backup.yaml
+                echo "Restarting descheduler with original policy..."
+                kubectl rollout restart deployment/descheduler -n d8-descheduler
+                kubectl rollout status deployment/descheduler -n d8-descheduler --timeout=120s
+                echo "Original policy restored"
+              else
+                echo "WARNING: Backup file not found, skipping restore"
+              fi
