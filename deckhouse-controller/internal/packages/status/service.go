@@ -128,6 +128,7 @@ func (s *Service) GetStatus(name string) Status {
 	return Status{
 		Version:    status.Version,
 		Conditions: condsCopy,
+		Tracking:   status.Tracking,
 	}
 }
 
@@ -178,6 +179,9 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	if !ok {
 		return
 	}
+
+	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: "Upgrading"})
+	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: "Upgrading"})
 
 	status.Tracking = report
 	s.ch <- name
