@@ -36,25 +36,6 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/deckhouse
   to: /deckhouse
-<<<<<<< HEAD
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /go_lib
-  to: /go_lib
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /pkg
-  to: /pkg
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /go.mod
-  to: /go.mod
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /go.sum
-  to: /go.sum
-=======
->>>>>>> f53771ab37 (fix werf and go mod)
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
