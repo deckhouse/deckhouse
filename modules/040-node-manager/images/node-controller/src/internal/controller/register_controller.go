@@ -21,8 +21,6 @@ import (
 	"strings"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-
-	nodegroupcontroller "github.com/deckhouse/node-controller/internal/controller/nodegroup"
 )
 
 // SetupFunc is a function that sets up a controller with the manager.
@@ -33,22 +31,34 @@ type controllerEntry struct {
 	setup SetupFunc
 }
 
-var controllers []controllerEntry
-
-func init() {
-	Register("NodeGroupStatus", nodegroupcontroller.SetupNodeGroupStatus)
+type objectControllerEntry struct {
+	controllers []controllerEntry
 }
 
+var (
+	controllersByObject = map[string]*objectControllerEntry{}
+	objectsOrder        []string
+)
+
 // Register adds a controller to the registry. Call this in init() of controller packages.
-func Register(name string, setup SetupFunc) {
-	controllers = append(controllers, controllerEntry{name: name, setup: setup})
+func Register(object, name string, setup SetupFunc) {
+	if controllersByObject[object] == nil {
+		controllersByObject[object] = &objectControllerEntry{}
+		objectsOrder = append(objectsOrder, object)
+	}
+	controllersByObject[object].controllers = append(
+		controllersByObject[object].controllers,
+		controllerEntry{name: name, setup: setup},
+	)
 }
 
 // Names returns the names of all registered controllers.
 func Names() []string {
-	names := make([]string, len(controllers))
-	for i, c := range controllers {
-		names[i] = c.name
+	names := make([]string, 0)
+	for _, object := range objectsOrder {
+		for _, c := range controllersByObject[object].controllers {
+			names = append(names, c.name)
+		}
 	}
 	return names
 }
@@ -67,15 +77,18 @@ func SetupAll(mgr ctrl.Manager, disabledControllers string) error {
 		}
 	}
 
-	for _, c := range controllers {
-		if disabled[c.name] {
-			setupLog.Info("controller disabled", "controller", c.name)
-			continue
+	for _, object := range objectsOrder {
+		entry := controllersByObject[object]
+		for _, c := range entry.controllers {
+			if disabled[c.name] {
+				setupLog.Info("controller disabled", "object", object, "controller", c.name)
+				continue
+			}
+			if err := c.setup(mgr); err != nil {
+				return fmt.Errorf("unable to setup %s controller: %w", c.name, err)
+			}
+			setupLog.Info("controller enabled", "object", object, "controller", c.name)
 		}
-		if err := c.setup(mgr); err != nil {
-			return fmt.Errorf("unable to setup %s controller: %w", c.name, err)
-		}
-		setupLog.Info("controller enabled", "controller", c.name)
 	}
 
 	return nil
