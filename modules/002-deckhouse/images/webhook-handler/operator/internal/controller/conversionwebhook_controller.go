@@ -16,6 +16,8 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -52,6 +54,7 @@ type ConversionWebhookReconciler struct {
 	scheme            *runtime.Scheme
 	logger            *log.Logger
 	pythonTemplate    string
+	templateHashes    map[string][32]byte
 }
 
 // NewConversionWebhookReconciler creates a new ConversionWebhookReconciler.
@@ -69,6 +72,7 @@ func NewConversionWebhookReconciler(
 		scheme:            scheme,
 		logger:            logger.Named("conversion-webhook"),
 		pythonTemplate:    pythonTemplate,
+		templateHashes:    make(map[string][32]byte),
 	}
 }
 
@@ -148,6 +152,14 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 	if err != nil {
 		return res, fmt.Errorf("render template: %w", err)
 	}
+
+	hash := sha256.Sum256(buf.Bytes())
+	if r.templateHashes[cwh.Name] == hash {
+		r.logger.Debug("template hash is the same, skipping webhook file update", slog.String("hash", hex.EncodeToString(hash[:])))
+		return res, nil
+	}
+
+	r.templateHashes[cwh.Name] = hash
 
 	webhookFile := r.webhookFilePath(cwh.Name)
 	if err := os.WriteFile(webhookFile, buf.Bytes(), filePermissions); err != nil {
