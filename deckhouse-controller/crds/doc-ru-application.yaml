@@ -32,7 +32,7 @@ spec:
               properties:
                 tracking:
                   description: |
-                    Отображение Nelm трекинга
+                    Отображение Nelm-трекинга.
                 conditions:
                   description: |
                     Условия представляют последние доступные наблюдения за состоянием приложения.
