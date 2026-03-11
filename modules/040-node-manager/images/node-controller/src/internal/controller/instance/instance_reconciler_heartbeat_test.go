@@ -105,6 +105,19 @@ func TestDesiredBashibleHeartbeatCondition(t *testing.T) {
 			expectState:  metav1.ConditionUnknown,
 			expectReason: bashibleHeartbeatWaitingApprovalReason,
 		},
+		{
+			name: "do not override explicit machine reboot reason",
+			conditions: []deckhousev1alpha2.InstanceCondition{
+				{
+					Type:              deckhousev1alpha2.InstanceConditionTypeBashibleReady,
+					Status:            metav1.ConditionUnknown,
+					Reason:            deckhousev1alpha2.InstanceConditionReasonMachineReboot,
+					Message:           "Machine reboot requested by bashible reboot step",
+					LastHeartbeatTime: &staleWaiting,
+				},
+			},
+			expectPatch: false,
+		},
 	}
 
 	for _, tt := range tests {
