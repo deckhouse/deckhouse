@@ -257,15 +257,11 @@ func prepareConverge(componentName string, isTemp bool) error {
 		slog.Bool("temp_rootfs", isTemp),
 	)
 
-	var err error
-	var out []byte
-
 	c := exec.Command(kubeadmPath, args...)
-	out, err = c.CombinedOutput()
+	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
 		log.Info(s)
 	}
-
 	return err
 }
 
