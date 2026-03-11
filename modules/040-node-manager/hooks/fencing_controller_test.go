@@ -190,10 +190,10 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			nodeExists: true,
 			podExists:  true,
 		}),
-		Entry("Dryrun mode with rotten lease: pods evicted, node preserved", testCaseParams{
-			Name:               "dryrun-rotten-lease",
+		Entry("Notify mode with rotten lease: pods evicted, node preserved", testCaseParams{
+			Name:               "notify-rotten-lease",
 			FencingEnabled:     true,
-			FencingMode:        "Dryrun",
+			FencingMode:        "Notify",
 			MaintanenceEnabled: false,
 			RenewTime:          func() time.Time { return time.Now().Add(-time.Hour) },
 		}, testCaseResult{
