@@ -68,8 +68,9 @@ Allows you to configure JWT authentication for requests.
 ## Authorization
 
 {% alert level="warning" %}
-Authorization without the use of mTLS or JWT authentication will not work fully. In this case, you will be able to use only basic arguments, such as `source.ip` and `request.headers`, for defining policies. 
+Authorization without the use of mTLS or JWT authentication will not work fully. In this case, you will be able to use only basic arguments, such as `source.ip` and `request.headers`, for defining policies.
 {% endalert %}
+
 ### AuthorizationPolicy
 
 [Reference](https://istio.io/v1.21/docs/reference/config/security/authorization-policy/).
