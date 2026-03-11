@@ -7,17 +7,20 @@
 ## Installation
 
 **Homebrew (macOS/Linux):**
+
 ```bash
 brew tap kyverno/chainsaw https://github.com/kyverno/chainsaw
 brew install kyverno/chainsaw/chainsaw
 ```
 
 **Go install:**
+
 ```bash
 go install github.com/kyverno/chainsaw@latest
 ```
 
 **Verify:**
+
 ```bash
 chainsaw version
 ```
@@ -80,4 +83,3 @@ chainsaw test --test-dir ./low-node-utilization/ --pause-on-failure
 | `low-node-utilization/` | Validates LowNodeUtilization plugin rebalances pods from overloaded nodes |
 | `high-node-utilization/` | Validates HighNodeUtilization plugin consolidates pods to fewer nodes |
 | `exclude-namespaces-from-processing/` | Validates Deckhouse patch preventing eviction of pods in `d8-*` and `kube-system` namespaces |
-
