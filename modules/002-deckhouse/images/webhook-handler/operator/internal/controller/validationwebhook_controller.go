@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -52,6 +54,7 @@ type ValidationWebhookReconciler struct {
 	scheme            *runtime.Scheme
 	logger            *log.Logger
 	pythonTemplate    string
+	templateHashes    map[string][32]byte
 }
 
 // NewValidationWebhookReconciler creates a new ValidationWebhookReconciler.
@@ -69,6 +72,7 @@ func NewValidationWebhookReconciler(
 		scheme:            scheme,
 		logger:            logger.Named("validation-webhook"),
 		pythonTemplate:    pythonTemplate,
+		templateHashes:    make(map[string][32]byte),
 	}
 }
 
@@ -149,6 +153,14 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 	if err != nil {
 		return res, fmt.Errorf("render template: %w", err)
 	}
+
+	hash := sha256.Sum256(buf.Bytes())
+	if r.templateHashes[vwh.Name] == hash {
+		r.logger.Debug("template hash is the same, skipping webhook file update", slog.String("hash", hex.EncodeToString(hash[:])))
+		return res, nil
+	}
+
+	r.templateHashes[vwh.Name] = hash
 
 	webhookFile := r.webhookFilePath(vwh.Name)
 	if err := os.WriteFile(webhookFile, buf.Bytes(), validationWebhookFilePerms); err != nil {
