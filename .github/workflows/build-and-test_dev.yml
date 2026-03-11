@@ -664,6 +664,10 @@ jobs:
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm -r ${{ steps.build.outputs.build_report_dir }}
+
     # </template: build_template>
 
 
@@ -965,6 +969,10 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm -r ${{ steps.build.outputs.build_report_dir }}
 
     # </template: build_template>
 
@@ -1268,6 +1276,10 @@ jobs:
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm -r ${{ steps.build.outputs.build_report_dir }}
+
     # </template: build_template>
 
 
@@ -1569,6 +1581,10 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm -r ${{ steps.build.outputs.build_report_dir }}
 
     # </template: build_template>
 
@@ -1872,6 +1888,10 @@ jobs:
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm -r ${{ steps.build.outputs.build_report_dir }}
+
     # </template: build_template>
 
 
@@ -2173,6 +2193,10 @@ jobs:
           name: build_report_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm -r ${{ steps.build.outputs.build_report_dir }}
 
     # </template: build_template>
 

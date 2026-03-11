@@ -442,6 +442,10 @@ jobs:
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm -r ${{ steps.build.outputs.build_report_dir }}
+
     # </template: build_template>
 
 
