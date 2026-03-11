@@ -61,11 +61,11 @@ html {
     &__nav {
         &.nav {
             @include breakpoints.min-w(l) {
+                display: flex;
                 gap: .75rem 1rem;
             }
 
             @include breakpoints.min-w(xl) {
-                display: flex;
                 gap: .75rem;
             }
 
@@ -113,7 +113,9 @@ html {
                 cursor: pointer;
 
                 > a:first-child  {
-                    &::after {
+                    font-weight: 700;
+
+                    &[href*="documentation"]::after {
                         content: '';
                         position: absolute;
                         right: 0;

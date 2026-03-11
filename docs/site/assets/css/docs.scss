@@ -539,9 +539,14 @@
     width: 250px;
     min-width: 250px;
   }
+}
 
-  @include breakpoints.max-w(l) {
-    display: none;
+.layout-sidebar:has(div.docs) {
+  .layout-sidebar__sidebar,
+  .layout-sidebar__sidebar_right {
+    @include breakpoints.max-w(l) {
+      display: none;
+    }
   }
 }
 
