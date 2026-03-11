@@ -39,13 +39,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/client"
 	"caps-controller-manager/internal/controller"
 	"caps-controller-manager/internal/event"
 	"caps-controller-manager/internal/pool"
 	"caps-controller-manager/internal/scope"
+
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
 const (
@@ -308,7 +309,7 @@ func (r *StaticMachineReconciler) cleanup(
 
 	// Delete flow might observe an inconsistent state where phase is Pending (or empty),
 	// but refs are still set. Normalize it and allow StaticMachine deletion to proceed.
-	if phase == "" || phase == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
+	if phase == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
 		if instanceScope.Instance.Status.MachineRef != nil || instanceScope.Instance.Status.NodeRef != nil || instanceScope.Instance.Status.CurrentStatus != nil {
 			err := instanceScope.ToPending(ctx)
 			if err != nil {
