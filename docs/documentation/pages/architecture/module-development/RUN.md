@@ -296,6 +296,12 @@ If a module release is `Pending`, it means that manual confirmation is required 
 d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
 
+This can also be done using the d8 CLI for convenience (module names and versions are autocompleted):
+
+```shell
+d8 system module approve <module-name> <version>
+```
+
 {% endalert %}
 
 ### Switching the module to a different module source
@@ -442,6 +448,12 @@ The example output above illustrates ModuleRelease message when the update mode 
 
 ```shell
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
+```
+
+This can also be done using the d8 CLI for convenience (module names and versions are autocompleted):
+
+```shell
+d8 system module approve module-1 v1.23.2
 ```
 
 ## Integrating Deckhouse Module Tools for Module Validation

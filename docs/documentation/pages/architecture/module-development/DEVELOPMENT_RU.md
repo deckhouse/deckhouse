@@ -366,6 +366,12 @@ p-o-test-v0.7.25   Pending      Release is waiting for the 'modules.deckhouse.io
 d8 k annotate mr p-o-test-v0.7.25 modules.deckhouse.io/approved="true"
 ```
 
+Для удобства это можно сделать с помощью d8 CLI (имена модулей и версии автодополняются):
+
+```shell
+d8 system module approve p-o-test v0.7.25
+```
+
 Пример вывода после подтверждения:
 
 ```console
