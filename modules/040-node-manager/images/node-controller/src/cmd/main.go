@@ -36,6 +36,8 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	_ "github.com/deckhouse/node-controller/internal/controllers"
+	"github.com/deckhouse/node-controller/internal/dynctrl"
 	"github.com/deckhouse/node-controller/internal/webhook"
 )
 
@@ -88,6 +90,11 @@ func main() {
 
 	if err = webhook.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "NodeGroup")
+		os.Exit(1)
+	}
+
+	if err = dynctrl.SetupAll(mgr); err != nil {
+		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}
 
