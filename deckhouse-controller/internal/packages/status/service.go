@@ -69,9 +69,9 @@ type Service struct {
 
 // Status represents the current state of a package
 type Status struct {
-	Version    string                 `json:"version"`
-	Conditions []Condition            `json:"conditions"`
-	Tracking   progrep.ProgressReport `json:"tracking,omitempty"`
+	Version    string              `json:"version"`
+	Conditions []Condition         `json:"conditions"`
+	Tracking   progrep.StageReport `json:"tracking"`
 }
 
 // Condition represents a single status condition for a package
@@ -180,10 +180,14 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		return
 	}
 
-	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: "Upgrading"})
-	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: "Upgrading"})
+	if len(report.StageReports) == 0 {
+		return
+	}
 
-	status.Tracking = report
+	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: "ChartUpgrade"})
+	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: "ChartUpgrade"})
+
+	status.Tracking = report.StageReports[len(report.StageReports)-1]
 	s.ch <- name
 }
 
