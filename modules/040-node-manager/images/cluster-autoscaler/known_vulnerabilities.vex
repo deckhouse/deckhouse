@@ -1,7 +1,7 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-b016f826df981ee1e9b1babff19063606eae50274d87c4edd86bfe1919145855",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "author": "Deckhouse <contact@deckhouse.io>",
   "version": 1,
   "statements": [
     {
