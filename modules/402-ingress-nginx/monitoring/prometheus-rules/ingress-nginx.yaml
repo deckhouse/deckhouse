@@ -267,12 +267,14 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: Ingress Nginx Controller pods report different configuration hashes.
+      summary: Ingress NGINX Controller pods report different configuration hashes.
       description: |-
-        The "{{ $labels.controller }}" Ingress Nginx Controller pods report different configuration hashes.
+        The `{{ $labels.controller }}` Ingress NGINX Controller pods report different configuration hashes.
         It can result in inconsistent processing of incoming requests.
 
-        1. Check the associated metrics 'nginx_ingress_controller_config_hash{namespace="d8-ingress-nginx", controller="{{ $labels.controller }}"}' manually to find the outliers.
+        To diagnose the issue, follow these steps:
+
+        1. Check the associated metrics `nginx_ingress_controller_config_hash{namespace="d8-ingress-nginx", controller="{{ $labels.controller }}"}` manually to find the outliers.
 
         2. Check the controller logs for any configration errors resulting in the configuration drift across the pods:
 
