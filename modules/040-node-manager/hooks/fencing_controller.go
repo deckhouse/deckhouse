@@ -38,7 +38,7 @@ import (
 const (
 	nodesSnapshot            = "nodes"
 	fencingControllerTimeout = time.Duration(60) * time.Second
-	dryRunMode               = "Dryrun"
+	notifyMode               = "Notify"
 	watchdogMode             = "Watchdog"
 	nodeTypeStatic           = "Static"
 	nodeTypeCloudStatic      = "CloudStatic"
@@ -135,7 +135,7 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 				slog.String("node lease time", nodeLease.Spec.RenewTime.Time.String()),
 			)
 			nodesToEvictPod.Add(node.Name)
-			if node.FencingMode != dryRunMode &&
+			if node.FencingMode != notifyMode &&
 				node.Type != nodeTypeStatic &&
 				node.Type != nodeTypeCloudStatic {
 				nodesToKill.Add(node.Name)
