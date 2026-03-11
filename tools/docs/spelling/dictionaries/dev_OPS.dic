@@ -1,4 +1,4 @@
-2560
+2564
 1GB
 2GB
 5XX
@@ -471,6 +471,7 @@ enableMultiTenancy
 endofftopic
 enum
 env
+EnvoyFilter
 EOF
 erlier
 ESXi
@@ -664,6 +665,7 @@ ingressClass
 IngressClass
 IngressClassParameters
 ingressgateway
+IngressGateway
 ingressgateways
 IngressIstioController
 ingressNginxController
@@ -833,6 +835,7 @@ LowNodeUtilization
 LRS
 lsblk
 LTS
+Lua
 LUN
 lv
 LV
@@ -2069,6 +2072,7 @@ ZvirtInstanceClass
 неймспейс
 неймспейсах
 неймспейсе
+неймспейсы
 некоммитнутые
 некоммитнутыми
 неконсистентному
