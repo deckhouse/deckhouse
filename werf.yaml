@@ -1,7 +1,6 @@
 ---
 project: deckhouse
 configVersion: 1
-fromCacheVersion: "2026-03-11-force-rebuild"
 build:
   imageSpec:
     author: "Deckhouse Kubernetes Platform <contact@deckhouse.io>"
