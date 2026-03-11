@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	controllerregistry "github.com/deckhouse/node-controller/internal/controller"
 	cloudstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/cloud_status"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	ngconditions "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditions"
@@ -39,6 +40,10 @@ import (
 	nodestatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/node_status"
 	processedstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/processed_status"
 )
+
+func init() {
+	controllerregistry.Register("NodeGroup", "NodeGroupStatus", SetupNodeGroupStatus)
+}
 
 type NodeGroupStatusReconciler struct {
 	Client   client.Client
