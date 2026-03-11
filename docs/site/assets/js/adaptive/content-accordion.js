@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const titleHidden = document.querySelectorAll('h2');
+    const titleHidden = document.querySelectorAll('.docs h2');
     titleHidden.forEach(header => {
         let nextElements = header.nextElementSibling;
         const elementsToggle = [];
