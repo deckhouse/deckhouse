@@ -34,7 +34,7 @@ spec:
           jsonPath: .status.phase
         - name: Age
           type: date
-          description: "Time since creation."
+          description: "Time since creation"
           jsonPath: .metadata.creationTimestamp
         - name: Message
           type: string
@@ -45,7 +45,8 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Instance describes the full lifecycle of a server in the Deckhouse platform, aggregating status from Machine (infrastructure) and Bashible (configuration).
+            Describes the full lifecycle of a node in Deckhouse Kubernetes Platform.
+            The resource aggregates infrastructure (Machine) and configuration (Bashible) status.
           properties:
             spec:
               type: object
@@ -53,14 +54,14 @@ spec:
               properties:
                 nodeRef:
                   type: object
-                  description: Reference to the kubernetes node object.
+                  description: Reference to the Kubernetes Node object.
                   properties:
                     name:
                       type: string
-                      description: Node name
+                      description: Node name.
                 machineRef:
                   type: object
-                  description: Reference to instance in the cloud.
+                  description: Reference to the cloud provider machine object.
                   properties:
                     apiVersion:
                       type: string
@@ -76,17 +77,17 @@ spec:
                       description: Namespace of referenced object.
                 classReference:
                   description: |
-                    The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
+                    Reference to the `InstanceClass` (unique for each `cloud-provider-*` module).
                   type: object
                   properties:
                     kind:
                       type: string
                       description: |
-                        The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                        Object kind (for example, `OpenStackInstanceClass`). See the documentation of the corresponding `cloud-provider-*` module for the exact kind.
                     name:
                       type: string
                       description: |
-                        The name of the required `InstanceClass` object (e.g., `finland-medium`).
+                        Name of the required `InstanceClass` object (for example, `finland-medium`).
             status:
               type: object
               description: Most recently observed status of the Instance.
@@ -94,8 +95,7 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The high-level lifecycle phase of the Instance.
-                    Mapping: Pending -> Provisioning -> Provisioned -> Running -> Terminating.
+                    High-level lifecycle phase: `Pending` → `Provisioning` → `Provisioned` → `Running` → `Terminating`.
                   enum:
                     - Pending
                     - Provisioning
@@ -106,8 +106,7 @@ spec:
                 machineStatus:
                   type: string
                   description: |
-                    Aggregated status of the infrastructure machine.
-                    Derived from MachineReady condition.
+                    Aggregated infrastructure status (derived from the MachineReady condition).
                   enum:
                     - Progressing
                     - Error
@@ -117,8 +116,7 @@ spec:
                 bashibleStatus:
                   type: string
                   description: |
-                    Aggregated status of the bashible configuration process.
-                    Derived from BashibleReady condition.
+                    Aggregated configuration status (derived from the BashibleReady condition).
                   enum:
                     - Error
                     - Unknown
@@ -127,10 +125,10 @@ spec:
                 message:
                   type: string
                   description: |
-                    A human-readable message indicating details about the current status or error.
-                    Displayed in CLI only when using -o wide.
+                    Human-readable details about the current state or error.
+                    Shown in CLI (`kubectl`/`d8`) only with `-o wide`.
                 conditions:
-                  description: Detailed conditions of the instance (MachineReady, BashibleReady, etc.).
+                  description: Detailed conditions (MachineReady, BashibleReady, etc.).
                   type: array
                   x-kubernetes-list-map-keys:
                     - type
@@ -139,29 +137,29 @@ spec:
                     type: object
                     properties:
                       type:
-                        description: Type of the condition (e.g., MachineReady, BashibleReady).
+                        description: Condition type (for example, MachineReady, BashibleReady).
                         type: string
                       status:
-                        description: Status of the condition (True, False, Unknown).
+                        description: Condition status (`True`, `False`, `Unknown`).
                         type: string
                       severity:
                         type: string
                       lastHeartbeatTime:
-                        description: Last time the condition heartbeat was updated by its source.
+                        description: Time of the last heartbeat update from the condition source.
                         type: string
                         format: date-time
                       lastTransitionTime:
-                        description: Last time the condition transitioned from one status to another.
+                        description: Time of the last status transition.
                         type: string
                         format: date-time
                       reason:
-                        description: The reason for the condition's last transition.
+                        description: Reason for the last transition.
                         type: string
                       message:
-                        description: A human-readable message indicating details about the transition.
+                        description: Human-readable details about the transition.
                         type: string
                       observedGeneration:
-                        description: The generation observed by the controller.
+                        description: Generation observed by the controller.
                         type: integer
                         format: int64
                     required:

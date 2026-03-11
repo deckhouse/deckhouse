@@ -34,7 +34,7 @@ spec:
           jsonPath: .status.phase
         - name: Age
           type: date
-          description: "Время с момента создания."
+          description: "Время с момента создания"
           jsonPath: .metadata.creationTimestamp
         - name: Message
           type: string
@@ -45,7 +45,8 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Instance описывает полный жизненный цикл сервера в платформе Deckhouse, агрегируя состояние от Machine (инфраструктура) и Bashible (конфигурация).
+            Описывает полный жизненный цикл узла в Deckhouse Kubernetes Platform.
+            Ресурс агрегирует состояние инфраструктуры (Machine) и конфигурации (Bashible).
           properties:
             spec:
               type: object
@@ -53,11 +54,11 @@ spec:
               properties:
                 nodeRef:
                   type: object
-                  description: Ссылка на объект узла kubernetes.
+                  description: Ссылка на объект узла Kubernetes.
                   properties:
                     name:
                       type: string
-                      description: Имя узла
+                      description: Имя узла.
                 machineRef:
                   type: object
                   description: Ссылка на объект узла облачного провайдера.
@@ -73,20 +74,20 @@ spec:
                       description: Имя объекта.
                     namespace:
                       type: string
-                      description: Пространство имен, в котором находится объект.
+                      description: Пространство имён, в котором находится объект.
                 classReference:
                   description: |
-                    Ссылка на объект `InstanceClass`. Уникален для каждого модуля `cloud-provider-*`.
+                    Ссылка на InstanceClass (уникален для каждого cloud-provider-* модуля).
                   type: object
                   properties:
                     kind:
                       type: string
                       description: |
-                        Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                        Тип объекта (например, `OpenStackInstanceClass`). Указан в документации соответствующего модуля облачного провайдера.
                     name:
                       type: string
                       description: |
-                        Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
+                        Имя нужного `InstanceClass` объекта (например, `finland-medium`).
             status:
               type: object
               description: Последнее наблюдаемое состояние Instance.
@@ -94,8 +95,7 @@ spec:
                 phase:
                   type: string
                   description: |
-                    Высокоуровневая фаза жизненного цикла Instance.
-                    Соответствие: Pending -> Provisioning -> Provisioned -> Running -> Terminating.
+                    Высокоуровневая фаза жизненного цикла: `Pending` → `Provisioning` → `Provisioned` → `Running` → `Terminating`.
                   enum:
                     - Pending
                     - Provisioning
@@ -106,8 +106,7 @@ spec:
                 machineStatus:
                   type: string
                   description: |
-                    Агрегированный статус инфраструктурной машины.
-                    Вычисляется из условия MachineReady.
+                    Агрегированный статус инфраструктуры (из условия MachineReady).
                   enum:
                     - Progressing
                     - Error
@@ -117,8 +116,7 @@ spec:
                 bashibleStatus:
                   type: string
                   description: |
-                    Агрегированный статус процесса конфигурации bashible.
-                    Вычисляется из условия BashibleReady.
+                    Агрегированный статус конфигурации (из условия BashibleReady).
                   enum:
                     - Error
                     - Unknown
@@ -127,10 +125,10 @@ spec:
                 message:
                   type: string
                   description: |
-                    Человекочитаемое сообщение с деталями текущего состояния или ошибки.
-                    В CLI отображается только при использовании флага -o wide.
+                    Человекочитаемые детали текущего состояния или ошибки.
+                    В CLI (`kubectl`/`d8`) отображается только при использовании флага `-o wide`.
                 conditions:
-                  description: Детализированные условия instance (MachineReady, BashibleReady и т.д.).
+                  description: Детализированные условия (MachineReady, BashibleReady и т.п.).
                   type: array
                   x-kubernetes-list-map-keys:
                     - type
@@ -142,16 +140,16 @@ spec:
                         description: Тип условия (например, MachineReady, BashibleReady).
                         type: string
                       status:
-                        description: Статус условия (True, False, Unknown).
+                        description: Статус условия (`True`, `False`, `Unknown`).
                         type: string
                       severity:
                         type: string
                       lastHeartbeatTime:
-                        description: Время последнего heartbeat-обновления условия от источника.
+                        description: Время последнего heartbeat обновления.
                         type: string
                         format: date-time
                       lastTransitionTime:
-                        description: Время последнего перехода условия из одного состояния в другое.
+                        description: Время последнего изменения статуса условия.
                         type: string
                         format: date-time
                       reason:
