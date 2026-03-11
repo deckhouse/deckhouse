@@ -593,12 +593,8 @@
 }
 
 .layout-sidebar__content {
-  min-width: calc(1000px - 150px - 260px - 40px);
+  min-width: 360px;
   flex: 1;
-
-  @include breakpoints.max-w(xxl) {
-    min-width: 500px;
-  }
 
   &--tile {
     @media screen and (width < 1500px) {
