@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	spotDrainedAnnotationKey  = "update.node.deckhouse.io/drained"
-	spotDrainedSource         = "spot-termination"
+	spotDrainedAnnotationKey = "update.node.deckhouse.io/drained"
+	spotDrainedSource        = "spot-termination"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

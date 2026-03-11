@@ -51,8 +51,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleSpotTermination)
 
 type spotTaintedNode struct {
-	Name                 string
-	HasSpotTaint         bool
+	Name                  string
+	HasSpotTaint          bool
 	HasDrainingAnnotation bool
 }
 
@@ -65,8 +65,8 @@ func spotTaintFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	}
 
 	result := spotTaintedNode{
-		Name:                 node.Name,
-		HasSpotTaint:         false,
+		Name:                  node.Name,
+		HasSpotTaint:          false,
 		HasDrainingAnnotation: false,
 	}
 
