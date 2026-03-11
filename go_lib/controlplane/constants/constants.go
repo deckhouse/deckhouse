@@ -42,3 +42,8 @@ const (
 	// EncryptionAlgorithmRSA4096 defines the RSA encryption algorithm type with key size 4096 bits.
 	EncryptionAlgorithmRSA4096 EncryptionAlgorithmType = "RSA-4096"
 )
+
+const (
+	ControlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
+	ControlPlaneTaintKey = "node-role.kubernetes.io/control-plane"
+)
