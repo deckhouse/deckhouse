@@ -8,14 +8,18 @@ endif
 registry: ## Start local Docker registry
 		@if [ -z "$$(docker ps --filter name=registry --format '{{.Names}}')" ]; then \
 			docker rm -f registry 2>/dev/null 1>/dev/null; \
-			docker run -d -p 4999:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true --restart=always --name registry registry:2 ; \
-		fi
+			docker run -d -p 4999:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true --restart=always --name registry registry:2; \
+			echo "✅ Local Docker registry started on port 4999"; \
+		else \
+			echo "ℹ️ Local Docker registry is already running"; \
+		fi;
 
 .PHONY:
 registry-down: ## Stop and remove local Docker registry
 		docker rm -f registry; docker volume prune -fa
 
 up: ## Build and start the site in production mode
+		$(MAKE) registry 
 		werf compose up --follow --docker-compose-command-options='-d --force-recreate' --env local --repo localhost:4999/docs
 
 clean: ## Clean up werf artifacts
@@ -23,6 +27,8 @@ clean: ## Clean up werf artifacts
 
 down: ## Stop and remove all site containers and networks
 		docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
+		$(MAKE) registry-down
+		@echo "❌ Local Docker registry has been stopped"
 
 dev: ## Build and start the site in development mode
 		werf compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo localhost:4999/docs
