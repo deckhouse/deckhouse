@@ -17,8 +17,11 @@ package context
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/name212/govalue"
@@ -32,6 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
@@ -67,17 +71,17 @@ func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params K
 }
 
 func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState map[string][]byte) error {
-	if s.params.DisableSwitch {
-		s.logger.LogWarnLn("Switch to node user skipped. Switch disabled")
+	const action = "Switch to node user"
+
+	if s.switchDisbled(action) {
 		return nil
 	}
 
-	if s.ctx.CommanderMode() {
-		s.logger.LogDebugLn("Switch to node user skipped. In commander mode")
+	if s.inCommander(action) {
 		return nil
 	}
 
-	s.logger.LogDebugLn("Start switching to node user")
+	s.debugStartOperation(action)
 
 	convergeState, err := s.ctx.ConvergeState()
 	if err != nil {
@@ -85,19 +89,25 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 	}
 
 	if convergeState.NodeUserCredentials == nil {
-		s.logger.LogDebugLn("Generate node user")
+		s.debug("Generate node user")
 		nodeUser, nodeUserCredentials, err := v1.GenerateNodeUser(v1.ConvergerNodeUser())
 		if err != nil {
-			return fmt.Errorf("failed to generate NodeUser: %w", err)
+			return fmt.Errorf("Failed to generate NodeUser: %w", err)
 		}
 
 		c, cancel := s.ctx.WithTimeout(10 * time.Second)
 		defer cancel()
 		err = entity.CreateOrUpdateNodeUser(c, s.ctx, nodeUser, nil)
 		if err != nil {
-			return fmt.Errorf("failed to create or update NodeUser: %w", err)
+			return fmt.Errorf("Failed to create or update NodeUser: %w", err)
 		}
-		sshCl := s.ctx.KubeClient().NodeInterfaceAsSSHClient()
+
+		kubeCl, err := s.ctx.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("Cannot get kube client: %w", err)
+		}
+
+		sshCl := kubeCl.NodeInterfaceAsSSHClient()
 		if sshCl == nil {
 			return fmt.Errorf("Node interface is not ssh")
 		}
@@ -111,60 +121,162 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 
 		err = s.ctx.SetConvergeState(convergeState)
 		if err != nil {
-			return fmt.Errorf("failed to set converge state: %w", err)
+			return fmt.Errorf("Failed to set converge state: %w", err)
 		}
 	}
 
-	return s.replaceKubeClient(ctx, convergeState, nodesState)
+	return s.replaceKubeClientForSwithToNodeUser(ctx, convergeState, nodesState)
 }
 
-func (s *KubeClientSwitcher) tmpDirForConverger() string {
-	return filepath.Join(s.params.TmpDir, "converger")
+func (s *KubeClientSwitcher) CleanupNodeUser() error {
+	const action = "Cleanup node user"
+
+	if s.switchDisbled(action) {
+		return nil
+	}
+
+	if s.inCommander(action) {
+		return nil
+	}
+
+	s.debugStartOperation(action)
+
+	err := s.ctx.deleteConvergeState()
+	if err != nil {
+		return err
+	}
+
+	c, cancel := s.ctx.WithTimeout(10 * time.Second)
+	defer cancel()
+	return entity.DeleteNodeUser(c, s.ctx, global.ConvergeNodeUserName)
 }
 
-func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeState *State, state map[string][]byte) error {
-	s.logger.LogDebugLn("Starting replacing kube client")
+const firstMasterSuffix = "-0"
 
-	tmpDir := s.tmpDirForConverger()
+func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
+	const action = "Switch to first master"
 
-	err := os.MkdirAll(tmpDir, 0o755)
+	if s.inCommander(action) {
+		return nil
+	}
+
+	if s.switchDisbled(action) {
+		return fmt.Errorf("Internal error. Disable switch to node user passed, but it needs for %s", action)
+	}
+
+	s.debugStartOperation(action)
+
+	convergeState, err := s.ctx.ConvergeState()
 	if err != nil {
-		return fmt.Errorf("failed to create cache directory for NodeUser: %w", err)
+		return fmt.Errorf("Cannot get converge state: %w", err)
 	}
 
-	s.logger.LogDebugLn("Tempdir created for kubeclient")
-
-	privateKeyPath := filepath.Join(tmpDir, "id_rsa_converger")
-
-	privateKey := session.AgentPrivateKey{
-		Key:        privateKeyPath,
-		Passphrase: convergeState.NodeUserCredentials.Password,
-	}
-
-	err = os.WriteFile(privateKeyPath, []byte(convergeState.NodeUserCredentials.PrivateKey), 0o600)
+	firstMasterState, anotherMastersStates, err := s.extractStatesFromCluster(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to write private key for NodeUser: %w", err)
+		return err
 	}
 
-	s.logger.LogDebugLn("Private key written")
+	if firstMasterState == nil {
+		mastersNames := make([]string, 0, len(anotherMastersStates))
+		for _, s := range anotherMastersStates {
+			mastersNames = append(mastersNames, s.nodeName)
+		}
 
-	kubeCl := s.ctx.KubeClient()
+		return fmt.Errorf(
+			"Cannot find first control-plane node state or it is empty. Has states for [%s]",
+			strings.Join(mastersNames, ", "),
+		)
+	}
+
+	return s.replaceKubeClient(ctx, replaceKubeClientParams{
+		convergeState: convergeState,
+		state: map[string][]byte{
+			firstMasterState.nodeName: firstMasterState.state,
+		},
+		appendPKey: nil,
+	})
+}
+
+func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
+	const action = "Switch to not first master"
+
+	if s.inCommander(action) {
+		return nil
+	}
+
+	if s.switchDisbled(action) {
+		return fmt.Errorf("Internal error. Disable switch to node user passed, but it needs for %s", action)
+	}
+
+	s.debugStartOperation(action)
+
+	convergeState, err := s.ctx.ConvergeState()
+	if err != nil {
+		return fmt.Errorf("Cannot get converge state: %w", err)
+	}
+
+	firstMasterState, anotherMastersStates, err := s.extractStatesFromCluster(ctx)
+	if err != nil {
+		return err
+	}
+
+	statesMap := make(map[string][]byte)
+
+	for _, s := range anotherMastersStates {
+		statesMap[s.nodeName] = s.state
+	}
+
+	if len(statesMap) == 0 {
+		if firstMasterState == nil {
+			return fmt.Errorf("Cannot switch to another control-plane, no any states found")
+		}
+
+		s.logger.LogWarnF("Another control-plane nodes states not found. Try to continue with first")
+		statesMap[firstMasterState.nodeName] = firstMasterState.state
+	}
+
+	return s.replaceKubeClient(ctx, replaceKubeClientParams{
+		convergeState: convergeState,
+		state:         statesMap,
+		appendPKey:    nil,
+	})
+}
+
+type replaceKubeClientParams struct {
+	convergeState *State
+	state         map[string][]byte
+	appendPKey    *session.AgentPrivateKey
+}
+
+func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params replaceKubeClientParams) error {
+	kubeCl, err := s.ctx.KubeClientCtx(ctx)
+	if err != nil {
+		return fmt.Errorf("Cannot get kube client: %w", err)
+	}
 
 	sshCl := kubeCl.NodeInterfaceAsSSHClient()
 	if sshCl == nil {
 		return fmt.Errorf("Node interface is not ssh")
 	}
 
+	tmpDir, err := s.tmpDirForConverger()
+	if err != nil {
+		return err
+	}
+
 	settings := sshCl.Session()
 
-	for nodeName, stateBytes := range state {
+	suff := rand.NewSource(time.Now().UnixNano()).Int63()
+
+	for nodeName, stateBytes := range params.state {
 		metaConfig, err := s.ctx.MetaConfig()
 		if err != nil {
 			return fmt.Errorf("failed to get meta config for node %s: %w", nodeName, err)
 		}
-		statePath := filepath.Join(tmpDir, fmt.Sprintf("%s.tfstate", nodeName))
 
-		s.logger.LogDebugF("for extracting statePath: %s", statePath)
+		statePath := filepath.Join(tmpDir, fmt.Sprintf("%s-%d.tfstate", nodeName, suff))
+
+		s.debug("for extracting statePath: %s", statePath)
 
 		err = os.WriteFile(statePath, stateBytes, 0o644)
 		if err != nil {
@@ -190,101 +302,203 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeStat
 
 		ipAddress, err := infrastructure.GetMasterIPAddressForSSH(s.ctx.Ctx(), statePath, executor)
 		if err != nil {
-			s.logger.LogWarnF("failed to get master IP address: %v\n", err)
+			s.logger.LogWarnF("Failed to get master IP address: %v\n", err)
 			continue
 		}
 
 		settings.AddAvailableHosts(session.Host{Host: ipAddress, Name: nodeName})
 
-		s.logger.LogDebugF("Extracted ip address %s and node name: %s", ipAddress, nodeName)
+		s.debug("Extracted ip address %s and node name: %s", ipAddress, nodeName)
 	}
 
 	if s.lockRunner != nil {
 		s.lockRunner.Stop()
 	}
 
-	s.logger.LogDebugLn("Stopping kube proxies for replacing kube client")
+	s.debug("Stopping kube proxies for replacing kube client")
+
+	// todo during migrate to lib-connection
+	// please use .*Switch.* function in ssh provider
+	// also because we will use kube provider
+	// setting kube client not needed
 
 	kubeCl.KubeProxy.StopAll()
 
 	if sshclient.IsModernMode() {
-		s.logger.LogDebugF("Old SSH Client: %-v\n", sshCl)
+		s.debug("Old SSH Client: %-v\n", sshCl)
 		sshCl.Stop()
 	}
 
-	s.logger.LogDebugLn("Create new ssh client for replacing kube client")
+	s.debug("Create new ssh client for replacing kube client")
 
 	sess := session.NewSession(session.Input{
-		User:           convergeState.NodeUserCredentials.Name,
+		User:           params.convergeState.NodeUserCredentials.Name,
 		Port:           settings.Port,
 		BastionHost:    settings.BastionHost,
 		BastionPort:    settings.BastionPort,
 		BastionUser:    settings.BastionUser,
 		ExtraArgs:      settings.ExtraArgs,
 		AvailableHosts: settings.AvailableHosts(),
-		BecomePass:     convergeState.NodeUserCredentials.Password,
+		BecomePass:     params.convergeState.NodeUserCredentials.Password,
 	})
 
 	var pkeys []session.AgentPrivateKey
 
-	if sshclient.IsLegacyMode() {
-		pkeys = append(pkeys, privateKey)
+	appendPKey := params.appendPKey
+
+	if appendPKey != nil {
+		if sshclient.IsLegacyMode() {
+			pkeys = append(pkeys, *appendPKey)
+		} else {
+			pkeys = append(sshCl.PrivateKeys(), *appendPKey)
+		}
 	} else {
-		pkeys = append(sshCl.PrivateKeys(), privateKey)
+		pkeys = sshCl.PrivateKeys()
 	}
+
 	newSSHClient := sshclient.NewClient(ctx, sess, pkeys)
+
+	if err := newSSHClient.RefreshPrivateKeys(); err != nil {
+		return fmt.Errorf("Failed to refresh ssh agent private keys: %w", err)
+	}
+
+	s.debug("Private keys refreshed for replacing kube client")
 
 	err = newSSHClient.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
 
-	s.logger.LogDebugLn("SSH client started for replacing kube client")
-
-	if err := newSSHClient.RefreshPrivateKeys(); err != nil {
-		return fmt.Errorf("Failed to refresh ssh agent private keys: %w", err)
-	}
-
-	s.logger.LogDebugLn("Private keys refreshed for replacing kube client")
+	s.debug("SSH client started for replacing kube client")
 
 	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(s.ctx.Ctx(), ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {
 		return fmt.Errorf("failed to connect to Kubernetes API: %w", err)
 	}
 
-	s.logger.LogDebugLn("connected to kube API for replacing kube client")
+	s.debug("connected to kube API for replacing kube client")
 
 	s.ctx.setKubeClient(newKubeClient)
 
 	if s.lockRunner != nil {
-		s.logger.LogDebugLn("starting reset lock after replacing kube client")
+		s.debugStartOperation("reset lock after replacing kube client")
+
 		err := s.lockRunner.ResetLock(s.ctx.Ctx())
 		if err != nil {
-			return fmt.Errorf("failed to reset lock: %w", err)
+			return fmt.Errorf("Failed to reset lock: %w", err)
 		}
-		s.logger.LogDebugLn("lock was reset after replacing kube client")
+
+		s.debug("lock was reset after replacing kube client")
 	}
 
 	return nil
 }
 
-func (s *KubeClientSwitcher) CleanupNodeUser() error {
-	if s.params.DisableSwitch {
-		s.logger.LogDebugLn("Cleanup node user skipped. Switch disabled")
-		return nil
+func (s *KubeClientSwitcher) tmpDirForConverger() (string, error) {
+	tmpDir := filepath.Join(s.params.TmpDir, "converger")
+	err := os.MkdirAll(tmpDir, 0o755)
+	if err != nil && !os.IsExist(err) {
+		return "", fmt.Errorf("Failed to create tmp directory for converge: %w", err)
 	}
 
-	if s.ctx.CommanderMode() {
-		s.logger.LogDebugLn("Cleanup node user skipped. In commander mode")
-		return nil
-	}
+	s.debug("Temp dir %s created for kubeclient", tmpDir)
+	return tmpDir, nil
+}
 
-	err := s.ctx.deleteConvergeState()
+func (s *KubeClientSwitcher) replaceKubeClientForSwithToNodeUser(ctx context.Context, convergeState *State, state map[string][]byte) error {
+	s.debugStartOperation("call replaceKubeClientForSwithToNodeUser")
+
+	tmpDir, err := s.tmpDirForConverger()
 	if err != nil {
 		return err
 	}
 
-	c, cancel := s.ctx.WithTimeout(10 * time.Second)
-	defer cancel()
-	return entity.DeleteNodeUser(c, s.ctx, global.ConvergeNodeUserName)
+	privateKeyPath := filepath.Join(tmpDir, "id_rsa_converger")
+
+	privateKey := session.AgentPrivateKey{
+		Key:        privateKeyPath,
+		Passphrase: convergeState.NodeUserCredentials.Password,
+	}
+
+	err = os.WriteFile(privateKeyPath, []byte(convergeState.NodeUserCredentials.PrivateKey), 0o600)
+	if err != nil {
+		return fmt.Errorf("Failed to write private key for NodeUser: %w", err)
+	}
+
+	return s.replaceKubeClient(ctx, replaceKubeClientParams{
+		convergeState: convergeState,
+		state:         state,
+		appendPKey:    &privateKey,
+	})
+}
+
+type nodeState struct {
+	nodeName string
+	state    []byte
+}
+
+func (s *KubeClientSwitcher) extractStatesFromCluster(ctx context.Context) (*nodeState, []*nodeState, error) {
+	kubeCl, err := s.ctx.KubeClientCtx(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Cannot get kube client: %w", err)
+	}
+
+	states, err := infrastructurestate.GetMasterNodesStateFromCluster(ctx, kubeCl)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Cannot extract control-plane node states: %w", err)
+	}
+
+	var firstMasterState *nodeState
+	anoterNodesStates := make([]*nodeState, 0, 2)
+
+	for nodeName, state := range states {
+		st := &nodeState{
+			nodeName: nodeName,
+			state:    state,
+		}
+
+		if strings.HasSuffix(nodeName, firstMasterSuffix) {
+			s.debug("Found first master state %s", nodeName)
+			firstMasterState = st
+			continue
+		}
+
+		s.debug("Found another master state %s", nodeName)
+		anoterNodesStates = append(anoterNodesStates, st)
+	}
+
+	if len(anoterNodesStates) > 0 {
+		sort.Slice(anoterNodesStates, func(i, j int) bool {
+			return anoterNodesStates[i].nodeName < anoterNodesStates[j].nodeName
+		})
+	}
+
+	return firstMasterState, anoterNodesStates, nil
+}
+
+func (s *KubeClientSwitcher) inCommander(action string) bool {
+	if s.ctx.CommanderMode() {
+		s.debug("%s skipped. In commander mode", action)
+		return true
+	}
+
+	return false
+}
+
+func (s *KubeClientSwitcher) switchDisbled(action string) bool {
+	if s.params.DisableSwitch {
+		s.logger.LogWarnF("%s skipped. Switch disabled\n", action)
+		return true
+	}
+
+	return false
+}
+
+func (s *KubeClientSwitcher) debug(f string, args ...any) {
+	// todo remove new line after migrate to lib-dhctl
+	s.logger.LogDebugF(f+"\n", args...)
+}
+
+func (s *KubeClientSwitcher) debugStartOperation(action string) {
+	s.debug("Starting %s", strings.ToLower(action))
 }

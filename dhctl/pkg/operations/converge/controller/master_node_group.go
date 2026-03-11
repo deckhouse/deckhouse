@@ -34,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	"github.com/name212/govalue"
 )
 
 type MasterNodeGroupController struct {
@@ -119,7 +120,8 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 	}
 
 	if c.convergeState.Phase == phases.ScaleToMultiMasterPhase {
-		log.DebugF("scale to multi master\n")
+		log.DebugF("Scale to multi master\n")
+		
 		replicas := 3
 
 		err = c.runWithReplicas(ctx, replicas)
@@ -135,10 +137,26 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to set converge state: %w", err)
 		}
+
+		clientSwitcher := ctx.ClientSwitcher()
+		if !govalue.IsNil(clientSwitcher) {
+			// commander mode checking inside
+			if err := clientSwitcher.SwitchToNotFirstMaster(ctx.Ctx()); err != nil {
+				return fmt.Errorf("Cannot switch clients to not first control-plane node: %w", err)
+			}
+		}
 	}
 
 	if c.convergeState.Phase == phases.ScaleToSingleMasterPhase {
-		log.DebugF("scale to single master\n")
+		log.DebugF("Scale to single master\n")
+
+		clientSwitcher := ctx.ClientSwitcher()
+		if !govalue.IsNil(clientSwitcher) {
+			// commander mode checking inside
+			if err := clientSwitcher.SwitchToFirstMaster(ctx.Ctx()); err != nil {
+				return fmt.Errorf("Cannot switch clients to first control-plane node: %w", err)
+			}
+		}
 
 		replicas := 1
 

@@ -121,7 +121,14 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 	listOpts := metav1.ListOptions{}
 
 	if len(nodeUser.NodeGroups) > 0 {
-		selector, err := kubernetes.GetLabelSelector(global.NodeGroupLabel, selection.In, nodeUser.NodeGroups)
+		selector, err := kubernetes.GetLabelSelector([]kubernetes.LabelSelector{
+			{
+				Label: global.NodeGroupLabel,
+				Operator: selection.In,
+				Vals: nodeUser.NodeGroups,
+			},
+		})
+		
 		if err != nil {
 			return err
 		}

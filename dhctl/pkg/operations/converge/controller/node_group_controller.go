@@ -86,7 +86,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("nodes to delete %v\n", len(nodesToDeleteInfo))
+	log.DebugF("Nodes to delete %v\n", len(nodesToDeleteInfo))
 
 	if !ctx.CommanderMode() {
 		sshClient := ctx.KubeClient().NodeInterfaceAsSSHClient()
@@ -128,13 +128,14 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 					ChangeParams:   ctx.ChangesSettings(),
 					ProviderGetter: ctx.ProviderGetter(),
 					Logger:         ctx.Logger(),
+					ClientSwitcher: ctx.ClientSwitcher(),
 				})
 				ctx = newCtx
 			}
 		}
 	}
 
-	log.DebugF("starting update nodes\n")
+	log.DebugF("Starting update nodes\n")
 
 	err = c.updateNodes(ctx)
 	if err != nil {
