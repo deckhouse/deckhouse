@@ -73,7 +73,7 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 	definePackagesDebugSocketFlag(schedulerDumpCmd)
 
 	packagesQueueCmd := packagesCmd.Command("queue", "Queue operations.")
-	packagesQueueListCmd := packagesQueueCmd.Command("list", "List all package queues with tasks.").
+	packagesQueueListCmd := packagesQueueCmd.Command("dump", "Dump all package queues with tasks.").
 		Action(func(_ *kingpin.ParseContext) error {
 			client, err := debug.NewClient(packagesDebugSocket)
 			if err != nil {
