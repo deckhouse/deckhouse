@@ -30,10 +30,10 @@ index c34db87997..42f074f3c1 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 8873f05e86..04e1395943 100644
+index 8873f05e86..5b6a33b1c8 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
-@@ -2677,6 +2677,61 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+@@ -2677,6 +2677,73 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
  				  ext_err);
  }
  
@@ -51,7 +51,19 @@ index 8873f05e86..04e1395943 100644
 +	union macaddr dmac = {};
 +	__be32 tmp_addr;
 +	__u32 ccsum = 0;
-+	/* changing size invalidates pointers, so we need to re-fetch them. */
++	struct ratelimit_key rkey = {
++		.usage = RATELIMIT_USAGE_ICMP_LB4,
++	};
++	struct ratelimit_settings settings = {
++		.bucket_size = 1000,
++		.tokens_per_topup = 100,
++		.topup_interval_ns = NSEC_PER_SEC,
++	};
++
++	rkey.key.icmp_lb4.netdev_idx = ctx_get_ifindex(ctx);
++	if (!ratelimit_check_and_take(&rkey, &settings))
++		return DROP_RATE_LIMITED;
++
 +	data = ctx_data(ctx);
 +	data_end = ctx_data_end(ctx);
 +
@@ -95,7 +107,7 @@ index 8873f05e86..04e1395943 100644
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2714,7 +2769,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2714,7 +2781,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	lb4_fill_key(&key, &tuple);
  
  	svc = lb4_lookup_service(&key, false);
@@ -105,7 +117,7 @@ index 8873f05e86..04e1395943 100644
 +		/* If the packet is an ICMP echo request, we need to check if special
 +		port=0 service exists and if so, create a reply packet and send it back
 +		to the original source.	This is only supported for LoadBalancer services. */
-+		if (ip4->protocol == IPPROTO_ICMP) {
++		if (unlikely(ip4->protocol == IPPROTO_ICMP)) {
 +			ret = make_icmp_response_lb4(ctx, ip4);
 +			if (ret != CTX_ACT_REDIRECT)
 +				goto skip_service_lookup;
@@ -115,6 +127,28 @@ index 8873f05e86..04e1395943 100644
  		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
  					has_l4_header, l4_off,
  					src_sec_identity, punt_to_stack, ext_err);
+diff --git a/bpf/lib/ratelimit.h b/bpf/lib/ratelimit.h
+index fdef3ae9b2..2816a7d694 100644
+--- a/bpf/lib/ratelimit.h
++++ b/bpf/lib/ratelimit.h
+@@ -8,6 +8,7 @@
+ 
+ #define RATELIMIT_USAGE_ICMPV6 1
+ #define RATELIMIT_USAGE_EVENTS_MAP 2
++#define RATELIMIT_USAGE_ICMP_LB4 3
+ 
+ struct ratelimit_key {
+ 	__u32 usage;
+@@ -15,6 +16,9 @@ struct ratelimit_key {
+ 		struct {
+ 			__u32 netdev_idx;
+ 		} icmpv6;
++		struct {
++			__u32 netdev_idx;
++		} icmp_lb4;
+ 	} key;
+ };
+ 
 diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
 index 30ab069023..48044295bd 100644
 --- a/daemon/cmd/daemon_main.go
@@ -159,7 +193,7 @@ index 87623dbed9..879d1097f8 100644
  	// EnableHealthCheckLoadBalancerIP
  	EnableHealthCheckLoadBalancerIP = false
 diff --git a/pkg/maps/lbmap/lbmap.go b/pkg/maps/lbmap/lbmap.go
-index 70d220b69c..3547764fe4 100644
+index 70d220b69c..917ac277f9 100644
 --- a/pkg/maps/lbmap/lbmap.go
 +++ b/pkg/maps/lbmap/lbmap.go
 @@ -15,6 +15,7 @@ import (
@@ -180,18 +214,18 @@ index 70d220b69c..3547764fe4 100644
  var log = logging.DefaultLogger.WithField(logfields.LogSubsys, "map-lb")
  
  var (
-@@ -613,6 +617,114 @@ func (*LBBPFMap) IsMaglevLookupTableRecreated(ipv6 bool) bool {
+@@ -613,6 +617,108 @@ func (*LBBPFMap) IsMaglevLookupTableRecreated(ipv6 bool) bool {
  	return maglevRecreatedIPv4
  }
  
-+// LBICMPReplyHandleSvcDecrement handles decrementing the port=0 key count
-+// when a LoadBalancer service backend is deleted.
++// LBICMPReplyHandleSvcDecrement decrements the port=0 ICMP entry's service-port
++// count when a LoadBalancer service-port is deleted. If the count reaches zero,
++// the port=0 entry is removed from the BPF map.
 +func LBICMPReplyHandleSvcDecrement(svc loadbalancer.L3n4AddrID, svcType loadbalancer.SVCType, ipv6 bool) {
 +	if svc.Port == 0 || svcType != loadbalancer.SVCTypeLoadBalancer {
 +		return
 +	}
 +
-+	// Create a special instance of loadbalancer with port=0 key with same IP, protocol ICMP (1), and scope
 +	var portZeroKey ServiceKey
 +	if ipv6 {
 +		portZeroKey = NewService6Key(svc.AddrCluster.AsNetIP(), 0, ICMPProto, svc.Scope, 0)
@@ -199,7 +233,6 @@ index 70d220b69c..3547764fe4 100644
 +		portZeroKey = NewService4Key(svc.AddrCluster.AsNetIP(), 0, ICMPProto, svc.Scope, 0)
 +	}
 +
-+	// Lookup for the existing port=0 key in the map
 +	existingValue, err := portZeroKey.Map().Lookup(portZeroKey.ToNetwork())
 +	if err != nil {
 +		if errors.Is(err, ebpf.ErrKeyNotExist) {
@@ -214,20 +247,17 @@ index 70d220b69c..3547764fe4 100644
 +		return
 +	}
 +
-+	// Port=0 key exists, decrement its value in Count
 +	existingValueHost := existingValue.(ServiceValue).ToHost()
-+	currentCount := existingValueHost.GetCount()
-+	newCount := currentCount - 1
++	newCount := existingValueHost.GetCount() - 1
 +
 +	if newCount <= 0 {
-+		// Links of all backends for this port reached 0, so delete this port=0 key
++		// No more service-ports behind this IP — remove the ICMP entry.
 +		if err := deleteServiceLocked(portZeroKey); err != nil {
 +			log.WithFields(logrus.Fields{
 +				logfields.ServiceKey: portZeroKey,
 +			}).WithError(err).Warn("LoadBalancerICMPReply Unable to delete ICMP key after decrement")
 +		}
 +	} else {
-+		// Still remains links of all backends for this port, so update with decremented count
 +		existingValueHost.SetCount(newCount)
 +		if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), existingValueHost.ToNetwork()); err != nil {
 +			log.WithFields(logrus.Fields{
@@ -237,74 +267,69 @@ index 70d220b69c..3547764fe4 100644
 +	}
 +}
 +
-+// lbICMPReplyHandleSvcIncrement handles creating or incrementing the port=0 key count
-+// when a LoadBalancer service backend is created or updated.
++// lbICMPReplyHandleSvcIncrement increments the port=0 ICMP entry's service-port
++// count when a new LoadBalancer service-port is first written to the BPF map.
++// If the port=0 entry does not exist yet, it is created with Count=1.
 +func lbICMPReplyHandleSvcIncrement(fe ServiceKey, svcType loadbalancer.SVCType) error {
 +	if svcType != loadbalancer.SVCTypeLoadBalancer || fe.GetPort() == 0 {
 +		return nil
 +	}
 +
-+	// Check if the key already exists in the BPF map
++	// Only act when the service-port key is new (not yet in the BPF map).
 +	_, lookupErr := fe.Map().Lookup(fe.ToNetwork())
-+	keyExists := lookupErr == nil
-+
-+	if keyExists {
++	if lookupErr == nil {
 +		return nil
 +	}
 +
-+	// Create a special instance of loadbalancer with port=0 key with same IP, protocol ICMP, and scope
 +	var portZeroKey ServiceKey
-+	var portZeroValue ServiceValue
 +	if fe.IsIPv6() {
 +		portZeroKey = NewService6Key(fe.GetAddress(), 0, ICMPProto, fe.GetScope(), 0)
-+		portZeroValue = &Service6Value{}
 +	} else {
 +		portZeroKey = NewService4Key(fe.GetAddress(), 0, ICMPProto, fe.GetScope(), 0)
-+		portZeroValue = &Service4Value{}
 +	}
 +
-+	// Set the initial value for the special instance
-+	portZeroValue.SetCount(1)
-+	portZeroValue.SetRevNat(0)
-+	portZeroValue.SetFlags(0)
-+	portZeroValue.SetQCount(0)
-+	// Original key exists: increment Count of port=0 key
 +	existingValue, err := portZeroKey.Map().Lookup(portZeroKey.ToNetwork())
 +	if err != nil {
-+		if errors.Is(err, ebpf.ErrKeyNotExist) {
-+			// Port=0 key doesn't exist yet, create it with Count=1
-+			if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), portZeroValue.ToNetwork()); err != nil {
-+				return fmt.Errorf("EnableLoadBalancerICMPReply unable to create ICMP key: %w", err)
-+			}
-+		} else {
++		if !errors.Is(err, ebpf.ErrKeyNotExist) {
 +			return fmt.Errorf("EnableLoadBalancerICMPReply unable to lookup ICMP key: %w", err)
 +		}
-+	} else {
-+		// Port=0 key exists, increment its Count
-+		existingValueHost := existingValue.(ServiceValue).ToHost()
-+		currentCount := existingValueHost.GetCount()
-+		existingValueHost.SetCount(currentCount + 1)
-+		if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), existingValueHost.ToNetwork()); err != nil {
-+			return fmt.Errorf("EnableLoadBalancerICMPReply unable to increment special port=0 key count: %w", err)
++
++		// Port=0 key doesn't exist yet — create it with Count=1.
++		var portZeroValue ServiceValue
++		if fe.IsIPv6() {
++			portZeroValue = &Service6Value{}
++		} else {
++			portZeroValue = &Service4Value{}
 +		}
++		portZeroValue.SetCount(1)
++		portZeroValue.SetRevNat(0)
++		portZeroValue.SetFlags(0)
++		portZeroValue.SetQCount(0)
++		if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), portZeroValue.ToNetwork()); err != nil {
++			return fmt.Errorf("EnableLoadBalancerICMPReply unable to create ICMP key: %w", err)
++		}
++		return nil
 +	}
 +
++	// Port=0 key already exists — increment its Count.
++	existingValueHost := existingValue.(ServiceValue).ToHost()
++	existingValueHost.SetCount(existingValueHost.GetCount() + 1)
++	if err := portZeroKey.Map().Update(portZeroKey.ToNetwork(), existingValueHost.ToNetwork()); err != nil {
++		return fmt.Errorf("EnableLoadBalancerICMPReply unable to increment ICMP key count: %w", err)
++	}
 +	return nil
 +}
 +
  func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quarantinedBackends int, revNATID int,
  	svcType loadbalancer.SVCType, svcForwardingMode loadbalancer.SVCForwardingMode, svcExtLocal, svcIntLocal bool,
  	svcNatPolicy loadbalancer.SVCNatPolicy, sessionAffinity bool, sessionAffinityTimeoutSec uint32,
-@@ -652,6 +764,16 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
+@@ -652,6 +758,13 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
  		deleteLeastConnServiceMap(fe)
  	}
  
 +	if option.Config.EnableLoadBalancerICMPReply {
-+		/*
-+			EnableLoadBalancerICMPReply feature is used to generate ICMP reply packets for LoadBalancer services.
-+			When a LoadBalancer is created, a special ICMP instance of loadbalancer is created.
-+			For every backend we need to increment value of Count in the special ICMP instance of loadbalancer key.
-+		*/
++		// Ensure the port=0 ICMP entry exists for this LB IP and increment
++		// its service-port count for every new service-port added.
 +		if err := lbICMPReplyHandleSvcIncrement(fe, svcType); err != nil {
 +			return err
 +		}
@@ -345,32 +370,30 @@ index b2abedec59..1cec05394d 100644
  	c.EnableHostLegacyRouting = vp.GetBool(EnableHostLegacyRouting)
  	c.NodePortBindProtection = vp.GetBool(NodePortBindProtection)
 diff --git a/pkg/service/service.go b/pkg/service/service.go
-index fb2494991c..a5259b50ea 100644
+index fb2494991c..6affbc00bc 100644
 --- a/pkg/service/service.go
 +++ b/pkg/service/service.go
-@@ -1963,6 +1963,111 @@ func (s *Service) restoreServicesLocked(svcBackendsById map[lb.BackendID]struct{
+@@ -1963,9 +1963,109 @@ func (s *Service) restoreServicesLocked(svcBackendsById map[lb.BackendID]struct{
  		logfields.FailedSVCs:   failed,
  	}).Info("Restored services from maps")
  
 +	// Sync services with ICMP entries: ensure every service has ICMP entry and each ICMP entry has service
 +	if option.Config.EnableLoadBalancerICMPReply {
-+		if err := s.syncServicesWithICMPEntries(svcs); err != nil {
-+			log.WithError(err).Warn("LoadBalancerICMPReply: Failed to sync services with ICMP entries")
-+		}
++		s.syncServicesWithICMPEntries(svcs)
 +	}
 +
-+	return nil
-+}
-+
+ 	return nil
+ }
+ 
 +// icmpServiceInfo holds service information along with a counter for how many services share the same IP and scope
 +type icmpServiceInfo struct {
 +	svc   *lb.SVC
 +	count int
 +}
 +
-+// syncServicesWithICMPEntries ensures every LoadBalancer service has its own ICMP entry and each ICMP entry has a corresponding service.
-+// ICMP entries without services are deleted, and services without ICMP entries are created.
-+func (s *Service) syncServicesWithICMPEntries(svcs []*lb.SVC) error {
++// syncServicesWithICMPEntries ensures every LoadBalancer service has a
++// corresponding ICMP port=0 entry and removes orphaned ICMP entries.
++func (s *Service) syncServicesWithICMPEntries(svcs []*lb.SVC) {
 +	// Create a map of service IP addresses for all LoadBalancer services
 +	// Track how many services share the same IP and scope
 +	serviceIPs := make(map[string]*icmpServiceInfo)
@@ -443,7 +466,6 @@ index fb2494991c..a5259b50ea 100644
 +			portZeroValue = &lbmap.Service4Value{}
 +		}
 +
-+		// Create ICMP entry with backend count
 +		portZeroValue.SetCount(info.count)
 +		portZeroValue.SetRevNat(0)
 +		portZeroValue.SetFlags(0)
@@ -456,21 +478,18 @@ index fb2494991c..a5259b50ea 100644
 +			}).WithError(err).Warn("LoadBalancerICMPReply Unable to create ICMP entry for service")
 +		}
 +	}
++}
 +
- 	return nil
- }
- 
-@@ -1981,6 +2086,16 @@ func (s *Service) deleteServiceLocked(svc *svcInfo) error {
+ func (s *Service) deleteServiceLocked(svc *svcInfo) error {
+ 	ipv6 := svc.frontend.L3n4Addr.IsIPv6() || svc.svcNatPolicy == lb.SVCNatPolicyNat46
+ 	obsoleteBackendIDs, obsoleteBackends := s.deleteBackendsFromCacheLocked(svc)
+@@ -1981,6 +2081,12 @@ func (s *Service) deleteServiceLocked(svc *svcInfo) error {
  		return err
  	}
  
-+	// Handle ICMP reply decrement for LoadBalancer services
++	// Decrement the ICMP port=0 entry's service-port count for this LB IP.
++	// When the count reaches zero the port=0 entry is removed entirely.
 +	if option.Config.EnableLoadBalancerICMPReply {
-+		/*
-+			EnableLoadBalancerICMPReply feature is used to generate ICMP reply packets for LoadBalancer services.
-+			When a backend is deleted, we need to decrement value of Count in the special ICMP instance of loadbalancer key.
-+			When a LoadBalancer service with port=0 is deleted with all backends, the special instance of loadbalancer will be also deleted.
-+		*/
 +		lbmap.LBICMPReplyHandleSvcDecrement(svc.frontend, svc.svcType, ipv6)
 +	}
 +
