@@ -23,3 +23,7 @@ Update dependencies to fix CVEs
 ### 004-hardfix_bug_with_dropped_unknown_samples.patch
 
 Add loading chunk snapshots in remote-write to solve problem with unknown series's samples drop.
+
+### 005-op_functions.patch
+
+Added op functions (op_top, op_defined, op_replace_nan, op_smoothie, op_zero_if_none)
