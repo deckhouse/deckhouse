@@ -481,9 +481,9 @@
 }
 
 /* Adjust breadcrumb positioning to accommodate search */
-.breadcrumbs__right {
+/* .breadcrumbs__right {
   margin-right: 320px;
-}
+} */
 
 /* Subtle fade effect for page content when search is active */
 .searchV3 .results:not([style*="display: none"]) ~ * {

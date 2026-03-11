@@ -14,13 +14,16 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  // max-height: 200px;
   opacity: 1;
   margin: 0 0 25px;
   z-index: 50;
   height: 100%;
   background-color: #fff;
   transition: top .15s ease-in-out;
+
+  &:has(div.breadcrumbs__left) {
+    margin: 25px 0;
+  }
 
   @include breakpoints.max-w(s) {
     display: none;
@@ -156,7 +159,6 @@
 }
 
 .breadcrumbs__left {
-    //width: 300px;
     width: 297px;
     margin-right: 64px;
 
@@ -165,11 +167,11 @@
     }
 
     @include breakpoints.max-w(xl) {
-      gap: 40px;
+      width: 250px;
     }
 
     @media screen and (width < 1100px) {
-      gap: 30px;
+      margin-right: 38px;
     }
 
     &--link {
@@ -196,6 +198,10 @@
 .breadcrumbs__right {
   flex: 1;
   margin-right: 64px;
+
+  @include breakpoints.max-w(l) {
+    display: none;
+  }
 }
 
 .breadcrumbs {
@@ -593,7 +599,7 @@
 }
 
 .layout-sidebar__content {
-  min-width: 360px;
+  min-width: 320px;
   flex: 1;
 
   &--tile {
