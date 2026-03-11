@@ -70,6 +70,9 @@ spec:
         - --updater-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}
         - --feature-gates=InPlaceOrRecreate=true
         - --v=4
+        {{- if .Values.verticalPodAutoscaler.inPlaceSkipDisruptionBudget }}
+        - --in-place-skip-disruption-budget
+        {{- end }}
         ports:
         - containerPort: 8943
           name: http-metrics
