@@ -339,11 +339,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -360,10 +355,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -403,8 +395,8 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
           # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
 
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -424,12 +416,11 @@ jobs:
         uses: actions/upload-artifact@v4.4.0
         with:
           name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+          path: images_tags_werf.json
 
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm -r ${{ steps.build.outputs.build_report_dir }}
+        run: rm images_tags_werf.json
 
     # </template: build_template>
 
