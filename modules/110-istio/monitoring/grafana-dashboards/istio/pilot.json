@@ -688,7 +688,7 @@
         "type": "datasource",
         "uid": "-- Mixed --"
       },
-      "description": "Count of active and pending proxies managed by each instance.\nPending is expected to converge to zero.\n",
+      "description": "Distribution of xDS push time from Istiod to proxies.\n",
       "gridPos": {
         "h": 10,
         "w": 8,
@@ -795,7 +795,7 @@
         "type": "datasource",
         "uid": "-- Mixed --"
       },
-      "description": "Rate of XDS push operations, by type. This is incremented on a per-proxy basis.\n",
+      "description": "Rate of Galley configuration validation results.\n",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -846,7 +846,7 @@
         "type": "datasource",
         "uid": "-- Mixed --"
       },
-      "description": "Size of each xDS push.\n",
+      "description": "Rate of sidecar injection results.\n",
       "fieldConfig": {
         "defaults": {
           "custom": {

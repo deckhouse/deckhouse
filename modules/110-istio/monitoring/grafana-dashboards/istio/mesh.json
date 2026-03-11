@@ -124,7 +124,7 @@
         "type": "datasource",
         "uid": "-- Mixed --"
       },
-      "description": "Total 4xx requests in in the cluster",
+      "description": "Total 4xx requests in the cluster",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -163,7 +163,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "round(sum (rate(istio_requests_total{reporter=~\"source|waypoint\",response_code=~\"4..\"}[$__rate_interval])), 0.01)or vector(0)"
+          "expr": "round(sum (rate(istio_requests_total{reporter=~\"source|waypoint\",response_code=~\"4..\"}[$__rate_interval])), 0.01) or vector(0)"
         }
       ],
       "title": "4xxs",
@@ -174,7 +174,7 @@
         "type": "datasource",
         "uid": "-- Mixed --"
       },
-      "description": "Total 5xx requests in in the cluster",
+      "description": "Total 5xx requests in the cluster",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -213,7 +213,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "round(sum (rate(istio_requests_total{reporter=~\"source|waypoint\",response_code=~\"5..\"}[$__rate_interval])), 0.01)or vector(0)"
+          "expr": "round(sum (rate(istio_requests_total{reporter=~\"source|waypoint\",response_code=~\"5..\"}[$__rate_interval])), 0.01) or vector(0)"
         }
       ],
       "title": "5xxs",
@@ -497,7 +497,7 @@
         "type": "datasource",
         "uid": "-- Mixed --"
       },
-      "description": "Bytes sent and recieived information for TCP services",
+      "description": "Bytes sent and received information for TCP services",
       "fieldConfig": {
         "overrides": [
           {
