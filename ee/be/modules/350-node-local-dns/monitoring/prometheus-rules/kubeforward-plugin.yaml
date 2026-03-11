@@ -45,7 +45,7 @@
           Get kubeforward upstream IPs from a master host:
 
           ```bash
-          kubectl -n kube-system get po -l k8s-app=kube-dns -o jsonpath='{.items[*].status.podIP}'
+          d8 k -n kube-system get po -l k8s-app=kube-dns -o jsonpath='{.items[*].status.podIP}'
           ```
 
           Then run latency checks on the affected node `{{$labels.node}}` (or from a debug pod on that node):
@@ -65,7 +65,7 @@
 
           ```bash
           pod=$(kubectl -n kube-system get po -l k8s-app=node-local-dns --field-selector spec.nodeName={{$labels.node}} -o jsonpath='{.items[0].metadata.name}')
-          kubectl -n kube-system logs "$pod" | grep '\[kubeforward\] slow query'
+          d8 k -n kube-system logs "$pod" | grep '\[kubeforward\] slow query'
           ```
 
           Example log line:
