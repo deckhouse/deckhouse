@@ -9,13 +9,18 @@
         width: 400px !important;
     }
 
+    @include breakpoints.max-w(s) {
+        height: 450px !important;
+        width: 300px !important;
+    }
+
     @include breakpoints.max-w(xs) {
         right: 23px !important;
     }
 
-    @include breakpoints.max-w(xxs) {
-        height: 450px !important;
-        width: 300px !important;
+    @include breakpoints.max-w(s) {
+        height: 400px !important;
+        width: 250px !important;
     }
 
     &.bx-livechat-help-title {
