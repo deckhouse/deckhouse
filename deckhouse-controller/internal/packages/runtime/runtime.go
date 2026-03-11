@@ -177,25 +177,34 @@ func (r *Runtime) registerDebugServer(sockerPath string) error {
 		return fmt.Errorf("start debug server: %w", err)
 	}
 
-	r.debugServer.Register(http.MethodGet, "/packages/dump", func(w http.ResponseWriter, _ *http.Request) {
+	r.debugServer.Register(http.MethodGet, "/packages/dump", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
-		w.Write(r.Dump()) //nolint:errcheck
+		if name := req.URL.Query().Get("name"); name != "" {
+			w.Write(r.DumpByName(name)) //nolint:errcheck
+		} else {
+			w.Write(r.Dump()) //nolint:errcheck
+		}
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, _ *http.Request) {
+	r.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
-		w.Write(r.queueService.Dump()) //nolint:errcheck
+		queues := r.collectQueues(req.URL.Query().Get("name"))
+		w.Write(r.queueService.Dump(queues...)) //nolint:errcheck
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/scheduler/dump", func(w http.ResponseWriter, _ *http.Request) {
+	r.debugServer.Register(http.MethodGet, "/packages/scheduler/dump", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
-		w.Write(r.scheduler.Dump()) //nolint:errcheck
+		if name := req.URL.Query().Get("name"); name != "" {
+			w.Write(r.scheduler.DumpByName(name)) //nolint:errcheck
+		} else {
+			w.Write(r.scheduler.Dump()) //nolint:errcheck
+		}
 	})
 
 	r.debugServer.Register(http.MethodGet, "/packages/render/{name}", func(w http.ResponseWriter, req *http.Request) {
@@ -220,26 +229,35 @@ func (r *Runtime) registerDebugServer(sockerPath string) error {
 		w.Write([]byte(rendered)) //nolint:errcheck
 	})
 
+	r.debugServer.Register(http.MethodGet, "/packages/snapshots/{name}", func(w http.ResponseWriter, req *http.Request) {
+		packageName := chi.URLParam(req, "name")
+		if packageName == "" {
+			http.Error(w, "package name is required", http.StatusBadRequest)
+			return
+		}
+
+		r.mu.RLock()
+		app := r.apps[packageName]
+		mod := r.modules[packageName]
+		r.mu.RUnlock()
+
+		var data []byte
+		switch {
+		case app != nil:
+			data = app.GetHookSnapshotsDump()
+		case mod != nil:
+			data = mod.GetHookSnapshotsDump()
+		default:
+			http.Error(w, "package not found", http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data) //nolint:errcheck
+	})
+
 	return nil
-}
-
-// renderManifests renders the Helm chart for a loaded package. Used by the debug server.
-func (r *Runtime) renderManifests(ctx context.Context, name string) (string, error) {
-	r.mu.Lock()
-
-	if app := r.apps[name]; app != nil {
-		r.mu.Unlock()
-		return r.nelmService.Render(ctx, app.GetNamespace(), app)
-	}
-
-	if module := r.modules[name]; module != nil {
-		r.mu.Unlock()
-		return r.nelmService.Render(ctx, modulesNamespace, module)
-	}
-
-	r.mu.Unlock()
-
-	return "", errors.New("no package found")
 }
 
 // buildObjectPatcher creates a Kubernetes client optimized for patch operations.
