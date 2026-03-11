@@ -20,7 +20,7 @@
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
   id: ingress-nginx-1-14
-  version: 1.14.3
+  version: 1.14.4
 
 - name: nlohmannJson
   link: https://github.com/nlohmann/json
