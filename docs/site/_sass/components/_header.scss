@@ -746,10 +746,6 @@ html {
                     top: 100%;
                     -webkit-overflow-scrolling: touch;
                     width: min(100%, 320px);
-
-                    &.active {
-                        z-index: 11111;
-                    }
                 }
 
                 @include breakpoints.max-w(xxs) {

@@ -38,6 +38,8 @@
 }
 
 .b24-widget-button-position-bottom-right {
+    z-index: 99 !important;
+    
     @include breakpoints.max-w(xs) {
         right: 20px !important;
     }
