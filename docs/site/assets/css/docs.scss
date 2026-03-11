@@ -8,6 +8,7 @@
 .hidden {
   display: none;
 }
+
 .navigation__container {
   display: flex;
   flex-direction: row;
@@ -711,22 +712,23 @@
       }
     }
 
-  @include breakpoints.max-w(xl) {
-    min-width: 400px;
-  }
+    @include breakpoints.max-w(xl) {
+      min-width: 400px;
+    }
 
-  @include breakpoints.max-w(xs) {
-    min-width: 300px;
-  }
+    @include breakpoints.max-w(xs) {
+      min-width: 300px;
+    }
 
-  @media screen and (max-width: 1000px) {
-      background: #fff;
-      z-index: 1;
-  }
+    @media screen and (max-width: 1000px) {
+        background: #fff;
+        z-index: 1;
+    }
 
-  &--tile {
-    @media screen and (width < 1500px) {
-      max-width: 100%;
+    &--tile {
+      @media screen and (width < 1500px) {
+        max-width: 100%;
+      }
     }
   }
 }
