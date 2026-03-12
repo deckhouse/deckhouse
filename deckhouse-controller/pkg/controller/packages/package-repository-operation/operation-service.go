@@ -528,6 +528,8 @@ type failedVersion struct {
 func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, packageName, version string) error {
 	apvName := v1alpha1.MakeApplicationPackageVersionName(s.repo.Name, packageName, version)
 
+	logger := s.logger.With(slog.String("package version", apvName))
+
 	pkgVersion := &v1alpha1.ApplicationPackageVersion{}
 	err := s.client.Get(ctx, types.NamespacedName{Name: apvName}, pkgVersion)
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -536,11 +538,17 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 
 	// Version already exists
 	if err == nil {
+		// Version marked as not exist in registry
 		_, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry]
 		if ok {
-			// Version exists and marked as not exist in registry
+			logger.Debug("version marked as not exist in registry, checking if image exists")
 
-			// TODO: divide to func
+			err := s.svc.Package(packageName).Versions().CheckImageExists(ctx, version)
+			if err != nil {
+				logger.Debug("failed to check image exists", log.Err(err))
+				return fmt.Errorf("check image exists: %w", err)
+			}
+
 			original := pkgVersion.DeepCopy()
 
 			delete(pkgVersion.Labels, v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry)
@@ -553,6 +561,8 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 
 			return nil
 		}
+
+		return nil
 	}
 
 	// Create new ApplicationPackageVersion with draft label
@@ -734,6 +744,8 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 
 	return nil
 }
+
+//
 
 func (s *OperationService) setOwnerReference(obj client.Object) {
 	ownerRef := metav1.OwnerReference{
