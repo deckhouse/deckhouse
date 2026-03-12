@@ -14,32 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package dynctrl
+package rcname
 
-import (
-	"fmt"
+type ReconcilerName string
 
-	ctrl "sigs.k8s.io/controller-runtime"
+func (cn ReconcilerName) String() string { return string(cn) }
+
+const (
+	NodeGroup       ReconcilerName = "nodegroup"
+	NodeGroupStatus ReconcilerName = "nodegroup-status"
 )
-
-func SetupAll(mgr ctrl.Manager) error {
-	registryMu.Lock()
-	entries := make([]controllerEntry, len(registry))
-	copy(entries, registry)
-	registryMu.Unlock()
-
-	for _, entry := range entries {
-		dc := &dynamicController{
-			name:        entry.name,
-			obj:         entry.obj,
-			reconcilers: entry.reconcilers,
-			isGroup:     entry.isGroup,
-		}
-
-		if err := dc.setupWithManager(mgr); err != nil {
-			return fmt.Errorf("setting up controller %s: %w", entry.name, err)
-		}
-	}
-
-	return nil
-}

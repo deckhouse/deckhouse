@@ -37,7 +37,7 @@ import (
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	_ "github.com/deckhouse/node-controller/internal/controllers"
-	"github.com/deckhouse/node-controller/internal/dynctrl"
+	"github.com/deckhouse/node-controller/internal/dynr"
 	"github.com/deckhouse/node-controller/internal/webhook"
 )
 
@@ -93,7 +93,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = dynctrl.SetupAll(mgr); err != nil {
+	if err = dynr.SetupAll(mgr); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}

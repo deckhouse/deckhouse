@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package dynctrl
+package dynr
 
 import (
+	"context"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,24 +27,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var _ Watcher = (*builderWatcher)(nil)
-
-type builderWatcher struct {
-	b *ctrl.Builder
+type Watcher interface {
+	Owns(object client.Object, opts ...builder.OwnsOption) Watcher
+	Watches(object client.Object, eventHandler handler.EventHandler, opts ...builder.WatchesOption) Watcher
+	WatchesRawSource(src source.Source) Watcher
+	WithEventFilter(p predicate.Predicate) Watcher
 }
 
-func (w *builderWatcher) Owns(object client.Object, opts ...builder.OwnsOption) {
-	w.b.Owns(object, opts...)
-}
-
-func (w *builderWatcher) Watches(object client.Object, eventHandler handler.EventHandler, opts ...builder.WatchesOption) {
-	w.b.Watches(object, eventHandler, opts...)
-}
-
-func (w *builderWatcher) WatchesRawSource(src source.Source) {
-	w.b.WatchesRawSource(src)
-}
-
-func (w *builderWatcher) WithEventFilter(p predicate.Predicate) {
-	w.b.WithEventFilter(p)
+type Reconciler interface {
+	SetupWatches(w Watcher)
+	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
 }

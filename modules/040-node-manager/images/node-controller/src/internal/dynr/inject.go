@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package dynctrl
+package dynr
 
 import (
 	"github.com/go-logr/logr"
@@ -23,21 +23,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type Base struct {
-	Client client.Client
-	Cache  cache.Cache
-	Scheme *runtime.Scheme
-	Logger logr.Logger
+type NeedsClient interface {
+	InjectClient(client.Client)
 }
 
-var (
-	_ NeedsClient = (*Base)(nil)
-	_ NeedsCache  = (*Base)(nil)
-	_ NeedsScheme = (*Base)(nil)
-	_ NeedsLogger = (*Base)(nil)
-)
+type NeedsCache interface {
+	InjectCache(cache.Cache)
+}
 
-func (b *Base) InjectClient(c client.Client)   { b.Client = c }
-func (b *Base) InjectCache(c cache.Cache)      { b.Cache = c }
-func (b *Base) InjectScheme(s *runtime.Scheme) { b.Scheme = s }
-func (b *Base) InjectLogger(l logr.Logger)     { b.Logger = l }
+type NeedsScheme interface {
+	InjectScheme(*runtime.Scheme)
+}
+
+type NeedsLogger interface {
+	InjectLogger(logr.Logger)
+}

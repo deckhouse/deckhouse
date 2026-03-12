@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package dynctrl
+package dynr
 
 import (
-	"context"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,14 +25,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-type Watcher interface {
-	Owns(object client.Object, opts ...builder.OwnsOption)
-	Watches(object client.Object, eventHandler handler.EventHandler, opts ...builder.WatchesOption)
-	WatchesRawSource(src source.Source)
-	WithEventFilter(p predicate.Predicate)
+var _ Watcher = (*builderWatcher)(nil)
+
+type builderWatcher struct {
+	b *ctrl.Builder
 }
 
-type Reconciler interface {
-	SetupWatches(w Watcher)
-	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
+func (w *builderWatcher) Owns(object client.Object, opts ...builder.OwnsOption) Watcher {
+	w.b.Owns(object, opts...)
+	return w
+}
+
+func (w *builderWatcher) Watches(object client.Object, eventHandler handler.EventHandler, opts ...builder.WatchesOption) Watcher {
+	w.b.Watches(object, eventHandler, opts...)
+	return w
+}
+
+func (w *builderWatcher) WatchesRawSource(src source.Source) Watcher {
+	w.b.WatchesRawSource(src)
+	return w
+}
+
+func (w *builderWatcher) WithEventFilter(p predicate.Predicate) Watcher {
+	w.b.WithEventFilter(p)
+	return w
 }

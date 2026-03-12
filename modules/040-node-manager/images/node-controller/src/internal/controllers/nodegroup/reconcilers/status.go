@@ -23,30 +23,39 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/ctrlname"
-	"github.com/deckhouse/node-controller/internal/dynctrl"
+	"github.com/deckhouse/node-controller/internal/dynr"
+	"github.com/deckhouse/node-controller/internal/rcname"
 )
 
 func init() {
-	dynctrl.RegisterController(ctrlname.NodeGroupStatus, &deckhousev1.NodeGroup{}, &Status{})
+	dynr.RegisterReconciler(rcname.NodeGroupStatus, &deckhousev1.NodeGroup{}, &Status{})
 }
 
-var _ dynctrl.Reconciler = (*Status)(nil)
+var _ dynr.Reconciler = (*Status)(nil)
 
 type Status struct {
-	dynctrl.Base
+	dynr.Base
 }
 
-func (r *Status) SetupWatches(w dynctrl.Watcher) {
-	w.Watches(
-		&corev1.Node{},
-		handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
-			return []reconcile.Request{}
-		}),
-	)
+func (r *Status) SetupWatches(w dynr.Watcher) {
+	w.
+		Watches(
+			&corev1.Node{},
+			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+				return []reconcile.Request{}
+			}),
+		).
+		Watches(
+			&corev1.Node{},
+			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+				return []reconcile.Request{}
+			}),
+		).
+		WithEventFilter(predicate.GenerationChangedPredicate{})
 }
 
 func (r *Status) Reconcile(_ context.Context, _ ctrl.Request) (ctrl.Result, error) {

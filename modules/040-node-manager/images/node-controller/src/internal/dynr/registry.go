@@ -14,18 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package dynctrl
+package dynr
 
 import (
 	"sync"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/node-controller/internal/ctrlname"
+	"github.com/deckhouse/node-controller/internal/rcname"
 )
 
-type controllerEntry struct {
-	name        ctrlname.ControllerName
+type reconcilerEntity struct {
+	name        rcname.ReconcilerName
 	obj         client.Object
 	reconcilers []Reconciler
 	isGroup     bool
@@ -33,19 +33,19 @@ type controllerEntry struct {
 
 var (
 	registryMu sync.Mutex
-	registry   []controllerEntry
+	registry   []reconcilerEntity
 )
 
-func RegisterController(name ctrlname.ControllerName, obj client.Object, r Reconciler) {
+func RegisterReconciler(name rcname.ReconcilerName, obj client.Object, r Reconciler) {
 	registryMu.Lock()
 	defer registryMu.Unlock()
 
-	registry = append(registry, controllerEntry{name: name, obj: obj, reconcilers: []Reconciler{r}, isGroup: false})
+	registry = append(registry, reconcilerEntity{name: name, obj: obj, reconcilers: []Reconciler{r}, isGroup: false})
 }
 
-func RegisterGroup(name ctrlname.ControllerName, obj client.Object, reconcilers ...Reconciler) {
+func RegisterGroup(name rcname.ReconcilerName, obj client.Object, reconcilers ...Reconciler) {
 	registryMu.Lock()
 	defer registryMu.Unlock()
 
-	registry = append(registry, controllerEntry{name: name, obj: obj, reconcilers: reconcilers, isGroup: true})
+	registry = append(registry, reconcilerEntity{name: name, obj: obj, reconcilers: reconcilers, isGroup: true})
 }

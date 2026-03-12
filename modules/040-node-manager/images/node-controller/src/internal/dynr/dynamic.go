@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package dynctrl
+package dynr
 
 import (
 	"context"
@@ -28,27 +28,27 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/deckhouse/node-controller/internal/ctrlname"
+	"github.com/deckhouse/node-controller/internal/rcname"
 )
 
-var _ reconcile.Reconciler = (*dynamicController)(nil)
+var _ reconcile.Reconciler = (*dynamicReconciler)(nil)
 
-type dynamicController struct {
-	name        ctrlname.ControllerName
-	obj         client.Object
-	reconcilers []Reconciler
-	isGroup     bool
-	client      client.Client
-	cache       cache.Cache
-	scheme      *runtime.Scheme
+type dynamicReconciler struct {
+	name             rcname.ReconcilerName
+	obj              client.Object
+	childReconcilers []Reconciler
+	isGroup          bool
+	client           client.Client
+	cache            cache.Cache
+	scheme           *runtime.Scheme
 }
 
-func (dc *dynamicController) setupWithManager(mgr ctrl.Manager) error {
+func (dc *dynamicReconciler) setupWithManager(mgr ctrl.Manager) error {
 	dc.client = mgr.GetClient()
 	dc.cache = mgr.GetCache()
 	dc.scheme = mgr.GetScheme()
 
-	for _, r := range dc.reconcilers {
+	for _, r := range dc.childReconcilers {
 		dc.inject(r)
 	}
 
@@ -57,7 +57,7 @@ func (dc *dynamicController) setupWithManager(mgr ctrl.Manager) error {
 		For(dc.obj)
 
 	w := &builderWatcher{b: b}
-	for _, r := range dc.reconcilers {
+	for _, r := range dc.childReconcilers {
 		r.SetupWatches(w)
 	}
 
@@ -68,7 +68,7 @@ func (dc *dynamicController) setupWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-func (dc *dynamicController) inject(r Reconciler) {
+func (dc *dynamicReconciler) inject(r Reconciler) {
 	if v, ok := r.(NeedsClient); ok {
 		v.InjectClient(dc.client)
 	}
@@ -85,18 +85,18 @@ func (dc *dynamicController) inject(r Reconciler) {
 	}
 }
 
-func (dc *dynamicController) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (dc *dynamicReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx).WithValues("controller", dc.name)
 	ctx = logf.IntoContext(ctx, log)
 
 	if !dc.isGroup {
-		return dc.reconcilers[0].Reconcile(ctx, req)
+		return dc.childReconcilers[0].Reconcile(ctx, req)
 	}
 
 	return dc.reconcileGroup(ctx, req)
 }
 
-func (dc *dynamicController) reconcileGroup(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (dc *dynamicReconciler) reconcileGroup(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	var (
@@ -104,7 +104,7 @@ func (dc *dynamicController) reconcileGroup(ctx context.Context, req reconcile.R
 		errs     []error
 	)
 
-	for _, r := range dc.reconcilers {
+	for _, r := range dc.childReconcilers {
 		result, err := r.Reconcile(ctx, req)
 		if err != nil {
 			log.Error(err, "reconciler failed", "reconciler", fmt.Sprintf("%T", r))
