@@ -2,16 +2,7 @@
     $(document).ready(function () {
         // Handler for .ready() called.
 
-        function getHeaderHeight() {
-            const header = $('header');
-            return header.outerHeight(true);
-        }
-        const headerHeight = getHeaderHeight();
-
-        const $sidebar = $('.sidebar__wrapper-inner');
-        $sidebar.css("top", headerHeight);
-        const $navigationContainer = $('.navigation__container');
-        $navigationContainer.css("top", headerHeight);
+        const headerHeight = $('header').outerHeight(true) || 0;
         
         const $toc = $('#toc-sidebar');
 

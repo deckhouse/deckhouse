@@ -11,6 +11,7 @@
 
 .navigation__container {
   display: flex;
+  position: sticky;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
@@ -1171,7 +1172,19 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 // For anchorjs-link offset
 .docs :target {
-  scroll-margin-top: 70px;
+  scroll-margin-top: 60px;
+
+  @include breakpoints.max-w(xxl) {
+    scroll-margin-top: 50px;
+  }
+
+  @include breakpoints.max-w(xl) {
+    scroll-margin-top: 55px;
+  }
+
+  @include breakpoints.max-w(l) {
+    scroll-margin-top: 50px;
+  }
 }
 
 .layout-sidebar__content--tile :target {

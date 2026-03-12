@@ -189,22 +189,26 @@ html {
         }
 
         .sub-menu {
-            font-size: 12px;
+            // @include breakpoints.min-w(xxl) {
+            //     a {
+            //         font-size: 15px;
+            //     }
+            // }
+
+            // @include breakpoints.min-w(xl) {
+            //     gap: .75rem;
+            // }
 
             @include breakpoints.min-w(l) {
                 display: flex;
                 margin: 0;
                 padding: 1.125rem;
-                min-width: 180px;
+                min-width: 100%;
                 gap: .6rem;
                 flex-direction: column;
                 @include mixins.bg-color(mixins.$white);
                 border-radius: 4px;
                 @include mixins.box-shadow;
-
-                @include breakpoints.min-w(xl) {
-                    gap: .75rem;
-                }
 
                 &-container {
                     @include breakpoints.min-w(l) {
@@ -265,6 +269,21 @@ html {
                     }
                 }
             }
+
+            @include breakpoints.min-w(xl) {
+                gap: .75rem;
+            }
+
+            a {
+                @include breakpoints.max-w(xxxl) {
+                    font-size: 15px;
+                }
+
+                @include breakpoints.max-w(xxl) {
+                    font-size: 12px;
+                }
+            }
+
         }
 
         a {
@@ -320,7 +339,7 @@ html {
                         padding: 0;
                         font-size: 13px;
 
-                        li {
+                        li:not(:last-child) {
                             margin-bottom: 16px;
                         }
                     }
@@ -346,8 +365,6 @@ html {
                         z-index: 11;
 
                         a {
-                            color: mixins.$ntrl-700;
-
                             &:hover {
                                 color: mixins.$primary-700;
                             }
@@ -734,7 +751,6 @@ html {
                     flex-wrap: nowrap;
                     list-style: none;
                     margin-top: .75rem;
-                    max-height: calc(100dvh - 120px);
                     max-width: calc(100vw - 2rem);
                     min-width: 268px;
                     overflow-x: hidden;
@@ -745,7 +761,6 @@ html {
                     row-gap: 1.25rem;
                     top: 100%;
                     -webkit-overflow-scrolling: touch;
-                    width: min(100%, 320px);
                 }
 
                 @include breakpoints.max-w(xxs) {

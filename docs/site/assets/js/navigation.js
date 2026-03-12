@@ -1,89 +1,93 @@
 document.addEventListener('DOMContentLoaded', () => {
     const navigationContainer = document.querySelector('.navigation__container');
 
-    if (navigationContainer) {
-        const sidebarAndToc = document.querySelectorAll('.sidebar__wrapper-inner');
-        const tocSidebarLinks = document.querySelectorAll('.toc-sidebar__item-link');
+    if (!navigationContainer) {
+        return;
+    }
 
-        let lastScroll = window.scrollY;
-        let isScroll = true;
-        let isDesktop = false;
+    const sidebarAndToc = document.querySelectorAll('.sidebar__wrapper-inner');
+    let lastScroll = window.scrollY;
 
-        function hideNavigation() {
+    function applyHeaderOffsets() {
+        const header = document.querySelector('header');
+        const headerHeight = header.offsetHeight;
+        navigationContainer.style.top = `${headerHeight}px`;
+        sidebarAndToc.forEach(e => {
+            e.style.top = `${headerHeight}px`;
+        });
+        return headerHeight;
+    }
+
+    function updateTop() {
+        const headerHeight = applyHeaderOffsets();
+        const navigationHeight = navigationContainer.offsetHeight;
+        return headerHeight + navigationHeight;
+    }
+
+    let isScroll = true;
+
+    function hideNavigation() {
+        navigationContainer.classList.add('hidden');
+        lastScroll = window.scrollY;
+        sidebarAndToc.forEach(e => {
+            e.classList.remove('top');
+            e.style.removeProperty('--scroll-top');
+        });
+    }
+
+    function scrollHandler(newTopValue) {
+        if (!isScroll) return;
+
+        const scrollWindowTop = window.scrollY;
+        if (scrollWindowTop > lastScroll) {
             navigationContainer.classList.add('hidden');
-            lastScroll = window.scrollY;
+            lastScroll = scrollWindowTop;
             sidebarAndToc.forEach(e => {
                 e.classList.remove('top');
                 e.style.removeProperty('--scroll-top');
             });
-        }
-
-        function showNavigation() {
+        } else {
             navigationContainer.classList.remove('hidden');
-            lastScroll = window.scrollY;
-
-            const headerHeight = document.querySelector('.header-container')?.offsetHeight || 0;
-            const navigationHeight = navigationContainer.offsetHeight;
-            const newTop = headerHeight + navigationHeight;
-
+            lastScroll = scrollWindowTop;
             sidebarAndToc.forEach(e => {
+                e.style.setProperty('--scroll-top', `${newTopValue}px`);
                 e.classList.add('top');
-                e.style.setProperty('--scroll-top', `${newTop}px`);
             });
         }
+    }
 
-        function scrollHandler() {
-            if (!isScroll || !isDesktop) return;
-
-            const scrollWindowTop = window.scrollY;
-            if (scrollWindowTop > lastScroll) {
-                hideNavigation();
-            } else {
-                showNavigation();
-            }
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
         }
 
-        function applyLayout() {
-            if (window.innerWidth > 1024) {
-                if (!isDesktop) {
-                    isDesktop = true;
-                    window.addEventListener('scroll', scrollHandler);
-                }
-
-                navigationContainer.classList.add('fixed-navigation');
-                if (window.scrollY > 0) {
-                    hideNavigation();
-                } else {
-                    showNavigation();
-                }
-            } else {
-                if (isDesktop) {
-                    window.removeEventListener('scroll', scrollHandler);
-                }
-
-                isDesktop = false;
-                navigationContainer.classList.remove('fixed-navigation');
-                navigationContainer.classList.remove('hidden');
-                sidebarAndToc.forEach(e => {
-                    e.classList.remove('top');
-                    e.style.removeProperty('--scroll-top');
-                });
-            }
+        const tocLink = target.closest('.toc-sidebar__item-link');
+        if (!tocLink) {
+            return;
         }
 
-        tocSidebarLinks.forEach(link => {
-            link.addEventListener('click', () => {
-                if (!isDesktop) return;
+        isScroll = false;
+        hideNavigation();
+        setTimeout(() => {
+            isScroll = true;
+        }, 500);
+    });
 
-                isScroll = false;
-                hideNavigation();
-                setTimeout(() => {
-                    isScroll = true;
-                }, 500);
-            });
-        });
+    const initTop = updateTop();
+    scrollHandler(initTop);
 
-        applyLayout();
-        window.addEventListener('resize', applyLayout);
+    window.addEventListener('scroll', () => {
+        const newTop = updateTop();
+        scrollHandler(newTop)
+    });
+
+    window.addEventListener('resize', () => {
+        const newTop = updateTop();
+        scrollHandler(newTop)
+    });
+
+    if (window.scrollY > 0) {
+        hideNavigation();
     }
 });
