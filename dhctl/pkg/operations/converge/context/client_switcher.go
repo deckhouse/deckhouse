@@ -186,7 +186,7 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 				return fmt.Errorf("Cannot switch to another control-plane, no any states found")
 			}
 
-			s.logger.LogWarnF("Another control-plane nodes states not found. Try to continue with first")
+			s.warn("Another control-plane nodes states not found. Try to continue with first")
 			statesMap[firstMasterState.Name] = firstMasterState.State
 		}
 
@@ -337,7 +337,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 
 		ipAddress, err := infrastructure.GetMasterIPAddressForSSH(s.ctx.Ctx(), statePath, executor)
 		if err != nil {
-			s.logger.LogWarnF("Failed to get master IP address: %v\n", err)
+			s.warn("Failed to get master IP address: %v", err)
 			continue
 		}
 
@@ -570,7 +570,7 @@ func (s *KubeClientSwitcher) inCommander(action string) bool {
 
 func (s *KubeClientSwitcher) switchDisbled(action string) bool {
 	if s.params.DisableSwitch {
-		s.logger.LogWarnF("%s skipped. Switch disabled\n", action)
+		s.warn("%s skipped. Switch disabled", action)
 		return true
 	}
 
@@ -612,6 +612,11 @@ func (s *KubeClientSwitcher) extractClients(ctx context.Context) (*kclient.Kuber
 func (s *KubeClientSwitcher) debug(f string, args ...any) {
 	// todo remove new line after migrate to lib-dhctl
 	s.logger.LogDebugF(f+"\n", args...)
+}
+
+func (s *KubeClientSwitcher) warn(f string, args ...any) {
+	// todo remove new line after migrate to lib-dhctl
+	s.logger.LogWarnF(f+"\n", args...)
 }
 
 func (s *KubeClientSwitcher) debugStartOperation(action string) {
