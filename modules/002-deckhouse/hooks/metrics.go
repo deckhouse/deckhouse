@@ -22,14 +22,44 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
 
+const (
+	deckhouseModuleVersionMetricName = "deckhouse_module_version"
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "modules",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "Module",
+			FilterFunc: filterModuleVersion,
+		},
+	},
 }, collectMetrics)
+
+// moduleVersionSnapshot is the filter result for Module CR: name and version for telemetry.
+type moduleVersionSnapshot struct {
+	Name    string
+	Version string
+}
+
+func filterModuleVersion(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	version, _, _ := unstructured.NestedString(obj.Object, "properties", "version")
+	if version == "" {
+		return nil, nil
+	}
+	name := obj.GetName()
+	return moduleVersionSnapshot{Name: name, Version: version}, nil
+}
 
 func collectMetrics(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Set("deckhouse_release_channel", 1, map[string]string{
@@ -54,6 +84,16 @@ func collectMetrics(_ context.Context, input *go_hook.HookInput) error {
 				"days": strings.Join(windows.Days, " "),
 			})
 		}
+	}
+	snapshots := input.Snapshots.Get("modules")
+	for snap, err := range sdkobjectpatch.SnapshotIter[moduleVersionSnapshot](snapshots) {
+		if err != nil {
+			continue
+		}
+		input.MetricsCollector.Set(telemetry.WrapName(deckhouseModuleVersionMetricName), 1, map[string]string{
+			"module_name":    snap.Name,
+			"module_version": snap.Version,
+		})
 	}
 	return nil
 }
