@@ -70,6 +70,41 @@ alerts:
         Certificate is expiring soon.
       severity: "8"
       markupFormat: markdown
+    - name: CertmanagerCertificateChallengeStuck
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
+      moduleUrl: 101-cert-manager
+      module: cert-manager
+      edition: ce
+      description: |-
+        The ACME Challenge `{{ $labels.namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` is in `{{ $labels.status }}` state and requires manual intervention.
+
+        The certificate will not be issued or renewed until the issue is resolved.
+
+        **Common causes:**
+        * DNS misconfiguration (for DNS-01 challenges).
+        * Ingress or firewall issues (for HTTP-01 challenges).
+        * Rate limiting by the ACME provider.
+        * Authorization expired before challenge completion.
+
+        **Resolution steps:**
+
+        1. Check the Challenge status and reason:
+           ```bash
+           d8 k -n {{ $labels.namespace }} describe challenge {{ $labels.name }}
+           ```
+
+        2. Delete the failed Order to trigger a new certificate request:
+           ```bash
+           d8 k -n {{ $labels.namespace }} get orders
+           d8 k -n {{ $labels.namespace }} delete order <ORDER_NAME>
+           ```
+
+        3. For more details, see the cert-manager troubleshooting guide:
+           https://cert-manager.io/docs/troubleshooting/acme/
+      summary: |
+        ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is stuck in &quot;{{ $labels.status }}&quot; state.
+      severity: "4"
+      markupFormat: markdown
     - name: CertmanagerCertificateExpired
       sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
       moduleUrl: 101-cert-manager
