@@ -31,8 +31,8 @@ status:
   packages:
     failed:
     - errors:
-      - error: no release images found for package "test-package" in /version path
-        version: unknown
+      - error: 'package type could not be determined: unknown value "Garbage"'
+        version: v1.0.0
       name: test-package
     processed:
     - name: test-package

@@ -19,7 +19,6 @@ spec:
   packageRepositoryName: deckhouse
   type: Update
   update:
-    fullScan: true
     timeout: 5m
 status:
   completionTime: "2025-10-31T12:00:00Z"
@@ -29,25 +28,16 @@ status:
     status: "True"
     type: Completed
   packages:
-    failed:
-    - errors:
-      - error: 'ensure package version: create application package version: simulated
-          create error for v1.1.0'
-        version: v1.1.0
-      - error: 'ensure package version: create application package version: simulated
-          create error for v1.2.0'
-        version: v1.2.0
-      name: test-package
     processed:
     - name: test-package
-      type: Application
+      type: Module
     processedOverall: 1
     total: 1
   phase: Completed
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: ApplicationPackageVersion
+kind: ModulePackageVersion
 metadata:
   creationTimestamp: null
   labels:
@@ -56,6 +46,25 @@ metadata:
     packages.deckhouse.io/package: test-package
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-package-v1.0.0
+  resourceVersion: "2"
+spec:
+  packageName: test-package
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
+status:
+  packageMetadata:
+    stage: stable
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    packages.deckhouse.io/draft: "true"
+    packages.deckhouse.io/package: test-package
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-test-package-v1.1.0
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
     controller: true
@@ -66,8 +75,26 @@ metadata:
 spec:
   packageName: test-package
   packageRepositoryName: deckhouse
-  packageVersion: v1.0.0
+  packageVersion: v1.1.0
 status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: test-package
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+  resourceVersion: "2"
+status:
+  availableRepositories:
+  - deckhouse
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
@@ -87,7 +114,7 @@ status:
     type: LastOperationScanFinished
   packages:
   - name: test-package
-    type: Application
+    type: Module
   packagesCount: 1
   phase: Active
   syncTime: "2025-10-31T12:00:00Z"
