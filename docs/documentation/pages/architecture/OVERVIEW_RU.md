@@ -54,7 +54,7 @@ DKP — это платформа для управления кластерам
 При установке платформы в существующий Managed Kubernetes-кластер модули [`control-plane-manager`](/modules/control-plane-manager/) и [`node-manager`](/modules/node-manager/) не устанавливаются.
 {% endalert %}
 
-В модуль входят:
+Содержимое модулей:
 
 * Helm-чарты;
 * хуки [addon-operator](https://github.com/flant/addon-operator/);
