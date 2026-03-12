@@ -1,6 +1,7 @@
 ---
 title: "Module development and debugging"
 permalink: en/architecture/module-development/development/
+description: Tools and approaches for developing and debugging Deckhouse Kubernetes Platform modules, including local testing and troubleshooting.
 ---
 
 When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) resource is used for this purpose.
