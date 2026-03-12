@@ -2,6 +2,7 @@
 title: "Запуск и проверка модуля в кластере"
 permalink: ru/architecture/module-development/run/
 lang: ru
+description: Запуск модуля в кластере Deckhouse Kubernetes Platform с помощью ModuleSource, ModuleUpdatePolicy и ModuleConfig, а также проверка его работоспособности.
 ---
 
 В этом разделе рассмотрен процесс запуска модуля в кластере Deckhouse Kubernetes Platform (DKP), а также подключение Deckhouse Module Tools для проверки модуля и сбора метрик.
@@ -427,7 +428,7 @@ module-two                   Available   False     False
   example     2       16s    Some errors occurred. Inspect status for details
   ```
 
-По аналогии [с DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease). DKP создает ModuleRelease исходя из того, что хранится в container registry.
+По аналогии [с DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease). DKP создает ModuleRelease исходя из того, что хранится в хранилище образов.
 При поиске проблем с модулем проверьте также доступные в кластере ModuleRelease:
 
 ```shell

@@ -1,6 +1,7 @@
 ---
 title: "Versioning modules"
 permalink: en/architecture/module-development/versioning/
+description: Semantic versioning, release channels, and API versioning for Deckhouse Kubernetes Platform modules, including module lifecycle stages.
 ---
 
 Deckhouse Kubernetes Platform (DKP) uses [semantic versioning](https://semver.org/) for modules.

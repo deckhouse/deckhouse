@@ -2,6 +2,7 @@
 title: "Dependencies of the Deckhouse Kubernetes Platform modules"
 permalink: en/architecture/module-development/dependencies/
 lang: en
+description: Module dependency types in Deckhouse Kubernetes Platform — DKP version, Kubernetes version, and inter-module dependencies with required and optional modes.
 ---
 
 This section covers the dependencies you can set for the module.
