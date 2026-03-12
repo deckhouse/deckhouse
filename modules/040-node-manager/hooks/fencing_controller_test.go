@@ -190,7 +190,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			nodeExists: true,
 			podExists:  true,
 		}),
-		Entry("Notify mode with rotten lease: pods evicted, node preserved", testCaseParams{
+		Entry("Notify mode with rotten lease: pods deleted, node preserved", testCaseParams{
 			Name:               "notify-rotten-lease",
 			FencingEnabled:     true,
 			FencingMode:        "Notify",
@@ -200,7 +200,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			nodeExists: true,
 			podExists:  false,
 		}),
-		Entry("Static node with rotten lease: pods evicted, node preserved", testCaseParams{
+		Entry("Static node with rotten lease: pods deleted, node preserved", testCaseParams{
 			Name:               "static-rotten-lease",
 			FencingEnabled:     true,
 			FencingMode:        "Watchdog",
@@ -211,7 +211,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			nodeExists: true,
 			podExists:  false,
 		}),
-		Entry("CloudStatic node with rotten lease: pods evicted, node preserved", testCaseParams{
+		Entry("CloudStatic node with rotten lease: pods deleted, node preserved", testCaseParams{
 			Name:               "cloudstatic-rotten-lease",
 			FencingEnabled:     true,
 			FencingMode:        "Watchdog",
