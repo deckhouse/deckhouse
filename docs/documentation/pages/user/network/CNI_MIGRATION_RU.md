@@ -5,94 +5,117 @@ permalink: ru/user/network/cni_migration.html
 ---
 
 {% alert level="info" %}
-Инструкция для версий Deckhouse Kubernetes Platform <= 1.74
+Инструкция актуальна для Deckhouse Kubernetes Platform **<= 1.74**.
 {% endalert %}
 
 {% alert level="warning" %}
-Работы ведутся с полным простоем кластера, включая в себя перезапуск всех подов и всех нод.
-Ожидаемое время выполнения: ~1 час.
+Миграция выполняется с полным простоем кластера: будут перезапущены все поды и узлы. Оценочное время выполнения — **около 1 часа**.
 {% endalert %}
 
-1) Включаем модуль `cni-cilium`:
+Для миграции выполните следующие шаги:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-cilium
-spec:
-  version: 1
-  settings:
-    tunnelMode: VXLAN
-  enabled: true
-```
+1. Включите модуль `cni-cilium`:
 
-2) Если агенты cilium не стартуют, то порядок действия для их перезапуска:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: cni-cilium
+   spec:
+     version: 1
+     settings:
+       tunnelMode: VXLAN
+     enabled: true
+   ```
 
-```shell
-# Делаем бэкап, в процесе переключения ресурсы пересоздатуться сами
-kubectl -n kube-system get ds d8-kube-proxy -oyaml > d8-kube-proxy.yaml
+1. Дождитесь запуска компонентов Cilium:
 
-# Исправление crashloop агентов Cilium
-kubectl delete validatingadmissionpolicies.admissionregistration.k8s.io label-objects.deckhouse.io
-kubectl -n kube-system delete ds d8-kube-proxy
-kubectl -n d8-cni-cilium delete po -l app=agent
-```
+   ```shell
+   d8 k -n d8-cni-cilium get pods
+   ```
 
-Возможен длительный старт ( больше 5 минут) -  необходим перезапуск прокси.
-```shell
-kubectl -n kube-system delete po -l k8s-app=kube-proxy
-```
+   Если поды агента Cilium не переходят в состояние `Ready`:
 
-3) Выключаем модуль `cni-simple-bridge`/`cni-flannel` (после запуска всех подов `Cilium`). 
-На этом этапе pod с webhook-handle могут падать в CrashLoopBackOff.
+   - Сохраните манифест `d8-kube-proxy`:
 
-```shell
-# Делаем бэкап, в процесе переключения ресурсы пересоздатуться сами
-kubectl -n d8-cni-simple-bridge get ds simple-bridge -oyaml > simple-bridge.yaml
-# Или
-kubectl -n d8-cni-flannel get ds flannel -oyaml > flannel.yaml
-```
+     ```shell
+     d8 k -n kube-system get ds d8-kube-proxy -oyaml > d8-kube-proxy.yaml
+     ```
 
-```shell
-# Выключаем cni-simple-bridge
-kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io d8-deckhouse-validating-webhook-handler-hooks
-kubectl exec -it -n d8-system -it svc/deckhouse-leader -- deckhouse-controller module disable cni-simple-bridge
-# Или
-kubectl exec -it -n d8-system -it svc/deckhouse-leader -- deckhouse-controller module disable cni-flannel
-```
+   - Выполните действия для восстановления запуска:
 
-```shell
-# Должен удалиться сам, если не удалился удаляем сами, может так же зависнуть в Terminating
-kubectl delete ns d8-cni-simple-bridge
-# Или
-kubectl delete ns d8-cni-flannel
-```
+     ```shell
+     d8 k delete validatingadmissionpolicies.admissionregistration.k8s.io label-objects.deckhouse.io
+     d8 k -n kube-system delete ds d8-kube-proxy
+     d8 k -n d8-cni-cilium delete po -l app=agent
+     ```
 
-4) После того как убедимся, что `cni-simple-bridge`/`cni-flannel` не запускается вновь, редактируем iptables:
+   - Если запуск Cilium продолжается более 5 минут, перезапустите `kube-proxy`:
 
-Шаг опциональный и ожидаеться, что вовремя перезагрузки без удаления интерфейса и правил iptables, но для гарантированного, как пример оставлено удаление.
-```shell
-ip link delete cni0
+     ```shell
+     d8 k -n kube-system delete pod -l k8s-app=kube-proxy
+     ```
 
-iptables -t filter -F
-iptables -t filter -X
-iptables -t nat -F
-iptables -t nat -X
-iptables -t mangle -F
-iptables -t mangle -X
-iptables -t raw -F
-iptables -t raw -X
-iptables -P INPUT ACCEPT
-iptables -P FORWARD ACCEPT
-iptables -P OUTPUT ACCEPT
-```
+1. Отключите `cni-simple-bridge` или `cni-flannel`. Выполняйте шаг после того, как поды Cilium перешли в состояние `Ready`.
 
-5) Перезапускаем все поды:
-```shell
-kubectl delete pods -A --all --wait=false
-```
+1. Сохраните манифест DaemonSet:
 
-6) На внутренних loadbalancer поставить галку Preserve client IP addresses в Off для всех TargetGroup входящих в этот балансер
+   ```shell
+   d8 k -n d8-cni-simple-bridge get ds simple-bridge -o yaml > simple-bridge.yaml
+   # или
+   d8 k -n d8-cni-flannel get ds flannel -o yaml > flannel.yaml
+   ```
 
-7) По одному перезапускаем все ноды в кластере (включая мастера).
+1. Удалите `validating webhook` (если присутствует):
+
+   ```shell
+   d8 k delete validatingwebhookconfigurations.admissionregistration.k8s.io d8-deckhouse-validating-webhook-handler-hooks
+   ```
+
+1. Отключите соответствующий модуль:
+
+   ```shell
+   d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-simple-bridge
+   # или
+   d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-flannel
+   ```
+
+1. Удалите пространство имён старого CNI (если не удалился автоматически):
+
+   ```shell
+   d8 k delete ns d8-cni-simple-bridge
+   # или
+   d8 k delete ns d8-cni-flannel
+   ```
+
+1. (Опционально) Очистите артефакты старого CNI. При необходимости удалите интерфейс и сбросьте правила iptables:
+
+   ```shell
+   ip link delete cni0
+
+   iptables -t filter -F
+   iptables -t filter -X
+   iptables -t nat -F
+   iptables -t nat -X
+   iptables -t mangle -F
+   iptables -t mangle -X
+   iptables -t raw -F
+   iptables -t raw -X
+   iptables -P INPUT ACCEPT
+   iptables -P FORWARD ACCEPT
+   iptables -P OUTPUT ACCEPT
+   ```
+
+1. Перезапустите все поды:
+
+   ```shell
+   d8 k delete pods -A --all --wait=false
+   ```
+
+1. Настройте внутренние LoadBalancer (при использовании). Для всех TargetGroup, входящих во внутренний балансировщик, установите параметр:
+
+   ```text
+   Preserve client IP addresses = Off
+   ```
+
+1. Перезагрузите узлы кластера по одному, включая master-узлы.
