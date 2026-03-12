@@ -536,7 +536,23 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 
 	// Version already exists
 	if err == nil {
-		return nil
+		_, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry]
+		if ok {
+			// Version exists and marked as not exist in registry
+
+			// TODO: divide to func
+			original := pkgVersion.DeepCopy()
+
+			delete(pkgVersion.Labels, v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry)
+			pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelDraft] = "true"
+
+			err = s.client.Patch(ctx, pkgVersion, client.MergeFrom(original))
+			if err != nil {
+				return fmt.Errorf("update application package version: %w", err)
+			}
+
+			return nil
+		}
 	}
 
 	// Create new ApplicationPackageVersion with draft label
