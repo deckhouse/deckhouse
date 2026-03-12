@@ -61,6 +61,6 @@ DKP — это платформа для управления кластерам
 * правила сборки компонентов модуля (компонентов Deckhouse);
 * другие файлы.
 
-При работе с модулями DKP использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, чтобы узнать, как DKP работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md).
+При работе с модулями, DKP использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, чтобы узнать, как DKP работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md).
 
 Об архитектуре модуля и разработке собственных модулей читайте в разделе [Модули](module-development/).
