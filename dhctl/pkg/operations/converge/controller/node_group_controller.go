@@ -28,15 +28,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -88,51 +85,18 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 
 	log.DebugF("Nodes to delete %v\n", len(nodesToDeleteInfo))
 
-	if !ctx.CommanderMode() {
-		sshClient := ctx.KubeClient().NodeInterfaceAsSSHClient()
-		log.DebugF("sshClient: %v\n", sshClient)
-		if sshClient != nil {
-			availableHosts := sshClient.Session().AvailableHosts()
-			needReconnect := false
-			for _, host := range availableHosts {
-				for _, dhost := range nodesToDeleteInfo {
-					if host.Name == dhost.name {
-						ctx.KubeClient().NodeInterfaceAsSSHClient().Session().RemoveAvailableHosts(host)
-						if host.Host == ctx.KubeClient().NodeInterfaceAsSSHClient().Session().Host() {
-							needReconnect = true
-						}
-					}
-				}
-			}
+	nodesStates := make([]*context.NodeState, 0, len(nodesToDeleteInfo))
+	for _, dn := range nodesToDeleteInfo {
+		nodesStates = append(nodesStates, &context.NodeState{
+			Name: dn.name,
+			State: dn.state,
+		})
+	}
 
-			log.DebugF("list of available host: %-v\n", ctx.KubeClient().NodeInterfaceAsSSHClient().Session().AvailableHosts())
-
-			if len(nodesToDeleteInfo) > 0 && needReconnect {
-				err = retry.NewSilentLoop("reconnecting to SSH", 10, 10).Run(func() error {
-					ctx.KubeClient().NodeInterfaceAsSSHClient().Stop()
-					err = ctx.KubeClient().NodeInterfaceAsSSHClient().Start()
-					return err
-				})
-				if err != nil {
-					return err
-				}
-
-				kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx.Ctx(), ssh.NewNodeInterfaceWrapper(ctx.KubeClient().NodeInterfaceAsSSHClient()))
-				if err != nil {
-					return fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
-				}
-
-				newCtx := context.NewContext(ctx.Ctx(), context.Params{
-					KubeClient:     kubeCl,
-					Cache:          ctx.StateCache(),
-					ChangeParams:   ctx.ChangesSettings(),
-					ProviderGetter: ctx.ProviderGetter(),
-					Logger:         ctx.Logger(),
-					ClientSwitcher: ctx.ClientSwitcher(),
-				})
-				ctx = newCtx
-			}
-		}
+	// all checks to skip switching realised in method
+	err = ctx.ClientSwitcher().SwitchWhenDecreaseMastersIfNeed(ctx.Ctx(), c.name, nodesStates)
+	if err != nil {
+		return err
 	}
 
 	log.DebugF("Starting update nodes\n")
