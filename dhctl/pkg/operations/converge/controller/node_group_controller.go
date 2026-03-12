@@ -23,6 +23,7 @@ import (
 
 	gcmp "github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"
+	"github.com/name212/govalue"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -85,17 +86,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 
 	log.DebugF("Nodes to delete %v\n", len(nodesToDeleteInfo))
 
-	nodesStates := make([]*context.NodeState, 0, len(nodesToDeleteInfo))
-	for _, dn := range nodesToDeleteInfo {
-		nodesStates = append(nodesStates, &context.NodeState{
-			Name: dn.name,
-			State: dn.state,
-		})
-	}
-
-	// all checks to skip switching realised in method
-	err = ctx.ClientSwitcher().SwitchWhenDecreaseMastersIfNeed(ctx.Ctx(), c.name, nodesStates)
-	if err != nil {
+	if err := c.switchClientBeforeDeleteNodesIfNeed(ctx, nodesToDeleteInfo); err != nil {
 		return err
 	}
 
@@ -118,13 +109,32 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("starting converge node template\n")
+	log.DebugF("Starting converge node template\n")
 
 	if groupSpec != nil {
 		return c.tryUpdateNodeTemplate(ctx, groupSpec.NodeTemplate)
 	}
 
 	return c.tryDeleteNodeGroup(ctx)
+}
+
+func (c *NodeGroupController) switchClientBeforeDeleteNodesIfNeed(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
+	clientSwitcher := ctx.ClientSwitcher()
+	if govalue.IsNil(clientSwitcher) {
+		log.DebugF("Skip switch client before delete nodes. Got empty switcher\n")
+		return nil
+	}
+
+	nodesStates := make([]*context.NodeState, 0, len(nodesToDeleteInfo))
+	for _, dn := range nodesToDeleteInfo {
+		nodesStates = append(nodesStates, &context.NodeState{
+			Name:  dn.name,
+			State: dn.state,
+		})
+	}
+
+	// all checks to skip switching realised in method
+	return clientSwitcher.SwitchWhenDecreaseMastersIfNeed(ctx.Ctx(), c.name, nodesStates)
 }
 
 func (c *NodeGroupController) tryDeleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {

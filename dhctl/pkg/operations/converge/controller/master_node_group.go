@@ -138,24 +138,16 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 			return fmt.Errorf("failed to set converge state: %w", err)
 		}
 
-		clientSwitcher := ctx.ClientSwitcher()
-		if !govalue.IsNil(clientSwitcher) {
-			// commander mode checking inside
-			if err := clientSwitcher.SwitchToNotFirstMaster(ctx.Ctx()); err != nil {
-				return fmt.Errorf("Cannot switch clients to not first control-plane node: %w", err)
-			}
+		if err := c.switchClientToNotFirstMaster(ctx); err != nil {
+			return err
 		}
 	}
 
 	if c.convergeState.Phase == phases.ScaleToSingleMasterPhase {
 		log.DebugF("Scale to single master\n")
 
-		clientSwitcher := ctx.ClientSwitcher()
-		if !govalue.IsNil(clientSwitcher) {
-			// commander mode checking inside
-			if err := clientSwitcher.SwitchToFirstMaster(ctx.Ctx()); err != nil {
-				return fmt.Errorf("Cannot switch clients to first control-plane node: %w", err)
-			}
+		if err := c.switchClientToFirstMaster(ctx); err != nil {
+			return err
 		}
 
 		replicas := 1
@@ -180,6 +172,36 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 	}
 
 	return c.runWithReplicas(ctx, metaConfig.MasterNodeGroupSpec.Replicas)
+}
+
+func (c *MasterNodeGroupController) switchClientToNotFirstMaster(ctx *context.Context) error {
+	clientSwitcher := ctx.ClientSwitcher()
+	if govalue.IsNil(clientSwitcher) {
+		log.DebugF("Skip switch client to not first master. Got empty client switcher")
+		return nil
+	}
+
+	// commander mode and another checks checking inside
+	if err := clientSwitcher.SwitchToNotFirstMaster(ctx.Ctx()); err != nil {
+		return fmt.Errorf("Cannot switch clients to not first control-plane node: %w", err)
+	}
+
+	return nil
+}
+
+func (c *MasterNodeGroupController) switchClientToFirstMaster(ctx *context.Context) error {
+	clientSwitcher := ctx.ClientSwitcher()
+	if govalue.IsNil(clientSwitcher) {
+		log.DebugF("Skip switch client to first master. Got empty client switcher")
+		return nil
+	}
+
+	// commander mode and another checks checking inside
+	if err := clientSwitcher.SwitchToFirstMaster(ctx.Ctx()); err != nil {
+		return fmt.Errorf("Cannot switch clients to first control-plane node: %w", err)
+	}
+
+	return nil
 }
 
 func (c *MasterNodeGroupController) runWithReplicas(ctx *context.Context, replicas int) error {
