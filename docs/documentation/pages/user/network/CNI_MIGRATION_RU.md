@@ -2,6 +2,7 @@
 title: "Миграция с cni-simple-bridge/cni-flannel на cni-cilium"
 description: "Последовательность действий для миграции с cni-simple-bridge/cni-flannel на cni-cilium"
 permalink: ru/user/network/cni_migration.html
+lang: ru
 ---
 
 {% alert level="info" %}
