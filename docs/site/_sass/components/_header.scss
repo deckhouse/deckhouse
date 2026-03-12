@@ -820,7 +820,8 @@ html {
 .header__sidebar {
     display: none;
     left: 0;
-    padding-top: 130px;
+    padding-top: 25px;
+    margin-top: 105px;
     background: #fff;
     box-sizing: border-box;
     height: 100%;
@@ -833,7 +834,8 @@ html {
     transition: .2s;
 
     @include breakpoints.max-w(xxs) {
-        padding-top: 145px;
+        padding-top: 13px;
+        margin-top: 138px;
     }
 
     &.show {
