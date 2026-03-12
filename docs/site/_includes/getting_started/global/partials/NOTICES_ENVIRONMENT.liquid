@@ -50,14 +50,16 @@ The {{ page.title_main }} installation is not available in the Community Edition
   - поддержка `CgroupsV2`;
   - systemd версии `244` и новее;
   - поддержка модуля ядра `erofs`.
-  Подробнее в разделе [«ClusterConfiguration»](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
-  {%- if page.platform_code == "aws" %}
-  В образах Ubuntu для AWS используется специальная версия ядра, в которой поддержка erofs отключена по умолчанию.
-  Для её включения установите пакет дополнительных модулей:
 
-  ```bash
-  sudo apt install linux-modules-extra-aws
-  ```
+  Подробнее в разделе [«ClusterConfiguration»](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+
+  {%- if page.platform_code == "aws" %}
+  > В образах Ubuntu для AWS используется специальная версия ядра, в которой поддержка `erofs` отключена по умолчанию.
+  > Для её включения установите пакет дополнительных модулей:
+  >
+  > ```bash
+  > sudo apt install linux-modules-extra-aws
+  > ```
 
   {%- endif %}
 
@@ -90,10 +92,18 @@ Before installation, ensure the following:
   - `CgroupsV2` support;
   - Systemd version `244` or newer;
   - `erofs` kernel module support.
+
   For more information, see [the ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) resource.
-{%- if page.platform_code == "aws" %}
-  On AWS, Ubuntu uses a custom kernel without `erofs`; to meet the requirements, install the modules: `sudo apt install linux-modules-extra-aws`.
-{%- endif %}
+
+  {%- if page.platform_code == "aws" %}
+  > Ubuntu images for AWS use a custom kernel with `erofs` disabled by default.
+  > To enable it, install the extra kernel modules package:
+  >
+  > ```bash
+  > sudo apt install linux-modules-extra-aws
+  > ```
+
+  {%- endif %}
 
 - From version 1.74, Deckhouse has a module integrity control mechanism (protection against replacement and modification). It turns on automatically when the OS on the nodes supports the `erofs` kernel module. Without it, Deckhouse runs as before but the mechanism is off — an alert will indicate it is unavailable.
 {% endofftopic %}
