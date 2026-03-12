@@ -55,7 +55,7 @@ The {{ page.title_main }} installation is not available in the Community Edition
   В AWS Ubuntu идёт с кастомным ядром без `erofs`; для соответствия требованиям установите модули: `sudo apt install linux-modules-extra-aws`.
 {%- endif %}
 
-- Начиная с версии 1.74 в Deckhouse есть механизм контроля целостности модулей (защита от подмены и изменения). Он включается автоматически, если ОС на узлах поддерживает модуль ядра `erofs`. Без этого модуля Deckhouse работает как прежде, но механизм отключён — появится алерт о его недоступности.
+- Начиная с версии 1.74 в Deckhouse появился механизм контроля целостности модулей (защита от подмены и модификаций). Он включается автоматически, если на узлах ОС поддерживает модуль ядра `erofs`. Если `erofs` недоступен, Deckhouse продолжит работать как раньше, но контроль целостности будет отключён, и в мониторинге появится алерт о недоступности механизма.
 {% endofftopic %}
 {%- else %}
 {% alert level="warning" %}
@@ -84,7 +84,7 @@ Before installation, ensure the following:
   - `CgroupsV2` support;
   - Systemd version `244` or newer;
   - `erofs` kernel module support.
-  For more information, see the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) resource.
+  For more information, see [the ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) resource.
 {%- if page.platform_code == "aws" %}
   On AWS, Ubuntu uses a custom kernel without `erofs`; to meet the requirements, install the modules: `sudo apt install linux-modules-extra-aws`.
 {%- endif %}

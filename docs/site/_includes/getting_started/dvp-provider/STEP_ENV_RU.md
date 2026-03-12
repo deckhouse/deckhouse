@@ -56,4 +56,4 @@
      enabled: true
    ```
 
-1. Сгенерируйте kubeconfig в [веб-интерфейсе kubeconfigurator](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html). Адрес интерфейса зависит от [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (например, `kubeconfig.kube.my` при шаблоне `%s.kube.my`).
+1. Сгенерируйте kubeconfig [в веб-интерфейсе kubeconfigurator](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html). Адрес интерфейса зависит от [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (например, `kubeconfig.kube.my` при шаблоне `%s.kube.my`).
