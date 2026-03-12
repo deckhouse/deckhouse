@@ -25,8 +25,8 @@ import (
 
 const (
 	// Validation with modsecurity + owasp can exceed tiny defaults even on healthy configs.
-	sandboxCPUTimeLimit  = 10 * time.Second
-	sandboxWallTimeLimit = 20 * time.Second
+	sandboxCPUTimeLimit  = 12 * time.Second
+	sandboxWallTimeLimit = 25 * time.Second
 	sandboxMemoryLimit   = runner.Size(256 << 20) // 256 MiB
 )
 
