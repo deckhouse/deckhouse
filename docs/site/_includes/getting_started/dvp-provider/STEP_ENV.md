@@ -56,4 +56,4 @@ To deploy Deckhouse Kubernetes Platform on DVP, perform the initial setup in the
      enabled: true
    ```
 
-1. Generate a kubeconfig in the [kubeconfigurator web interface](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html). The interface URL depends on [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (e.g., `kubeconfig.kube.my` for template `%s.kube.my`).
+1. Generate a kubeconfig in [the kubeconfigurator web interface](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html). The interface URL depends on [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (e.g., `kubeconfig.kube.my` for template `%s.kube.my`).
