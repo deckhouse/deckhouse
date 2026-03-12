@@ -489,10 +489,12 @@ spec:
      --memory 2 \
      --cores 2 \
      --core-fraction 100 \
-     --ssh-key ~/.ssh/id_rsa.pub \
+     --ssh-key ~/.ssh/<SSH_PUBLIC_KEY_FILE> \
      --zone ru-central1-a \
      --public-address 178.154.226.159
    ```
+
+   > Замените здесь `<SSH_PUBLIC_KEY_FILE>` на имя вашего публичного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
 
    Убедитесь, что IP-адрес из параметра `--public-address` доступен из вашей сети и указан корректно.
 
@@ -500,8 +502,10 @@ spec:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
-     --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
+     --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
+
+   > Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
    Здесь:
 

@@ -19,30 +19,35 @@ package v1alpha2
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// StaticInstanceSpec defines the desired state of StaticInstance
+// StaticInstanceSpec defines the desired state of StaticInstance.
 type StaticInstanceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Address        string                  `json:"address"`
+	// The IP address of the host.
+	//+kubebuilder:validation:Pattern=`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`
+	Address string `json:"address"`
+
+	// The reference to the `SSHCredentials` object.
 	CredentialsRef *corev1.ObjectReference `json:"credentialsRef"`
 }
 
-// StaticInstanceStatus defines the observed state of StaticInstance
+// StaticInstanceStatus defines the observed state of StaticInstance.
 type StaticInstanceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// +optional
+	// The reference to the `StaticMachine` object.
 	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
 
 	// +optional
+	// The reference to the `Node` object.
 	NodeRef *corev1.ObjectReference `json:"nodeRef,omitempty"`
 
 	// +optional
@@ -50,7 +55,7 @@ type StaticInstanceStatus struct {
 
 	// Conditions defines current service state of the StaticInstance.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 type StaticInstanceStatusCurrentStatus struct {
@@ -75,11 +80,14 @@ const (
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:subresource:status
+//+kubebuilder:storageversion
+//+kubebuilder:metadata:labels="heritage=deckhouse"
+//+kubebuilder:metadata:labels="module=node-manager"
 //+kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.currentStatus.phase",description="Static instance state"
 //+kubebuilder:printcolumn:name="Node",type="string",JSONPath=".status.nodeRef.name",description="Node associated with this static instance"
 //+kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".status.machineRef.name",description="Static machine associated with this static instance"
 
-// StaticInstance is the Schema for the staticinstances API
+// StaticInstance describes a machine for the Cluster API Provider Static.
 type StaticInstance struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -91,7 +99,7 @@ type StaticInstance struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:scope=Cluster
 
-// StaticInstanceList contains a list of StaticInstance
+// StaticInstanceList contains a list of StaticInstance.
 type StaticInstanceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -103,11 +111,11 @@ func init() {
 }
 
 // GetConditions gets the StaticInstance status conditions
-func (r *StaticInstance) GetConditions() clusterv1.Conditions {
+func (r *StaticInstance) GetConditions() []metav1.Condition {
 	return r.Status.Conditions
 }
 
 // SetConditions sets the StaticInstance status conditions
-func (r *StaticInstance) SetConditions(conditions clusterv1.Conditions) {
+func (r *StaticInstance) SetConditions(conditions []metav1.Condition) {
 	r.Status.Conditions = conditions
 }

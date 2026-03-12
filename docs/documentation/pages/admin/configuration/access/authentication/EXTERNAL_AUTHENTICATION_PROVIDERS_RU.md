@@ -237,6 +237,47 @@ spec:
         - grafana-access
 ```
 
+### Интеграция по SAML 2.0
+
+В примере представлены настройки провайдера для интеграции с SAML 2.0 Identity Provider (например, [AD FS](https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/ad-fs-overview), [Okta](https://help.okta.com/en-us/content/topics/apps/apps_app_integration_wizard_saml.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#_client-saml-configuration)).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: saml-provider
+spec:
+  type: SAML
+  displayName: Корпоративный SAML
+  saml:
+    ssoURL: https://saml-idp.example.com/saml/sso
+    rootCAData: |
+      -----BEGIN CERTIFICATE-----
+      MIIFaDC...
+      -----END CERTIFICATE-----
+    entityIssuer: https://dex.example.com/callback
+    ssoIssuer: https://saml-idp.example.com
+    usernameAttr: name
+    emailAttr: email
+    groupsAttr: groups
+    nameIDPolicyFormat: persistent
+```
+
+Для настройки SAML Identity Provider:
+
+1. Зарегистрируйте Dex как Service Provider (SP) в вашем IdP со следующими параметрами:
+   - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`;
+   - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`;
+   - **Формат NameID**: `persistent` или `emailAddress`.
+
+1. Настройте маппинг атрибутов в IdP для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
+
+1. Экспортируйте сертификат подписи IdP и укажите его в поле `rootCAData` ресурса [DexProvider](/modules/user-authn/cr.html#dexprovider).
+
+{% alert level="info" %}
+SAML не поддерживает refresh tokens нативно. Dex кеширует identity пользователя из первичного SAML assertion и возвращает её при последующих запросах refresh. Время жизни сессии контролируется настройками `expiry.refreshTokens` в конфигурации модуля [`user-authn`](/modules/user-authn/).
+{% endalert %}
+
 ### Интеграция по LDAP
 
 Для настройки аутентификации создайте в LDAP учетную запись с правами только на чтение (service account). Эта учетная запись будет использоваться для выполнения поисковых запросов в каталоге LDAP.

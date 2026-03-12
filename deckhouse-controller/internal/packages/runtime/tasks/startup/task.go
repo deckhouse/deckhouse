@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"sync"
 
-	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -30,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	taskhooksync "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/hooksync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -44,9 +44,10 @@ const (
 type packageI interface {
 	GetName() string
 	GetValuesChecksum() string
+	HooksInitialized() bool
 	// InitializeHooks creates hook controllers and binds them to events.
 	InitializeHooks()
-	GetHooksByBinding(binding shtypes.BindingType) []*addonhooks.ModuleHook
+	GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 	RunHookByName(ctx context.Context, hook string, bctx []bctx.BindingContext) error
 	// UnlockKubernetesMonitors allows events to flow after initial sync.
@@ -174,6 +175,10 @@ func (t *task) Execute(ctx context.Context) error {
 func (t *task) initializeHooks(ctx context.Context) (map[string][]hookcontroller.BindingExecutionInfo, error) {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "InitializeHooks")
 	defer span.End()
+
+	if t.pkg.HooksInitialized() {
+		return map[string][]hookcontroller.BindingExecutionInfo{}, nil
+	}
 
 	// Initialize hook controllers and bind them to Kubernetes events and schedules
 	t.logger.Debug("initialize package hooks")

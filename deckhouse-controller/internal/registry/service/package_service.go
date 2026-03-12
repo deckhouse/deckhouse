@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -181,7 +182,8 @@ func NewPackageService(client registry.Client, logger *log.Logger) *PackageServi
 	}
 }
 
-func (s *PackageService) ReleaseChannels() *PackageVersionService {
+// TODO: add methods for legacy behaviour
+func (s *PackageService) Versions() *PackageVersionService {
 	return s.packageVersion
 }
 
@@ -197,6 +199,79 @@ type PackageVersionService struct {
 func NewPackageVersionService(basicService *BasicService) *PackageVersionService {
 	return &PackageVersionService{
 		BasicService: basicService,
+	}
+}
+
+// PackageDefinition represents the minimal parsed content of package.yaml.
+// It's needed for fallback type detection if the package type label is not set in both version and release images for some reason.
+type PackageDefinition struct {
+	Type string `yaml:"type"`
+}
+
+// ReadPackageDefinition reads package.yaml from the version image and parses its type field.
+// It's needed if for some reason we haven't set the package type label in both version and release images.
+//
+// Returns nil if package.yaml is not found or the image does not exist.
+func (s *PackageVersionService) ReadPackageDefinition(ctx context.Context, tag string) (*PackageDefinition, error) {
+	img, err := s.GetImage(ctx, tag)
+	if err != nil {
+		if errors.Is(err, client.ErrImageNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get version image: %w", err)
+	}
+
+	rc := img.Extract()
+	defer rc.Close()
+
+	tr := tar.NewReader(rc)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("read version image tar: %w", err)
+		}
+		if hdr.Name == "package.yaml" || hdr.Name == "package.yml" {
+			var def PackageDefinition
+			if err := yaml.NewDecoder(tr).Decode(&def); err != nil {
+				s.logger.Warn("failed to parse package.yaml", slog.String("tag", tag), log.Err(err))
+				return &PackageDefinition{}, nil
+			}
+			return &def, nil
+		}
+	}
+}
+
+// HasModuleDefinition checks whether the version image contains a module.yaml (or module.yml) file.
+// This is used as a fallback to identify legacy modules when neither type labels nor package.yaml are present.
+//
+// Returns (false, nil) if the image does not exist.
+func (s *PackageVersionService) HasModuleDefinition(ctx context.Context, tag string) (bool, error) {
+	img, err := s.GetImage(ctx, tag)
+	if err != nil {
+		if errors.Is(err, client.ErrImageNotFound) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get version image: %w", err)
+	}
+
+	rc := img.Extract()
+	defer rc.Close()
+
+	tr := tar.NewReader(rc)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return false, nil
+		}
+		if err != nil {
+			return false, fmt.Errorf("read version image tar: %w", err)
+		}
+		if hdr.Name == "module.yaml" || hdr.Name == "module.yml" {
+			return true, nil
+		}
 	}
 }
 

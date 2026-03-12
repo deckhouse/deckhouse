@@ -1,4 +1,4 @@
-{{- $istioVersion := "1.25.2" }}
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-25" $ ) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11

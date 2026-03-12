@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
@@ -72,18 +73,18 @@ func TestProgressTracker(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, progressTracker.Progress("", "", opts))
-	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", opts))
-	require.NoError(t, progressTracker.Progress(phases.RegistryPackagesProxyPhase, "", opts))
-	require.NoError(t, progressTracker.Progress(phases.ExecuteBashibleBundlePhase, "", opts))
-	require.NoError(t, progressTracker.Progress("", phases.InstallDeckhouseSubPhaseConnect, opts))
-	require.NoError(t, progressTracker.Progress("", phases.InstallDeckhouseSubPhaseInstall, opts))
-	require.NoError(t, progressTracker.Progress("", phases.InstallDeckhouseSubPhaseWait, opts))
-	require.NoError(t, progressTracker.Progress(phases.InstallDeckhousePhase, "", opts))
-	require.NoError(t, progressTracker.Progress(phases.InstallAdditionalMastersAndStaticNodes, "", opts))
-	require.NoError(t, progressTracker.Progress(phases.CreateResourcesPhase, "", opts))
-	require.NoError(t, progressTracker.Progress(phases.ExecPostBootstrapPhase, "", opts))
-	require.NoError(t, progressTracker.Progress(phases.FinalizationPhase, "", opts))
+	require.NoError(t, progressTracker.Progress("", "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.RegistryPackagesProxyPhase, "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.ExecuteBashibleBundlePhase, "", "", opts))
+	require.NoError(t, progressTracker.Progress("", "", phases.InstallDeckhouseSubPhaseConnect, opts))
+	require.NoError(t, progressTracker.Progress("", "", phases.InstallDeckhouseSubPhaseInstall, opts))
+	require.NoError(t, progressTracker.Progress("", "", phases.InstallDeckhouseSubPhaseWait, opts))
+	require.NoError(t, progressTracker.Progress(phases.InstallDeckhousePhase, "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.InstallAdditionalMastersAndStaticNodes, "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.CreateResourcesPhase, "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.ExecPostBootstrapPhase, "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.FinalizationPhase, "", "", opts))
 
 	// do nothing because progress is already 1
 	require.NoError(t, progressTracker.Complete(phases.FinalizationPhase))
@@ -214,8 +215,8 @@ func TestProgressTracker_Complete(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, progressTracker.Progress("", "", opts))
-	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", opts))
+	require.NoError(t, progressTracker.Progress("", "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
 	require.NoError(t, progressTracker.Complete(phases.RegistryPackagesProxyPhase))
 
 	lastPhases := phases.BootstrapPhases()
@@ -269,7 +270,7 @@ func TestProgressTracker_Complete_ZeroProgress(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, progressTracker.Progress("", "", skipOpts))
+	require.NoError(t, progressTracker.Progress("", "", "", skipOpts))
 	require.NoError(t, progressTracker.Complete(""))
 
 	assert.EqualValues(t, 0, result[len(result)-1].Progress)
@@ -281,8 +282,8 @@ func TestProgressTracker_NilCallback(t *testing.T) {
 	bootstrapPhases := phases.BootstrapPhases()
 	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, nil)
 
-	require.NoError(t, progressTracker.Progress("", "", opts))
-	require.NoError(t, progressTracker.Progress(bootstrapPhases[len(bootstrapPhases)-1].Phase, "", opts))
+	require.NoError(t, progressTracker.Progress("", "", "", opts))
+	require.NoError(t, progressTracker.Progress(bootstrapPhases[len(bootstrapPhases)-1].Phase, "", "", opts))
 }
 
 func TestProgressTracker_Skip(t *testing.T) {
@@ -296,9 +297,9 @@ func TestProgressTracker_Skip(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, progressTracker.Progress("", "", opts))
-	require.NoError(t, progressTracker.Progress(phases.AllNodesPhase, "", skipOpts))
-	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", opts))
+	require.NoError(t, progressTracker.Progress("", "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.AllNodesPhase, "", "", skipOpts))
+	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
 
 	expected := []phases.Progress{
 		{
@@ -353,8 +354,8 @@ func TestProgressTracker_WriteProgress(t *testing.T) {
 		phases.WriteProgress(progressFilePath),
 	)
 
-	require.NoError(t, progressTracker.Progress("", "", opts))
-	require.NoError(t, progressTracker.Progress(bootstrapPhases[len(bootstrapPhases)-1].Phase, "", opts))
+	require.NoError(t, progressTracker.Progress("", "", "", opts))
+	require.NoError(t, progressTracker.Progress(bootstrapPhases[len(bootstrapPhases)-1].Phase, "", "", opts))
 
 	result := readJSONLinesFromFile(t, progressFilePath)
 	expected := []phases.Progress{
@@ -379,6 +380,64 @@ func TestProgressTracker_WriteProgress(t *testing.T) {
 	if !cmp.Equal(expected, result, cmpOpts) {
 		t.Errorf("Diff: %v", cmp.Diff(expected, result, cmpOpts))
 	}
+}
+
+func TestProgressTracker_Progress_ExcludesPhase(t *testing.T) {
+	t.Parallel()
+
+	var result []phases.Progress
+	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, func(progress phases.Progress) error {
+		result = append(result, progress)
+		return nil
+	})
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static"})
+
+	require.NoError(t, progressTracker.Progress("", "", "", opts))
+	require.Len(t, result, 1)
+
+	phaseNames := make([]string, 0, len(result[0].Phases))
+	for _, p := range result[0].Phases {
+		phaseNames = append(phaseNames, string(p.Phase))
+	}
+
+	assert.NotContains(t, phaseNames, string(phases.BaseInfraPhase),
+		"BaseInfraPhase must not appear in progress for Bootstrap Static",
+	)
+	assert.Equal(t, string(phases.RegistryPackagesProxyPhase), string(result[0].CurrentPhase),
+		"first phase for Bootstrap Static should be RegistryPackagesProxy",
+	)
+}
+
+func TestProgressTracker_Progress_CurrentPhase(t *testing.T) {
+	t.Parallel()
+
+	var result []phases.Progress
+	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, func(progress phases.Progress) error {
+		result = append(result, progress)
+		return nil
+	})
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static"})
+
+	require.NoError(t, progressTracker.Progress(phases.InstallDeckhousePhase, phases.CreateResourcesPhase, "", opts))
+	require.Len(t, result, 1)
+
+	p := result[0]
+	assert.Equal(t, string(phases.InstallDeckhousePhase), string(p.CompletedPhase))
+	assert.Equal(t, string(phases.CreateResourcesPhase), string(p.CurrentPhase))
+	assert.Equal(t, string(phases.ExecPostBootstrapPhase), string(p.NextPhase))
+
+	// InstallAdditionalMastersAndStaticNodes must be marked as skipped
+	var installAdditionalPhase *phases.PhaseWithSubPhases
+	for i := range p.Phases {
+		if p.Phases[i].Phase == phases.InstallAdditionalMastersAndStaticNodes {
+			installAdditionalPhase = &p.Phases[i]
+			break
+		}
+	}
+
+	require.NotNil(t, installAdditionalPhase)
+	assert.NotNil(t, installAdditionalPhase.Action)
+	assert.Equal(t, phases.ProgressActionSkip, *installAdditionalPhase.Action)
 }
 
 func readJSONLinesFromFile(t *testing.T, filename string) []phases.Progress {
@@ -407,6 +466,8 @@ func readJSONLinesFromFile(t *testing.T, filename string) []phases.Progress {
 }
 
 var cmpOpts = cmp.Options{
+	cmpopts.IgnoreFields(phases.PhaseWithSubPhases{}, "includeIf"),
+
 	cmp.Comparer(func(x, y *phases.ProgressAction) bool {
 		if x == nil && (y != nil && *y == "") {
 			return true

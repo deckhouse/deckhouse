@@ -526,10 +526,12 @@ To configure access, follow these steps:
      --memory 2 \
      --cores 2 \
      --core-fraction 100 \
-     --ssh-key ~/.ssh/id_rsa.pub \
+     --ssh-key ~/.ssh/<SSH_PUBLIC_KEY_FILE> \
      --zone ru-central1-a \
      --public-address 178.154.226.159
    ```
+
+   > Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
    Ensure the IP address specified in `--public-address` is accessible from your network and is correct.
 
@@ -537,7 +539,7 @@ To configure access, follow these steps:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
-     --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
+     --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
 
    Where:

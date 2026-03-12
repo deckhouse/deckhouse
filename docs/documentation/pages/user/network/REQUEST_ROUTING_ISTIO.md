@@ -10,7 +10,7 @@ The main resource for managing routing is [VirtualService](#virtualservice-resou
 
 ## VirtualService resource
 
-For more details on VirtualService, refer to the [Istio documentation](https://istio.io/v1.19/docs/reference/config/networking/virtual-service/).
+For more details on VirtualService, refer to the [Istio documentation](https://istio.io/v1.21/docs/reference/config/networking/virtual-service/).
 
 Using VirtualService is optional. Standard Services will continue to work if their functionality is sufficient. With this resource, you can configure request routing:
 

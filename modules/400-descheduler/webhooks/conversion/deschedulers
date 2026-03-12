@@ -41,6 +41,7 @@ function __on_conversion::alpha1_to_alpha2() {
        del(.spec.deschedulerPolicy.strategies.removeFailedPods) |
        del(.spec.deschedulerPolicy.strategies.removePodsHavingTooManyRestarts) |
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeTaints) |
+       if .spec.deschedulerPolicy.strategies.removePodsViolatingTopologySpreadConstraint.enabled then .spec.strategies.removePodsViolatingTopologySpreadConstraint.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingTopologySpreadConstraint.enabled | .spec.strategies.removePodsViolatingTopologySpreadConstraint.constraints = ["DoNotSchedule"] end |
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingTopologySpreadConstraint) |
        if .spec.deschedulerPolicy.strategies.removeDuplicates.enabled then .spec.strategies.removeDuplicates.enabled = .spec.deschedulerPolicy.strategies.removeDuplicates.enabled end |
        if .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled then .spec.strategies.removePodsViolatingNodeAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled | .spec.strategies.removePodsViolatingNodeAffinity.nodeAffinityType = ["requiredDuringSchedulingIgnoredDuringExecution"] end |
@@ -81,6 +82,7 @@ function __on_conversion::alpha2_to_alpha1() {
        if .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled then .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled = .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled end |
        if .spec.strategies.highNodeUtilization.enabled then .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled = .spec.strategies.highNodeUtilization.enabled end |
        if .spec.strategies.lowNodeUtilization.enabled then .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled = .spec.strategies.lowNodeUtilization.enabled end |
+       if .spec.strategies.removePodsViolatingTopologySpreadConstraint.enabled then .spec.deschedulerPolicy.strategies.removePodsViolatingTopologySpreadConstraint.enabled = .spec.strategies.removePodsViolatingTopologySpreadConstraint.enabled end |
        del(.spec.strategies)
      else . end
   )')

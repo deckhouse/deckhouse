@@ -1,5 +1,5 @@
 ---
-{{- $istioVersion := "1.25.2" }}
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-25" $ ) }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.25.2 -> v1x25x2 */}}
 {{- $istioProxyCacheRev := "v1.25.2-abc32af61f354196bc8d1a011faf8dacc4dc12d7-v1" }}
 {{- $istioProxyDepsRev := "v1.25.2-abc32af61f354196bc8d1a011faf8dacc4dc12d7-v1" }}

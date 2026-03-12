@@ -1018,17 +1018,17 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        The module update policy for {{ $labels.module_release }} is missing.
+        The module update policy for {{ $labels.moduleRelease }} is missing.
 
         To resolve this issue, remove the label from the module release using the following command:
 
         ```bash
-        d8 k label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-
+        d8 k label mr {{ $labels.moduleRelease }} modules.deckhouse.io/update-policy-
         ```
 
         A new suitable policy will be detected automatically.
       summary: |
-        Module update policy not found for {{ $labels.module_release }}.
+        Module update policy not found for {{ $labels.moduleRelease }}.
       severity: "5"
       markupFormat: markdown
     - name: D8DeckhouseModuleValidationError
@@ -2194,13 +2194,13 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind on major version releases.
+        Module `{{ $labels.module }}` is running {{ $labels.majorReleaseDepth }} major versions behind on major version releases.
         Major version updates may contain breaking changes and require immediate attention and careful planning.
 
         To check the module releases status, run the following command:
 
         ```bash
-        d8 k get mr -l module={{ $labels.moduleName }}
+        d8 k get mr -l module={{ $labels.module }}
         ```{{ if ne $labels.majorReleaseName "nil" }}{{ if ne $labels.fromToName "nil" }}
 
         This major release has from-to version constraints that must be met before applying the update.
@@ -2218,7 +2218,7 @@ alerts:
         d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```{{ end }}
       summary: |
-        Module {{ $labels.moduleName }} is running {{ $labels.majorReleaseDepth }} major versions behind.
+        Module {{ $labels.module }} is running {{ $labels.majorReleaseDepth }} major versions behind.
       severity: "9"
       markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
@@ -3783,7 +3783,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.module_name }}` specified in DeckhouseRelease was moved to external source and not found in any available ModuleSource registry. DeckhouseRelease will be lock until found module in any available ModuleSource.
+        Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to external source and not found in any available ModuleSource registry. DeckhouseRelease will be lock until found module in any available ModuleSource.
 
         This may indicate:
         - The module source registry is not properly configured.
@@ -3809,7 +3809,7 @@ alerts:
         d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
-        Migrated module {{ $labels.module_name }} not found in registry.
+        Migrated module {{ $labels.module }} not found in registry.
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseModuleUpdatingFailedBrokenSequence
@@ -3820,7 +3820,7 @@ alerts:
       description: |
         The '{{ $labels.module }}' Module update has failed.
 
-        Current version: {{ $labels.actual_version }}.
+        Current version: {{ $labels.actualVersion }}.
         Desired version: {{ $labels.version }}.
 
         Attempt to download interim releases failed.
@@ -3828,7 +3828,7 @@ alerts:
         Possible reasons:
          - The necessary versions of the Module image is not available in the registry.
 
-        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' Module image between {{ $labels.actualVersion }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
       summary: |
         Module update has failed. Updating sequence is broken.
       severity: "4"
@@ -3857,12 +3857,12 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        The Deckhouse module `{{ $labels.module_name }}` is using `emptyDir` as its storage.
+        The Deckhouse module `{{ $labels.module }}` is using `emptyDir` as its storage.
 
         If the associated Pod is removed from the node for any reason, the data in the `emptyDir` is deleted permanently.
         Consider using persistent storage if data durability is critical for the module.
       summary: |
-        Deckhouse module {{ $labels.module_name }} is using emptyDir for storage.
+        Deckhouse module {{ $labels.module }} is using emptyDir for storage.
       severity: "9"
       markupFormat: markdown
     - name: DeckhouseReleaseDisruptionApprovalRequired
@@ -5151,11 +5151,11 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse has detected conflicting sources for the {{ $labels.moduleName }} module.
+        Deckhouse has detected conflicting sources for the {{ $labels.module }} module.
 
         To resolve this issue, specify the correct source in the module configuration.
       summary: |
-        Conflict detected for module {{ $labels.moduleName }}.
+        Conflict detected for module {{ $labels.module }}.
       severity: "4"
       markupFormat: markdown
     - name: ModuleConfigDeprecated
@@ -5197,12 +5197,12 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |-
-        Deckhouse has detected that the module `{{ $labels.moduleName }}` is using the deprecated update policy `{{ $labels.updatePolicy }}`. The `v1alpha1` policy has a selector that no longer functions.
+        Deckhouse has detected that the module `{{ $labels.module }}` is using the deprecated update policy `{{ $labels.updatePolicy }}`. The `v1alpha1` policy has a selector that no longer functions.
 
         To specify the update policy in the module configuration, run the following command:
 
         ```bash
-        d8 k patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
+        d8 k patch moduleconfig {{ $labels.module }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
         ```
 
         After resolving all alerts related to the update policy `{{ $labels.updatePolicy }}`, clear the selector by running the following command:
@@ -5211,7 +5211,7 @@ alerts:
         d8 k patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
         ```
       summary: |
-        Module {{ $labels.moduleName }} is matched by the deprecated update policy {{ $labels.updatePolicy }}.
+        Module {{ $labels.module }} is matched by the deprecated update policy {{ $labels.updatePolicy }}.
       severity: "4"
       markupFormat: markdown
     - name: ModuleIsDeprecated
@@ -5231,15 +5231,15 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.moduleName }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+        Module `{{ $labels.module }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
 
         To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
 
         ```bash
-        d8 k patch moduleconfig {{ $labels.moduleName }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
+        d8 k patch moduleconfig {{ $labels.module }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
         ```
       summary: |
-        Module {{ $labels.moduleName }} is running in maintenance mode.
+        Module {{ $labels.module }} is running in maintenance mode.
       severity: "6"
       markupFormat: markdown
     - name: ModuleReleaseIsBlockedByRequirements
@@ -5248,7 +5248,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        A new release for module `{{ $labels.moduleName }}` has been blocked because it doesn't meet the required conditions.
+        A new release for module `{{ $labels.module }}` has been blocked because it doesn't meet the required conditions.
 
         To check the requirements, run the following command:
 
@@ -5256,7 +5256,7 @@ alerts:
         d8 k  get mr {{ $labels.name }} -o json | jq .spec.requirements
         ```
       summary: |
-        A new release for module {{ $labels.moduleName }} has been blocked due to unmet requirements.
+        A new release for module {{ $labels.module }} has been blocked due to unmet requirements.
       severity: "6"
       markupFormat: markdown
     - name: ModuleReleaseIsOutdated
@@ -5265,7 +5265,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.moduleName }}` is running {{ $labels.versionLag }} or more minor versions behind the latest available release.
+        Module `{{ $labels.module }}` is running {{ $labels.versionLag }} or more minor versions behind the latest available release.
         This module is significantly outdated and may have compatibility issues.
 
         To approve the module release update, run the following command:
@@ -5274,7 +5274,7 @@ alerts:
         d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
       summary: |
-        Module {{ $labels.moduleName }} is {{ $labels.versionLag }} or more minor versions behind the latest available release.
+        Module {{ $labels.module }} is {{ $labels.versionLag }} or more minor versions behind the latest available release.
       severity: "5"
       markupFormat: markdown
     - name: ModuleReleaseIsOutdated
@@ -5283,7 +5283,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.moduleName }}` is running 2 minor versions behind the latest available release.
+        Module `{{ $labels.module }}` is running 2 minor versions behind the latest available release.
         Updating is recommended to maintain compatibility and access to latest features.
 
         To approve the module release update, run the following command:
@@ -5292,7 +5292,7 @@ alerts:
         d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
       summary: |
-        Module {{ $labels.moduleName }} is 2 minor versions behind the latest available release.
+        Module {{ $labels.module }} is 2 minor versions behind the latest available release.
       severity: "7"
       markupFormat: markdown
     - name: ModuleReleaseIsOutdated
@@ -5301,7 +5301,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.moduleName }}` is running 1 minor version behind the latest available release.
+        Module `{{ $labels.module }}` is running 1 minor version behind the latest available release.
         Consider updating to maintain compatibility and security.
 
         To approve the module release update, run the following command:
@@ -5310,7 +5310,7 @@ alerts:
         d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
       summary: |
-        Module {{ $labels.moduleName }} is 1 minor version behind the latest available release.
+        Module {{ $labels.module }} is 1 minor version behind the latest available release.
       severity: "9"
       markupFormat: markdown
     - name: ModuleReleaseIsWaitingManualApproval
@@ -5319,7 +5319,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        A new release for module `{{ $labels.moduleName }}` is available but requires manual approval before it can be applied.
+        A new release for module `{{ $labels.module }}` is available but requires manual approval before it can be applied.
 
         To approve the module release, run the following command:
 
@@ -5327,7 +5327,7 @@ alerts:
         d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
       summary: |
-        A new release for module {{ $labels.moduleName }} is awaiting manual approval.
+        A new release for module {{ $labels.module }} is awaiting manual approval.
       severity: "6"
       markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone

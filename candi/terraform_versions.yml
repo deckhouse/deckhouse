@@ -54,7 +54,7 @@ gcp:
   namespace: hashicorp
   cloudName: GCP
   type: google
-  version: 3.48.0
+  version: 4.85.0
   artifact: terraform-provider-gcp
   artifactBinary: terraform-provider-gcp
   destinationBinary: terraform-provider-google
@@ -96,7 +96,7 @@ ovirt:
   namespace: terraform-provider-ovirt
   cloudName: Zvirt
   type: ovirt
-  version: 2.1.5
+  version: 2.2.0
   artifact: terraform-provider-ovirt
   artifactBinary: terraform-provider-ovirt
   destinationBinary: terraform-provider-ovirt
@@ -191,7 +191,7 @@ kubernetes:
   namespace: hashicorp
   cloudName: DVP
   type: kubernetes
-  version: 2.35.1
+  version: 2.38.0
   artifact: terraform-provider-kubernetes
   artifactBinary: terraform-provider-kubernetes
   destinationBinary: terraform-provider-kubernetes

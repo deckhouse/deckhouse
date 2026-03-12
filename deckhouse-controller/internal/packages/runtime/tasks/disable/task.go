@@ -20,7 +20,6 @@ import (
 	"log/slog"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
-	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -37,11 +36,10 @@ const (
 // packageI abstracts package operations needed for disabling.
 type packageI interface {
 	GetName() string
-	GetQueues() []string
+	GetHooksQueues() []string
 	// RunHooksByBinding executes hooks matching the given binding type (e.g., AfterDeleteHelm).
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
-	// GetHooksByBinding returns hooks for a binding type to disable their controllers.
-	GetHooksByBinding(binding shtypes.BindingType) []*addonhooks.ModuleHook
+	DisableHooks()
 }
 
 // nelmI abstracts Helm release management operations.
@@ -103,7 +101,7 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("disable package '%s': %w", t.pkg.GetName(), err)
 	}
 
-	for _, q := range t.pkg.GetQueues() {
+	for _, q := range t.pkg.GetHooksQueues() {
 		t.logger.Debug("remove package queue", slog.String("queue", q))
 		t.queueService.Remove(fmt.Sprintf("%s/%s", t.pkg.GetName(), q))
 		t.queueService.Remove(fmt.Sprintf("%s/%s/sync", t.pkg.GetName(), q))
@@ -151,23 +149,7 @@ func (t *task) disablePackage(ctx context.Context) error {
 		}
 	}
 
-	// Disable all schedule-based hooks
-	schHooks := t.pkg.GetHooksByBinding(shtypes.Schedule)
-	for _, hook := range schHooks {
-		t.logger.Debug("disable schedule hook", slog.String("hook", hook.GetName()))
-		if hook.GetHookController() != nil {
-			hook.GetHookController().DisableScheduleBindings()
-		}
-	}
-
-	// Stop all Kubernetes event monitors
-	kubeHooks := t.pkg.GetHooksByBinding(shtypes.OnKubernetesEvent)
-	for _, hook := range kubeHooks {
-		t.logger.Debug("disable kube hook", slog.String("hook", hook.GetName()))
-		if hook.GetHookController() != nil {
-			hook.GetHookController().StopMonitors()
-		}
-	}
+	t.pkg.DisableHooks()
 
 	return nil
 }

@@ -195,7 +195,6 @@ func NewDeckhouseController(
 				&v1alpha1.ModuleRelease{}:       {},
 				&v1alpha1.ModuleSource{}:        {},
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
-				&v1alpha1.ModulePullOverride{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},
 				&v1alpha1.DeckhouseRelease{}:    {},
 			},
@@ -209,6 +208,8 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 	}
 
 	// Module package controllers (feature flag)
@@ -363,6 +364,8 @@ func NewDeckhouseController(
 	// Package system controllers (feature flag)
 	if os.Getenv(envEnablePackageSystem) == "true" {
 		logger.Info("Package system controllers are enabled")
+
+		packageOperator.Run()
 
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {

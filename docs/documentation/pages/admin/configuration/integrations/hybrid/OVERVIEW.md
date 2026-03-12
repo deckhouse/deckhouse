@@ -116,7 +116,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
      cloudID: CLOUD_ID
      folderID: FOLDER_ID
      serviceAccountJSON: '{"id":"ajevk1dp8f9...--END PRIVATE KEY-----\n"}'
-   sshPublicKey: <ssh-rsa SSHKEY>
+   sshPublicKey: <SSH_PUBLIC_KEY>
    ```
 
    Parameter descriptions:

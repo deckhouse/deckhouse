@@ -26,15 +26,15 @@ import (
 var conversionlog = logf.Log.WithName("nodegroup-conversion-v1alpha2")
 
 // ConvertTo converts this NodeGroup (v1alpha2) to the Hub version (v1).
-func (src *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
+func (ng *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1.NodeGroup)
-	conversionlog.V(1).Info("converting NodeGroup from v1alpha2 to v1", "name", src.Name)
+	conversionlog.V(1).Info("converting NodeGroup from v1alpha2 to v1", "name", ng.Name)
 
 	// Convert ObjectMeta
-	dst.ObjectMeta = src.ObjectMeta
+	dst.ObjectMeta = ng.ObjectMeta
 
 	// Map nodeType
-	switch src.Spec.NodeType {
+	switch ng.Spec.NodeType {
 	case NodeTypeCloud:
 		dst.Spec.NodeType = v1.NodeTypeCloudEphemeral
 	case NodeTypeStatic:
@@ -42,98 +42,98 @@ func (src *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 	case NodeTypeHybrid:
 		dst.Spec.NodeType = v1.NodeTypeCloudStatic
 	default:
-		dst.Spec.NodeType = v1.NodeType(src.Spec.NodeType)
+		dst.Spec.NodeType = v1.NodeType(ng.Spec.NodeType)
 	}
 
 	// Convert CRI
-	if src.Spec.CRI != nil {
+	if ng.Spec.CRI != nil {
 		dst.Spec.CRI = &v1.CRISpec{
-			Type: v1.CRIType(src.Spec.CRI.Type),
+			Type: v1.CRIType(ng.Spec.CRI.Type),
 		}
-		if src.Spec.CRI.Containerd != nil {
+		if ng.Spec.CRI.Containerd != nil {
 			dst.Spec.CRI.Containerd = &v1.ContainerdSpec{
-				MaxConcurrentDownloads: src.Spec.CRI.Containerd.MaxConcurrentDownloads,
+				MaxConcurrentDownloads: ng.Spec.CRI.Containerd.MaxConcurrentDownloads,
 			}
 		}
-		if src.Spec.CRI.Docker != nil {
+		if ng.Spec.CRI.Docker != nil {
 			dst.Spec.CRI.Docker = &v1.DockerSpec{
-				MaxConcurrentDownloads: src.Spec.CRI.Docker.MaxConcurrentDownloads,
-				Manage:                 src.Spec.CRI.Docker.Manage,
+				MaxConcurrentDownloads: ng.Spec.CRI.Docker.MaxConcurrentDownloads,
+				Manage:                 ng.Spec.CRI.Docker.Manage,
 			}
 		}
-		if src.Spec.CRI.NotManaged != nil {
+		if ng.Spec.CRI.NotManaged != nil {
 			dst.Spec.CRI.NotManaged = &v1.NotManagedCRISpec{
-				CRISocketPath: src.Spec.CRI.NotManaged.CRISocketPath,
+				CRISocketPath: ng.Spec.CRI.NotManaged.CRISocketPath,
 			}
 		}
 	}
 
 	// Convert CloudInstances
-	if src.Spec.CloudInstances != nil {
+	if ng.Spec.CloudInstances != nil {
 		dst.Spec.CloudInstances = &v1.CloudInstancesSpec{
-			Zones:                 src.Spec.CloudInstances.Zones,
-			MinPerZone:            src.Spec.CloudInstances.MinPerZone,
-			MaxPerZone:            src.Spec.CloudInstances.MaxPerZone,
-			MaxUnavailablePerZone: src.Spec.CloudInstances.MaxUnavailablePerZone,
-			MaxSurgePerZone:       src.Spec.CloudInstances.MaxSurgePerZone,
-			Standby:               src.Spec.CloudInstances.Standby,
+			Zones:                 ng.Spec.CloudInstances.Zones,
+			MinPerZone:            ng.Spec.CloudInstances.MinPerZone,
+			MaxPerZone:            ng.Spec.CloudInstances.MaxPerZone,
+			MaxUnavailablePerZone: ng.Spec.CloudInstances.MaxUnavailablePerZone,
+			MaxSurgePerZone:       ng.Spec.CloudInstances.MaxSurgePerZone,
+			Standby:               ng.Spec.CloudInstances.Standby,
 			ClassReference: v1.ClassReference{
-				Kind: src.Spec.CloudInstances.ClassReference.Kind,
-				Name: src.Spec.CloudInstances.ClassReference.Name,
+				Kind: ng.Spec.CloudInstances.ClassReference.Kind,
+				Name: ng.Spec.CloudInstances.ClassReference.Name,
 			},
 		}
-		if src.Spec.CloudInstances.StandbyHolder != nil {
+		if ng.Spec.CloudInstances.StandbyHolder != nil {
 			dst.Spec.CloudInstances.StandbyHolder = &v1.StandbyHolderSpec{}
-			if src.Spec.CloudInstances.StandbyHolder.NotHeldResources != nil {
+			if ng.Spec.CloudInstances.StandbyHolder.NotHeldResources != nil {
 				dst.Spec.CloudInstances.StandbyHolder.NotHeldResources = &v1.NotHeldResourcesSpec{
-					CPU:    src.Spec.CloudInstances.StandbyHolder.NotHeldResources.CPU,
-					Memory: src.Spec.CloudInstances.StandbyHolder.NotHeldResources.Memory,
+					CPU:    ng.Spec.CloudInstances.StandbyHolder.NotHeldResources.CPU,
+					Memory: ng.Spec.CloudInstances.StandbyHolder.NotHeldResources.Memory,
 				}
 			}
 		}
 	}
 
 	// Convert NodeTemplate
-	if src.Spec.NodeTemplate != nil {
+	if ng.Spec.NodeTemplate != nil {
 		dst.Spec.NodeTemplate = &v1.NodeTemplate{
-			Labels:      src.Spec.NodeTemplate.Labels,
-			Annotations: src.Spec.NodeTemplate.Annotations,
-			Taints:      src.Spec.NodeTemplate.Taints,
+			Labels:      ng.Spec.NodeTemplate.Labels,
+			Annotations: ng.Spec.NodeTemplate.Annotations,
+			Taints:      ng.Spec.NodeTemplate.Taints,
 		}
 	}
 
 	// Convert Chaos
-	if src.Spec.Chaos != nil {
+	if ng.Spec.Chaos != nil {
 		dst.Spec.Chaos = &v1.ChaosSpec{
-			Mode:   v1.ChaosMode(src.Spec.Chaos.Mode),
-			Period: src.Spec.Chaos.Period,
+			Mode:   v1.ChaosMode(ng.Spec.Chaos.Mode),
+			Period: ng.Spec.Chaos.Period,
 		}
 	}
 
 	// Convert OperatingSystem
-	if src.Spec.OperatingSystem != nil {
+	if ng.Spec.OperatingSystem != nil {
 		dst.Spec.OperatingSystem = &v1.OperatingSystemSpec{
-			ManageKernel: src.Spec.OperatingSystem.ManageKernel,
+			ManageKernel: ng.Spec.OperatingSystem.ManageKernel,
 		}
 	}
 
 	// Convert Disruptions
-	if src.Spec.Disruptions != nil {
+	if ng.Spec.Disruptions != nil {
 		dst.Spec.Disruptions = &v1.DisruptionsSpec{
-			ApprovalMode: v1.DisruptionApprovalMode(src.Spec.Disruptions.ApprovalMode),
+			ApprovalMode: v1.DisruptionApprovalMode(ng.Spec.Disruptions.ApprovalMode),
 		}
-		if src.Spec.Disruptions.Automatic != nil {
+		if ng.Spec.Disruptions.Automatic != nil {
 			dst.Spec.Disruptions.Automatic = &v1.AutomaticDisruptionSpec{
-				DrainBeforeApproval: src.Spec.Disruptions.Automatic.DrainBeforeApproval,
+				DrainBeforeApproval: ng.Spec.Disruptions.Automatic.DrainBeforeApproval,
 			}
-			for _, w := range src.Spec.Disruptions.Automatic.Windows {
+			for _, w := range ng.Spec.Disruptions.Automatic.Windows {
 				dst.Spec.Disruptions.Automatic.Windows = append(dst.Spec.Disruptions.Automatic.Windows,
 					v1.DisruptionWindow{From: w.From, To: w.To, Days: w.Days})
 			}
 		}
-		if src.Spec.Disruptions.RollingUpdate != nil {
+		if ng.Spec.Disruptions.RollingUpdate != nil {
 			dst.Spec.Disruptions.RollingUpdate = &v1.RollingUpdateDisruptionSpec{}
-			for _, w := range src.Spec.Disruptions.RollingUpdate.Windows {
+			for _, w := range ng.Spec.Disruptions.RollingUpdate.Windows {
 				dst.Spec.Disruptions.RollingUpdate.Windows = append(dst.Spec.Disruptions.RollingUpdate.Windows,
 					v1.DisruptionWindow{From: w.From, To: w.To, Days: w.Days})
 			}
@@ -141,17 +141,17 @@ func (src *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	// Convert Kubelet
-	if src.Spec.Kubelet != nil {
+	if ng.Spec.Kubelet != nil {
 		dst.Spec.Kubelet = &v1.KubeletSpec{
-			MaxPods:              src.Spec.Kubelet.MaxPods,
-			RootDir:              src.Spec.Kubelet.RootDir,
-			ContainerLogMaxSize:  src.Spec.Kubelet.ContainerLogMaxSize,
-			ContainerLogMaxFiles: src.Spec.Kubelet.ContainerLogMaxFiles,
+			MaxPods:              ng.Spec.Kubelet.MaxPods,
+			RootDir:              ng.Spec.Kubelet.RootDir,
+			ContainerLogMaxSize:  ng.Spec.Kubelet.ContainerLogMaxSize,
+			ContainerLogMaxFiles: ng.Spec.Kubelet.ContainerLogMaxFiles,
 		}
 	}
 
 	// Convert Status
-	if err := convertStatusTo(&src.Status, &dst.Status); err != nil {
+	if err := convertStatusTo(&ng.Status, &dst.Status); err != nil {
 		return err
 	}
 
@@ -159,23 +159,23 @@ func (src *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 // ConvertFrom converts the Hub version (v1) to this NodeGroup (v1alpha2).
-func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
+func (ng *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*v1.NodeGroup)
 	conversionlog.V(1).Info("converting NodeGroup from v1 to v1alpha2", "name", src.Name)
 
 	// Convert ObjectMeta
-	dst.ObjectMeta = src.ObjectMeta
+	ng.ObjectMeta = src.ObjectMeta
 
 	// Map nodeType (reverse)
 	switch src.Spec.NodeType {
 	case v1.NodeTypeCloudEphemeral:
-		dst.Spec.NodeType = NodeTypeCloud
+		ng.Spec.NodeType = NodeTypeCloud
 	case v1.NodeTypeStatic:
-		dst.Spec.NodeType = NodeTypeStatic
+		ng.Spec.NodeType = NodeTypeStatic
 	case v1.NodeTypeCloudStatic, v1.NodeTypeCloudPermanent:
-		dst.Spec.NodeType = NodeTypeHybrid
+		ng.Spec.NodeType = NodeTypeHybrid
 	default:
-		dst.Spec.NodeType = NodeType(src.Spec.NodeType)
+		ng.Spec.NodeType = NodeType(src.Spec.NodeType)
 	}
 
 	// Convert CRI
@@ -186,28 +186,28 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 			criType = v1.CRITypeContainerd
 		}
 
-		dst.Spec.CRI = &CRISpec{
+		ng.Spec.CRI = &CRISpec{
 			Type: CRIType(criType),
 		}
 		if src.Spec.CRI.Containerd != nil {
-			dst.Spec.CRI.Containerd = &ContainerdSpec{
+			ng.Spec.CRI.Containerd = &ContainerdSpec{
 				MaxConcurrentDownloads: src.Spec.CRI.Containerd.MaxConcurrentDownloads,
 			}
 		}
 		// ContainerdV2 settings go to Containerd
-		if src.Spec.CRI.ContainerdV2 != nil && dst.Spec.CRI.Containerd == nil {
-			dst.Spec.CRI.Containerd = &ContainerdSpec{
+		if src.Spec.CRI.ContainerdV2 != nil && ng.Spec.CRI.Containerd == nil {
+			ng.Spec.CRI.Containerd = &ContainerdSpec{
 				MaxConcurrentDownloads: src.Spec.CRI.ContainerdV2.MaxConcurrentDownloads,
 			}
 		}
 		if src.Spec.CRI.Docker != nil {
-			dst.Spec.CRI.Docker = &DockerSpec{
+			ng.Spec.CRI.Docker = &DockerSpec{
 				MaxConcurrentDownloads: src.Spec.CRI.Docker.MaxConcurrentDownloads,
 				Manage:                 src.Spec.CRI.Docker.Manage,
 			}
 		}
 		if src.Spec.CRI.NotManaged != nil {
-			dst.Spec.CRI.NotManaged = &NotManagedCRISpec{
+			ng.Spec.CRI.NotManaged = &NotManagedCRISpec{
 				CRISocketPath: src.Spec.CRI.NotManaged.CRISocketPath,
 			}
 		}
@@ -215,7 +215,7 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 
 	// Convert CloudInstances
 	if src.Spec.CloudInstances != nil {
-		dst.Spec.CloudInstances = &CloudInstancesSpec{
+		ng.Spec.CloudInstances = &CloudInstancesSpec{
 			Zones:                 src.Spec.CloudInstances.Zones,
 			MinPerZone:            src.Spec.CloudInstances.MinPerZone,
 			MaxPerZone:            src.Spec.CloudInstances.MaxPerZone,
@@ -228,9 +228,9 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 			},
 		}
 		if src.Spec.CloudInstances.StandbyHolder != nil {
-			dst.Spec.CloudInstances.StandbyHolder = &StandbyHolderSpec{}
+			ng.Spec.CloudInstances.StandbyHolder = &StandbyHolderSpec{}
 			if src.Spec.CloudInstances.StandbyHolder.NotHeldResources != nil {
-				dst.Spec.CloudInstances.StandbyHolder.NotHeldResources = &NotHeldResourcesSpec{
+				ng.Spec.CloudInstances.StandbyHolder.NotHeldResources = &NotHeldResourcesSpec{
 					CPU:    src.Spec.CloudInstances.StandbyHolder.NotHeldResources.CPU,
 					Memory: src.Spec.CloudInstances.StandbyHolder.NotHeldResources.Memory,
 				}
@@ -240,7 +240,7 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 
 	// Convert NodeTemplate
 	if src.Spec.NodeTemplate != nil {
-		dst.Spec.NodeTemplate = &NodeTemplate{
+		ng.Spec.NodeTemplate = &NodeTemplate{
 			Labels:      src.Spec.NodeTemplate.Labels,
 			Annotations: src.Spec.NodeTemplate.Annotations,
 			Taints:      src.Spec.NodeTemplate.Taints,
@@ -249,7 +249,7 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 
 	// Convert Chaos
 	if src.Spec.Chaos != nil {
-		dst.Spec.Chaos = &ChaosSpec{
+		ng.Spec.Chaos = &ChaosSpec{
 			Mode:   ChaosMode(src.Spec.Chaos.Mode),
 			Period: src.Spec.Chaos.Period,
 		}
@@ -257,29 +257,29 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 
 	// Convert OperatingSystem
 	if src.Spec.OperatingSystem != nil {
-		dst.Spec.OperatingSystem = &OperatingSystemSpec{
+		ng.Spec.OperatingSystem = &OperatingSystemSpec{
 			ManageKernel: src.Spec.OperatingSystem.ManageKernel,
 		}
 	}
 
 	// Convert Disruptions
 	if src.Spec.Disruptions != nil {
-		dst.Spec.Disruptions = &DisruptionsSpec{
+		ng.Spec.Disruptions = &DisruptionsSpec{
 			ApprovalMode: DisruptionApprovalMode(src.Spec.Disruptions.ApprovalMode),
 		}
 		if src.Spec.Disruptions.Automatic != nil {
-			dst.Spec.Disruptions.Automatic = &AutomaticDisruptionSpec{
+			ng.Spec.Disruptions.Automatic = &AutomaticDisruptionSpec{
 				DrainBeforeApproval: src.Spec.Disruptions.Automatic.DrainBeforeApproval,
 			}
 			for _, w := range src.Spec.Disruptions.Automatic.Windows {
-				dst.Spec.Disruptions.Automatic.Windows = append(dst.Spec.Disruptions.Automatic.Windows,
+				ng.Spec.Disruptions.Automatic.Windows = append(ng.Spec.Disruptions.Automatic.Windows,
 					DisruptionWindow{From: w.From, To: w.To, Days: w.Days})
 			}
 		}
 		if src.Spec.Disruptions.RollingUpdate != nil {
-			dst.Spec.Disruptions.RollingUpdate = &RollingUpdateDisruptionSpec{}
+			ng.Spec.Disruptions.RollingUpdate = &RollingUpdateDisruptionSpec{}
 			for _, w := range src.Spec.Disruptions.RollingUpdate.Windows {
-				dst.Spec.Disruptions.RollingUpdate.Windows = append(dst.Spec.Disruptions.RollingUpdate.Windows,
+				ng.Spec.Disruptions.RollingUpdate.Windows = append(ng.Spec.Disruptions.RollingUpdate.Windows,
 					DisruptionWindow{From: w.From, To: w.To, Days: w.Days})
 			}
 		}
@@ -287,7 +287,7 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 
 	// Convert Kubelet
 	if src.Spec.Kubelet != nil {
-		dst.Spec.Kubelet = &KubeletSpec{
+		ng.Spec.Kubelet = &KubeletSpec{
 			MaxPods:              src.Spec.Kubelet.MaxPods,
 			RootDir:              src.Spec.Kubelet.RootDir,
 			ContainerLogMaxSize:  src.Spec.Kubelet.ContainerLogMaxSize,
@@ -296,7 +296,7 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 	}
 
 	// Convert Status
-	if err := convertStatusFrom(&src.Status, &dst.Status); err != nil {
+	if err := convertStatusFrom(&src.Status, &ng.Status); err != nil {
 		return err
 	}
 
@@ -304,14 +304,14 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 }
 
 // ConvertTo converts NodeGroupList (v1alpha2) to the Hub version (v1).
-func (src *NodeGroupList) ConvertTo(dstRaw conversion.Hub) error {
+func (ng *NodeGroupList) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1.NodeGroupList)
 
-	dst.ListMeta = src.ListMeta
-	dst.Items = make([]v1.NodeGroup, len(src.Items))
+	dst.ListMeta = ng.ListMeta
+	dst.Items = make([]v1.NodeGroup, len(ng.Items))
 
-	for i := range src.Items {
-		if err := src.Items[i].ConvertTo(&dst.Items[i]); err != nil {
+	for i := range ng.Items {
+		if err := ng.Items[i].ConvertTo(&dst.Items[i]); err != nil {
 			return err
 		}
 	}
@@ -320,14 +320,14 @@ func (src *NodeGroupList) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 // ConvertFrom converts NodeGroupList from the Hub version (v1) to v1alpha2.
-func (dst *NodeGroupList) ConvertFrom(srcRaw conversion.Hub) error {
+func (ng *NodeGroupList) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*v1.NodeGroupList)
 
-	dst.ListMeta = src.ListMeta
-	dst.Items = make([]NodeGroup, len(src.Items))
+	ng.ListMeta = src.ListMeta
+	ng.Items = make([]NodeGroup, len(src.Items))
 
 	for i := range src.Items {
-		if err := dst.Items[i].ConvertFrom(&src.Items[i]); err != nil {
+		if err := ng.Items[i].ConvertFrom(&src.Items[i]); err != nil {
 			return err
 		}
 	}

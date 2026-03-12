@@ -72,3 +72,11 @@ Ignore error when using IPv4 address for egress gateway other than assigned
 ## 014-kernel-verifier-stat.patch
 
 Added kernel verifer statistics in logs and prometeus metric as max bpf program complexity
+
+## 015-cleanup-conntrack-endpoints.patch
+
+Add new conntrack cleanup logic for vm pods.
+
+## 016-add-import-export-conntrack-http-endpoints.patch
+
+Add import/export conntrack http endpoints. See usage example here modules/021-cni-cilium/docs/internal/DVP_INTEGRATION.md.

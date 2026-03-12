@@ -20,7 +20,7 @@ spec:
     - jsonPath: .spec.packageName
       name: Package
       type: string
-    - jsonPath: .spec.packageRepository
+    - jsonPath: .spec.packageRepositoryName
       name: Repository
       type: string
     - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime
