@@ -185,7 +185,7 @@ func (s *Service) SetConditionFalse(name string, condition ConditionType, reason
 	}
 
 	// Notify only if the condition actually changed
-	if s.statuses[name].setCondition(Condition{Type: condition, Status: metav1.ConditionTrue, Reason: ConditionReason(reason), Message: message}) {
+	if s.statuses[name].setCondition(Condition{Type: condition, Status: metav1.ConditionFalse, Reason: ConditionReason(reason), Message: message}) {
 		s.ch <- name
 	}
 }

@@ -42,6 +42,11 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			return nil, fmt.Errorf("expect Application as unstructured, got %T", obj)
 		}
 
+		// no sense to check already deleted app
+		if app.DeletionTimestamp != nil {
+			return nil, nil
+		}
+
 		name := apps.BuildName(app.Namespace, app.Name)
 
 		res, err := manager.ValidateSettings(ctx, name, app.Spec.Settings.GetMap())
@@ -90,7 +95,9 @@ func checkConstraintsByApp(ctx context.Context, cli client.Client, manager packa
 	}
 
 	// Parse the APV's requirements into schedule.Constraints if metadata is present.
-	var constraints schedule.Constraints
+	constraints := schedule.Constraints{
+		Order: schedule.FunctionalOrder,
+	}
 	if apv.Status.PackageMetadata != nil && apv.Status.PackageMetadata.Requirements != nil {
 		var err error
 
