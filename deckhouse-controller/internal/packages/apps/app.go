@@ -40,6 +40,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -239,8 +240,8 @@ func (a *Application) GetPath() string {
 	return a.path
 }
 
-// GetQueues returns package queues from all hooks
-func (a *Application) GetQueues() []string {
+// GetHooksQueues returns package queues from all hooks
+func (a *Application) GetHooksQueues() []string {
 	var res []string //nolint:prealloc
 	scheduleHooks := a.hooks.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range scheduleHooks {
@@ -258,6 +259,17 @@ func (a *Application) GetQueues() []string {
 
 	slices.Sort(res)
 	return slices.Compact(res)
+}
+
+// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
+func (a *Application) GetHookSnapshotsDump() []byte {
+	d := make(map[string]interface{})
+	for _, h := range a.hooks.GetHooks() {
+		d[h.GetName()] = h.GetHookController().SnapshotsDump()
+	}
+
+	marshalled, _ := yaml.Marshal(d)
+	return marshalled
 }
 
 // GetValuesChecksum returns a checksum of the current values.
