@@ -76,7 +76,9 @@ alerts:
       module: cert-manager
       edition: ce
       description: |-
-        The ACME Challenge `{{ $labels.namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` is in `{{ $labels.status }}` state and requires manual intervention.
+        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` is in `{{ $labels.status }}` state and requires manual intervention.
+
+        **Reason:** {{ $labels.reason }}
 
         The certificate will not be issued or renewed until the issue is resolved.
 
@@ -90,17 +92,14 @@ alerts:
 
         1. Check the Challenge status and reason:
            ```bash
-           d8 k -n {{ $labels.namespace }} describe challenge {{ $labels.name }}
+           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
            ```
 
         2. Delete the failed Order to trigger a new certificate request:
            ```bash
-           d8 k -n {{ $labels.namespace }} get orders
-           d8 k -n {{ $labels.namespace }} delete order <ORDER_NAME>
+           d8 k -n {{ $labels.exported_namespace }} get orders
+           d8 k -n {{ $labels.exported_namespace }} delete order <ORDER_NAME>
            ```
-
-        3. For more details, see the cert-manager troubleshooting guide:
-           https://cert-manager.io/docs/troubleshooting/acme/
       summary: |
         ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is stuck in &quot;{{ $labels.status }}&quot; state.
       severity: "4"
