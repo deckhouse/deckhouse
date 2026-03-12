@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,27 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package phases
+package suites
 
 import (
-	"strings"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
-type DhctlState map[string][]byte
+type StaticAbortDeps struct {
+	Node node.Interface
+}
 
-func ExtractDhctlState(stateCache state.Cache) (res DhctlState, err error) {
-	err = stateCache.Iterate(func(k string, v []byte) error {
-		if strings.HasPrefix(k, "preflight-") {
-			return nil
-		}
-		if res == nil {
-			res = make(map[string][]byte)
-		}
-		res[k] = v
-		return nil
-	})
-
-	return res, err
+func NewStaticAbortSuite(deps StaticAbortDeps) preflight.Suite {
+	return preflight.NewSuite(
+		checks.SSHCredential(deps.Node),
+		checks.SudoAllowed(deps.Node),
+	)
 }
