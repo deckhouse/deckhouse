@@ -36,6 +36,7 @@ type IstioFederationStatus struct {
 		PublicLastFetchTimestamp  string                     `json:"publicLastFetchTimestamp"`
 		PrivateLastFetchTimestamp string                     `json:"privateLastFetchTimestamp"`
 	} `json:"metadataCache,omitempty"`
+	DataPlaneHealth *DataPlaneHealthStatus `json:"dataPlaneHealth,omitempty"`
 }
 
 // Warning! This struct is duplicated in images/metadata-exporter
