@@ -15,9 +15,9 @@
 package controller
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -142,9 +142,11 @@ func (r *ConversionWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context.Context, cwh *deckhouseiov1alpha1.ConversionWebhook) (ctrl.Result, error) {
 	var res ctrl.Result
 
+	logger := r.logger.With(slog.String("webhook", cwh.Name))
+
 	webhookDir := r.webhookDir(cwh.Name)
 	if err := os.MkdirAll(webhookDir, directoryPermissions); err != nil {
-		r.logger.Error("failed to create directory", slog.String("path", webhookDir), log.Err(err))
+		logger.Error("failed to create directory", slog.String("path", webhookDir), log.Err(err))
 		return res, fmt.Errorf("create dir %s: %w", webhookDir, err)
 	}
 
@@ -153,17 +155,16 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 		return res, fmt.Errorf("render template: %w", err)
 	}
 
-	hash := sha256.Sum256(buf.Bytes())
-	if r.templateHashes[cwh.Name] == hash {
-		r.logger.Debug("template hash is the same, skipping webhook file update", slog.String("hash", hex.EncodeToString(hash[:])))
+	webhookFile := r.webhookFilePath(cwh.Name)
+
+	isChanged := r.isWebhookFileChanged(webhookFile, buf.Bytes())
+	if !isChanged {
+		logger.Debug("webhook file not changed, skipping webhook file update")
 		return res, nil
 	}
 
-	r.templateHashes[cwh.Name] = hash
-
-	webhookFile := r.webhookFilePath(cwh.Name)
 	if err := os.WriteFile(webhookFile, buf.Bytes(), filePermissions); err != nil {
-		r.logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
+		logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
 		return res, fmt.Errorf("write file %s: %w", webhookFile, err)
 	}
 
@@ -181,10 +182,10 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 	}
 
 	if needsUpdate {
-		r.logger.Debug("add finalizers")
+		logger.Debug("add finalizers")
 		if err := r.client.Update(ctx, cwh); err != nil {
 			if removeErr := os.Remove(webhookFile); removeErr != nil {
-				r.logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
+				logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
 			}
 			return res, fmt.Errorf("add finalizers: %w", err)
 		}
@@ -262,6 +263,17 @@ func (r *ConversionWebhookReconciler) cleanupCRDConversion(ctx context.Context, 
 	}
 
 	return nil
+}
+
+// isWebhookFileChanged returns true if the webhook file has changed.
+// If the file does not exist, it returns true to force the file to be created.
+func (r *ConversionWebhookReconciler) isWebhookFileChanged(webhookFile string, renderedTemplate []byte) bool {
+	fileContent, err := os.ReadFile(webhookFile)
+	if err == nil {
+		hash := sha256.Sum256(renderedTemplate)
+		return !bytes.Equal(fileContent, hash[:])
+	}
+	return true
 }
 
 // SetupWithManager sets up the controller with the Manager.
