@@ -12,7 +12,7 @@ relatedLinks:
 
 Перенаправление запросов к хранилищу образов от CRI осуществляется при помощи его настроек, которые указываются в конфигурации `containerd`.
 
-В случае таких компонентов, как [`operator-trivy`](/modules/operator-trivy/), `image-availability-exporter`, `deckhouse-controller` и ряда других, обращающихся к хранилищу образов напрямую, запросы будут идти через внутрикластерный прокси-сервер, расположенный на master-узлах.
+Для таких компонентов, как [`operator-trivy`](/modules/operator-trivy/), `image-availability-exporter`, `deckhouse-controller` и ряда других, обращающихся к хранилищу образов напрямую, запросы проходят через внутрикластерный прокси-сервер, расположенный на master-узлах.
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
 ![Режим Direct модуля registry](../../images/registry-module/direct-ru.png)
