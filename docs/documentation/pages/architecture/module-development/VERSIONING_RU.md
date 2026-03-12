@@ -2,6 +2,7 @@
 title: "Версионирование модуля"
 permalink: ru/architecture/module-development/versioning/
 lang: ru
+description: Семантическое версионирование, каналы обновлений и версионирование API для модулей Deckhouse Kubernetes Platform, включая этапы жизненного цикла модуля.
 ---
 
 В Deckhouse Kubernetes Platform (DKP) используется принцип [семантического версионирования](https://semver.org/lang/ru/) для модулей.
