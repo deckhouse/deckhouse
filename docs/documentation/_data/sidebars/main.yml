@@ -969,6 +969,10 @@ entries:
                 ru: Настройка retry для запросов с Istio
               url: /user/network/retry_istio.html
             - title:
+                en: Migration from cni-simple-bridge/cni-flannel to cni-cilium
+                ru: Миграция с cni-simple-bridge/cni-flannel на cni-cilium
+              url: /user/network/cni_migration.html 
+            - title:
                 en: Configuring resources for istio-proxy sidecars
                 ru: Настройка ресурсов для istio-proxy сайдкаров
               url: /user/network/istio-sidecar-resource-management.html
