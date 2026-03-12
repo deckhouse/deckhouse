@@ -57,7 +57,7 @@ func discoverCloudProviderDefaultStorageClass(_ context.Context, input *go_hook.
 
 // discoverDefaultStorageClassFromDVP extracts default StorageClass name from DVP provider discovery data
 func discoverDefaultStorageClassFromDVP(input *go_hook.HookInput) string {
-	dvpDiscoveryData, exists := input.Values.GetOk("cloudProviderDvp.internal.providerDiscoveryData.storageClasses")
+	dvpDiscoveryData, exists := input.Values.GetOk("cloudProviderDvp.internal.storageClasses")
 	if !exists || !dvpDiscoveryData.Exists() {
 		return ""
 	}

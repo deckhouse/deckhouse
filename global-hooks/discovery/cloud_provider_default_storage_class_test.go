@@ -45,20 +45,18 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
   },
   "cloudProviderDvp": {
     "internal": {
-      "providerDiscoveryData": {
-        "storageClasses": [
-          {
-            "name": "fast-ssd",
-            "isDefault": true,
-            "allowVolumeExpansion": true
-          },
-          {
-            "name": "standard",
-            "isDefault": false,
-            "allowVolumeExpansion": true
-          }
-        ]
-      }
+      "storageClasses": [
+        {
+          "name": "fast-ssd",
+          "isDefault": true,
+          "allowVolumeExpansion": true
+        },
+        {
+          "name": "standard",
+          "isDefault": false,
+          "allowVolumeExpansion": true
+        }
+      ]
     }
   }
 }
@@ -72,20 +70,18 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
   },
   "cloudProviderDvp": {
     "internal": {
-      "providerDiscoveryData": {
-        "storageClasses": [
-          {
-            "name": "fast-ssd",
-            "isDefault": false,
-            "allowVolumeExpansion": true
-          },
-          {
-            "name": "standard",
-            "isDefault": false,
-            "allowVolumeExpansion": true
-          }
-        ]
-      }
+      "storageClasses": [
+        {
+          "name": "fast-ssd",
+          "isDefault": false,
+          "allowVolumeExpansion": true
+        },
+        {
+          "name": "standard",
+          "isDefault": false,
+          "allowVolumeExpansion": true
+        }
+      ]
     }
   }
 }
@@ -110,15 +106,13 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
   },
   "cloudProviderDvp": {
     "internal": {
-      "providerDiscoveryData": {
-        "storageClasses": [
-          {
-            "name": "fast-ssd",
-            "isDefault": true,
-            "allowVolumeExpansion": true
-          }
-        ]
-      }
+      "storageClasses": [
+        {
+          "name": "fast-ssd",
+          "isDefault": true,
+          "allowVolumeExpansion": true
+        }
+      ]
     }
   }
 }
@@ -134,20 +128,18 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
   },
   "cloudProviderDvp": {
     "internal": {
-      "providerDiscoveryData": {
-        "storageClasses": [
-          {
-            "name": "fast-ssd",
-            "isDefault": true,
-            "allowVolumeExpansion": true
-          },
-          {
-            "name": "standard",
-            "isDefault": false,
-            "allowVolumeExpansion": true
-          }
-        ]
-      }
+      "storageClasses": [
+        {
+          "name": "fast-ssd",
+          "isDefault": true,
+          "allowVolumeExpansion": true
+        },
+        {
+          "name": "standard",
+          "isDefault": false,
+          "allowVolumeExpansion": true
+        }
+      ]
     }
   }
 }
@@ -182,12 +174,10 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 			f.ValuesSetFromYaml("global", []byte(`{"discovery": {}}`))
 			f.ValuesSetFromYaml("cloudProviderDvp", []byte(`{
 				"internal": {
-					"providerDiscoveryData": {
-						"storageClasses": [
-							{"name": "fast-ssd", "isDefault": true, "allowVolumeExpansion": true},
-							{"name": "standard", "isDefault": false, "allowVolumeExpansion": true}
-						]
-					}
+					"storageClasses": [
+						{"name": "fast-ssd", "isDefault": true, "allowVolumeExpansion": true},
+						{"name": "standard", "isDefault": false, "allowVolumeExpansion": true}
+					]
 				}
 			}`))
 			f.RunHook()
@@ -212,12 +202,10 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 			f.ValuesSetFromYaml("global", []byte(`{"discovery": {}}`))
 			f.ValuesSetFromYaml("cloudProviderDvp", []byte(`{
 				"internal": {
-					"providerDiscoveryData": {
-						"storageClasses": [
-							{"name": "fast-ssd", "isDefault": false, "allowVolumeExpansion": true},
-							{"name": "standard", "isDefault": false, "allowVolumeExpansion": true}
-						]
-					}
+					"storageClasses": [
+						{"name": "fast-ssd", "isDefault": false, "allowVolumeExpansion": true},
+						{"name": "standard", "isDefault": false, "allowVolumeExpansion": true}
+					]
 				}
 			}`))
 			f.RunHook()
@@ -242,11 +230,9 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 			f.ValuesSetFromYaml("global", []byte(`{"discovery": {"defaultStorageClass": "fast-ssd"}}`))
 			f.ValuesSetFromYaml("cloudProviderDvp", []byte(`{
 				"internal": {
-					"providerDiscoveryData": {
-						"storageClasses": [
-							{"name": "fast-ssd", "isDefault": true, "allowVolumeExpansion": true}
-						]
-					}
+					"storageClasses": [
+						{"name": "fast-ssd", "isDefault": true, "allowVolumeExpansion": true}
+					]
 				}
 			}`))
 			f.RunHook()
@@ -271,12 +257,10 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 			f.ValuesSetFromYaml("global", []byte(`{"discovery": {"defaultStorageClass": "standard"}}`))
 			f.ValuesSetFromYaml("cloudProviderDvp", []byte(`{
 				"internal": {
-					"providerDiscoveryData": {
-						"storageClasses": [
-							{"name": "fast-ssd", "isDefault": true, "allowVolumeExpansion": true},
-							{"name": "standard", "isDefault": false, "allowVolumeExpansion": true}
-						]
-					}
+					"storageClasses": [
+						{"name": "fast-ssd", "isDefault": true, "allowVolumeExpansion": true},
+						{"name": "standard", "isDefault": false, "allowVolumeExpansion": true}
+					]
 				}
 			}`))
 			f.RunHook()
