@@ -18,6 +18,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -34,7 +36,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	"github.com/name212/govalue"
 )
 
 type MasterNodeGroupController struct {
@@ -121,7 +122,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 
 	if c.convergeState.Phase == phases.ScaleToMultiMasterPhase {
 		log.DebugF("Scale to multi master\n")
-		
+
 		replicas := 3
 
 		err = c.runWithReplicas(ctx, replicas)

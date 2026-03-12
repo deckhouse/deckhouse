@@ -88,7 +88,7 @@ func (s *ClusterStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) e
 	}
 
 	log.DebugF("Intermediate save base infra in cluster...\n")
-	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 5, 3*time.Second).Run(task.Patch)
+	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 15, 3*time.Second).Run(task.Patch)
 	msg := "Intermediate base infra was saved in cluster\n"
 	if err != nil {
 		msg = fmt.Sprintf("Intermediate base infra was not saved in cluster: %v\n", err)
@@ -151,7 +151,7 @@ func (s *NodeStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) erro
 	}
 	taskName := fmt.Sprintf("Save intermediate infrastructure state for Node %q", s.nodeName)
 	log.DebugF("Intermediate save state for node %s in cluster...\n", s.nodeName)
-	err := retry.NewSilentLoop(taskName, 5, 3*time.Second).Run(task.PatchOrCreate)
+	err := retry.NewSilentLoop(taskName, 15, 3*time.Second).Run(task.PatchOrCreate)
 	msg := fmt.Sprintf("Intermediate state for node %s was saved in cluster\n", s.nodeName)
 	if err != nil {
 		msg = fmt.Sprintf("Intermediate state for node %s was not saved in cluster: %v\n", s.nodeName, err)

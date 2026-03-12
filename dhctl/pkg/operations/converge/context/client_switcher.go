@@ -73,7 +73,7 @@ func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params K
 }
 
 func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState map[string][]byte) error {
-	const action = "Switch to node user"
+	const action = "Switch clients to node user"
 
 	if skip, err := s.isSkipOrLogStart(action, false); err != nil {
 		return err
@@ -81,49 +81,19 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 		return nil
 	}
 
-	convergeState, err := s.ctx.ConvergeState()
-	if err != nil {
-		return err
-	}
 
-	if convergeState.NodeUserCredentials == nil {
-		s.debug("Generate node user")
-		nodeUser, nodeUserCredentials, err := v1.GenerateNodeUser(v1.ConvergerNodeUser())
-		if err != nil {
-			return fmt.Errorf("Failed to generate NodeUser: %w", err)
-		}
-
-		c, cancel := s.ctx.WithTimeout(10 * time.Second)
-		defer cancel()
-		err = entity.CreateOrUpdateNodeUser(c, s.ctx, nodeUser, nil)
-		if err != nil {
-			return fmt.Errorf("Failed to create or update NodeUser: %w", err)
-		}
-
-		// check ssh client
-		_, _, err = s.extractClients(ctx)
+	return s.logger.LogProcess("default", action, func() error {
+		convergeState, err := s.createNodeUser(ctx)
 		if err != nil {
 			return err
 		}
 
-		err = entity.NewConvergerNodeUserExistsWaiter(s.ctx).WaitPresentOnNodes(ctx, nodeUserCredentials)
-		if err != nil {
-			return fmt.Errorf("Could not ensure converger user is presented on control plane hosts: %w", err)
-		}
-
-		convergeState.NodeUserCredentials = nodeUserCredentials
-
-		err = s.ctx.SetConvergeState(convergeState)
-		if err != nil {
-			return fmt.Errorf("Failed to set converge state: %w", err)
-		}
-	}
-
-	return s.replaceKubeClientForSwithToNodeUser(ctx, convergeState, nodesState)
+		return s.replaceKubeClientForSwithToNodeUser(ctx, convergeState, nodesState)
+	})
 }
 
 func (s *KubeClientSwitcher) CleanupNodeUser() error {
-	const action = "Cleanup node user"
+	const action = "Delete node user"
 
 	if skip, err := s.isSkipOrLogStart(action, false); err != nil {
 		return err
@@ -131,18 +101,20 @@ func (s *KubeClientSwitcher) CleanupNodeUser() error {
 		return nil
 	}
 
-	err := s.ctx.deleteConvergeState()
-	if err != nil {
-		return err
-	}
+	return s.logger.LogProcess("default", action, func() error {
+		err := s.ctx.deleteConvergeState()
+		if err != nil {
+			return err
+		}
 
-	c, cancel := s.ctx.WithTimeout(10 * time.Second)
-	defer cancel()
-	return entity.DeleteNodeUser(c, s.ctx, global.ConvergeNodeUserName)
+		c, cancel := s.ctx.WithTimeout(10 * time.Second)
+		defer cancel()
+		return entity.DeleteNodeUser(c, s.ctx, global.ConvergeNodeUserName)
+	})
 }
 
 func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
-	const action = "Switch to first master"
+	const action = "Switch clients to first control-plane node"
 
 	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
 		return err
@@ -150,39 +122,41 @@ func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
 		return nil
 	}
 
-	convergeState, err := s.ctx.ConvergeState()
-	if err != nil {
-		return fmt.Errorf("Cannot get converge state: %w", err)
-	}
-
-	firstMasterState, anotherMastersStates, err := s.extractStatesFromCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	if firstMasterState == nil {
-		mastersNames := make([]string, 0, len(anotherMastersStates))
-		for _, s := range anotherMastersStates {
-			mastersNames = append(mastersNames, s.Name)
+	return s.logger.LogProcess("default", action, func() error {
+		convergeState, err := s.ctx.ConvergeState()
+		if err != nil {
+			return fmt.Errorf("Cannot get converge state: %w", err)
 		}
 
-		return fmt.Errorf(
-			"Cannot find first control-plane node state or it is empty. Has states for [%s]",
-			strings.Join(mastersNames, ", "),
-		)
-	}
+		firstMasterState, anotherMastersStates, err := s.extractStatesFromCluster(ctx)
+		if err != nil {
+			return err
+		}
 
-	return s.replaceKubeClient(ctx, replaceKubeClientParams{
-		convergeState: convergeState,
-		state: map[string][]byte{
-			firstMasterState.Name: firstMasterState.State,
-		},
-		appendPKey: nil,
+		if firstMasterState == nil {
+			mastersNames := make([]string, 0, len(anotherMastersStates))
+			for _, s := range anotherMastersStates {
+				mastersNames = append(mastersNames, s.Name)
+			}
+
+			return fmt.Errorf(
+				"Cannot find first control-plane node state or it is empty. Has states for [%s]",
+				strings.Join(mastersNames, ", "),
+			)
+		}
+
+		return s.replaceKubeClient(ctx, replaceKubeClientParams{
+			convergeState: convergeState,
+			state: map[string][]byte{
+				firstMasterState.Name: firstMasterState.State,
+			},
+			appendPKey: nil,
+		})
 	})
 }
 
 func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
-	const action = "Switch to not first master"
+	const action = "Switch clients to not first control-plane nodes"
 
 	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
 		return err
@@ -190,40 +164,42 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 		return nil
 	}
 
-	convergeState, err := s.ctx.ConvergeState()
-	if err != nil {
-		return fmt.Errorf("Cannot get converge state: %w", err)
-	}
-
-	firstMasterState, anotherMastersStates, err := s.extractStatesFromCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	statesMap := make(map[string][]byte)
-
-	for _, s := range anotherMastersStates {
-		statesMap[s.Name] = s.State
-	}
-
-	if len(statesMap) == 0 {
-		if firstMasterState == nil {
-			return fmt.Errorf("Cannot switch to another control-plane, no any states found")
+	return s.logger.LogProcess("default", action, func() error {
+		convergeState, err := s.ctx.ConvergeState()
+		if err != nil {
+			return fmt.Errorf("Cannot get converge state: %w", err)
 		}
 
-		s.logger.LogWarnF("Another control-plane nodes states not found. Try to continue with first")
-		statesMap[firstMasterState.Name] = firstMasterState.State
-	}
+		firstMasterState, anotherMastersStates, err := s.extractStatesFromCluster(ctx)
+		if err != nil {
+			return err
+		}
 
-	return s.replaceKubeClient(ctx, replaceKubeClientParams{
-		convergeState: convergeState,
-		state:         statesMap,
-		appendPKey:    nil,
+		statesMap := make(map[string][]byte)
+
+		for _, s := range anotherMastersStates {
+			statesMap[s.Name] = s.State
+		}
+
+		if len(statesMap) == 0 {
+			if firstMasterState == nil {
+				return fmt.Errorf("Cannot switch to another control-plane, no any states found")
+			}
+
+			s.logger.LogWarnF("Another control-plane nodes states not found. Try to continue with first")
+			statesMap[firstMasterState.Name] = firstMasterState.State
+		}
+
+		return s.replaceKubeClient(ctx, replaceKubeClientParams{
+			convergeState: convergeState,
+			state:         statesMap,
+			appendPKey:    nil,
+		})
 	})
 }
 
 func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context, ngName string, nodesToDeleteInfo []*NodeState) error {
-	const action = "Switch when decrease control-plane"
+	const action = "Switch clients when decrease control-plane nodes"
 
 	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
 		return err
@@ -272,27 +248,29 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 		return nil
 	}
 
-	convergeState, err := s.ctx.ConvergeState()
-	if err != nil {
-		return fmt.Errorf("Cannot get converge state: %w", err)
-	}
-
-	firstMaster, anotherMasters, err := s.extractStatesFromCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	statesMap := make(map[string][]byte)
-	for _, s := range append([]*NodeState{firstMaster}, anotherMasters...) {
-		if _, ok := deletedHostsNames[s.Name]; !ok {
-			statesMap[s.Name] = s.State
+	return s.logger.LogProcess("default", action, func() error {
+		convergeState, err := s.ctx.ConvergeState()
+		if err != nil {
+			return fmt.Errorf("Cannot get converge state: %w", err)
 		}
-	}
 
-	return s.replaceKubeClient(ctx, replaceKubeClientParams{
-		convergeState: convergeState,
-		state:         statesMap,
-		appendPKey:    nil,
+		firstMaster, anotherMasters, err := s.extractStatesFromCluster(ctx)
+		if err != nil {
+			return err
+		}
+
+		statesMap := make(map[string][]byte)
+		for _, s := range append([]*NodeState{firstMaster}, anotherMasters...) {
+			if _, ok := deletedHostsNames[s.Name]; !ok {
+				statesMap[s.Name] = s.State
+			}
+		}
+
+		return s.replaceKubeClient(ctx, replaceKubeClientParams{
+			convergeState: convergeState,
+			state:         statesMap,
+			appendPKey:    nil,
+		})
 	})
 }
 
@@ -458,8 +436,54 @@ func (s *KubeClientSwitcher) tmpDirForConverger() (string, error) {
 		return "", fmt.Errorf("Failed to create tmp directory for converge: %w", err)
 	}
 
-	s.debug("Temp dir %s created for kubeclient", tmpDir)
+	s.debug("Temp dir %s created for switch kube client", tmpDir)
 	return tmpDir, nil
+}
+
+func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error) {
+	convergeState, err := s.ctx.ConvergeState()
+	if err != nil {
+		return nil, err
+	}
+
+	if convergeState.NodeUserCredentials != nil {
+		return convergeState, nil
+	}
+
+	s.debugStartOperation("create node user")
+	s.debug("Generate node user")
+
+	nodeUser, nodeUserCredentials, err := v1.GenerateNodeUser(v1.ConvergerNodeUser())
+	if err != nil {
+		return nil, fmt.Errorf("Failed to generate NodeUser: %w", err)
+	}
+
+	c, cancel := s.ctx.WithTimeout(10 * time.Second)
+	defer cancel()
+	err = entity.CreateOrUpdateNodeUser(c, s.ctx, nodeUser, nil)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create or update NodeUser: %w", err)
+	}
+
+	// check ssh client
+	_, _, err = s.extractClients(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = entity.NewConvergerNodeUserExistsWaiter(s.ctx).WaitPresentOnNodes(ctx, nodeUserCredentials)
+	if err != nil {
+		return nil, fmt.Errorf("Could not ensure converger user is presented on control plane hosts: %w", err)
+	}
+
+	convergeState.NodeUserCredentials = nodeUserCredentials
+
+	err = s.ctx.SetConvergeState(convergeState)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to set converge state: %w", err)
+	}
+
+	return convergeState, nil
 }
 
 func (s *KubeClientSwitcher) replaceKubeClientForSwithToNodeUser(ctx context.Context, convergeState *State, state map[string][]byte) error {
