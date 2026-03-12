@@ -229,6 +229,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 			patch := client.MergeFrom(oldAPV.DeepCopy())
 			oldAPV = oldAPV.RemoveInstalledApp(app.Namespace, app.Name)
 			if err := r.client.Status().Patch(ctx, oldAPV, patch); err != nil {
+				logger.Error("failed to patch application package", log.Err(err))
 				return fmt.Errorf("patch old application package version status '%s': %w", oldAPVName, err)
 			}
 		}
@@ -241,6 +242,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		apv = apv.AddInstalledApp(app.Namespace, app.Name)
 		if err := r.client.Status().Patch(ctx, apv, patch); err != nil {
+			logger.Error("failed to patch apv", log.Err(err))
 			return fmt.Errorf("patch application package version status '%s': %w", apv.Name, err)
 		}
 	}
@@ -264,6 +266,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 			patch := client.MergeFrom(oldAP.DeepCopy())
 			oldAP = oldAP.RemoveInstalledApp(app.Namespace, app.Name)
 			if err := r.client.Status().Patch(ctx, oldAP, patch); err != nil {
+				logger.Error("failed to patch application package", log.Err(err))
 				return fmt.Errorf("patch old application package status '%s': %w", oldAPName, err)
 			}
 		}
@@ -276,6 +279,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		ap = ap.AddInstalledApp(app.Namespace, app.Name, app.Spec.PackageVersion)
 		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
+			logger.Error("failed to patch application package", log.Err(err))
 			return fmt.Errorf("patch application package status '%s': %w", ap.Name, err)
 		}
 	} else if ap.GetAppVersion(app.Namespace, app.Name) != app.Spec.PackageVersion {
@@ -285,6 +289,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		ap.UpdateAppVersion(app.Namespace, app.Name, app.Spec.PackageVersion)
 		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
+			logger.Error("failed to patch application package", log.Err(err))
 			return fmt.Errorf("patch application package status '%s': %w", ap.Name, err)
 		}
 	}
@@ -292,6 +297,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	logger.Debug("registry application to operator")
 	repo := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
+		logger.Error("get package repository", log.Err(err))
 		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
 	}
 
@@ -319,6 +325,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	app = r.addOwnerReferences(app, apv, ap)
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
+		logger.Error("failed to patch application", log.Err(err))
 		return fmt.Errorf("patch application '%s': %w", app.Name, err)
 	}
 
@@ -346,6 +353,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 
 		ap = ap.RemoveInstalledApp(app.Namespace, app.Name)
 		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
+			logger.Error("failed to patch application package", log.Err(err))
 			return fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
 		}
 	}
@@ -366,6 +374,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 
 		apv = apv.RemoveInstalledApp(app.Namespace, app.Name)
 		if err := r.client.Status().Patch(ctx, apv, patch); err != nil {
+			logger.Error("failed to patch apv", log.Err(err))
 			return fmt.Errorf("patch application package version status '%s': %w", app.Spec.PackageName, err)
 		}
 	}
@@ -384,6 +393,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	}
 
 	if err := r.client.Patch(ctx, app, patch); err != nil {
+		logger.Error("failed to patch application", log.Err(err))
 		return fmt.Errorf("patch application %s: %w", app.Name, err)
 	}
 
