@@ -25,7 +25,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// Order 25: run after module discovery hooks (typically Order 20)
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 25},
+	OnBeforeAll: &go_hook.OrderedConfig{Order: 25},
 }, discoverCloudProviderDefaultStorageClass)
 
 func discoverCloudProviderDefaultStorageClass(_ context.Context, input *go_hook.HookInput) error {
