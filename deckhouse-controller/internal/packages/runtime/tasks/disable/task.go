@@ -36,7 +36,7 @@ const (
 // packageI abstracts package operations needed for disabling.
 type packageI interface {
 	GetName() string
-	GetQueues() []string
+	GetHooksQueues() []string
 	// RunHooksByBinding executes hooks matching the given binding type (e.g., AfterDeleteHelm).
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 	DisableHooks()
@@ -101,7 +101,7 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("disable package '%s': %w", t.pkg.GetName(), err)
 	}
 
-	for _, q := range t.pkg.GetQueues() {
+	for _, q := range t.pkg.GetHooksQueues() {
 		t.logger.Debug("remove package queue", slog.String("queue", q))
 		t.queueService.Remove(fmt.Sprintf("%s/%s", t.pkg.GetName(), q))
 		t.queueService.Remove(fmt.Sprintf("%s/%s/sync", t.pkg.GetName(), q))

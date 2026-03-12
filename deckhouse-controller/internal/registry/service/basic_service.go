@@ -90,6 +90,21 @@ func (s *BasicService) CheckImageExists(ctx context.Context, tag string) error {
 	return nil
 }
 
+func (s *BasicService) GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile, error) {
+	logger := s.logger.With(slog.String("service", s.name), slog.String("tag", tag))
+
+	logger.Debug("Getting image config")
+
+	cfg, err := s.client.GetImageConfig(ctx, tag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image config: %w", err)
+	}
+
+	logger.Debug("Image config retrieved successfully")
+
+	return cfg, nil
+}
+
 func (s *BasicService) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 	logger := s.logger.With(slog.String("service", s.name))
 

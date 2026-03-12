@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: base/distroless
+fromImage: base/scratch
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
   to: /candi

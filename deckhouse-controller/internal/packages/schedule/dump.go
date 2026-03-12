@@ -63,3 +63,33 @@ func (s *Scheduler) Dump() []byte {
 	marshalled, _ := yaml.Marshal(d)
 	return marshalled
 }
+
+// DumpByName returns a YAML snapshot of a single scheduler node by name.
+// Returns empty bytes if the node is not found.
+// It is used by the debug endpoint to inspect the scheduling state of an
+// individual package without dumping the entire graph.
+func (s *Scheduler) DumpByName(name string) []byte {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Look up the node in the scheduler graph; return early if absent.
+	n, ok := s.nodes[name]
+	if !ok {
+		return []byte{}
+	}
+
+	d := nodeDump{
+		Version:      n.version.String(),
+		Order:        n.order,
+		State:        n.state,
+		Status:       n.status,
+		Followees:    slices.Collect(maps.Keys(n.followees)),
+		Followers:    slices.Collect(maps.Keys(n.followers)),
+		Dependencies: maps.Clone(n.dependencies),
+	}
+
+	// Marshal to YAML; errors are intentionally ignored because nodeDump
+	// contains only primitive/simple types that always serialize successfully.
+	marshalled, _ := yaml.Marshal(d)
+	return marshalled
+}
