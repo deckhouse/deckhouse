@@ -1123,8 +1123,8 @@ entries:
           draft: true
           url: /architecture/system-requirements/
         - title:
-            en: C4 model
-            ru: Модель C4
+            en: DKP architecture (C4 model)
+            ru: Архитектура DKP (модель C4)
           url: /architecture/c4-model.html
         - title:
             en: Modules
