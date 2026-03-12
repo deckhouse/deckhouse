@@ -1500,6 +1500,7 @@ istio.example.com
 istio-api-proxy.example.com
 kubeconfig.example.com
 openvpn-admin.example.com
+registry.example.com
 prometheus.example.com
 status.example.com
 tools.example.com
