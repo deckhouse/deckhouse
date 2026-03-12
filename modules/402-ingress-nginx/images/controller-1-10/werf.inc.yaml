@@ -4,7 +4,7 @@
 {{- $controllerUID := "64535" }}
 
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-patches-artifact
 fromImage: common/src-artifact
 final: false
 git:
@@ -12,7 +12,48 @@ git:
   to: /patches
   stageDependencies:
     install:
-      - '**/*'
+      - 001-go-mod.patch
+      - 002-healthcheck.patch
+      - 004-lua-info.patch
+      - 005-makefile.patch
+      - 006-metrics-SetSSLExpireTime.patch
+      - 008-util.patch
+      - 009-fix-cleanup.patch
+      - 011-add-http3.patch
+      - 012-new-metrics.patch
+      - 013-default-backend-fix.patch
+      - 015-validation-mode.patch
+      - 016-verbose-maxmind-logs.patch
+      - 017-fix-success-reload-metric.patch
+      - 018-disable-error-logs.patch
+      - 019-fix-sorting.patch
+      - 020-geoip-ver-metric.patch
+      - 021-skip-tls-verification-maxmind.patch
+      - 022-ingress-update-status.patch
+      - 023-use-proxy-real-ip-cidr-v2.patch
+      - 024-cve-03022026-controller.patch
+      - 027-fix-rewrite-target-cve.patch
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-patches-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - 003-nginx-tmpl.patch
+      - 007-auth-cookie-always.patch
+      - 010-nginx-build.patch
+      - 014-balancer-lua.patch
+      - 023-use-proxy-real-ip-cidr-v2.patch
+      - 025-cve-03022026-rootfs.patch
+      - 026-lua_ingress-use-request-host-for-https-redirect.patch
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-local-files-artifact
+fromImage: common/src-artifact
+final: false
+git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
   to: /src/rootfs
   stageDependencies:
@@ -28,6 +69,32 @@ git:
   stageDependencies:
     install:
       - '**/*'
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-aux-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  setup:
+  - mkdir -p /src
+  - cd /src
+  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
+  - git clone --branch 0.5.1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
+  - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
+  - rm -rf /src/dumb-init/.git
+  - rm -rf /src/lua-protobuf/.git
+  - rm -rf /src/lua-iconv/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-patches-artifact
+  add: /patches
+  to: /patches
+  before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -38,9 +105,6 @@ shell:
   setup:
   - mkdir -p /src
   - cd /src
-  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
-  - git clone --branch 0.5.1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
-  - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
   - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
   - patch -p1 < /patches/001-go-mod.patch
@@ -50,7 +114,6 @@ shell:
   - patch -p1 < /patches/006-metrics-SetSSLExpireTime.patch
   - patch -p1 < /patches/008-util.patch
   - patch -p1 < /patches/009-fix-cleanup.patch
-  - patch -p1 < /patches/010-nginx-build.patch
   - patch -p1 < /patches/011-add-http3.patch
   - patch -p1 < /patches/012-new-metrics.patch
   - patch -p1 < /patches/013-default-backend-fix.patch
@@ -64,22 +127,42 @@ shell:
   - patch -p1 < /patches/022-ingress-update-status.patch
   - patch -p1 < /patches/023-use-proxy-real-ip-cidr-v2.patch
   - patch -p1 < /patches/024-cve-03022026-controller.patch
-  - patch -p1 < /patches/026-lua_ingress-use-request-host-for-https-redirect.patch
   - patch -p1 < /patches/027-fix-rewrite-target-cve.patch
   - patch -p1 < /patches/028-stable-config-hash-metric-02.patch
+  # pass env for build
+  - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
+  - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
+  - echo "export TAG=$(git describe --tags --always)" >> .env_pass
+  - rm -rf /src/ingress-nginx/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-src-artifact
+fromImage: common/src-artifact
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-patches-artifact
+  add: /patches
+  to: /patches
+  before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install patch
+  setup:
+  - mkdir -p /src
+  - cd /src
+  - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
+  - cd /src/ingress-nginx
+  - patch -p1 < /patches/010-nginx-build.patch
+  - patch -p1 < /patches/023-use-proxy-real-ip-cidr-v2.patch
+  - patch -p1 < /patches/026-lua_ingress-use-request-host-for-https-redirect.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
   - patch -p1 < /patches/007-auth-cookie-always.patch
   - patch -p1 < /patches/025-cve-03022026-rootfs.patch
-  # pass env for build
-  - cd /src/ingress-nginx
-  - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
-  - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
-  - echo "export TAG=$(git describe --tags --always)" >> .env_pass
-  - rm -rf /src/dumb-init/.git
-  - rm -rf /src/lua-protobuf/.git
-  - rm -rf /src/lua-iconv/.git
   - rm -rf /src/ingress-nginx/.git
 
 ---
@@ -87,7 +170,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-aux-src-artifact
   add: /src/dumb-init
   to: /src
   before: install
@@ -103,11 +186,11 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
 fromImage: common/alt-p11-artifact
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-aux-src-artifact
   add: /src/lua-protobuf
   to: /src/lua-protobuf
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-aux-src-artifact
   add: /src/lua-iconv
   to: /src/lua-iconv
   before: install
@@ -157,11 +240,11 @@ mount:
 - from: tmp_dir
   to: /tmp
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-src-artifact
   add: /src/ingress-nginx/images/nginx-1.25/rootfs/
   to: /
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-local-files-artifact
   add: /src/rootfs/etc
   to: /src/etc
   before: install
@@ -217,8 +300,8 @@ import:
   add: /usr/share/lua/5.1/protoc.lua
   to: /usr/local/share/lua/5.1/protoc.lua
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/etc
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-src-artifact
+  add: /src/ingress-nginx/rootfs/etc
   to: /src/rootfs/etc
   before: install
 shell:
@@ -340,11 +423,11 @@ import:
   add: /bin/pgrep
   to: /usr/bin/pgrep
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-local-files-artifact
   add: /src/curl-chroot-wrapper.sh
   to: /usr/bin/curl
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-local-files-artifact
   add: /src/nginx-chroot-wrapper.sh
   to: /usr/bin/nginx
   before: setup
@@ -352,7 +435,7 @@ import:
   add: /src/dumb-init
   to: /usr/bin/dumb-init
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-local-files-artifact
   add: /src/rootfs/etc
   to: /src/rootfs/etc
   before: setup
