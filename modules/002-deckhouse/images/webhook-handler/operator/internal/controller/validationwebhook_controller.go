@@ -17,9 +17,9 @@ limitations under the License.
 package controller
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -54,7 +54,6 @@ type ValidationWebhookReconciler struct {
 	scheme            *runtime.Scheme
 	logger            *log.Logger
 	pythonTemplate    string
-	templateHashes    map[string][32]byte
 }
 
 // NewValidationWebhookReconciler creates a new ValidationWebhookReconciler.
@@ -72,7 +71,6 @@ func NewValidationWebhookReconciler(
 		scheme:            scheme,
 		logger:            logger.Named("validation-webhook"),
 		pythonTemplate:    pythonTemplate,
-		templateHashes:    make(map[string][32]byte),
 	}
 }
 
@@ -143,9 +141,11 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context.Context, vwh *deckhouseiov1alpha1.ValidationWebhook) (ctrl.Result, error) {
 	var res ctrl.Result
 
+	logger := r.logger.With(slog.String("webhook", vwh.Name))
+
 	webhookDir := r.webhookDir(vwh.Name)
 	if err := os.MkdirAll(webhookDir, validationWebhookDirectoryPerms); err != nil {
-		r.logger.Error("failed to create directory", slog.String("path", webhookDir), log.Err(err))
+		logger.Error("failed to create directory", slog.String("path", webhookDir), log.Err(err))
 		return res, fmt.Errorf("create dir %s: %w", webhookDir, err)
 	}
 
@@ -154,17 +154,15 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 		return res, fmt.Errorf("render template: %w", err)
 	}
 
-	hash := sha256.Sum256(buf.Bytes())
-	if r.templateHashes[vwh.Name] == hash {
-		r.logger.Debug("template hash is the same, skipping webhook file update", slog.String("hash", hex.EncodeToString(hash[:])))
+	webhookFile := r.webhookFilePath(vwh.Name)
+	isChanged := r.isWebhookFileChanged(webhookFile, buf.Bytes())
+	if !isChanged {
+		logger.Debug("webhook file not changed, skipping webhook file update")
 		return res, nil
 	}
 
-	r.templateHashes[vwh.Name] = hash
-
-	webhookFile := r.webhookFilePath(vwh.Name)
 	if err := os.WriteFile(webhookFile, buf.Bytes(), validationWebhookFilePerms); err != nil {
-		r.logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
+		logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
 		return res, fmt.Errorf("write file %s: %w", webhookFile, err)
 	}
 
@@ -172,12 +170,12 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 
 	// add finalizer
 	if !controllerutil.ContainsFinalizer(vwh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
-		r.logger.Debug("add finalizer")
+		logger.Debug("add finalizer")
 		controllerutil.AddFinalizer(vwh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
 
 		if err := r.client.Update(ctx, vwh); err != nil {
 			if removeErr := os.Remove(webhookFile); removeErr != nil {
-				r.logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
+				logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
 			}
 			return res, fmt.Errorf("add finalizer: %w", err)
 		}
@@ -207,6 +205,18 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 	}
 
 	return res, nil
+}
+
+// isWebhookFileChanged returns true if the webhook file has changed.
+// If the file does not exist, it returns true to force the file to be created.
+func (r *ValidationWebhookReconciler) isWebhookFileChanged(webhookFile string, renderedTemplate []byte) bool {
+	fileContent, err := os.ReadFile(webhookFile)
+	if err == nil {
+		hash := sha256.Sum256(renderedTemplate)
+		return !bytes.Equal(fileContent, hash[:])
+	}
+
+	return true
 }
 
 // SetupWithManager sets up the controller with the Manager.
