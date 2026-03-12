@@ -34,7 +34,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
@@ -118,7 +118,7 @@ type moduleManagerI interface {
 
 // New creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli client.Client, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
+func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -223,7 +223,7 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		rendered, err := r.renderManifests(req.Context(), packageName)
 		if err != nil {
 			if errors.Is(err, nelm.ErrPackageNotHelm) {
-				http.Error(w, fmt.Sprint("package has no Helm chart"), http.StatusBadRequest)
+				http.Error(w, "package has no Helm chart", http.StatusBadRequest)
 				return
 			}
 			http.Error(w, fmt.Sprintf("render failed: %v", err), http.StatusInternalServerError)
@@ -385,7 +385,7 @@ func (r *Runtime) buildNelmService() error {
 //   - onDisable: Stops hooks and transitions package back to Loaded state
 //
 // The scheduler starts paused and is resumed after initial package loading completes.
-func (r *Runtime) buildScheduler(cli client.Client) {
+func (r *Runtime) buildScheduler(cli kclient.Client) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
 		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
 		if len(discovery) == 0 {
@@ -447,7 +447,7 @@ func (r *Runtime) buildScheduler(cli client.Client) {
 
 		module := new(v1alpha1.Module)
 		err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-			return cli.Get(context.Background(), client.ObjectKey{Name: name}, module)
+			return cli.Get(context.Background(), kclient.ObjectKey{Name: name}, module)
 		})
 
 		if err != nil {
