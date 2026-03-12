@@ -35,6 +35,6 @@ type IngressNginxControllerSpec struct {
 
 var IngressNginxControllerGVR = schema.GroupVersionResource{
 	Group:    "deckhouse.io",
-	Version:  "v1",
+	Version:  "v2",
 	Resource: "ingressnginxcontrollers",
 }

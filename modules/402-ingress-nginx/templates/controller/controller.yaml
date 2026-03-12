@@ -13,7 +13,7 @@ memory: 10Mi
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $kubernetesVersion := $context.Values.global.discovery.kubernetesVersion }}
 
-{{- $resourcesRequests := $crd.spec.resourcesRequests | default dict }}
+{{- $resourcesManagement := $crd.spec.resourcesManagement | default dict }}
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $geoproxyReady := $context.Values.ingressNginx.internal.geoproxyReady | default false }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
@@ -44,21 +44,21 @@ spec:
     apiVersion: "apps.kruise.io/v1alpha1"
     kind: DaemonSet
     name: controller-{{ $name }}
-    {{- if eq ($resourcesRequests.mode | default "") "VPA" }}
-      {{- $resourcesRequestsVPA := $resourcesRequests.vpa | default dict }}
-      {{- $resourcesRequestsVPA_CPU := $resourcesRequestsVPA.cpu | default dict }}
-      {{- $resourcesRequestsVPA_Memory := $resourcesRequestsVPA.memory | default dict }}
+    {{- if eq ($resourcesManagement.mode | default "") "VPA" }}
+      {{- $resourcesManagementVPA := $resourcesManagement.vpa | default dict }}
+      {{- $resourcesManagementVPA_CPU := $resourcesManagementVPA.cpu | default dict }}
+      {{- $resourcesManagementVPA_Memory := $resourcesManagementVPA.memory | default dict }}
   updatePolicy:
-    updateMode: {{ $resourcesRequestsVPA.mode | default "Initial" | quote }}
+    updateMode: {{ $resourcesManagementVPA.mode | default "Initial" | quote }}
   resourcePolicy:
     containerPolicies:
     - containerName: controller
       minAllowed:
-        cpu: {{ $resourcesRequestsVPA_CPU.min | default "10m" | quote }}
-        memory: {{ $resourcesRequestsVPA_Memory.min | default "50Mi" | quote }}
+        cpu: {{ $resourcesManagementVPA_CPU.min | default "10m" | quote }}
+        memory: {{ $resourcesManagementVPA_Memory.min | default "50Mi" | quote }}
       maxAllowed:
-        cpu: {{ $resourcesRequestsVPA_CPU.max | default "50m" | quote }}
-        memory: {{ $resourcesRequestsVPA_Memory.max | default "200Mi" | quote }}
+        cpu: {{ $resourcesManagementVPA_CPU.max | default "50m" | quote }}
+        memory: {{ $resourcesManagementVPA_Memory.max | default "200Mi" | quote }}
       {{- if $crd.spec.enableIstioSidecar }}
     - containerName: istio-proxy
       mode: "Off"
@@ -341,13 +341,21 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
-  {{- if and $loadBalancer (not $resourcesRequests) }}
+  {{- if and $loadBalancer (not $resourcesManagement) }}
             cpu: "350m"
             memory: "500Mi"
-  {{- else if eq ($resourcesRequests.mode | default "") "Static" }}
-    {{- $resourcesRequestsStatic := $resourcesRequests.static | default dict }}
-            cpu: {{ $resourcesRequestsStatic.cpu | default "350m" | quote }}
-            memory: {{ $resourcesRequestsStatic.memory | default "500Mi" | quote }}
+  {{- else if eq ($resourcesManagement.mode | default "") "Static" }}
+    {{- $resourcesManagementStatic := $resourcesManagement.static | default dict }}
+    {{- $requests := $resourcesManagementStatic.requests | default dict }}
+            cpu: {{ $requests.cpu | default "350m" | quote }}
+            memory: {{ $requests.memory | default "500Mi" | quote }}
+    {{- $limits := $resourcesManagementStatic.limits | default dict }}
+    {{- if $limits }}
+          limits:
+    {{- range $resource, $limit := $limits }}
+            {{ $resource }}: {{ $limit | quote }}
+    {{- end }}
+    {{- end }}
   {{- end }}
         ports:
         - containerPort: 80

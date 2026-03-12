@@ -47,7 +47,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 75f05158bf87157bb787e2c8cb81a77686c625ae745ed10ef04069935288049f
+    ingress-nginx-controller.deckhouse.io/checksum: 805484e6819e5a68d335e70f3f4a5c082e444f05faad0a41be128e3f2309931b
     ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
     ingress-nginx-controller.deckhouse.io/inlet: HostWithFailover
   labels:
@@ -370,7 +370,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 75f05158bf87157bb787e2c8cb81a77686c625ae745ed10ef04069935288049f
+    ingress-nginx-controller.deckhouse.io/checksum: 805484e6819e5a68d335e70f3f4a5c082e444f05faad0a41be128e3f2309931b
     ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
     ingress-nginx-controller.deckhouse.io/inlet: HostWithFailover
   labels:
