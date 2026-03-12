@@ -55,7 +55,6 @@ type ConversionWebhookReconciler struct {
 	scheme            *runtime.Scheme
 	logger            *log.Logger
 	pythonTemplate    string
-	templateHashes    map[string][32]byte
 }
 
 // NewConversionWebhookReconciler creates a new ConversionWebhookReconciler.
@@ -73,7 +72,6 @@ func NewConversionWebhookReconciler(
 		scheme:            scheme,
 		logger:            logger.Named("conversion-webhook"),
 		pythonTemplate:    pythonTemplate,
-		templateHashes:    make(map[string][32]byte),
 	}
 }
 
