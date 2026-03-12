@@ -76,6 +76,7 @@ type Status struct {
 
 type Tracking struct {
 	Completed int                 `json:"completed"`
+	Remaining int                 `json:"remaining"`
 	Report    progrep.StageReport `json:"report"`
 }
 
@@ -195,13 +196,18 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		}
 
 		completed := 0
+		remaining := 0
 		for _, op := range r.Operations {
-			if op.Type == progrep.OperationTypeTrackReadiness && op.Status == progrep.OperationStatusCompleted {
-				completed++
+			if op.Type == progrep.OperationTypeTrackReadiness {
+				if op.Status == progrep.OperationStatusCompleted {
+					completed++
+				} else {
+					remaining++
+				}
 			}
 		}
 
-		status.Tracking = Tracking{Completed: completed, Report: r}
+		status.Tracking = Tracking{Completed: completed, Remaining: remaining, Report: r}
 		break
 	}
 
