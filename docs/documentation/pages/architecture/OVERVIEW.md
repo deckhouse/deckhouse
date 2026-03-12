@@ -55,10 +55,10 @@ Key modules:
 
 {% alert level="info" %}
 The [`control-plane-manager`](/modules/control-plane-manager/) and [`node-manager`](/modules/node-manager/) modules
-are not present when the platform is installed into an existing Managed Kubernetes cluster.
+are not installed when DKP is installed into an existing Managed Kubernetes cluster.
 {% endalert %}
 
-A module includes:
+Module contents:
 
 * Helm charts
 * [Addon-operator](https://github.com/flant/addon-operator/) hooks

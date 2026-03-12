@@ -13,7 +13,7 @@ description: Authentication features in Deckhouse Kubernetes Platform.
 
 1. **Kubeconfig generation**. The Deckhouse Kubernetes Platform (DKP) web UI generates a kubeconfig file that includes an `ID token` and a `refresh token`. This file is used by `kubectl` or other Kubernetes clients.
 
-1. **Authentication when accessing the API**. Upon receiving a request with an `ID token`, the `kube-apiserver` verifies the token's signature using keys from the JWKS endpoint. It then compares the `iss` (issuer) and `aud` (audience) claims in the token against the configured values.
+1. **Authentication when accessing the API**. Upon receiving a request with an `ID token`, the `kube-apiserver` verifies the token's signature using keys from the JWKS endpoint. It then compares the `iss` (issuer) and `aud` (audience) claims in the token against the server configuration.
 
 ## Protection against credential brute-forcing in Dex
 
