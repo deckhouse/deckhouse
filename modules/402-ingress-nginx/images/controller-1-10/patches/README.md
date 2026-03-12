@@ -161,6 +161,6 @@ This patch fixes rewrite-target CVE-2026-3288 in Ingress-NGINX
 
 https://github.com/kubernetes/kubernetes/issues/137560
 
-### 028-stable-config-hash-metric.patch
+### 028-stable-config-hash-metric-01.patch
 
 This patch updates the way config_hash controller metric is calculated so that all pods of a controller report the same value
