@@ -43,7 +43,7 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 		}
 
 		// no sense to check already deleted app
-		if app.DeletionTimestamp.IsZero() {
+		if !app.DeletionTimestamp.IsZero() {
 			return nil, nil
 		}
 
