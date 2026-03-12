@@ -205,8 +205,9 @@ document.addEventListener('DOMContentLoaded', function() {
     pre.addEventListener('mouseenter', () => {
       button.classList.add('show');
 
-      if (pre.querySelector('.icon--copy')) {
-        pre.querySelector('.icon--copy').classList.add('show');
+      const existingCopyBtn = pre.querySelector('.icon--copy');
+      if (existingCopyBtn) {
+        existingCopyBtn.classList.add('show');
         return;
       }
 
@@ -227,12 +228,11 @@ document.addEventListener('DOMContentLoaded', function() {
       });
 
       copyBtn.addEventListener('click', () => {
-        const currentCode = pre.querySelector('code');
-        if (!currentCode) {
+        if (!code) {
           return;
         }
 
-        const textToCopy = extractCopyText(currentCode);
+        const textToCopy = extractCopyText(code);
 
         navigator.clipboard.writeText(textToCopy).then(() => {
           copyBtnTippy.setContent(texts.copied);
@@ -248,8 +248,8 @@ document.addEventListener('DOMContentLoaded', function() {
       });
 
       setTimeout(() => {
-        if (pre.querySelector('.icon--copy')) {
-          pre.querySelector('.icon--copy').classList.add('show');
+        if (copyBtn.isConnected) {
+          copyBtn.classList.add('show');
         }
       }, 0);
     });
