@@ -2,6 +2,7 @@
 title: "Запуск и проверка модуля в кластере"
 permalink: ru/architecture/module-development/run/
 lang: ru
+description: Запуск модуля в кластере Deckhouse Kubernetes Platform с помощью ModuleSource, ModuleUpdatePolicy и ModuleConfig, а также проверка его работоспособности.
 ---
 
 В этом разделе рассмотрен процесс запуска модуля в кластере Deckhouse Kubernetes Platform (DKP), а также подключение Deckhouse Module Tools для проверки модуля и сбора метрик.

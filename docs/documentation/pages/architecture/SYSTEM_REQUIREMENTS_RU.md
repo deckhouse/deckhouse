@@ -3,6 +3,7 @@ title: Системные требования
 permalink: ru/architecture/system-requirements/
 lang: ru
 search: system requirements, системные требования
+description: Варианты установки и предварительные требования для Deckhouse Kubernetes Platform — облако, bare metal и существующие кластеры Kubernetes.
 ---
 
 Deckhouse Kubernetes Platform (DKP) может устанавливаться в следующих вариантах:

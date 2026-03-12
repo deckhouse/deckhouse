@@ -2,6 +2,7 @@
 title: "Пример адаптации существующего чарта"
 permalink: ru/architecture/module-development/example/
 lang: ru
+description: Пошаговый пример создания модуля Deckhouse Kubernetes Platform на основе адаптации существующего Helm-чарта и его публикации через CI/CD-пайплайн.
 ---
 
 {% raw %}

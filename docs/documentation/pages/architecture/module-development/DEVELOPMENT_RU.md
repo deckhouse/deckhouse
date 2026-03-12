@@ -2,6 +2,7 @@
 title: "Разработка и отладка модуля"
 permalink: ru/architecture/module-development/development/
 lang: ru
+description: Инструменты и подходы для разработки и отладки модулей Deckhouse Kubernetes Platform, включая локальное тестирование и поиск ошибок.
 ---
 
 При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride).
