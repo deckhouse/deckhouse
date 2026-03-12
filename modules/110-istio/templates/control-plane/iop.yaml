@@ -134,6 +134,9 @@ spec:
         clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
       externalIstiod: false
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
+      # Always emit so values.global has a fixed set of fields (expected by operator/config parsing).
+      # For 1.21=false to avoid operator editing ClusterRole*; for 1.22+=true for version-aware RBAC.
+      createClusterRoleBinding: false
 
   {{- if $.Values.istio.multicluster.enabled }}
       meshNetworks:

@@ -43,6 +43,25 @@ spec:
       openAPIV3Schema:
         type: object
         x-kubernetes-preserve-unknown-fields: true
+        properties:
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+            properties:
+              values:
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+                properties:
+                  global:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                    properties:
+                      createClusterRoleBinding:
+                        type: boolean
+                        description: |
+                          When false, ClusterRoleBinding resources are not created by the operator (e.g. when the installer
+                          lacks cluster-scoped RBAC). For Istio 1.21 this field is not supported by the operator;
+                          omit it or use only with operator 1.22+.
     served: true
     storage: true
 ---
