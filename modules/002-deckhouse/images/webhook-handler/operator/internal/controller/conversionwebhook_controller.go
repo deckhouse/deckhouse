@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -270,9 +271,16 @@ func (r *ConversionWebhookReconciler) cleanupCRDConversion(ctx context.Context, 
 func (r *ConversionWebhookReconciler) isWebhookFileChanged(webhookFile string, renderedTemplate []byte) bool {
 	fileContent, err := os.ReadFile(webhookFile)
 	if err == nil {
-		hash := sha256.Sum256(renderedTemplate)
-		return !bytes.Equal(fileContent, hash[:])
+		currentHash := sha256.Sum256(fileContent)
+		incomingHash := sha256.Sum256(renderedTemplate)
+
+		r.logger.Debug("debug hash comparison",
+			slog.String("current_hash", hex.EncodeToString(currentHash[:])),
+			slog.String("incoming_hash", hex.EncodeToString(incomingHash[:])))
+
+		return !bytes.Equal(currentHash[:], incomingHash[:])
 	}
+
 	return true
 }
 
