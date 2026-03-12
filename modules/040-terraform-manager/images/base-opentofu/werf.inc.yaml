@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: builder/scratch
+fromImage: base/scratch
 import:
 - image: opentofu
   add: /opentofu/opentofu
