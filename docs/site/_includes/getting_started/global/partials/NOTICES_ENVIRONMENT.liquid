@@ -51,9 +51,15 @@ The {{ page.title_main }} installation is not available in the Community Edition
   - systemd версии `244` и новее;
   - поддержка модуля ядра `erofs`.
   Подробнее в разделе [«ClusterConfiguration»](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
-{%- if page.platform_code == "aws" %}
-  В AWS Ubuntu идёт с кастомным ядром без `erofs`; для соответствия требованиям установите модули: `sudo apt install linux-modules-extra-aws`.
-{%- endif %}
+  {%- if page.platform_code == "aws" %}
+  В образах Ubuntu для AWS используется специальная версия ядра, в которой поддержка erofs отключена по умолчанию.
+  Для её включения установите пакет дополнительных модулей:
+
+  ```bash
+  sudo apt install linux-modules-extra-aws
+  ```
+
+  {%- endif %}
 
 - Начиная с версии 1.74 в Deckhouse есть механизм контроля целостности модулей (защита от подмены и изменения). Он включается автоматически, если ОС на узлах поддерживает модуль ядра `erofs`. Без этого модуля Deckhouse работает как прежде, но механизм отключён — появится алерт о его недоступности.
 {% endofftopic %}
