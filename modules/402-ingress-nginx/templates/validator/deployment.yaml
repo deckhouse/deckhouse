@@ -6,7 +6,7 @@
 {{- $geoproxyReady := $context.Values.ingressNginx.internal.geoproxyReady | default false }}
 {{- $checksum := toJson $crd | sha256sum }}
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
-{{- $resources := $crd.spec.resourcesRequests | default dict }}
+{{- $resources := $crd.spec.resourcesManagement | default dict }}
 {{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 }}
 
 {{- if (has "vertical-pod-autoscaler" $context.Values.global.enabledModules) }}
@@ -195,12 +195,17 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
             {{- if eq ($resources.mode | default "") "Static" }}
-            {{- $resourcesRequestsStatic := $resources.static | default dict }}
-            cpu: {{ $resourcesRequestsStatic.cpu | default "350m" | quote }}
-            memory: {{ $resourcesRequestsStatic.memory | default "500Mi" | quote }}
-            {{- else if not $resources }}
-            cpu: "350m"
-            memory: "500Mi"
+            {{- $resourcesManagementStatic := $resources.static | default dict }}
+            {{- $requests := $resourcesManagementStatic.requests | default dict }}
+            cpu: {{ $requests.cpu | default "350m" | quote }}
+            memory: {{ $requests.memory | default "500Mi" | quote }}
+            {{- $limits := $resourcesManagementStatic.limits | default dict }}
+            {{- if $limits }}
+          limits:
+              {{- range $resource, $limit := $limits }}
+            {{ $resource }}: {{ $limit | quote }}
+              {{- end }}
+            {{- end }}
             {{- end }}
         ports:
           - name: webhook

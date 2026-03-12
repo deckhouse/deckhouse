@@ -37,7 +37,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "ingress_nginx_controllers",
-			ApiVersion: "deckhouse.io/v1",
+			ApiVersion: "deckhouse.io/v2",
 			Kind:       "IngressNginxController",
 			FilterFunc: filterName,
 		},

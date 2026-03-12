@@ -1,4 +1,4 @@
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test-lbwpp
@@ -8,7 +8,7 @@ spec:
   ingressClass: nginx
   controllerVersion: "1.10"
   inlet: LoadBalancerWithProxyProtocol
-  resourcesRequests:
+  resourcesManagement:
     mode: Static
   loadBalancerWithProxyProtocol:
     annotations:
