@@ -1,6 +1,6 @@
 /*
-Copyright 2010 SomeAuthor
-Copyright 2925 Flant JSC
+Copyright 2017 The Kubernetes Authors.
+Copyright 2026 Flant JSC
 
 Modifications made by Flant JSC as part of the Deckhouse project.
 
