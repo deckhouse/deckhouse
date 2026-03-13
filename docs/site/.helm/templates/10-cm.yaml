@@ -61,6 +61,7 @@ data:
       -o jsonpath='{.data.installer-versions-nginx\.include}')
 
     CURRENT_VERSION=$(printf "%s" "$CURRENT_INCLUDE" | sed -n 's/.*"latest"[[:space:]]*"\([^"]*\)".*/\1/p')
+    echo "Current version: ${CURRENT_VERSION:-<empty>}"
 
     if [ "$VERSION" = "$CURRENT_VERSION" ]; then
       echo "Version unchanged (${VERSION}), skipping ConfigMap patch."
