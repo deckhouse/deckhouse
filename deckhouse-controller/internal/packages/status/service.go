@@ -175,6 +175,21 @@ func (s *Service) SetConditionTrue(name string, condition ConditionType) {
 	}
 }
 
+// SetConditionFalse marks a condition as successful and notifies listeners if changed
+func (s *Service) SetConditionFalse(name string, condition ConditionType, reason, message string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.statuses[name]; !ok {
+		s.statuses[name] = newStatus()
+	}
+
+	// Notify only if the condition actually changed
+	if s.statuses[name].setCondition(Condition{Type: condition, Status: metav1.ConditionFalse, Reason: ConditionReason(reason), Message: message}) {
+		s.ch <- name
+	}
+}
+
 // UpdateTracking updates the nelm progress report for a package and notifies listeners.
 // If the package is not tracked by the service, the update is silently ignored.
 func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {

@@ -34,7 +34,6 @@ import (
 	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
@@ -106,13 +105,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		return
 	}
 
-	if err := r.scheduler.CheckConstraints(app.Definition.Constraints()); err != nil {
-		r.status.HandleError(name, err)
-		return
-	}
-
 	r.status.ClearRuntimeConditions(name)
-	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
 	tasks := []queue.Task{
 		taskdownload.NewAppTask(name, packageName, version, repo, r.installer, r.status, r.logger),
