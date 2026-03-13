@@ -986,6 +986,7 @@ function wait_alerts_resolve() {
   "SecurityEventsDetected" # This is normal for e2e tests
   "D8NodeContainerdV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
   "D8NodeCgroupV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
+  "CPUStealHigh" # Not related to e2e tests
   )
 
   # Alerts
