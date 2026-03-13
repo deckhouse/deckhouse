@@ -11,7 +11,7 @@ spec:
     spec:
       template:
         spec:
-          serviceAccountName: configmap-installer-updater
+          serviceAccountName: configmap-installer-updater-sa
           restartPolicy: OnFailure
           volumes:
             - name: scripts
