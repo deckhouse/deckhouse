@@ -62,6 +62,79 @@
         ```bash
         d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager
         ```
+  - alert: CertmanagerCertificateChallengePending
+    expr: |
+      certmanager_certificate_challenge_status{job="cert-manager", status="pending"} == 1
+    for: 10m
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__cluster_has_pending_challenges: ClusterHasCertmanagerChallengesPending,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__cluster_has_pending_challenges: ClusterHasCertmanagerChallengesPending,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      summary: ACME Challenge for domain "{{ $labels.domain }}" is pending for more than 10 minutes.
+      description: |-
+        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` has been in `pending` state for more than 10 minutes.
+
+        This may indicate issues with the ACME challenge validation process.
+
+        **Common causes:**
+        * DNS propagation delays (for DNS-01 challenges).
+        * Ingress or firewall issues blocking HTTP-01 validation.
+        * ACME provider rate limiting or temporary unavailability.
+
+        **Diagnostic steps:**
+
+        1. Check the Challenge status:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
+           ```
+
+        2. Check cert-manager logs for errors:
+           ```bash
+           d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
+           ```
+
+  - alert: CertmanagerCertificateChallengePendingLong
+    expr: |
+      certmanager_certificate_challenge_status{job="cert-manager", status="pending"} == 1
+    for: 1h
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__cluster_has_pending_challenges: ClusterHasCertmanagerChallengesPending,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__cluster_has_pending_challenges: ClusterHasCertmanagerChallengesPending,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      summary: ACME Challenge for domain "{{ $labels.domain }}" is pending for more than 1 hour.
+      description: |-
+        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` has been in `pending` state for more than 1 hour and requires investigation.
+
+        **Common causes:**
+        * DNS misconfiguration (for DNS-01 challenges).
+        * Ingress or firewall issues blocking HTTP-01 validation.
+        * ACME provider rate limiting.
+        * Network connectivity issues.
+
+        **Resolution steps:**
+
+        1. Check the Challenge status and reason:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
+           ```
+
+        2. Check cert-manager logs for errors:
+           ```bash
+           d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
+           ```
+
+        3. If the challenge is stuck, delete the Order to trigger a retry:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} get orders
+           d8 k -n {{ $labels.exported_namespace }} delete order <ORDER_NAME>
+           ```
+
   - alert: CertmanagerCertificateChallengeStuck
     expr: |
       certmanager_certificate_challenge_status{job="cert-manager", status=~"invalid|expired|errored"} == 1
