@@ -9,8 +9,8 @@ webIfaces:
 
 | Istio version | [K8S versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in D8          |
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
-|     1.25      |                                                1.29, 1.30, 1.31, 1.32                                                | Supported |
-|     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31                                                | Deprecated and will be deleted |
+|     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                                          | Supported |
+|     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                        | Deprecated and will be deleted |
 
 <sup>*</sup> — the Kubernetes version **is NOT supported** in the current Deckhouse Kubernetes Platform release.
 
