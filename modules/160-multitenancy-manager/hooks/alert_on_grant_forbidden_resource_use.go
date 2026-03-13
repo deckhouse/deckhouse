@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	grantViolationMetricName         = "d8_cluster_objects_grant_violated"
-	grantViolationMetricsGroupPrefix = "grant_violations_"
+	grantViolationMetricName = "d8_cluster_objects_grant_violated"
 )
 
 type grant struct {
@@ -86,7 +85,9 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 		}
 
 		metricLabels := map[string]string{
-			"project": g.ObjectMeta.Name,
+			"project":               g.ObjectMeta.Name,
+			"violating_object_name": "",
+			"violating_resource":    "",
 		}
 
 		log.InfoContext(ctx, "Scanning grant violations", "grant", g)
@@ -103,7 +104,7 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 		)
 
 		if len(violations) == 0 {
-			input.MetricsCollector.Set(grantViolationMetricName, 0, metricLabels, metrics.WithGroup(grantViolationMetricsGroupPrefix+g.ObjectMeta.Name))
+			input.MetricsCollector.Set(grantViolationMetricName, 0, metricLabels)
 			continue
 		}
 
@@ -113,10 +114,12 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 			if v.GVR.Group != "" {
 				metricLabels["violating_resource"] = fmt.Sprintf("%s.%s", v.GVR.Resource, v.GVR.Group)
 			}
+
 			input.MetricsCollector.Set(
-				grantViolationMetricName, 1,
-				metricLabels, metrics.WithGroup(grantViolationMetricsGroupPrefix+g.ObjectMeta.Name),
+				grantViolationMetricName, float64(len(violations)),
+				metricLabels,
 			)
+
 		}
 
 		return nil
