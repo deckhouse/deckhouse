@@ -76,36 +76,6 @@ alerts:
       module: cert-manager
       edition: ce
       description: |-
-        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` has been in `pending` state for more than 10 minutes.
-
-        This may indicate issues with the ACME challenge validation process.
-
-        **Common causes:**
-        * DNS propagation delays (for DNS-01 challenges).
-        * Ingress or firewall issues blocking HTTP-01 validation.
-        * ACME provider rate limiting or temporary unavailability.
-
-        **Diagnostic steps:**
-
-        1. Check the Challenge status:
-           ```bash
-           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
-           ```
-
-        2. Check `cert-manager` logs for errors:
-           ```bash
-           d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
-           ```
-      summary: |
-        ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is pending for more than 10 minutes.
-      severity: "6"
-      markupFormat: markdown
-    - name: CertmanagerCertificateChallengePendingLong
-      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
-      moduleUrl: 101-cert-manager
-      module: cert-manager
-      edition: ce
-      description: |-
         The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` has been in `pending` state for more than 1 hour and requires investigation.
 
         **Common causes:**
@@ -134,6 +104,36 @@ alerts:
       summary: |
         ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is pending for more than 1 hour.
       severity: "4"
+      markupFormat: markdown
+    - name: CertmanagerCertificateChallengePending
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
+      moduleUrl: 101-cert-manager
+      module: cert-manager
+      edition: ce
+      description: |-
+        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` has been in `pending` state for more than 10 minutes.
+
+        This may indicate issues with the ACME challenge validation process.
+
+        **Common causes:**
+        * DNS propagation delays (for DNS-01 challenges).
+        * Ingress or firewall issues blocking HTTP-01 validation.
+        * ACME provider rate limiting or temporary unavailability.
+
+        **Diagnostic steps:**
+
+        1. Check the Challenge status:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
+           ```
+
+        2. Check `cert-manager` logs for errors:
+           ```bash
+           d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
+           ```
+      summary: |
+        ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is pending for more than 10 minutes.
+      severity: "6"
       markupFormat: markdown
     - name: CertmanagerCertificateChallengeStuck
       sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
