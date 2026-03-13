@@ -430,6 +430,13 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 	// debug
 	fmt.Printf("ingressGateways=%v\n", ingressGateways)
 
+	sort.Slice(ingressGateways, func(i, j int) bool {
+		if ingressGateways[i].Address != ingressGateways[j].Address {
+			return ingressGateways[i].Address < ingressGateways[j].Address
+		}
+		return ingressGateways[i].Port < ingressGateways[j].Port
+	})
+
 	return ingressGateways, nil
 }
 

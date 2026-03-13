@@ -48,6 +48,8 @@ spec:
           value: "true"
         - name: ENABLE_ENHANCED_RESOURCE_SCOPING
           value: "true"
+        - name: GOMEMLIMIT
+          value: "2GiB"
   {{- if $.Values.istio.dataPlane.enableHTTP10 }}
         - name: PILOT_HTTP10
           value: "1"
