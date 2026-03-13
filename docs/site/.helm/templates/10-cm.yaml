@@ -24,5 +24,46 @@ metadata:
   name: doc-installer-version
 data:
   installer-versions-nginx.include: |
-    "latest" "v0.4.1";
+    "latest" "v0.6.2";
 {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doc-installer-update-script
+data:
+  update.sh: |
+    #!/bin/bash
+
+    set -uo pipefail
+
+    CONFIGMAP="doc-installer-version"
+
+    VERSION=$(curl -s \
+        --fail \
+        --retry 5 \
+        --retry-delay 10 \
+        --retry-max-time 120 \
+        --retry-connrefused \
+        --connect-timeout 10 \
+        --max-time 30 \
+        "https://deckhouse.ru/downloads/deckhouse-installer-trdl/targets/channels/0/ea")
+
+    if [ -z "$VERSION" ]; then
+      echo "Failed to retrieve version."
+      exit 1
+    fi
+
+    echo "Got version: $VERSION"
+
+    kubectl patch configmap "${CONFIGMAP}" \
+      -n "${NAMESPACE}" \
+      --type=merge \
+      -p "{\"data\": {\"installer-versions-nginx.include\": \"\\\"latest\\\" \\\"${VERSION}\\\";\\n\"}}"
+
+    if [ $? -eq 0 ]; then
+      echo "ConfigMap '${CONFIGMAP}' successfully updated: latest -> ${VERSION}"
+    else
+      echo "Error updating ConfigMap '${CONFIGMAP}'" >&2
+      exit 1
+    fi

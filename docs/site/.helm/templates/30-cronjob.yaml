@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: doc-installer-updater
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: "* 10 * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: configmap-installer-updater
+          restartPolicy: OnFailure
+          volumes:
+            - name: scripts
+              configMap:
+                name: doc-installer-update-script
+                defaultMode: 0755
+                items:
+                  - key: update.sh
+                    path: update.sh
+          containers:
+            - name: updater
+              image: alpine/k8s:1.32.12
+              env:
+                - name: NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+              command:
+                - /bin/sh
+              args:
+                - -c
+                - |
+                  echo "=== Update started at $(date) ==="
+                  /scripts/update.sh
+                  echo "=== Completed at $(date) ==="
