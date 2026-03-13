@@ -35,7 +35,7 @@ var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio ::", func() {
 
 		It("Hook must fail", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
-			Expect(f.GoHookError).To(MatchError("istio.internal.globalVersion value isn't discovered by discovery_versions.go yet"))
+			Expect(f.GoHookError).To(MatchError("istio.internal.globalVersion is not discovered by discovery_versions_to_install.go yet"))
 			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "testcrds.deckhouse.io").Exists()).To(BeFalse())
 		})
 	})
@@ -64,7 +64,7 @@ var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio ::", func() {
 			f.RunHook()
 		})
 
-		It("Hook must not fail, CRD v0.992 should be created", func() {
+		It("Hook must not fail, CRD v0.991 should be created", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "testcrds.deckhouse.io").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "testcrds.deckhouse.io").Field("spec.scope").String()).To(Equal("0.991"))
