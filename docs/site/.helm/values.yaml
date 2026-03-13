@@ -49,8 +49,8 @@ docsBuilder:
 
 vpa:
   updateMode:
-    _default: Off
-    web-production: Auto
+    _default: "Off"
+    web-production: "Auto"
 
 resources:
   requests:
