@@ -393,18 +393,18 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 
 	newSSHClient := sshclient.NewClient(ctx, sess, pkeys)
 
-	if err := newSSHClient.RefreshPrivateKeys(); err != nil {
-		return fmt.Errorf("Failed to refresh ssh agent private keys: %w", err)
-	}
-
-	s.debug("Private keys refreshed for replacing kube client")
-
 	err = newSSHClient.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
 
 	s.debug("SSH client started for replacing kube client")
+
+	if err := newSSHClient.RefreshPrivateKeys(); err != nil {
+		return fmt.Errorf("Failed to refresh ssh agent private keys: %w", err)
+	}
+
+	s.debug("Private keys refreshed for replacing kube client")
 
 	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(s.ctx.Ctx(), ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {
