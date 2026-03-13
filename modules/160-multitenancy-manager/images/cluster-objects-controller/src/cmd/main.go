@@ -30,6 +30,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/dynamic"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -203,6 +204,7 @@ func main() {
 	defaultingWebhook := webhooks.NewDefaultingMutator(
 		baseLogger.WithValues("component", "DefaultingWebhook"),
 		mgr.GetClient(),
+		dynamic.NewForConfigOrDie(mgr.GetConfig()),
 	)
 	defaultingWebhook.InstallInto(mgr.GetWebhookServer())
 

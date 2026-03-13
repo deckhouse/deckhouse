@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"strings"
 
 	"controller/api/v1alpha1"
@@ -14,7 +16,11 @@ import (
 	"github.com/PaesslerAG/jsonpath"
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -23,17 +29,20 @@ import (
 var _ http.Handler = &DefaultingMutator{}
 
 type DefaultingMutator struct {
-	log logr.Logger
-	cl  client.Client
+	log       logr.Logger
+	cl        client.Client
+	dynamicCl dynamic.Interface
 }
 
 func NewDefaultingMutator(
 	log logr.Logger,
 	client client.Client,
+	dynamicClient dynamic.Interface,
 ) *DefaultingMutator {
 	return &DefaultingMutator{
-		log: log,
-		cl:  client,
+		log:       log,
+		cl:        client,
+		dynamicCl: dynamicClient,
 	}
 }
 
@@ -119,14 +128,14 @@ func (m *DefaultingMutator) applyDefaultsIfNecessary(
 
 	var patches []jsonPatchOperation
 	for _, grantPolicyRef := range grant.Spec.Policies {
-		if grantPolicyRef.Default == "" {
-			// No default for this policy
-			continue
-		}
-
 		policy, err := m.policyByName(ctx, grantPolicyRef.Name)
 		if err != nil {
 			m.log.Error(err, "failed to load ClusterObjectGrantPolicy", "policy_name", grantPolicyRef.Name)
+			continue
+		}
+
+		if grantPolicyRef.Default == "" && policy.Spec.GrantedResource.Defaults.AnnotationKey == "" {
+			// No defaults for this policy
 			continue
 		}
 
@@ -141,13 +150,8 @@ func (m *DefaultingMutator) applyDefaultsIfNecessary(
 				continue
 			}
 
-			refGVR := schema.GroupVersionResource{
-				Group:    gv.Group,
-				Resource: ref.Resource,
-			}
-
 			// Versions are not important here
-			if refGVR.Group != objectGVR.Group || refGVR.Resource != objectGVR.Resource {
+			if gv.Group != objectGVR.Group || ref.Resource != objectGVR.Resource {
 				continue
 			}
 
@@ -162,16 +166,30 @@ func (m *DefaultingMutator) applyDefaultsIfNecessary(
 				continue
 			}
 
+			defaultResourceName, err := m.findDefaultValue(ctx, &grantPolicyRef, policy)
+			switch {
+			case errors.Is(err, errNoDefault):
+				continue
+			case errors.Is(err, errMultipleDefaults):
+				m.log.Error(err,
+					"Multiple candidates for default object based on annotation lookup,"+
+						" will not apply any default based on that",
+				)
+				continue
+			case err != nil:
+				m.log.Error(err, "Cannot find out what is the default")
+				continue
+			}
+
 			pointer, err := m.jsonPathToJSONPointer(ref.FieldPath)
 			if err != nil {
 				m.log.Error(err, "failed to convert fieldPath to JSON Pointer", "field_path", ref.FieldPath)
 				continue
 			}
-
 			patches = append(patches, jsonPatchOperation{
 				Op:    "add",
 				Path:  pointer,
-				Value: grantPolicyRef.Default,
+				Value: defaultResourceName,
 			})
 
 			m.log.Info("injecting default value",
@@ -296,4 +314,64 @@ func (m *DefaultingMutator) policyByName(
 	}
 
 	return policy, nil
+}
+
+var (
+	errNoDefault        = errors.New("no default resource provided")
+	errMultipleDefaults = errors.New("multiple resources are marked as default")
+)
+
+func (m *DefaultingMutator) findDefaultValue(
+	ctx context.Context,
+	grantPolicyReference *v1alpha1.ApplicablePolicy,
+	policy *v1alpha1.ClusterObjectGrantPolicy,
+) (string, error) {
+	if policy.Spec.GrantedResource.Defaults.AnnotationKey == "" {
+		if grantPolicyReference.Default == "" {
+			return "", errNoDefault
+		}
+		return grantPolicyReference.Default, nil
+	}
+
+	gv, err := schema.ParseGroupVersion(policy.Spec.GrantedResource.APIVersion)
+	if err != nil {
+		return "", fmt.Errorf("invalid apiVersion in grantedResource: %w", err)
+	}
+
+	gk := schema.GroupKind{
+		Group: gv.Group,
+		Kind:  policy.Spec.GrantedResource.Kind,
+	}
+
+	kindResourceMapping, err := m.cl.RESTMapper().RESTMapping(gk, gv.Version)
+	if err != nil {
+		return "", fmt.Errorf("map kind to resource: %w", err)
+	}
+
+	list, err := m.dynamicCl.Resource(kindResourceMapping.Resource).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return "", fmt.Errorf("search %q for possible default annotations: %w", kindResourceMapping.GroupVersionKind, err)
+	}
+
+	annotatedItems := make([]*unstructured.Unstructured, 0, 1)
+	for _, item := range list.Items {
+		_, hasAnnotation := item.GetAnnotations()[policy.Spec.GrantedResource.Defaults.AnnotationKey]
+		if hasAnnotation {
+			annotatedItems = append(annotatedItems, &item)
+		}
+	}
+
+	switch len(annotatedItems) {
+	case 0:
+		return "", errNoDefault
+	case 1:
+		return annotatedItems[0].GetName(), nil
+	default:
+		return "", fmt.Errorf(
+			"multiple %+v resources are annotated with %q: %w",
+			gk,
+			&policy.Spec.GrantedResource.Defaults.AnnotationKey,
+			errMultipleDefaults,
+		)
+	}
 }
