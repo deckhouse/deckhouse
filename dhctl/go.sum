@@ -93,6 +93,12 @@ github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbL
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.2.2 h1:27LBs+PKJEFnkQXjPU9eIps7a7iyI13AKcSYj897DCU=
 github.com/flant/kube-client v1.2.2/go.mod h1:eMa3aJ6V1PRWSQ/RCROkObDpY4S74uM84SJS4G/LINg=
+github.com/flant/kube-client v1.2.3-0.20251010113940-a5ee3ab51ae7 h1:DyeSB10HH7WtdVIuRz/BvLb5ww55IcoAUOqzrTKdlIc=
+github.com/flant/kube-client v1.2.3-0.20251010113940-a5ee3ab51ae7/go.mod h1:eMa3aJ6V1PRWSQ/RCROkObDpY4S74uM84SJS4G/LINg=
+github.com/flant/kube-client v1.2.3-0.20251010120358-6d59508d68da h1:QTK//RIoqdsUq3h0LLtd/+GKHZK5h/nGHW5wE2MCOnU=
+github.com/flant/kube-client v1.2.3-0.20251010120358-6d59508d68da/go.mod h1:kuIr5aVjXzJaMRth/wEHYwLXz9qt28B6M+zhidk7S04=
+github.com/flant/kube-client v1.2.3 h1:cmS4FktyBdM65xNT71CW/sS3gaJatANqGOHySNCNbio=
+github.com/flant/kube-client v1.2.3/go.mod h1:kuIr5aVjXzJaMRth/wEHYwLXz9qt28B6M+zhidk7S04=
 github.com/frankban/quicktest v1.14.3 h1:FJKSZTDHjyhriyC81FLQ0LY93eSai0ZyR/ZIkd3ZUKE=
 github.com/frankban/quicktest v1.14.3/go.mod h1:mgiwOwqx65TmIk1wJ6Q7wvnVMocbUorkibMOrVTHZps=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
