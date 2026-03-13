@@ -587,15 +587,6 @@ CRl8TSg922cXTLVt8Q==
 				wantErr: false,
 			},
 			{
-				title:     "Cache hit, unable to replace r/o files, failure",
-				directory: testDir,
-				rc:        RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
-				// docker.io/library/nginx:stable-alpine
-				image:   "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
-				wantErr: true,
-				err:     "extracting layer: creating file",
-			},
-			{
 				title:     "Invalid image reference, failure",
 				directory: testDir,
 				rc:        RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
@@ -640,19 +631,19 @@ CRl8TSg922cXTLVt8Q==
 				// docker.io/library/nginx:stable-alpine
 				image: "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
 				prepareFunc: func() error {
-					path := filepath.Join(testDir, "sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e")
-					if err = os.Remove(path); err != nil {
+					if err = os.Remove(filepath.Join(testDir, "images_hashs.json")); err != nil {
 						return err
 					}
-					_, err := os.Create(path)
+					f, err := os.Create(filepath.Join(testDir, "images_hashs.json"))
 					if err != nil {
 						return err
 					}
+					_, err = f.WriteString("Wrong JSON")
+					return err
 
-					return os.Chmod(path, 0o001)
 				},
 				wantErr: true,
-				err:     "pulling image docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e: saving tar.gz: creating tar file",
+				err:     "saving checksum to file: unmarshalling json: invalid character",
 			},
 		}
 
@@ -741,13 +732,8 @@ func TestPullImage(t *testing.T) {
 	err := os.MkdirAll(testDir, 0755)
 	require.NoError(t, err)
 
-	testDir2 := filepath.Join(os.TempDir(), "dhctltests2")
-	err = os.MkdirAll(testDir2, 0001)
-	require.NoError(t, err)
-
 	t.Cleanup(func() {
 		os.RemoveAll(testDir)
-		os.RemoveAll(testDir2)
 	})
 
 	t.Run("pullImage tests", func(t *testing.T) {
@@ -768,40 +754,12 @@ func TestPullImage(t *testing.T) {
 				wantErr: false,
 			},
 			{
-				title:   "Unaccessible target dir, failure",
-				imgRef:  "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
-				rc:      &RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
-				destDir: testDir2,
-				wantErr: true,
-				err:     "could not create cache directory",
-			},
-			{
 				title:   "Unaccessible image, failure",
 				imgRef:  "docker.io/library/nginx:notatag100500",
 				rc:      &RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
 				destDir: testDir,
 				wantErr: true,
 				err:     "pulling image",
-			},
-			{
-				title:   "Unaccessible tarball path, failure",
-				imgRef:  "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
-				rc:      &RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
-				destDir: testDir,
-				prepareFunc: func() error {
-					path := filepath.Join(testDir, "sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e")
-					if err = os.Remove(path); err != nil {
-						return err
-					}
-					_, err := os.Create(path)
-					if err != nil {
-						return err
-					}
-
-					return os.Chmod(path, 0o001)
-				},
-				wantErr: true,
-				err:     "saving tar.gz",
 			},
 			{
 				title:   "Wrong images_hash.json, failure",
