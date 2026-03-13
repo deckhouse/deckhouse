@@ -138,10 +138,6 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to set converge state: %w", err)
 		}
-
-		if err := c.switchClientToNotFirstMaster(ctx); err != nil {
-			return err
-		}
 	}
 
 	if c.convergeState.Phase == phases.ScaleToSingleMasterPhase {
@@ -261,13 +257,8 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 	}
 
 	if len(masterIPForSSHList) > 0 {
-		if !ctx.CommanderMode() {
-			sshCl := ctx.KubeClient().NodeInterfaceAsSSHClient()
-			if sshCl == nil {
-				panic("NodeInterface is not ssh")
-			}
-
-			sshCl.Session().AddAvailableHosts(masterIPForSSHList...)
+		if err := c.addNewNodesToSSH(ctx, masterIPForSSHList); err != nil {
+			return err
 		}
 
 		// we hide deckhouse logs because we always have config
@@ -275,40 +266,61 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		if err != nil {
 			return err
 		}
-
 		c.cloudConfig = nodeCloudConfig
+
+		c.addNewNodesToCache(ctx, masterIPForSSHList)
 	}
 
-	// Update master hosts cache with all newly created masters
-	if len(masterIPForSSHList) > 0 {
-		log.DebugF("Updating master hosts cache with %d new masters\n", len(masterIPForSSHList))
-
-		// Get current master hosts from cache
-		stateCache := ctx.StateCache()
-		currentHosts, err := state.GetMasterHostsIPs(stateCache)
-		if err != nil {
-			log.DebugF("Could not load current master hosts from cache (this is OK for first master): %v\n", err)
-			currentHosts = []session.Host{}
+	if c.convergeState.Phase == phases.ScaleToMultiMasterPhase {
+		if err := c.switchClientToNotFirstMaster(ctx); err != nil {
+			return err
 		}
-
-		hostsMap := make(map[string]string)
-		for _, host := range currentHosts {
-			hostsMap[host.Name] = host.Host
-		}
-
-		for _, newHost := range masterIPForSSHList {
-			hostsMap[newHost.Name] = newHost.Host
-			log.DebugF("Adding new master to cache: %s -> %s\n", newHost.Name, newHost.Host)
-		}
-
-		log.DebugF("Saving updated master hosts to cache: %v\n", hostsMap)
-
-		state.SaveMasterHostsToCache(stateCache, hostsMap)
-
-		log.DebugF("Successfully updated master hosts cache with %d new masters. hostsMap: %v\n", len(masterIPForSSHList), hostsMap)
 	}
 
 	return nil
+}
+
+func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, masterIPForSSHList []session.Host) error {
+	if ctx.CommanderMode() {
+		return nil
+	}
+
+	sshCl := ctx.KubeClient().NodeInterfaceAsSSHClient()
+	if govalue.IsNil(sshCl) {
+		return fmt.Errorf("NodeInterface is not ssh")
+	}
+
+	sshCl.Session().AddAvailableHosts(masterIPForSSHList...)
+
+	return nil
+}
+
+func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, masterIPForSSHList []session.Host) {
+	log.DebugF("Updating master hosts cache with %d new masters\n", len(masterIPForSSHList))
+
+	// Get current master hosts from cache
+	stateCache := ctx.StateCache()
+	currentHosts, err := state.GetMasterHostsIPs(stateCache)
+	if err != nil {
+		log.DebugF("Could not load current master hosts from cache (this is OK for first master): %v\n", err)
+		currentHosts = []session.Host{}
+	}
+
+	hostsMap := make(map[string]string)
+	for _, host := range currentHosts {
+		hostsMap[host.Name] = host.Host
+	}
+
+	for _, newHost := range masterIPForSSHList {
+		hostsMap[newHost.Name] = newHost.Host
+		log.DebugF("Adding new master to cache: %s -> %s\n", newHost.Name, newHost.Host)
+	}
+
+	log.DebugF("Saving updated master hosts to cache: %v\n", hostsMap)
+
+	state.SaveMasterHostsToCache(stateCache, hostsMap)
+
+	log.DebugF("Successfully updated master hosts cache with %d new masters. hostsMap: %v\n", len(masterIPForSSHList), hostsMap)
 }
 
 func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {

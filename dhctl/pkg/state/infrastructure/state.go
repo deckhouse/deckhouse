@@ -134,12 +134,20 @@ func GetMasterNodesStateFromCluster(ctx context.Context, kubeCl *client.Kubernet
 }
 
 func getMasterNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) ([]*v1.Secret, error) {
-	stateSelector := kubernetes.LabelSelector{
-		Label: manifests.NodeInfrastructureStateLabelKey,
-		Operator: selection.Exists,
+	stateSelectors := []kubernetes.LabelSelector{
+		{
+			// terraform state has different label for node group
+			Label:    "node.deckhouse.io/node-group",
+			Operator: selection.Equals,
+			Vals:     []string{global.MasterNodeGroupName},
+		},
+		{
+			Label: manifests.NodeInfrastructureStateLabelKey,
+			Operator: selection.Exists,
+		},
 	}
 	
-	selector, err := kubernetes.GetMasterNodeGroupLabelSelector(stateSelector)
+	selector, err := kubernetes.GetLabelSelector(stateSelectors)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot build label selector for master node group: %w", err)
 	}
@@ -150,7 +158,7 @@ func getMasterNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.K
 
 	var nodeStateSecrets []*v1.Secret
 
-	err = retry.NewLoop("Get Control-plane nodes infrastructure state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx, func() error {
+	err = retry.NewLoop("Get control-plane nodes infrastructure state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx, func() error {
 		nodeStateSecretsList, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).List(ctx, listOpts)
 		if err != nil {
 			return err

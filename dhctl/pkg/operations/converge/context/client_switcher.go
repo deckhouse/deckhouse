@@ -81,7 +81,6 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 		return nil
 	}
 
-
 	return s.logger.LogProcess("default", action, func() error {
 		convergeState, err := s.createNodeUser(ctx)
 		if err != nil {
@@ -93,7 +92,7 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 }
 
 func (s *KubeClientSwitcher) CleanupNodeUser() error {
-	const action = "Delete node user"
+	const action = "Cleanup node user"
 
 	if skip, err := s.isSkipOrLogStart(action, false); err != nil {
 		return err
@@ -301,6 +300,8 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 
 	settings := sshCl.Session()
 
+	availableHosts := make([]session.Host, 0, len(params.state))
+
 	suff := rand.NewSource(time.Now().UnixNano()).Int63()
 
 	for nodeName, stateBytes := range params.state {
@@ -341,9 +342,13 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 			continue
 		}
 
-		settings.AddAvailableHosts(session.Host{Host: ipAddress, Name: nodeName})
+		availableHosts = append(availableHosts, session.Host{Host: ipAddress, Name: nodeName})
 
 		s.debug("Extracted ip address %s and node name: %s", ipAddress, nodeName)
+	}
+
+	if len(availableHosts) == 0 {
+		return fmt.Errorf("Cannot switch clients. Got empty available hosts from node states")
 	}
 
 	if s.lockRunner != nil {
@@ -373,7 +378,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 		BastionPort:    settings.BastionPort,
 		BastionUser:    settings.BastionUser,
 		ExtraArgs:      settings.ExtraArgs,
-		AvailableHosts: settings.AvailableHosts(),
+		AvailableHosts: availableHosts,
 		BecomePass:     params.convergeState.NodeUserCredentials.Password,
 	})
 
