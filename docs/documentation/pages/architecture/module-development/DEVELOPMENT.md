@@ -366,7 +366,7 @@ To approve the module release, apply the annotation:
 d8 k annotate mr p-o-test-v0.7.25 modules.deckhouse.io/approved="true"
 ```
 
-This can also be done using the d8 CLI for convenience (module names and versions are autocompleted):
+This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
 
 ```shell
 d8 system module approve p-o-test v0.7.25

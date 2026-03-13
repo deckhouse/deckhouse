@@ -298,7 +298,7 @@ module-two-v1.2.5          Pending      deckhouse       44d              Waiting
 d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
 
-Для удобства это можно сделать с помощью d8 CLI (имена модулей и версии автодополняются):
+Для удобства это можно сделать с помощью [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI (имена модулей и версии автодополняются):
 
 ```shell
 d8 system module approve <module-name> <version>
@@ -454,7 +454,7 @@ module-1-v1.23.2     Pending      example-update-policy  3m               Waitin
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
 
-Для удобства это можно сделать с помощью d8 CLI (имена модулей и версии автодополняются):
+Для удобства это можно сделать с помощью [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI (имена модулей и версии автодополняются):
 
 ```shell
 d8 system module approve module-1 v1.23.2

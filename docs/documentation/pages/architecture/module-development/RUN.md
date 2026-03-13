@@ -296,7 +296,7 @@ If a module release is `Pending`, it means that manual confirmation is required 
 d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
 
-This can also be done using the d8 CLI for convenience (module names and versions are autocompleted):
+This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
 
 ```shell
 d8 system module approve <module-name> <version>
@@ -450,7 +450,7 @@ The example output above illustrates ModuleRelease message when the update mode 
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
 
-This can also be done using the d8 CLI for convenience (module names and versions are autocompleted):
+This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
 
 ```shell
 d8 system module approve module-1 v1.23.2

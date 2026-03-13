@@ -13,7 +13,7 @@ lang: ru
 d8 k annotate mr console-v1.43.3 modules.deckhouse.io/apply-now="true"
 ```
 
-Для удобства это можно сделать с помощью d8 CLI (имена модулей и версии автодополняются):
+Для удобства это можно сделать с помощью [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI (имена модулей и версии автодополняются):
 
 ```shell
 d8 system module apply-now console v1.43.3
