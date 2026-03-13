@@ -62,30 +62,29 @@ fi
 # rewrite "kubectl" to "d8 k" and call d8 __complete directly
 cat <<'EOF' > /etc/bash_completion.d/d8_kubectl_completion
 _kubectl_complete() {
-    local orig_words=("${COMP_WORDS[@]}")
-    local orig_cword="$COMP_CWORD"
-    local cur="${COMP_WORDS[$COMP_CWORD]}"
+    local cur prev words cword
+    _init_completion -n =: || return
 
-    # Build d8 __complete command: replace "kubectl" with "k"
-    local args=("k" "${COMP_WORDS[@]:1}")
+    local args=("k" "${words[@]:1}")
     local requestComp="/opt/deckhouse/bin/d8 __complete ${args[*]}"
 
-    # If current word is incomplete, don't add empty arg
-    # If current word is empty (user pressed space+tab), add empty arg
-    if [[ "$cur" == "" ]]; then
+    local lastParam="${words[$((${#words[@]}-1))]}"
+    local lastChar="${lastParam:$((${#lastParam}-1)):1}"
+
+    if [[ -z "$cur" && "$lastChar" != "=" ]]; then
         requestComp="${requestComp} \"\""
     fi
 
     local out
     out=$(eval "${requestComp}" 2>/dev/null)
 
-    # Parse results: remove directive line (:N) and debug lines
     local completions=()
     while IFS='' read -r line; do
         [[ "$line" =~ ^:[0-9]+$ ]] && continue
         [[ "$line" =~ ^Completion ]] && continue
         [[ -z "$line" ]] && continue
-        completions+=("$line")
+        # Remove description after tab character
+        completions+=("${line%%$'\t'*}")
     done <<< "$out"
 
     COMPREPLY=()
