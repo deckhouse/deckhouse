@@ -9,7 +9,7 @@ function __config__() {
   cat <<EOF
 configVersion: v1
 kubernetes:
-- name: istioMC
+- name: istio_mc
   group: main
   executeHookOnEvent: []
   executeHookOnSynchronization: false
@@ -21,12 +21,12 @@ kubernetes:
     - istio
   jqFilter: |
     {
-      "multicluster_enabled": .spec.settings.multicluster.enabled,
+      "multiclusterEnabled": .spec.settings.multicluster.enabled,
     }
 kubernetesValidating:
 - name: istiomulticlusters.deckhouse.io
   group: main
-  includeSnapshotsFrom: ["istioMC"]
+  includeSnapshotsFrom: ["istio_mc"]
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["v1alpha1"]
@@ -37,7 +37,7 @@ EOF
 }
 
 function __main__() {
-  multicluster_enabled=$(context::jq -r '.snapshots.istioMC[]?.filterResult.multicluster_enabled')
+  multicluster_enabled=$(context::jq -r '.snapshots.istio_mc[]?.filterResult.multiclusterEnabled')
   if [ "$multicluster_enabled" != "true" ]; then
     jq -nc '
     {
