@@ -252,7 +252,7 @@ func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageC
 	}
 }
 
-type storageClass struct{
+type storageClass struct {
 	Name                 string `json:"name"`
 	DVPStorageClass      string `json:"dvpStorageClass"`
 	VolumeBindingMode    string `json:"volumeBindingMode"`
