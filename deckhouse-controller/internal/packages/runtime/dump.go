@@ -28,19 +28,19 @@ import (
 
 // dump is the serialization envelope for the debug endpoint.
 type dump struct {
-	Apps    map[string]appDump    `json:"apps" yaml:"apps"`
-	Modules map[string]moduleDump `json:"modules" yaml:"modules"`
+	Apps    map[string]appDump    `json:"apps"`
+	Modules map[string]moduleDump `json:"modules"`
 }
 
 // appDump combines status conditions and package info for a single app.
 type appDump struct {
-	status.Status
+	Status status.Status `json:"status"`
 	apps.Info
 }
 
 // moduleDump combines status conditions and package info for a single module.
 type moduleDump struct {
-	status.Status
+	Status status.Status `json:"status"`
 	modules.Info
 }
 
@@ -64,15 +64,15 @@ func (r *Runtime) Dump() []byte {
 
 	for _, app := range r.apps {
 		d.Apps[app.GetName()] = appDump{
-			r.status.GetStatus(app.GetName()),
-			app.GetInfo(),
+			Status: r.status.GetStatus(app.GetName()),
+			Info:   app.GetInfo(),
 		}
 	}
 
 	for _, module := range r.modules {
 		d.Modules[module.GetName()] = moduleDump{
-			r.status.GetStatus(module.GetName()),
-			module.GetInfo(),
+			Status: r.status.GetStatus(module.GetName()),
+			Info:   module.GetInfo(),
 		}
 	}
 
