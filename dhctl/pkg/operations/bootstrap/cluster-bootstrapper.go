@@ -379,6 +379,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 		cloudPreflightSuite := suites.NewCloudSuite(suites.CloudDeps{
 			InstallConfig: deckhouseInstallConfig,
+			MetaConfig:    metaConfig,
 		})
 		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
 			MetaConfig: metaConfig,
