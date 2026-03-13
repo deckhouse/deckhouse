@@ -45,8 +45,8 @@ const (
 	lokiKubeRbacProxyTLSSecretNS     = "d8-monitoring"
 	lokiKubeRbacProxyTLSSecretSnap   = "kube_rbac_proxy_tls_secret"
 	lokiKubeRbacProxyCertCN          = "loki.d8-monitoring"
-	lokiKubeRbacProxyRotationCron    = "0 5 * * 1"
-	lokiKubeRbacProxyRotateIfExpires = 15 * 24 * time.Hour
+	lokiKubeRbacProxyRotationCron    = "0 5 1 * *"
+	lokiKubeRbacProxyRotateIfExpires = 60 * 24 * time.Hour // 2 months
 )
 
 func kubeRbacProxyTLSSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
