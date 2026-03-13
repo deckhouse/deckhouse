@@ -51,6 +51,7 @@ admissionPolicyEngine:
       - metadata:
           name: genpolicy
         spec:
+          enforcementAction: Warn
           policies:
             allowedRepos:
               - foo
@@ -105,6 +106,14 @@ admissionPolicyEngine:
             namespaceSelector:
               matchNames:
                 - default
+              excludeNames:
+                - kube-system
+              labelSelector:
+                matchLabels:
+                  operation-policy.deckhouse.io/enabled: "true"
+            labelSelector:
+              matchLabels:
+                operation-policy.deckhouse.io/enabled: "true"
     trackedConstraintResources:
       - apiGroups:
           - ""
@@ -178,6 +187,57 @@ admissionPolicyEngine:
 					}
 					validateYAML(resourceMap, constraintKind)
 				}
+			}
+		})
+
+		It("Operation policy constraints must use values for enforcementAction, match and parameters", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			expectedSelector := constraintSelectorExpectation{
+				namespaces: mustParseYaml("- default"),
+				excludedNamespaces: mustParseYaml("- kube-system"),
+				namespaceSelector: mustParseYaml("matchLabels:\n  operation-policy.deckhouse.io/enabled: \"true\""),
+				labelSelector: mustParseYaml("matchLabels:\n  operation-policy.deckhouse.io/enabled: \"true\""),
+			}
+			expectedAction := "warn"
+
+			expectedParameters := map[string]interface{}{
+				"D8AllowedRepos": mustParseYaml("repos:\n  - foo"),
+				"D8RequiredResources": mustParseYaml("limits:\n  - memory\nrequests:\n  - cpu\n  - memory"),
+				"D8DisallowedTags": mustParseYaml("tags:\n  - latest"),
+				"D8RequiredLabels": mustParseYaml("labels:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.agilebank.demo$\""),
+				"D8RequiredAnnotations": mustParseYaml("annotations:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.myapp.demo$\""),
+				"D8RequiredProbes": mustParseYaml("probes:\n  - livenessProbe\n  - readinessProbe"),
+				"D8RevisionHistoryLimit": mustParseYaml("limit: 3"),
+				"D8ImagePullPolicy": mustParseYaml("policy: \"Always\""),
+				"D8PriorityClass": mustParseYaml("priorityClassNames:\n  - foo\n  - bar"),
+				"D8IngressClass": mustParseYaml("ingressClassNames:\n  - ing1\n  - ing2"),
+				"D8StorageClass": mustParseYaml("storageClassNames:\n  - st1\n  - st2"),
+				"D8ReplicaLimits": mustParseYaml("ranges:\n  - minReplicas: 1\n    maxReplicas: 10"),
+				"D8DisallowedTolerations": mustParseYaml("tolerations:\n  - key: node-role.kubernetes.io/master\n    operator: Exists\n  - key: node-role.kubernetes.io/control-plane\n    operator: Exists"),
+			}
+
+			constraintsWithoutParameters := []string{
+				"D8DNSPolicy",
+				"D8ContainerDuplicates",
+			}
+
+			for constraintKind, expected := range expectedParameters {
+				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
+				Expect(constraint.Exists()).To(BeTrue())
+				spec := getConstraintSpecMap(constraint)
+				expectConstraintAction(spec, expectedAction)
+				expectConstraintSelector(spec, expectedSelector)
+				expectConstraintParameters(spec, expected)
+			}
+
+			for _, constraintKind := range constraintsWithoutParameters {
+				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
+				Expect(constraint.Exists()).To(BeTrue())
+				spec := getConstraintSpecMap(constraint)
+				expectConstraintAction(spec, expectedAction)
+				expectConstraintSelector(spec, expectedSelector)
+				expectConstraintParameters(spec, nil)
 			}
 		})
 	})
