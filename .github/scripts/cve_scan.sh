@@ -113,7 +113,7 @@ function send_report() {
   echo ""
   echo " Uploading trivy ${dd_branch} report for image \"${dd_image_name}\" of \"${dd_module_name}\" module"
   echo ""
-  dd_upload_response=$(curl -sw "%{http_code}" -X POST \
+  dd_upload_response=$(curl -w "%{http_code}" -X POST \
     --retry 10 \
     --retry-delay 20 \
     --retry-all-errors \
@@ -153,7 +153,7 @@ function send_report() {
     echo "dd_engagement_id: ${dd_engagement_id}"
     echo "Update with tags: ${tags_string}"
     # Updating engagement
-    dd_eng_patch_response=$(curl -sw "%{http_code}" -X "PATCH" \
+    dd_eng_patch_response=$(curl -w "%{http_code}" -X "PATCH" \
       --retry 10 \
       --retry-delay 20 \
       --retry-all-errors \
