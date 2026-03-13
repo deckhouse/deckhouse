@@ -62,33 +62,37 @@ fi
 # rewrite "kubectl" to "d8 k" and call d8 __complete directly
 cat <<'EOF' > /etc/bash_completion.d/d8_kubectl_completion
 _kubectl_complete() {
-    local orig_line="$COMP_LINE"
-    local orig_point="$COMP_POINT"
     local orig_words=("${COMP_WORDS[@]}")
     local orig_cword="$COMP_CWORD"
+    local cur="${COMP_WORDS[$COMP_CWORD]}"
 
-    COMP_LINE="d8 k${COMP_LINE#kubectl}"
-    COMP_POINT=$((COMP_POINT + 1))
-    COMP_WORDS=("d8" "k" "${COMP_WORDS[@]:1}")
-    COMP_CWORD=$((COMP_CWORD + 1))
+    # Build d8 __complete command: replace "kubectl" with "k"
+    local args=("k" "${COMP_WORDS[@]:1}")
+    local requestComp="/opt/deckhouse/bin/d8 __complete ${args[*]}"
 
-    local requestComp="/opt/deckhouse/bin/d8 __complete ${COMP_WORDS[*]:1}"
-    local out directive
+    # If current word is incomplete, don't add empty arg
+    # If current word is empty (user pressed space+tab), add empty arg
+    if [[ "$cur" == "" ]]; then
+        requestComp="${requestComp} \"\""
+    fi
+
+    local out
     out=$(eval "${requestComp}" 2>/dev/null)
 
-    local lastLine="${out##*$'\n'}"
-    directive="${lastLine#*:}"
-    out="${out%$'\n'*}"
+    # Parse results: remove directive line (:N) and debug lines
+    local completions=()
+    while IFS='' read -r line; do
+        [[ "$line" =~ ^:[0-9]+$ ]] && continue
+        [[ "$line" =~ ^Completion ]] && continue
+        [[ -z "$line" ]] && continue
+        completions+=("$line")
+    done <<< "$out"
 
     COMPREPLY=()
-    while IFS='' read -r line; do
-        COMPREPLY+=("${line}")
-    done < <(compgen -W "${out}" -- "${orig_words[$orig_cword]}")
-
-    COMP_LINE="$orig_line"
-    COMP_POINT="$orig_point"
-    COMP_WORDS=("${orig_words[@]}")
-    COMP_CWORD="$orig_cword"
+    if [[ ${#completions[@]} -gt 0 ]]; then
+        local IFS=$'\n'
+        COMPREPLY=($(compgen -W "${completions[*]}" -- "$cur"))
+    fi
 }
 complete -o default -F _kubectl_complete kubectl
 EOF
