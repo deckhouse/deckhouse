@@ -24,7 +24,7 @@ metadata:
   name: doc-installer-version
 data:
   installer-versions-nginx.include: |
-    "latest" "v0.6.2";
+    "latest" "0.6.2";
 {{- end }}
 ---
 apiVersion: v1
