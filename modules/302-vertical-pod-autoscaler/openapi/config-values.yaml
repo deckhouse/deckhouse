@@ -28,9 +28,3 @@ properties:
           format: int64
         value:
           type: string
-  inPlaceSkipDisruptionBudget:
-    type: boolean
-    default: false
-    description: |
-      [ALPHA] If true, VPA updater skips disruption budget checks for in-place pod updates
-      when all containers have NotRequired resize policy for both CPU and memory resources.

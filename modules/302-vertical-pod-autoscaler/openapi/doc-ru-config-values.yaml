@@ -9,7 +9,3 @@ properties:
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
       Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
-  inPlaceSkipDisruptionBudget:
-    description: |
-      [ALPHA] Если указано `true`, то VPA updater пропустит проверку disruption budget для in-place обновления подов, когда
-       у контейнеров указано NotRequired resize policy для ресурсов CPU and memory.
