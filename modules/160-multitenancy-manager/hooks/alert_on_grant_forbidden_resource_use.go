@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-const grantViolationMetricNamePrefix = "d8_cluster_objects_grant_violated"
+const grantViolationMetricName = "d8_cluster_objects_grant_violated"
 
 type grant struct {
 	ObjectMeta v1.ObjectMeta `json:"metadata"`
@@ -81,7 +81,6 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 			return fmt.Errorf("unmarshal grant snapshot: %w", err)
 		}
 
-		metricName := fmt.Sprintf("%s_%s", grantViolationMetricNamePrefix, g.ObjectMeta.Name)
 		metricLabels := map[string]string{
 			"project": g.ObjectMeta.Name,
 		}
@@ -100,7 +99,7 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 		)
 
 		if len(violations) == 0 {
-			input.MetricsCollector.Set(metricName, 0, metricLabels)
+			input.MetricsCollector.Set(grantViolationMetricName, 0, metricLabels)
 			continue
 		}
 
@@ -112,7 +111,7 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 			}
 		}
 
-		input.MetricsCollector.Set(metricName, 1, metricLabels)
+		input.MetricsCollector.Set(grantViolationMetricName, float64(len(violations)), metricLabels)
 		return nil
 
 	}
