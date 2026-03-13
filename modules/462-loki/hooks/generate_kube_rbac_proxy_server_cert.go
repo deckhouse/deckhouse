@@ -45,7 +45,7 @@ const (
 	lokiKubeRbacProxyTLSSecretNS     = "d8-monitoring"
 	lokiKubeRbacProxyTLSSecretSnap   = "kube_rbac_proxy_tls_secret"
 	lokiKubeRbacProxyCertCN          = "loki.d8-monitoring"
-	lokiKubeRbacProxyRotationCron    = "19 4 * * *"
+	lokiKubeRbacProxyRotationCron    = "0 5 * * 1"
 	lokiKubeRbacProxyRotateIfExpires = 15 * 24 * time.Hour
 )
 
