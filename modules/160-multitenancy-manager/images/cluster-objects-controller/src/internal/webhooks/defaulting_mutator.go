@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"net/http"
-	"slices"
 	"strings"
 
 	"controller/api/v1alpha1"
@@ -18,7 +16,6 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/utils/ptr"
@@ -370,7 +367,7 @@ func (m *DefaultingMutator) findDefaultValue(
 		return "", fmt.Errorf(
 			"multiple %+v resources are annotated with %q: %w",
 			gk,
-			&policy.Spec.GrantedResource.Defaults.AnnotationKey,
+			policy.Spec.GrantedResource.Defaults.AnnotationKey,
 			errMultipleDefaults,
 		)
 	}
