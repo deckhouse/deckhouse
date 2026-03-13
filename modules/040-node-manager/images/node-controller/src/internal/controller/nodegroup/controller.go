@@ -23,8 +23,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,46 +30,36 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	controllerregistry "github.com/deckhouse/node-controller/internal/controller"
 	cloudstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/cloud_status"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	ngconditions "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditions"
 	calcconditions "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditionscalc"
 	nodestatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/node_status"
 	processedstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/processed_status"
+	"github.com/deckhouse/node-controller/internal/controller/updateapproval"
+	"github.com/deckhouse/node-controller/internal/register"
+	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
 
 func init() {
-	controllerregistry.Register("NodeGroup", "NodeGroupStatus", SetupNodeGroupStatus)
+	register.RegisterGroup(register.NodeGroupStatus, &v1.NodeGroup{}, &Status{}, updateapproval.New())
 }
 
-type NodeGroupStatusReconciler struct {
-	Client   client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+var _ dynctrl.Reconciler = (*Status)(nil)
+
+type Status struct {
+	dynctrl.Base
 }
 
-func SetupNodeGroupStatus(mgr ctrl.Manager) error {
-	return (&NodeGroupStatusReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("node-controller"),
-	}).SetupWithManager(mgr)
+func (r *Status) SetupWatches(w dynctrl.Watcher) {
+	w.Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(ngcommon.NodeToNodeGroup), builder.WithPredicates(ngcommon.NodeHasGroupLabelPredicate()))
+	w.Watches(ngcommon.NewUnstructured(ngcommon.MCMMachineGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
+	w.Watches(ngcommon.NewUnstructured(ngcommon.MCMMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
+	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
+	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
 }
 
-func (r *NodeGroupStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.NodeGroup{}).
-		Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(ngcommon.NodeToNodeGroup), builder.WithPredicates(ngcommon.NodeHasGroupLabelPredicate())).
-		Watches(ngcommon.NewUnstructured(ngcommon.MCMMachineGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup)).
-		Watches(ngcommon.NewUnstructured(ngcommon.MCMMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup)).
-		Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup)).
-		Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup)).
-		Named("nodegroup-status").
-		Complete(r)
-}
-
-func (r *NodeGroupStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.V(1).Info("reconciling nodegroup status", "name", req.Name)
 
