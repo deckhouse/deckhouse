@@ -189,15 +189,6 @@ html {
         }
 
         .sub-menu {
-            // @include breakpoints.min-w(xxl) {
-            //     a {
-            //         font-size: 15px;
-            //     }
-            // }
-
-            // @include breakpoints.min-w(xl) {
-            //     gap: .75rem;
-            // }
 
             @include breakpoints.min-w(l) {
                 display: flex;
