@@ -144,6 +144,8 @@ function send_report() {
     -F "branch_tag=${d8_tag}" \
     -F "apply_tags_to_findings=true")
 
+  echo "${dd_upload_response}"
+
   dd_return_code="${dd_upload_response: -3}"
   dd_return_body="${dd_upload_response:0: -3}"
   if [ ${dd_return_code} -eq 201 ]; then
@@ -164,6 +166,9 @@ function send_report() {
       \"version\": \"${dd_image_version}\",
       \"branch_tag\": \"${d8_tag}\"
     }")
+
+    echo "${dd_eng_patch_response}"
+
     if [ ${dd_eng_patch_response: -3} -eq 200 ]; then
       echo "Engagemet \"${dd_engagement_name}\" updated successfully"
     else
