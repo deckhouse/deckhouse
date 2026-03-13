@@ -16,7 +16,7 @@ description: Архитектура подсистемы Storage в Deckhouse Ku
 * [`sds-node-configurator`](/modules/sds-node-configurator/) — управляет блочными устройствами и LVM на узлах Kubernetes-кластера через [кастомные ресурсы Kubernetes](https://deckhouse.ru/modules/sds-node-configurator/stable/cr.html);
 * [`sds-replicated-volume`](/modules/sds-replicated-volume/) — управляет реплицируемым блочным хранилищем на базе `DRBD`. В качестве control-plane/бэкенда используется `LINSTOR`;
 * [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) — обеспечивает безопасные экспорт и импорт содержимого постоянных томов по протоколу HTTP;
-* модули, предоставляющие реализацию CSI-драйвера для интеграции с различными типами хранилищ (программными и аппартными):
+* модули, предоставляющие реализацию CSI-драйвера для интеграции с различными типами хранилищ (программными и аппаратными):
 
   * [`csi-ceph`](/modules/csi-ceph/);
   * [`csi-hpe`](/modules/csi-hpe/);

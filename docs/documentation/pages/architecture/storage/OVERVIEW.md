@@ -9,7 +9,7 @@ This subsection describes the architecture of the Storage subsystem of Deckhouse
 
 The Storage subsystem includes the following modules:
 
-* [`local-path-provisioner`](/modules/local-path-provisioner/): Provides the local storage on Kubernetse nodes using HostPath volumes. Creates StorageClass resources to manage the allocation of local storage.
+* [`local-path-provisioner`](/modules/local-path-provisioner/): Provides the local storage on Kubernetes nodes using HostPath volumes. Creates StorageClass resources to manage the allocation of local storage.
 * [`snapshot-controller`](/modules/snapshot-controller/): Enables snapshot support for compatible CSI-drivers in the Kubernetes cluster.
 * [`sds-local-volume`](/modules/sds-local-volume/): Manages the local block storage based on LVM. It enables creating StorageClasses in Kubernetes using the [LocalStorageClass](https://deckhouse.ru/modules/sds-local-volume/cr.html#localstorageclass) resource.
 * [`sds-node-configurator`](/modules/sds-node-configurator/): Manages block devices and LVM on Kubernetes cluster nodes through [Kubernetes custom resources](https://deckhouse.ru/modules/sds-node-configurator/stable/cr.html).
