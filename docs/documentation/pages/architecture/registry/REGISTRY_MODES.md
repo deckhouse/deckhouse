@@ -1,7 +1,8 @@
 ---
 title: "Architecture of registry interaction modes"
-permalink: en/architecture/registry-modes.html
+permalink: en/architecture/deckhouse/registry-modes.html
 ---
+
 Deckhouse Kubernetes Platform supports several modes of interaction with the container image repository.
 
 ## Direct mode architecture
@@ -13,9 +14,9 @@ CRI requests to the registry are redirected based on its configuration, which is
 For components such as [operator-trivy](/modules/operator-trivy/), `image-availability-exporter`, `deckhouse-controller`, and others that access the registry directly, requests will go through the in-cluster proxy located on the master nodes.
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
-![direct](../images/registry-module/direct-en.png)
+![direct](../../images/registry-module/direct-en.png)
 
-For more information about the `Direct` mode, see the section [Managing registry interaction settings in a cluster fully managed by DKP](../admin/configuration/registry/managing-interaction.html).
+For more information about the `Direct` mode, see the section [Managing registry interaction settings in a cluster fully managed by DKP](../../admin/configuration/registry/managing-interaction.html).
 
 ## Proxy mode architecture
 
@@ -32,9 +33,9 @@ To ensure high availability of the caching proxy registry, a load balancer is de
 For components such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others that access the registry directly, requests will go through the caching proxy registry.
 
 <!--- Source: mermaid code from docs/internal/PROXY.md --->
-![direct](../images/registry-module/proxy-en.png)
+![proxy](../../images/registry-module/proxy-en.png)
 
-For more information about the `Proxy` mode, see the section [Managing registry interaction settings in a cluster fully managed by DKP](../admin/configuration/registry/managing-interaction.html).
+For more information about the `Proxy` mode, see the section [Managing registry interaction settings in a cluster fully managed by DKP](../../admin/configuration/registry/managing-interaction.html).
 
 ## Local mode architecture
 
@@ -53,6 +54,6 @@ For components such as `operator-trivy`, `image-availability-exporter`, `deckhou
 The local registry is populated using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) tool with the `d8 mirror push/pull` commands. For more details, see the [«Registry Module: Usage Examples»](/modules/registry/examples.html) section.
 
 <!--- Source: mermaid code from docs/internal/LOCAL.md --->
-![direct](../images/registry-module/local-en.png)
+![local](../../images/registry-module/local-en.png)
 
-For more information about the `Local` mode, see the section [Managing registry interaction settings in a cluster fully managed by DKP](../admin/configuration/registry/managing-interaction.html).
+For more information about the `Local` mode, see the section [Managing registry interaction settings in a cluster fully managed by DKP](../../admin/configuration/registry/managing-interaction.html).

@@ -1,6 +1,6 @@
 ---
 title: "Архитектура режимов взаимодействия с хранилищем образов"
-permalink: ru/architecture/registry-modes.html
+permalink: ru/architecture/deckhouse/registry-modes.html
 lang: ru
 ---
 
@@ -15,9 +15,9 @@ Deckhouse Kubernetes Platform поддерживает несколько реж
 В случае таких компонентов, как [operator-trivy](/modules/operator-trivy/), `image-availability-exporter`, `deckhouse-controller` и ряда других, обращающихся к хранилищу образов напрямую, запросы будут идти через in-cluster proxy, расположенный на master-узлах.
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
-![direct](../images/registry-module/direct-ru.png)
+![direct](../../images/registry-module/direct-ru.png)
 
-Подробнее о режиме `Direct` — в разделе [«Управление настройками взаимодействия с хранилищем образов в кластере, полностью управляемом DKP»](../admin/configuration/registry/managing-interaction.html).
+Подробнее о режиме `Direct` — в разделе [«Управление настройками взаимодействия с хранилищем образов в кластере, полностью управляемом DKP»](../../admin/configuration/registry/managing-interaction.html).
 
 ## Архитектура режима Proxy
 
@@ -34,9 +34,9 @@ Deckhouse Kubernetes Platform поддерживает несколько реж
 В случае таких компонентов, как `operator-trivy`, `image-availability-exporter`, `deckhouse-controller` и ряда других, обращающихся к хранилищу образов напрямую, запросы будут идти через кеширующее proxy хранилище образов.
 
 <!--- Source: mermaid code from docs/internal/PROXY.md --->
-![proxy](../images/registry-module/proxy-ru.png)
+![proxy](../../images/registry-module/proxy-ru.png)
 
-Подробнее о режиме `Proxy` — в разделе [«Управление настройками взаимодействия с хранилищем образов в кластере, полностью управляемом DKP»](../admin/configuration/registry/managing-interaction.html).
+Подробнее о режиме `Proxy` — в разделе [«Управление настройками взаимодействия с хранилищем образов в кластере, полностью управляемом DKP»](../../admin/configuration/registry/managing-interaction.html).
 
 ## Архитектура режима Local
 
@@ -55,6 +55,6 @@ Deckhouse Kubernetes Platform поддерживает несколько реж
 Локальное хранилище образов наполняется с помощью инструмента [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) (команды `d8 mirror push/pull`). Подробнее — в разделе [«Модуль registry: примеры использования»](/modules/registry/examples.html).
 
 <!--- Source: mermaid code from docs/internal/LOCAL.md --->
-![local](../images/registry-module/local-ru.png)
+![local](../../images/registry-module/local-ru.png)
 
-Подробнее о режиме `Local` — в разделе [«Управление настройками взаимодействия с хранилищем образов в кластере, полностью управляемом DKP](../admin/configuration/registry/managing-interaction.html).
+Подробнее о режиме `Local` — в разделе [«Управление настройками взаимодействия с хранилищем образов в кластере, полностью управляемом DKP](../../admin/configuration/registry/managing-interaction.html).
