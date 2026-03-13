@@ -109,7 +109,7 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 			if v.GVR.Group != "" {
 				metricLabels["violating_resource"] = fmt.Sprintf("%s.%s", v.GVR.Resource, v.GVR.Group)
 			}
-			input.MetricsCollector.Set(grantViolationMetricName, 1, metricLabels)
+			input.MetricsCollector.Add(grantViolationMetricName, 1, metricLabels)
 		}
 
 		return nil
