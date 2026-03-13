@@ -663,7 +663,12 @@ func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
 func (m *MetaConfig) LoadInstallerVersion() error {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
-		return err
+		// TODO param instead of hardcode path
+		rawFile, err = os.ReadFile("/tmp/deckhouse/version")
+		if err != nil {
+			return err
+		}
+
 	}
 
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))

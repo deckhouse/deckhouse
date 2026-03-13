@@ -162,12 +162,7 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(
-				context.TODO(),
-				[]string{app.ParseInputFile},
-				preparatorProvider,
-				config.ValidateOptionStrictUnmarshal(true),
-			)
+			metaConfig, err = config.LoadConfigFromFile(context.TODO(), []string{app.ParseInputFile}, preparatorProvider)
 			if err != nil {
 				return err
 			}

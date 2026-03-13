@@ -91,7 +91,7 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
-	metaConfig, err := config.ParseConfig(
+	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(

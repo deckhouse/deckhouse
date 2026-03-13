@@ -29,7 +29,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	restore := b.applyParams()
 	defer restore()
 
-	metaConfig, err := config.ParseConfig(
+	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(

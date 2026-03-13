@@ -16,7 +16,9 @@ package digests
 
 import (
 	"embed"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -27,28 +29,48 @@ var imagesDigestsEmbeddedJSON embed.FS
 
 var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
+type imagesDigests map[string]any
+
 func ImagesDigestsBytes() ([]byte, error) {
 	stat, err := os.Stat(imagesDigestsJSON)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			log.InfoF("%s not exists. Fallback to embedded images_digests.json", imagesDigestsJSON, err)
+			log.InfoF("%s not exists. Fallback to embedded images_digests.json\n", imagesDigestsJSON)
 		} else {
-			log.WarnF("Failed to stat %s: %w. Fallback to embedded images_digests.json", imagesDigestsJSON, err)
+			log.WarnF("Failed to stat %s: %w. Fallback to embedded images_digests.json\n", imagesDigestsJSON, err)
 		}
 		return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
 	}
 
 	if stat.IsDir() {
-		log.WarnF("%s stats as directory. Fallback to embedded images_digests.json", imagesDigestsJSON)
+		log.WarnF("%s stats as directory. Fallback to embedded images_digests.json\n", imagesDigestsJSON)
 		return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
 	}
 
 	file, err := os.ReadFile(imagesDigestsJSON)
 	if err != nil {
-		log.WarnF("Failed to open %s. Fallback to embedded images_digests.json", imagesDigestsJSON)
+		log.WarnF("Failed to open %s. Fallback to embedded images_digests.json\n", imagesDigestsJSON)
 		return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
 	}
 
 	log.DebugF("Using %s\n", imagesDigestsJSON)
 	return file, nil
+}
+
+func GetImage(section, name string) (string, error) {
+	var digests imagesDigests
+	digest, err := ImagesDigestsBytes()
+	if err != nil {
+		return "", fmt.Errorf("could not load images digests: %w", err)
+	}
+	if err := json.Unmarshal(digest, &digests); err != nil {
+		return "", fmt.Errorf("could not unmarshal: %w", err)
+	}
+	sec := digests[section].(map[string]interface{})
+	img, ok := sec[name]
+	if ok {
+		return img.(string), nil
+	}
+
+	return "", fmt.Errorf("could not find image %s in section %s", name, section)
 }

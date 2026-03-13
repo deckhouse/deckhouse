@@ -94,6 +94,11 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 
 func NewSchemaStore(paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
+	_, err := os.Stat(candiDir)
+	if err != nil {
+		// fallback to /tmp
+		paths = append(paths, "/tmp/deckhouse/candi")
+	}
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
@@ -112,6 +117,13 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		moduleConfigsCache: make(map[string]*spec.Schema),
 		modulesCache:       make(map[string]struct{}),
 	}
+	_, err := os.Stat(deckhouseDir)
+	if err != nil {
+		// fallback to /tmp
+		deckhouseDir = "/tmp/deckhouse"
+		modulesDir = deckhouseDir + "/modules"
+	}
+	log.InfoF("deckhouse dir: %s, modulesDir: %s\n", deckhouseDir, modulesDir)
 
 	st.conversionsStore = conversion.NewConversionsStore()
 

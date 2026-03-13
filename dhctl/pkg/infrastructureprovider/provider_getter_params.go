@@ -16,6 +16,7 @@ package infrastructureprovider
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/name212/govalue"
@@ -83,6 +84,24 @@ func (p *CloudProviderGetterParams) gtFSDIParams() (*fsprovider.DIParams, error)
 		BinariesDir:       filepath.Join(dhctlPath, "bin"),
 		CloudProviderDir:  filepath.Join(dhctlPath, "deckhouse", "candi", "cloud-providers"),
 		PluginsDir:        filepath.Join(dhctlPath, "plugins"),
+	}
+
+	_, err = os.Stat(diDefaultParams.BinariesDir)
+	if err != nil {
+		// fallback to /bin
+		diDefaultParams.BinariesDir = "/bin"
+	}
+
+	_, err = os.Stat(diDefaultParams.CloudProviderDir)
+	if err != nil {
+		// fallback to /tmp
+		diDefaultParams.CloudProviderDir = filepath.Join("/tmp", "deckhouse", "candi", "cloud-providers")
+	}
+
+	_, err = os.Stat(diDefaultParams.PluginsDir)
+	if err != nil {
+		// fallback to /tmp
+		diDefaultParams.PluginsDir = filepath.Join("/tmp", "plugins")
 	}
 
 	logger.LogDebugF("Using default FSDIParams: %+v\n", diDefaultParams)

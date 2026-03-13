@@ -15,6 +15,7 @@
 package template
 
 import (
+	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -25,8 +26,10 @@ import (
 )
 
 var (
-	candiDir         = "/deckhouse/candi"
-	candiBashibleDir = candiDir + "/bashible"
+	candiDir                    = "/deckhouse/candi"
+	candiBashibleDir            = candiDir + "/bashible"
+	candiAlternativeDir         = "/tmp/deckhouse/candi"
+	candiBashibleAlternativeDir = candiAlternativeDir + "/bashible"
 )
 
 const (
@@ -83,6 +86,12 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 		return err
 	}
 
+	_, err = os.Stat(candiBashibleDir)
+	if err != nil {
+		// fallback to alternative
+		candiBashibleDir = candiBashibleAlternativeDir
+	}
+
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
 	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
@@ -90,6 +99,11 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 
 //nolint:prealloc
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, devicePath string) error {
+	_, err := os.Stat(candiBashibleDir)
+	if err != nil {
+		// fallback to alternative
+		candiBashibleDir = candiBashibleAlternativeDir
+	}
 	saveInfo := make([]saveFromTo, 0)
 	saveInfo = append(saveInfo, saveFromTo{
 		from: candiBashibleDir,
@@ -140,6 +154,11 @@ func GetKubeadmVersion(kubernetesVersion string) (string, error) {
 }
 
 func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}) error {
+	_, err := os.Stat(candiDir)
+	if err != nil {
+		// fallback to alternative
+		candiDir = candiAlternativeDir
+	}
 	cc := templateData["clusterConfiguration"].(map[string]interface{})
 	k8sVer := cc["kubernetesVersion"].(string)
 	kubeadmVersion, err := GetKubeadmVersion(k8sVer)

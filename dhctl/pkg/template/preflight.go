@@ -14,7 +14,12 @@
 
 package template
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/log"
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+)
 
 var (
 	checkPortsScriptPath              = candiBashibleDir + "/preflight/check_ports.sh.tpl"
@@ -28,17 +33,35 @@ var (
 func RenderAndSavePreflightCheckPortsScript() (string, error) {
 	log.DebugLn("Start render check ports script")
 
+	_, err := os.Stat(checkPortsScriptPath)
+	if err != nil {
+		// fallback to /tmp
+		checkPortsScriptPath = filepath.Join(candiBashibleAlternativeDir, "preflight", "check_ports.sh.tpl")
+	}
+
 	return RenderAndSaveTemplate("check_ports.sh", checkPortsScriptPath, map[string]interface{}{})
 }
 
 func RenderAndSavePreflightCheckDeckhouseUserScript() (string, error) {
 	log.DebugLn("Start render check user script")
 
+	_, err := os.Stat(checkDeckhouseUserScriptPath)
+	if err != nil {
+		// fallback to /tmp
+		checkDeckhouseUserScriptPath = filepath.Join(candiBashibleAlternativeDir, "preflight", "check_deckhouse_user.sh.tpl")
+	}
+
 	return RenderAndSaveTemplate("check_deckhouse_user.sh", checkDeckhouseUserScriptPath, map[string]interface{}{})
 }
 
 func RenderAndSavePreflightCheckLocalhostScript() (string, error) {
 	log.DebugLn("Start render check localhost script")
+
+	_, err := os.Stat(checkLocalhostScriptPath)
+	if err != nil {
+		// fallback to /tmp
+		checkLocalhostScriptPath = filepath.Join(candiBashibleAlternativeDir, "preflight", "check_localhost.sh.tpl")
+	}
 
 	return RenderAndSaveTemplate(
 		"check_localhost.sh",
@@ -49,6 +72,12 @@ func RenderAndSavePreflightCheckLocalhostScript() (string, error) {
 
 func RenderAndSavePreflightReverseTunnelOpenScript(url string) (string, error) {
 	log.DebugLn("Start render proxy reverse tunnel open script")
+
+	_, err := os.Stat(checkProxyRevTunnelOpenScriptPath)
+	if err != nil {
+		// fallback to /tmp
+		checkProxyRevTunnelOpenScriptPath = filepath.Join(candiBashibleAlternativeDir, "preflight", "check_reverse_tunnel_open.sh.tpl")
+	}
 
 	return RenderAndSaveTemplate(
 		"check_reverse_tunnel_open.sh",
@@ -61,6 +90,12 @@ func RenderAndSavePreflightReverseTunnelOpenScript(url string) (string, error) {
 
 func RenderAndSaveKillReverseTunnelScript(host, port string) (string, error) {
 	log.DebugLn("Start render kill reverse tunnel script")
+
+	_, err := os.Stat(killReverseTunnelPath)
+	if err != nil {
+		// fallback to /tmp
+		killReverseTunnelPath = filepath.Join(candiBashibleAlternativeDir, "preflight", "kill_reverse_tunnel.sh.tpl")
+	}
 
 	return RenderAndSaveTemplate(
 		"kill_reverse_tunnel.sh",
@@ -78,9 +113,15 @@ func RenderAndSavePreflightCheckScript(
 ) (string, error) {
 	log.DebugLn("Start render check localhost script")
 
+	_, err := os.Stat(preflightScriptDirPath)
+	if err != nil {
+		// fallback to /tmp
+		preflightScriptDirPath = filepath.Join(candiBashibleAlternativeDir, "preflight")
+	}
+
 	return RenderAndSaveTemplate(
 		filename,
-		preflightScriptDirPath+filename,
+		filepath.Join(preflightScriptDirPath, filename),
 		params,
 	)
 }

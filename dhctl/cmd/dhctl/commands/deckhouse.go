@@ -93,7 +93,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 		ctx := context.Background()
 
 		// Load deckhouse config
-		metaConfig, err := config.ParseConfig(
+		metaConfig, err := config.LoadConfigFromFile(
 			context.TODO(),
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
