@@ -56,6 +56,17 @@ data:
 
     echo "Got version: $VERSION"
 
+    CURRENT_INCLUDE=$(kubectl get configmap "${CONFIGMAP}" \
+      -n "${NAMESPACE}" \
+      -o jsonpath='{.data.installer-versions-nginx\.include}')
+
+    CURRENT_VERSION=$(printf "%s" "$CURRENT_INCLUDE" | sed -n 's/.*"latest"[[:space:]]*"\([^"]*\)".*/\1/p')
+
+    if [ "$VERSION" = "$CURRENT_VERSION" ]; then
+      echo "Version unchanged (${VERSION}), skipping ConfigMap patch."
+      exit 0
+    fi
+
     kubectl patch configmap "${CONFIGMAP}" \
       -n "${NAMESPACE}" \
       --type=merge \
