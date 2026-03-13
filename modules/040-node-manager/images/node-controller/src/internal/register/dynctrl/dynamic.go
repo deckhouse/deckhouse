@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -103,12 +104,27 @@ func (dc *dynamicController) inject(r Reconciler) {
 func (dc *dynamicController) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx).WithValues("controller", dc.name)
 	ctx = logf.IntoContext(ctx, log)
+	start := time.Now()
+
+	log.V(1).Info("reconcile started", "key", req.NamespacedName.String(), "isGroup", dc.isGroup)
 
 	if !dc.isGroup {
-		return dc.reconcilers[0].Reconcile(ctx, req)
+		result, err := dc.reconcilers[0].Reconcile(ctx, req)
+		if err != nil {
+			log.Error(err, "reconcile failed", "key", req.NamespacedName.String(), "duration", time.Since(start).String())
+			return result, err
+		}
+		log.V(1).Info("reconcile completed", "key", req.NamespacedName.String(), "duration", time.Since(start).String(), "requeue", result.Requeue, "requeueAfter", result.RequeueAfter.String())
+		return result, nil
 	}
 
-	return dc.reconcileGroup(ctx, req)
+	result, err := dc.reconcileGroup(ctx, req)
+	if err != nil {
+		log.Error(err, "reconcile group failed", "key", req.NamespacedName.String(), "duration", time.Since(start).String())
+		return result, err
+	}
+	log.V(1).Info("reconcile group completed", "key", req.NamespacedName.String(), "duration", time.Since(start).String(), "requeue", result.Requeue, "requeueAfter", result.RequeueAfter.String())
+	return result, nil
 }
 
 func (dc *dynamicController) reconcileGroup(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -120,12 +136,15 @@ func (dc *dynamicController) reconcileGroup(ctx context.Context, req reconcile.R
 	)
 
 	for _, r := range dc.reconcilers {
+		subStart := time.Now()
+		log.V(1).Info("subreconciler started", "reconciler", fmt.Sprintf("%T", r), "key", req.NamespacedName.String())
 		result, err := r.Reconcile(ctx, req)
 		if err != nil {
 			log.Error(err, "reconciler failed", "reconciler", fmt.Sprintf("%T", r))
 			errs = append(errs, fmt.Errorf("reconciler %T: %w", r, err))
 			continue
 		}
+		log.V(1).Info("subreconciler completed", "reconciler", fmt.Sprintf("%T", r), "key", req.NamespacedName.String(), "duration", time.Since(subStart).String(), "requeue", result.Requeue, "requeueAfter", result.RequeueAfter.String())
 		combined.Requeue = combined.Requeue || result.Requeue
 		if result.RequeueAfter > 0 && (combined.RequeueAfter == 0 || result.RequeueAfter < combined.RequeueAfter) {
 			combined.RequeueAfter = result.RequeueAfter

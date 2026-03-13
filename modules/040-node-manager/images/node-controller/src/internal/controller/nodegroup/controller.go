@@ -145,9 +145,15 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 
 	if !apiequality.Semantic.DeepEqual(statusBefore, ng.Status) {
 		if err := r.Client.Status().Patch(ctx, ng, patch); err != nil {
+			if errors.IsConflict(err) {
+				logger.Info("nodegroup status patch conflict, likely concurrent update", "name", ng.Name)
+			}
 			logger.Error(err, "failed to patch nodegroup status")
 			return ctrl.Result{}, err
 		}
+		logger.V(1).Info("patched nodegroup status", "name", ng.Name)
+	} else {
+		logger.V(1).Info("nodegroup status unchanged, patch skipped", "name", ng.Name)
 	}
 
 	processedService := processedstatus.Service{Client: r.Client}

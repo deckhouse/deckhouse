@@ -117,6 +117,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to get nodegroup %s: %w", req.Name, err)
 	}
+	logger.V(1).Info("updateapproval input snapshot", "nodegroup", ng.Name, "nodeType", ng.Spec.NodeType, "statusDesired", ng.Status.Desired, "statusReady", ng.Status.Ready, "statusNodes", ng.Status.Nodes)
 
 	kubeSvc := kubeclient.Client{Client: r.Client}
 	engineSvc := engine.Processor{
@@ -151,23 +152,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	finished, err := engineSvc.ProcessUpdatedNodes(ctx, ng, nodeInfos, ngChecksum)
 	if err != nil {
+		if errors.IsConflict(err) {
+			logger.Info("process updated nodes conflict, likely concurrent node patch", "nodegroup", ng.Name)
+		}
 		return ctrl.Result{}, err
 	}
 	if finished {
+		logger.V(1).Info("updateapproval phase finished", "phase", "ProcessUpdatedNodes", "nodegroup", ng.Name)
 		return ctrl.Result{}, nil
 	}
 
 	finished, err = engineSvc.ApproveDisruptions(ctx, ng, nodeInfos)
 	if err != nil {
+		if errors.IsConflict(err) {
+			logger.Info("approve disruptions conflict, likely concurrent node patch", "nodegroup", ng.Name)
+		}
 		return ctrl.Result{}, err
 	}
 	if finished {
+		logger.V(1).Info("updateapproval phase finished", "phase", "ApproveDisruptions", "nodegroup", ng.Name)
 		return ctrl.Result{}, nil
 	}
 
 	if _, err := engineSvc.ApproveUpdates(ctx, ng, nodeInfos); err != nil {
+		if errors.IsConflict(err) {
+			logger.Info("approve updates conflict, likely concurrent node patch", "nodegroup", ng.Name)
+		}
 		return ctrl.Result{}, err
 	}
+	logger.V(1).Info("updateapproval completed without mutations", "nodegroup", ng.Name)
 
 	return ctrl.Result{}, nil
 }
