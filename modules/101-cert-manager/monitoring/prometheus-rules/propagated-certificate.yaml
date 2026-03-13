@@ -96,7 +96,7 @@
            d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
            ```
 
-  - alert: CertmanagerCertificateChallengePendingLong
+  - alert: CertmanagerCertificateChallengePending
     expr: |
       certmanager_certificate_challenge_status{job="cert-manager", status="pending"} == 1
     for: 1h
