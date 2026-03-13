@@ -47,6 +47,11 @@ docsBuilder:
     _default: false
     web-production: true
 
+vpa:
+  updateMode:
+    _default: Off
+    web-production: Auto
+
 resources:
   requests:
     memory:
