@@ -5552,10 +5552,14 @@ alerts:
         It can result in inconsistent processing of incoming requests.
 
         To diagnose the issue, follow these steps:
+        1. Make sure that the pods of `{{ $labels.controller }}` Ingress NGINX Controller are not being updated at the moment as during update, pods of a single controller may report different config hashes for some time:
+           ```bash
+           d8 k -n {{ $labels.namespace }} get pod -l app=controller,name={{ $labels.controller }}
+           ```
 
-        1. Check the associated metrics `nginx_ingress_controller_config_hash{namespace="d8-ingress-nginx", controller="{{ $labels.controller }}"}` manually to find the outliers.
+        2. Check the associated metrics `nginx_ingress_controller_config_hash{namespace="d8-ingress-nginx", controller="{{ $labels.controller }}"}` manually to find the outliers.
 
-        2. Check the controller logs for any configration errors resulting in the configuration drift across the pods:
+        3. Check the controller logs for any configration errors resulting in the configuration drift across the pods:
 
            ```bash
            d8 k -n {{ $labels.namespace }} logs -l app=controller,name={{ $labels.controller }} -c controller --tail=10000
