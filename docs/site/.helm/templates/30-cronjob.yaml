@@ -12,6 +12,7 @@ spec:
       template:
         spec:
           serviceAccountName: configmap-installer-updater-sa
+          priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
           restartPolicy: OnFailure
           volumes:
             - name: scripts
