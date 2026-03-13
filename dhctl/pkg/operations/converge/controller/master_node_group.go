@@ -464,7 +464,8 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 	return controlplane.NewHookForUpdatePipeline(ctx, nodesToCheck, metaConfig.UUID, ctx.CommanderMode(), c.skipChecks).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
-		WithConfirm(confirm)
+		WithConfirm(confirm).
+		WithClientSwitcher(ctx.ClientSwitcher())
 }
 
 func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {

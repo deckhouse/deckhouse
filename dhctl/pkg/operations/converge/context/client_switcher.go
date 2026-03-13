@@ -197,6 +197,57 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 	})
 }
 
+func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Context, nodeName, ip string) error {
+	const action = "Switch clients when destructive cahange control-plane nodes"
+
+	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
+		return err
+	} else if skip {
+		return nil
+	}
+
+	_, sshClient, err := s.extractClients(ctx)
+	if err != nil {
+		return err
+	}
+
+	s.debug("SwitchClientsToAnotherNodeIfNeed sshClient: %v", sshClient)
+	currentHost := sshClient.Session().CurrentHost()
+	if currentHost.IsEmpty() {
+		return fmt.Errorf("Got empty current host")
+	}
+
+	if nodeName != currentHost.Name {
+		s.debug("Skip %s: current host is not deleted host '%s'", action, nodeName)
+		return nil
+	}
+
+	return s.logger.LogProcess("default", action, func() error {
+		convergeState, err := s.ctx.ConvergeState()
+		if err != nil {
+			return fmt.Errorf("Cannot get converge state: %w", err)
+		}
+
+		firstMaster, anotherMasters, err := s.extractStatesFromCluster(ctx)
+		if err != nil {
+			return err
+		}
+
+		statesMap := make(map[string][]byte)
+		for _, s := range append([]*NodeState{firstMaster}, anotherMasters...) {
+			if nodeName != s.Name {
+				statesMap[s.Name] = s.State
+			}
+		}
+
+		return s.replaceKubeClient(ctx, replaceKubeClientParams{
+			convergeState: convergeState,
+			state:         statesMap,
+			appendPKey:    nil,
+		})
+	})
+}
+
 func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context, ngName string, nodesToDeleteInfo []*NodeState) error {
 	const action = "Switch clients when decrease control-plane nodes"
 

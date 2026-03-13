@@ -37,6 +37,7 @@ type MultiMasterClientSwitcher interface {
 	SwitchToFirstMaster(ctx context.Context) error
 	SwitchToNotFirstMaster(ctx context.Context) error
 	SwitchWhenDecreaseMastersIfNeed(ctx context.Context, ngName string, nodesToDeleteInfo []*NodeState) error
+	SwitchClientsToAnotherNodeIfNeed(ctx context.Context, nodeName, ip string) error
 }
 
 type Context struct {
