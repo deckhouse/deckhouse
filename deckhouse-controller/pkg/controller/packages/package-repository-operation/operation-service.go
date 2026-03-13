@@ -747,8 +747,6 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 	return nil
 }
 
-//
-
 func (s *OperationService) setOwnerReference(obj client.Object) {
 	ownerRef := metav1.OwnerReference{
 		APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
