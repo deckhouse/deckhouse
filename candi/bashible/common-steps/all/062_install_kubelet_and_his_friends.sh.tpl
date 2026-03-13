@@ -28,6 +28,20 @@ if [[ "${old_kubelet_hash}" != "${new_kubelet_hash}" ]]; then
   bb-flag-set kubelet-need-restart
 fi
 
+if grep -qF '# "\e[5~": history-search-backward' /etc/inputrc; then
+  sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc
+fi
+if grep -qF '# "\e[6~": history-search-forward' /etc/inputrc; then
+  sed -i 's/^\# \"\\e\[6~\": history-search-forward/\"\\e\[6~\": history-search-forward/' /etc/inputrc
+fi
+
+if grep -qF '#force_color_prompt=yes' /root/.bashrc; then
+  sed -i 's/\#force_color_prompt=yes/force_color_prompt=yes/' /root/.bashrc
+fi
+if grep -qF '01;32m' /root/.bashrc; then
+  sed -i 's/01;32m/01;31m/' /root/.bashrc
+fi
+
 completion="if [ -f /etc/bash_completion ] && ! shopt -oq posix; then . /etc/bash_completion ; fi"
 if ! grep -qF -- "$completion"  /root/.bashrc; then
   echo "$completion" >> /root/.bashrc
@@ -40,6 +54,44 @@ if [ ! -f "/etc/bash_completion.d/d8" ]; then
   mkdir -p /etc/bash_completion.d
   d8 completion bash > /etc/bash_completion.d/d8
 fi
+
+# Install kubectl as alias for d8 k
+
+# This need for correct Tab-completion in kubectl alias
+# Bash does not expand aliases during completion, so we
+# rewrite "kubectl" to "d8 k" and call d8 __complete directly
+cat <<'EOF' > /etc/bash_completion.d/d8_kubectl_completion
+_kubectl_complete() {
+    local orig_line="$COMP_LINE"
+    local orig_point="$COMP_POINT"
+    local orig_words=("${COMP_WORDS[@]}")
+    local orig_cword="$COMP_CWORD"
+
+    COMP_LINE="d8 k${COMP_LINE#kubectl}"
+    COMP_POINT=$((COMP_POINT + 1))
+    COMP_WORDS=("d8" "k" "${COMP_WORDS[@]:1}")
+    COMP_CWORD=$((COMP_CWORD + 1))
+
+    local requestComp="/opt/deckhouse/bin/d8 __complete ${COMP_WORDS[*]:1}"
+    local out directive
+    out=$(eval "${requestComp}" 2>/dev/null)
+
+    local lastLine="${out##*$'\n'}"
+    directive="${lastLine#*:}"
+    out="${out%$'\n'*}"
+
+    COMPREPLY=()
+    while IFS='' read -r line; do
+        COMPREPLY+=("${line}")
+    done < <(compgen -W "${out}" -- "${orig_words[$orig_cword]}")
+
+    COMP_LINE="$orig_line"
+    COMP_POINT="$orig_point"
+    COMP_WORDS=("${orig_words[@]}")
+    COMP_CWORD="$orig_cword"
+}
+complete -o default -F _kubectl_complete kubectl
+EOF
 
 if ! type kubectl >/dev/null 2>&1; then
   cat <<'EOF' > /opt/deckhouse/bin/kubectl
