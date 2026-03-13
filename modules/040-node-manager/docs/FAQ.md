@@ -1552,7 +1552,8 @@ To add a GPU node to the cluster, perform the following steps:
    - [Debian](#debian)
    - [CentOS](#centos)
 
-   #### Ubuntu
+   **Ubuntu**
+   {: #ubuntu .anchored}
 
    > Tested for Ubuntu 22.04.
 
@@ -1621,7 +1622,8 @@ To add a GPU node to the cluster, perform the following steps:
      weight: 5   
    ```
 
-   #### Debian
+   **Debian**
+   {: #debian .anchored}
 
    > Tested for Debian 12.
 
@@ -1690,7 +1692,8 @@ To add a GPU node to the cluster, perform the following steps:
      weight: 5  
    ```
 
-   #### CentOS
+   **CentOS**
+   {: #centos .anchored}
 
    > Tested for CentOS 9.
 

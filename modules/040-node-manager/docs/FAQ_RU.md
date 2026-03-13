@@ -1555,7 +1555,8 @@ Containerd на GPU-узлах настраивается автоматичес
    - [РЕД ОС](#ред-ос);
    - [Astra Linux](#astra-linux).
 
-   #### Ubuntu
+   **Ubuntu**
+   {: #ubuntu .anchored}
 
    > Протестировано для Ubuntu 22.04.
 
@@ -1624,7 +1625,8 @@ Containerd на GPU-узлах настраивается автоматичес
      weight: 5   
    ```
 
-   #### Debian
+   **Debian**
+   {: #debian .anchored}
 
    > Протестировано для Debian 12.
 
@@ -1693,7 +1695,8 @@ Containerd на GPU-узлах настраивается автоматичес
      weight: 5  
    ```
 
-   #### CentOS
+   **CentOS**
+   {: #centos .anchored}
 
    > Протестировано для CentOS 9.
 
@@ -1766,7 +1769,8 @@ Containerd на GPU-узлах настраивается автоматичес
      weight: 5
    ```
 
-   #### РЕД ОС
+   **РЕД ОС**
+   {: #ред-ос .anchored}
 
    > Протестировано для РЕД ОС 8.
 
@@ -1823,7 +1827,8 @@ Containerd на GPU-узлах настраивается автоматичес
      weight: 5
    ```
 
-   #### Astra Linux
+   **Astra Linux**
+   {: #astra-linux .anchored}
 
    > Протестировано для Astra Linux 1.8.
 
