@@ -92,7 +92,7 @@ alerts:
            d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
            ```
 
-        2. Check cert-manager logs for errors:
+        2. Check `cert-manager` logs for errors:
            ```bash
            d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
            ```
@@ -121,7 +121,7 @@ alerts:
            d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
            ```
 
-        2. Check cert-manager logs for errors:
+        2. Check `cert-manager` logs for errors:
            ```bash
            d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
            ```
