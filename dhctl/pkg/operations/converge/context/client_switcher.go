@@ -92,7 +92,7 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 }
 
 func (s *KubeClientSwitcher) CleanupNodeUser() error {
-	const action = "Cleanup node user"
+	const action = "Cleanup"
 
 	if skip, err := s.isSkipOrLogStart(action, false); err != nil {
 		return err

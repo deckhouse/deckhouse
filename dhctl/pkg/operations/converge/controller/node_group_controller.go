@@ -84,13 +84,11 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("Nodes to delete %v\n", len(nodesToDeleteInfo))
+	log.DebugF("Nodes to delete %d. Starting update nodes\n", len(nodesToDeleteInfo))
 
-	if err := c.switchClientBeforeDeleteNodesIfNeed(ctx, nodesToDeleteInfo); err != nil {
+	if err := c.nodeGroup.beforeUpdateNodes(ctx); err != nil {
 		return err
 	}
-
-	log.DebugF("Starting update nodes\n")
 
 	err = c.updateNodes(ctx)
 	if err != nil {
@@ -98,6 +96,10 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 	}
 
 	log.DebugF("starting delete nodes\n")
+
+	if err := c.switchClientBeforeDeleteNodesIfNeed(ctx, nodesToDeleteInfo); err != nil {
+		return err
+	}
 
 	err = c.tryDeleteNodes(ctx, nodesToDeleteInfo)
 	if err != nil {
@@ -459,6 +461,7 @@ type nodeNameWithIndex struct {
 
 type nodeGroupController interface {
 	addNodes(ctx *context.Context) error
+	beforeUpdateNodes(ctx *context.Context) error
 	updateNode(ctx *context.Context, name string) error
 	deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error
 }

@@ -271,13 +271,19 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		c.addNewNodesToCache(ctx, masterIPForSSHList)
 	}
 
-	if c.convergeState.Phase == phases.ScaleToMultiMasterPhase {
-		if err := c.switchClientToNotFirstMaster(ctx); err != nil {
-			return err
-		}
+	return nil
+}
+
+func (c *MasterNodeGroupController) beforeUpdateNodes(ctx *context.Context) error {
+	noScaleToMultiMaster := c.convergeState.Phase != phases.ScaleToMultiMasterPhase
+
+	log.DebugF("Master ng. beforeUpdateNodes: has phase %s; noScaleToMultiMaster %v\n", c.convergeState.Phase, noScaleToMultiMaster)
+	
+	if noScaleToMultiMaster {
+		return nil
 	}
 
-	return nil
+	return c.switchClientToNotFirstMaster(ctx)
 }
 
 func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, masterIPForSSHList []session.Host) error {
