@@ -29,12 +29,12 @@ description: Описание архитектуры Deckhouse Kubernetes Platfo
 
 Для элементов диаграмм используется следующие графические символы:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Условные обозначения на диаграммах DKP](../../images/architecture/c4-legend.ru.png)
 
 ## Диаграмма контекста
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Диаграмма контекста DKP](../../images/architecture/c4-l1-context.ru.png)
 
 С DKP взаимодействуют:
@@ -54,7 +54,7 @@ description: Описание архитектуры Deckhouse Kubernetes Platfo
 Связи между подсистемами показаны в обобщённом виде и без детализации.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Диаграмма подсистем DKP](../../images/architecture/c4-subsystems.ru.png)
 
 ## Диаграмма модулей
@@ -65,5 +65,5 @@ description: Описание архитектуры Deckhouse Kubernetes Platfo
 Связи между модулями показаны в обобщённом виде и без детализации.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Диаграмма модулей DKP](../../images/architecture/c4-modules.ru.png)
