@@ -115,7 +115,7 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 			}
 
 			input.MetricsCollector.Set(
-				grantViolationMetricName, float64(len(violations)),
+				grantViolationMetricName, 1),
 				metricLabels,
 			)
 
