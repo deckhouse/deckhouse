@@ -543,11 +543,13 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 		if ok {
 			logger.Debug("version marked as not exist in registry, checking if image exists")
 
-			err := s.svc.Package(packageName).Versions().CheckImageExists(ctx, version)
+			err := s.svc.Package(packageName).CheckImageExists(ctx, version)
 			if err != nil {
 				logger.Debug("failed to check image exists", log.Err(err))
 				return fmt.Errorf("check image exists: %w", err)
 			}
+
+			logger.Debug("image exists, updating package version")
 
 			original := pkgVersion.DeepCopy()
 
