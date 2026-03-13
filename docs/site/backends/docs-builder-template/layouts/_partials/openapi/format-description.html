@@ -8,7 +8,8 @@
 {{- $repl := printf "&lt;%s&gt;" "$1" }}
 {{- $sentinel := printf "%c" 57344 }}
 {{- if in $desc "`" }}
-  {{- $backtickBlocks := findRE "`[^`]+`" $desc }}
+  {{- /* Use [^`]* (not +) so empty backtick pairs `` are matched and protected; else e.g. "`` `<x>foo</x>`" would match "` `" first and the second block would get <word> escaped */}}
+  {{- $backtickBlocks := findRE "`[^`]*`" $desc }}
   {{- $work := $desc }}
   {{- range $idx, $block := $backtickBlocks }}
     {{- $work = replace $work $block (printf "%sOPENAPI_BT_%d%s" $sentinel $idx $sentinel) }}
