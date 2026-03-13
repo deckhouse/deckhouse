@@ -306,6 +306,7 @@ func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, 
 	return endpoints, nil
 }
 
+
 func k8sVersions(ctx context.Context, input *go_hook.HookInput) error {
 	input.Logger.Info("k8s version. Start discovery")
 	endpoints, err := apiServerEndpoints(ctx, input)
