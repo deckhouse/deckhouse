@@ -1027,6 +1027,52 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("no bundle image in registry", func() {
+		// Create a custom mock that differentiates between root and package calls:
+		// - Returns package name "test-package" when listing tags at root level
+		// - Returns versions "v1.0.0", "v1.1.0", "v1.2.0" when listing tags for a package
+		segmentAwareMock := &segmentAwareMockClient{
+			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"test-package"}, nil
+			},
+			packageListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"v1.0.0", "v1.1.0", "v1.2.0"}, nil
+			},
+			versionGetImageConfigFunc: func(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
+				return &crv1.ConfigFile{
+					Config: crv1.Config{
+						Labels: map[string]string{
+							"io.deckhouse.package.type": "Application",
+						},
+					},
+				}, nil
+			},
+			versionExtractFunc: packageYAMLTar(),
+		}
+		psm := createMockPSM(segmentAwareMock)
+
+		suite.setupController("no-bundle-image.yaml", withPackageServiceManager(psm))
+
+		// Wrap the client to inject errors for specific ApplicationPackageVersion creates
+		// The names are built as: <repo>-<package>-<version> (e.g., deckhouse-test-package-v1.1.0)
+		errorClient := &errorInjectingClient{
+			Client: suite.kubeClient,
+		}
+		suite.ctr.client = errorClient
+
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
 }
 
 // nolint:unparam
