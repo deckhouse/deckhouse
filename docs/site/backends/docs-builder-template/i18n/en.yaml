@@ -107,8 +107,8 @@ search_filter: Search by module name
 search_placeholder_text_filter: Search
 editions_filter: Edition
 editions_filter_all_selected: All editions
-statuses_filter: Status
-statuses_filter_all_selected: All statuses
+stage_filter: Lifecycle stage
+stage_filter_all_selected: All stages
 tags_filter: Tag
 tags_filter_all_selected: All tags
 core: core
