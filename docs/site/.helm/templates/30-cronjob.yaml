@@ -4,7 +4,7 @@ metadata:
   name: doc-installer-updater
   namespace: {{ .Release.Namespace }}
 spec:
-  schedule: "* 10 * * *"
+  schedule: "*/15 * * * *"
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 1
   concurrencyPolicy: Replace

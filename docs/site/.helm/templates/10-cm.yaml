@@ -24,7 +24,7 @@ metadata:
   name: doc-installer-version
 data:
   installer-versions-nginx.include: |
-    "latest" "v0.6.2";
+    "latest" "0.6.2";
 {{- end }}
 ---
 apiVersion: v1
@@ -55,6 +55,18 @@ data:
     fi
 
     echo "Got version: $VERSION"
+
+    CURRENT_INCLUDE=$(kubectl get configmap "${CONFIGMAP}" \
+      -n "${NAMESPACE}" \
+      -o jsonpath='{.data.installer-versions-nginx\.include}')
+
+    CURRENT_VERSION=$(printf "%s" "$CURRENT_INCLUDE" | sed -n 's/.*"latest"[[:space:]]*"\([^"]*\)".*/\1/p')
+    echo "Current version: ${CURRENT_VERSION:-<empty>}"
+
+    if [ "$VERSION" = "$CURRENT_VERSION" ]; then
+      echo "Version unchanged (${VERSION}), skipping ConfigMap patch."
+      exit 0
+    fi
 
     kubectl patch configmap "${CONFIGMAP}" \
       -n "${NAMESPACE}" \
