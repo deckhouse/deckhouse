@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -36,13 +37,12 @@ import (
 	calcconditions "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditionscalc"
 	nodestatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/node_status"
 	processedstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/processed_status"
-	"github.com/deckhouse/node-controller/internal/controller/updateapproval"
 	"github.com/deckhouse/node-controller/internal/register"
 	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
 
 func init() {
-	register.RegisterGroup(register.NodeGroupStatus, &v1.NodeGroup{}, &Status{}, updateapproval.New())
+	register.RegisterController(register.NodeGroupStatus, &v1.NodeGroup{}, &Status{})
 }
 
 var _ dynctrl.Reconciler = (*Status)(nil)
@@ -120,6 +120,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	conditionSummary := ngconditions.CalculateConditionSummary(newConditions, statusMsg)
 
 	patch := client.MergeFrom(ng.DeepCopy())
+	statusBefore := ng.Status
 	ng.Status.Nodes = nodeResult.NodesCount
 	ng.Status.Ready = nodeResult.ReadyCount
 	ng.Status.UpToDate = nodeResult.UpToDateCount
@@ -142,9 +143,11 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		ng.Status.LastMachineFailures = nil
 	}
 
-	if err := r.Client.Status().Patch(ctx, ng, patch); err != nil {
-		logger.Error(err, "failed to patch nodegroup status")
-		return ctrl.Result{}, err
+	if !apiequality.Semantic.DeepEqual(statusBefore, ng.Status) {
+		if err := r.Client.Status().Patch(ctx, ng, patch); err != nil {
+			logger.Error(err, "failed to patch nodegroup status")
+			return ctrl.Result{}, err
+		}
 	}
 
 	processedService := processedstatus.Service{Client: r.Client}

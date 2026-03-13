@@ -31,7 +31,9 @@ type ControllerName string
 func (cn ControllerName) String() string { return string(cn) }
 
 const (
-	NodeGroupStatus ControllerName = "nodegroup-status"
+	NodeGroupStatus         ControllerName = "nodegroup-status"
+	NodeGroupUpdateApproval ControllerName = "nodegroup-update-approval"
+	NodeTemplate            ControllerName = "node-template"
 )
 
 type controllerEntry struct {

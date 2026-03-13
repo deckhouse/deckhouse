@@ -18,4 +18,6 @@ package bootstrap
 
 import (
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
+	_ "github.com/deckhouse/node-controller/internal/controller/nodetemplate"
+	_ "github.com/deckhouse/node-controller/internal/controller/updateapproval"
 )
