@@ -28,17 +28,17 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
 
 Вариант с использованием dex-authenticator:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля user-authn с аутентификацией через dex-authenticator](../../../images/architecture/iam/c4-l2-user-authn.ru.png)
 
 Вариант с использованием клиента Dex (для упрощения на схеме не показано взаимодействие модуля `prometheus-main` с dex):
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля user-authn с аутентификацией через Dex](../../../images/architecture/iam/c4-l2-user-authn-dex-client.ru.png)
 
 При подключении к API Kubernetes с помощью утилиты `kubectl` или других клиентов Kubernetes с использованием сгенерированного kubeconfig используется отдельная схема аутентификации. Она подробно описана в [соответствующем разделе документации](authentication.html#подключение-к-api-kubernetes-с-помощью-сгенерированного-kubeconfig):
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля user-authn при использовании сгенерированного kubeconfig](../../../images/architecture/iam/c4-l2-user-authn-kubeconfig.ru.png)
 
 ## Компоненты модуля

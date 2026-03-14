@@ -24,6 +24,7 @@ The following simplifications are made in the diagram:
 
 The reference CSI driver architecture at Level 2 of the C4 model and its interactions with other DKP components are shown in the following diagram:
 
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Reference CSI driver architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-csi-driver-common.png)
 
 ## Driver components
