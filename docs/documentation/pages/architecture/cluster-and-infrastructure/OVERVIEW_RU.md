@@ -4,6 +4,8 @@ permalink: ru/architecture/cluster-and-infrastructure/
 lang: ru
 search: cluster & infrastructure, управление узлами
 description: Архитектура подсистемы Cluster & Infrastructure в Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 Данный раздел посвящён архитектуре подсистемы Cluster & Infrastructure платформы Deckhouse Kubernetes Platform (DKP).

@@ -3,6 +3,8 @@ title: Observability subsystem
 permalink: en/architecture/observability/
 search: observability subsystem
 description: Observability subsystem architecture in Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 This section describes the architecture of the Observability subsystem of Deckhouse Kubernetes Platform (DKP).

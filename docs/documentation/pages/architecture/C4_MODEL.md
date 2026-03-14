@@ -3,6 +3,9 @@ title: DKP architecture (C4 model)
 permalink: en/architecture/c4-model.html
 search: C4 model, context diagram, subsystem diagram, module diagram
 description: Architecture of Deckhouse Kubernetes Platform represented using the C4 model, including context, subsystem, and module diagrams.
+relatedLinks:
+  - title: "The C4 model for visualising software architecture"
+    url: "https://c4model.com/"
 ---
 
 The [C4 model](https://c4model.com/) is used to visually represent a system's architecture
@@ -41,12 +44,12 @@ For a detailed view of individual services, refer to the Level 2 and higher diag
 
 The following graphical symbols are used in the diagrams:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Legend used in DKP diagrams](../../images/architecture/c4-legend.png)
 
 ## Context diagram
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![DKP context diagram](../../images/architecture/c4-l1-context.png)
 
 The following roles interact with DKP:
@@ -66,7 +69,7 @@ The diagram below shows the DKP subsystems.
 Relationships between subsystems are shown in a generalized form and without detailed interactions.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![DKP subsystem diagram](../../images/architecture/c4-subsystems.png)
 
 ## Module diagram
@@ -77,5 +80,5 @@ The diagram below shows all modules included in the Default [module bundle](../.
 Relationships between modules are shown in a generalized form and without detailed interactions.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![DKP module diagram](../../images/architecture/c4-modules.png)
