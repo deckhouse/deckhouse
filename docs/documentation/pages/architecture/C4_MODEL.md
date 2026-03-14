@@ -3,6 +3,9 @@ title: DKP architecture (C4 model)
 permalink: en/architecture/c4-model.html
 search: C4 model, context diagram, subsystem diagram, module diagram
 description: Architecture of Deckhouse Kubernetes Platform represented using the C4 model, including context, subsystem, and module diagrams.
+relatedLinks:
+  - title: "The C4 model for visualising software architecture"
+    url: "https://c4model.com/"
 ---
 
 The [C4 model](https://c4model.com/) is used to visually represent a system's architecture

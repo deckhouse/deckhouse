@@ -4,6 +4,10 @@ permalink: ru/architecture/c4-model.html
 lang: ru
 search: модель C4, диаграмма контекста, диаграмма подсистем, диаграмма модулей
 description: Описание архитектуры Deckhouse Kubernetes Platform в нотации модели C4 — диаграммы контекста, подсистем и модулей.
+relatedLinks:
+  - title: "The C4 model for visualising software architecture"
+    url: "https://c4model.com/"
+
 ---
 
 Для графического изображения архитектуры системы и объяснения декомпозиции системы на элементы используется [Модель С4](https://c4model.com/). Диаграммы в этой модели организуются по принципу увеличения масштаба и детализации элементов:
