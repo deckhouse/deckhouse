@@ -139,6 +139,6 @@ https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
 
 This patch sets go version to 1.25.7 to comply with current Deckhouse build image.
 
-### 022-stable-config-hash-metric-02.patch
+### 022-stable-config-hash-metric-03.patch
 
 This patch updates the way config_hash controller metric is calculated so that all pods of a controller report the same value

@@ -308,3 +308,166 @@ index 8a4278ea8..dbaba8873 100644
  	if err != nil {
  		klog.Errorf("unexpected error hashing configuration: %v", err)
  	}
+diff --git a/internal/ingress/controller/template/configmap.go b/internal/ingress/controller/template/configmap.go
+index febf20be0..5ce2a02ba 100644
+--- a/internal/ingress/controller/template/configmap.go
++++ b/internal/ingress/controller/template/configmap.go
+@@ -17,6 +17,7 @@ limitations under the License.
+ package template
+ 
+ import (
++	"encoding/json"
+ 	"fmt"
+ 	"net"
+ 	"regexp"
+@@ -24,6 +25,7 @@ import (
+ 	"strings"
+ 	"time"
+ 
++	"github.com/cespare/xxhash/v2"
+ 	"k8s.io/klog/v2"
+ 
+ 	"github.com/mitchellh/hashstructure/v2"
+@@ -397,13 +399,20 @@ func ReadConfig(src map[string]string) config.Configuration {
+ 		delete(conf, nginxStatusIpv6Whitelist)
+ 	}
+ 
++	// workerProcessesChecksum is used for BackendConfigChecksum only so per-node CPU count (auto) does not split pods.
++	var workerProcessesChecksum string
+ 	if val, ok := conf[workerProcesses]; ok {
+-		to.WorkerProcesses = val
+ 		if val == "auto" {
++			workerProcessesChecksum = "auto"
+ 			to.WorkerProcesses = strconv.Itoa(runtime.NumCPU())
++		} else {
++			workerProcessesChecksum = val
++			to.WorkerProcesses = val
+ 		}
+-
+ 		delete(conf, workerProcesses)
++	} else {
++		// NewDefault() sets WorkerProcesses from NumCPU(); treat as auto for checksum.
++		workerProcessesChecksum = "auto"
+ 	}
+ 
+ 	if val, ok := conf[workerSerialReloads]; ok {
+@@ -467,14 +476,27 @@ func ReadConfig(src map[string]string) config.Configuration {
+ 		klog.Warningf("unexpected error merging defaults: %v", err)
+ 	}
+ 
+-	hash, err := hashstructure.Hash(to, hashstructure.FormatV1, &hashstructure.HashOptions{
+-		TagName: "json",
+-	})
+-	if err != nil {
+-		klog.Warningf("unexpected error obtaining hash: %v", err)
+-	}
++	// Deterministic checksum; omit per-node fields so all pods agree (IPv6 layout, CPU count).
++	savedDisableIPv6DNS := to.DisableIpv6DNS
++	savedWorkerProcesses := to.WorkerProcesses
++	to.DisableIpv6DNS = false
++	to.WorkerProcesses = workerProcessesChecksum
+ 
+-	to.Checksum = fmt.Sprintf("%v", hash)
++	to.Checksum = ""
++	var data []byte
++	var jerr error
++	data, jerr = json.Marshal(to)
++	to.DisableIpv6DNS = savedDisableIPv6DNS
++	to.WorkerProcesses = savedWorkerProcesses
++
++	if jerr != nil {
++		klog.Warningf("unexpected error obtaining checksum: %v", jerr)
++		if h, herr := hashstructure.Hash(to, hashstructure.FormatV1, &hashstructure.HashOptions{TagName: "json"}); herr == nil {
++			to.Checksum = fmt.Sprintf("%v", h)
++		}
++	} else {
++		to.Checksum = fmt.Sprintf("%v", xxhash.Sum64(data))
++	}
+ 
+ 	return to
+ }
+diff --git a/internal/ingress/controller/template/configmap_test.go b/internal/ingress/controller/template/configmap_test.go
+index 6c7468303..09d2d2c94 100644
+--- a/internal/ingress/controller/template/configmap_test.go
++++ b/internal/ingress/controller/template/configmap_test.go
+@@ -17,18 +17,34 @@ limitations under the License.
+ package template
+ 
+ import (
++	"encoding/json"
+ 	"fmt"
+ 	"reflect"
+ 	"testing"
+ 	"time"
+ 
++	"github.com/cespare/xxhash/v2"
+ 	"github.com/kylelemons/godebug/pretty"
+-	"github.com/mitchellh/hashstructure/v2"
+ 
+ 	"k8s.io/ingress-nginx/internal/ingress/annotations/authreq"
+ 	"k8s.io/ingress-nginx/internal/ingress/controller/config"
+ )
+ 
++// backendConfigChecksum matches ReadConfig: IPv6 DNS and worker CPU count omitted from hash input.
++func backendConfigChecksum(c *config.Configuration) string {
++	savedDNS := c.DisableIpv6DNS
++	savedWP := c.WorkerProcesses
++	c.DisableIpv6DNS = false
++	c.WorkerProcesses = "auto"
++	b, err := json.Marshal(c)
++	c.DisableIpv6DNS = savedDNS
++	c.WorkerProcesses = savedWP
++	if err != nil {
++		return ""
++	}
++	return fmt.Sprintf("%v", xxhash.Sum64(b))
++}
++
+ func TestFilterErrors(t *testing.T) {
+ 	e := filterErrors([]int{200, 300, 345, 500, 555, 999})
+ 	if len(e) != 4 {
+@@ -104,13 +120,7 @@ func TestMergeConfigMapToStruct(t *testing.T) {
+ 	def.DefaultType = "text/plain"
+ 	def.DebugConnections = []string{"127.0.0.1", "1.1.1.1/24", "::1"}
+ 
+-	hash, err := hashstructure.Hash(def, hashstructure.FormatV1, &hashstructure.HashOptions{
+-		TagName: "json",
+-	})
+-	if err != nil {
+-		t.Fatalf("unexpected error obtaining hash: %v", err)
+-	}
+-	def.Checksum = fmt.Sprintf("%v", hash)
++	def.Checksum = backendConfigChecksum(&def)
+ 
+ 	to := ReadConfig(conf)
+ 	if diff := pretty.Compare(to, def); diff != "" {
+@@ -134,13 +144,7 @@ func TestMergeConfigMapToStruct(t *testing.T) {
+ 	def.LuaSharedDicts = defaultLuaSharedDicts
+ 	def.DisableIpv6DNS = true
+ 
+-	hash, err = hashstructure.Hash(def, hashstructure.FormatV1, &hashstructure.HashOptions{
+-		TagName: "json",
+-	})
+-	if err != nil {
+-		t.Fatalf("unexpected error obtaining hash: %v", err)
+-	}
+-	def.Checksum = fmt.Sprintf("%v", hash)
++	def.Checksum = backendConfigChecksum(&def)
+ 
+ 	to = ReadConfig(map[string]string{
+ 		"disable-ipv6-dns": "true",
+@@ -155,13 +159,7 @@ func TestMergeConfigMapToStruct(t *testing.T) {
+ 	def.WhitelistSourceRange = []string{"1.1.1.1/32"}
+ 	def.DisableIpv6DNS = true
+ 
+-	hash, err = hashstructure.Hash(def, hashstructure.FormatV1, &hashstructure.HashOptions{
+-		TagName: "json",
+-	})
+-	if err != nil {
+-		t.Fatalf("unexpected error obtaining hash: %v", err)
+-	}
+-	def.Checksum = fmt.Sprintf("%v", hash)
++	def.Checksum = backendConfigChecksum(&def)
+ 
+ 	to = ReadConfig(map[string]string{
+ 		"denylist-source-range":  "2.2.2.2/32",
