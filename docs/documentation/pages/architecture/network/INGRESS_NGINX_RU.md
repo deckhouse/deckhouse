@@ -25,7 +25,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
 Архитектура модуля [`ingress-nginx`](/modules/ingress-nginx/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля ingress-nginx](../../../images/architecture/network/c4-l2-ingress-nginx.ru.png)
 
 ## Компоненты модуля

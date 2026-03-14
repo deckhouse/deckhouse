@@ -19,7 +19,7 @@ description: Архитектура модуля node-manager для CloudPerman
 
 Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля node-manager для CloudPermanent-узлов](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-permanent-nodes.ru.png)
 
 ## Компоненты модуля
