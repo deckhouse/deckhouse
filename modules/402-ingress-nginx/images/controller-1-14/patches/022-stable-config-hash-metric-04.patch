@@ -1,14 +1,13 @@
 diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
-index 8a4278ea8..dbaba8873 100644
+index 8a4278ea8..f7b0c865c 100644
 --- a/internal/ingress/controller/controller.go
 +++ b/internal/ingress/controller/controller.go
-@@ -18,13 +18,15 @@ package controller
+@@ -18,13 +18,14 @@ package controller
  
  import (
  	"context"
 +	"encoding/json"
  	"fmt"
-+	"os"
  	"sort"
  	"strconv"
  	"strings"
@@ -19,7 +18,7 @@ index 8a4278ea8..dbaba8873 100644
  	apiv1 "k8s.io/api/core/v1"
  	networking "k8s.io/api/networking/v1"
  	apiequality "k8s.io/apimachinery/pkg/api/equality"
-@@ -47,6 +49,7 @@ import (
+@@ -47,6 +48,7 @@ import (
  	"k8s.io/ingress-nginx/internal/ingress/inspector"
  	"k8s.io/ingress-nginx/internal/ingress/metric/collectors"
  	"k8s.io/ingress-nginx/internal/k8s"
@@ -27,17 +26,7 @@ index 8a4278ea8..dbaba8873 100644
  	"k8s.io/ingress-nginx/internal/nginx"
  	"k8s.io/ingress-nginx/pkg/apis/ingress"
  	utilingress "k8s.io/ingress-nginx/pkg/util/ingress"
-@@ -54,6 +57,9 @@ import (
- )
- 
- const (
-+	// ingressControllerConfigJSONPath is written on each sync for cross-pod diff (kubectl exec … cat).
-+	ingressControllerConfigJSONPath = "/tmp/ingress_controller_config.json"
-+
- 	defUpstreamName             = "upstream-default-backend"
- 	defServerName               = "_"
- 	rootLocation                = "/"
-@@ -62,6 +68,246 @@ const (
+@@ -62,6 +64,246 @@ const (
  	orphanMetricLabelNoEndpoint = "no-endpoint"
  )
  
@@ -284,20 +273,7 @@ index 8a4278ea8..dbaba8873 100644
  // Configuration contains all the settings required by an Ingress controller
  type Configuration struct {
  	APIServerHost string
-@@ -192,12 +438,20 @@ func (n *NGINXController) syncIngress(interface{}) error {
- 	ings := n.store.ListIngresses()
- 	hosts, servers, pcfg := n.getConfiguration(ings)
- 
-+	// JSON snapshot of the same normalized structure used for config_hash (sorted, endpoints cleared, etc.).
-+	if cfgForJSON := deepCopyConfigurationForHash(pcfg); cfgForJSON != nil {
-+		if data, jerr := json.MarshalIndent(cfgForJSON, "", "  "); jerr == nil {
-+			_ = os.WriteFile(ingressControllerConfigJSONPath, data, 0o600)
-+		} else {
-+			fallback, _ := json.MarshalIndent(map[string]string{"marshalError": jerr.Error()}, "", "  ")
-+			_ = os.WriteFile(ingressControllerConfigJSONPath, fallback, 0o600)
-+		}
-+	}
-+
+@@ -195,9 +437,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
  	n.metricCollector.SetSSLExpireTime(servers)
  	n.metricCollector.SetSSLInfo(servers)
  
@@ -386,88 +362,3 @@ index febf20be0..5ce2a02ba 100644
  
  	return to
  }
-diff --git a/internal/ingress/controller/template/configmap_test.go b/internal/ingress/controller/template/configmap_test.go
-index 6c7468303..09d2d2c94 100644
---- a/internal/ingress/controller/template/configmap_test.go
-+++ b/internal/ingress/controller/template/configmap_test.go
-@@ -17,18 +17,34 @@ limitations under the License.
- package template
- 
- import (
-+	"encoding/json"
- 	"fmt"
- 	"reflect"
- 	"testing"
- 	"time"
- 
-+	"github.com/cespare/xxhash/v2"
- 	"github.com/kylelemons/godebug/pretty"
--	"github.com/mitchellh/hashstructure/v2"
- 
- 	"k8s.io/ingress-nginx/internal/ingress/annotations/authreq"
- 	"k8s.io/ingress-nginx/internal/ingress/controller/config"
- )
- 
-+// backendConfigChecksum matches ReadConfig: IPv6 DNS and worker CPU count omitted from hash input.
-+func backendConfigChecksum(c *config.Configuration) string {
-+	savedDNS := c.DisableIpv6DNS
-+	savedWP := c.WorkerProcesses
-+	c.DisableIpv6DNS = false
-+	c.WorkerProcesses = "auto"
-+	b, err := json.Marshal(c)
-+	c.DisableIpv6DNS = savedDNS
-+	c.WorkerProcesses = savedWP
-+	if err != nil {
-+		return ""
-+	}
-+	return fmt.Sprintf("%v", xxhash.Sum64(b))
-+}
-+
- func TestFilterErrors(t *testing.T) {
- 	e := filterErrors([]int{200, 300, 345, 500, 555, 999})
- 	if len(e) != 4 {
-@@ -104,13 +120,7 @@ func TestMergeConfigMapToStruct(t *testing.T) {
- 	def.DefaultType = "text/plain"
- 	def.DebugConnections = []string{"127.0.0.1", "1.1.1.1/24", "::1"}
- 
--	hash, err := hashstructure.Hash(def, hashstructure.FormatV1, &hashstructure.HashOptions{
--		TagName: "json",
--	})
--	if err != nil {
--		t.Fatalf("unexpected error obtaining hash: %v", err)
--	}
--	def.Checksum = fmt.Sprintf("%v", hash)
-+	def.Checksum = backendConfigChecksum(&def)
- 
- 	to := ReadConfig(conf)
- 	if diff := pretty.Compare(to, def); diff != "" {
-@@ -134,13 +144,7 @@ func TestMergeConfigMapToStruct(t *testing.T) {
- 	def.LuaSharedDicts = defaultLuaSharedDicts
- 	def.DisableIpv6DNS = true
- 
--	hash, err = hashstructure.Hash(def, hashstructure.FormatV1, &hashstructure.HashOptions{
--		TagName: "json",
--	})
--	if err != nil {
--		t.Fatalf("unexpected error obtaining hash: %v", err)
--	}
--	def.Checksum = fmt.Sprintf("%v", hash)
-+	def.Checksum = backendConfigChecksum(&def)
- 
- 	to = ReadConfig(map[string]string{
- 		"disable-ipv6-dns": "true",
-@@ -155,13 +159,7 @@ func TestMergeConfigMapToStruct(t *testing.T) {
- 	def.WhitelistSourceRange = []string{"1.1.1.1/32"}
- 	def.DisableIpv6DNS = true
- 
--	hash, err = hashstructure.Hash(def, hashstructure.FormatV1, &hashstructure.HashOptions{
--		TagName: "json",
--	})
--	if err != nil {
--		t.Fatalf("unexpected error obtaining hash: %v", err)
--	}
--	def.Checksum = fmt.Sprintf("%v", hash)
-+	def.Checksum = backendConfigChecksum(&def)
- 
- 	to = ReadConfig(map[string]string{
- 		"denylist-source-range":  "2.2.2.2/32",
