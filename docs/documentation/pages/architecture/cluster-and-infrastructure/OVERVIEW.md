@@ -3,6 +3,8 @@ title: Cluster & Infrastructure subsystem
 permalink: en/architecture/cluster-and-infrastructure/
 search: cluster & infrastructure, node management
 description: Architecture of the Cluster & Infrastructure subsystem in Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 This section describes the architecture of the Cluster & Infrastructure subsystem of the Deckhouse Kubernetes Platform (DKP).

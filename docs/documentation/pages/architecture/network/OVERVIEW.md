@@ -3,6 +3,8 @@ title: Network subsystem
 permalink: en/architecture/network/
 search: network, network subsystem
 description: Architecture of the Network subsystem in Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 This subsection describes the architecture of the Network subsystem of Deckhouse Kubernetes Platform (DKP).

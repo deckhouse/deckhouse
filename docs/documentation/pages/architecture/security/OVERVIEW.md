@@ -3,6 +3,8 @@ title: Security subsystem
 permalink: en/architecture/security/
 search: security, security subsystem
 description: Architecture of the Security subsystem in Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 This subsection describes the architecture of the Security subsystem of Deckhouse Kubernetes Platform (DKP).
