@@ -3,6 +3,8 @@ title: Deckhouse subsystem
 permalink: en/architecture/deckhouse/
 search: Deckhouse subsystem, Deckhouse controller
 description: General information about the Deckhouse subsystem of Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 This subsection describes the architecture of the Deckhouse controller

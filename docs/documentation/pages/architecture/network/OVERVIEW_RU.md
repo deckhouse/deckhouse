@@ -4,6 +4,8 @@ permalink: ru/architecture/network/
 lang: ru
 search: network, сетевая подсистема, сеть
 description: Архитектура подсистемы Network в Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 В данном подразделе описана архитектура подсистемы Network (сетевой подсистемы) Deckhouse Kubernetes Platform (DKP).

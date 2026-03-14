@@ -4,6 +4,10 @@ permalink: ru/architecture/c4-model.html
 lang: ru
 search: модель C4, диаграмма контекста, диаграмма подсистем, диаграмма модулей
 description: Описание архитектуры Deckhouse Kubernetes Platform в нотации модели C4 — диаграммы контекста, подсистем и модулей.
+relatedLinks:
+  - title: "The C4 model for visualising software architecture"
+    url: "https://c4model.com/"
+
 ---
 
 Для графического изображения архитектуры системы и объяснения декомпозиции системы на элементы используется [Модель С4](https://c4model.com/). Диаграммы в этой модели организуются по принципу увеличения масштаба и детализации элементов:
@@ -29,12 +33,12 @@ description: Описание архитектуры Deckhouse Kubernetes Platfo
 
 Для элементов диаграмм используется следующие графические символы:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Условные обозначения на диаграммах DKP](../../images/architecture/c4-legend.ru.png)
 
 ## Диаграмма контекста
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Диаграмма контекста DKP](../../images/architecture/c4-l1-context.ru.png)
 
 С DKP взаимодействуют:
@@ -54,7 +58,7 @@ description: Описание архитектуры Deckhouse Kubernetes Platfo
 Связи между подсистемами показаны в обобщённом виде и без детализации.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Диаграмма подсистем DKP](../../images/architecture/c4-subsystems.ru.png)
 
 ## Диаграмма модулей
@@ -65,5 +69,5 @@ description: Описание архитектуры Deckhouse Kubernetes Platfo
 Связи между модулями показаны в обобщённом виде и без детализации.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Диаграмма модулей DKP](../../images/architecture/c4-modules.ru.png)

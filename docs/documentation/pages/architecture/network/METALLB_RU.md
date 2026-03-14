@@ -28,12 +28,12 @@ description: Архитектура модуля metallb в Deckhouse Kubernetes
 
 MetalLB в режиме Layer 2:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля metallb в режиме Layer 2](../../../images/architecture/network/c4-l2-metallb-l2.ru.png)
 
 MetalLB в режиме BGP:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля metallb в режиме BGP](../../../images/architecture/network/c4-l2-metallb-bgp.ru.png)
 
 ## Компоненты модуля
