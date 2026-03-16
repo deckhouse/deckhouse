@@ -38,3 +38,7 @@ type Reconciler interface {
 	SetupWatches(w Watcher)
 	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
 }
+
+type HasForPredicates interface {
+	SetupForPredicates() []predicate.Predicate
+}

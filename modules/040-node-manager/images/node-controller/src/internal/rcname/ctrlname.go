@@ -1,19 +1,3 @@
-/*
-Copyright 2025 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package rcname
 
 type ReconcilerName string
@@ -21,6 +5,30 @@ type ReconcilerName string
 func (cn ReconcilerName) String() string { return string(cn) }
 
 const (
-	NodeGroup       ReconcilerName = "nodegroup"
-	NodeGroupStatus ReconcilerName = "nodegroup-status"
+	NodeGroup              ReconcilerName = "nodegroup"
+	NodeGroupStatus        ReconcilerName = "nodegroup-status"
+	NodeGroupInstanceClass ReconcilerName = "nodegroup-instanceclass"
+	NodeGroupMaster        ReconcilerName = "nodegroup-master"
+	NodeUpdate             ReconcilerName = "node-update"
+	NodeTemplate           ReconcilerName = "node-template"
+	NodeGPU                ReconcilerName = "node-gpu"
+	NodeProviderID         ReconcilerName = "node-provider-id"
+	NodeBashibleCleanup    ReconcilerName = "node-bashible-cleanup"
+	NodeFencing            ReconcilerName = "node-fencing"
+	Instance               ReconcilerName = "instance"
+	MachineDeployment      ReconcilerName = "machine-deployment"
+	CSITaint               ReconcilerName = "csi-taint"
+	CSRApprover            ReconcilerName = "csr-approver"
+	CRDWebhook             ReconcilerName = "crd-webhook"
+	BashiblePod            ReconcilerName = "bashible-pod"
+	BashibleLock           ReconcilerName = "bashible-lock"
+	ControlPlane           ReconcilerName = "control-plane"
+	ChaosMonkey            ReconcilerName = "chaos-monkey"
+	NodeUser               ReconcilerName = "node-user"
+	YCPreemptible          ReconcilerName = "yc-preemptible"
+	MetricsCAPS            ReconcilerName = "metrics-caps"
+	MetricsNGConfig        ReconcilerName = "metrics-ng-config"
+	MetricsContainerd      ReconcilerName = "metrics-containerd"
+	MetricsOSVersion       ReconcilerName = "metrics-os-version"
+	MetricsCloudConditions ReconcilerName = "metrics-cloud-conditions"
 )

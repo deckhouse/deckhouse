@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 type Base struct {
@@ -31,13 +32,16 @@ type Base struct {
 }
 
 var (
-	_ NeedsClient = (*Base)(nil)
-	_ NeedsCache  = (*Base)(nil)
-	_ NeedsScheme = (*Base)(nil)
-	_ NeedsLogger = (*Base)(nil)
+	_ NeedsClient      = (*Base)(nil)
+	_ NeedsCache       = (*Base)(nil)
+	_ NeedsScheme      = (*Base)(nil)
+	_ NeedsLogger      = (*Base)(nil)
+	_ HasForPredicates = (*Base)(nil)
 )
 
 func (b *Base) InjectClient(c client.Client)   { b.Client = c }
 func (b *Base) InjectCache(c cache.Cache)      { b.Cache = c }
 func (b *Base) InjectScheme(s *runtime.Scheme) { b.Scheme = s }
 func (b *Base) InjectLogger(l logr.Logger)     { b.Logger = l }
+
+func (b *Base) SetupForPredicates() []predicate.Predicate { return nil }

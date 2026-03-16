@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -52,9 +53,18 @@ func (dc *dynamicReconciler) setupWithManager(mgr ctrl.Manager) error {
 		dc.inject(r)
 	}
 
+	var forOpts []builder.ForOption
+	for _, r := range dc.childReconcilers {
+		if fp, ok := r.(HasForPredicates); ok {
+			if preds := fp.SetupForPredicates(); len(preds) > 0 {
+				forOpts = append(forOpts, builder.WithPredicates(preds...))
+			}
+		}
+	}
+
 	b := ctrl.NewControllerManagedBy(mgr).
 		Named(dc.name.String()).
-		For(dc.obj)
+		For(dc.obj, forOpts...)
 
 	w := &builderWatcher{b: b}
 	for _, r := range dc.childReconcilers {
