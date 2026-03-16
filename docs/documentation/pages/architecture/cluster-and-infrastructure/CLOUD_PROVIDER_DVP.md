@@ -37,7 +37,7 @@ The module consists of the following components:
 
    * **capdvp-controller-manager**.
 
-2. **Сloud-controller-manager**: It is an implementation of [Сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) for DVP, it provides interaction with the DVP cloud and performs the following functions:
+2. **Cloud-controller-manager**: It is an implementation of [Cloud controller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) for DVP, it provides interaction with the DVP cloud and performs the following functions:
 
    * Implements a 1:1 relationship between a Node resource in Kubernetes and a VM in a cloud provider. To do this:
 
@@ -46,7 +46,7 @@ The module consists of the following components:
 
    * When creating a LoadBalancer Service resource in Kubernetes, it creates a load balancer in the cloud that will route traffic from outside into the cluster nodes.
 
-   For more details about **Сloud-controller-manager**, refer to the [Kubernetes documentation](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/)
+   For more details about **Cloud-controller-manager**, refer to the [Kubernetes documentation](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/)
 
    It consists of a single container:
 
