@@ -1,11 +1,11 @@
 diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
-index 45da5db23..8fc4d8d91 100644
+index 489f1f3d4..f530421a2 100644
 --- a/internal/ingress/controller/controller.go
 +++ b/internal/ingress/controller/controller.go
-@@ -18,13 +18,14 @@ package controller
+@@ -17,13 +17,14 @@ limitations under the License.
+ package controller
  
  import (
- 	"context"
 +	"encoding/json"
  	"fmt"
  	"sort"
@@ -18,7 +18,7 @@ index 45da5db23..8fc4d8d91 100644
  	apiv1 "k8s.io/api/core/v1"
  	networking "k8s.io/api/networking/v1"
  	apiequality "k8s.io/apimachinery/pkg/api/equality"
-@@ -47,6 +48,7 @@ import (
+@@ -44,6 +45,7 @@ import (
  	"k8s.io/ingress-nginx/internal/ingress/inspector"
  	"k8s.io/ingress-nginx/internal/ingress/metric/collectors"
  	"k8s.io/ingress-nginx/internal/k8s"
@@ -26,11 +26,10 @@ index 45da5db23..8fc4d8d91 100644
  	"k8s.io/ingress-nginx/internal/nginx"
  	"k8s.io/ingress-nginx/pkg/apis/ingress"
  	utilingress "k8s.io/ingress-nginx/pkg/util/ingress"
-@@ -62,6 +64,246 @@ const (
- 	orphanMetricLabelNoEndpoint = "no-endpoint"
- )
+@@ -164,6 +166,245 @@ func (n *NGINXController) GetPublishService() *apiv1.Service {
+ 	return s
+ }
  
-+
 +// deepCopyConfigurationForHash returns a full deep copy of the configuration with variable
 +// or per-pod data cleared (Backend.Endpoints, SSLCert.Certificate/CACertificate, L4Service.Endpoints)
 +// so the copy is suitable for deterministic hashing.
@@ -192,7 +191,7 @@ index 45da5db23..8fc4d8d91 100644
 +		Hostname:               s.Hostname,
 +		SSLPassthrough:         s.SSLPassthrough,
 +		RedirectFromToWWW:      s.RedirectFromToWWW,
-+		CertificateAuth:       s.CertificateAuth,
++		CertificateAuth:        s.CertificateAuth,
 +		ProxySSL:               s.ProxySSL,
 +		ServerSnippet:          s.ServerSnippet,
 +		SSLCiphers:             s.SSLCiphers,
@@ -270,10 +269,10 @@ index 45da5db23..8fc4d8d91 100644
 +	return xxhash.Sum64(data), nil
 +}
 +
- // Configuration contains all the settings required by an Ingress controller
- type Configuration struct {
- 	APIServerHost string
-@@ -196,9 +438,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
+ // syncIngress collects all the pieces required to assemble the NGINX
+ // configuration file and passes the resulting data structures to the backend
+ // (OnUpdate) when a reload is deemed necessary.
+@@ -180,9 +421,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
  	n.metricCollector.SetSSLExpireTime(servers)
  	n.metricCollector.SetSSLInfo(servers)
  
@@ -284,3 +283,75 @@ index 45da5db23..8fc4d8d91 100644
  	if err != nil {
  		klog.Errorf("unexpected error hashing configuration: %v", err)
  	}
+diff --git a/internal/ingress/controller/template/configmap.go b/internal/ingress/controller/template/configmap.go
+index 9dc019bcc..a9e1d7fe4 100644
+--- a/internal/ingress/controller/template/configmap.go
++++ b/internal/ingress/controller/template/configmap.go
+@@ -17,6 +17,7 @@ limitations under the License.
+ package template
+ 
+ import (
++	"encoding/json"
+ 	"fmt"
+ 	"net"
+ 	"regexp"
+@@ -24,6 +25,7 @@ import (
+ 	"strings"
+ 	"time"
+ 
++	"github.com/cespare/xxhash/v2"
+ 	"k8s.io/klog/v2"
+ 
+ 	"github.com/mitchellh/hashstructure/v2"
+@@ -376,13 +378,18 @@ func ReadConfig(src map[string]string) config.Configuration {
+ 		delete(conf, nginxStatusIpv6Whitelist)
+ 	}
+ 
++	var workerProcessesChecksum string
+ 	if val, ok := conf[workerProcesses]; ok {
+-		to.WorkerProcesses = val
+ 		if val == "auto" {
++			workerProcessesChecksum = "auto"
+ 			to.WorkerProcesses = strconv.Itoa(runtime.NumCPU())
++		} else {
++			workerProcessesChecksum = val
++			to.WorkerProcesses = val
+ 		}
+-
+ 		delete(conf, workerProcesses)
++	} else {
++		workerProcessesChecksum = "auto"
+ 	}
+ 
+ 	if val, ok := conf[plugins]; ok {
+@@ -439,15 +446,23 @@ func ReadConfig(src map[string]string) config.Configuration {
+ 		klog.Warningf("unexpected error merging defaults: %v", err)
+ 	}
+ 
+-	hash, err := hashstructure.Hash(to, hashstructure.FormatV1, &hashstructure.HashOptions{
+-		TagName: "json",
+-	})
+-	if err != nil {
+-		klog.Warningf("unexpected error obtaining hash: %v", err)
++	savedDisableIPv6DNS := to.DisableIpv6DNS
++	savedWorkerProcesses := to.WorkerProcesses
++	to.DisableIpv6DNS = false
++	to.WorkerProcesses = workerProcessesChecksum
++	to.Checksum = ""
++	data, jerr := json.Marshal(to)
++	to.DisableIpv6DNS = savedDisableIPv6DNS
++	to.WorkerProcesses = savedWorkerProcesses
++	if jerr != nil {
++		klog.Warningf("unexpected error obtaining checksum: %v", jerr)
++		if h, herr := hashstructure.Hash(to, hashstructure.FormatV1, &hashstructure.HashOptions{TagName: "json"}); herr == nil {
++			to.Checksum = fmt.Sprintf("%v", h)
++		}
++	} else {
++		to.Checksum = fmt.Sprintf("%v", xxhash.Sum64(data))
+ 	}
+ 
+-	to.Checksum = fmt.Sprintf("%v", hash)
+-
+ 	return to
+ }
+ 
