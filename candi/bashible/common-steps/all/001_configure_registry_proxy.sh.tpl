@@ -16,7 +16,6 @@
 
 mkdir -p /etc/kubernetes/registry-proxy
 
-# Read previously discovered IP
 # Need for bootstrap Local and Proxy registry modes
 discovered_node_ip="$(bb-d8-node-ip)"
 
