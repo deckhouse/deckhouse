@@ -1,8 +1,8 @@
 # The cni-flannel version corresponds to the flanneld version.
 # https://github.com/deckhouse/deckhouse/blob/main/modules/035-cni-flannel/images/flanneld/werf.inc.yaml
 # https://github.com/flannel-io/flannel/blob/v0.26.2/chart/kube-flannel/values.yaml#L18
-{{- $cni_flannel_version := "1.6.0-flannel1" }}
-{{- $cni_version := "1.6.2" }}
+{{- $cni_flannel_version := include "get_oss_version_by_id" (list "cni-flannel" $ )  -}}
+{{- $cni_version := include "get_oss_version_by_id" (list "kubernetes-cni" $ )  -}}
 {{- $image_version := $cni_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}

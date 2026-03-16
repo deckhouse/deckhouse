@@ -23,7 +23,6 @@ import (
 // Condition reasons for startup-related failures.
 const (
 	ConditionReasonStartupHooksFailed status.ConditionReason = "StartupHookFailed"
-	ConditionReasonHooksFailed        status.ConditionReason = "HooksFailed"
 	ConditionReasonInitHooksFailed    status.ConditionReason = "InitHooksFailed"
 )
 
@@ -39,12 +38,6 @@ func newStartupHookErr(err error) error {
 				Reason:  ConditionReasonStartupHooksFailed,
 				Message: err.Error(),
 			},
-			{
-				Type:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonHooksFailed,
-				Message: err.Error(),
-			},
 		},
 	}
 }
@@ -56,7 +49,7 @@ func newInitHooksErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionReadyInRuntime,
+				Type:    status.ConditionHooksProcessed,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonInitHooksFailed,
 				Message: err.Error(),

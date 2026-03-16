@@ -3,19 +3,22 @@ RotateKubeletServerCertificate default is true, but CIS benchmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
 {{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
-{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion -}}
-  {{- /*
-  Enable DRA multi-allocations by activating required feature gates:
-  DRADeviceBindingConditions and DRAResourceClaimDeviceStatus (for BindsToNode)
-  DRAConsumableCapacity (for AllowMultipleAllocations)
-  */ -}}
+  {{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations) */ -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
-  {{- $baseFeatureGates = append $baseFeatureGates "DRAResourceClaimDeviceStatus=true" -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
+{{- end }}
+{{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
+  {{- /* DRAPartitionableDevices: Alpha in 1.33 (for NodeSelector per device) */ -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAPartitionableDevices=true" -}}
+{{- end }}
+{{- if semverCompare ">=1.32 <1.33" .clusterConfiguration.kubernetesVersion }}
+  {{- /* DRAResourceClaimDeviceStatus: Alpha in 1.32, Beta in 1.33 (for BindsToNode) */ -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAResourceClaimDeviceStatus=true" -}}
 {{- end }}
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}

@@ -44,6 +44,7 @@ var (
 type loader func(ctx context.Context, repo registry.Remote, path string) (string, error)
 
 type statusService interface {
+	SetConditionTrue(name string, condition status.ConditionType)
 	HandleError(name string, err error)
 	SetVersion(name string, version string)
 }
@@ -125,6 +126,8 @@ func (t *task) Execute(ctx context.Context) error {
 			},
 		},
 	})
+
+	t.status.SetConditionTrue(t.name, status.ConditionReadyInRuntime)
 
 	return nil
 }

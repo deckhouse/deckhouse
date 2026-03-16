@@ -146,7 +146,7 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 }
 
 func (c *KubeProxyChecker) Name() string {
-	return "Ssh access and kube-proxy availability"
+	return "SSH access and kube-proxy availability"
 }
 
 func (c *KubeProxyChecker) printNs(cm *corev1.ConfigMap) {
