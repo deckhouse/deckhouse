@@ -88,7 +88,7 @@ The following external components interact with the module:
 
 Indirect interactions:
 
-1. The `cloud-provider-dvp` module provides [`node-manager`](/modules/node-manager/) with following artefacts:
+1. The `cloud-provider-dvp` module provides [`node-manager`](/modules/node-manager/) with following artifacts:
 
    * Provider-specific Cluster API custom resources templates to be used by **cloud-provider-dvp** to create VM's in the cloud.
    * `kube-system/d8-node-manager-cloud-provider` secret, which contains all the necessary settings to connect to the cloud and to create CloudEphemeral nodes. These settings are registered in the provider-specific Cluster API custom resources created based on the templates mentioned above.
