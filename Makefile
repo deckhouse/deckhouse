@@ -280,14 +280,14 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 docs: bin/werf ## Run containers with the documentation.
 	@echo "Building documentation containers..."
 	@echo -n "werf: "; bin/werf version
-	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true --platform linux/amd64
+	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
 
 .PHONY: docs-dev
 docs-dev: bin/werf ## Run containers with the documentation in the dev mode (allow uncommited files).
 	@echo "Building documentation containers (dev mode)..."
 	@echo -n "werf: "; bin/werf version;
-	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true --platform linux/amd64
+	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
 
 .PHONY: docs-down
