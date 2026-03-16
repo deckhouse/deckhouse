@@ -136,7 +136,8 @@ data:
 						"violating_object_name": "testcm",
 						"violating_resource":    "configmaps",
 					},
-				}, operation.MetricOperation{
+				},
+				operation.MetricOperation{
 					Action: operation.ActionGaugeSet,
 					Name:   grantViolationMetricName,
 					Value:  ptr.To(1.0),

@@ -83,12 +83,6 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 			return fmt.Errorf("unmarshal grant snapshot: %w", err)
 		}
 
-		metricLabels := map[string]string{
-			"project":               g.ObjectMeta.Name,
-			"violating_object_name": "",
-			"violating_resource":    "",
-		}
-
 		log.InfoContext(ctx, "Scanning grant violations", "grant", g)
 
 		violations, err := validateGrantNotViolated(ctx, g, kubeClient, log)
@@ -103,13 +97,18 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 		)
 
 		if len(violations) == 0 {
-			input.MetricsCollector.Set(grantViolationMetricName, 0, metricLabels)
+			input.MetricsCollector.Set(grantViolationMetricName, 0, map[string]string{
+				"project": g.ObjectMeta.Name,
+			})
 			continue
 		}
 
 		for _, v := range violations {
-			metricLabels["violating_object_name"] = v.Name
-			metricLabels["violating_resource"] = v.GVR.Resource
+			metricLabels := map[string]string{
+				"project":               g.ObjectMeta.Name,
+				"violating_object_name": v.Name,
+				"violating_resource":    v.GVR.Resource,
+			}
 			if v.GVR.Group != "" {
 				metricLabels["violating_resource"] = fmt.Sprintf("%s.%s", v.GVR.Resource, v.GVR.Group)
 			}
