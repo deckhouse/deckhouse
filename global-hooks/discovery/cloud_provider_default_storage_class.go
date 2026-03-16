@@ -18,6 +18,8 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +28,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -55,8 +59,42 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleCloudProviderDefaultStorageClass)
 
+type discoveryData struct {
+	StorageClasses []storageClassInfo `json:"storageClasses"`
+}
+
+type storageClassInfo struct {
+	Name      string `json:"name"`
+	IsDefault bool   `json:"isDefault"`
+}
+
 func applyCloudProviderSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return &corev1.Secret{}, nil
+	secret := &corev1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract discovery-data.json from secret
+	discoveryJSON, ok := secret.Data["discovery-data.json"]
+	if !ok {
+		return "", nil
+	}
+
+	// Parse JSON to find default storage class
+	var data discoveryData
+	if err := json.Unmarshal(discoveryJSON, &data); err != nil {
+		return "", nil
+	}
+
+	// Find default storage class
+	for _, sc := range data.StorageClasses {
+		if sc.IsDefault {
+			return sc.Name, nil
+		}
+	}
+
+	return "", nil
 }
 
 func handleCloudProviderDefaultStorageClass(_ context.Context, input *go_hook.HookInput) error {
@@ -66,8 +104,16 @@ func handleCloudProviderDefaultStorageClass(_ context.Context, input *go_hook.Ho
 		metricGroup   = "cloud_provider_dvp_default_storage_class"
 	)
 
-	// Read default storage class from cloud-provider-dvp module internal values
-	defaultSC := input.Values.Get("cloudProviderDvp.internal.defaultStorageClass").String()
+	// Read default storage class from Secret snapshot using UnmarshalToStruct
+	defaultSCSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "cloud_provider_discovery_data")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cloud_provider_discovery_data snapshot: %w", err)
+	}
+
+	var defaultSC string
+	if len(defaultSCSnap) > 0 {
+		defaultSC = defaultSCSnap[0]
+	}
 
 	if defaultSC != "" {
 		input.Values.Set(discoveryPath, defaultSC)

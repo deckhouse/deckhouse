@@ -42,9 +42,8 @@ var _ = Describe("Global hooks :: discovery :: cloud_provider_default_storage_cl
 		})
 	})
 
-	Context("Module has default storage class in internal values", func() {
+	Context("Secret has default storage class", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cloudProviderDvp.internal.defaultStorageClass", "replicated")
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 apiVersion: v1
@@ -53,7 +52,7 @@ metadata:
   name: d8-cloud-provider-discovery-data
   namespace: kube-system
 data:
-  discovery-data.json: e30=
+  discovery-data.json: eyJzdG9yYWdlQ2xhc3NlcyI6W3sibmFtZSI6InJlcGxpY2F0ZWQiLCJpc0RlZmF1bHQiOnRydWV9XX0=
 `))
 			f.RunHook()
 		})
@@ -67,7 +66,7 @@ data:
 		})
 	})
 
-	Context("Module has no default storage class", func() {
+	Context("Secret has no default storage class", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.discovery.cloudProviderDefaultStorageClass", "old-value")
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -78,7 +77,7 @@ metadata:
   name: d8-cloud-provider-discovery-data
   namespace: kube-system
 data:
-  discovery-data.json: e30=
+  discovery-data.json: eyJzdG9yYWdlQ2xhc3NlcyI6W3sibmFtZSI6ImxvY2FsIiwiaXNEZWZhdWx0IjpmYWxzZX1dfQ==
 `))
 			f.RunHook()
 		})
@@ -94,7 +93,6 @@ data:
 
 	Context("Drift detection: no drift", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cloudProviderDvp.internal.defaultStorageClass", "replicated")
 			f.ValuesSet("global.discovery.defaultStorageClass", "replicated")
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
@@ -104,7 +102,7 @@ metadata:
   name: d8-cloud-provider-discovery-data
   namespace: kube-system
 data:
-  discovery-data.json: e30=
+  discovery-data.json: eyJzdG9yYWdlQ2xhc3NlcyI6W3sibmFtZSI6InJlcGxpY2F0ZWQiLCJpc0RlZmF1bHQiOnRydWV9XX0=
 `))
 			f.RunHook()
 		})
@@ -127,7 +125,6 @@ data:
 
 	Context("Drift detection: drift detected", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cloudProviderDvp.internal.defaultStorageClass", "replicated")
 			f.ValuesSet("global.discovery.defaultStorageClass", "local")
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
@@ -137,7 +134,7 @@ metadata:
   name: d8-cloud-provider-discovery-data
   namespace: kube-system
 data:
-  discovery-data.json: e30=
+  discovery-data.json: eyJzdG9yYWdlQ2xhc3NlcyI6W3sibmFtZSI6InJlcGxpY2F0ZWQiLCJpc0RlZmF1bHQiOnRydWV9XX0=
 `))
 			f.RunHook()
 		})
@@ -163,7 +160,6 @@ data:
 
 	Context("Drift detection: no actual default SC yet", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cloudProviderDvp.internal.defaultStorageClass", "replicated")
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 apiVersion: v1
@@ -172,7 +168,7 @@ metadata:
   name: d8-cloud-provider-discovery-data
   namespace: kube-system
 data:
-  discovery-data.json: e30=
+  discovery-data.json: eyJzdG9yYWdlQ2xhc3NlcyI6W3sibmFtZSI6InJlcGxpY2F0ZWQiLCJpc0RlZmF1bHQiOnRydWV9XX0=
 `))
 			f.RunHook()
 		})
