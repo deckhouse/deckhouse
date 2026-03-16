@@ -77,7 +77,7 @@ Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. A
 
 ### 011-restore-validation.patch (sandbox)
 
-Re-enables configuration validation with sandboxed (by sandbox) for the ingress-nginx controller, which was previously disabled as a mitigation for the security vulnerabilities described in CVE-2025-1097, CVE-2025-1098, CVE-2025-1974, CVE-2025-24513, and CVE-2025-24514.
+Re-enables configuration validation in a sandboxed (by sandbox) environment, which was previously disabled as a mitigation for the security vulnerabilities described in CVE-2025-1097, CVE-2025-1098, CVE-2025-1974, CVE-2025-24513, and CVE-2025-24514.
 
 ### 012-validation-mode.patch
 
