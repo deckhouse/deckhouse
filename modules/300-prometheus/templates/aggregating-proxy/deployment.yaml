@@ -30,14 +30,14 @@ spec:
         minAllowed:
           {{- include "mimir_resources" . | nindent 10 }}
         maxAllowed:
-          cpu: 200m
-          memory: 256Mi
+          cpu: 50m
+          memory: 100Mi
       - containerName: promxy
         minAllowed:
           {{- include "promxy_resources" . | nindent 10 }}
         maxAllowed:
-          cpu: 200m
-          memory: 300Mi
+          cpu: 50m
+          memory: 100Mi
       {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
 {{- end }}
 ---
