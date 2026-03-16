@@ -13,6 +13,7 @@
 # limitations under the License.
 
 mkdir -p /etc/kubernetes/kubernetes-api-proxy
+# Read previously discovered IP
 
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
 {{- $list := list }}
