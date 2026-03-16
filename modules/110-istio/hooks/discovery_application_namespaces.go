@@ -170,11 +170,13 @@ func applicationNamespacesDiscovery(_ context.Context, input *go_hook.HookInput)
 		namespacesMap[nsInfo.Name] = nsInfo
 	}
 
+	//namespacesSnapshots = append(namespacesSnapshots, input.Snapshots.Get("all_namespaces")...)
 	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots.Get("namespaces_definite_revision")...)
 	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots.Get("namespaces_global_revision")...)
 	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots.Get("istio_pod_global_rev")...)
 	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots.Get("istio_pod_definite_rev")...)
 	for nsInfo, err := range sdkobjectpatch.SnapshotIter[IstioNamespaceFilterResult](namespacesSnapshots) {
+		fmt.Printf("%s \n", nsInfo.Name)
 		if err != nil {
 			return fmt.Errorf("failed to iterate over namespace snapshots: %w", err)
 		}
@@ -182,6 +184,7 @@ func applicationNamespacesDiscovery(_ context.Context, input *go_hook.HookInput)
 		if nsInfo.DeletionTimestampExists {
 			continue
 		}
+		fmt.Printf("Second - %s \n", nsInfo.Name)
 		if !lib.Contains(applicationNamespaces, nsInfo.Name) {
 			applicationNamespaces = append(applicationNamespaces, nsInfo.Name)
 			if !namespacesMap[nsInfo.Name].DiscardMetrics {
