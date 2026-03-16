@@ -1,8 +1,46 @@
+diff --git a/cmd/kube-controller-manager/app/policy.go b/cmd/kube-controller-manager/app/policy.go
+index 0db44ba6e4a..c8893ae9c78 100644
+--- a/cmd/kube-controller-manager/app/policy.go
++++ b/cmd/kube-controller-manager/app/policy.go
+@@ -54,6 +54,7 @@ func startDisruptionController(ctx context.Context, controllerContext Controller
+ 		controllerContext.InformerFactory.Apps().V1().ReplicaSets(),
+ 		controllerContext.InformerFactory.Apps().V1().Deployments(),
+ 		controllerContext.InformerFactory.Apps().V1().StatefulSets(),
++		controllerContext.InformerFactory.Apps().V1().DaemonSets(),
+ 		client,
+ 		controllerContext.RESTMapper,
+ 		scaleClient,
+diff --git a/cmd/kubeadm/app/cmd/join.go b/cmd/kubeadm/app/cmd/join.go
+index 967e3344901..3ee07bfc256 100644
+--- a/cmd/kubeadm/app/cmd/join.go
++++ b/cmd/kubeadm/app/cmd/join.go
+@@ -442,6 +442,13 @@ func newJoinData(cmd *cobra.Command, args []string, opt *joinOptions, out io.Wri
+ 		return nil, err
+ 	}
+ 
++	initCfg, err := configutil.LoadInitConfigurationFromFile(opt.cfgPath, configutil.LoadOrDefaultConfigurationOptions{
++		SkipCRIDetect: true,
++	})
++	if err != nil {
++		return nil, err
++	}
++
+ 	ignorePreflightErrorsSet, err := validation.ValidateIgnorePreflightErrors(opt.ignorePreflightErrors, cfg.NodeRegistration.IgnorePreflightErrors)
+ 	if err != nil {
+ 		return nil, err
+@@ -473,6 +480,7 @@ func newJoinData(cmd *cobra.Command, args []string, opt *joinOptions, out io.Wri
+ 
+ 	return &joinData{
+ 		cfg:                   cfg,
++		initCfg:               initCfg,
+ 		dryRun:                cmdutil.ValueFromFlagsOrConfig(cmd.Flags(), options.DryRun, cfg.DryRun, opt.dryRun).(bool),
+ 		tlsBootstrapCfg:       tlsBootstrapCfg,
+ 		ignorePreflightErrors: ignorePreflightErrorsSet,
 diff --git a/go.mod b/go.mod
-index 66c64e46b7e..6c7a18bdb76 100644
+index f7c2d919341..6c7a18bdb76 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,14 +1,6 @@
+@@ -1,9 +1,3 @@
 -// This is a generated file. Do not edit directly.
 -// Ensure you've carefully read
 -// https://git.k8s.io/community/contributors/devel/sig-architecture/vendor.md
@@ -11,48 +49,8 @@ index 66c64e46b7e..6c7a18bdb76 100644
 -
  module k8s.io/kubernetes
  
--go 1.24.0
--
--toolchain go1.24.3
-+go 1.23.0
- 
- godebug default=go1.23
- 
-@@ -77,14 +69,14 @@ require (
- 	go.opentelemetry.io/proto/otlp v1.3.1
- 	go.uber.org/goleak v1.3.0
- 	go.uber.org/zap v1.27.0
--	golang.org/x/crypto v0.45.0
--	golang.org/x/net v0.47.0
--	golang.org/x/oauth2 v0.27.0
--	golang.org/x/sync v0.18.0
--	golang.org/x/sys v0.38.0
--	golang.org/x/term v0.37.0
-+	golang.org/x/crypto v0.28.0
-+	golang.org/x/net v0.30.0
-+	golang.org/x/oauth2 v0.23.0
-+	golang.org/x/sync v0.8.0
-+	golang.org/x/sys v0.26.0
-+	golang.org/x/term v0.25.0
- 	golang.org/x/time v0.7.0
--	golang.org/x/tools v0.38.0
-+	golang.org/x/tools v0.26.0
- 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240826202546-f6391c0de4c7
- 	google.golang.org/grpc v1.65.0
- 	google.golang.org/protobuf v1.35.1
-@@ -209,9 +201,8 @@ require (
- 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.28.0 // indirect
- 	go.uber.org/multierr v1.11.0 // indirect
- 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
--	golang.org/x/mod v0.29.0 // indirect
--	golang.org/x/text v0.31.0 // indirect
--	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
-+	golang.org/x/mod v0.21.0 // indirect
-+	golang.org/x/text v0.19.0 // indirect
- 	google.golang.org/genproto v0.0.0-20240123012728-ef4313101c80 // indirect
- 	google.golang.org/genproto/googleapis/api v0.0.0-20240826202546-f6391c0de4c7 // indirect
- 	gopkg.in/inf.v0 v0.9.1 // indirect
-@@ -257,4 +248,4 @@ replace (
+ go 1.23.0
+@@ -254,4 +248,4 @@ replace (
  	k8s.io/sample-apiserver => ./staging/src/k8s.io/sample-apiserver
  	k8s.io/sample-cli-plugin => ./staging/src/k8s.io/sample-cli-plugin
  	k8s.io/sample-controller => ./staging/src/k8s.io/sample-controller
@@ -60,16 +58,133 @@ index 66c64e46b7e..6c7a18bdb76 100644
 +)
 \ No newline at end of file
 diff --git a/go.sum b/go.sum
-index da17fce883d..0942cf427a5 100644
+index cbff0e93873..0942cf427a5 100644
 --- a/go.sum
 +++ b/go.sum
-@@ -1,22 +1,28 @@
+@@ -1,137 +1,24 @@
  bitbucket.org/bertimus9/systemstat v0.5.0 h1:n0aLnh2Jo4nBUBym9cE5PJDG8GT6g+4VuS2Ya2jYYpA=
  bitbucket.org/bertimus9/systemstat v0.5.0/go.mod h1:EkUWPp8lKFPMXP8vnbpT5JDI0W/sTiLZAvN8ONWErHY=
 -cel.dev/expr v0.18.0 h1:CJ6drgk+Hf96lkLikr4rFf19WrU0BOWEihyZnI2TAzo=
 -cel.dev/expr v0.18.0/go.mod h1:MrpN08Q+lEBs+bGYdLxxHkZoUSsCp0nSKTs0nTymJgw=
 -cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 -cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
+-cloud.google.com/go v0.112.0/go.mod h1:3jEEVwZ/MHU4djK5t5RHuKOA/GbLddgTdVubX1qnPD4=
+-cloud.google.com/go/accessapproval v1.7.4/go.mod h1:/aTEh45LzplQgFYdQdwPMR9YdX0UlhBmvB84uAmQKUc=
+-cloud.google.com/go/accesscontextmanager v1.8.4/go.mod h1:ParU+WbMpD34s5JFEnGAnPBYAgUHozaTmDJU7aCU9+M=
+-cloud.google.com/go/aiplatform v1.58.0/go.mod h1:pwZMGvqe0JRkI1GWSZCtnAfrR4K1bv65IHILGA//VEU=
+-cloud.google.com/go/analytics v0.22.0/go.mod h1:eiROFQKosh4hMaNhF85Oc9WO97Cpa7RggD40e/RBy8w=
+-cloud.google.com/go/apigateway v1.6.4/go.mod h1:0EpJlVGH5HwAN4VF4Iec8TAzGN1aQgbxAWGJsnPCGGY=
+-cloud.google.com/go/apigeeconnect v1.6.4/go.mod h1:CapQCWZ8TCjnU0d7PobxhpOdVz/OVJ2Hr/Zcuu1xFx0=
+-cloud.google.com/go/apigeeregistry v0.8.2/go.mod h1:h4v11TDGdeXJDJvImtgK2AFVvMIgGWjSb0HRnBSjcX8=
+-cloud.google.com/go/appengine v1.8.4/go.mod h1:TZ24v+wXBujtkK77CXCpjZbnuTvsFNT41MUaZ28D6vg=
+-cloud.google.com/go/area120 v0.8.4/go.mod h1:jfawXjxf29wyBXr48+W+GyX/f8fflxp642D/bb9v68M=
+-cloud.google.com/go/artifactregistry v1.14.6/go.mod h1:np9LSFotNWHcjnOgh8UVK0RFPCTUGbO0ve3384xyHfE=
+-cloud.google.com/go/asset v1.17.0/go.mod h1:yYLfUD4wL4X589A9tYrv4rFrba0QlDeag0CMcM5ggXU=
+-cloud.google.com/go/assuredworkloads v1.11.4/go.mod h1:4pwwGNwy1RP0m+y12ef3Q/8PaiWrIDQ6nD2E8kvWI9U=
+-cloud.google.com/go/automl v1.13.4/go.mod h1:ULqwX/OLZ4hBVfKQaMtxMSTlPx0GqGbWN8uA/1EqCP8=
+-cloud.google.com/go/baremetalsolution v1.2.3/go.mod h1:/UAQ5xG3faDdy180rCUv47e0jvpp3BFxT+Cl0PFjw5g=
+-cloud.google.com/go/batch v1.7.0/go.mod h1:J64gD4vsNSA2O5TtDB5AAux3nJ9iV8U3ilg3JDBYejU=
+-cloud.google.com/go/beyondcorp v1.0.3/go.mod h1:HcBvnEd7eYr+HGDd5ZbuVmBYX019C6CEXBonXbCVwJo=
+-cloud.google.com/go/bigquery v1.58.0/go.mod h1:0eh4mWNY0KrBTjUzLjoYImapGORq9gEPT7MWjCy9lik=
+-cloud.google.com/go/billing v1.18.0/go.mod h1:5DOYQStCxquGprqfuid/7haD7th74kyMBHkjO/OvDtk=
+-cloud.google.com/go/binaryauthorization v1.8.0/go.mod h1:VQ/nUGRKhrStlGr+8GMS8f6/vznYLkdK5vaKfdCIpvU=
+-cloud.google.com/go/certificatemanager v1.7.4/go.mod h1:FHAylPe/6IIKuaRmHbjbdLhGhVQ+CWHSD5Jq0k4+cCE=
+-cloud.google.com/go/channel v1.17.4/go.mod h1:QcEBuZLGGrUMm7kNj9IbU1ZfmJq2apotsV83hbxX7eE=
+-cloud.google.com/go/cloudbuild v1.15.0/go.mod h1:eIXYWmRt3UtggLnFGx4JvXcMj4kShhVzGndL1LwleEM=
+-cloud.google.com/go/clouddms v1.7.3/go.mod h1:fkN2HQQNUYInAU3NQ3vRLkV2iWs8lIdmBKOx4nrL6Hc=
+-cloud.google.com/go/cloudtasks v1.12.4/go.mod h1:BEPu0Gtt2dU6FxZHNqqNdGqIG86qyWKBPGnsb7udGY0=
+-cloud.google.com/go/compute v1.25.1/go.mod h1:oopOIR53ly6viBYxaDhBfJwzUAxf1zE//uf3IB011ls=
+-cloud.google.com/go/compute/metadata v0.3.0/go.mod h1:zFmK7XCadkQkj6TtorcaGlCW1hT1fIilQDwofLpJ20k=
+-cloud.google.com/go/contactcenterinsights v1.12.1/go.mod h1:HHX5wrz5LHVAwfI2smIotQG9x8Qd6gYilaHcLLLmNis=
+-cloud.google.com/go/container v1.29.0/go.mod h1:b1A1gJeTBXVLQ6GGw9/9M4FG94BEGsqJ5+t4d/3N7O4=
+-cloud.google.com/go/containeranalysis v0.11.3/go.mod h1:kMeST7yWFQMGjiG9K7Eov+fPNQcGhb8mXj/UcTiWw9U=
+-cloud.google.com/go/datacatalog v1.19.2/go.mod h1:2YbODwmhpLM4lOFe3PuEhHK9EyTzQJ5AXgIy7EDKTEE=
+-cloud.google.com/go/dataflow v0.9.4/go.mod h1:4G8vAkHYCSzU8b/kmsoR2lWyHJD85oMJPHMtan40K8w=
+-cloud.google.com/go/dataform v0.9.1/go.mod h1:pWTg+zGQ7i16pyn0bS1ruqIE91SdL2FDMvEYu/8oQxs=
+-cloud.google.com/go/datafusion v1.7.4/go.mod h1:BBs78WTOLYkT4GVZIXQCZT3GFpkpDN4aBY4NDX/jVlM=
+-cloud.google.com/go/datalabeling v0.8.4/go.mod h1:Z1z3E6LHtffBGrNUkKwbwbDxTiXEApLzIgmymj8A3S8=
+-cloud.google.com/go/dataplex v1.14.0/go.mod h1:mHJYQQ2VEJHsyoC0OdNyy988DvEbPhqFs5OOLffLX0c=
+-cloud.google.com/go/dataproc/v2 v2.3.0/go.mod h1:G5R6GBc9r36SXv/RtZIVfB8SipI+xVn0bX5SxUzVYbY=
+-cloud.google.com/go/dataqna v0.8.4/go.mod h1:mySRKjKg5Lz784P6sCov3p1QD+RZQONRMRjzGNcFd0c=
+-cloud.google.com/go/datastore v1.15.0/go.mod h1:GAeStMBIt9bPS7jMJA85kgkpsMkvseWWXiaHya9Jes8=
+-cloud.google.com/go/datastream v1.10.3/go.mod h1:YR0USzgjhqA/Id0Ycu1VvZe8hEWwrkjuXrGbzeDOSEA=
+-cloud.google.com/go/deploy v1.17.0/go.mod h1:XBr42U5jIr64t92gcpOXxNrqL2PStQCXHuKK5GRUuYo=
+-cloud.google.com/go/dialogflow v1.48.1/go.mod h1:C1sjs2/g9cEwjCltkKeYp3FFpz8BOzNondEaAlCpt+A=
+-cloud.google.com/go/dlp v1.11.1/go.mod h1:/PA2EnioBeXTL/0hInwgj0rfsQb3lpE3R8XUJxqUNKI=
+-cloud.google.com/go/documentai v1.23.7/go.mod h1:ghzBsyVTiVdkfKaUCum/9bGBEyBjDO4GfooEcYKhN+g=
+-cloud.google.com/go/domains v0.9.4/go.mod h1:27jmJGShuXYdUNjyDG0SodTfT5RwLi7xmH334Gvi3fY=
+-cloud.google.com/go/edgecontainer v1.1.4/go.mod h1:AvFdVuZuVGdgaE5YvlL1faAoa1ndRR/5XhXZvPBHbsE=
+-cloud.google.com/go/errorreporting v0.3.0/go.mod h1:xsP2yaAp+OAW4OIm60An2bbLpqIhKXdWR/tawvl7QzU=
+-cloud.google.com/go/essentialcontacts v1.6.5/go.mod h1:jjYbPzw0x+yglXC890l6ECJWdYeZ5dlYACTFL0U/VuM=
+-cloud.google.com/go/eventarc v1.13.3/go.mod h1:RWH10IAZIRcj1s/vClXkBgMHwh59ts7hSWcqD3kaclg=
+-cloud.google.com/go/filestore v1.8.0/go.mod h1:S5JCxIbFjeBhWMTfIYH2Jx24J6BqjwpkkPl+nBA5DlI=
+-cloud.google.com/go/firestore v1.14.0/go.mod h1:96MVaHLsEhbvkBEdZgfN+AS/GIkco1LRpH9Xp9YZfzQ=
+-cloud.google.com/go/functions v1.15.4/go.mod h1:CAsTc3VlRMVvx+XqXxKqVevguqJpnVip4DdonFsX28I=
+-cloud.google.com/go/gkebackup v1.3.4/go.mod h1:gLVlbM8h/nHIs09ns1qx3q3eaXcGSELgNu1DWXYz1HI=
+-cloud.google.com/go/gkeconnect v0.8.4/go.mod h1:84hZz4UMlDCKl8ifVW8layK4WHlMAFeq8vbzjU0yJkw=
+-cloud.google.com/go/gkehub v0.14.4/go.mod h1:Xispfu2MqnnFt8rV/2/3o73SK1snL8s9dYJ9G2oQMfc=
+-cloud.google.com/go/gkemulticloud v1.1.0/go.mod h1:7NpJBN94U6DY1xHIbsDqB2+TFZUfjLUKLjUX8NGLor0=
+-cloud.google.com/go/gsuiteaddons v1.6.4/go.mod h1:rxtstw7Fx22uLOXBpsvb9DUbC+fiXs7rF4U29KHM/pE=
+-cloud.google.com/go/iam v1.1.5/go.mod h1:rB6P/Ic3mykPbFio+vo7403drjlgvoWfYpJhMXEbzv8=
+-cloud.google.com/go/iap v1.9.3/go.mod h1:DTdutSZBqkkOm2HEOTBzhZxh2mwwxshfD/h3yofAiCw=
+-cloud.google.com/go/ids v1.4.4/go.mod h1:z+WUc2eEl6S/1aZWzwtVNWoSZslgzPxAboS0lZX0HjI=
+-cloud.google.com/go/iot v1.7.4/go.mod h1:3TWqDVvsddYBG++nHSZmluoCAVGr1hAcabbWZNKEZLk=
+-cloud.google.com/go/kms v1.15.5/go.mod h1:cU2H5jnp6G2TDpUGZyqTCoy1n16fbubHZjmVXSMtwDI=
+-cloud.google.com/go/language v1.12.2/go.mod h1:9idWapzr/JKXBBQ4lWqVX/hcadxB194ry20m/bTrhWc=
+-cloud.google.com/go/lifesciences v0.9.4/go.mod h1:bhm64duKhMi7s9jR9WYJYvjAFJwRqNj+Nia7hF0Z7JA=
+-cloud.google.com/go/logging v1.9.0/go.mod h1:1Io0vnZv4onoUnsVUQY3HZ3Igb1nBchky0A0y7BBBhE=
+-cloud.google.com/go/longrunning v0.5.4/go.mod h1:zqNVncI0BOP8ST6XQD1+VcvuShMmq7+xFSzOL++V0dI=
+-cloud.google.com/go/managedidentities v1.6.4/go.mod h1:WgyaECfHmF00t/1Uk8Oun3CQ2PGUtjc3e9Alh79wyiM=
+-cloud.google.com/go/maps v1.6.3/go.mod h1:VGAn809ADswi1ASofL5lveOHPnE6Rk/SFTTBx1yuOLw=
+-cloud.google.com/go/mediatranslation v0.8.4/go.mod h1:9WstgtNVAdN53m6TQa5GjIjLqKQPXe74hwSCxUP6nj4=
+-cloud.google.com/go/memcache v1.10.4/go.mod h1:v/d8PuC8d1gD6Yn5+I3INzLR01IDn0N4Ym56RgikSI0=
+-cloud.google.com/go/metastore v1.13.3/go.mod h1:K+wdjXdtkdk7AQg4+sXS8bRrQa9gcOr+foOMF2tqINE=
+-cloud.google.com/go/monitoring v1.17.0/go.mod h1:KwSsX5+8PnXv5NJnICZzW2R8pWTis8ypC4zmdRD63Tw=
+-cloud.google.com/go/networkconnectivity v1.14.3/go.mod h1:4aoeFdrJpYEXNvrnfyD5kIzs8YtHg945Og4koAjHQek=
+-cloud.google.com/go/networkmanagement v1.9.3/go.mod h1:y7WMO1bRLaP5h3Obm4tey+NquUvB93Co1oh4wpL+XcU=
+-cloud.google.com/go/networksecurity v0.9.4/go.mod h1:E9CeMZ2zDsNBkr8axKSYm8XyTqNhiCHf1JO/Vb8mD1w=
+-cloud.google.com/go/notebooks v1.11.2/go.mod h1:z0tlHI/lREXC8BS2mIsUeR3agM1AkgLiS+Isov3SS70=
+-cloud.google.com/go/optimization v1.6.2/go.mod h1:mWNZ7B9/EyMCcwNl1frUGEuY6CPijSkz88Fz2vwKPOY=
+-cloud.google.com/go/orchestration v1.8.4/go.mod h1:d0lywZSVYtIoSZXb0iFjv9SaL13PGyVOKDxqGxEf/qI=
+-cloud.google.com/go/orgpolicy v1.12.0/go.mod h1:0+aNV/nrfoTQ4Mytv+Aw+stBDBjNf4d8fYRA9herfJI=
+-cloud.google.com/go/osconfig v1.12.4/go.mod h1:B1qEwJ/jzqSRslvdOCI8Kdnp0gSng0xW4LOnIebQomA=
+-cloud.google.com/go/oslogin v1.13.0/go.mod h1:xPJqLwpTZ90LSE5IL1/svko+6c5avZLluiyylMb/sRA=
+-cloud.google.com/go/phishingprotection v0.8.4/go.mod h1:6b3kNPAc2AQ6jZfFHioZKg9MQNybDg4ixFd4RPZZ2nE=
+-cloud.google.com/go/policytroubleshooter v1.10.2/go.mod h1:m4uF3f6LseVEnMV6nknlN2vYGRb+75ylQwJdnOXfnv0=
+-cloud.google.com/go/privatecatalog v0.9.4/go.mod h1:SOjm93f+5hp/U3PqMZAHTtBtluqLygrDrVO8X8tYtG0=
+-cloud.google.com/go/pubsub v1.34.0/go.mod h1:alj4l4rBg+N3YTFDDC+/YyFTs6JAjam2QfYsddcAW4c=
+-cloud.google.com/go/pubsublite v1.8.1/go.mod h1:fOLdU4f5xldK4RGJrBMm+J7zMWNj/k4PxwEZXy39QS0=
+-cloud.google.com/go/recaptchaenterprise/v2 v2.9.0/go.mod h1:Dak54rw6lC2gBY8FBznpOCAR58wKf+R+ZSJRoeJok4w=
+-cloud.google.com/go/recommendationengine v0.8.4/go.mod h1:GEteCf1PATl5v5ZsQ60sTClUE0phbWmo3rQ1Js8louU=
+-cloud.google.com/go/recommender v1.12.0/go.mod h1:+FJosKKJSId1MBFeJ/TTyoGQZiEelQQIZMKYYD8ruK4=
+-cloud.google.com/go/redis v1.14.1/go.mod h1:MbmBxN8bEnQI4doZPC1BzADU4HGocHBk2de3SbgOkqs=
+-cloud.google.com/go/resourcemanager v1.9.4/go.mod h1:N1dhP9RFvo3lUfwtfLWVxfUWq8+KUQ+XLlHLH3BoFJ0=
+-cloud.google.com/go/resourcesettings v1.6.4/go.mod h1:pYTTkWdv2lmQcjsthbZLNBP4QW140cs7wqA3DuqErVI=
+-cloud.google.com/go/retail v1.14.4/go.mod h1:l/N7cMtY78yRnJqp5JW8emy7MB1nz8E4t2yfOmklYfg=
+-cloud.google.com/go/run v1.3.3/go.mod h1:WSM5pGyJ7cfYyYbONVQBN4buz42zFqwG67Q3ch07iK4=
+-cloud.google.com/go/scheduler v1.10.5/go.mod h1:MTuXcrJC9tqOHhixdbHDFSIuh7xZF2IysiINDuiq6NI=
+-cloud.google.com/go/secretmanager v1.11.4/go.mod h1:wreJlbS9Zdq21lMzWmJ0XhWW2ZxgPeahsqeV/vZoJ3w=
+-cloud.google.com/go/security v1.15.4/go.mod h1:oN7C2uIZKhxCLiAAijKUCuHLZbIt/ghYEo8MqwD/Ty4=
+-cloud.google.com/go/securitycenter v1.24.3/go.mod h1:l1XejOngggzqwr4Fa2Cn+iWZGf+aBLTXtB/vXjy5vXM=
+-cloud.google.com/go/servicedirectory v1.11.3/go.mod h1:LV+cHkomRLr67YoQy3Xq2tUXBGOs5z5bPofdq7qtiAw=
+-cloud.google.com/go/shell v1.7.4/go.mod h1:yLeXB8eKLxw0dpEmXQ/FjriYrBijNsONpwnWsdPqlKM=
+-cloud.google.com/go/spanner v1.55.0/go.mod h1:HXEznMUVhC+PC+HDyo9YFG2Ajj5BQDkcbqB9Z2Ffxi0=
+-cloud.google.com/go/speech v1.21.0/go.mod h1:wwolycgONvfz2EDU8rKuHRW3+wc9ILPsAWoikBEWavY=
+-cloud.google.com/go/storagetransfer v1.10.3/go.mod h1:Up8LY2p6X68SZ+WToswpQbQHnJpOty/ACcMafuey8gc=
+-cloud.google.com/go/talent v1.6.5/go.mod h1:Mf5cma696HmE+P2BWJ/ZwYqeJXEeU0UqjHFXVLadEDI=
+-cloud.google.com/go/texttospeech v1.7.4/go.mod h1:vgv0002WvR4liGuSd5BJbWy4nDn5Ozco0uJymY5+U74=
+-cloud.google.com/go/tpu v1.6.4/go.mod h1:NAm9q3Rq2wIlGnOhpYICNI7+bpBebMJbh0yyp3aNw1Y=
+-cloud.google.com/go/trace v1.10.4/go.mod h1:Nso99EDIK8Mj5/zmB+iGr9dosS/bzWCJ8wGmE6TXNWY=
+-cloud.google.com/go/translate v1.10.0/go.mod h1:Kbq9RggWsbqZ9W5YpM94Q1Xv4dshw/gr/SHfsl5yCZ0=
+-cloud.google.com/go/video v1.20.3/go.mod h1:TnH/mNZKVHeNtpamsSPygSR0iHtvrR/cW1/GDjN5+GU=
+-cloud.google.com/go/videointelligence v1.11.4/go.mod h1:kPBMAYsTPFiQxMLmmjpcZUMklJp3nC9+ipJJtprccD8=
+-cloud.google.com/go/vision/v2 v2.7.5/go.mod h1:GcviprJLFfK9OLf0z8Gm6lQb6ZFUulvpZws+mm6yPLM=
+-cloud.google.com/go/vmmigration v1.7.4/go.mod h1:yBXCmiLaB99hEl/G9ZooNx2GyzgsjKnw5fWcINRgD70=
+-cloud.google.com/go/vmwareengine v1.0.3/go.mod h1:QSpdZ1stlbfKtyt6Iu19M6XRxjmXO+vb5a/R6Fvy2y4=
+-cloud.google.com/go/vpcaccess v1.7.4/go.mod h1:lA0KTvhtEOb/VOdnH/gwPuOzGgM+CWsmGu6bb4IoMKk=
+-cloud.google.com/go/webrisk v1.9.4/go.mod h1:w7m4Ib4C+OseSr2GL66m0zMBywdrVNTDKsdEsfMl7X0=
+-cloud.google.com/go/websecurityscanner v1.6.4/go.mod h1:mUiyMQ+dGpPPRkHgknIZeCzSHJ45+fY4F52nZFDHm2o=
+-cloud.google.com/go/workflows v1.12.3/go.mod h1:fmOUeeqEwPzIU81foMjTRQIdwQHADi/vEr1cx9R1m5g=
 +buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.4-20250130201111-63bb56e20495.1/go.mod h1:novQBstnxcGpfKf8qGRATqn1anQKwMJIbH5Q581jibU=
 +cel.dev/expr v0.24.0 h1:56OvJKSH3hDGL0ml5uSxZmz3/3Pq4tJ+fb1unVLAFcY=
 +cel.dev/expr v0.24.0/go.mod h1:hLPLo1W4QUmuYdA72RBX06QTs6MXw941piREPl3Yfiw=
@@ -94,17 +209,26 @@ index da17fce883d..0942cf427a5 100644
 +github.com/Microsoft/hnslib v0.1.2/go.mod h1:5vTyBey4N/VI2ZTNh2gdWhkPMefSbCFYjpvVwye+qtI=
  github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
  github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
-+github.com/alecthomas/kingpin/v2 v2.4.0/go.mod h1:0gyi0zQnjuFk8xrkNKamJoyUo382HRL7ATRpFZCw6tE=
-+github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137/go.mod h1:OMCwj8VM1Kc9e19TLln2VL61YJF0x1XFtfdL4JdbSyE=
- github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
- github.com/antlr4-go/antlr/v4 v4.13.0 h1:lxCg3LAv+EUK6t1i0y1V6/SLeUi0eKEKdhQAlS8TVTI=
- github.com/antlr4-go/antlr/v4 v4.13.0/go.mod h1:pfChB/xh/Unjila75QW7+VU4TSnWnnk9UTnmpPaOR2g=
-@@ -24,72 +30,85 @@ github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 h1:7Ip0wMmLHLRJdrloD
+ github.com/alecthomas/kingpin/v2 v2.4.0/go.mod h1:0gyi0zQnjuFk8xrkNKamJoyUo382HRL7ATRpFZCw6tE=
+@@ -143,93 +30,85 @@ github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 h1:7Ip0wMmLHLRJdrloD
  github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
  github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
  github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 -github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a h1:idn718Q4B6AGu/h5Sxe66HYVdqdGu2l9Iebqhi/AEoA=
 -github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
+-github.com/aws/aws-sdk-go-v2 v1.30.1/go.mod h1:nIQjQVp5sfpQcTc9mPSr1B0PaWK5ByX9MOoDadSN4lc=
+-github.com/aws/aws-sdk-go-v2/config v1.27.24/go.mod h1:aXzi6QJTuQRVVusAO8/NxpdTeTyr/wRcybdDtfUwJSs=
+-github.com/aws/aws-sdk-go-v2/credentials v1.17.24/go.mod h1:Hld7tmnAkoBQdTMNYZGzztzKRdA4fCdn9L83LOoigac=
+-github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.9/go.mod h1:WQr3MY7AxGNxaqAtsDWn+fBxmd4XvLkzeqQ8P1VM0/w=
+-github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.13/go.mod h1:+rdA6ZLpaSeM7tSg/B0IEDinCIBJGmW8rKDFkYpP04g=
+-github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.13/go.mod h1:i+kbfa76PQbWw/ULoWnp51EYVWH4ENln76fLQE3lXT8=
+-github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0/go.mod h1:8tu/lYfQfFe6IGnaOdrpVgEL2IrrDOf6/m9RQum4NkY=
+-github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.3/go.mod h1:GlAeCkHwugxdHaueRr4nhPuY+WW+gR8UjlcqzPr1SPI=
+-github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.15/go.mod h1:9xWJ3Q/S6Ojusz1UIkfycgD1mGirJfLLKqq3LPT7WN8=
+-github.com/aws/aws-sdk-go-v2/service/sso v1.22.1/go.mod h1:/vWdhoIoYA5hYoPZ6fm7Sv4d8701PiG5VKe8/pPJL60=
+-github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.2/go.mod h1:xyFHA4zGxgYkdD73VeezHt3vSKEG9EmFnGwoKlP00u4=
+-github.com/aws/aws-sdk-go-v2/service/sts v1.30.1/go.mod h1:jiNR3JqT15Dm+QWq2SRgh0x0bCNSRP2L25+CqPNpJlQ=
+-github.com/aws/smithy-go v1.20.3/go.mod h1:krry+ya/rV9RDcV/Q16kpu6ypI4K2czasz0NC3qS14E=
 +github.com/aws/aws-sdk-go-v2 v1.36.3/go.mod h1:LLXuLpgzEbD766Z5ECcRmi8AzSwfZItDtmABVkRLGzg=
 +github.com/aws/aws-sdk-go-v2/config v1.29.14/go.mod h1:wVPHWcIFv3WO89w0rE10gzf17ZYy+UVS1Geq8Iei34g=
 +github.com/aws/aws-sdk-go-v2/credentials v1.17.67/go.mod h1:p3C44m+cfnbv763s52gCqrjaqyPikj9Sg47kUVaNZQQ=
@@ -126,19 +250,24 @@ index da17fce883d..0942cf427a5 100644
  github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
  github.com/cenkalti/backoff/v4 v4.3.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 -github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
+-github.com/census-instrumentation/opencensus-proto v0.4.1/go.mod h1:4T9NM4+4Vw91VeyqjLS6ao50K5bOcLKN6Q42XnYaRYw=
  github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
  github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
  github.com/chai2010/gettext-go v1.0.2 h1:1Lwwip6Q2QGsAdl/ZKPCwTe9fe0CjlUbqj5bFNSjIRk=
  github.com/chai2010/gettext-go v1.0.2/go.mod h1:y+wnP2cHYaVj19NZhYKAwEMH2CI1gNHeQQ+5AjwawxA=
+-github.com/checkpoint-restore/go-criu/v6 v6.3.0/go.mod h1:rrRTN/uSwY2X+BPRl/gkulo9gsKOSAeVp9/K2tv7xZI=
+ github.com/chzyer/readline v1.5.1/go.mod h1:Eh+b79XXUwfKfcPLepksvw2tcLE/Ct21YObkaSkeBlk=
+-github.com/cilium/ebpf v0.16.0/go.mod h1:L7u2Blt2jMM/vLAVgjxluxtBKlz3/GWjB0dMOEngfwE=
 -github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 -github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
-+github.com/chzyer/readline v1.5.1/go.mod h1:Eh+b79XXUwfKfcPLepksvw2tcLE/Ct21YObkaSkeBlk=
+-github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b/go.mod h1:W+zGtBO5Y1IgJhy4+A9GOqVhqLpfZi+vwmdNXUehLA8=
 +github.com/cilium/ebpf v0.17.3/go.mod h1:G5EDHij8yiLzaqn0WjyfJHvRa+3aDlReIaLVRMvOyJk=
 +github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42/go.mod h1:W+zGtBO5Y1IgJhy4+A9GOqVhqLpfZi+vwmdNXUehLA8=
  github.com/cockroachdb/datadriven v1.0.2 h1:H9MtNqVoVhvd9nCBwOyDjUEdZCREqbIdCJD93PBm/jA=
  github.com/cockroachdb/datadriven v1.0.2/go.mod h1:a9RdTaap04u637JoCzcUoIcDmvwSUtcUFtT/C3kJlTU=
  github.com/container-storage-interface/spec v1.9.0 h1:zKtX4STsq31Knz3gciCYCi1SXtO2HJDecIjDVboYavY=
  github.com/container-storage-interface/spec v1.9.0/go.mod h1:ZfDu+3ZRyeVqxZM0Ds19MVLkN2d1XJ5MAfi1L3VjlT0=
+-github.com/containerd/console v1.0.4/go.mod h1:YynlIjWYF8myEu6sdkwKIvGQq+cOckRm6So2avqoYAk=
 -github.com/containerd/containerd/api v1.7.19 h1:VWbJL+8Ap4Ju2mx9c9qS1uFSB1OVYr5JJrW2yT5vFoA=
 -github.com/containerd/containerd/api v1.7.19/go.mod h1:fwGavl3LNwAV5ilJ0sbrABL44AQxmNjDRcwheXDb6Ig=
 -github.com/containerd/errdefs v0.1.0 h1:m0wCRBiu1WJT/Fr+iOoQHMQS/eP5myQ8lCv4Dz5ZURM=
@@ -206,7 +335,9 @@ index da17fce883d..0942cf427a5 100644
 -github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 -github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 -github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
+-github.com/envoyproxy/go-control-plane v0.12.0/go.mod h1:ZBTaoJ23lqITozF0M6G4/IragXCQKCnYbmlmtHvwRG0=
 -github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
+-github.com/envoyproxy/protoc-gen-validate v1.0.4/go.mod h1:qys6tmnRsYrQqIhm2bvKZH4Blx/1gTIZ2UKVY1M+Yew=
 +github.com/emicklei/go-restful/v3 v3.12.2 h1:DhwDP0vY3k8ZzE0RunuJy8GhNpPL6zqLkDf9B/a0/xU=
 +github.com/emicklei/go-restful/v3 v3.12.2/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
 +github.com/envoyproxy/go-control-plane v0.13.4/go.mod h1:kDfuBlDVsSj2MjrLEtRWtHlsWIFcGyB2RMO44Dc5GZA=
@@ -216,7 +347,7 @@ index da17fce883d..0942cf427a5 100644
  github.com/euank/go-kmsg-parser v2.0.0+incompatible h1:cHD53+PLQuuQyLZeriD1V/esuG4MuU0Pjs5y6iknohY=
  github.com/euank/go-kmsg-parser v2.0.0+incompatible/go.mod h1:MhmAMZ8V4CYH4ybgdRwPr2TU5ThnS43puaKEMpja1uw=
  github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f h1:Wl78ApPPB2Wvf/TIe2xdyJxTlb6obmF18d8QdkxNDu4=
-@@ -99,18 +118,22 @@ github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwo
+@@ -239,20 +118,22 @@ github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwo
  github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
  github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
  github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
@@ -238,7 +369,9 @@ index da17fce883d..0942cf427a5 100644
  github.com/go-errors/errors v1.4.2 h1:J6MZopCL4uSllY1OfXM374weqZFFItUbrImctkmUxIA=
  github.com/go-errors/errors v1.4.2/go.mod h1:sIVyrIiJhuEF+Pj9Ebtd6P/rEYROXFi3BopGUQ5a5Og=
 -github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
+-github.com/go-kit/log v0.2.1/go.mod h1:NwTd00d/i8cPZ3xOwwiv2PO5MOcx78fFErGNcVmBjv0=
 -github.com/go-logfmt/logfmt v0.4.0/go.mod h1:3RMwSq7FuexP4Kalkev3ejPJsZTpXXBr9+V4qmtdjCk=
+-github.com/go-logfmt/logfmt v0.5.1/go.mod h1:WYhtIu8zTZfxdn5+rREduYbwxfcBr/Vr6KEVveWlfTs=
 +github.com/go-jose/go-jose/v4 v4.0.4/go.mod h1:NKb5HO1EZccyMpiZNbdUw/14tiXNyUJh188dfnMCAfc=
  github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 -github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
@@ -248,7 +381,7 @@ index da17fce883d..0942cf427a5 100644
  github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
  github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
  github.com/go-logr/zapr v1.3.0 h1:XGdV8XW8zdwFiwOA2Dryh1gj2KRQyOOoNmBy4EplIcQ=
-@@ -123,76 +146,72 @@ github.com/go-openapi/jsonreference v0.20.2/go.mod h1:Bl1zwGIM8/wsvqjsOQLJ/SH+En
+@@ -265,71 +146,62 @@ github.com/go-openapi/jsonreference v0.20.2/go.mod h1:Bl1zwGIM8/wsvqjsOQLJ/SH+En
  github.com/go-openapi/swag v0.22.3/go.mod h1:UzaqsxGiab7freDnrUUra0MwWfN/q7tE4j+VcZ0yl14=
  github.com/go-openapi/swag v0.23.0 h1:vsEVJDUo2hPJ2tu0/Xc+4noaxyEffXNIs3cOULZ+GrE=
  github.com/go-openapi/swag v0.23.0/go.mod h1:esZ8ITTYEsH1V2trKHjAN8Ai7xHb8RV+YSZ577vPjgQ=
@@ -265,14 +398,15 @@ index da17fce883d..0942cf427a5 100644
 -github.com/golang-jwt/jwt/v4 v4.5.0 h1:7cYmW1XlMY7h7ii7UhUyChSgS5wUJEnm9uZVTGqOWzg=
 -github.com/golang-jwt/jwt/v4 v4.5.0/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
 -github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
+-github.com/golang/glog v1.2.1/go.mod h1:6AhwSGph0fcJtXVM/PEHPqZlFeoLxhs7/t5UDAwmO+w=
++github.com/golang-jwt/jwt/v5 v5.2.2 h1:Rl4B7itRWVtYIHFrSNd7vhTiz9UpLdi6gZhZ3wEeDy8=
++github.com/golang-jwt/jwt/v5 v5.2.2/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVIyoH402zdk=
++github.com/golang/glog v1.2.4/go.mod h1:6AhwSGph0fcJtXVM/PEHPqZlFeoLxhs7/t5UDAwmO+w=
+ github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
 -github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
 -github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 -github.com/golang/protobuf v1.3.2/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 -github.com/golang/protobuf v1.3.3/go.mod h1:vzj43D7+SQXF/4pzW/hwtAqwc6iTitCiVSaWz5lYuqw=
-+github.com/golang-jwt/jwt/v5 v5.2.2 h1:Rl4B7itRWVtYIHFrSNd7vhTiz9UpLdi6gZhZ3wEeDy8=
-+github.com/golang-jwt/jwt/v5 v5.2.2/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVIyoH402zdk=
-+github.com/golang/glog v1.2.4/go.mod h1:6AhwSGph0fcJtXVM/PEHPqZlFeoLxhs7/t5UDAwmO+w=
-+github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
  github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
  github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
 -github.com/google/btree v1.0.1 h1:gK4Kx5IaGY9CD5sPJ36FHiBJ6ZXl0kilRiiCj+jdYp4=
@@ -332,7 +466,7 @@ index da17fce883d..0942cf427a5 100644
 -github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0/go.mod h1:P+Lt/0by1T8bfcF3z737NnSbmxQAppXMRziHUxPOC8k=
 +github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 h1:5ZPtiqj0JL5oKWmcsq4VMaAW5ukBEgSGXEN89zeH1Jo=
 +github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3/go.mod h1:ndYquD05frm2vACXE1nsccT4oJzjhw2arTS2cpUD1PI=
-+github.com/ianlancetaylor/demangle v0.0.0-20240312041847-bd984b5ce465/go.mod h1:gx7rwoVhcfuVKG5uya9Hs3Sxj7EIvldVofAWIUtGouw=
+ github.com/ianlancetaylor/demangle v0.0.0-20240312041847-bd984b5ce465/go.mod h1:gx7rwoVhcfuVKG5uya9Hs3Sxj7EIvldVofAWIUtGouw=
  github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
  github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 -github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2 h1:i2fYnDurfLlJH8AyyMOnkLHnHeP8Ff/DDpuZA/D3bPo=
@@ -347,11 +481,10 @@ index da17fce883d..0942cf427a5 100644
  github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
 +github.com/joshdk/go-junit v1.0.0 h1:S86cUKIdwBHWwA6xCmFlf3RTLfVXYQfvanM5Uh+K6GE=
 +github.com/joshdk/go-junit v1.0.0/go.mod h1:TiiV0PqkaNfFXjEiyjWM3XXrhVyCa1K4Zfga6W52ung=
-+github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
+ github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
  github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
  github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
-+github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8IZAc4RVcycCCAKdM=
- github.com/karrick/godirwalk v1.17.0 h1:b4kY7nqDdioR/6qnbHQyDvmA17u5G1cZ6J+CZXwSWoI=
+@@ -338,8 +210,8 @@ github.com/karrick/godirwalk v1.17.0 h1:b4kY7nqDdioR/6qnbHQyDvmA17u5G1cZ6J+CZXwS
  github.com/karrick/godirwalk v1.17.0/go.mod h1:j4mkqPuvaLI8mp1DroR3P6ad7cyYd4c1qeJ3RV7ULlk=
  github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
  github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
@@ -362,7 +495,7 @@ index da17fce883d..0942cf427a5 100644
  github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
  github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
  github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
-@@ -200,6 +219,8 @@ github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
+@@ -347,6 +219,8 @@ github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
  github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
  github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
  github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
@@ -371,10 +504,11 @@ index da17fce883d..0942cf427a5 100644
  github.com/libopenstorage/openstorage v1.0.0 h1:GLPam7/0mpdP8ZZtKjbfcXJBTIA/T1O6CBErVEFEyIM=
  github.com/libopenstorage/openstorage v1.0.0/go.mod h1:Sp1sIObHjat1BeXhfMqLZ14wnOzEhNx2YQedreMcUyc=
  github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de h1:9TO3cAIGXtEhnIaL+V+BEER86oLrvS+kWobKpbJuye0=
-@@ -208,6 +229,11 @@ github.com/lithammer/dedent v1.1.0 h1:VNzHMVCBNG1j0fh3OrsFRkVUwStdDArbgBWoPAffkt
+@@ -355,7 +229,11 @@ github.com/lithammer/dedent v1.1.0 h1:VNzHMVCBNG1j0fh3OrsFRkVUwStdDArbgBWoPAffkt
  github.com/lithammer/dedent v1.1.0/go.mod h1:jrXYCQtgg0nJiN+StA2KgR7w6CiQNv9Fd/Z9BP0jIOc=
  github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
  github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
+-github.com/matttproud/golang_protobuf_extensions v1.0.2/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
 +github.com/maruel/natural v1.1.1 h1:Hja7XhhmvEFhcByqDoHz9QZbkWey+COd9xWfCfn1ioo=
 +github.com/maruel/natural v1.1.1/go.mod h1:v+Rfd79xlw1AgVBjbO0BEQmptqb5HvL/k9GRHB7ZKEg=
 +github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
@@ -383,15 +517,18 @@ index da17fce883d..0942cf427a5 100644
  github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible h1:aKW/4cBs+yK6gpqU3K/oIwk9Q/XICqd3zOX/UFuvqmk=
  github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible/go.mod h1:8AuVvqP/mXw1px98n46wfvcGfQ4ci2FwoAjKYxuo3Z4=
  github.com/mitchellh/go-wordwrap v1.0.1 h1:TLuKupo69TCn6TQSyGxwI1EblZZEsQ0vMlAFQflz0v0=
-@@ -218,6 +244,7 @@ github.com/moby/ipvs v1.1.0 h1:ONN4pGaZQgAx+1Scz5RvWV4Q7Gb+mvfRh3NsPS+1XQQ=
+@@ -366,9 +244,9 @@ github.com/moby/ipvs v1.1.0 h1:ONN4pGaZQgAx+1Scz5RvWV4Q7Gb+mvfRh3NsPS+1XQQ=
  github.com/moby/ipvs v1.1.0/go.mod h1:4VJMWuf098bsUMmZEiD4Tjk/O7mOn3l1PTD3s4OoYAs=
  github.com/moby/spdystream v0.5.0 h1:7r0J1Si3QO/kjRitvSLVVFUjxMEb/YLj6S9FF62JBCU=
  github.com/moby/spdystream v0.5.0/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
 +github.com/moby/sys/atomicwriter v0.1.0/go.mod h1:Ul8oqv2ZMNHOceF643P6FKPXeCmYtlQMvpizfsSoaWs=
  github.com/moby/sys/mountinfo v0.7.2 h1:1shs6aH5s4o5H2zQLn796ADW1wMrIwHsyJ2v9KouLrg=
  github.com/moby/sys/mountinfo v0.7.2/go.mod h1:1YOa8w8Ih7uW0wALDUgT1dTTSBrZ+HiBLGws92L2RU4=
+-github.com/moby/sys/user v0.3.0/go.mod h1:bG+tYYYJgaMtRKgEmuueC0hJEAZWwtIbZTB+85uoHjs=
  github.com/moby/sys/userns v0.1.0 h1:tVLXkFOxVu9A64/yh59slHVv9ahO9UIev4JZusOLG/g=
-@@ -227,197 +254,199 @@ github.com/moby/term v0.5.0/go.mod h1:8FzsFHVUBGZdbDsJw/ot+X+d5HLUbvklYLJ9uGfcI3
+ github.com/moby/sys/userns v0.1.0/go.mod h1:IHUYgu/kao6N8YZlp9Cf444ySSvCmDlmzUcYfDHOl28=
+ github.com/moby/term v0.5.0 h1:xt8Q1nalod/v7BqbG21f8mQPqH+xAaC9C3N3wfWbVP0=
+@@ -376,8 +254,9 @@ github.com/moby/term v0.5.0/go.mod h1:8FzsFHVUBGZdbDsJw/ot+X+d5HLUbvklYLJ9uGfcI3
  github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
@@ -402,13 +539,8 @@ index da17fce883d..0942cf427a5 100644
  github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 h1:RWengNIwukTxcDr9M+97sNutRR1RKhG96O6jWumTTnw=
  github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826/go.mod h1:TaXosZuwdSHYgviHp1DAtfrULt5eUgsSMsZf+YrPgl8=
  github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 h1:n6/2gBQ3RWajuToeY6ZtZTIKv2v7ThUy5KKusIT0yc0=
- github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00/go.mod h1:Pm3mSP3c5uWn86xMLZ5Sa7JB9GsEZySvHYXCTK4E9q4=
-+github.com/morikuni/aec v1.0.0/go.mod h1:BbKIizmSmc5MMPqRYbxO4ZU0S0+P200+tUnFx7PXmsc=
- github.com/mrunalp/fileutils v0.5.1 h1:F+S7ZlNKnrwHfSwdlgNSkKo67ReVf8o9fel6C3dkm/Q=
- github.com/mrunalp/fileutils v0.5.1/go.mod h1:M1WthSahJixYnrXQl/DFQuteStB1weuxD2QJNHXfbSQ=
- github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
- github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
-+github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
+@@ -390,86 +269,90 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8m
+ github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
  github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f h1:y5//uYreIhSUg3J1GEMiLbxo1LJaP8RfCpH6pymGZus=
  github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
 -github.com/onsi/ginkgo/v2 v2.21.0 h1:7rg/4f3rB88pb5obDgNZrNHrQ4e6WpjonchcpuBRnZM=
@@ -478,6 +610,7 @@ index da17fce883d..0942cf427a5 100644
 +github.com/russross/blackfriday v1.6.0/go.mod h1:ti0ldHuxg49ri4ksnFxlkCfN+hvslNlmVHqNRXXJNAY=
  github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf35Ld67mk=
  github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
+-github.com/seccomp/libseccomp-golang v0.10.0/go.mod h1:JA8cRccbGaA1s33RQf7Y1+q9gHmZX1yB/z9WDN1C6fg=
 +github.com/santhosh-tekuri/jsonschema/v5 v5.3.1/go.mod h1:uToXkOrWAZ6/Oc07xWQrPOhJotwFIyu2bBVN41fcDUY=
  github.com/sergi/go-diff v1.2.0 h1:XU+rvMAioB0UC3q1MFrIQy4Vo5/4VsRDQQXHsEya6xQ=
  github.com/sergi/go-diff v1.2.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
@@ -515,6 +648,7 @@ index da17fce883d..0942cf427a5 100644
  github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 -github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 -github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+-github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
 +github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 +github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 +github.com/tidwall/gjson v1.18.0 h1:FIDeeyB800efLX89e5a8Y0BNH+LOngJyGrIWxG2FKQY=
@@ -527,6 +661,7 @@ index da17fce883d..0942cf427a5 100644
 +github.com/tidwall/sjson v1.2.5/go.mod h1:Fvgq9kS/6ociJEDnK0Fk1cpYF4FIW6ZF7LAe+6jwd28=
  github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75 h1:6fotK7otjonDflCTK0BCfls4SPy3NcCVb5dqqmbRknE=
  github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75/go.mod h1:KO6IkyS8Y3j8OdNO85qEYBsRPuteD+YciPomcXdrMnk=
+-github.com/urfave/cli v1.22.14/go.mod h1:X0eDS6pD6Exaclxm99NJ3FiCDRED7vIHpx2mDOHLvkA=
 -github.com/vishvananda/netlink v1.3.1-0.20250206174618-62fb240731fa h1:iAhToRwOrdk+pKzclvLM7nKZhsg8f7dVrgkFccDUbUw=
 -github.com/vishvananda/netlink v1.3.1-0.20250206174618-62fb240731fa/go.mod h1:i6NetklAujEcC6fK0JPjT8qSwWyO0HLn4UKG+hGqeJs=
 -github.com/vishvananda/netns v0.0.4 h1:Oeaw1EM2JMxD51g9uhtC0D7erkIjgmj8+JZc26m1YX8=
@@ -537,13 +672,11 @@ index da17fce883d..0942cf427a5 100644
 +github.com/vishvananda/netns v0.0.5/go.mod h1:SpkAiCQRtJ6TvvxPnOSyH3BMl6unz3xZlaprSwhNNJM=
  github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
  github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
-+github.com/xhit/go-str2duration/v2 v2.1.0/go.mod h1:ohY8p+0f07DiV6Em5LKB0s2YpLtXVyJfNt1+BlmyAsU=
- github.com/xiang90/probing v0.0.0-20221125231312-a49e3df8f510 h1:S2dVYn90KE98chqDkyE9Z4N61UnQd+KOfgp5Iu53llk=
- github.com/xiang90/probing v0.0.0-20221125231312-a49e3df8f510/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
- github.com/xlab/treeprint v1.2.0 h1:HzHnuAF1plUN2zGlAFHbSQP2qJ0ZAD3XF5XD7OesXRQ=
- github.com/xlab/treeprint v1.2.0/go.mod h1:gj5Gd3gPdKtR1ikdDK6fnFLdmIS0X30kTTuNd/WEJu0=
+ github.com/xhit/go-str2duration/v2 v2.1.0/go.mod h1:ohY8p+0f07DiV6Em5LKB0s2YpLtXVyJfNt1+BlmyAsU=
+@@ -480,103 +363,90 @@ github.com/xlab/treeprint v1.2.0/go.mod h1:gj5Gd3gPdKtR1ikdDK6fnFLdmIS0X30kTTuNd
  github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
  github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+ github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 -go.etcd.io/bbolt v1.3.11 h1:yGEzV1wPz2yVCLsD8ZAiGHhHVlczyC9d1rP43/VCRJ0=
 -go.etcd.io/bbolt v1.3.11/go.mod h1:dksAq7YMXoljX0xu6VF5DMZGbhYYoLUalEiSySYAS4I=
 -go.etcd.io/etcd/api/v3 v3.5.16 h1:WvmyJVbjWqK4R1E+B12RRHz3bRGy9XVfh++MgbN+6n0=
@@ -560,6 +693,7 @@ index da17fce883d..0942cf427a5 100644
 -go.etcd.io/etcd/raft/v3 v3.5.16/go.mod h1:P4UP14AxofMJ/54boWilabqqWoW9eLodl6I5GdGzazI=
 -go.etcd.io/etcd/server/v3 v3.5.16 h1:d0/SAdJ3vVsZvF8IFVb1k8zqMZ+heGcNfft71ul9GWE=
 -go.etcd.io/etcd/server/v3 v3.5.16/go.mod h1:ynhyZZpdDp1Gq49jkUg5mfkDWZwXnn3eIqCqtJnrD/s=
+-go.etcd.io/gofail v0.1.0/go.mod h1:VZBCXYGZhHAinaBiiqYvuDynvahNsAyLFwB3kEHKz1M=
 -go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.42.0 h1:Z6SbqeRZAl2OczfkFOqLx1BeYBDYehNjEnqluD7581Y=
 -go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.42.0/go.mod h1:XiglO+8SPMqM3Mqh5/rtxR1VHc63o8tb38QrU6tm4mU=
 -go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.53.0 h1:9G6E0TXzGFVfTnawRzrPl83iHOAV7L8NJiR8RSGYV1g=
@@ -574,16 +708,6 @@ index da17fce883d..0942cf427a5 100644
 -go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.28.0/go.mod h1:s75jGIWA9OfCMzF0xr+ZgfrB5FEbbV7UuYo32ahUiFI=
 -go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.27.0 h1:qFffATk0X+HD+f1Z8lswGiOQYKHRlzfmdJm0wEaVrFA=
 -go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.27.0/go.mod h1:MOiCmryaYtc+V0Ei+Tx9o5S1ZjA7kzLucuVuyzBZloQ=
--go.opentelemetry.io/otel/metric v1.28.0 h1:f0HGvSl1KRAU1DLgLGFjrwVyismPlnuU6JD6bOeuA5Q=
--go.opentelemetry.io/otel/metric v1.28.0/go.mod h1:Fb1eVBFZmLVTMb6PPohq3TO9IIhUisDsbJoL/+uQW4s=
--go.opentelemetry.io/otel/sdk v1.28.0 h1:b9d7hIry8yZsgtbmM0DKyPWMMUMlK9NEKuIG4aBqWyE=
--go.opentelemetry.io/otel/sdk v1.28.0/go.mod h1:oYj7ClPUA7Iw3m+r7GeEjz0qckQRJK2B8zjcZEfu7Pg=
--go.opentelemetry.io/otel/trace v1.28.0 h1:GhQ9cUuQGmNDd5BTCP2dAvv75RdMxEfTmYejp+lkx9g=
--go.opentelemetry.io/otel/trace v1.28.0/go.mod h1:jPyXzNPg6da9+38HEwElrQiHlVMTnVfM3/yv2OlIHaI=
--go.opentelemetry.io/proto/otlp v1.3.1 h1:TrMUixzpM0yuc/znrFTP9MMRh8trP93mkCiDVeXrui0=
--go.opentelemetry.io/proto/otlp v1.3.1/go.mod h1:0X1WI4de4ZsLrrJNLAQbFeLCm3T7yBkR0XqQ7niQU+8=
--go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
-+github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 +github.com/zeebo/errs v1.4.0/go.mod h1:sgbWHsvVuTPHcqJJGQ1WhI5KbWlHYz+2+2C/LSEtCw4=
 +go.etcd.io/bbolt v1.4.3 h1:dEadXpI6G79deX5prL3QRNP6JB8UxVkqo4UPnHaNXJo=
 +go.etcd.io/bbolt v1.4.3/go.mod h1:tKQlpPaYCVFctUIgFKFnAlvbmB3tpy1vkTnDWohtc0E=
@@ -617,7 +741,17 @@ index da17fce883d..0942cf427a5 100644
 +go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.34.0/go.mod h1:7Bept48yIeqxP2OZ9/AqIpYS94h2or0aB4FypJTc8ZM=
 +go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.34.0 h1:tgJ0uaNS4c98WRNUEx5U3aDlrDOI5Rs+1Vifcw4DJ8U=
 +go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.34.0/go.mod h1:U7HYyW0zt/a9x5J1Kjs+r1f/d4ZHnYFclhYY2+YbeoE=
-+go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.27.0/go.mod h1:HVkSiDhTM9BoUJU8qE6j2eSWLLXvi1USXjyd2BXT8PY=
+ go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.27.0/go.mod h1:HVkSiDhTM9BoUJU8qE6j2eSWLLXvi1USXjyd2BXT8PY=
+-go.opentelemetry.io/otel/metric v1.28.0 h1:f0HGvSl1KRAU1DLgLGFjrwVyismPlnuU6JD6bOeuA5Q=
+-go.opentelemetry.io/otel/metric v1.28.0/go.mod h1:Fb1eVBFZmLVTMb6PPohq3TO9IIhUisDsbJoL/+uQW4s=
+-go.opentelemetry.io/otel/sdk v1.28.0 h1:b9d7hIry8yZsgtbmM0DKyPWMMUMlK9NEKuIG4aBqWyE=
+-go.opentelemetry.io/otel/sdk v1.28.0/go.mod h1:oYj7ClPUA7Iw3m+r7GeEjz0qckQRJK2B8zjcZEfu7Pg=
+-go.opentelemetry.io/otel/trace v1.28.0 h1:GhQ9cUuQGmNDd5BTCP2dAvv75RdMxEfTmYejp+lkx9g=
+-go.opentelemetry.io/otel/trace v1.28.0/go.mod h1:jPyXzNPg6da9+38HEwElrQiHlVMTnVfM3/yv2OlIHaI=
+-go.opentelemetry.io/proto/otlp v1.3.1 h1:TrMUixzpM0yuc/znrFTP9MMRh8trP93mkCiDVeXrui0=
+-go.opentelemetry.io/proto/otlp v1.3.1/go.mod h1:0X1WI4de4ZsLrrJNLAQbFeLCm3T7yBkR0XqQ7niQU+8=
+-go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
+-go.uber.org/atomic v1.7.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=
 +go.opentelemetry.io/otel/metric v1.36.0 h1:MoWPKVhQvJ+eeXWHFBOPoBOi20jh6Iq2CcCREuTYufE=
 +go.opentelemetry.io/otel/metric v1.36.0/go.mod h1:zC7Ks+yeyJt4xig9DEw9kuUFe5C3zLbVjV2PzT6qzbs=
 +go.opentelemetry.io/otel/sdk v1.36.0 h1:b6SYIuLRs88ztox4EyrvRti80uXIFy+Sqzoh9kFULbs=
@@ -644,9 +778,11 @@ index da17fce883d..0942cf427a5 100644
  golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
  golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
  golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
- golang.org/x/crypto v0.45.0 h1:jMBrvKuj23MTlT0bQEOBcAE0mjg8mK9RXFhRH6nyF3Q=
- golang.org/x/crypto v0.45.0/go.mod h1:XTGrrkGJve7CYK7J8PEww4aY7gM3qMCElcJQ8n8JdX4=
+-golang.org/x/crypto v0.28.0 h1:GBDwsMXVQi34v5CCYUm2jkJvu4cbtru2U4TN2PSyQnw=
+-golang.org/x/crypto v0.28.0/go.mod h1:rmgy+3RHxRZMyY0jjAJShp2zgEdOqj2AO7U0pYmeQ7U=
 -golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
++golang.org/x/crypto v0.45.0 h1:jMBrvKuj23MTlT0bQEOBcAE0mjg8mK9RXFhRH6nyF3Q=
++golang.org/x/crypto v0.45.0/go.mod h1:XTGrrkGJve7CYK7J8PEww4aY7gM3qMCElcJQ8n8JdX4=
  golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 h1:2dVuKD2vS7b0QIHQbpyTISPd0LeHDbnYEryqj5Q1ug8=
  golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56/go.mod h1:M4RDyNAINzryxdtnbRXRL/OHtkFuWGRjvuhBJpk2IlY=
 -golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
@@ -654,13 +790,15 @@ index da17fce883d..0942cf427a5 100644
 -golang.org/x/lint v0.0.0-20190313153728-d0100b6bd8b3/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
  golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
  golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
- golang.org/x/mod v0.29.0 h1:HV8lRxZC4l2cr3Zq1LvtOsi/ThTgWnUk/y64QSs8GwA=
- golang.org/x/mod v0.29.0/go.mod h1:NyhrlYXJ2H4eJiRy/WDBO6HMqZQ6q9nk4JzS3NuCK+w=
+-golang.org/x/mod v0.21.0 h1:vvrHzRwRfVKSiLrG+d4FMl/Qi4ukBCE6kZlTUkDYRT0=
+-golang.org/x/mod v0.21.0/go.mod h1:6SkKJ3Xj0I0BrPOZoBy3bdMptDDU9oJrpohJ3eWZ1fY=
 -golang.org/x/net v0.0.0-20180724234803-3673e40ba225/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 -golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 -golang.org/x/net v0.0.0-20190108225652-1e06a53dbb7e/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 -golang.org/x/net v0.0.0-20190213061140-3a22650c66bd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 -golang.org/x/net v0.0.0-20190311183353-d8887717615a/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
++golang.org/x/mod v0.29.0 h1:HV8lRxZC4l2cr3Zq1LvtOsi/ThTgWnUk/y64QSs8GwA=
++golang.org/x/mod v0.29.0/go.mod h1:NyhrlYXJ2H4eJiRy/WDBO6HMqZQ6q9nk4JzS3NuCK+w=
  golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
  golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
  golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
@@ -668,23 +806,27 @@ index da17fce883d..0942cf427a5 100644
  golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
  golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
  golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
- golang.org/x/net v0.47.0 h1:Mx+4dIFzqraBXUugkia1OOvlD6LemFo1ALMHjrXDOhY=
- golang.org/x/net v0.47.0/go.mod h1:/jNxtkgq5yWUGYkaZGqo27cfGZ1c5Nen03aYrrKpVRU=
+-golang.org/x/net v0.30.0 h1:AcW1SDZMkb8IpzCdQUaIq2sP4sZ4zw+55h6ynffypl4=
+-golang.org/x/net v0.30.0/go.mod h1:2wGyMJ5iFasEhkwi13ChkO/t1ECNC4X4eBKkVFyYFlU=
 -golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
 -golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
--golang.org/x/oauth2 v0.27.0 h1:da9Vo7/tDv5RH/7nZDz1eMGS/q1Vv1N/7FCrBhI9I3M=
--golang.org/x/oauth2 v0.27.0/go.mod h1:onh5ek6nERTohokkhCD/y2cV4Do3fxFHFuAejCkRWT8=
+-golang.org/x/oauth2 v0.23.0 h1:PbgcYx2W7i4LvjJWEbf0ngHV6qJYr86PkAV3bXdLEbs=
+-golang.org/x/oauth2 v0.23.0/go.mod h1:XYTD2NtWslqkgxebSiOHnXEap4TF09sJSc7H1sXbhtI=
 -golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 -golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 -golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
++golang.org/x/net v0.47.0 h1:Mx+4dIFzqraBXUugkia1OOvlD6LemFo1ALMHjrXDOhY=
++golang.org/x/net v0.47.0/go.mod h1:/jNxtkgq5yWUGYkaZGqo27cfGZ1c5Nen03aYrrKpVRU=
 +golang.org/x/oauth2 v0.30.0 h1:dnDm7JmhM45NNpd8FDDeLhK6FwqbOf4MLCM9zb1BOHI=
 +golang.org/x/oauth2 v0.30.0/go.mod h1:B++QgG3ZKulg6sRPGD/mqlHQs5rB3Ml9erfeDY7xKlU=
  golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
- golang.org/x/sync v0.18.0 h1:kr88TuHDroi+UVf+0hZnirlk8o8T+4MrK6mr60WkH/I=
- golang.org/x/sync v0.18.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
+-golang.org/x/sync v0.8.0 h1:3NFvSEYkUoMifnESzZl15y791HH1qU2xm6eCJU5ZPXQ=
+-golang.org/x/sync v0.8.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
 -golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
++golang.org/x/sync v0.18.0 h1:kr88TuHDroi+UVf+0hZnirlk8o8T+4MrK6mr60WkH/I=
++golang.org/x/sync v0.18.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
  golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 -golang.org/x/sys v0.0.0-20190422165155-953cdadca894/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
@@ -693,23 +835,31 @@ index da17fce883d..0942cf427a5 100644
  golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
  golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
  golang.org/x/sys v0.0.0-20210423082822-04245dca01da/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-@@ -426,8 +455,10 @@ golang.org/x/sys v0.0.0-20210616094352-59db8d763f22/go.mod h1:oPkhp1MJrh7nUepCBc
+@@ -585,100 +455,83 @@ golang.org/x/sys v0.0.0-20210616094352-59db8d763f22/go.mod h1:oPkhp1MJrh7nUepCBc
  golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.2.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.10.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+-golang.org/x/sys v0.26.0 h1:KHjCJyddX0LoSTb3J+vWpupP9p0oznkqVk/IfjymZbo=
+-golang.org/x/sys v0.26.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+-golang.org/x/telemetry v0.0.0-20240521205824-bda55230c457/go.mod h1:pRgIJT+bRLFKnoM1ldnzKoxTIn14Yxz928LQRYYgIN0=
 +golang.org/x/sys v0.27.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
- golang.org/x/sys v0.38.0 h1:3yZWxaJjBmCWXqhN1qh02AkOnCQ1poK6oF+a7xWL6Gc=
- golang.org/x/sys v0.38.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
++golang.org/x/sys v0.38.0 h1:3yZWxaJjBmCWXqhN1qh02AkOnCQ1poK6oF+a7xWL6Gc=
++golang.org/x/sys v0.38.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
 +golang.org/x/telemetry v0.0.0-20251008203120-078029d740a8/go.mod h1:Pi4ztBfryZoJEkyFTI5/Ocsu2jXyDr6iSdgJiYE/uwE=
  golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
- golang.org/x/term v0.37.0 h1:8EGAD0qCmHYZg6J17DvsMy9/wJ7/D/4pV/wfnld5lTU=
- golang.org/x/term v0.37.0/go.mod h1:5pB4lxRNYYVZuTLmy8oR2BH8dflOR+IbTYFD8fi3254=
-@@ -436,89 +467,71 @@ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
+-golang.org/x/term v0.25.0 h1:WtHI/ltw4NvSUig5KARz9h521QvRC8RmF/cuYqifU24=
+-golang.org/x/term v0.25.0/go.mod h1:RPyXicDX+6vLxogjjRxjgD2TKtmAO6NZBsBRfrOLu7M=
++golang.org/x/term v0.37.0 h1:8EGAD0qCmHYZg6J17DvsMy9/wJ7/D/4pV/wfnld5lTU=
++golang.org/x/term v0.37.0/go.mod h1:5pB4lxRNYYVZuTLmy8oR2BH8dflOR+IbTYFD8fi3254=
+ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
  golang.org/x/text v0.3.6/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
- golang.org/x/text v0.31.0 h1:aC8ghyu4JhP8VojJ2lEHBnochRno1sgL6nEi9WGFGMM=
- golang.org/x/text v0.31.0/go.mod h1:tKRAlv61yKIjGGHX/4tP1LTbc13YSec1pxVEWXzfoeM=
+-golang.org/x/text v0.19.0 h1:kTxAhCbGbxhK0IwgSKiMO5awPoDQ0RpfiVYBfK860YM=
+-golang.org/x/text v0.19.0/go.mod h1:BuEKDfySbSR4drPmRPG/7iBdf8hvFMuRexcpahXilzY=
 -golang.org/x/time v0.7.0 h1:ntUhktv3OPE6TgYxXWv9vKvUSJyIFJlyohwbkEwPrKQ=
 -golang.org/x/time v0.7.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
++golang.org/x/text v0.31.0 h1:aC8ghyu4JhP8VojJ2lEHBnochRno1sgL6nEi9WGFGMM=
++golang.org/x/text v0.31.0/go.mod h1:tKRAlv61yKIjGGHX/4tP1LTbc13YSec1pxVEWXzfoeM=
 +golang.org/x/time v0.9.0 h1:EsRrnYcQiGH+5FfbgvV4AP7qEZstoyrHB0DzarOQ4ZY=
 +golang.org/x/time v0.9.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
  golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
@@ -720,20 +870,21 @@ index da17fce883d..0942cf427a5 100644
  golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
  golang.org/x/tools v0.0.0-20200619180055-7c47624df98f/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
  golang.org/x/tools v0.0.0-20210106214847-113979e3529a/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
- golang.org/x/tools v0.38.0 h1:Hx2Xv8hISq8Lm16jvBZ2VQf+RLmbd7wVUsALibYI/IQ=
- golang.org/x/tools v0.38.0/go.mod h1:yEsQ/d/YK8cjh0L6rZlY8tgtlKiBNTL14pGDJPJpYQs=
--golang.org/x/tools/go/expect v0.1.0-deprecated h1:jY2C5HGYR5lqex3gEniOQL0r7Dq5+VGVgY1nudX5lXY=
--golang.org/x/tools/go/expect v0.1.0-deprecated/go.mod h1:eihoPOH+FgIqa3FpoTwguz/bVUSGBlGQU67vpBeOrBY=
+-golang.org/x/tools v0.26.0 h1:v/60pFQmzmT9ExmjDv2gGIfi3OqfKoEP6I5+umXlbnQ=
+-golang.org/x/tools v0.26.0/go.mod h1:TPVVj70c7JJ3WCazhD8OdXcZg/og+b9+tH/KxylGwH0=
++golang.org/x/tools v0.38.0 h1:Hx2Xv8hISq8Lm16jvBZ2VQf+RLmbd7wVUsALibYI/IQ=
++golang.org/x/tools v0.38.0/go.mod h1:yEsQ/d/YK8cjh0L6rZlY8tgtlKiBNTL14pGDJPJpYQs=
 +golang.org/x/tools/go/expect v0.1.1-deprecated h1:jpBZDwmgPhXsKZC6WhL20P4b/wmnpsEAGHaNy0n/rJM=
 +golang.org/x/tools/go/expect v0.1.1-deprecated/go.mod h1:eihoPOH+FgIqa3FpoTwguz/bVUSGBlGQU67vpBeOrBY=
- golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated h1:1h2MnaIAIXISqTFKdENegdpAgUXz6NrPEsbIeWaBRvM=
- golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated/go.mod h1:RVAQXBGNv1ib0J382/DPCRS/BPnsGebyM1Gj5VSDpG8=
++golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated h1:1h2MnaIAIXISqTFKdENegdpAgUXz6NrPEsbIeWaBRvM=
++golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated/go.mod h1:RVAQXBGNv1ib0J382/DPCRS/BPnsGebyM1Gj5VSDpG8=
  golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 -google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
 -google.golang.org/appengine v1.4.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7/EB5XEv4=
+-google.golang.org/appengine v1.6.7/go.mod h1:8WjMMxjGQR8xUklV/ARdw2HLXBOI7O7uCIDZVag1xfc=
 -google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
 -google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55/go.mod h1:DMBHOl98Agz4BDEuKkezgsaosCRResVns1a3J2ZsMNc=
 -google.golang.org/genproto v0.0.0-20200423170343-7949de9c1215/go.mod h1:55QSHmfGQM9UVYDPBsyGGes0y52j32PQ3BqQfXhyH3c=
@@ -779,14 +930,15 @@ index da17fce883d..0942cf427a5 100644
 -gopkg.in/square/go-jose.v2 v2.6.0/go.mod h1:M9dMgbHiYLoDGQrXy7OpJDJWiKiU//h+vD76mk0e1AI=
 -gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 -gopkg.in/yaml.v2 v2.2.3/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+-gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
  gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
  gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
  gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+ gotest.tools/v3 v3.0.2/go.mod h1:3SzNCllyD9/Y+b5r9JIKQ474KzkZyqLqEfYqMsX94Bk=
 -honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 -honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 -k8s.io/gengo/v2 v2.0.0-20240911193312-2b36238f13e9 h1:si3PfKm8dDYxgfbeA6orqrtLkvvIeH8UqffFJDl0bz4=
 -k8s.io/gengo/v2 v2.0.0-20240911193312-2b36238f13e9/go.mod h1:EJykeLsmFC60UQbYJezXkEsG2FLrt0GPNkU5iK5GWxU=
-+gotest.tools/v3 v3.0.2/go.mod h1:3SzNCllyD9/Y+b5r9JIKQ474KzkZyqLqEfYqMsX94Bk=
 +k8s.io/gengo/v2 v2.0.0-20250922181213-ec3ebc5fd46b h1:gMplByicHV/TJBizHd9aVEsTYoJBnnUAT5MHlTkbjhQ=
 +k8s.io/gengo/v2 v2.0.0-20250922181213-ec3ebc5fd46b/go.mod h1:CgujABENc3KuTrcsdpGmrrASjtQsWCT7R99mEV4U/fM=
  k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
@@ -815,6 +967,7 @@ index da17fce883d..0942cf427a5 100644
  sigs.k8s.io/knftables v0.0.17/go.mod h1:f/5ZLKYEUPUhVjUCg6l80ACdL7CIIyeL0DxfgojGRTk=
 -sigs.k8s.io/kustomize/api v0.18.0 h1:hTzp67k+3NEVInwz5BHyzc9rGxIauoXferXyjv5lWPo=
 -sigs.k8s.io/kustomize/api v0.18.0/go.mod h1:f8isXnX+8b+SGLHQ6yO4JG1rdkZlvhaCf/uZbLVMb0U=
+-sigs.k8s.io/kustomize/cmd/config v0.15.0/go.mod h1:Jq57b0nPaoYUlOqg//0JtAh6iibboqMcfbtCYoWPM00=
 -sigs.k8s.io/kustomize/kustomize/v5 v5.5.0 h1:o1mtt6vpxsxDYaZKrw3BnEtc+pAjLz7UffnIvHNbvW0=
 -sigs.k8s.io/kustomize/kustomize/v5 v5.5.0/go.mod h1:AeFCmgCrXzmvjWWaeZCyBp6XzG1Y0w1svYus8GhJEOE=
 -sigs.k8s.io/kustomize/kyaml v0.18.1 h1:WvBo56Wzw3fjS+7vBjN6TeivvpbW9GmRaWZ9CIVmt4E=
@@ -836,6 +989,401 @@ index da17fce883d..0942cf427a5 100644
 +sigs.k8s.io/structured-merge-diff/v6 v6.3.0/go.mod h1:M3W8sfWvn2HhQDIbGWj3S099YozAsymCo/wrT5ohRUE=
 +sigs.k8s.io/yaml v1.6.0 h1:G8fkbMSAFqgEFgh4b1wmtzDnioxFCUgTZhlbj5P9QYs=
 +sigs.k8s.io/yaml v1.6.0/go.mod h1:796bPqUfzR/0jLAl6XjHl3Ck7MiyVv8dbTdyT3/pMf4=
+diff --git a/go.work b/go.work
+index 08d4697e45e..2b87307a3b7 100644
+--- a/go.work
++++ b/go.work
+@@ -1,6 +1,8 @@
+ // This is a generated file. Do not edit directly.
+ 
+-go 1.23.0
++go 1.24.0
++
++toolchain go1.24.3
+ 
+ godebug default=go1.23
+ 
+diff --git a/hack/lib/golang.sh b/hack/lib/golang.sh
+index 3a20da92e42..3b29ed6effd 100755
+--- a/hack/lib/golang.sh
++++ b/hack/lib/golang.sh
+@@ -788,13 +788,13 @@ kube::golang::build_some_binaries() {
+     done
+     if [[ "${#uncovered[@]}" != 0 ]]; then
+       V=2 kube::log::info "Building ${uncovered[*]} without coverage..."
+-      GOPROXY=off go install "${build_args[@]}" "${uncovered[@]}"
++      go install "${build_args[@]}" "${uncovered[@]}"
+     else
+       V=2 kube::log::info "Nothing to build without coverage."
+     fi
+   else
+     V=2 kube::log::info "Coverage is disabled."
+-    GOPROXY=off go install "${build_args[@]}" "$@"
++    go install "${build_args[@]}" "$@"
+   fi
+ }
+ 
+diff --git a/pkg/apis/core/validation/validation.go b/pkg/apis/core/validation/validation.go
+index 797783912f3..70a0b2d17e4 100644
+--- a/pkg/apis/core/validation/validation.go
++++ b/pkg/apis/core/validation/validation.go
+@@ -2236,6 +2236,86 @@ func allowInvalidAPIGroupInDataSourceOrRef(spec *core.PersistentVolumeClaimSpec)
+ func ValidatePersistentVolumeClaim(pvc *core.PersistentVolumeClaim, opts PersistentVolumeClaimSpecValidationOptions) field.ErrorList {
+ 	allErrs := ValidateObjectMeta(&pvc.ObjectMeta, true, ValidatePersistentVolumeName, field.NewPath("metadata"))
+ 	allErrs = append(allErrs, ValidatePersistentVolumeClaimSpec(&pvc.Spec, field.NewPath("spec"), opts)...)
++	allErrs = append(allErrs, validateResourceQuotaLabels(pvc.Labels, field.NewPath("metadata", "labels"))...)
++	return allErrs
++}
++
++// isValidCPUQuantityString checks if a quantity string is valid for CPU resources.
++// Other DecimalSI suffixes (k, M, G, etc..) are not valid for CPU.
++func isValidCPUQuantityString(value string) bool {
++	if len(value) == 0 {
++		return false
++	}
++	lastChar := value[len(value)-1]
++	if lastChar >= '0' && lastChar <= '9' {
++		return true // No suffix
++	}
++	if lastChar == 'm' {
++		return true // Millicores suffix
++	}
++	return false
++}
++
++// validateResourceQuotaLabels validates the labels of a pod and pvc
++func validateResourceQuotaLabels(labels map[string]string, fldPath *field.Path) field.ErrorList {
++	allErrs := field.ErrorList{}
++	if labels == nil {
++		return allErrs
++	}
++
++	// Validate LabelResourceQuotaIgnore if present
++	if value, exists := labels[v1.LabelResourceQuotaIgnore]; exists {
++		labelPath := fldPath.Key(v1.LabelResourceQuotaIgnore)
++		if value != "true" && value != "false" {
++			allErrs = append(allErrs, field.Invalid(labelPath, value, "must be 'true' or 'false'"))
++		}
++	}
++
++	// Validate CPU quantity labels (only m or no suffix allowed)
++	cpuLabels := []string{
++		v1.LabelResourceQuotaCapCPU,
++		v1.LabelResourceQuotaDiscountCPU,
++	}
++	for _, labelKey := range cpuLabels {
++		if value, exists := labels[labelKey]; exists {
++			labelPath := fldPath.Key(labelKey)
++			quantity, err := resource.ParseQuantity(value)
++			if err != nil {
++				allErrs = append(allErrs, field.Invalid(labelPath, value, fmt.Sprintf("must be a valid quantity: %v", err)))
++			} else {
++				allErrs = append(allErrs, ValidateNonnegativeQuantity(quantity, labelPath)...)
++				// CPU must only use 'm' suffix (millicores) or no suffix (cores)
++				// Other DecimalSI suffixes like k, M, G are invalid for CPU
++				if !isValidCPUQuantityString(value) {
++					allErrs = append(allErrs, field.Invalid(labelPath, value, "must be a CPU quantity (e.g., '1', '500m', '0.5')"))
++				}
++			}
++		}
++	}
++
++	// Validate Memory/Storage quantity labels (only binary/decimal SI units allowed, not m)
++	memoryStorageLabels := []string{
++		v1.LabelResourceQuotaCapMemory,
++		v1.LabelResourceQuotaDiscountMemory,
++		v1.LabelResourceQuotaCapStorage,
++		v1.LabelResourceQuotaDiscountStorage,
++	}
++	for _, labelKey := range memoryStorageLabels {
++		if value, exists := labels[labelKey]; exists {
++			labelPath := fldPath.Key(labelKey)
++			quantity, err := resource.ParseQuantity(value)
++			if err != nil {
++				allErrs = append(allErrs, field.Invalid(labelPath, value, fmt.Sprintf("must be a valid quantity: %v", err)))
++			} else {
++				allErrs = append(allErrs, ValidateNonnegativeQuantity(quantity, labelPath)...)
++				// Memory/Storage must use BinarySI format (Ki, Mi, Gi, etc.) or DecimalSI with large units (k, M, G, etc.), not m
++				if quantity.Format == resource.DecimalSI && strings.HasSuffix(value, "m") {
++					allErrs = append(allErrs, field.Invalid(labelPath, value, "must be a memory/storage quantity (e.g., '1Gi', '500Mi', '1G'), not a CPU quantity"))
++				}
++			}
++		}
++	}
++
+ 	return allErrs
+ }
+ 
+@@ -4070,6 +4150,7 @@ func validatePodMetadataAndSpec(pod *core.Pod, opts PodValidationOptions) field.
+ 
+ 	allErrs := ValidateObjectMeta(&pod.ObjectMeta, true, ValidatePodName, metaPath)
+ 	allErrs = append(allErrs, ValidatePodSpecificAnnotations(pod.ObjectMeta.Annotations, &pod.Spec, metaPath.Child("annotations"), opts)...)
++	allErrs = append(allErrs, validateResourceQuotaLabels(pod.ObjectMeta.Labels, metaPath)...)
+ 	allErrs = append(allErrs, ValidatePodSpec(&pod.Spec, &pod.ObjectMeta, specPath, opts)...)
+ 
+ 	// we do additional validation only pertinent for pods and not pod templates
+diff --git a/pkg/controller/disruption/disruption.go b/pkg/controller/disruption/disruption.go
+index edaff5af2bd..0d681e155d1 100644
+--- a/pkg/controller/disruption/disruption.go
++++ b/pkg/controller/disruption/disruption.go
+@@ -102,6 +102,9 @@ type DisruptionController struct {
+ 	ssLister       appsv1listers.StatefulSetLister
+ 	ssListerSynced cache.InformerSynced
+ 
++	dsLister       appsv1listers.DaemonSetLister
++	dsListerSynced cache.InformerSynced
++
+ 	// PodDisruptionBudget keys that need to be synced.
+ 	queue        workqueue.TypedRateLimitingInterface[string]
+ 	recheckQueue workqueue.TypedDelayingInterface[string]
+@@ -137,6 +140,7 @@ func NewDisruptionController(
+ 	rsInformer appsv1informers.ReplicaSetInformer,
+ 	dInformer appsv1informers.DeploymentInformer,
+ 	ssInformer appsv1informers.StatefulSetInformer,
++	dsInformer appsv1informers.DaemonSetInformer,
+ 	kubeClient clientset.Interface,
+ 	restMapper apimeta.RESTMapper,
+ 	scaleNamespacer scaleclient.ScalesGetter,
+@@ -150,6 +154,7 @@ func NewDisruptionController(
+ 		rsInformer,
+ 		dInformer,
+ 		ssInformer,
++		dsInformer,
+ 		kubeClient,
+ 		restMapper,
+ 		scaleNamespacer,
+@@ -168,6 +173,7 @@ func NewDisruptionControllerInternal(ctx context.Context,
+ 	rsInformer appsv1informers.ReplicaSetInformer,
+ 	dInformer appsv1informers.DeploymentInformer,
+ 	ssInformer appsv1informers.StatefulSetInformer,
++	dsInformer appsv1informers.DaemonSetInformer,
+ 	kubeClient clientset.Interface,
+ 	restMapper apimeta.RESTMapper,
+ 	scaleNamespacer scaleclient.ScalesGetter,
+@@ -247,6 +253,9 @@ func NewDisruptionControllerInternal(ctx context.Context,
+ 	dc.ssLister = ssInformer.Lister()
+ 	dc.ssListerSynced = ssInformer.Informer().HasSynced
+ 
++	dc.dsLister = dsInformer.Lister()
++	dc.dsListerSynced = dsInformer.Informer().HasSynced
++
+ 	dc.mapper = restMapper
+ 	dc.scaleNamespacer = scaleNamespacer
+ 	dc.discoveryClient = discoveryClient
+@@ -262,7 +271,7 @@ func NewDisruptionControllerInternal(ctx context.Context,
+ // resources directly and only fall back to the scale subresource when needed.
+ func (dc *DisruptionController) finders() []podControllerFinder {
+ 	return []podControllerFinder{dc.getPodReplicationController, dc.getPodDeployment, dc.getPodReplicaSet,
+-		dc.getPodStatefulSet, dc.getScaleController}
++		dc.getPodStatefulSet, dc.getPodDaemonSet, dc.getScaleController}
+ }
+ 
+ var (
+@@ -270,6 +279,7 @@ var (
+ 	controllerKindSS  = apps.SchemeGroupVersion.WithKind("StatefulSet")
+ 	controllerKindRC  = v1.SchemeGroupVersion.WithKind("ReplicationController")
+ 	controllerKindDep = v1beta1.SchemeGroupVersion.WithKind("Deployment")
++	controllerKindDS  = apps.SchemeGroupVersion.WithKind("DaemonSet")
+ )
+ 
+ // getPodReplicaSet finds a replicaset which has no matching deployments.
+@@ -294,6 +304,24 @@ func (dc *DisruptionController) getPodReplicaSet(ctx context.Context, controller
+ 	return &controllerAndScale{rs.UID, *(rs.Spec.Replicas)}, nil
+ }
+ 
++// getPodDaemonSet returns the daemonset referenced by the provided controllerRef.
++func (dc *DisruptionController) getPodDaemonSet(ctx context.Context, controllerRef *metav1.OwnerReference, namespace string) (*controllerAndScale, error) {
++	ok, err := verifyGroupKind(controllerRef, controllerKindDS.Kind, []string{"apps"})
++	if !ok || err != nil {
++		return nil, err
++	}
++	ds, err := dc.dsLister.DaemonSets(namespace).Get(controllerRef.Name)
++	if err != nil {
++		// The only possible error is NotFound, which is ok here.
++		return nil, nil
++	}
++	if ds.UID != controllerRef.UID {
++		return nil, nil
++	}
++
++	return &controllerAndScale{ds.UID, ds.Status.DesiredNumberScheduled}, nil
++}
++
+ // getPodStatefulSet returns the statefulset referenced by the provided controllerRef.
+ func (dc *DisruptionController) getPodStatefulSet(ctx context.Context, controllerRef *metav1.OwnerReference, namespace string) (*controllerAndScale, error) {
+ 	ok, err := verifyGroupKind(controllerRef, controllerKindSS.Kind, []string{"apps"})
+@@ -463,7 +491,7 @@ func (dc *DisruptionController) Run(ctx context.Context) {
+ 	logger.Info("Starting disruption controller")
+ 	defer logger.Info("Shutting down disruption controller")
+ 
+-	if !cache.WaitForNamedCacheSync("disruption", ctx.Done(), dc.podListerSynced, dc.pdbListerSynced, dc.rcListerSynced, dc.rsListerSynced, dc.dListerSynced, dc.ssListerSynced) {
++	if !cache.WaitForNamedCacheSync("disruption", ctx.Done(), dc.podListerSynced, dc.pdbListerSynced, dc.rcListerSynced, dc.rsListerSynced, dc.dListerSynced, dc.ssListerSynced, dc.dsListerSynced) {
+ 		return
+ 	}
+ 
+diff --git a/pkg/controller/disruption/disruption_test.go b/pkg/controller/disruption/disruption_test.go
+index 977e1b8d9e5..0e1833c91c2 100644
+--- a/pkg/controller/disruption/disruption_test.go
++++ b/pkg/controller/disruption/disruption_test.go
+@@ -134,6 +134,7 @@ type disruptionController struct {
+ 	rsStore  cache.Store
+ 	dStore   cache.Store
+ 	ssStore  cache.Store
++	dsStore  cache.Store
+ 
+ 	coreClient      *fake.Clientset
+ 	scaleClient     *scalefake.FakeScaleClient
+@@ -173,6 +174,7 @@ func newFakeDisruptionControllerWithTime(ctx context.Context, now time.Time) (*d
+ 		informerFactory.Apps().V1().ReplicaSets(),
+ 		informerFactory.Apps().V1().Deployments(),
+ 		informerFactory.Apps().V1().StatefulSets(),
++		informerFactory.Apps().V1().DaemonSets(),
+ 		coreClient,
+ 		testrestmapper.TestOnlyStaticRESTMapper(scheme),
+ 		fakeScaleClient,
+@@ -187,6 +189,7 @@ func newFakeDisruptionControllerWithTime(ctx context.Context, now time.Time) (*d
+ 	dc.rsListerSynced = alwaysReady
+ 	dc.dListerSynced = alwaysReady
+ 	dc.ssListerSynced = alwaysReady
++	dc.dsListerSynced = alwaysReady
+ 	dc.recorder = record.NewFakeRecorder(100)
+ 	informerFactory.Start(ctx.Done())
+ 	informerFactory.WaitForCacheSync(ctx.Done())
+@@ -199,6 +202,7 @@ func newFakeDisruptionControllerWithTime(ctx context.Context, now time.Time) (*d
+ 		informerFactory.Apps().V1().ReplicaSets().Informer().GetStore(),
+ 		informerFactory.Apps().V1().Deployments().Informer().GetStore(),
+ 		informerFactory.Apps().V1().StatefulSets().Informer().GetStore(),
++		informerFactory.Apps().V1().DaemonSets().Informer().GetStore(),
+ 		coreClient,
+ 		fakeScaleClient,
+ 		fakeDiscovery,
+@@ -272,6 +276,13 @@ func updatePodOwnerToRc(t *testing.T, pod *v1.Pod, rc *v1.ReplicationController)
+ 	pod.OwnerReferences = append(pod.OwnerReferences, controllerReference)
+ }
+ 
++func updatePodOwnerToDs(t *testing.T, pod *v1.Pod, ds *apps.DaemonSet) {
++	var controllerReference metav1.OwnerReference
++	var trueVar = true
++	controllerReference = metav1.OwnerReference{UID: ds.UID, APIVersion: controllerKindDS.GroupVersion().String(), Kind: controllerKindDS.Kind, Name: ds.Name, Controller: &trueVar}
++	pod.OwnerReferences = append(pod.OwnerReferences, controllerReference)
++}
++
+ func updatePodOwnerToRs(t *testing.T, pod *v1.Pod, rs *apps.ReplicaSet) {
+ 	var controllerReference metav1.OwnerReference
+ 	var trueVar = true
+@@ -279,6 +290,32 @@ func updatePodOwnerToRs(t *testing.T, pod *v1.Pod, rs *apps.ReplicaSet) {
+ 	pod.OwnerReferences = append(pod.OwnerReferences, controllerReference)
+ }
+ 
++func newDaemonSet(t *testing.T, size int32) (*apps.DaemonSet, string) {
++	ds := &apps.DaemonSet{
++		TypeMeta: metav1.TypeMeta{APIVersion: "v1"},
++		ObjectMeta: metav1.ObjectMeta{
++			UID:             uuid.NewUUID(),
++			Name:            "foobar",
++			Namespace:       metav1.NamespaceDefault,
++			ResourceVersion: "18",
++			Labels:          fooBar(),
++		},
++		Spec: apps.DaemonSetSpec{
++			Selector: newSelFooBar(),
++		},
++		Status: apps.DaemonSetStatus{
++			DesiredNumberScheduled: size,
++		},
++	}
++
++	dsName, err := controller.KeyFunc(ds)
++	if err != nil {
++		t.Fatalf("Unexpected error naming DaemonSet %q: %v", ds.Name, err)
++	}
++
++	return ds, dsName
++}
++
+ func updatePodOwnerToSs(t *testing.T, pod *v1.Pod, ss *apps.StatefulSet) {
+ 	var controllerReference metav1.OwnerReference
+ 	var trueVar = true
+@@ -415,6 +452,37 @@ func update(t *testing.T, store cache.Store, obj interface{}) {
+ 	}
+ }
+ 
++func TestDaemonSetController(t *testing.T) {
++	labels := map[string]string{
++		"foo": "bar",
++		"baz": "quux",
++	}
++
++	dc, ps := newFakeDisruptionController()
++
++	// 34% should round up to 2
++	pdb, pdbName := newMinAvailablePodDisruptionBudget(t, intstr.FromString("34%"))
++	add(t, dc.pdbStore, pdb)
++	ds, _ := newDaemonSet(t, 3)
++	add(t, dc.dsStore, ds)
++	dc.sync(context.TODO(), pdbName)
++
++	ps.VerifyPdbStatus(t, pdbName, 0, 0, 0, 0, map[string]metav1.Time{})
++
++	for i := int32(0); i < 3; i++ {
++		pod, _ := newPod(t, fmt.Sprintf("foobar %d", i))
++		updatePodOwnerToDs(t, pod, ds)
++		pod.Labels = labels
++		add(t, dc.podStore, pod)
++		dc.sync(context.TODO(), pdbName)
++		if i < 2 {
++			ps.VerifyPdbStatus(t, pdbName, 0, i+1, 2, 3, map[string]metav1.Time{})
++		} else {
++			ps.VerifyPdbStatus(t, pdbName, 1, 3, 2, 3, map[string]metav1.Time{})
++		}
++	}
++}
++
+ func add(t *testing.T, store cache.Store, obj interface{}) {
+ 	if err := store.Add(obj); err != nil {
+ 		t.Fatalf("Could not add %+v to %+v: %v", obj, store, err)
+@@ -887,6 +955,8 @@ func TestStatefulSetController(t *testing.T) {
+ 	add(t, dc.pdbStore, pdb)
+ 	ss, _ := newStatefulSet(t, 3)
+ 	add(t, dc.ssStore, ss)
++	ds, _ := newDaemonSet(t, 13)
++	add(t, dc.dsStore, ds)
+ 	dc.sync(ctx, pdbName)
+ 
+ 	// It starts out at 0 expected because, with no pods, the PDB doesn't know
+@@ -1064,6 +1134,8 @@ func TestBasicFinderFunctions(t *testing.T) {
+ 	add(t, dc.rcStore, rc)
+ 	ss, _ := newStatefulSet(t, 14)
+ 	add(t, dc.ssStore, ss)
++	ds, _ := newDaemonSet(t, 13)
++	add(t, dc.dsStore, ds)
+ 
+ 	testCases := map[string]struct {
+ 		finderFunc    podControllerFinder
+@@ -1125,6 +1197,23 @@ func TestBasicFinderFunctions(t *testing.T) {
+ 			uid:        ss.UID,
+ 			findsScale: false,
+ 		},
++		"daemonset controller with extensions group": {
++			finderFunc:    dc.getPodDaemonSet,
++			apiVersion:    "apps/v1",
++			kind:          controllerKindDS.Kind,
++			name:          ds.Name,
++			uid:           ds.UID,
++			findsScale:    true,
++			expectedScale: 13,
++		},
++		"daemonset controller with invalid kind": {
++			finderFunc: dc.getPodDaemonSet,
++			apiVersion: "apps/v1",
++			kind:       controllerKindRS.Kind,
++			name:       ds.Name,
++			uid:        ds.UID,
++			findsScale: false,
++		},
+ 	}
+ 
+ 	for tn, tc := range testCases {
 diff --git a/pkg/controlplane/apiserver/apiextensions.go b/pkg/controlplane/apiserver/apiextensions.go
 index 1a0b8910c29..77439dc00e1 100644
 --- a/pkg/controlplane/apiserver/apiextensions.go
@@ -893,6 +1441,1169 @@ index 1a0b8910c29..77439dc00e1 100644
 +		return srr
 +	}
 +	return nil
++}
+diff --git a/pkg/kubelet/cm/container_manager_linux.go b/pkg/kubelet/cm/container_manager_linux.go
+index efbd90c1d5f..d8b58c9e726 100644
+--- a/pkg/kubelet/cm/container_manager_linux.go
++++ b/pkg/kubelet/cm/container_manager_linux.go
+@@ -405,7 +405,6 @@ func setupKernelTunables(option KernelTunableBehavior) error {
+ 	desiredState := map[string]int{
+ 		utilsysctl.VMOvercommitMemory: utilsysctl.VMOvercommitMemoryAlways,
+ 		utilsysctl.VMPanicOnOOM:       utilsysctl.VMPanicOnOOMInvokeOOMKiller,
+-		utilsysctl.KernelPanic:        utilsysctl.KernelPanicRebootTimeout,
+ 		utilsysctl.KernelPanicOnOops:  utilsysctl.KernelPanicOnOopsAlways,
+ 		utilsysctl.RootMaxKeys:        utilsysctl.RootMaxKeysSetting,
+ 		utilsysctl.RootMaxBytes:       utilsysctl.RootMaxBytesSetting,
+diff --git a/pkg/kubelet/config/file.go b/pkg/kubelet/config/file.go
+index 79e2af6ed62..2e3f632095b 100644
+--- a/pkg/kubelet/config/file.go
++++ b/pkg/kubelet/config/file.go
+@@ -44,6 +44,24 @@ const (
+ 	eventBufferLen = 10
+ )
+ 
++// manifestAllowedExtensions lists filename extensions that are allowed as pod manifests.
++// Only files with these extensions are processed (e.g. kube-apiserver.backup is ignored).
++var manifestAllowedExtensions = []string{".yaml", ".yml"}
++
++// shouldIgnoreManifestFile returns true if the manifest file should be ignored
++// (hidden files or files without an allowed extension).
++func shouldIgnoreManifestFile(baseName string) bool {
++	if strings.HasPrefix(baseName, ".") {
++		return true
++	}
++	for _, ext := range manifestAllowedExtensions {
++		if strings.HasSuffix(strings.ToLower(baseName), ext) {
++			return false
++		}
++	}
++	return true
++}
++
+ type watchEvent struct {
+ 	fileName  string
+ 	eventType podEventType
+@@ -181,6 +199,9 @@ func (s *sourceFile) extractFromDir(name string) ([]*v1.Pod, error) {
+ 		case statInfo.Mode().IsDir():
+ 			klog.ErrorS(nil, "Provided manifest path is a directory, not recursing into manifest path", "path", path)
+ 		case statInfo.Mode().IsRegular():
++			if shouldIgnoreManifestFile(filepath.Base(path)) {
++				continue
++			}
+ 			pod, err := s.extractFromFile(path)
+ 			if err != nil {
+ 				if !os.IsNotExist(err) {
+diff --git a/pkg/kubelet/config/file_linux.go b/pkg/kubelet/config/file_linux.go
+index 42d86f86872..53d7bccc60a 100644
+--- a/pkg/kubelet/config/file_linux.go
++++ b/pkg/kubelet/config/file_linux.go
+@@ -23,13 +23,12 @@ import (
+ 	"fmt"
+ 	"os"
+ 	"path/filepath"
+-	"strings"
+ 	"time"
+ 
+ 	"github.com/fsnotify/fsnotify"
++	v1 "k8s.io/api/core/v1"
+ 	"k8s.io/klog/v2"
+ 
+-	"k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/util/wait"
+ 	"k8s.io/client-go/util/flowcontrol"
+ 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
+@@ -101,9 +100,8 @@ func (s *sourceFile) doWatch() error {
+ }
+ 
+ func (s *sourceFile) produceWatchEvent(e *fsnotify.Event) error {
+-	// Ignore file start with dots
+-	if strings.HasPrefix(filepath.Base(e.Name), ".") {
+-		klog.V(4).InfoS("Ignored pod manifest, because it starts with dots", "eventName", e.Name)
++	if shouldIgnoreManifestFile(filepath.Base(e.Name)) {
++		klog.V(4).InfoS("Ignored pod manifest, because of inappropriate filename", "eventName", e.Name)
+ 		return nil
+ 	}
+ 	var eventType podEventType
+diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+index 12dcb66ec77..989f0dc76e0 100644
+--- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
++++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+@@ -22,6 +22,7 @@ package nodeshutdown
+ 
+ import (
+ 	"fmt"
++	"os"
+ 	"path/filepath"
+ 	"sync"
+ 	"time"
+@@ -248,6 +249,11 @@ func (m *managerImpl) start() (chan struct{}, error) {
+ 					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
+ 				}
+ 
++				// Clean up memory manager state before shutdown
++				if isShuttingDown {
++					m.cleanupMemoryManagerState()
++				}
++
+ 				m.nodeShuttingDownMutex.Lock()
+ 				m.nodeShuttingDownNow = isShuttingDown
+ 				m.nodeShuttingDownMutex.Unlock()
+@@ -324,3 +330,20 @@ func (m *managerImpl) processShutdownEvent() error {
+ 
+ 	return m.podManager.killPods(activePods)
+ }
++
++// cleanupMemoryManagerState ensures that the memory manager starts with a clean state after reboot.
++func (m *managerImpl) cleanupMemoryManagerState() {
++	memoryManagerStatePath := "/var/lib/kubelet/memory_manager_state"
++
++	if _, err := os.Stat(memoryManagerStatePath); os.IsNotExist(err) {
++		m.logger.V(1).Info("Memory manager state file does not exist, skipping removal", "path", memoryManagerStatePath)
++		return
++	}
++
++	if err := os.Remove(memoryManagerStatePath); err != nil {
++		m.logger.Error(err, "Failed to remove memory manager state file", "path", memoryManagerStatePath)
++		return
++	}
++
++	m.logger.Info("Successfully removed memory manager state file before shutdown", "path", memoryManagerStatePath)
++}
+diff --git a/pkg/quota/v1/evaluator/core/persistent_volume_claims.go b/pkg/quota/v1/evaluator/core/persistent_volume_claims.go
+index a4da87b496b..a9abf113d94 100644
+--- a/pkg/quota/v1/evaluator/core/persistent_volume_claims.go
++++ b/pkg/quota/v1/evaluator/core/persistent_volume_claims.go
+@@ -147,6 +147,11 @@ func (p *pvcEvaluator) Usage(item runtime.Object) (corev1.ResourceList, error) {
+ 		return result, err
+ 	}
+ 
++	// Check for ignore label
++	if pvc.Labels != nil && pvc.Labels[corev1.LabelResourceQuotaIgnore] == "true" {
++		return result, nil
++	}
++
+ 	// charge for claim
+ 	result[corev1.ResourcePersistentVolumeClaims] = *(resource.NewQuantity(1, resource.DecimalSI))
+ 	result[pvcObjectCountName] = *(resource.NewQuantity(1, resource.DecimalSI))
+diff --git a/pkg/quota/v1/evaluator/core/pods.go b/pkg/quota/v1/evaluator/core/pods.go
+index 8efdec6cc2b..0e034c0cbf1 100644
+--- a/pkg/quota/v1/evaluator/core/pods.go
++++ b/pkg/quota/v1/evaluator/core/pods.go
+@@ -363,6 +363,11 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
+ 		return corev1.ResourceList{}, err
+ 	}
+ 
++	// Check for ignore label
++	if pod.Labels != nil && pod.Labels[corev1.LabelResourceQuotaIgnore] == "true" {
++		return corev1.ResourceList{}, nil
++	}
++
+ 	// always quota the object count (even if the pod is end of life)
+ 	// object count quotas track all objects that are in storage.
+ 	// where "pods" tracks all pods that have not reached a terminal state,
+@@ -385,10 +390,73 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
+ 	requests := resourcehelper.PodRequests(pod, opts)
+ 	limits := resourcehelper.PodLimits(pod, opts)
+ 
+-	result = quota.Add(result, podComputeUsageHelper(requests, limits))
++	podUsage := podComputeUsageHelper(requests, limits)
++
++	// Apply discount and cap if specified via labels
++	// Dont handle errors here, validated earlier in pkg/apis/core/validation/validation.go
++	applyQuotaModifiers(podUsage, pod.Labels)
++
++	result = quota.Add(result, podUsage)
+ 	return result, nil
+ }
+ 
++// applyQuotaModifiers applies discounts and caps to the resource in usage
++func applyQuotaModifiers(usage corev1.ResourceList, labels map[string]string) {
++	if labels == nil {
++		return
++	}
++	// CPU discount + cap
++	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
++	applyCap(usage, labels, corev1.LabelResourceQuotaCapCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
++	// Memory discount + cap
++	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
++	applyCap(usage, labels, corev1.LabelResourceQuotaCapMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
++	// Ephemeral-storage discount + cap
++	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
++	applyCap(usage, labels, corev1.LabelResourceQuotaCapStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
++}
++
++// applyDiscount subtracts discount from the resource in usage, ensuring the result is non-negative
++func applyDiscount(usage corev1.ResourceList, labels map[string]string, labelKey string, resources ...corev1.ResourceName) {
++	discountStr, exists := labels[labelKey]
++	if !exists {
++		return
++	}
++	discount, err := resource.ParseQuantity(discountStr)
++	if err != nil {
++		return
++	}
++	for _, resourceName := range resources {
++		if val, exists := usage[resourceName]; exists {
++			val.Sub(discount)
++			if val.Sign() == -1 {
++				val = *resource.NewQuantity(0, resource.DecimalSI)
++			}
++			usage[resourceName] = val
++		}
++	}
++
++}
++
++// applyCap limits the resource in usage to the cap value
++func applyCap(usage corev1.ResourceList, labels map[string]string, labelKey string, resources ...corev1.ResourceName) {
++	capStr, exists := labels[labelKey]
++	if !exists {
++		return
++	}
++	cap, err := resource.ParseQuantity(capStr)
++	if err != nil {
++		return
++	}
++	for _, resourceName := range resources {
++		if val, exists := usage[resourceName]; exists {
++			if val.Cmp(cap) > 0 {
++				usage[resourceName] = cap
++			}
++		}
++	}
++}
++
+ func isBestEffort(pod *corev1.Pod) bool {
+ 	return qos.GetPodQOS(pod) == corev1.PodQOSBestEffort
+ }
+diff --git a/pkg/quota/v1/install/update_filter.go b/pkg/quota/v1/install/update_filter.go
+index 507ff05ad87..c402597b61b 100644
+--- a/pkg/quota/v1/install/update_filter.go
++++ b/pkg/quota/v1/install/update_filter.go
+@@ -34,6 +34,12 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 		case schema.GroupResource{Resource: "pods"}:
+ 			oldPod := oldObj.(*v1.Pod)
+ 			newPod := newObj.(*v1.Pod)
++
++			// when resource quota labels changed
++			if hasResourceQuotaLabelsChanged(oldPod.Labels, newPod.Labels) {
++				return true
++			}
++
+ 			// when Resources changed
+ 			if feature.DefaultFeatureGate.Enabled(features.InPlacePodVerticalScaling) && hasResourcesChanged(oldPod, newPod) {
+ 				return true
+@@ -46,6 +52,12 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 		case schema.GroupResource{Resource: "persistentvolumeclaims"}:
+ 			oldPVC := oldObj.(*v1.PersistentVolumeClaim)
+ 			newPVC := newObj.(*v1.PersistentVolumeClaim)
++
++			// when resource quota labels changed
++			if hasResourceQuotaLabelsChanged(oldPVC.Labels, newPVC.Labels) {
++				return true
++			}
++
+ 			return core.RequiresQuotaReplenish(newPVC, oldPVC)
+ 		}
+ 
+@@ -53,6 +65,16 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 	}
+ }
+ 
++// hasResourceQuotaLabelsChanged checks if any resource quota control labels have changed
++func hasResourceQuotaLabelsChanged(oldLabels, newLabels map[string]string) bool {
++	for _, label := range v1.ResourceQuotaLabels {
++		if oldLabels[label] != newLabels[label] {
++			return true
++		}
++	}
++	return false
++}
++
+ // hasResourcesChanged function to compare resources in container statuses
+ func hasResourcesChanged(oldPod *v1.Pod, newPod *v1.Pod) bool {
+ 	for _, oldStatus := range oldPod.Status.ContainerStatuses {
+diff --git a/pkg/registry/core/namespace/storage/accessible_fetcher.go b/pkg/registry/core/namespace/storage/accessible_fetcher.go
+new file mode 100644
+index 00000000000..a12ef6456fe
+--- /dev/null
++++ b/pkg/registry/core/namespace/storage/accessible_fetcher.go
+@@ -0,0 +1,188 @@
++/*
++Copyright 2025 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package storage
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"io"
++	"net/http"
++	"strings"
++	"time"
++
++	restclient "k8s.io/client-go/rest"
++	"k8s.io/client-go/transport"
++	"k8s.io/klog/v2"
++)
++
++const (
++	// accessibleNamespacesAPIPath is the path to the accessiblenamespaces API
++	// provided by permission-browser-apiserver (Deckhouse extension).
++	accessibleNamespacesAPIPath = "/apis/authorization.deckhouse.io/v1alpha1/accessiblenamespaces"
++
++	// DefaultHTTPTimeout is the default timeout for HTTP requests.
++	DefaultHTTPTimeout = 10 * time.Second
++)
++
++// AccessibleNamespaceResponse represents a single accessible namespace from the API response.
++type AccessibleNamespaceResponse struct {
++	Metadata struct {
++		Name string `json:"name"`
++	} `json:"metadata"`
++}
++
++// AccessibleNamespaceListResponse represents the list response from the accessible namespaces API.
++type AccessibleNamespaceListResponse struct {
++	Items []AccessibleNamespaceResponse `json:"items"`
++}
++
++// LoopbackAccessibleNamespaceFetcher implements AccessibleNamespaceFetcher by calling
++// the permission-browser-apiserver's accessiblenamespaces API through kube-apiserver's
++// loopback connection. This ensures proper authentication via loopback client credentials
++// while using impersonation to act as the target user.
++//
++// Deckhouse-specific: used for ACL-based namespace filtering.
++type LoopbackAccessibleNamespaceFetcher struct {
++	// baseURL is the base URL for API requests (typically https://127.0.0.1:6443)
++	baseURL string
++
++	// roundTripper is the authenticated transport from loopback config
++	roundTripper http.RoundTripper
++
++	// timeout for HTTP requests
++	timeout time.Duration
++}
++
++// NewLoopbackAccessibleNamespaceFetcher creates a new fetcher that uses the kube-apiserver's
++// loopback client configuration to call the accessiblenamespaces API with impersonation.
++//
++// This is the recommended way to create the fetcher as it:
++// - Uses proper authentication via loopback client certificates
++// - Supports impersonation to act as the target user
++// - Routes through kube-apiserver's aggregator to reach the extension apiserver
++func NewLoopbackAccessibleNamespaceFetcher(loopbackConfig *restclient.Config) (*LoopbackAccessibleNamespaceFetcher, error) {
++	if loopbackConfig == nil {
++		return nil, fmt.Errorf("loopback config is required")
++	}
++
++	// Create a copy of the config to avoid modifying the original
++	cfg := restclient.CopyConfig(loopbackConfig)
++
++	// Create the transport from config (includes TLS, auth, etc.)
++	transportConfig, err := cfg.TransportConfig()
++	if err != nil {
++		return nil, fmt.Errorf("failed to get transport config: %w", err)
++	}
++
++	rt, err := transport.New(transportConfig)
++	if err != nil {
++		return nil, fmt.Errorf("failed to create transport: %w", err)
++	}
++
++	// Normalize the base URL
++	baseURL := strings.TrimRight(cfg.Host, "/")
++
++	return &LoopbackAccessibleNamespaceFetcher{
++		baseURL:      baseURL,
++		roundTripper: rt,
++		timeout:      DefaultHTTPTimeout,
++	}, nil
++}
++
++func (f *LoopbackAccessibleNamespaceFetcher) httpClientFor(username string, groups []string, extra map[string][]string) *http.Client {
++	// IMPORTANT:
++	// User extra keys may contain characters that are invalid in HTTP header field-names (e.g. '/').
++	// Kubernetes solves this by escaping extra keys in impersonation headers.
++	// Use client-go's impersonating round-tripper to match upstream behavior.
++	impRT := transport.NewImpersonatingRoundTripper(transport.ImpersonationConfig{
++		UserName: username,
++		Groups:   groups,
++		Extra:    extra,
++	}, f.roundTripper)
++
++	return &http.Client{
++		Transport: impRT,
++		Timeout:   f.timeout,
++	}
++}
++
++// FetchAccessibleNamespaces fetches the list of accessible namespace names for the user
++// by calling the accessiblenamespaces API with impersonation headers.
++func (f *LoopbackAccessibleNamespaceFetcher) FetchAccessibleNamespaces(ctx context.Context, username string, groups []string, extra map[string][]string) ([]string, error) {
++	url := f.baseURL + accessibleNamespacesAPIPath
++
++	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
++	if err != nil {
++		return nil, fmt.Errorf("failed to create request: %w", err)
++	}
++
++	klog.V(4).Infof("Fetching accessible namespaces for user %s via loopback at %s", username, url)
++
++	client := f.httpClientFor(username, groups, extra)
++	resp, err := client.Do(req)
++	if err != nil {
++		return nil, fmt.Errorf("failed to fetch accessible namespaces: %w", err)
++	}
++	defer resp.Body.Close()
++
++	if resp.StatusCode != http.StatusOK {
++		body, _ := io.ReadAll(resp.Body)
++		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
++	}
++
++	var listResponse AccessibleNamespaceListResponse
++	if err := json.NewDecoder(resp.Body).Decode(&listResponse); err != nil {
++		return nil, fmt.Errorf("failed to decode response: %w", err)
++	}
++
++	names := make([]string, len(listResponse.Items))
++	for i, item := range listResponse.Items {
++		names[i] = item.Metadata.Name
++	}
++
++	return names, nil
++}
++
++// IsNamespaceAccessible checks if a specific namespace is accessible to the user
++// by calling the accessiblenamespaces API with impersonation headers.
++func (f *LoopbackAccessibleNamespaceFetcher) IsNamespaceAccessible(ctx context.Context, username string, groups []string, extra map[string][]string, namespace string) (bool, error) {
++	url := fmt.Sprintf("%s%s/%s", f.baseURL, accessibleNamespacesAPIPath, namespace)
++
++	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
++	if err != nil {
++		return false, fmt.Errorf("failed to create request: %w", err)
++	}
++
++	client := f.httpClientFor(username, groups, extra)
++	resp, err := client.Do(req)
++	if err != nil {
++		return false, fmt.Errorf("failed to check namespace accessibility: %w", err)
++	}
++	defer resp.Body.Close()
++
++	switch resp.StatusCode {
++	case http.StatusOK:
++		return true, nil
++	case http.StatusNotFound:
++		// Namespace not accessible (or doesn't exist)
++		return false, nil
++	default:
++		body, _ := io.ReadAll(resp.Body)
++		return false, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
++	}
++}
+diff --git a/pkg/registry/core/namespace/storage/filtering_test.go b/pkg/registry/core/namespace/storage/filtering_test.go
+new file mode 100644
+index 00000000000..74dbbfb9494
+--- /dev/null
++++ b/pkg/registry/core/namespace/storage/filtering_test.go
+@@ -0,0 +1,379 @@
++/*
++Copyright 2025 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package storage
++
++import (
++	"context"
++	"fmt"
++	"testing"
++
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apiserver/pkg/authentication/user"
++	"k8s.io/apiserver/pkg/endpoints/filters"
++	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
++	"k8s.io/apiserver/pkg/registry/generic"
++	"k8s.io/apiserver/pkg/registry/rest"
++	etcd3testing "k8s.io/apiserver/pkg/storage/etcd3/testing"
++
++	api "k8s.io/kubernetes/pkg/apis/core"
++	"k8s.io/kubernetes/pkg/registry/registrytest"
++)
++
++// mockAccessibleFetcher implements AccessibleNamespaceFetcher for testing
++type mockAccessibleFetcher struct {
++	accessibleNamespaces []string
++	accessibleMap        map[string]bool
++	fetchError           error
++}
++
++func (m *mockAccessibleFetcher) FetchAccessibleNamespaces(ctx context.Context, username string, groups []string, extra map[string][]string) ([]string, error) {
++	if m.fetchError != nil {
++		return nil, m.fetchError
++	}
++	return m.accessibleNamespaces, nil
++}
++
++func (m *mockAccessibleFetcher) IsNamespaceAccessible(ctx context.Context, username string, groups []string, extra map[string][]string, namespace string) (bool, error) {
++	if m.fetchError != nil {
++		return false, m.fetchError
++	}
++	if m.accessibleMap != nil {
++		return m.accessibleMap[namespace], nil
++	}
++	for _, ns := range m.accessibleNamespaces {
++		if ns == namespace {
++			return true, nil
++		}
++	}
++	return false, nil
++}
++
++// newStorageWithFiltering creates a storage with filtering enabled
++func newStorageWithFiltering(t *testing.T, fetcher *mockAccessibleFetcher) (*REST, *etcd3testing.EtcdTestServer) {
++	etcdStorage, server := registrytest.NewEtcdStorage(t, "")
++	restOptions := generic.RESTOptions{StorageConfig: etcdStorage, Decorator: generic.UndecoratedStorage, DeleteCollectionWorkers: 1, ResourcePrefix: "namespaces"}
++
++	namespaceStorage, _, _, err := NewRESTWithFiltering(restOptions, fetcher)
++	if err != nil {
++		t.Fatalf("unexpected error from REST storage: %v", err)
++	}
++	return namespaceStorage, server
++}
++
++// createNamespace creates a namespace in storage
++func createNamespace(t *testing.T, storage *REST, name string) {
++	ns := &api.Namespace{
++		ObjectMeta: metav1.ObjectMeta{
++			Name: name,
++		},
++	}
++	// Use a clean context for creation (without namespace scope since namespaces are cluster-scoped)
++	ctx := genericapirequest.WithNamespace(genericapirequest.NewContext(), metav1.NamespaceNone)
++	_, err := storage.Create(ctx, ns, rest.ValidateAllObjectFunc, &metav1.CreateOptions{})
++	if err != nil {
++		t.Fatalf("failed to create namespace %s: %v", name, err)
++	}
++}
++
++// ctxWithUser creates a context with user info
++func ctxWithUser(username string, groups []string) context.Context {
++	ctx := genericapirequest.NewContext()
++	ctx = genericapirequest.WithUser(ctx, &user.DefaultInfo{
++		Name:   username,
++		Groups: groups,
++	})
++	return ctx
++}
++
++// ctxWithFilteringMode creates a context with namespace filtering mode enabled
++// This simulates what WithAuthorization filter does when user is denied list/get permission
++func ctxWithFilteringMode(ctx context.Context) context.Context {
++	return filters.WithNamespaceFilteringMode(ctx)
++}
++
++func TestListWithFiltering_NoFilteringMode_ReturnsAll(t *testing.T) {
++	fetcher := &mockAccessibleFetcher{accessibleNamespaces: []string{"ns-a"}}
++
++	storage, server := newStorageWithFiltering(t, fetcher)
++	defer server.Terminate(t)
++	defer storage.store.DestroyFunc()
++
++	// Create some namespaces
++	createNamespace(t, storage, "ns-a")
++	createNamespace(t, storage, "ns-b")
++	createNamespace(t, storage, "ns-c")
++
++	// List without filtering mode (user has full access)
++	ctx := ctxWithUser("test-user", []string{"system:authenticated"})
++
++	// List should return all namespaces (filtering mode not set)
++	result, err := storage.List(ctx, nil)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	nsList := result.(*api.NamespaceList)
++	if len(nsList.Items) != 3 {
++		t.Errorf("expected 3 namespaces, got %d", len(nsList.Items))
++	}
++}
++
++func TestListWithFiltering_FilteringMode_FilteredList(t *testing.T) {
++	fetcher := &mockAccessibleFetcher{accessibleNamespaces: []string{"ns-a", "ns-c"}}
++
++	storage, server := newStorageWithFiltering(t, fetcher)
++	defer server.Terminate(t)
++	defer storage.store.DestroyFunc()
++
++	// Create some namespaces
++	createNamespace(t, storage, "ns-a")
++	createNamespace(t, storage, "ns-b")
++	createNamespace(t, storage, "ns-c")
++
++	// List with filtering mode enabled (user was denied list permission)
++	ctx := ctxWithUser("test-user", []string{"system:authenticated"})
++	ctx = ctxWithFilteringMode(ctx)
++
++	// List should return only accessible namespaces
++	result, err := storage.List(ctx, nil)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	nsList := result.(*api.NamespaceList)
++	if len(nsList.Items) != 2 {
++		t.Errorf("expected 2 namespaces, got %d", len(nsList.Items))
++	}
++
++	// Check that only ns-a and ns-c are returned
++	names := make(map[string]bool)
++	for _, ns := range nsList.Items {
++		names[ns.Name] = true
++	}
++
++	if !names["ns-a"] {
++		t.Error("expected ns-a in result")
++	}
++	if names["ns-b"] {
++		t.Error("ns-b should not be in result")
++	}
++	if !names["ns-c"] {
++		t.Error("expected ns-c in result")
++	}
++}
++
++func TestListWithFiltering_FilteringMode_EmptyList(t *testing.T) {
++	fetcher := &mockAccessibleFetcher{accessibleNamespaces: []string{}}
++
++	storage, server := newStorageWithFiltering(t, fetcher)
++	defer server.Terminate(t)
++	defer storage.store.DestroyFunc()
++
++	// Create some namespaces
++	createNamespace(t, storage, "ns-a")
++	createNamespace(t, storage, "ns-b")
++
++	// List with filtering mode enabled
++	ctx := ctxWithUser("test-user", []string{"system:authenticated"})
++	ctx = ctxWithFilteringMode(ctx)
++
++	// List should return empty list
++	result, err := storage.List(ctx, nil)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	nsList := result.(*api.NamespaceList)
++	if len(nsList.Items) != 0 {
++		t.Errorf("expected 0 namespaces, got %d", len(nsList.Items))
++	}
++}
++
++func TestListWithFiltering_FetchError_ReturnsForbidden(t *testing.T) {
++	fetcher := &mockAccessibleFetcher{fetchError: fmt.Errorf("service unavailable")}
++
++	storage, server := newStorageWithFiltering(t, fetcher)
++	defer server.Terminate(t)
++	defer storage.store.DestroyFunc()
++
++	ctx := ctxWithUser("test-user", []string{"system:authenticated"})
++	ctx = ctxWithFilteringMode(ctx)
++
++	// List should return forbidden error
++	_, err := storage.List(ctx, nil)
++	if err == nil {
++		t.Fatal("expected error, got nil")
++	}
++
++	if !apierrors.IsForbidden(err) {
++		t.Errorf("expected Forbidden error, got %v", err)
++	}
++}
++
++func TestGetWithFiltering_NoFilteringMode_ReturnsNamespace(t *testing.T) {
++	fetcher := &mockAccessibleFetcher{accessibleNamespaces: []string{"ns-a"}}
++
++	storage, server := newStorageWithFiltering(t, fetcher)
++	defer server.Terminate(t)
++	defer storage.store.DestroyFunc()
++
++	createNamespace(t, storage, "ns-a")
++
++	// Get without filtering mode
++	ctx := ctxWithUser("test-user", []string{"system:authenticated"})
++
++	// Get should succeed (filtering mode not set)
++	result, err := storage.Get(ctx, "ns-a", &metav1.GetOptions{})
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	ns := result.(*api.Namespace)
++	if ns.Name != "ns-a" {
++		t.Errorf("expected ns-a, got %s", ns.Name)
++	}
++}
++
++func TestGetWithFiltering_FilteringMode_AccessibleNamespace(t *testing.T) {
++	fetcher := &mockAccessibleFetcher{
++		accessibleNamespaces: []string{"ns-a"},
++		accessibleMap:        map[string]bool{"ns-a": true},
++	}
++
++	storage, server := newStorageWithFiltering(t, fetcher)
++	defer server.Terminate(t)
++	defer storage.store.DestroyFunc()
++
++	createNamespace(t, storage, "ns-a")
++
++	ctx := ctxWithUser("test-user", []string{"system:authenticated"})
++	ctx = ctxWithFilteringMode(ctx)
++
++	// Get should succeed (namespace is accessible)
++	result, err := storage.Get(ctx, "ns-a", &metav1.GetOptions{})
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	ns := result.(*api.Namespace)
++	if ns.Name != "ns-a" {
++		t.Errorf("expected ns-a, got %s", ns.Name)
++	}
++}
++
++func TestGetWithFiltering_FilteringMode_InaccessibleNamespace_ReturnsNotFound(t *testing.T) {
++	fetcher := &mockAccessibleFetcher{
++		accessibleNamespaces: []string{},
++		accessibleMap:        map[string]bool{"ns-a": false},
++	}
++
++	storage, server := newStorageWithFiltering(t, fetcher)
++	defer server.Terminate(t)
++	defer storage.store.DestroyFunc()
++
++	createNamespace(t, storage, "ns-a")
++
++	ctx := ctxWithUser("test-user", []string{"system:authenticated"})
++	ctx = ctxWithFilteringMode(ctx)
++
++	// Get should return NotFound (namespace not accessible)
++	_, err := storage.Get(ctx, "ns-a", &metav1.GetOptions{})
++	if err == nil {
++		t.Fatal("expected error, got nil")
++	}
++
++	if !apierrors.IsNotFound(err) {
++		t.Errorf("expected NotFound error, got %v", err)
++	}
++}
++
++func TestGetWithFiltering_NonExistentNamespace_ReturnsNotFound(t *testing.T) {
++	fetcher := &mockAccessibleFetcher{accessibleNamespaces: []string{}}
++
++	storage, server := newStorageWithFiltering(t, fetcher)
++	defer server.Terminate(t)
++	defer storage.store.DestroyFunc()
++
++	ctx := ctxWithUser("test-user", []string{"system:authenticated"})
++	ctx = ctxWithFilteringMode(ctx)
++
++	// Get should return NotFound for non-existent namespace
++	_, err := storage.Get(ctx, "ns-nonexistent", &metav1.GetOptions{})
++	if err == nil {
++		t.Fatal("expected error, got nil")
++	}
++
++	if !apierrors.IsNotFound(err) {
++		t.Errorf("expected NotFound error, got %v", err)
++	}
++}
++
++func TestGetWithFiltering_FetchError_ReturnsForbidden(t *testing.T) {
++	fetcher := &mockAccessibleFetcher{fetchError: fmt.Errorf("service unavailable")}
++
++	storage, server := newStorageWithFiltering(t, fetcher)
++	defer server.Terminate(t)
++	defer storage.store.DestroyFunc()
++
++	createNamespace(t, storage, "ns-a")
++
++	ctx := ctxWithUser("test-user", []string{"system:authenticated"})
++	ctx = ctxWithFilteringMode(ctx)
++
++	// Get should return Forbidden when permission-browser-apiserver is unavailable.
++	// This is consistent with vanilla Kubernetes behavior.
++	_, err := storage.Get(ctx, "ns-a", &metav1.GetOptions{})
++	if err == nil {
++		t.Fatal("expected error, got nil")
++	}
++
++	if !apierrors.IsForbidden(err) {
++		t.Errorf("expected Forbidden error, got %v", err)
++	}
++}
++
++func TestListWithFiltering_NoFetcher_ReturnsAll(t *testing.T) {
++	// Test with nil fetcher (filtering disabled)
++	etcdStorage, server := registrytest.NewEtcdStorage(t, "")
++	defer server.Terminate(t)
++
++	restOptions := generic.RESTOptions{StorageConfig: etcdStorage, Decorator: generic.UndecoratedStorage, DeleteCollectionWorkers: 1, ResourcePrefix: "namespaces"}
++
++	storage, _, _, err := NewRESTWithFiltering(restOptions, nil)
++	if err != nil {
++		t.Fatalf("unexpected error from REST storage: %v", err)
++	}
++	defer storage.store.DestroyFunc()
++
++	createNamespace(t, storage, "ns-a")
++	createNamespace(t, storage, "ns-b")
++
++	// Even with filtering mode set, should return all (no fetcher)
++	ctx := ctxWithUser("test-user", []string{"system:authenticated"})
++	ctx = ctxWithFilteringMode(ctx)
++
++	result, err := storage.List(ctx, nil)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	nsList := result.(*api.NamespaceList)
++	if len(nsList.Items) != 2 {
++		t.Errorf("expected 2 namespaces (filtering disabled), got %d", len(nsList.Items))
++	}
++}
+diff --git a/pkg/registry/core/namespace/storage/storage.go b/pkg/registry/core/namespace/storage/storage.go
+index e88fad7fa8a..72c54d36816 100644
+--- a/pkg/registry/core/namespace/storage/storage.go
++++ b/pkg/registry/core/namespace/storage/storage.go
+@@ -26,12 +26,16 @@ import (
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+ 	"k8s.io/apimachinery/pkg/watch"
++	"k8s.io/apiserver/pkg/endpoints/filters"
++	"k8s.io/apiserver/pkg/endpoints/request"
+ 	"k8s.io/apiserver/pkg/registry/generic"
+ 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
+ 	"k8s.io/apiserver/pkg/registry/rest"
+ 	"k8s.io/apiserver/pkg/storage"
+ 	storageerr "k8s.io/apiserver/pkg/storage/errors"
+ 	"k8s.io/apiserver/pkg/util/dryrun"
++	restclient "k8s.io/client-go/rest"
++	"k8s.io/klog/v2"
+ 	api "k8s.io/kubernetes/pkg/apis/core"
+ 	"k8s.io/kubernetes/pkg/printers"
+ 	printersinternal "k8s.io/kubernetes/pkg/printers/internalversion"
+@@ -40,10 +44,26 @@ import (
+ 	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
+ )
+ 
++// AccessibleNamespaceFetcher is an interface for fetching accessible namespaces for a user.
++// This is typically implemented by calling an external service (e.g., permission-browser-apiserver).
++type AccessibleNamespaceFetcher interface {
++	// FetchAccessibleNamespaces returns a list of namespace names that the user has access to.
++	// Returns nil, nil if the feature is disabled or the user has full access.
++	FetchAccessibleNamespaces(ctx context.Context, username string, groups []string, extra map[string][]string) ([]string, error)
++
++	// IsNamespaceAccessible checks if a specific namespace is accessible to the user.
++	IsNamespaceAccessible(ctx context.Context, username string, groups []string, extra map[string][]string, namespace string) (bool, error)
++}
++
+ // rest implements a RESTStorage for namespaces
+ type REST struct {
+ 	store  *genericregistry.Store
+ 	status *genericregistry.Store
++
++	// Deckhouse: namespace filtering support.
++	// If set, namespaces will be filtered based on user permissions
++	// when IsNamespaceFilteringMode(ctx) is true.
++	accessibleFetcher AccessibleNamespaceFetcher
+ }
+ 
+ // StatusREST implements the REST endpoint for changing the status of a namespace.
+@@ -58,6 +78,31 @@ type FinalizeREST struct {
+ 
+ // NewREST returns a RESTStorage object that will work against namespaces.
+ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *FinalizeREST, error) {
++	return NewRESTWithFiltering(optsGetter, nil)
++}
++
++// NewRESTWithDeckhouseFiltering returns a RESTStorage object with Deckhouse namespace filtering enabled.
++// It uses the loopback client config to call permission-browser-apiserver through kube-apiserver's
++// aggregated API mechanism with impersonation.
++// Filtering is triggered when IsNamespaceFilteringMode(ctx) is true (set by WithAuthorization filter).
++// If loopbackConfig is nil, filtering is disabled (vanilla Kubernetes behavior).
++// Deckhouse-specific: used for ACL-based namespace filtering.
++func NewRESTWithDeckhouseFiltering(optsGetter generic.RESTOptionsGetter, loopbackConfig *restclient.Config) (*REST, *StatusREST, *FinalizeREST, error) {
++	var fetcher AccessibleNamespaceFetcher
++	if loopbackConfig != nil {
++		var err error
++		fetcher, err = NewLoopbackAccessibleNamespaceFetcher(loopbackConfig)
++		if err != nil {
++			klog.Warningf("Failed to create loopback accessible namespace fetcher: %v, namespace filtering disabled", err)
++			fetcher = nil
++		}
++	}
++	return NewRESTWithFiltering(optsGetter, fetcher)
++}
++
++// NewRESTWithFiltering returns a RESTStorage object with optional namespace filtering support.
++// If fetcher is nil, filtering is disabled (default Kubernetes behavior).
++func NewRESTWithFiltering(optsGetter generic.RESTOptionsGetter, fetcher AccessibleNamespaceFetcher) (*REST, *StatusREST, *FinalizeREST, error) {
+ 	store := &genericregistry.Store{
+ 		NewFunc:                   func() runtime.Object { return &api.Namespace{} },
+ 		NewListFunc:               func() runtime.Object { return &api.NamespaceList{} },
+@@ -88,7 +133,9 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
+ 	finalizeStore.UpdateStrategy = namespace.FinalizeStrategy
+ 	finalizeStore.ResetFieldsStrategy = namespace.FinalizeStrategy
+ 
+-	return &REST{store: store, status: &statusStore}, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
++	r := &REST{store: store, status: &statusStore, accessibleFetcher: fetcher}
++
++	return r, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
+ }
+ 
+ func (r *REST) NamespaceScoped() bool {
+@@ -114,8 +161,123 @@ func (r *REST) NewList() runtime.Object {
+ 	return r.store.NewList()
+ }
+ 
++// isFilteringEnabled returns true if namespace filtering is configured.
++func (r *REST) isFilteringEnabled() bool {
++	return r.accessibleFetcher != nil
++}
++
++// shouldFilter checks if filtering should be applied for this request.
++// Filtering is triggered when:
++// 1. accessibleFetcher is configured (Deckhouse filtering enabled)
++// 2. IsNamespaceFilteringMode(ctx) is true (user was denied by authorizer but bypassed)
++func (r *REST) shouldFilter(ctx context.Context) bool {
++	return r.isFilteringEnabled() && filters.IsNamespaceFilteringMode(ctx)
++}
++
++// getAccessibleNamespaces fetches accessible namespace names for the user from external service.
++func (r *REST) getAccessibleNamespaces(ctx context.Context) ([]string, error) {
++	userInfo, ok := request.UserFrom(ctx)
++	if !ok {
++		return nil, fmt.Errorf("no user info in context")
++	}
++
++	// Convert extra from map[string][]string to what fetcher expects
++	extra := make(map[string][]string)
++	for k, v := range userInfo.GetExtra() {
++		extra[k] = v
++	}
++
++	return r.accessibleFetcher.FetchAccessibleNamespaces(
++		ctx,
++		userInfo.GetName(),
++		userInfo.GetGroups(),
++		extra,
++	)
++}
++
++// isNamespaceAccessibleToUser checks if a specific namespace is accessible to the user.
++func (r *REST) isNamespaceAccessibleToUser(ctx context.Context, name string) (bool, error) {
++	userInfo, ok := request.UserFrom(ctx)
++	if !ok {
++		return false, fmt.Errorf("no user info in context")
++	}
++
++	extra := make(map[string][]string)
++	for k, v := range userInfo.GetExtra() {
++		extra[k] = v
++	}
++
++	return r.accessibleFetcher.IsNamespaceAccessible(
++		ctx,
++		userInfo.GetName(),
++		userInfo.GetGroups(),
++		extra,
++		name,
++	)
++}
++
++// filterNamespaceList filters a NamespaceList to only include accessible namespaces.
++func (r *REST) filterNamespaceList(list runtime.Object, accessibleNames []string) runtime.Object {
++	nsList, ok := list.(*api.NamespaceList)
++	if !ok {
++		return list
++	}
++
++	accessibleSet := make(map[string]struct{}, len(accessibleNames))
++	for _, name := range accessibleNames {
++		accessibleSet[name] = struct{}{}
++	}
++
++	filtered := &api.NamespaceList{
++		TypeMeta: nsList.TypeMeta,
++		ListMeta: nsList.ListMeta,
++		Items:    make([]api.Namespace, 0, len(accessibleNames)),
++	}
++
++	for _, ns := range nsList.Items {
++		if _, ok := accessibleSet[ns.Name]; ok {
++			filtered.Items = append(filtered.Items, ns)
++		}
++	}
++
++	return filtered
++}
++
+ func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
+-	return r.store.List(ctx, options)
++	// Fast path: no filtering needed (either disabled or user has full access)
++	if !r.shouldFilter(ctx) {
++		return r.store.List(ctx, options)
++	}
++
++	// Slow path: user was denied list permission, fetch accessible namespaces and filter
++	klog.V(4).Info("Namespace filtering mode active, fetching accessible namespaces")
++
++	accessibleNames, err := r.getAccessibleNamespaces(ctx)
++	if err != nil {
++		klog.Warningf("Failed to fetch accessible namespaces: %v, returning forbidden", err)
++		return nil, apierrors.NewForbidden(api.Resource("namespaces"), "", fmt.Errorf("cannot list namespaces"))
++	}
++
++	if len(accessibleNames) == 0 {
++		// User has no accessible namespaces
++		return &api.NamespaceList{
++			TypeMeta: metav1.TypeMeta{
++				Kind:       "NamespaceList",
++				APIVersion: "v1",
++			},
++		}, nil
++	}
++
++	// Get full list from store (using privileged context to bypass RBAC at storage level)
++	// Note: The store.List doesn't do RBAC checks, it's done at the handler level
++	fullList, err := r.store.List(ctx, options)
++	if err != nil {
++		klog.Errorf("Failed to list namespaces from store: %v", err)
++		return nil, apierrors.NewInternalError(err)
++	}
++
++	// Filter the list
++	return r.filterNamespaceList(fullList, accessibleNames), nil
+ }
+ 
+ func (r *REST) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (runtime.Object, error) {
+@@ -127,10 +289,39 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
+ }
+ 
+ func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
++	// Fast path: no filtering needed (either disabled or user has full access)
++	if !r.shouldFilter(ctx) {
++		return r.store.Get(ctx, name, options)
++	}
++
++	// Slow path: user was denied get permission, check if namespace is accessible via external service
++	klog.V(4).Infof("Namespace filtering mode active for get %s, checking accessible namespaces", name)
++
++	accessible, err := r.isNamespaceAccessibleToUser(ctx, name)
++	if err != nil {
++		// Return Forbidden when permission-browser-apiserver is unavailable.
++		// This is consistent with vanilla Kubernetes behavior and signals to clients
++		// that the operation failed due to authorization issues.
++		klog.Warningf("Failed to check namespace accessibility for %s: %v, returning forbidden", name, err)
++		return nil, apierrors.NewForbidden(api.Resource("namespaces"), name, fmt.Errorf("cannot get namespace"))
++	}
++
++	if !accessible {
++		// Return NotFound instead of Forbidden to avoid existence disclosure.
++		// This is safe because we only reach here when we successfully contacted
++		// permission-browser-apiserver and it confirmed the user has no access.
++		klog.V(4).Infof("Namespace %s is not accessible to user, returning not found", name)
++		return nil, apierrors.NewNotFound(api.Resource("namespaces"), name)
++	}
++
++	// User has access, get the namespace
+ 	return r.store.Get(ctx, name, options)
+ }
+ 
+ func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
++	// Note: Watch filtering is not implemented in MVP.
++	// If user doesn't have watch permission, kube-apiserver will return 403.
++	// Future improvement: filter watch events based on accessible namespaces.
+ 	return r.store.Watch(ctx, options)
+ }
+ 
+diff --git a/pkg/registry/core/rest/storage_core_generic.go b/pkg/registry/core/rest/storage_core_generic.go
+index 664724f3bc0..bc6414fd1ba 100644
+--- a/pkg/registry/core/rest/storage_core_generic.go
++++ b/pkg/registry/core/rest/storage_core_generic.go
+@@ -96,7 +96,11 @@ func (c *GenericConfig) NewRESTStorage(apiResourceConfigSource serverstorage.API
+ 		return genericapiserver.APIGroupInfo{}, err
+ 	}
+ 
+-	namespaceStorage, namespaceStatusStorage, namespaceFinalizeStorage, err := namespacestore.NewREST(restOptionsGetter)
++	// Deckhouse: Always use filtering-enabled storage with loopback client for proper auth.
++	// Actual filtering only happens when IsNamespaceFilteringMode(ctx) is true
++	// (set by WithAuthorization filter when user does not have list/get namespaces permission).
++	// The loopback client ensures authenticated calls to permission-browser-apiserver via aggregated API.
++	namespaceStorage, namespaceStatusStorage, namespaceFinalizeStorage, err := namespacestore.NewRESTWithDeckhouseFiltering(restOptionsGetter, c.LoopbackClientConfig)
+ 	if err != nil {
+ 		return genericapiserver.APIGroupInfo{}, err
+ 	}
+diff --git a/staging/src/k8s.io/api/core/v1/well_known_labels.go b/staging/src/k8s.io/api/core/v1/well_known_labels.go
+index 8c3cb87b82a..46d0768fdc0 100644
+--- a/staging/src/k8s.io/api/core/v1/well_known_labels.go
++++ b/staging/src/k8s.io/api/core/v1/well_known_labels.go
+@@ -71,4 +71,25 @@ const (
+ 	LabelNodeExcludeBalancers = "node.kubernetes.io/exclude-from-external-load-balancers"
+ 	// LabelMetadataName is the label name which, in-tree, is used to automatically label namespaces, so they can be selected easily by tools which require definitive labels
+ 	LabelMetadataName = "kubernetes.io/metadata.name"
++
++	// Resource quota control labels
++	LabelResourceQuotaIgnore          = "resource-quota-overrides.deckhouse.io/ignore"
++	LabelResourceQuotaDiscountStorage = "resource-quota-overrides.deckhouse.io/discount-storage"
++	LabelResourceQuotaCapStorage      = "resource-quota-overrides.deckhouse.io/cap-storage"
++	LabelResourceQuotaDiscountCPU     = "resource-quota-overrides.deckhouse.io/discount-cpu"
++	LabelResourceQuotaCapCPU          = "resource-quota-overrides.deckhouse.io/cap-cpu"
++	LabelResourceQuotaDiscountMemory  = "resource-quota-overrides.deckhouse.io/discount-memory"
++	LabelResourceQuotaCapMemory       = "resource-quota-overrides.deckhouse.io/cap-memory"
+ )
++
++// ResourceQuotaLabels is a list of all resource quota labels.
++// This list is used to check if any of these labels have changed on a pod or PVC.
++var ResourceQuotaLabels = []string{
++	LabelResourceQuotaIgnore,
++	LabelResourceQuotaDiscountStorage,
++	LabelResourceQuotaCapStorage,
++	LabelResourceQuotaDiscountCPU,
++	LabelResourceQuotaCapCPU,
++	LabelResourceQuotaDiscountMemory,
++	LabelResourceQuotaCapMemory,
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
 index 61efeae69ca..30b55c8ab95 100644
@@ -4548,6 +6259,96 @@ index 9185278f06f..9550a22c289 100644
  	// TODO(audit): hook into the serializer to avoid double conversion
  	var err error
  	ae.ResponseObject, err = encodeObject(obj, gv, s)
+diff --git a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
+index bdc1b1790e3..57a3522222b 100644
+--- a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
++++ b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
+@@ -22,6 +22,7 @@ import (
+ 	"crypto/x509/pkix"
+ 	"encoding/hex"
+ 	"fmt"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"strings"
+ 	"time"
+@@ -178,6 +179,13 @@ func (a *Authenticator) AuthenticateRequest(req *http.Request) (*authenticator.R
+ 
+ 	remaining := req.TLS.PeerCertificates[0].NotAfter.Sub(time.Now())
+ 	clientCertificateExpirationHistogram.WithContext(req.Context()).Observe(remaining.Seconds())
++
++	if remaining < (7 * 24 * time.Hour) {
++		klog.Warningf("%s %s: [%s %s]: certificate expires in one week. Issuer: %s, Subject: %s, NotBefore: %s, NotAfter: %s",
++			req.Method, req.RequestURI, req.UserAgent(), req.RemoteAddr,
++			req.TLS.PeerCertificates[0].Issuer, req.TLS.PeerCertificates[0].Subject, req.TLS.PeerCertificates[0].NotBefore, req.TLS.PeerCertificates[0].NotAfter)
++	}
++
+ 	chains, err := req.TLS.PeerCertificates[0].Verify(optsCopy)
+ 	if err != nil {
+ 		return nil, false, fmt.Errorf(
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
+index eec02e5722f..d001f27b898 100644
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
+@@ -47,6 +47,37 @@ const (
+ 	reasonError    = "internal error"
+ )
+ 
++// Deckhouse: Context key for namespace filtering mode.
++// When set to true, indicates that the request was denied by authorizer but bypassed
++// because it's a namespace list/get request that should be filtered by accessible namespaces.
++type namespaceFilteringModeKey struct{}
++
++// IsNamespaceFilteringMode returns true if the request context indicates that
++// namespace filtering should be applied (user doesn't have full list/get namespaces permission).
++// Deckhouse-specific: used for ACL-based namespace filtering.
++func IsNamespaceFilteringMode(ctx context.Context) bool {
++	val, ok := ctx.Value(namespaceFilteringModeKey{}).(bool)
++	return ok && val
++}
++
++// WithNamespaceFilteringMode returns a new context with namespace filtering mode set.
++// This is primarily for testing purposes.
++// Deckhouse-specific: used for ACL-based namespace filtering.
++func WithNamespaceFilteringMode(ctx context.Context) context.Context {
++	return context.WithValue(ctx, namespaceFilteringModeKey{}, true)
++}
++
++// isNamespaceListOrGetRequest checks if the request is for listing or getting namespaces.
++// Deckhouse-specific: these requests are bypassed from 403 to allow filtered responses.
++func isNamespaceListOrGetRequest(requestInfo *request.RequestInfo) bool {
++	return requestInfo != nil &&
++		requestInfo.IsResourceRequest &&
++		requestInfo.APIGroup == "" &&
++		requestInfo.Resource == "namespaces" &&
++		requestInfo.Subresource == "" &&
++		(requestInfo.Verb == "list" || requestInfo.Verb == "get")
++}
++
+ type recordAuthorizationMetricsFunc func(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time)
+ 
+ // WithAuthorization passes all authorized requests on to handler, and returns a forbidden error otherwise.
+@@ -89,6 +120,21 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+ 			return
+ 		}
+ 
++		// Deckhouse: bypass 403 for namespace list/get requests to allow filtered responses.
++		// The storage layer will check IsNamespaceFilteringMode() and filter accordingly.
++		requestInfo, _ := request.RequestInfoFrom(ctx)
++		if isNamespaceListOrGetRequest(requestInfo) {
++			klog.V(4).InfoS("Bypassing authorization denial for namespace request, will filter in storage",
++				"URI", req.RequestURI, "verb", requestInfo.Verb, "reason", reason)
++			audit.AddAuditAnnotations(ctx,
++				decisionAnnotationKey, "allow-filtered", // Deckhouse: custom decision for audit
++				reasonAnnotationKey, "namespace filtering mode")
++			// Set context flag for storage layer to know filtering is required
++			filteredCtx := context.WithValue(ctx, namespaceFilteringModeKey{}, true)
++			handler.ServeHTTP(w, req.WithContext(filteredCtx))
++			return
++		}
++
+ 		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
+ 		audit.AddAuditAnnotations(ctx,
+ 			decisionAnnotationKey, decisionForbid,
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
 index acfff1961c9..440f7694301 100644
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
