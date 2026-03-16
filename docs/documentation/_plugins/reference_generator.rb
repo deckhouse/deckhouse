@@ -30,7 +30,6 @@ module ReferenceGenerator
       self.data = {
         'title' => site.data['i18n']['common']['d8_cli_reference_title'][lang],
         'description' => site.data['i18n']['common']['d8_cli_reference_description'][lang],
-        'd8Version' => site.data['reference']['d8-cli']['version'],
         'searchable' => true,
         'permalink' => "%s/%s" % [@lang, @path],
         'url' => "%s/%s" % [@lang, @path],
