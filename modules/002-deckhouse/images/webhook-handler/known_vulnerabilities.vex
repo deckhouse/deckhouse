@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 9,
+  "version": 10,
   "statements": [
     {
       "vulnerability": {
@@ -17,8 +17,64 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Функционал извлечения tar-архивов с использованием уязвимого fallback-кода pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все используемые версии Python соответствуют требованиям PEP 706, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2025-10-09T14:31:32.069712443Z"
+    },
+    {
+      "vulnerability": { "name": "CVE-2025-68121" },
+      "products": [{ "@id": "pkg:golang/stdlib@v1.25.5" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "TLS session resumption vulnerability - Функционал клонирования конфигурации TLS (Config.Clone) и мутации полей ClientCAs/RootCAs между рукопожатиями в стандартной библиотеке Go (stdlib) версии 1.25.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все взаимодействия с TLS проходят через стандартные сценарии без изменения конфигурации между сессиями, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-16T12:00:00Z"
+    },
+    {
+      "vulnerability": { "name": "CVE-2026-26007" },
+      "products": [{ "@id": "pkg:pypi/cryptography@44.0.1" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Cryptography SECT curves subgroup validation - Функционал работы с кривыми SECT (binary elliptic) и функциями public_key_from_numbers(), load_der_public_key(), load_pem_public_key() библиотеки cryptography версии 44.0.1 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все криптографические операции выполняются с использованием иных типов кривых и путей кода, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-16T12:00:00Z"
+    },
+    {
+      "vulnerability": { "name": "CVE-2026-24051" },
+      "products": [{ "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.35.0" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "OpenTelemetry SDK path hijacking - Уязвимый код определения ресурса хоста (sdk/resource, выполнение ioreg) в библиотеке go.opentelemetry.io/otel/sdk не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы в контексте, допускающем модификацию переменной окружения PATH. Развёртывание осуществляется в контролируемой среде без возможности подмены пути поиска исполняемых файлов, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-16T12:00:00Z"
+    },
+    {
+      "vulnerability": { "name": "CVE-2025-61726" },
+      "products": [{ "@id": "pkg:golang/stdlib@v1.25.5" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "net/http ParseForm memory exhaustion - Функционал парсинга URL-encoded форм с произвольным количеством пар ключ-значение (Request.ParseForm) в стандартной библиотеке Go (stdlib) версии 1.25.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы в сценариях, допускающих поступление недоверенных данных. Обработка входящих запросов ограничена и валидируется, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-16T12:00:00Z"
+    },
+    {
+      "vulnerability": { "name": "CVE-2025-61728" },
+      "products": [{ "@id": "pkg:golang/stdlib@v1.25.5" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "archive/zip denial of service - Функционал обработки и открытия произвольных ZIP-архивов в стандартной библиотеке Go (stdlib) версии 1.25.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Приложение не обращается к пакету archive/zip для разбора неподконтрольных архивов, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-16T12:00:00Z"
+    },
+    {
+      "vulnerability": { "name": "CVE-2025-61730" },
+      "products": [{ "@id": "pkg:golang/stdlib@v1.25.5" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "crypto/tls handshake encryption level - Уязвимость, связанная с обработкой сообщений TLS 1.3 на неверном уровне шифрования при инъекции сообщений в рукопожатие, в стандартной библиотеке Go (stdlib) версии 1.25.5 не может быть реализована в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Для эксплуатации требуется сетевая инъекция сообщений в момент рукопожатия, что исключено в контролируемой среде развёртывания.",
+      "timestamp": "2026-03-16T12:00:00Z"
+    },
+    {
+      "vulnerability": { "name": "CVE-2026-1703" },
+      "products": [{ "@id": "pkg:pypi/pip@25.3" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Pip path traversal in wheel extraction - Функционал извлечения wheel-архивов с именами файлов, содержащими path traversal (../), в pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Установка пакетов выполняется из доверенных источников с контролируемым составом, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-16T12:00:00Z"
     }
   ],
   "timestamp": "2025-10-09T14:31:31Z",
-  "last_updated": "2025-10-09T14:31:32Z"
+  "last_updated": "2026-03-16T12:00:00Z"
 }
