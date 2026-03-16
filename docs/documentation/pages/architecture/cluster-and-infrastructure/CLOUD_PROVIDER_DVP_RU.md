@@ -31,7 +31,7 @@ description: Архитектура модуля cloud-provider-dvp в Deckhouse
 1. **Capdvp-controller-manager** — Kubernetes Cluster API Provider для DVP. [Cluster API](https://github.com/kubernetes-sigs/cluster-api) является расширением для Kubernetes, которое дает возможность управлять Kubernetes-кластерами как кастомными ресурсами внутри другого Kubernetes-кластера. Cluster API Provider позволяет для кластеров под управлением Cluster API заказывать виртуальные машины в инфраструктуре облачного провайдера, в данном случае DVP. **Capdvp-controller-manager** работает со следующими кастомными ресурсами:
 
    * DeckhouseCluster — описание кластера на базе DVP.
-   * DeckhouseMachineTemplate — шаблон с описанием характеристик создаваемых машин в облаке. 
+   * DeckhouseMachineTemplate — шаблон с описанием характеристик создаваемых машин в облаке.
    * DeckhouseMachine — описание характеристик созданной на основе DeckhouseMachineTemplate машины.
 
    Состоит из одного контейнера:
@@ -41,22 +41,22 @@ description: Архитектура модуля cloud-provider-dvp в Deckhouse
 2. **Сloud-controller-manager** — реализация [Сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для DVP, обеспечивает взаимодействие с облаком DVP и выполняет следующие функции:
 
    * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
-   
+
      * заполняет поля `spec.providerID` и `nodeInfo` ресурса Node;
      * проверяет наличие виртуальной машины в облаке и при ее отсутствии удаляет ресурс Node в кластере.
-   
+
    * при создании ресурса Service типа LoadBalancer в Kubernetes создаёт балансировщик в облаке, который направит трафик извне к узлам кластера.
 
    Подробнее о **Сloud-controller-manager** можно почитать в [документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/)
 
    Состоит из одного контейнера:
-    
+
    * **dvp-cloud-controller-manager**.
 
-3. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-dvp`. Например, для DVP — это такие параметры, как список зон доступности, ресурсов StorageClass и т.д. 
+3. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-dvp`. Например, для DVP — это такие параметры, как список зон доступности, ресурсов StorageClass и т.д.
 
    Состоит из следующих контейнеров:
-    
+
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера **cloud-data-discoverer**.
 
@@ -98,8 +98,8 @@ description: Архитектура модуля cloud-provider-dvp в Deckhouse
 
    * terraform/OpenTofu-провайдер;
    * terraform-модули;
-   * layouts - набор схем размещения в облаке: как создается базовая инфраструктура, как и с какими дополнительными характеристиками для данного размещения должны создаваться узлы. Например, для одной схемы узлы будут иметь публичные IP, а для другой нет. Каждый layout должен иметь 3 модуля: 
-   
+   * layouts - набор схем размещения в облаке: как создается базовая инфраструктура, как и с какими дополнительными характеристиками для данного размещения должны создаваться узлы. Например, для одной схемы узлы будут иметь публичные IP, а для другой нет. Каждый layout должен иметь 3 модуля:
+
      * `base-infrastructure` (базовая инфраструктура, например, создаются сети, но может быть и пустым);
      * `master-node`;
      * `static-node`.
