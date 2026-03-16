@@ -1,0 +1,56 @@
+{{- $version := "11.02.26" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - registry-proxy.tar
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "registry-proxy": "{{ $version }}" }
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- image: common/crane
+  add: /crane
+  to: /crane
+  before: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  before: setup
+dependencies:
+- image: registry/registry-proxy
+  before: setup
+  imports:
+  - type: ImageDigest
+    targetEnv: IMAGE_DIGEST
+  - type: ImageRepo
+    targetEnv: IMAGE_REPO
+secrets:
+- id: REGISTRY_USER
+  env: REGISTRY_USER
+- id: REGISTRY_PASSWORD
+  env: REGISTRY_PASSWORD
+shell:
+  setup:
+  - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
+  - /crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
+  - /crane pull --format oci $IMAGE_REPO@$IMAGE_DIGEST $param /tmp/image
+  - rm -f ~/.docker/config.json
+  - jq '.manifests[0].annotations = {"org.opencontainers.image.ref.name":"deckhouse.local/images:registry-proxy"}' /tmp/image/index.json > /tmp/index.updated.json && mv /tmp/index.updated.json /tmp/image/index.json
+  - tar -C /tmp/image -cf /registry-proxy.tar .
+  - rm -rf /tmp/image

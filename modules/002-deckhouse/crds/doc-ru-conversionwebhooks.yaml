@@ -1,0 +1,157 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Кастомный ресурс для настройки вебхуков конвертации версий CRD.
+
+            Один кастомный ресурс ConversionWebhook описывает обработчики конвертации между версиями пользовательских ресурсов.
+          properties:
+            apiVersion:
+              description: |- 
+                APIVersion определяет версионную схему этого представления объекта. Серверы должны преобразовывать распознанные схемы в последнее внутреннее значение и могут отклонять нераспознанные значения. Более подробно: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources.
+            context:
+              description: |
+                Запускает хук при изменениях объектов Kubernetes.
+              items:
+                properties:
+                  kubernetes:
+                    properties:
+                      allowFailure:
+                        description: |
+                          Если `true`, Shell-operator игнорирует ошибки выполнения хука.
+                          Если `false` или параметр не установлен, хук перезапускается через 5 секунд после ошибки.
+                      apiVersion:
+                        description: |
+                          Необязательная группа и версия API объекта.
+                          Например, `v1` для основных объектов (Pod и т.д.), `rbac.authorization.k8s.io/v1beta1` для ClusterRole и `monitoring.coreos.com/v1` для prometheus-operator.
+                      fieldSelector:
+                        properties:
+                          matchExpressions:
+                            items:
+                              properties:
+                                field:
+                                  description: |
+                                    Имя поля для фильтрации.
+                                operator:
+                                  description: |
+                                    Оператор для сравнения поля со значением.
+                                value:
+                                  description: |
+                                    Значение для сравнения с полем.
+                      includeSnapshotsFrom:
+                        description: |
+                          Массив имен привязок kubernetes в хуке.
+                          При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле `snapshots`. Возможно само-включение.
+                      jqFilter:
+                        description: |
+                          Необязательный параметр, который указывает фильтрацию событий с использованием синтаксиса jq.
+                          Хук будет запущен на событии "Modified" только если результат фильтра изменился после последнего события.
+                      kind:
+                        description: |
+                          Тип отслеживаемого ресурса Kubernetes. Это поле обязательно.
+                      labelSelector:
+                        description: |
+                          Селектор меток для фильтрации ресурсов. Результат `matchLabels` и `matchExpressions` объединяется через `AND`. Пустой селектор меток соответствует всем объектам. Нулевой селектор меток не соответствует ни одному объекту.
+                        properties:
+                          matchExpressions:
+                            description: |-
+                              Список фильтров на основе выражений.
+                              Итоговый результат — результат пересечения множеств, определяемых всеми фильтрами в списке (операция `И`).
+                            items:
+                              description: |-
+                                Селектор, содержащий значения, ключ и оператор, который  связывает ключ и значения.
+                              properties:
+                                key:
+                                  description: |-
+                                    Ключ метки, к которому применяется селектор.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    Представляет соотношение ключа с набором значений.
+                                    Допустимые операторы: `In`, `NotIn`, `Exists` и `DoesNotExist`.
+                                  type: string
+                                values:
+                                  description: |-
+                                    `values` — массив строковых значений. Если в `operator` значение `In` или `NotIn`, массив значений не должен быть пустым. Если в `operator` значение `Exists` или `DoesNotExist`, массив значений должен быть пустым. Этот массив заменяется во время стратегического слияния патчей.
+                          matchLabels:
+                            description: |-
+                              Карта пар {ключ, значение}. Одна пара {ключ, значение} в карте `matchLabels` эквивалентна элементу `matchExpressions`, ключевое поле которого — `key`,  оператор — `In`, а массив значений содержит только «значение». Требования объединяются оператором `AND`.
+                      nameSelector:
+                        properties:
+                          matchNames:
+                            description: |
+                              Список имен ресурсов для отслеживания.
+                      namespace:
+                        description: |
+                          Фильтры для выбора пространств имен.
+                        properties:
+                          labelSelector:
+                            description: |
+                              Селектор меток для фильтрации пространств имен.
+                            properties:
+                              matchExpressions:
+                                description: |-
+                                  Список фильтров на основе выражений.
+                                  Итоговый результат — результат пересечения множеств, определяемых всеми фильтрами в списке (операция `И`).
+                                items:
+                                  description: |-
+                                    Селектор, содержащий значения, ключ и оператор, который  связывает ключ и значения.
+                                  properties:
+                                    key:
+                                      description: |-
+                                        Ключ метки, к которому применяется селектор.
+                                      type: string
+                                    operator:
+                                      description: |-
+                                        Представляет соотношение ключа с набором значений.
+                                        Допустимые операторы: `In`, `NotIn`, `Exists` и `DoesNotExist`.
+                                      type: string
+                                    values:
+                                      description: |-
+                                        `values` — массив строковых значений. Если в `operator` значение `In` или `NotIn`, массив значений не должен быть пустым. Если в `operator` значение `Exists` или `DoesNotExist`, массив значений должен быть пустым. Этот массив заменяется во время стратегического слияния патчей.
+                              matchLabels:
+                                description: |-
+                                  Карта пар {ключ, значение}. Одна пара {ключ, значение} в карте `matchLabels` эквивалентна элементу `matchExpressions`, ключевое поле которого — `key`,  оператор — `In`, а массив значений содержит только «значение». Требования объединяются оператором `AND`.
+                          nameSelector:
+                            description: |
+                              Селектор имен для фильтрации пространств имен.
+                      queue:
+                        description: |
+                          Имя отдельной очереди. Может использоваться для выполнения долго работающих хуков параллельно с хуками в «основной» очереди.
+                      resynchronizationPeriod:
+                        description: |
+                          Период ресинхронизации для привязки.
+                  name:
+                    description: |
+                      Используется для различения разных привязок во время выполнения.
+            conversions:
+              description: |
+                Эта привязка превращает хук в обработчик для конвертации, определенной в CustomResourceDefinition.
+                Shell-operator обновляет CRD с помощью `.spec.conversion`, запускает HTTPS сервер и выполняет хуки для обработки запросов ConversionReview.
+              items:
+                properties:
+                  from:
+                    description: |
+                      Версия пользовательского ресурса, которую хук может конвертировать.
+                  handler:
+                    description: |
+                      Код обработчика конвертации.
+                    properties:
+                      python:
+                        description: |
+                          Python-скрипт обработчика для объекта.
+                  includeSnapshotsFrom:
+                    description: |
+                      Массив имен привязок kubernetes в хуке.
+                      При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле `snapshots`.
+                  to:
+                    description: |
+                      Версия пользовательского ресурса, которую хук может производить.
+            kind:
+              description: |-
+                Kind — это строковое значение, представляющее REST-ресурс, который описывает этот объект.
+                Серверы могут определять его на основе конечной точки, к которой клиент отправляет запросы.
+                Не может быть изменено. Записывается в CamelCase.
+                Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds.

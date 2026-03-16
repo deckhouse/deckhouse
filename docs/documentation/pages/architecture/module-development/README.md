@@ -2,6 +2,7 @@
 title: "Deckhouse Kubernetes Platform module development"
 permalink: en/architecture/module-development/
 lang: en
+description: Overview of Deckhouse Kubernetes Platform module architecture — module types, development stages, required tools, and entry points for module development.
 ---
 
 A module is a set of resources and applications designed to extend the functionality of the Deckhouse Kubernetes Platform.

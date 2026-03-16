@@ -56,5 +56,5 @@ If, after the license token expired, the Deckhouse Kubernetes Platform (DKP) pod
 1. Repeat the [standard procedure](./third-party.html) for changing the registry, substituting your token, the required registry address, and the edition instead of `example`:
 
    ```shell
-   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user licence-token --password MY-PASSWORD registry-example.deckhouse.ru/deckhouse/example
+   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password MY-PASSWORD registry-example.deckhouse.ru/deckhouse/example
    ```

@@ -1,4 +1,4 @@
-$(window).on('load', function() {
+document.addEventListener('DOMContentLoaded', () => {
     const navigationContainer = document.querySelector('.navigation__container');
 
     if (navigationContainer) {

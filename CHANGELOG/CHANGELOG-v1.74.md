@@ -75,6 +75,7 @@
     Workload Pods are no longer denied by unrelated SecurityPolicy checks (e.g. hostNetwork/hostPort) when corresponding policy fields are not explicitly set.
  - **[admission-policy-engine]** Refactor constraint templates [#17882](https://github.com/deckhouse/deckhouse/pull/17882)
  - **[admission-policy-engine]** Allow DELETE operations, add containerPorts check in case of hostNetwork [#17084](https://github.com/deckhouse/deckhouse/pull/17084)
+ - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#18377](https://github.com/deckhouse/deckhouse/pull/18377)
  - **[candi]** Bashible script fix to handle multiple GPUs [#18158](https://github.com/deckhouse/deckhouse/pull/18158)
  - **[candi]** fix if node has bashible-uninitialized taint in race condition. [#18133](https://github.com/deckhouse/deckhouse/pull/18133)
  - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#16625](https://github.com/deckhouse/deckhouse/pull/16625)
@@ -91,6 +92,7 @@
  - **[candi]** Excluded I/O loopback from node IP discovery. [#16179](https://github.com/deckhouse/deckhouse/pull/16179)
  - **[cilium-hubble]** Fix affinity in HA mode [#16862](https://github.com/deckhouse/deckhouse/pull/16862)
     In HA cluster mode hubble-ui and hubble-relay will be restarted
+ - **[cloud-provider-aws]** fix getInstancesByIDs to comply with the describeInstanceBatcher. [#18312](https://github.com/deckhouse/deckhouse/pull/18312)
  - **[cloud-provider-aws]** fix cve [#17470](https://github.com/deckhouse/deckhouse/pull/17470)
  - **[cloud-provider-aws]** fix cve [#16843](https://github.com/deckhouse/deckhouse/pull/16843)
  - **[cloud-provider-azure]** fixed patch in azure [#17696](https://github.com/deckhouse/deckhouse/pull/17696)
@@ -106,6 +108,8 @@
  - **[cloud-provider-huaweicloud]** fix cve [#17171](https://github.com/deckhouse/deckhouse/pull/17171)
  - **[cloud-provider-huaweicloud]** Updated the `caphc-controller-manager` component for the Huawei Cloud provider. [#16679](https://github.com/deckhouse/deckhouse/pull/16679)
  - **[cloud-provider-huaweicloud]** Added `enterpriseProjectID` support for Cinder-based (<10Gi) volumes. [#16618](https://github.com/deckhouse/deckhouse/pull/16618)
+ - **[cloud-provider-openstack]** fix LB.enabled flag [#18402](https://github.com/deckhouse/deckhouse/pull/18402)
+ - **[cloud-provider-openstack]** Add loadBalancer.enabled flag to prevent CCM crashes on k8s 1.32 without Octavia service [#18228](https://github.com/deckhouse/deckhouse/pull/18228)
  - **[cloud-provider-openstack]** fix cve [#17082](https://github.com/deckhouse/deckhouse/pull/17082)
  - **[cloud-provider-openstack]** Fixed discovery data merging for hybrid cases. [#16067](https://github.com/deckhouse/deckhouse/pull/16067)
  - **[cloud-provider-vcd]** fix cve [#17136](https://github.com/deckhouse/deckhouse/pull/17136)
@@ -149,6 +153,8 @@
  - **[dhctl]** Fixed a memory leak in Terraform exporter. [#15350](https://github.com/deckhouse/deckhouse/pull/15350)
  - **[extended-monitoring]** Cleanup exporter metrics when the monitored resource has been deleted [#17988](https://github.com/deckhouse/deckhouse/pull/17988)
  - **[extended-monitoring]** Add namespace-scoped overrides [#17213](https://github.com/deckhouse/deckhouse/pull/17213)
+ - **[ingress-nginx]** CVE-2026-3288 fix is backported in all Ingress-Nginx controllers. [#18410](https://github.com/deckhouse/deckhouse/pull/18410)
+    All Ingress-Nginx controller pods will be restarted.
  - **[ingress-nginx]** Nginx and module's dependencies are updated. [#18156](https://github.com/deckhouse/deckhouse/pull/18156)
     All ingress-nginx controller pods will be restared.
  - **[ingress-nginx]** A false-positive trigger of alert GeoIPDownloadErrorDetectedFromMaxMind is fixed. [#17741](https://github.com/deckhouse/deckhouse/pull/17741)
@@ -181,6 +187,8 @@
  - **[node-manager]** Moved `bb-label-node-bashible-first-run-finished` to a Bashible template. [#16307](https://github.com/deckhouse/deckhouse/pull/16307)
  - **[prometheus]** Make Grafana redirect ingress pass the annotations validation. [#17816](https://github.com/deckhouse/deckhouse/pull/17816)
  - **[prometheus]** Added `ingressClassName` to the `grafana/prometheus` redirect Ingress. [#16116](https://github.com/deckhouse/deckhouse/pull/16116)
+ - **[registry]** Updated auth image Go dependencies to fix Go CVEs. [#18232](https://github.com/deckhouse/deckhouse/pull/18232)
+    Registry pods will be restarted.
  - **[registry]** Fixed validation of input image list changes in the registry checker. [#17553](https://github.com/deckhouse/deckhouse/pull/17553)
  - **[registry]** Omitted the auth field in DockerConfig when credentials (username and password) are empty. [#17333](https://github.com/deckhouse/deckhouse/pull/17333)
  - **[registrypackages]** Added `which` to RPP. [#16563](https://github.com/deckhouse/deckhouse/pull/16563)

@@ -13,6 +13,10 @@ Ability to create LoadBalancer with type `none`. LoadBalancer with this type wil
 
 We shouldn't delete Ingress SG rule, if it allows access from configured "ElbSecurityGroup", so that we won't disrupt access to Nodes from other ELBs.
 
+## 004-bump-deps.patch
+
+Update dependencies
+
 ## 005-fix-list-routes-method.patch
 
 Modify `ListRoutes` method to handle errors gracefully without blocking reconcile loop.
@@ -20,3 +24,7 @@ Modify `ListRoutes` method to handle errors gracefully without blocking reconcil
 ## 006-publicNetworkAllowList-for-NLB.patch
 
 Adds support for PublicNetworkAllowList to restrict incoming traffic to NLBs
+
+## 007-fix-getInstancesByIDs-batcher.patch
+
+fix getInstancesByIDs to comply with describeInstanceBatcher single-ID contract

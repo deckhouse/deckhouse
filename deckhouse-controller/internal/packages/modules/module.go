@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"sync/atomic"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
@@ -34,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -52,6 +55,14 @@ import (
 type Module struct {
 	name string // Package name
 	path string // path to the package dir on fs
+
+	// version is the parsed semver version of the package, derived from definition.Version.
+	// Falls back to "0.0.0" if the version string cannot be parsed.
+	version *semver.Version
+
+	// running tracks whether OnStartup hooks have completed successfully.
+	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
+	running atomic.Bool
 
 	definition Definition        // Module definition
 	digests    map[string]string // Package digests
@@ -104,6 +115,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m := new(Module)
 
 	m.name = name
+	m.running = atomic.Bool{}
 
 	m.path = cfg.Path
 	m.definition = cfg.Definition
@@ -116,15 +128,21 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.globalValuesGetter = cfg.GlobalValuesGetter
 	m.logger = logger
 
+	parsed, err := semver.NewVersion(m.definition.Version)
+	if err != nil {
+		parsed = semver.MustParse("0.0.0")
+	}
+
+	m.version = parsed
+
 	m.hooks = hooks.NewStorage()
-	if err := m.addHooks(cfg.Hooks...); err != nil {
+	if err = m.addHooks(cfg.Hooks...); err != nil {
 		return nil, fmt.Errorf("add hooks: %v", err)
 	}
 
-	var err error
 	m.values, err = values.NewStorage(m.name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
-		return nil, fmt.Errorf("new values storage: %v", err)
+		return nil, fmt.Errorf("build values storage: %v", err)
 	}
 
 	return m, nil
@@ -193,8 +211,8 @@ func (m *Module) GetName() string {
 }
 
 // GetVersion return the package version
-func (m *Module) GetVersion() string {
-	return m.definition.Version
+func (m *Module) GetVersion() *semver.Version {
+	return m.version
 }
 
 // GetPath returns path to the package dir
@@ -202,8 +220,8 @@ func (m *Module) GetPath() string {
 	return m.path
 }
 
-// GetQueues returns package queues from all hooks
-func (m *Module) GetQueues() []string {
+// GetHooksQueues returns package queues from all hooks
+func (m *Module) GetHooksQueues() []string {
 	var res []string //nolint:prealloc
 	scheduleHooks := m.hooks.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range scheduleHooks {
@@ -221,6 +239,20 @@ func (m *Module) GetQueues() []string {
 
 	slices.Sort(res)
 	return slices.Compact(res)
+}
+
+// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
+// If include is provided, only hooks matching those names are included.
+func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
+	d := make(map[string]interface{})
+	for _, h := range m.hooks.GetHooks() {
+		if len(include) == 0 || slices.Contains(include, h.GetName()) {
+			d[h.GetName()] = h.GetHookController().SnapshotsDump()
+		}
+	}
+
+	marshalled, _ := yaml.Marshal(d)
+	return marshalled
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -265,14 +297,21 @@ func (m *Module) GetValues() addonutils.Values {
 		m.values.GetValues())
 }
 
-// ApplySettings apply settings values
+// ApplySettings applies settings values
 func (m *Module) ApplySettings(settings addonutils.Values) error {
 	return m.values.ApplyConfigValues(settings)
 }
 
-// GetChecks return scheduler checks, their determine if an app should be enabled/disabled
-func (m *Module) GetChecks() schedule.Checks {
-	return m.definition.Requirements.Checks()
+// GetConstraints returns scheduler checks, their determine if an module should be enabled/disabled
+func (m *Module) GetConstraints() schedule.Constraints {
+	return m.definition.Constraints()
+}
+
+// HooksInitialized reports whether the package requires a hook initialize phase.
+// This is true when hooks have not yet been initialized (no controllers attached),
+// meaning the pkg needs to go through the full startup sequence before it can run.
+func (m *Module) HooksInitialized() bool {
+	return m.hooks.Initialized()
 }
 
 // GetHooks returns all hooks for this module in arbitrary order.
@@ -290,6 +329,32 @@ func (m *Module) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+}
+
+// DisableHooks tears down all active hook bindings and clears the hook registry.
+// Called by the Disable task when a package is being stopped or upgraded.
+//
+// Cleanup order: schedule bindings are disabled first (stops cron triggers),
+// then Kubernetes monitors are stopped (stops informer watches), and finally
+// the hook registry is cleared so a subsequent InitializeHooks starts fresh.
+func (m *Module) DisableHooks() {
+	// Disable all schedule-based hooks
+	schHooks := m.hooks.GetHooksByBinding(shtypes.Schedule)
+	for _, hook := range schHooks {
+		if hook.GetHookController() != nil {
+			hook.GetHookController().DisableScheduleBindings()
+		}
+	}
+
+	// Stop all Kubernetes event monitors
+	kubeHooks := m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
+	for _, hook := range kubeHooks {
+		if hook.GetHookController() != nil {
+			hook.GetHookController().StopMonitors()
+		}
+	}
+
+	m.running.Store(false)
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events
@@ -317,6 +382,10 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 
 	span.SetAttributes(attribute.String("binding", string(binding)))
 
+	if binding == shtypes.OnStartup && m.running.Load() {
+		return nil
+	}
+
 	for _, hook := range m.hooks.GetHooksByBinding(binding) {
 		bc := bctx.BindingContext{
 			Binding: string(binding),
@@ -332,6 +401,10 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
+	}
+
+	if binding == shtypes.OnStartup {
+		m.running.Store(true)
 	}
 
 	return nil

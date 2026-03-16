@@ -21,33 +21,8 @@ import (
 )
 
 const (
-	ConditionReasonValidationFailed status.ConditionReason = "ValidationFailed"
-	ConditionReasonApplySettings    status.ConditionReason = "ApplySettings"
-	ConditionReasonLoadFailed       status.ConditionReason = "LoadFailed"
+	ConditionReasonLoadFailed status.ConditionReason = "LoadFailed"
 )
-
-// newApplyInitialSettingsErr wraps an error with conditions that mark both
-// ReadyInRuntime and SettingsValid as False.
-// Used when initial settings validation fails during package loading.
-func newApplyInitialSettingsErr(err error) error {
-	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonApplySettings,
-				Message: err.Error(),
-			},
-			{
-				Type:    status.ConditionSettingsValid,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonValidationFailed,
-				Message: err.Error(),
-			},
-		},
-	}
-}
 
 // newLoadFailedErr wraps an error with ReadyInRuntime=False.
 // Used when the package fails to load from its filesystem path.

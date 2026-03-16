@@ -1,0 +1,13 @@
+ci:
+  fixes:
+    - summary: Fix render workflow job.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18137
+runtime-audit-engine:
+  chore:
+  - summary: "Update CI file"
+    pull_request: https://github.com/deckhouse/deckhouse/pull/15410
+istio:
+  fixes:
+    - summary: Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18101
+

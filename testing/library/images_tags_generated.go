@@ -169,6 +169,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"simpleBridge":        "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
+		"candi":                          "imageHash-common-candi",
 		"checkKernelVersion":             "imageHash-common-checkKernelVersion",
 		"coredns":                        "imageHash-common-coredns",
 		"csiExternalAttacher131":         "imageHash-common-csiExternalAttacher131",
@@ -266,7 +267,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeScheduler134VexArtifact":         "imageHash-controlPlaneManager-kubeScheduler134VexArtifact",
 		"kubeScheduler135":                    "imageHash-controlPlaneManager-kubeScheduler135",
 		"kubeScheduler135VexArtifact":         "imageHash-controlPlaneManager-kubeScheduler135VexArtifact",
-		"kubernetesApiProxy":                  "imageHash-controlPlaneManager-kubernetesApiProxy",
 		"updateObserver":                      "imageHash-controlPlaneManager-updateObserver",
 	},
 	"dashboard": map[string]interface{}{
@@ -416,6 +416,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"d8ShutdownInhibitor":             "imageHash-nodeManager-d8ShutdownInhibitor",
 		"earlyOom":                        "imageHash-nodeManager-earlyOom",
 		"fencingAgent":                    "imageHash-nodeManager-fencingAgent",
+		"kubernetesApiProxy":              "imageHash-nodeManager-kubernetesApiProxy",
 		"machineControllerManager":        "imageHash-nodeManager-machineControllerManager",
 		"nodeController":                  "imageHash-nodeManager-nodeController",
 		"nodeFeatureDiscovery":            "imageHash-nodeManager-nodeFeatureDiscovery",
@@ -467,6 +468,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"dockerDistribution":  "imageHash-registry-dockerDistribution",
 		"mirrorer":            "imageHash-registry-mirrorer",
 		"nodeservicesManager": "imageHash-registry-nodeservicesManager",
+		"registryProxy":       "imageHash-registry-registryProxy",
 	},
 	"registryPackagesProxy": map[string]interface{}{
 		"registryPackagesProxy": "imageHash-registryPackagesProxy-registryPackagesProxy",
@@ -474,7 +476,9 @@ var DefaultImagesDigests = map[string]interface{}{
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":               "imageHash-registrypackages-amazonEc2Utils220",
 		"containerd1730":                  "imageHash-registrypackages-containerd1730",
+		"containerd1730VexArtifact":       "imageHash-registrypackages-containerd1730VexArtifact",
 		"containerd216":                   "imageHash-registrypackages-containerd216",
+		"containerd216VexArtifact":        "imageHash-registrypackages-containerd216VexArtifact",
 		"crictl131":                       "imageHash-registrypackages-crictl131",
 		"crictl131VexArtifact":            "imageHash-registrypackages-crictl131VexArtifact",
 		"crictl132":                       "imageHash-registrypackages-crictl132",
@@ -539,6 +543,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nfsMount282":                     "imageHash-registrypackages-nfsMount282",
 		"nvmeCli211":                      "imageHash-registrypackages-nvmeCli211",
 		"pause":                           "imageHash-registrypackages-pause",
+		"registryProxy":                   "imageHash-registrypackages-registryProxy",
 		"socat1734":                       "imageHash-registrypackages-socat1734",
 		"systemctlPowerCommandsWrapper02": "imageHash-registrypackages-systemctlPowerCommandsWrapper02",
 		"tomlMerge01":                     "imageHash-registrypackages-tomlMerge01",
@@ -552,6 +557,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller": "imageHash-serviceWithHealthchecks-controller",
 	},
 	"terraformManager": map[string]interface{}{
+		"baseOpentofu":                "imageHash-terraformManager-baseOpentofu",
+		"baseTerraform":               "imageHash-terraformManager-baseTerraform",
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",
 		"terraformManagerAzure":       "imageHash-terraformManager-terraformManagerAzure",
 		"terraformManagerDvp":         "imageHash-terraformManager-terraformManagerDvp",

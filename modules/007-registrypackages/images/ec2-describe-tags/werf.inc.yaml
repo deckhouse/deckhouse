@@ -1,4 +1,4 @@
-{{- $version := "v0.0.1-flant.3" }}
+{{- $version := include "get_oss_version_by_id" (list "ec2-describe-tags" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}

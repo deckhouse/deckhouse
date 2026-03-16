@@ -55,6 +55,7 @@ func (i instances) IsEmpty() bool {
 type loadBalancer struct {
 	SubnetID          string `json:"subnetID,omitempty" yaml:"subnetID,omitempty"`
 	FloatingNetworkID string `json:"floatingNetworkID,omitempty" yaml:"floatingNetworkID,omitempty"`
+	Disabled          bool   `json:"disabled,omitempty" yaml:"disabled,omitempty"`
 }
 
 func (lb loadBalancer) IsEmpty() bool {
@@ -63,6 +64,10 @@ func (lb loadBalancer) IsEmpty() bool {
 	}
 
 	if lb.FloatingNetworkID != "" {
+		return false
+	}
+
+	if lb.Disabled {
 		return false
 	}
 

@@ -37,7 +37,6 @@ check_container_running() {
   done
 }
 
-check_container_running "kubernetes-api-proxy-reloader"
 check_container_running "kubernetes-api-proxy"
 mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
 cp {{ $kubeadmDir}}/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/

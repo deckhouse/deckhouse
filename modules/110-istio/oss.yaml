@@ -1,11 +1,31 @@
 - name: Istio
   link: https://github.com/istio/istio
   description: An open platform to connect, manage, and secure microservices.
-  logo: https://github.com/istio/istio/raw/master/logo/istio-bluelogo-whitebackground-unframed.svg
+  logo: /images/logos/istio.svg
   license: Apache License 2.0
+  id: istio-1-21
+  version: 1.21.6
+
+- name: Istio
+  link: https://github.com/istio/istio
+  description: An open platform to connect, manage, and secure microservices.
+  logo: /images/logos/istio.svg
+  license: Apache License 2.0
+  id: istio-1-25
+  version: 1.25.2
 
 - name: Kiali
   link: https://github.com/kiali/kiali
   description: Visualisation tool for the istio service mesh topology, and features like circuit breakers or request rates.
   logo: /images/logos/kiali.png
   license: Apache License 2.0
+  id: kiali-for-istio-1-21
+  version: 1.81.0
+
+- name: Kiali
+  link: https://github.com/kiali/kiali
+  description: Visualisation tool for the istio service mesh topology, and features like circuit breakers or request rates.
+  logo: /images/logos/kiali.png
+  license: Apache License 2.0
+  id: kiali-for-istio-1-25
+  version: 2.7.1

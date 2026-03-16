@@ -182,7 +182,7 @@ The Deckhouse Kubernetes Platform provides the ability to declaratively manage a
 Custom resources [ClusterNetwork](/modules/sdn/cr.html#clusternetwork), [Network](/modules/sdn/cr.html#network), and [NetworkClass](/modules/sdn/cr.html#networkclass) are used to configure and connect additional networks for application pods.
 
 {% alert level="info" %}
-If the VLAN type was specified in the [Network](/modules/sdn/cr.html#network) or [ClusterNetwork](/modules/sdn/cr.html#clusternetwork) resources, [NodeNetworkInterface](/modules/sdn/stable/cr.html#nodenetworkinterface) will also be created for VLAN and Bridge.
+If the VLAN type was specified in the [Network](/modules/sdn/cr.html#network) or [ClusterNetwork](/modules/sdn/cr.html#clusternetwork) resources, [NodeNetworkInterface](/modules/sdn/cr.html#nodenetworkinterface) will also be created for VLAN and Bridge.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -300,11 +300,11 @@ spec:
 
 Upon user request, the administrator provides them with the name of the created NetworkClass, which is used when creating the project network.
 
-An example of creating a custom network using the NetworkClass resource administrator is described in the section ["Creating a project network (user network)"](../../../../user/network/sdn/dedicated-networks.html).
+An example of creating a custom network using the NetworkClass resource administrator is described in the section ["Creating a project network (user network)"](../../../../user/network/sdn/dedicated.html#creating-a-project-network-user-network).
 
 ### Checking the connection of an additional network to interfaces on nodes
 
-After creating ClusterNetwork or Network, the controller will create a NodeNetworkInterfaceAttachment tracking resource to link it to a [NodeNetworkInterface](/modules/sdn/stable/cr.html#nodenetworkinterface).
+After creating ClusterNetwork or Network, the controller will create a NodeNetworkInterfaceAttachment tracking resource to link it to a [NodeNetworkInterface](/modules/sdn/cr.html#nodenetworkinterface).
 
 To obtain a list of NodeNetworkInterfaceAttachment resources and information about a specific resource, use the following commands:
 
@@ -368,6 +368,74 @@ right-worker-b23d3a26-5fb4b-h2bkv-nic-fa163eebea7b   Deckhouse   right-worker-b2
 right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b23d3a26-5fb4b-h2bkv   VLAN     ens3.900    683       Up      14h
 ...
 ```
+
+### IPAM: IP address pools for additional networks
+
+The IPAM mechanism allows you to automatically allocate and assign **IPv4 addresses** for additional network interfaces of pods connected to [cluster networks](#creating-a-publicly-accessible-network-cluster) and [project networks](#creating-a-project-network-user-network).
+
+#### Principles and features of IPAM in DKP
+
+For each required IP address, a object [IPAddress](/modules/sdn/cr.html#ipaddress) ([ClusterIPAddress](/modules/sdn/cr.html#clusteripaddress) — for cluster networks) is created and used, which references the project network or cluster network. The controller allocates an address from the pool and stores the result in `status.address`, `status.network`, `status.routes` of the IPAddress (ClusterIPAddress) object. The agent on the node assigns an IP address and routes to the interface inside the pod and sets the `status.conditions[Attached]` and `status.usedByPods` fields of the IPAddress (ClusterIPAddress) object.
+
+##### Protection against conflicts when reusing IP addresses
+
+To protect against conflicts, a cluster-scoped object [IPAddressLease](/modules/sdn/cr.html#ipaddresslease) is created, which reserves the IP address. When an IPAddress object is deleted, the corresponding IPAddressLease is marked as `orphaned` (using the `status.orphaningTimestamp` field) and holds the address for the time specified in the [`spec.ttl`](/modules/sdn/cr.html#ipaddresslease-v1alpha1-spec-ttl) parameter (to avoid rapid reuse).
+
+##### Resources and settings for configuring IPAM
+
+The following are used to manage the allocation and assignment of IP addresses:
+
+* Address pools: for cluster networks (resource [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool)) or project networks (resource [IPAddressPool](/modules/sdn/cr.html#ipaddresspool)).
+* Parameters for enabling IPAM for a specific network: [`Network.spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#network-v1alpha1-spec-ipam-ipaddresspoolref) —  for project networks, [`ClusterNetwork.spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) — for cluster networks.
+* The [IPAddress](/modules/sdn/cr.html#ipaddress) resource is a request (automatic or static) for an address allocation, which is then assigned to the pod interface.
+
+#### Example of assigning IP addresses to the cluster network
+
+> To allocate an address pool for a [cluster network](#creating-a-publicly-accessible-network-cluster), use the [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) resource.
+
+To allocate a pool of addresses and assign them to network interfaces of pods connected to the cluster network, perform the following steps:
+
+1. Create an address pool. To do this, use the [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) resource.
+
+   Example:
+
+   ```yaml
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: ClusterIPAddressPool
+   metadata:
+     name: public-net-pool
+   spec:
+     leaseTTL: 24h
+     pools:
+       - network: 203.0.113.0/24
+         ranges:
+           - 203.0.113.10-203.0.113.200
+   ```
+
+   > The [`spec.pools[].ranges`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-ranges) parameter is optional. If it is not specified, the entire CIDR from [`spec.pools[].network`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-network) is considered available (except for network/broadcast addresses, see the behavior of `/31` and `/32`).
+
+1. Enable IPAM on the network. To do this, specify the parameters of the lusterIPAddressPool created in the previous step in the [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) parameter of the ClusterNetwork resource:
+
+   ```yaml
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: ClusterNetwork
+   metadata:
+     name: my-cluster-network
+   spec:
+     type: VLAN
+     vlan:
+       id: 900
+     parentNodeNetworkInterfaces:
+       labelSelector:
+         matchLabels:
+           nic-group: extra
+     ipam:
+       ipAddressPoolRef:
+         kind: ClusterIPAddressPool
+         name: public-net-pool
+   ```
+
+After allocating a pool of IP addresses for the cluster network, they can be assigned to the network interfaces of pods connected to this network. For more details, see the section [Assigning IP addresses to network interfaces of pods connected to an additional network](../../../../user/network/sdn/dedicated.html#assigning-ip-addresses-to-network-interfaces-of-pods-connected-to-an-additional-network).
 
 ## Configuring and connecting underlay networks for hardware device passthrough
 

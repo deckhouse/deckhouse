@@ -105,7 +105,6 @@ func (t *task) Execute(ctx context.Context) error {
 
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionHelmApplied)
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionHooksProcessed)
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionReadyInRuntime)
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionReadyInCluster)
 
 	return nil

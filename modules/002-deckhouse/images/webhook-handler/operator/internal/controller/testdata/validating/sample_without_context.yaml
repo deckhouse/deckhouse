@@ -1,0 +1,31 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  labels:
+    app.kubernetes.io/name: operator
+    app.kubernetes.io/managed-by: kustomize
+  name: validationwebhook-sample
+validationObject: # as-is as validationwebhookconfiguration
+  name: validationwebhook.deployments.apps
+  rules:
+    - apiGroups: ["apps"]
+      apiVersions: ["v1", "v1beta1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["deployments", "replicasets"]
+      scope: "Namespaced"
+  namespace:
+    labelSelector:
+      matchExpressions:
+        - key: runlevel
+          operator: NotIn
+          values: ["0","1"]
+  matchConditions:
+    - name: yyyy
+      expression: 'request.resource.group != "rbac.authorization.k8s.io"'
+handler:
+  cel: |
+    TODO: not need now
+  python: |
+    def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+      # logic here
+      return None, True

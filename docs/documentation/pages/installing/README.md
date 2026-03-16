@@ -628,27 +628,28 @@ List of checks performed by the installer before starting Deckhouse Kubernetes P
 
 {% offtopic title="List of preflight skip flags..." %}
 
+To skip a specific check, use the `--preflight-skip-check` flag and pass the preflight check name as its argument. The flag can be specified multiple times.
+
 - `--preflight-skip-all-checks`: Skip all preflight checks.
-- `--preflight-skip-ssh-forward-check`: Skip the SSH forwarding check.
-- `--preflight-skip-availability-ports-check`: Skip the check for the availability of required ports.
-- `--preflight-skip-resolving-localhost-check`: Skip the `localhost` resolution check.
-- `--preflight-skip-deckhouse-version-check`: Skip the DKP version check.
-- `--preflight-skip-registry-through-proxy`: Skip the check for accessing the registry through a proxy server.
-- `--preflight-skip-public-domain-template-check`: Skip the check for the `publicDomain` template.
-- `--preflight-skip-ssh-credentials-check`: Skip the check for SSH user credentials.
-- `--preflight-skip-registry-credential`: Skip the check for registry access credentials.
-- `--preflight-skip-containerd-exist`: Skip the check for the existence of `containerd`.
-- `--preflight-skip-python-checks`: Skip the check for Python installation.
-- `--preflight-skip-sudo-allowed`: Skip the check for `sudo` privileges.
-- `--preflight-skip-system-requirements-check`: Skip the check for meeting system requirements.
-- `--preflight-skip-one-ssh-host`: Skip the check for the number of specified SSH hosts.
-- `--preflight-cloud-api-accesibility-check`: Skip the Cloud API accessibility check.
-- `--preflight-time-drift-check`: Skip the time drift check.
-- `--preflight-skip-cidr-intersection`: Skip the CIDR intersection check.
-- `--preflight-skip-deckhouse-user-check`: Skip the `deckhouse` user existence check.
-- `--preflight-skip-yandex-with-nat-instance-check`: Skip the Yandex Cloud with NAT Instance configuration check.
-- `--preflight-skip-dvp-kubeconfig`: Skip the DVP kubeconfig check.
-- `--preflight-skip-staticinstances-with-ssh-credentials` — skip verifying accessibility StaticInstances with SSHCredentials.
+- `--preflight-skip-check=static-ssh-tunnel`: Skip the SSH forwarding check.
+- `--preflight-skip-check=ports-availability`: Skip the check for the availability of required ports.
+- `--preflight-skip-check=resolve-localhost`: Skip the `localhost` resolution check.
+- `--preflight-skip-check=dhctl-edition`: Skip the DKP version check.
+- `--preflight-skip-check=registry-access-through-proxy`: Skip the check for accessing the registry through a proxy server.
+- `--preflight-skip-check=public-domain-template`: Skip the check for the `publicDomain` template.
+- `--preflight-skip-check=static-ssh-credential`: Skip the check for SSH user credentials.
+- `--preflight-skip-check=registry-credentials`: Skip the check for registry access credentials.
+- `--preflight-skip-check=python-modules`: Skip the check for Python installation.
+- `--preflight-skip-check=sudo-allowed`: Skip the check for `sudo` privileges.
+- `--preflight-skip-check=static-system-requirements`: Skip the check for meeting system requirements.
+- `--preflight-skip-check=static-single-ssh-host`: Skip the check for the number of specified SSH hosts.
+- `--preflight-skip-check=cloud-api-accessibility`: Skip the Cloud API accessibility check.
+- `--preflight-skip-check=time-drift`: Skip the time drift check.
+- `--preflight-skip-check=cidr-intersection`: Skip the CIDR intersection check.
+- `--preflight-skip-check=deckhouse-user`: Skip the `deckhouse` user existence check.
+- `--preflight-skip-check=yandex-cloud-config`: Skip the Yandex Cloud with NAT Instance configuration check.
+- `--preflight-skip-check=dvp-kubeconfig`: Skip the DVP kubeconfig check.
+- `--preflight-skip-check=static-instances-ssh-credentials` — skip verifying accessibility StaticInstances with SSHCredentials.
 
 Example of using a preflight skip flag:
 

@@ -45,6 +45,7 @@ type (
 		CompleteSubPhase(completedSubPhase OperationSubPhase)
 		CompletePhaseAndPipeline(stateCache dstate.Cache, completedPhaseData OperationPhaseDataT) error
 		GetLastState() DhctlState
+		SetClusterConfig(cfg ClusterConfig)
 	}
 
 	DefaultPhasedExecutionContext PhasedExecutionContext[DefaultContextType]
@@ -94,7 +95,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPha
 		opts.Action = ProgressActionSkip
 	}
 
-	err := pec.progressTracker.Progress(lastCompletedPhase, "", opts)
+	err := pec.progressTracker.Progress(lastCompletedPhase, nextPhase, "", opts)
 	if err != nil {
 		log.ErrorF("Failed to write progress for phase %v: %v", completedPhase, err)
 	}
@@ -126,6 +127,12 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPha
 	}
 
 	return false, nil
+}
+
+// SetClusterConfig sets the cluster config and syncs the progress phase list.
+// Call as soon as meta config is parsed, before any phase is reported.
+func (pec *phasedExecutionContext[OperationPhaseDataT]) SetClusterConfig(cfg ClusterConfig) {
+	pec.progressTracker.SetClusterConfig(cfg)
 }
 
 // InitPipeline initializes phasedExecutionContext before usage.
@@ -182,7 +189,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) CompletePhase(stateCache
 
 // CompleteSubPhase completes specified sub phase.
 func (pec *phasedExecutionContext[OperationPhaseDataT]) CompleteSubPhase(completedSubPhase OperationSubPhase) {
-	err := pec.progressTracker.Progress("", completedSubPhase, ProgressOpts{})
+	err := pec.progressTracker.Progress("", "", completedSubPhase, ProgressOpts{})
 	if err != nil {
 		log.ErrorF("Failed to write progress for sub phase %v: %v", completedSubPhase, err)
 	}

@@ -23,7 +23,6 @@ import (
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	shkubetypes "github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	taskhookrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/hookrun"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 )
@@ -43,7 +42,7 @@ func (r *Runtime) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	r.apps.Range(func(app *apps.Application) {
+	for _, app := range r.apps {
 		for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 			hookCtrl := hook.GetHookController()
 
@@ -66,11 +65,11 @@ func (r *Runtime) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 					slog.String("event", kubeEvent.String()))
 
 				queueName := fmt.Sprintf("%s/%s", app.GetName(), info.QueueName)
-				t := taskhookrun.NewTask(app, hook.GetName(), info.BindingContext, r.runApp, r.nelmService, r.status, r.logger)
+				t := taskhookrun.NewTask(app, hook.GetName(), info.BindingContext, r.scheduler.Reschedule, r.nelmService, r.status, r.logger)
 				res[queueName] = append(res[queueName], t)
 			})
 		}
-	})
+	}
 
 	return res
 }
@@ -89,7 +88,7 @@ func (r *Runtime) BuildScheduleTasks(ctx context.Context, crontab string) map[st
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	r.apps.Range(func(app *apps.Application) {
+	for _, app := range r.apps {
 		for _, hook := range app.GetHooksByBinding(shtypes.Schedule) {
 			hookCtrl := hook.GetHookController()
 
@@ -111,12 +110,12 @@ func (r *Runtime) BuildScheduleTasks(ctx context.Context, crontab string) map[st
 
 				// queue = <name>/<queue>
 				queueName := fmt.Sprintf("%s/%s", app.GetName(), info.QueueName)
-				t := taskhookrun.NewTask(app, hook.GetName(), info.BindingContext, r.runApp, r.nelmService, r.status, r.logger)
+				t := taskhookrun.NewTask(app, hook.GetName(), info.BindingContext, r.scheduler.Reschedule, r.nelmService, r.status, r.logger)
 
 				res[queueName] = append(res[queueName], t)
 			})
 		}
-	})
+	}
 
 	return res
 }
