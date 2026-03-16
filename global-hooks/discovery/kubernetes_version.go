@@ -287,7 +287,7 @@ func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, 
 	}
 
 	controlPlaneEnabled := module.IsEnabled("control-plane-manager", input)
-	input.Logger.Info(fmt.Sprintf("podsCnt %d, endpointsCnt %d", podsCnt, endpointsCnt))
+	input.Logger.Info(fmt.Sprintf("podsCnt %d, endpointsCnt %d, controlPlaneEnabled: %v", podsCnt, endpointsCnt, controlPlaneEnabled))
 	if controlPlaneEnabled && podsCnt != endpointsCnt {
 		msg := fmt.Sprintf("Not found k8s versions. Pods(%v) != Endpoints (%v) count", podsCnt, endpointsCnt)
 
