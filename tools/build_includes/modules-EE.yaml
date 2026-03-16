@@ -319,6 +319,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/500-operator-trivy
+  to: /deckhouse/modules/500-operator-trivy
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/610-service-with-healthchecks
   to: /deckhouse/modules/610-service-with-healthchecks
   stageDependencies:
