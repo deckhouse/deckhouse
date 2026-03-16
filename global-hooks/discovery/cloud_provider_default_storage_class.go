@@ -29,6 +29,13 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: "/modules/cloud-provider-dvp",
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "check_default_storage_class",
+			Crontab: "*/5 * * * *", // Every 5 minutes
+		},
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cloud_provider_discovery_data",
