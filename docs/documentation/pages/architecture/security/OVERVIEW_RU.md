@@ -4,6 +4,8 @@ permalink: ru/architecture/security/
 lang: ru
 search: security, безопасность, подсистема безопасности
 description: Архитектура подсистемы Security в Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 В данном подразделе описывается архитектура подсистемы Security (подсистемы безопасности) Deckhouse Kubernetes Platform (DKP).

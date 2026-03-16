@@ -1335,6 +1335,18 @@ entries:
                 ru: Кеширующий DNS-сервер в кластере
               url: /architecture/network/dns-caching.html
         - title:
+            en: Storage subsystem
+            ru: Подсистема Storage
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/storage/
+            - title:
+                en: Local-path-provisioner module
+                ru: Модуль local-path-provisioner
+              url: /architecture/storage/local-path-provisioner.html
+        - title:
             en: Observability subsystem
             ru: Подсистема Observability
           folders:

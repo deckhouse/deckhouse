@@ -21,7 +21,7 @@ description: Архитектура модуля terraform-manager в Deckhouse 
 
 Архитектура модуля [`terraform-manager`](/modules/terraform-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля terraform-manager](../../../images/architecture/cluster-and-infrastructure/c4-l2-terraform-manager.ru.png)
 
 ## Компоненты модуля

@@ -61,6 +61,8 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
 	}
 
+	// no need to switch client because we try to switch before delete nodes
+
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
 		h.oldMasterIPForSSH = ""
