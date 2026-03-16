@@ -14,6 +14,9 @@
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
 
+{{ $imgDockerDistribution := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerDistribution") }}
+{{ $imgDockerAuth := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerAuth") }}
+
 check_container_running() {
   local container_name=$1
   local max_retries=20
@@ -36,9 +39,6 @@ check_container_running() {
     echo "wait for the $container_name to start $count"
   done
 }
-
-{{ $imgDockerDistribution := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerDistribution") }}
-{{ $imgDockerAuth := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerAuth") }}
 
 # Prepare proxy envs
 bb-set-proxy

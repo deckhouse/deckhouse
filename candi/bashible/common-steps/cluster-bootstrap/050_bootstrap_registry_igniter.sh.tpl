@@ -24,7 +24,9 @@ discovered_node_ip="$(bb-d8-node-ip)"
 pki_path="${REGISTRY_MODULE_IGNITER_DIR}/pki"
 
 # Create the directories
-mkdir -p ${REGISTRY_MODULE_IGNITER_DIR}/{pki,logs} \
+mkdir -p "${REGISTRY_MODULE_IGNITER_DIR}" \
+        "${REGISTRY_MODULE_IGNITER_DIR}/pki" \
+        "${REGISTRY_MODULE_IGNITER_DIR}/logs" \
         /opt/deckhouse/registry/local_data
 
 # Prepare certs
