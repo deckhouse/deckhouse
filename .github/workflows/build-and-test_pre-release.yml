@@ -159,6 +159,15 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -267,10 +276,10 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.24
+      - name: Set up Go 1.25
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache: false
 
       - name: Run go generate
@@ -344,11 +353,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
@@ -365,10 +369,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -408,8 +409,8 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
           # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
 
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -429,8 +430,11 @@ jobs:
         uses: actions/upload-artifact@v4.4.0
         with:
           name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
 
     # </template: build_template>
 
@@ -461,6 +465,15 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -569,10 +582,10 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.24
+      - name: Set up Go 1.25
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache: false
 
       - name: Run go generate
@@ -646,11 +659,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
@@ -667,10 +675,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -710,8 +715,8 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
           # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
 
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -731,8 +736,11 @@ jobs:
         uses: actions/upload-artifact@v4.4.0
         with:
           name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
 
     # </template: build_template>
 
@@ -763,6 +771,15 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -871,10 +888,10 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.24
+      - name: Set up Go 1.25
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache: false
 
       - name: Run go generate
@@ -948,11 +965,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
@@ -969,10 +981,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1012,8 +1021,8 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
           # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
 
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -1033,8 +1042,11 @@ jobs:
         uses: actions/upload-artifact@v4.4.0
         with:
           name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
 
     # </template: build_template>
 
@@ -1065,6 +1077,15 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1173,10 +1194,10 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.24
+      - name: Set up Go 1.25
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache: false
 
       - name: Run go generate
@@ -1250,11 +1271,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
@@ -1271,10 +1287,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1314,8 +1327,8 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
           # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
 
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -1335,8 +1348,11 @@ jobs:
         uses: actions/upload-artifact@v4.4.0
         with:
           name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
 
     # </template: build_template>
 
@@ -1367,6 +1383,15 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1475,10 +1500,10 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.24
+      - name: Set up Go 1.25
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache: false
 
       - name: Run go generate
@@ -1552,11 +1577,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
@@ -1573,10 +1593,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1616,8 +1633,8 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
           # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
 
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -1637,8 +1654,11 @@ jobs:
         uses: actions/upload-artifact@v4.4.0
         with:
           name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
 
     # </template: build_template>
 
@@ -1669,6 +1689,15 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1777,10 +1806,10 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.24
+      - name: Set up Go 1.25
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache: false
 
       - name: Run go generate
@@ -1854,11 +1883,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
@@ -1875,10 +1899,7 @@ jobs:
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1918,8 +1939,8 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
           # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
 
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -1939,8 +1960,11 @@ jobs:
         uses: actions/upload-artifact@v4.4.0
         with:
           name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
 
     # </template: build_template>
 
@@ -2047,8 +2071,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -2154,13 +2178,13 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:38ad74c3c7830c587e549a76edd0d5e23edfb741e1a602f93e0c8b8b91056394"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:4aaf81659fa6ea3cbbb0f241d739dda485bce79ec98b0fd5014ef4f4210e1cd5"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -2318,8 +2342,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
@@ -2431,8 +2455,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
@@ -2545,8 +2569,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
@@ -2658,8 +2682,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
@@ -2854,8 +2878,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests

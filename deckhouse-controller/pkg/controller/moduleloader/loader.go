@@ -338,13 +338,11 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 		}
 	}
 
-	// OPTIMIZATION: Make cleanup async to not block module loading startup!
-	// Cleanup is non-critical housekeeping that can happen in background
-	go func() {
-		if err := l.cleanupDeletedModules(ctx); err != nil {
-			l.logger.Warn("async cleanup failed", slog.String("error", err.Error()))
-		}
-	}()
+	// Run cleanup synchronously to avoid race with module-config-controller:
+	// async cleanup could set EnabledByModuleConfig to Unknown while the controller is processing a config.
+	if err := l.cleanupDeletedModules(ctx); err != nil {
+		return fmt.Errorf("cleanup deleted modules: %w", err)
+	}
 
 	return nil
 }

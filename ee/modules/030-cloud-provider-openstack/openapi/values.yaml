@@ -84,6 +84,8 @@ properties:
         type: object
         default: {}
         properties:
+          disabled:
+            type: boolean
           subnetID:
             type: string
           floatingNetworkID:

@@ -195,7 +195,6 @@ func NewDeckhouseController(
 				&v1alpha1.ModuleRelease{}:       {},
 				&v1alpha1.ModuleSource{}:        {},
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
-				&v1alpha1.ModulePullOverride{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},
 				&v1alpha1.DeckhouseRelease{}:    {},
 			},
@@ -253,7 +252,7 @@ func NewDeckhouseController(
 
 		// set some version for the modules overridden by mpos
 		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
-			return "v2.0.0", nil
+			return defaultModuleVersion, nil
 		}
 
 		return module.GetVersion(), nil
@@ -344,7 +343,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	packageOperator, err := packageoperator.New(operator.ModuleManager, dc, logger)
+	packageOperator, err := packageoperator.New(runtimeManager.GetClient(), operator.ModuleManager, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -363,6 +362,8 @@ func NewDeckhouseController(
 	// Package system controllers (feature flag)
 	if os.Getenv(envEnablePackageSystem) == "true" {
 		logger.Info("Package system controllers are enabled")
+
+		packageOperator.Run()
 
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {

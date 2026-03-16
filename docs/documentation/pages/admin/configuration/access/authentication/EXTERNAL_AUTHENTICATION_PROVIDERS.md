@@ -245,6 +245,47 @@ spec:
         - grafana-access
 ```
 
+### SAML 2.0 integration
+
+The example shows the provider's settings for integration with a SAML 2.0 Identity Provider (e.g., [AD FS](https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/ad-fs-overview), [Okta](https://help.okta.com/en-us/content/topics/apps/apps_app_integration_wizard_saml.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#_client-saml-configuration)).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: saml-provider
+spec:
+  type: SAML
+  displayName: Corporate SAML
+  saml:
+    ssoURL: https://saml-idp.example.com/saml/sso
+    rootCAData: |
+      -----BEGIN CERTIFICATE-----
+      MIIFaDC...
+      -----END CERTIFICATE-----
+    entityIssuer: https://dex.example.com/callback
+    ssoIssuer: https://saml-idp.example.com
+    usernameAttr: name
+    emailAttr: email
+    groupsAttr: groups
+    nameIDPolicyFormat: persistent
+```
+
+To configure the SAML Identity Provider:
+
+1. Register Dex as a Service Provider (SP) in your IdP with the following settings:
+   - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
+   - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
+   - **NameID format**: `persistent` or `emailAddress`
+
+1. Configure attribute mappings in the IdP to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
+
+1. Export the IdP signing certificate and specify it in the `rootCAData` field of the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
+
+{% alert level="info" %}
+SAML does not natively support refresh tokens. Dex caches the user identity from the initial SAML assertion and returns it on subsequent refresh requests. The session lifetime is controlled by the `expiry.refreshTokens` settings in the [`user-authn`](/modules/user-authn/) module configuration.
+{% endalert %}
+
 ### LDAP integration
 
 To configure authentication, create a read-only account (service account) in your LDAP directory.  

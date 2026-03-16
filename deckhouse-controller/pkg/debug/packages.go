@@ -17,6 +17,7 @@ package debug
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -28,7 +29,9 @@ var packagesDebugSocket = "/tmp/deckhouse-debug.socket"
 func DefinePackagesCommands(kpApp *kingpin.Application) {
 	packagesCmd := kpApp.Command("packages", "Package debug commands.")
 
-	packagesDumpCmd := packagesCmd.Command("dump", "Dump all packages state from memory.").
+	var packageName string
+
+	packagesDumpCmd := packagesCmd.Command("dump", "Dump all/specific packages state from memory.").
 		Action(func(_ *kingpin.ParseContext) error {
 			client, err := debug.NewClient(packagesDebugSocket)
 			if err != nil {
@@ -37,7 +40,7 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 			defer client.Close()
 
 			ctx := context.Background()
-			out, err := client.Get(ctx, "packages/dump")
+			out, err := client.Get(ctx, withQuery("packages/dump", "name", packageName))
 			if err != nil {
 				return err
 			}
@@ -45,10 +48,11 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 
 			return nil
 		})
+	packagesDumpCmd.Flag("name", "Filter by package name.").StringVar(&packageName)
 	definePackagesDebugSocketFlag(packagesDumpCmd)
 
-	packagesQueueCmd := packagesCmd.Command("queue", "Queue operations.")
-	packagesQueueListCmd := packagesQueueCmd.Command("list", "List all package queues with tasks.").
+	schedulerCmd := packagesCmd.Command("scheduler", "Scheduler operations.")
+	schedulerDumpCmd := schedulerCmd.Command("dump", "Dump all scheduler node state from memory.").
 		Action(func(_ *kingpin.ParseContext) error {
 			client, err := debug.NewClient(packagesDebugSocket)
 			if err != nil {
@@ -57,7 +61,7 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 			defer client.Close()
 
 			ctx := context.Background()
-			out, err := client.Get(ctx, "packages/queues/dump")
+			out, err := client.Get(ctx, withQuery("packages/scheduler/dump", "name", packageName))
 			if err != nil {
 				return err
 			}
@@ -65,9 +69,30 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 
 			return nil
 		})
+	schedulerDumpCmd.Flag("name", "Filter by package name.").StringVar(&packageName)
+	definePackagesDebugSocketFlag(schedulerDumpCmd)
+
+	packagesQueueCmd := packagesCmd.Command("queue", "Queue operations.")
+	packagesQueueListCmd := packagesQueueCmd.Command("dump", "Dump all package queues with tasks.").
+		Action(func(_ *kingpin.ParseContext) error {
+			client, err := debug.NewClient(packagesDebugSocket)
+			if err != nil {
+				return err
+			}
+			defer client.Close()
+
+			ctx := context.Background()
+			out, err := client.Get(ctx, withQuery("packages/queues/dump", "name", packageName))
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(out))
+
+			return nil
+		})
+	packagesQueueListCmd.Flag("name", "Filter by package name.").StringVar(&packageName)
 	definePackagesDebugSocketFlag(packagesQueueListCmd)
 
-	var packageName string
 	packagesRenderCmd := packagesCmd.Command("render", "Render package Helm templates.").
 		Action(func(_ *kingpin.ParseContext) error {
 			client, err := debug.NewClient(packagesDebugSocket)
@@ -87,6 +112,26 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 		})
 	packagesRenderCmd.Arg("package_name", "Name of the package to render.").Required().StringVar(&packageName)
 	definePackagesDebugSocketFlag(packagesRenderCmd)
+
+	packagesSnapshotsCmd := packagesCmd.Command("snapshots", "Dump hook snapshots for a package.").
+		Action(func(_ *kingpin.ParseContext) error {
+			client, err := debug.NewClient(packagesDebugSocket)
+			if err != nil {
+				return err
+			}
+			defer client.Close()
+
+			ctx := context.Background()
+			out, err := client.Get(ctx, "packages/snapshots", packageName)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(out))
+
+			return nil
+		})
+	packagesSnapshotsCmd.Arg("package_name", "Name of the package.").Required().StringVar(&packageName)
+	definePackagesDebugSocketFlag(packagesSnapshotsCmd)
 }
 
 func definePackagesDebugSocketFlag(cmd *kingpin.CmdClause) {
@@ -94,4 +139,12 @@ func definePackagesDebugSocketFlag(cmd *kingpin.CmdClause) {
 		Envar("PACKAGES_DEBUG_UNIX_SOCKET").
 		Default(packagesDebugSocket).
 		StringVar(&packagesDebugSocket)
+}
+
+// withQuery appends a query parameter to a path if value is non-empty.
+func withQuery(path, key, value string) string {
+	if value == "" {
+		return path
+	}
+	return path + "?" + url.QueryEscape(key) + "=" + url.QueryEscape(value)
 }

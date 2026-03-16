@@ -186,7 +186,7 @@ func (d *DiskService) GetDiskByName(ctx context.Context, diskName string) (*v1al
 	}
 
 	if len(disks.Items) > 1 {
-		return nil, fmt.Errorf("found more then one disk with the name %s, please contanct the DVP admin to check the name duplication", diskName)
+		return nil, fmt.Errorf("found more than one disk with the name %s, please contanct the DVP admin to check the name duplication", diskName)
 	}
 	if len(disks.Items) == 0 {
 		return nil, cloudprovider.DiskNotFound

@@ -2,6 +2,7 @@
 title: "Зависимости модуля Deckhouse Kubernetes Platform"
 permalink: ru/architecture/module-development/dependencies/
 lang: ru
+description: Виды зависимостей модуля в Deckhouse Kubernetes Platform — от версии DKP, версии Kubernetes и других модулей с обязательными и необязательными режимами.
 ---
 
 В этом разделе описаны зависимости, которые могут быть установлены для модуля.

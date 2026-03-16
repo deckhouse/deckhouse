@@ -241,6 +241,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/configtools/conversion"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/go_lib/dependency/k8s/drain"
   labels:
   - "type/dependencies"
@@ -287,6 +296,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/000-common/images/vxlan-offloading-fixer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/002-deckhouse/images/webhook-handler/operator"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -502,6 +520,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/038-registry/images/registry-proxy/reloader"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/039-registry-packages-proxy/images/registry-packages-proxy/src"
   labels:
   - "type/dependencies"
@@ -512,15 +539,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-control-plane-manager/images/control-plane-manager/controller"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/040-control-plane-manager/images/kubernetes-api-proxy/reloader"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -566,6 +584,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/fencing-agent/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/kubernetes-api-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

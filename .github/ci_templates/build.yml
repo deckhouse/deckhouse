@@ -36,6 +36,7 @@ runs-on: [self-hosted, large]
 outputs:
   tests_image_name: ${{ steps.build.outputs.tests_image_name }}
 steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
 {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
 {!{ end }!}
@@ -67,10 +68,10 @@ steps:
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
-  - name: Set up Go 1.24
+  - name: Set up Go 1.25
     uses: actions/setup-go@v5
     with:
-      go-version: '1.24'
+      go-version: '1.25'
       cache: false
 
   - name: Run go generate
@@ -99,8 +100,8 @@ steps:
       DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
 {!{- end }!}
 {!{- if eq $buildType "release" }!}
-      GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-      GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+      GHCR_IO_REGISTRY_USER: ${{ github.actor }}
+      GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
       DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
       DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
       DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
@@ -174,11 +175,6 @@ steps:
       # CE/EE/FE -> ce/ee/fe
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-      # Temporary directory is moved to ensure
-      TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-      echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-      mkdir -p "$TEMP_WORKDIR"
-
     {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
       STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -224,10 +220,7 @@ steps:
       werf build \
         --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
-        --tmp-dir="$TEMP_WORKDIR" \
         --build-report-path images_tags_werf.json
-
-      cp images_tags_werf.json "$TEMP_WORKDIR"
 
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -267,8 +260,8 @@ steps:
       echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       # Filter out data from build report
-      egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-      mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+      egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+      mv images_tags_werf_filtered.json images_tags_werf.json
 
   - name: Check DKP images manifests in public registry
     if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -294,7 +287,7 @@ steps:
     run: |
       export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
       export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
-      export IMAGES_TAGS_PATH=${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+      export IMAGES_TAGS_PATH=./images_tags_werf.json
       python .github/scripts/python/copy_attestations.py
   {!{- end }!}
 
@@ -303,8 +296,11 @@ steps:
     uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
     with:
       name: build_report_${{ env.WERF_ENV }}
-      path: |
-        ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+      path: images_tags_werf.json
+
+  - name: Cleanup workdir
+    if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+    run: rm images_tags_werf.json
 
 # </template: build_template>
 {!{ end }!}

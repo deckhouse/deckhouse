@@ -1,0 +1,37 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix template tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18251
+ci:
+  fixes:
+    - summary: Add zVirt testing to e2e tests to DKP 1.74.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18236
+    - summary: >-
+        Backport the provider instance change and the new containerd version in OpenStack tests to
+        release 1.74.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18221
+cloud-provider-aws:
+  fixes:
+    - summary: fix getInstancesByIDs to comply with the describeInstanceBatcher.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18312
+cloud-provider-openstack:
+  fixes:
+    - summary: Add loadBalancer.enabled flag to prevent CCM crashes on k8s 1.32 without Octavia service
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18228
+docs:
+  fixes:
+    - summary: Correct the wording in the cloud-provider-vsphere module docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18260
+    - summary: Updated editions for the modules managed-postgres, managed-valkey and managed-memcached.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18120
+ingress-nginx:
+  fixes:
+    - summary: Golang versions are updated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18224
+      impact: Kruise controller pod will be restarted.
+registry:
+  fixes:
+    - summary: Updated auth image Go dependencies to fix Go CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18232
+      impact: Registry pods will be restarted.
+

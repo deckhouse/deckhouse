@@ -1,0 +1,96 @@
+Subject: [PATCH] add skip deps for data sources
+---
+Index: internal/tofu/node_resource_abstract_instance.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/tofu/node_resource_abstract_instance.go b/internal/tofu/node_resource_abstract_instance.go
+--- a/internal/tofu/node_resource_abstract_instance.go	(revision 8053640205da25b2504ea64a36c951cb3fe52bcf)
++++ b/internal/tofu/node_resource_abstract_instance.go	(date 1772566915569)
+@@ -8,6 +8,7 @@
+ import (
+ 	"fmt"
+ 	"log"
++	"os"
+ 	"strings"
+
+ 	"github.com/hashicorp/hcl/v2"
+@@ -2018,6 +2019,8 @@
+ 		}
+ 	}
+
++	pendingDeps := make(map[string]struct{})
++
+ 	for _, d := range depsToUse {
+ 		if d.Resource.Mode == addrs.DataResourceMode {
+ 			// Data sources have no external side effects, so they pose a need
+@@ -2041,11 +2044,63 @@
+ 			}
+
+ 			if change != nil && change.Action != plans.NoOp {
+-				return true
+-			}
+-		}
+-	}
+-	return false
++				pendingDeps[d.String()] = struct{}{}
++				break
++			}
++		}
++	}
++
++	return n.handleDataHavePendingDeps(pendingDeps)
++}
++
++func (n *NodeAbstractResourceInstance) handleDataHavePendingDeps(pendingDeps map[string]struct{}) bool {
++	logDebug := func(f string, args ...any) {
++		f = fmt.Sprintf("[DEBUG] planDataSource: %s handleDataHavePendingDeps: ", n.Addr) + f
++		log.Printf(f, args...)
++	}
++
++	withDefaultCheck := func(f string, args ...any) bool {
++		res := len(pendingDeps) > 0
++		f = f + fmt.Sprintf(" use default check result %v; pending deps %v", res, pendingDeps)
++		logDebug(f, args...)
++		return res
++	}
++
++	providerName := n.Config.Provider.Type
++
++	envProvider := strings.TrimSpace(os.Getenv("TF_SKIP_DEPS_FOR_DATA_SOURCES_PROVIDER"))
++	if envProvider == "" || envProvider != providerName {
++		return withDefaultCheck("provider '%s' not provided or not match with '%s'", envProvider, providerName)
++	}
++
++	logDebug("should handle skip deps for provider %s", providerName)
++
++	if len(pendingDeps) != 1 {
++		return withDefaultCheck("have no one pending deps")
++	}
++
++	skipDepsStr := os.Getenv("TF_SKIP_DEPS_FOR_DATA_SOURCES")
++	skipDepsRaw := strings.Split(skipDepsStr, ";")
++	skippedDeps := make([]string, 0, len(skipDepsRaw))
++	for _, dep := range skipDepsRaw {
++		if trimmed := strings.TrimSpace(dep); trimmed != "" {
++			skippedDeps = append(skippedDeps, trimmed)
++		}
++	}
++
++	if len(skippedDeps) == 0 {
++		return withDefaultCheck("parse zero deps from env '%s'", skipDepsStr)
++	}
++
++	for _, dep := range skippedDeps {
++		if _, ok := pendingDeps[dep]; ok {
++			logDebug("found dep for skip: '%s'. Returns do not have pending deps", dep)
++			return false
++		}
++	}
++
++	logDebug("all passed skipped deps not not match with %v. Returns have pending deps", pendingDeps)
++	return true
+ }
+
+ // apply deals with the main part of the data resource lifecycle: either
