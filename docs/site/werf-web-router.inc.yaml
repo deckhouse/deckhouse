@@ -1,6 +1,5 @@
 image: web-router-artifact
 fromImage: builder/golang-alpine
-final: false
 shell:
   install:
   - cd /go/src/app
@@ -21,7 +20,7 @@ image: web-router
 imageSpec:
   config:
     workingDir: "/app"
-fromImage: builder/alpine-3.22
+fromImage: builder/alpine
 import:
   - image: tools/curl
     add: /usr/bin/curl-static
