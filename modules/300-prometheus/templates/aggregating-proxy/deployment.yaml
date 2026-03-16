@@ -30,14 +30,14 @@ spec:
         minAllowed:
           {{- include "mimir_resources" . | nindent 10 }}
         maxAllowed:
-          cpu: 50m
-          memory: 100Mi
+          cpu: 200m
+          memory: 256Mi
       - containerName: promxy
         minAllowed:
           {{- include "promxy_resources" . | nindent 10 }}
         maxAllowed:
-          cpu: 50m
-          memory: 100Mi
+          cpu: 200m
+          memory: 300Mi
       {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
 {{- end }}
 ---
@@ -119,6 +119,9 @@ spec:
             - "--config=/etc/promxy/config.yaml"
             - "--log-format=json"
             - "--log-level=info"
+          env:
+          - name: GOMEMLIMIT
+            value: "250MiB"
           volumeMounts:
             - mountPath: /etc/promxy/config.yaml
               name: aggregating-proxy-config
