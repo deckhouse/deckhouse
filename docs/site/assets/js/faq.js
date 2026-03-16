@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const faqTitle = faqContainer.querySelectorAll('h3');
-    expandButton.classList.add('active');
+    collapseButton.classList.add('active');
     const faqContent = faqContainer.querySelectorAll('h3 + div');
 
     function findContent(element) {
@@ -24,16 +24,22 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     expandButton.addEventListener('click', () => {
-        expandButton.classList.add('active');
-        collapseButton.classList.remove('active');
+        expandButton.classList.remove('active');
+        collapseButton.classList.add('active');
+        faqTitle.forEach(title => {
+            title.classList.remove('hide');
+        });
         faqContent.forEach(content => {
             content.classList.remove('hidden');
         });
     });
 
     collapseButton.addEventListener('click', () => {
-        expandButton.classList.remove('active');
-        collapseButton.classList.add('active');
+        expandButton.classList.add('active');
+        collapseButton.classList.remove('active');
+        faqTitle.forEach(title => {
+            title.classList.add('hide');
+        });
         faqContent.forEach(content => {
             content.classList.add('hidden');
         });
@@ -45,8 +51,9 @@ document.addEventListener('DOMContentLoaded', function () {
         title.addEventListener('click', () => {
             if (!content) {
                 return;
-            }
-            content.classList.toggle('hidden')
+            };
+            title.classList.toggle('hide');
+            content.classList.toggle('hidden');
         });
     });
 })

@@ -68,6 +68,14 @@
             margin-left: -21px;
         }
 
+        &.hide {
+            color: #00122C;
+
+            &::before {
+                transform: rotate(-90deg);
+            }
+        }
+
         &> a {
             color: #00122C;
 
