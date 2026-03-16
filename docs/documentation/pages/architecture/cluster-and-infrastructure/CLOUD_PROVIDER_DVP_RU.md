@@ -30,8 +30,8 @@ description: Архитектура модуля cloud-provider-dvp в Deckhouse
 
 1. **Capdvp-controller-manager** — Kubernetes Cluster API Provider для DVP. [Cluster API](https://github.com/kubernetes-sigs/cluster-api) является расширением для Kubernetes, которое дает возможность управлять Kubernetes-кластерами как кастомными ресурсами внутри другого Kubernetes-кластера. Cluster API Provider позволяет для кластеров под управлением Cluster API заказывать виртуальные машины в инфраструктуре облачного провайдера, в данном случае DVP. **Capdvp-controller-manager** работает со следующими кастомными ресурсами:
 
-   * DeckhouseCluster — описание кластера на базе DVP.
-   * DeckhouseMachineTemplate — шаблон с описанием характеристик создаваемых машин в облаке.
+   * DeckhouseCluster — описание кластера на базе DVP;
+   * DeckhouseMachineTemplate — шаблон с описанием характеристик создаваемых машин в облаке;
    * DeckhouseMachine — описание характеристик созданной на основе DeckhouseMachineTemplate машины.
 
    Состоит из одного контейнера:
@@ -96,8 +96,8 @@ description: Архитектура модуля cloud-provider-dvp в Deckhouse
 
 2. Модуль `cloud-provider-dvp` предоставляет составляющие Terraform/OpenTofu для DVP, которые используются при сборке исполняемого файла утилиты [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) для компонентов модуля [`terraform-manager`](/modules/terraform-manager/), такие как:
 
-   * terraform/OpenTofu-провайдер;
-   * terraform-модули;
+   * Terraform/OpenTofu-провайдер;
+   * Terraform-модули;
    * layouts - набор схем размещения в облаке: как создается базовая инфраструктура, как и с какими дополнительными характеристиками для данного размещения должны создаваться узлы. Например, для одной схемы узлы будут иметь публичные IP, а для другой нет. Каждый layout должен иметь 3 модуля:
 
      * `base-infrastructure` (базовая инфраструктура, например, создаются сети, но может быть и пустым);

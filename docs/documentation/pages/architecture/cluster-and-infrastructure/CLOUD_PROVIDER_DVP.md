@@ -95,8 +95,8 @@ Indirect interactions:
 
 2. The `cloud-provider-dvp` module provides Terraform/OpenTofu components for DVP cloud used when building the [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) executable file for the [`terraform-manager`](/modules/terraform-manager/) module components, such as:
 
-   * terraform/OpenTofu provider,
-   * terraform modules,
+   * Terraform/OpenTofu provider,
+   * Terraform modules,
    * layouts: a set of cloud placement schemes, for example how the basic infrastructure is created, how and with which additional characteristics should be created nodes for this placement. For example, for one scheme, nodes will have public IP addresses, but not for the other. Each layout should have 3 modules:
 
      * `base-infrastructure` (basic infrastructure, for example, networks are being created, but it can also be empty),
