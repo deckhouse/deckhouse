@@ -54,11 +54,13 @@ locals {
   disk_type              = lookup(local.node_group.instanceClass, "diskType", "StandardSSD_LRS")
   disk_size_gb           = lookup(local.node_group.instanceClass, "diskSizeGb", 50)
   enable_external_ip     = lookup(local.node_group.instanceClass, "enableExternalIP", false)
-  urn                    = split(":", local.node_group.instanceClass.urn)
-  image_publisher        = local.urn[0]
-  image_offer            = local.urn[1]
-  image_sku              = local.urn[2]
-  image_version          = local.urn[3]
+  is_custom_id           = substr(local.node_group.instanceClass.urn, 0, 1) == "/"
+  urn                    = local.is_custom_id ? [] : split(":", local.node_group.instanceClass.urn)
+  image_publisher        = local.is_custom_id ? null : local.urn[0]
+  image_offer            = local.is_custom_id ? null : local.urn[1]
+  image_sku              = local.is_custom_id ? null : local.urn[2]
+  image_version          = local.is_custom_id ? null : local.urn[3]
+  image_id               = local.is_custom_id ? local.node_group.instanceClass.urn : null
   actual_zones           = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(["1", "2", "3"], var.providerClusterConfiguration.zones)) : ["1", "2", "3"]
   zones                  = lookup(local.node_group, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.node_group["zones"])) : local.actual_zones
   additional_tags        = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.node_group.instanceClass, "additionalTags", {}))

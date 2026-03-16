@@ -53,11 +53,13 @@ locals {
   disk_size_gb           = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskSizeGb", 50)
   etcd_disk_size_gb      = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   enable_external_ip     = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "enableExternalIP", false)
-  urn                    = split(":", var.providerClusterConfiguration.masterNodeGroup.instanceClass.urn)
-  image_publisher        = local.urn[0]
-  image_offer            = local.urn[1]
-  image_sku              = local.urn[2]
-  image_version          = local.urn[3]
+  is_custom_id           = substr(var.providerClusterConfiguration.masterNodeGroup.instanceClass.urn, 0, 1) == "/"
+  urn                    = local.is_custom_id ? [] : split(":", var.providerClusterConfiguration.masterNodeGroup.instanceClass.urn)
+  image_publisher        = local.is_custom_id ? null : local.urn[0]
+  image_offer            = local.is_custom_id ? null : local.urn[1]
+  image_sku              = local.is_custom_id ? null : local.urn[2]
+  image_version          = local.is_custom_id ? null : local.urn[3]
+  image_id               = local.is_custom_id ? var.providerClusterConfiguration.masterNodeGroup.instanceClass.urn : null
   actual_zones           = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(["1", "2", "3"], var.providerClusterConfiguration.zones)) : ["1", "2", "3"]
   zones                  = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
   additional_tags        = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {}))

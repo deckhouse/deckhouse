@@ -83,12 +83,17 @@ resource "azurerm_linux_virtual_machine" "node" {
     disk_size_gb         = local.disk_size_gb
   }
 
-  source_image_reference {
-    publisher = local.image_publisher
-    offer     = local.image_offer
-    sku       = local.image_sku
-    version   = local.image_version
+  dynamic "source_image_reference" {
+    for_each = local.image_id == null ? [1] : []
+    content {
+      publisher = local.image_publisher
+      offer     = local.image_offer
+      sku       = local.image_sku
+      version   = local.image_version
+    }
   }
+
+  source_image_id = local.image_id
 
   custom_data = var.cloudConfig != "" ? var.cloudConfig : base64encode(local.default_cloud_config)
 
