@@ -244,6 +244,8 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		DisableSwitch: true,
 	})
 
+	convergeCtx.SetClientSwitcher(switcher)
+
 	r := newRunner(inLockRunner, switcher).
 		WithCommanderUUID(c.CommanderUUID)
 
@@ -440,6 +442,8 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		DisableSwitch: c.NoSwitchToNodeUser,
 	})
 
+	convergeCtx.SetClientSwitcher(kubectlSwitcher)
+
 	phasesToSkip := make([]phases.OperationPhase, 0)
 	if !c.CommanderMode {
 		phasesToSkip = []phases.OperationPhase{phases.DeckhouseConfigurationPhase}
@@ -545,11 +549,15 @@ func (c *Converger) AutoConverge(listenAddress string, checkInterval time.Durati
 
 	app.DeckhouseTimeout = 1 * time.Hour
 
-	r := newRunner(inLockRunner, convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
+	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
 		TmpDir:  c.TmpDir,
 		Logger:  c.Logger,
 		IsDebug: c.IsDebug,
-	})).
+	})
+
+	convergeCtx.SetClientSwitcher(switcher)
+
+	r := newRunner(inLockRunner, switcher).
 		WithCommanderUUID(c.CommanderUUID).
 		WithExcludedNodes([]string{app.RunningNodeName}).
 		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase, phases.DeckhouseConfigurationPhase})
