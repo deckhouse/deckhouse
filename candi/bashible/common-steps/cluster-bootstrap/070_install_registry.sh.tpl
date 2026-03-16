@@ -14,6 +14,29 @@
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
 
+check_container_running() {
+  local container_name=$1
+  local max_retries=20
+  local sleep_interval=10
+  local count=0
+
+  while [[ $count -lt $max_retries ]]; do
+    if crictl ps -o json | jq -e --arg name "$container_name" '.containers[] | select(.metadata.name == $name and .state == "CONTAINER_RUNNING")' > /dev/null; then
+      echo "$container_name is running"
+      return 0
+    fi
+    count=$((count + 1))
+
+    if [[ $count -ge $max_retries ]]; then
+      echo "$container_name not running in $sleep_interval*$max_retries"
+      exit 1
+    fi
+
+    sleep $sleep_interval
+    echo "wait for the $container_name to start $count"
+  done
+}
+
 {{ $imgDockerDistribution := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerDistribution") }}
 {{ $imgDockerAuth := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerAuth") }}
 
@@ -351,13 +374,18 @@ spec:
 EOF
 
 # Prepull static pod images
-/opt/deckhouse/bin/crictl pull {{ $imgDockerDistribution }}
-/opt/deckhouse/bin/crictl pull {{ $imgDockerAuth }}
+crictl pull {{ $imgDockerDistribution }}
+crictl pull {{ $imgDockerAuth }}
 
-
-# Switching registry from igniter to static pod
+# Switching registry to static pod
 bash "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh"
 mv "${static_pod_path}" /etc/kubernetes/manifests/registry-nodeservices.yaml
+
+# Check containers
+check_container_running auth
+check_container_running distribution
+check_container_running registry-proxy
+check_container_running registry-proxy-reloader
 
 # Unset proxy envs
 bb-unset-proxy
