@@ -56,4 +56,4 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
-* **prometheus-main**: Collects metrics from terraform-auto-converger and terraform-state-exporter.
+* **Prometheus-main**: Collects metrics from **Terraform-auto-converger** and **Terraform-state-exporter**.
