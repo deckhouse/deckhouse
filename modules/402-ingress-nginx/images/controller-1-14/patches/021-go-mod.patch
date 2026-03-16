@@ -1,12 +1,25 @@
 diff --git a/go.mod b/go.mod
-index f84c6dc6c..a0aa5eee8 100644
+index f84c6dc6c..70386e689 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,6 +1,6 @@
+@@ -1,11 +1,12 @@
  module k8s.io/ingress-nginx
  
 -go 1.26.1
-+go 1.25
++go 1.25.0
  
  require (
  	dario.cat/mergo v1.0.2
+ 	github.com/Anddd7/pb v0.0.0-20250506021228-7e355c18f206
+ 	github.com/blang/semver/v4 v4.0.0
++	github.com/cespare/xxhash/v2 v2.3.0
+ 	github.com/eapache/channels v1.1.0
+ 	github.com/fsnotify/fsnotify v1.9.0
+ 	github.com/google/go-github/v48 v48.2.0
+@@ -56,7 +57,6 @@ require (
+ 	github.com/BurntSushi/toml v1.6.0 // indirect
+ 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
+ 	github.com/beorn7/perks v1.0.1 // indirect
+-	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+ 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
+ 	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
