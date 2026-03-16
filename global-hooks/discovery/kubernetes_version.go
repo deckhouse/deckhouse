@@ -253,7 +253,8 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, error) {
 	serverK8sLabeledSnap := input.Snapshots.Get(kubeAPIServK8sLabeledSnap)
 	serverCPLabeledSnap := input.Snapshots.Get(kubeAPIServCPLabeledSnap)
-
+	input.Logger.Info(fmt.Sprintf("serverK8sLabeledSnap, length %d: %s", len(serverK8sLabeledSnap), serverK8sLabeledSnap))
+	input.Logger.Info(fmt.Sprintf("serverCPLabeledSnap, length %d: %s", len(serverCPLabeledSnap), serverCPLabeledSnap))
 	podsCnt := 0
 	if c := len(serverK8sLabeledSnap); c > 0 {
 		podsCnt = c
@@ -300,7 +301,7 @@ func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, 
 
 		input.Logger.Warn(msg)
 
-		return endpoints, nil
+		return nil, nil
 	}
 
 	return endpoints, nil
