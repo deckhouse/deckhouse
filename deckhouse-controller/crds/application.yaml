@@ -161,6 +161,10 @@ spec:
                     description: Semantic version of the installed application.
                     type: string
                 type: object
+              tracking:
+                description: Nelm tracking.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
             type: object
         required:
         - spec

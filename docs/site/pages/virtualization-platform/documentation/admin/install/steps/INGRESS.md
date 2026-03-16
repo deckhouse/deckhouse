@@ -108,6 +108,7 @@ grafana.my-dvp-cluster.example.com
 hubble.my-dvp-cluster.example.com
 kubeconfig.my-dvp-cluster.example.com
 openvpn-admin.my-dvp-cluster.example.com
+registry.my-dvp-cluster.example.com
 prometheus.my-dvp-cluster.example.com
 status.my-dvp-cluster.example.com
 upmeter.my-dvp-cluster.example.com
@@ -126,6 +127,7 @@ grafana-my-dvp-cluster.example.com
 hubble-my-dvp-cluster.example.com
 kubeconfig-my-dvp-cluster.example.com
 openvpn-admin-my-dvp-cluster.example.com
+registry.my-dvp-cluster.example.com
 prometheus-my-dvp-cluster.example.com
 status-my-dvp-cluster.example.com
 upmeter-my-dvp-cluster.example.com
@@ -149,6 +151,7 @@ $PUBLIC_IP grafana.$CLUSTER_DOMAIN
 $PUBLIC_IP hubble.$CLUSTER_DOMAIN
 $PUBLIC_IP kubeconfig.$CLUSTER_DOMAIN
 $PUBLIC_IP openvpn-admin.$CLUSTER_DOMAIN
+$PUBLIC_IP registry.$CLUSTER_DOMAIN
 $PUBLIC_IP prometheus.$CLUSTER_DOMAIN
 $PUBLIC_IP status.$CLUSTER_DOMAIN
 $PUBLIC_IP upmeter.$CLUSTER_DOMAIN

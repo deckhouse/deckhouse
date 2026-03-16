@@ -2,6 +2,7 @@
 title: "Запуск и проверка модуля в кластере"
 permalink: ru/architecture/module-development/run/
 lang: ru
+description: Запуск модуля в кластере Deckhouse Kubernetes Platform с помощью ModuleSource, ModuleUpdatePolicy и ModuleConfig, а также проверка его работоспособности.
 ---
 
 В этом разделе рассмотрен процесс запуска модуля в кластере Deckhouse Kubernetes Platform (DKP), а также подключение Deckhouse Module Tools для проверки модуля и сбора метрик.
@@ -298,6 +299,12 @@ module-two-v1.2.5          Pending      deckhouse       44d              Waiting
 d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
 
+Для удобства это можно сделать с помощью [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI (имена модулей и версии автодополняются):
+
+```shell
+d8 system module approve <module-name> <version>
+```
+
 {% endalert %}
 
 ### Переключение модуля на другой источник модулей
@@ -427,7 +434,7 @@ module-two                   Available   False     False
   example     2       16s    Some errors occurred. Inspect status for details
   ```
 
-По аналогии [с DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease). DKP создает ModuleRelease исходя из того, что хранится в container registry.
+По аналогии [с DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease). DKP создает ModuleRelease исходя из того, что хранится в хранилище образов.
 При поиске проблем с модулем проверьте также доступные в кластере ModuleRelease:
 
 ```shell
@@ -446,6 +453,12 @@ module-1-v1.23.2     Pending      example-update-policy  3m               Waitin
 
 ```shell
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
+```
+
+Для удобства это можно сделать с помощью [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI (имена модулей и версии автодополняются):
+
+```shell
+d8 system module approve module-1 v1.23.2
 ```
 
 ## Подключение Deckhouse Module Tools для проверки модуля

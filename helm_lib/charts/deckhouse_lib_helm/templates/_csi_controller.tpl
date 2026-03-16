@@ -84,6 +84,7 @@ memory: 50Mi
   {{- $resizerEnabled := dig "resizerEnabled" true $config }}
   {{- $syncerEnabled := dig "syncerEnabled" false $config }}
   {{- $topologyEnabled := dig "topologyEnabled" true $config }}
+  {{- $capacityEnabled := dig "capacityEnabled" true $config }}
   {{- $runAsRootUser := dig "runAsRootUser" false $config }}
   {{- $extraCreateMetadataEnabled := dig "extraCreateMetadataEnabled" false $config }}
   {{- $controllerImage := $config.controllerImage | required "$config.controllerImage is required" }}
@@ -301,8 +302,10 @@ spec:
         - "--leader-election-lease-duration=30s"
         - "--leader-election-renew-deadline=20s"
         - "--leader-election-retry-period=5s"
+  {{- if $capacityEnabled }}
         - "--enable-capacity"
         - "--capacity-ownerref-level=2"
+  {{- end }}
   {{- if $extraCreateMetadataEnabled }}
         - "--extra-create-metadata=true"
   {{- end }}

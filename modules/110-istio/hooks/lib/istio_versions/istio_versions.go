@@ -84,7 +84,7 @@ func (vm IstioVersionsMap) GetFullVersionByRevision(rev string) string {
 func (vm IstioVersionsMap) GetAllVersions() []string {
 	versions := make([]string, len(vm)) //nolint:prealloc
 	for ver := range vm {
-		versions = append(versions, ver)
+		versions = append(versions, ver) //nolint:makezero
 	}
 	return versions
 }

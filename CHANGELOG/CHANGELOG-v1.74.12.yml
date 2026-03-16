@@ -1,0 +1,16 @@
+candi:
+  fixes:
+    - summary: >-
+        Added a Netplan override to force the secondary NIC to use the main routing table, fixing
+        cloud-init PBR conflicts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18377
+ingress-nginx:
+  fixes:
+    - summary: CVE-2026-3288 fix is backported in all Ingress-Nginx controllers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18410
+      impact: All Ingress-Nginx controller pods will be restarted.
+node-manager:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18370
+

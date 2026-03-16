@@ -1,4 +1,4 @@
-{{- $version := "2.11" }}
+{{- $version := include "get_oss_version_by_id" (list "nvme-cli" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}

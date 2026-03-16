@@ -1,14 +1,8 @@
-Subject: [PATCH] fix ListRoutes implementation
----
-Index: pkg/providers/v1/aws_routes.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/providers/v1/aws_routes.go b/pkg/providers/v1/aws_routes.go
---- a/pkg/providers/v1/aws_routes.go	(revision 8ed070cd7501f6032ac056a4e79b9afc70fe522c)
-+++ b/pkg/providers/v1/aws_routes.go	(date 1746511538247)
-@@ -116,7 +116,8 @@
+index 2fea345..7f2247e 100644
+--- a/pkg/providers/v1/aws_routes.go
++++ b/pkg/providers/v1/aws_routes.go
+@@ -117,7 +117,8 @@ func (c *Cloud) ListRoutes(ctx context.Context, clusterName string) ([]*cloudpro
  			if found {
  				node, err := c.instanceIDToNodeName(InstanceID(instanceID))
  				if err != nil {

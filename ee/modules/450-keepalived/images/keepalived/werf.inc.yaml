@@ -7,7 +7,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 -b v2.2.7 $(cat /run/secrets/SOURCE_REPO)/acassen/keepalived.git /src
+  - git clone --depth 1 -b v{{ include "get_oss_version_by_id" (list "keepalived" $ ) }} $(cat /run/secrets/SOURCE_REPO)/acassen/keepalived.git /src
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/build-keepalived

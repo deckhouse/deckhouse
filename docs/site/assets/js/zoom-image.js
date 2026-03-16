@@ -287,7 +287,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!images.length) return;
 
   images.forEach(function (img) {
-    if (img.closest('.oss__item-logo')) return;
+    if (img.closest('.oss__item-logo, .button_card')) return;
     if (img.classList.contains('zoom-image-disable')) return;
 
     const w = img.getAttribute('width') || img.offsetWidth;

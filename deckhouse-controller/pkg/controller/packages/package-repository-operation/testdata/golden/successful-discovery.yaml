@@ -29,6 +29,11 @@ status:
     status: "True"
     type: Completed
   packages:
+    failed:
+    - errors:
+      - error: no release images found for package "test-package" in /version path
+        version: unknown
+      name: test-package
     processed:
     - name: test-package
     processedOverall: 1
@@ -52,9 +57,5 @@ status:
     reason: ""
     status: "True"
     type: LastOperationScanFinished
-  packages:
-  - name: test-package
-    type: Application
-  packagesCount: 1
   phase: Active
   syncTime: "2025-10-31T12:00:00Z"

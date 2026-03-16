@@ -90,6 +90,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.module_name\s*\}\}/m,'MODULE_NAME').
               gsub(/{{\s*\$labels\.moduleName\s*\}\}/m,'MODULE_NAME').
               gsub(/{{\s*\$labels\.module_release\s*\}\}/m,'MODULE_RELEASE').
+              gsub(/{{\s*\$labels\.moduleRelease\s*\}\}/m,'MODULE_RELEASE').
               gsub(/{{\s*\$labels\.mountpoint\s*\}\}/m,'MOUNTPOINT').
               gsub(/{{\s*\$labels\.multicluster_name\s*\}\}/m,'MULTICLUSTER_NAME').
               gsub(/{{\s*\$labels\.namespace\s*\}\}/m,'NAMESPACE').

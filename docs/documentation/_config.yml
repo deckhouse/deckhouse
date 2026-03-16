@@ -78,6 +78,8 @@ kramdown:
  auto_ids: true
  hard_wrap: false
  syntax_highlighter: rouge
+ syntax_highlighter_opts:
+  default_lang: plaintext
  parse_block_html: true
 
 defaults:

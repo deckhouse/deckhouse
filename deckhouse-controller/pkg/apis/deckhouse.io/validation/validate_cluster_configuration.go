@@ -331,7 +331,13 @@ func validateUnsafeConfigChanges(oldConfig, newConfig *clusterConfig, unsafeMode
 }
 
 func validateClusterConfiguration(ctx context.Context, clusterConfiguration []byte) (*kwhvalidating.ValidatorResult, error) {
-	_, err := config.ParseConfigFromData(ctx, string(clusterConfiguration), config.DummyPreparatorProvider(), config.ValidateOptionOmitDocInError(true))
+	_, err := config.ParseConfigFromData(
+		ctx,
+		string(clusterConfiguration),
+		config.DummyPreparatorProvider(),
+		config.ValidateOptionOmitDocInError(true),
+		config.ValidateOptionStrictUnmarshal(true),
+	)
 	if err != nil {
 		result, _ := rejectResult(err.Error())
 		return result, nil

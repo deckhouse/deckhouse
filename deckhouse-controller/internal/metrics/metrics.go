@@ -100,9 +100,9 @@ func ModuleReleaseMetricsGroupName(moduleName, version string) string {
 // This ensures consistent label usage across the codebase and matches the registered metric labels.
 func ModuleConfigurationErrorLabels(moduleName, version, errorMsg string) map[string]string {
 	return map[string]string{
-		"module":  moduleName,
-		"version": version,
-		"error":   errorMsg,
+		LabelModule:  moduleName,
+		LabelVersion: version,
+		LabelError:   errorMsg,
 	}
 }
 
@@ -133,7 +133,7 @@ func RegisterDeckhouseControllerMetrics(metricStorage metricsstorage.Storage) er
 // including experimental modules, migrations, and deprecation tracking.
 func RegisterModuleManagerMetrics(metricStorage metricsstorage.Storage) error {
 	// Register module manager metrics
-	moduleLabels := []string{"module"}
+	moduleLabels := []string{LabelModule}
 
 	// Register experimental modules allowed metric (global setting)
 	_, err := metricStorage.RegisterGauge(
@@ -220,7 +220,7 @@ func RegisterDeckhouseReleaseMetrics(metricStorage metricsstorage.Storage) error
 
 	// Register update status gauges
 	// These gauges are managed via grouped metrics and are set during release operations
-	releaseLabels := []string{"deployingRelease"}
+	releaseLabels := []string{LabelDeployingRelease}
 
 	_, err = metricStorage.RegisterGauge(
 		D8IsUpdating,
@@ -247,8 +247,8 @@ func RegisterDeckhouseReleaseMetrics(metricStorage metricsstorage.Storage) error
 // including config, source, and release controller metrics.
 func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error {
 	// Define common labels for module controller metrics
-	moduleLabels := []string{"module", "source"}
-	configLabels := []string{"module"}
+	moduleLabels := []string{LabelModule, LabelSource}
+	configLabels := []string{LabelModule}
 
 	// Register counter for module operations
 	// Note: These metrics use deckhouse_ placeholder which is replaced by metrics storage
@@ -282,7 +282,7 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 
 	// ModuleConfigurationError uses different labels than other module metrics
 	// because it tracks configuration errors per module version, not per source
-	moduleConfigErrorLabels := []string{"module", "version", "error"}
+	moduleConfigErrorLabels := []string{LabelModule, LabelVersion, LabelError}
 	_, err = metricStorage.RegisterGauge(
 		ModuleConfigurationError,
 		moduleConfigErrorLabels,

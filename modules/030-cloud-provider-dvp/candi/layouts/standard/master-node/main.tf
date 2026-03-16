@@ -25,6 +25,22 @@ module "root-disk" {
   cluster_uuid  = local.cluster_uuid
 }
 
+resource "kubernetes_owner_references_v1" "root-disk" {
+  api_version = "virtualization.deckhouse.io/v1alpha2"
+  kind        = "VirtualDisk"
+  metadata {
+    name      = module.root-disk.name
+    namespace = local.namespace
+  }
+
+  owner_references {
+    api_version = "virtualization.deckhouse.io/v1alpha2"
+    kind        = "VirtualMachine"
+    name        = module.master.name
+    uid         = module.master.uid
+  }
+}
+
 module "kubernetes-data-disk" {
   source        = "../../../terraform-modules/kubernetes-data-disk/"
   prefix        = local.prefix
@@ -35,6 +51,22 @@ module "kubernetes-data-disk" {
   size          = local.kubernetes_data_disk_size
   hostname      = local.hostname
   cluster_uuid  = local.cluster_uuid
+}
+
+resource "kubernetes_owner_references_v1" "kubernetes-data-disk" {
+  api_version = "virtualization.deckhouse.io/v1alpha2"
+  kind        = "VirtualDisk"
+  metadata {
+    name      = module.kubernetes-data-disk.name
+    namespace = local.namespace
+  }
+
+  owner_references {
+    api_version = "virtualization.deckhouse.io/v1alpha2"
+    kind        = "VirtualMachine"
+    name        = module.master.name
+    uid         = module.master.uid
+  }
 }
 
 module "additional-disk" {
@@ -66,12 +98,46 @@ locals {
   ]
 }
 
+resource "kubernetes_owner_references_v1" "additional-disk" {
+  for_each = module.additional-disk
+
+  api_version = "virtualization.deckhouse.io/v1alpha2"
+  kind        = "VirtualDisk"
+  metadata {
+    name      = each.value.name
+    namespace = local.namespace
+  }
+
+  owner_references {
+    api_version = "virtualization.deckhouse.io/v1alpha2"
+    kind        = "VirtualMachine"
+    name        = module.master.name
+    uid         = module.master.uid
+  }
+}
+
 module "ipv4-address" {
   source       = "../../../terraform-modules/ipv4-address/"
   namespace    = local.namespace
   hostname     = local.hostname
   ipv4_address = local.ipv4_address
   cluster_uuid = local.cluster_uuid
+}
+
+resource "kubernetes_owner_references_v1" "ipv4-address" {
+  api_version = "virtualization.deckhouse.io/v1alpha2"
+  kind        = "VirtualMachineIPAddress"
+  metadata {
+    name      = module.ipv4-address.name
+    namespace = local.namespace
+  }
+
+  owner_references {
+    api_version = "virtualization.deckhouse.io/v1alpha2"
+    kind        = "VirtualMachine"
+    name        = module.master.name
+    uid         = module.master.uid
+  }
 }
 
 module "master" {
@@ -101,4 +167,20 @@ module "master" {
   zone                       = local.zone
   cloud_config               = local.user_data
   additional_disks           = local.master_additional_disks
+}
+
+resource "kubernetes_owner_references_v1" "cloudinit-secret" {
+  api_version = "v1"
+  kind        = "Secret"
+  metadata {
+    name      = module.master.cloudinit_secret_name
+    namespace = local.namespace
+  }
+
+  owner_references {
+    api_version = "virtualization.deckhouse.io/v1alpha2"
+    kind        = "VirtualMachine"
+    name        = module.master.name
+    uid         = module.master.uid
+  }
 }

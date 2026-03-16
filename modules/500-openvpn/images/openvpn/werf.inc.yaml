@@ -1,6 +1,3 @@
-{{- $openvpnVersion := "2.6.12" }}
-{{- $opensslVersion := "3.3.2" }}
-{{- $libcapNgVersion := "0.8.5" }}
 {{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so* /bin/mknod" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
@@ -41,9 +38,9 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 -b openssl-{{ $opensslVersion }} $(cat /run/secrets/SOURCE_REPO)/openssl/openssl.git /src/openssl && cd /src/openssl && rm -rf .git
-  - git clone --depth 1 -b v{{ $libcapNgVersion }} $(cat /run/secrets/SOURCE_REPO)/stevegrubb/libcap-ng.git /src/libcap-ng && cd /src/libcap-ng && rm -rf .git
-  - git clone --depth 1 -b v{{ $openvpnVersion }} $(cat /run/secrets/SOURCE_REPO)/OpenVPN/openvpn.git /src/openvpn && cd /src/openvpn && rm -rf .git
+  - git clone --depth 1 -b openssl-{{ include "get_oss_version_by_id" (list "openssl" $ ) }} $(cat /run/secrets/SOURCE_REPO)/openssl/openssl.git /src/openssl && cd /src/openssl && rm -rf .git
+  - git clone --depth 1 -b v{{ include "get_oss_version_by_id" (list "libcapng" $ ) }} $(cat /run/secrets/SOURCE_REPO)/stevegrubb/libcap-ng.git /src/libcap-ng && cd /src/libcap-ng && rm -rf .git
+  - git clone --depth 1 -b v{{ include "get_oss_version_by_id" (list "openvpn" $ ) }} $(cat /run/secrets/SOURCE_REPO)/OpenVPN/openvpn.git /src/openvpn && cd /src/openvpn && rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 final: false
