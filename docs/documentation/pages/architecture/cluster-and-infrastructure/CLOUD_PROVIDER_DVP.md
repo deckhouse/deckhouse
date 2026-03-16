@@ -59,7 +59,7 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container;
    * **kube-rbac-proxy**: Sidecar container providing authorized access to **cloud-data-discoverer** container metrics.
 
-4. **CSI driver (DVP)**: It is an implementation of the CSI driver for DVP. To study the `cloud-provider-*' CSI driver typical architecture, refer to the [corresponding documentation page](csi-driver.html). **CSI driver (DVP)** does not support snapshots. For this reason, the **Csi-controller** does not contain **snapshotter** ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter )) sidecar container.
+4. **CSI driver (DVP)**: It is an implementation of the CSI driver for DVP. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](csi-driver.html). **CSI driver (DVP)** does not support snapshots. For this reason, the **Csi-controller** does not contain **snapshotter** ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter )) sidecar container.
 
 ## Module interactions
 
@@ -88,16 +88,16 @@ The following external components interact with the module:
 
 Indirect interactions:
 
-1. The `cloud-provider-dvp` module provides [`node-manager`](/modules/node-manager/) following artefacts:
+1. The `cloud-provider-dvp` module provides [`node-manager`](/modules/node-manager/) with following artefacts:
 
    * Provider-specific Cluster API custom resources templates to be used by **cloud-provider-dvp** to create VM's in the cloud.
    * `kube-system/d8-node-manager-cloud-provider` secret, which contains all the necessary settings to connect to the cloud and to create CloudEphemeral nodes. These settings are registered in the provider-specific Cluster API custom resources created based on the templates mentioned above.
 
 2. The `cloud-provider-dvp` module provides Terraform/OpenTofu components for DVP cloud used when building the [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) executable file for the [`terraform-manager`](/modules/terraform-manager/) module components, such as:
 
-   * Terraform/OpenTofu provider,
-   * Terraform modules,
-   * layouts: a set of cloud placement schemes, for example how the basic infrastructure is created, how and with which additional characteristics should be created nodes for this placement. For example, for one scheme, nodes will have public IP addresses, but not for the other. Each layout should have 3 modules:
+   * Terraform/OpenTofu provider.
+   * Terraform modules.
+   * Layouts. It is a set of cloud placement schemes, such as: how the basic infrastructure is created, how and with which additional characteristics should nodes be created for this placement. For example, for one scheme, nodes will have public IP addresses, but not for the other. Each layout should have 3 modules:
 
      * `base-infrastructure` (basic infrastructure, for example, networks are being created, but it can also be empty),
      * `master-node`,
