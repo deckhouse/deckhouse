@@ -14,10 +14,10 @@
     .post-content {
         p {
             margin: 0;
+        }
 
-            &:first-child {
-                margin-bottom: 56px;
-            }
+        &> p:first-child {
+            margin-bottom: 56px;
         }
     }
 
@@ -66,6 +66,14 @@
             background: url(../../images/faq-title.svg) no-repeat;
             background-size: contain;
             margin-left: -21px;
+        }
+
+        &> a {
+            color: #00122C;
+
+            &:hover {
+                color: variables.$primary-700;
+            }
         }
     }
 
