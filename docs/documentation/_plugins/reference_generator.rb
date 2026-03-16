@@ -145,7 +145,11 @@ module ReferenceGenerator
 
       if data['description']
         description = escape_liquid_tags(data['description'])
-        result += "<p>#{description}</p>\n<p><b>Version:</b> #{data['version']}</p>\n"
+        result += "<p>#{description}</p>\n"
+      end
+      if data['version'].to_s.strip != ''
+        version = escape_liquid_tags(data['version'].to_s)
+        result += "<p><strong>Version:</strong> #{version}</p>\n"
       end
 
       # Render flags
