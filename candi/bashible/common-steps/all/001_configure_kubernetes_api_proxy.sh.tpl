@@ -14,10 +14,6 @@
 
 mkdir -p /etc/kubernetes/kubernetes-api-proxy
 
-# Read previously discovered IP
-# Need for bootstrap Local and Proxy registry modes
-discovered_node_ip="$(bb-d8-node-ip)"
-
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
 {{- $list := list }}
 {{- if eq .runType "Normal" }}
