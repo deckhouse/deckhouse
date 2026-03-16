@@ -85,6 +85,13 @@ func run(argv []string) int {
 		return 1
 	}
 
+	if debug {
+		log.Printf(
+			"sandbox metrics: status=%s exit=%d cpu=%s wall=%s mem=%dB err=%q",
+			res.Status, res.ExitStatus, res.Time, res.RunningTime, res.Memory, res.Error,
+		)
+	}
+
 	if res.Status == runner.StatusNormal && res.ExitStatus == 0 && res.Error == "" {
 		return 0
 	}
