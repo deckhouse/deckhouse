@@ -209,8 +209,10 @@ The sidecar-injector is a recommended way to add sidecars. Istio can inject side
 It is also possible to add the sidecar to an individual pod in namespace without the `istio-injection=enabled` or `istio.io/rev=vXxYZ` labels by setting the `sidecar.istio.io/inject=true` Pod label.
 
 {% alert level="warning" %}
-Istio-proxy, running as a sidecar container, consumes resources and adds overhead:
+Istio-proxy, running as a sidecar container, consumes resources and adds overhead.
 {% endalert %}
+
+Overhead added by Istio-proxy:
 
 - Any incoming DNAT request is forcibly intercepted by the Envoy proxy. Envoy analyzes the request and forwards it by establishing a new connection. On the receiver side, the process is identical: traffic first reaches the "receiving" Envoy and only then is passed to the application itself.
 - Each Envoy instance stores information about all services in the cluster; therefore, scaling the cluster leads to a linear increase in Envoy's RAM consumption due to storing the full service map. Using the [Sidecar](istio-cr.html#sidecar) CustomResource, the configuration is filtered, and only the necessary minimum of data is delivered to Envoy.
@@ -272,7 +274,7 @@ Below are their fundamental differences:
 #### General principles of federation
 
 - Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. This is achieved by a mutual exchange of root certificates.
-- You also need to share information about government services to use the federation. You can do that using `ServiceEntry`. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
+- You also need to share information about government services to use the federation. You can do that using ServiceEntry resource. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
 <div data-presentation="presentations/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
