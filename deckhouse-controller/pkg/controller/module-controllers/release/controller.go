@@ -60,6 +60,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -213,6 +214,9 @@ func (r *reconciler) preflight(ctx context.Context) error {
 		r.metricStorage.GaugeSet(metrics.ModulePullSecondsTotal, release.Status.PullDuration.Seconds(), labels)
 		r.metricStorage.GaugeSet(metrics.ModuleSizeBytesTotal, float64(release.Status.Size), labels)
 	}
+
+	// DOP telemetry: initial snapshot of deployed module versions
+	_ = reportModuleVersions(ctx, r.client, r.metricStorage)
 
 	r.log.Debug("controller is ready")
 
@@ -1245,6 +1249,9 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 		return fmt.Errorf("update status with retry: %w", err)
 	}
 
+	// DOP telemetry: refresh module version metrics when a release is published
+	_ = reportModuleVersions(ctx, r.client, r.metricStorage)
+
 	return nil
 }
 
@@ -1912,4 +1919,24 @@ func (r *reconciler) isModuleReady(ctx context.Context, moduleName string) bool 
 	}
 
 	return module.Status.Phase == v1alpha1.ModulePhaseReady
+}
+
+func reportModuleVersions(ctx context.Context, c client.Client, ms metricsstorage.Storage) error {
+	var list v1alpha1.ModuleList
+	if err := c.List(ctx, &list); err != nil {
+		return err
+	}
+	ms.Grouped().ExpireGroupMetrics(metrics.DeckhouseModuleVersionTelemetryGroup)
+	metricName := telemetry.WrapName(metrics.DeckhouseModuleVersionMetricName)
+	for i := range list.Items {
+		m := &list.Items[i]
+		if m.Properties.Version == "" {
+			continue
+		}
+		ms.Grouped().GaugeSet(metrics.DeckhouseModuleVersionTelemetryGroup, metricName, 1, map[string]string{
+			metrics.LabelModuleName:    m.Name,
+			metrics.LabelModuleVersion: m.Properties.Version,
+		})
+	}
+	return nil
 }

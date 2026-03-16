@@ -72,6 +72,14 @@ const (
 	ModuleSizeBytesTotal       = "deckhouse_module_size_bytes_total"
 	ModuleUpdatePolicyNotFound = "deckhouse_module_update_policy_not_found"
 	ModuleConfigurationError   = "deckhouse_module_configuration_error"
+
+	// ============================================================================
+	// DOP Telemetry: Module Versions (d8_telemetry_deckhouse_module_version)
+	// ============================================================================
+	// DeckhouseModuleVersionMetricName is the base name for the DOP telemetry metric
+	// that reports deployed version per module. Wrapped with d8_telemetry_ prefix.
+	// Labels: module_name, module_version. Value: 1.
+	DeckhouseModuleVersionMetricName = "deckhouse_module_version"
 )
 
 // ============================================================================
@@ -82,6 +90,10 @@ const (
 	D8Updating                  = "d8_updating"
 	D8ModuleUpdatingGroup       = "d8_module_updating_group"
 	ModuleReleaseGroup          = "module_release_group"
+
+	// DeckhouseModuleVersionTelemetryGroup is the metrics group for d8_telemetry_deckhouse_module_version.
+	// Used to expire old series when the set of modules changes.
+	DeckhouseModuleVersionTelemetryGroup = "deckhouse_module_version_telemetry"
 )
 
 // Group templates for dynamic metric names using fmt.Sprintf
@@ -337,6 +349,18 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 	)
 	if err != nil {
 		return fmt.Errorf("failed to register %s: %w", D8ModuleUpdatingBrokenSequence, err)
+	}
+
+	// DOP telemetry: deployed module versions (d8_telemetry_deckhouse_module_version).
+	// One series per (module_name, module_version) with value 1. Used by flant-integration for DOP.
+	deckhouseModuleVersionLabels := []string{LabelModuleName, LabelModuleVersion}
+	_, err = metricStorage.RegisterGauge(
+		WrapTelemetryMetric(DeckhouseModuleVersionMetricName),
+		deckhouseModuleVersionLabels,
+		options.WithHelp("Gauge indicating deployed Deckhouse module version per module (1 = present). For DOP telemetry; labels: module_name, module_version."),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", DeckhouseModuleVersionMetricName, err)
 	}
 
 	return nil
