@@ -97,6 +97,10 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 	return entity.WaitForNodesListBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodesToWait, nil)
 }
 
+func (c *CloudPermanentNodeGroupController) beforeUpdateNodes(*context.Context) error {
+	return nil
+}
+
 func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {

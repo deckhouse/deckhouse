@@ -115,8 +115,13 @@ data:
             try_files /$lang/$1 /$lang/$1/index.html /$lang/$1/ $1 $1/index.html $1/ =404;
         }
 
-        # DVP and stronghold documentation
-        location ~* ^/products/((virtualization-platform|stronghold)/(documentation|guides|modules|gs|reference)/.*)$  {
+        # DVP documentation
+        location ~* ^/products/((virtualization-platform)/(documentation|guides|modules|gs|reference)/.*)$  {
+            try_files /$lang/$1 /$lang/$1/index.html /$lang/$1/ $1 $1/index.html $1/ =404;
+        }
+
+        # Stronghold Getting Started
+        location ~* ^/products/((stronghold)/(gs)/.*)$  {
             try_files /$lang/$1 /$lang/$1/index.html /$lang/$1/ $1 $1/index.html $1/ =404;
         }
 

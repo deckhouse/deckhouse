@@ -23,7 +23,9 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync/atomic"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
@@ -38,6 +40,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -58,6 +61,14 @@ type Application struct {
 	instance  string // Application instance name
 	namespace string // Application instance namespace
 	path      string // path to the package dir on fs
+
+	// version is the parsed semver version of the package, derived from definition.Version.
+	// Falls back to "0.0.0" if the version string cannot be parsed.
+	version *semver.Version
+
+	// running tracks whether OnStartup hooks have completed successfully.
+	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
+	running atomic.Bool
 
 	definition Definition        // Application definition
 	digests    map[string]string // Package digests
@@ -112,6 +123,7 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.instance = splits[1]
 
 	a.name = name
+	a.running = atomic.Bool{}
 
 	a.path = cfg.Path
 	a.definition = cfg.Definition
@@ -123,15 +135,21 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.kubeEventsManager = cfg.KubeEventsManager
 	a.logger = logger
 
+	parsed, err := semver.NewVersion(a.definition.Version)
+	if err != nil {
+		parsed = semver.MustParse("0.0.0")
+	}
+
+	a.version = parsed
+
 	a.hooks = hooks.NewStorage()
-	if err := a.addHooks(cfg.Hooks...); err != nil {
+	if err = a.addHooks(cfg.Hooks...); err != nil {
 		return nil, fmt.Errorf("add hooks: %v", err)
 	}
 
-	var err error
 	a.values, err = values.NewStorage(a.definition.Name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
-		return nil, fmt.Errorf("new values storage: %v", err)
+		return nil, fmt.Errorf("build values storage: %v", err)
 	}
 
 	return a, nil
@@ -213,8 +231,8 @@ func (a *Application) GetNamespace() string {
 }
 
 // GetVersion return the package version
-func (a *Application) GetVersion() string {
-	return a.definition.Version
+func (a *Application) GetVersion() *semver.Version {
+	return a.version
 }
 
 // GetPath returns path to the package dir
@@ -222,8 +240,8 @@ func (a *Application) GetPath() string {
 	return a.path
 }
 
-// GetQueues returns package queues from all hooks
-func (a *Application) GetQueues() []string {
+// GetHooksQueues returns package queues from all hooks
+func (a *Application) GetHooksQueues() []string {
 	var res []string //nolint:prealloc
 	scheduleHooks := a.hooks.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range scheduleHooks {
@@ -241,6 +259,17 @@ func (a *Application) GetQueues() []string {
 
 	slices.Sort(res)
 	return slices.Compact(res)
+}
+
+// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
+func (a *Application) GetHookSnapshotsDump() []byte {
+	d := make(map[string]interface{})
+	for _, h := range a.hooks.GetHooks() {
+		d[h.GetName()] = h.GetHookController().SnapshotsDump()
+	}
+
+	marshalled, _ := yaml.Marshal(d)
+	return marshalled
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -283,14 +312,21 @@ func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
 }
 
-// ApplySettings apply setting values to application
+// ApplySettings applies settings values to application
 func (a *Application) ApplySettings(settings addonutils.Values) error {
 	return a.values.ApplyConfigValues(settings)
 }
 
-// GetChecks return scheduler checks, their determine if an app should be enabled/disabled
-func (a *Application) GetChecks() schedule.Checks {
-	return a.definition.Requirements.Checks()
+// GetConstraints returns scheduler checks, their determine if an app should be enabled/disabled
+func (a *Application) GetConstraints() schedule.Constraints {
+	return a.definition.Constraints()
+}
+
+// HooksInitialized reports whether the package requires a hook initialize phase.
+// This is true when hooks have not yet been initialized (no controllers attached),
+// meaning the pkg needs to go through the full startup sequence before it can run.
+func (a *Application) HooksInitialized() bool {
+	return a.hooks.Initialized()
 }
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
@@ -312,6 +348,32 @@ func (a *Application) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+}
+
+// DisableHooks tears down all active hook bindings and clears the hook registry.
+// Called by the Disable task when a package is being stopped or upgraded.
+//
+// Cleanup order: schedule bindings are disabled first (stops cron triggers),
+// then Kubernetes monitors are stopped (stops informer watches), and finally
+// the hook registry is cleared so a subsequent InitializeHooks starts fresh.
+func (a *Application) DisableHooks() {
+	// Disable all schedule-based hooks
+	schHooks := a.hooks.GetHooksByBinding(shtypes.Schedule)
+	for _, hook := range schHooks {
+		if hook.GetHookController() != nil {
+			hook.GetHookController().DisableScheduleBindings()
+		}
+	}
+
+	// Stop all Kubernetes event monitors
+	kubeHooks := a.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
+	for _, hook := range kubeHooks {
+		if hook.GetHookController() != nil {
+			hook.GetHookController().StopMonitors()
+		}
+	}
+
+	a.running.Store(false)
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events
@@ -339,6 +401,10 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 
 	span.SetAttributes(attribute.String("binding", string(binding)))
 
+	if binding == shtypes.OnStartup && a.running.Load() {
+		return nil
+	}
+
 	for _, hook := range a.hooks.GetHooksByBinding(binding) {
 		bc := bctx.BindingContext{
 			Binding: string(binding),
@@ -354,6 +420,10 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
+	}
+
+	if binding == shtypes.OnStartup {
+		a.running.Store(true)
 	}
 
 	return nil
@@ -403,6 +473,9 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {
+			for _, op := range hookResult.ObjectPatcherOperations {
+				op.SetObjectPrefix(a.instance)
+			}
 			patchErr := a.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations)
 			if patchErr != nil {
 				return fmt.Errorf("exec hook: %w, and exec operations: %w", err, patchErr)
@@ -413,6 +486,9 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 	}
 
 	if len(hookResult.ObjectPatcherOperations) > 0 {
+		for _, op := range hookResult.ObjectPatcherOperations {
+			op.SetObjectPrefix(a.instance)
+		}
 		if err = a.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations); err != nil {
 			return fmt.Errorf("exec operations: %w", err)
 		}

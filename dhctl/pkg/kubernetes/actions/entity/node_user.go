@@ -67,7 +67,8 @@ func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeCli
 }
 
 func DeleteNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, name string) error {
-	return retry.NewLoop("Delete dhctl converge NodeUser", 45, 10*time.Second).RunContext(ctx, func() error {
+	processName := fmt.Sprintf("Delete NodeUser %s", name)
+	return retry.NewLoop(processName, 45, 10*time.Second).RunContext(ctx, func() error {
 		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err
@@ -121,7 +122,14 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 	listOpts := metav1.ListOptions{}
 
 	if len(nodeUser.NodeGroups) > 0 {
-		selector, err := kubernetes.GetLabelSelector(global.NodeGroupLabel, selection.In, nodeUser.NodeGroups)
+		selector, err := kubernetes.GetLabelSelector([]kubernetes.LabelSelector{
+			{
+				Label: global.NodeGroupLabel,
+				Operator: selection.In,
+				Vals: nodeUser.NodeGroups,
+			},
+		})
+		
 		if err != nil {
 			return err
 		}

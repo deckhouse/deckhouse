@@ -1,6 +1,7 @@
 ---
 title: Updating
 permalink: en/architecture/updating.html
+description: Release types, release channels, and the update process for the control plane and nodes in Deckhouse Kubernetes Platform.
 ---
 
 ## Releases

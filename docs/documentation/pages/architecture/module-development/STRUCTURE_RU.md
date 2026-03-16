@@ -2,6 +2,7 @@
 title: "Структура модуля"
 permalink: ru/architecture/module-development/structure/
 lang: ru
+description: Структура директорий модуля Deckhouse Kubernetes Platform — charts, CRD, docs, хуки, образы, OpenAPI-схемы, шаблоны и метаданные module.yaml.
 ---
 
 Исходный код модуля и правила его сборки должны находиться в директории с определенной структурой. Ближайший аналог — Helm chart.

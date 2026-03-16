@@ -76,7 +76,7 @@ shell:
 
         echo '[] Converting editions structure...'
         cd /srv/jekyll-data/documentation/_data
-        yq e -o json editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
+        {{ .Files.Get (printf "%sdocs/documentation/werf-editions-convert-partials.inc.yaml" .ModulePath) | indent 8 }}
 
 {{ if eq .ModuleName "documentation" }}
         # "Converting public documentation links to modules to the internal relative..."

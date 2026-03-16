@@ -1,0 +1,196 @@
+- name: Amazon EC2 Utils
+  link: https://github.com/amazonlinux/amazon-ec2-utils
+  description: Utilities for Amazon EC2 instances.
+  logo: /images/logos/aws.svg
+  license: MIT License
+  id: amazon-ec2-utils
+  version: "2.2.0"
+  
+- name: containerd
+  link: https://github.com/containerd/containerd
+  description: An open and reliable container runtime.
+  logo: /images/logos/containerd.svg
+  license: Apache License 2.0
+
+- name: runc
+  link: https://github.com/opencontainers/runc
+  description: OCI-compatible container runtime.
+  logo: /images/logos/opencontainers.svg
+  license: Apache License 2.0
+  id: runc
+  version: "1.3.4"
+
+- name: curl
+  link: https://github.com/curl/curl
+  description: A command line tool and library for transferring data with URLs.
+  logo: /images/logos/curl.svg
+  license: curl License
+  id: curl
+  version: "8.9.1"
+
+- name: Deckhouse CLI
+  link: https://github.com/deckhouse/deckhouse-cli
+  description: Command-line interface for Deckhouse.
+  logo: /images/logos/deckhouse.svg
+  license: Apache License 2.0
+  id: deckhouse-cli
+
+- name: Docker Auth
+  link: https://github.com/cesanta/docker_auth
+  description: Authentication server for Docker registry.
+  logo: /images/logos/docker.svg
+  license: Apache License 2.0
+  id: docker-auth
+  version: "1.13.0"
+
+- name: Docker Distribution
+  link: https://github.com/distribution/distribution
+  description: Docker registry implementation.
+  logo: /images/logos/docker.svg
+  license: Apache License 2.0
+  id: docker
+  version: "2.8.3"
+
+- name: e2fsprogs
+  link: https://github.com/tytso/e2fsprogs
+  description: Utilities for the ext2/ext3/ext4 filesystem.
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
+  id: e2fsprogs
+  version: "1.47.2"
+
+- name: EC2 Describe Tags
+  link: https://github.com/flant/go-ec2-describe-tags
+  description: Utility for describing AWS EC2 instance tags.
+  logo: /images/logos/aws.svg
+  license: Apache License 2.0
+  id: ec2-describe-tags
+  version: "v0.0.1-flant.3"
+
+- name: cloud-utils
+  link: https://github.com/canonical/cloud-utils
+  description: Utilities for cloud images.
+  logo: /images/logos/ubuntu.svg
+  license: GPL-3.0 license
+  id: cloud-utils
+  version: "0.33"
+
+- name: util-linux (growpart)
+  link: https://github.com/util-linux/util-linux
+  description: System utilities used by growpart (fdisk/sfdisk).
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
+  id: util-linux-growpart
+  version: "2.40.1"
+
+- name: iptables
+  link: https://git.netfilter.org/iptables/
+  description: Administration tool for IPv4/IPv6 packet filtering and NAT.
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
+  id: iptables
+  version: "1.8.9"
+
+- name: libmnl
+  link: https://git.netfilter.org/libmnl/
+  description: Minimalistic netlink library.
+  logo: /images/logos/linux.svg
+  license: LGPL-2.1 license
+  id: libmnl
+  version: "1.0.5"
+
+- name: libnftnl
+  link: https://git.netfilter.org/libnftnl/
+  description: Netfilter nftables userspace library.
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
+  id: libnftnl
+  version: "1.2.6"
+
+- name: CNI Plugins
+  link: https://github.com/containernetworking/plugins
+  description: Container Network Interface plugins.
+  logo: /images/logos/cni.svg
+  license: Apache License 2.0
+  id: kubernetes-cni
+  version: "1.6.2"
+
+- name: Flannel CNI Plugin
+  link: https://github.com/flannel-io/cni-plugin
+  description: CNI plugin for Flannel.
+  logo: /images/logos/flannel.svg
+  license: Apache License 2.0
+  id: cni-flannel
+  version: "1.6.0-flannel1"
+
+- name: util-linux (lsblk)
+  link: https://github.com/util-linux/util-linux
+  description: System utilities used by lsblk.
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
+  id: util-linux-lsblk
+  version: "2.40.2"
+
+- name: netcat
+  link: https://salsa.debian.org/debian/netcat
+  description: Netcat utility for reading/writing across network connections.
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
+  id: netcat
+  version: "1.10-50.1"
+
+- name: nvme-cli
+  link: https://github.com/linux-nvme/nvme-cli
+  description: NVM-Express user space tooling.
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
+  id: nvme-cli
+  version: "2.11"
+
+- name: socat
+  link: https://repo.or.cz/socat.git
+  description: Multipurpose relay for bidirectional data transfer.
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
+  id: socat
+  version: "1.7.3.4"
+
+- name: virt-what
+  link: https://people.redhat.com/rjones/virt-what/
+  description: Detects whether running in a virtualized environment.
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
+  id: virt-what
+  version: "1.25"
+
+- name: which
+  link: https://ftp.gnu.org/gnu/which/
+  description: Shows the full path of shell commands.
+  logo: /images/logos/gnu.svg
+  license: GPL-3.0 license
+  id: which
+  version: "2.23"
+
+- name: xfsprogs
+  link: https://kernel.googlesource.com/pub/scm/fs/xfs/xfsprogs-dev/
+  description: XFS filesystem utilities.
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
+  id: xfsprogs
+  version: "6.7.0"
+
+- name: jq
+  link: https://github.com/jqlang/jq
+  description: Lightweight and flexible command-line JSON processor.
+  logo: /images/logos/jq.svg
+  license: MIT License
+  id: jq
+  version: "1.7.1"
+
+- name: yq
+  link: https://github.com/mikefarah/yq
+  description: Command-line YAML, JSON and XML processor.
+  logo: /images/logos/linux.svg
+  license: MIT License
+  id: yq
+  version: "4.47.1"

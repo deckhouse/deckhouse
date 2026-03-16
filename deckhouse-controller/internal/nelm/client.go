@@ -27,6 +27,7 @@ import (
 
 	"github.com/werf/nelm/pkg/action"
 	"github.com/werf/nelm/pkg/common"
+	"github.com/werf/nelm/pkg/legacy/progrep"
 	nelmlog "github.com/werf/nelm/pkg/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -189,6 +190,10 @@ type InstallOptions struct {
 	ExtraValues string   // Extra values in json format
 
 	ReleaseLabels map[string]string // Labels to apply to the release
+
+	// OnTrackingEvent is an optional callback invoked with progress updates
+	// as Kubernetes resources are being tracked for readiness during install.
+	OnTrackingEvent func(name string, report progrep.ProgressReport)
 }
 
 // Install installs a Helm chart as a release
@@ -206,7 +211,23 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		valuesSet = append(valuesSet, opts.ExtraValues)
 	}
 
+	// reportCh receives progress reports from nelm during resource tracking.
+	// A background goroutine converts each report into a tracking event and
+	// forwards it to the caller's callback. The channel is closed when the
+	// install operation completes.
+	reportCh := make(chan progrep.ProgressReport, 1)
+	defer close(reportCh)
+
+	go func() {
+		for report := range reportCh {
+			if opts.OnTrackingEvent != nil {
+				opts.OnTrackingEvent(releaseName, report)
+			}
+		}
+	}()
+
 	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
+		LegacyProgressReportCh: reportCh,
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},

@@ -1,5 +1,5 @@
 ---
-{{- $istioVersion := "1.21.6" }}
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-21" $ ) }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.21.6 -> v1x21x6 */}}
 {{- $istioProxyCacheRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
 {{- $istioProxyDepsRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
@@ -351,6 +351,17 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- url: {{ .SOURCE_REPO }}/llvm/llvm-project.git
+  tag: {{ $llvmRev }}
+  add: /
+  to: /src/llvm
+  excludePaths:
+  - llvm/utils/git
+  - mlir/utils/vscode
+  - third-party/benchmark
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -359,12 +370,5 @@ shell:
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
   - cd /src/proxy/
   - git apply --verbose /patches/*.patch
-  - git clone --branch "{{ $llvmRev }}" $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-project.git /src/llvm
-  - rm -rf /src/llvm/.git
-
-  # getting rid of unused vulnerable code
-  - rm -rf /src/llvm/llvm/utils/git
-  - rm -rf /src/llvm/mlir/utils/vscode
-  - rm -rf /src/llvm/third-party/benchmark && mkdir /src/llvm/third-party/benchmark
-  - touch /src/llvm/third-party/benchmark/placeholder.txt
+  - mkdir /src/llvm/third-party/benchmark && touch /src/llvm/third-party/benchmark/placeholder.txt
 ---

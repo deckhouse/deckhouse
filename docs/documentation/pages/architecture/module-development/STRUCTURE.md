@@ -2,6 +2,7 @@
 title: "Module structure"
 permalink: en/architecture/module-development/structure/
 lang: en
+description: Directory layout of a Deckhouse Kubernetes Platform module — charts, CRDs, docs, hooks, images, OpenAPI schemas, templates, and module.yaml metadata.
 ---
 
 The source code of the module and its assembly rules must be located in a directory with a certain structure. The best analog is a Helm chart.
