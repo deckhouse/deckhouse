@@ -47,7 +47,7 @@ dev: werf-bin ## Start documentation containers in a werf watch mode (rebuilding
 			echo "\nStarting documentation in a DEV watch mode using local docker images store..."; \
 		fi
 		@echo -n "\nwerf: "; $(WERF_BIN) version
-		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO)
+		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
 
 clean: werf-bin ## Clean up werf artifacts (set USE_LOCALHOST_REPO=1)
 		@if [ "$(USE_LOCALHOST_REPO)" = "1" ]; then \
