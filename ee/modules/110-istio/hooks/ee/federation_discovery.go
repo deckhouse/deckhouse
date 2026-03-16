@@ -42,7 +42,7 @@ type IstioFederationDiscoveryCrdInfo struct {
 	Name                     string
 	ClusterUUID              string
 	TrustDomain              string
-	ClusterCA                string
+	MetadataCA               string
 	EnableInsecureConnection bool
 	PublicMetadataEndpoint   string
 	PrivateMetadataEndpoint  string
@@ -90,7 +90,7 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	return IstioFederationDiscoveryCrdInfo{
 		Name:                     federation.GetName(),
 		TrustDomain:              federation.Spec.TrustDomain,
-		ClusterCA:                federation.Spec.Metadata.ClusterCA,
+		MetadataCA:               federation.Spec.Metadata.CA,
 		EnableInsecureConnection: federation.Spec.Metadata.EnableInsecureConnection,
 		ClusterUUID:              clusterUUID,
 		PublicMetadataEndpoint:   me + "/public/public.json",
@@ -152,8 +152,8 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 
 		defaultProtocol := "TCP"
 
-		if federationInfo.ClusterCA != "" {
-			caCerts := [][]byte{[]byte(federationInfo.ClusterCA)}
+		if federationInfo.MetadataCA != "" {
+			caCerts := [][]byte{[]byte(federationInfo.MetadataCA)}
 			httpOption = append(httpOption, http.WithAdditionalCACerts(caCerts))
 		} else if federationInfo.EnableInsecureConnection {
 			httpOption = append(httpOption, http.WithInsecureSkipVerify())
