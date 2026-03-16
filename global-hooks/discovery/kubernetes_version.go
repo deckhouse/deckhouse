@@ -304,7 +304,6 @@ func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, 
 
 		input.Logger.Warn(msg)
 
-		return nil, nil
 	}
 
 	return endpoints, nil
