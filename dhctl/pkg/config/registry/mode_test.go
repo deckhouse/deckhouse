@@ -288,6 +288,15 @@ func TestModeProxy(t *testing.T) {
 									Password: pki.ROUser.Password,
 								},
 							},
+							{
+								Host:   "${discovered_node_ip}:5001",
+								Scheme: "https",
+								CA:     pki.CA.Cert,
+								Auth: bashible.ConfigAuth{
+									Username: pki.ROUser.Name,
+									Password: pki.ROUser.Password,
+								},
+							},
 						},
 					},
 				},

@@ -23,6 +23,10 @@ import (
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
+const (
+	discoveredNodeIP = "${discovered_node_ip}"
+)
+
 type ModeSettings struct {
 	Mode       constant.ModeType
 	RemoteData Data
@@ -258,19 +262,33 @@ func (m ModeModel) toUnmanagedBashibleHosts() map[string]bashible.ConfigHosts {
 }
 
 func (m ModeModel) toProxyLocalBashibleHosts(pki PKI) map[string]bashible.ConfigHosts {
-	ret := map[string]bashible.ConfigHosts{
-		constant.Host: {
-			Mirrors: []bashible.ConfigMirrorHost{
-				{
-					Host:   constant.ProxyHost,
-					Scheme: constant.Scheme,
-					CA:     pki.CA.Cert,
-					Auth: bashible.ConfigAuth{
-						Username: pki.ROUser.Name,
-						Password: pki.ROUser.Password,
-					},
+	// ProxyHost is the main endpoint for accessing the registry-proxy service.
+	hosts := []string{constant.ProxyHost}
+
+	// Append endpoints for direct access.
+	// These are used when the registry-proxy is not yet running (during bootstrap).
+	hosts = append(hosts, m.toProxyLocalEndpoints()...)
+
+	scheme := strings.ToLower(string(constant.SchemeHTTPS))
+	mirrors := make([]bashible.ConfigMirrorHost, 0, len(hosts))
+
+	for _, host := range hosts {
+		mirrors = append(mirrors,
+			bashible.ConfigMirrorHost{
+				Host:   host,
+				Scheme: scheme,
+				CA:     pki.CA.Cert,
+				Auth: bashible.ConfigAuth{
+					Username: pki.ROUser.Name,
+					Password: pki.ROUser.Password,
 				},
 			},
+		)
+	}
+
+	ret := map[string]bashible.ConfigHosts{
+		constant.Host: {
+			Mirrors: mirrors,
 		},
 	}
 
@@ -278,5 +296,5 @@ func (m ModeModel) toProxyLocalBashibleHosts(pki PKI) map[string]bashible.Config
 }
 
 func (m ModeModel) toProxyLocalEndpoints() []string {
-	return constant.GenerateProxyEndpoints([]string{"${discovered_node_ip}"})
+	return constant.GenerateProxyEndpoints([]string{discoveredNodeIP})
 }
