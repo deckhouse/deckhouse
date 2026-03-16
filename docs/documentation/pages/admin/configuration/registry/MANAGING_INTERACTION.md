@@ -60,7 +60,7 @@ Mode switching restrictions are as follows:
 ## Examples of switching DKP registry interaction modes
 
 {% alert level="warning" %}
-If, during the switch, a module's image did not pull and the module did not reinstall, follow the [instructions](../../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
+If, during the switch, a module's image did not pull and the module did not reinstall, follow [the instructions](../../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
 {% endalert %}
 
 ### Switching to `Direct` mode
@@ -146,7 +146,7 @@ On the first switch from `Unmanaged` to `Direct` mode, all DKP components will b
            license: <LICENSE_KEY> # Replace with your license key
    ```
 
-1. Check the registry mode switch status in the `registry-state` secret using the [instruction](#check-registry-mode-switch-status).
+1. Check the registry mode switch status in the `registry-state` secret using [the instruction](#check-registry-mode-switch-status).
 
    Example output:
 
@@ -370,7 +370,7 @@ To switch an already running cluster to `Local` mode, follow these steps:
          mode: Local
    ```
 
-1. Check the registry mode switch status in the `registry-state` secret using the [instruction](#check-registry-mode-switch-status). Wait for the `RegistryContainsRequiredImages` check to start in the status. The condition shows whether images are present or missing in the running local registry.
+1. Check the registry mode switch status in the `registry-state` secret using [the instruction](#check-registry-mode-switch-status). Wait for the `RegistryContainsRequiredImages` check to start in the status. The condition shows whether images are present or missing in the running local registry.
 
    Example output:
 
@@ -418,7 +418,7 @@ To switch an already running cluster to `Local` mode, follow these steps:
    registry.${PUBLIC_DOMAIN}/system/deckhouse
    ```
 
-1. Check the registry mode switch status in the `registry-state` secret using the [instruction](#check-registry-mode-switch-status). After the images are uploaded, the `RegistryContainsRequiredImages` condition should be in the `Ready` state.
+1. Check the registry mode switch status in the `registry-state` secret using [the instruction](#check-registry-mode-switch-status). After the images are uploaded, the `RegistryContainsRequiredImages` condition should be in the `Ready` state.
 
    Example output:
 
@@ -437,7 +437,7 @@ To switch an already running cluster to `Local` mode, follow these steps:
    target_mode: Local
    ```
 
-1. Wait for the switch to complete. To check the switch status, use the [instruction](#check-registry-mode-switch-status).
+1. Wait for the switch to complete. To check the switch status, use [the instruction](#check-registry-mode-switch-status).
 
    Example output:
 
@@ -513,7 +513,7 @@ Changing the registry in `Unmanaged` mode will restart all DKP components.
            license: <LICENSE_KEY> # Replace with your license key
    ```
 
-1. Check the registry mode switch status in the `registry-state` secret using the [instruction](#check-registry-mode-switch-status).
+1. Check the registry mode switch status in the `registry-state` secret using [the instruction](#check-registry-mode-switch-status).
 
    Example output:
 
@@ -530,7 +530,7 @@ Changing the registry in `Unmanaged` mode will restart all DKP components.
    target_mode: Unmanaged
    ```
 
-1. If you need to switch to the legacy registry management method, see the [instruction](#migration-to-the-deprecated-registry-management-format-without-the-registry-module).
+1. If you need to switch to the legacy registry management method, see [the instruction](#migration-to-the-deprecated-registry-management-format-without-the-registry-module).
 
 {% alert level="warning" %}
 This is a deprecated format for registry management.
@@ -992,7 +992,7 @@ Description of conditions:
 | `ContainerdConfigPreflightReady`  | State of the containerd configuration preflight check. Verifies there are no custom containerd auth configurations on the nodes.                                                                                           |
 | `TransitionContainerdConfigReady` | State of preparing the containerd configuration for the new mode. Verifies that the configuration contains both the old and new mode settings.                                                                             |
 | `FinalContainerdConfigReady`      | State of finalizing the switch to the new containerd mode. Verifies that the containerd configuration has been successfully applied and contains only the new mode settings.                                               |
-| `DeckhouseRegistrySwitchReady`    | State of switching Deckhouse and its components to use the new registry. `True` means Deckhouse successfully switched and is ready to operate.                                                                             |
+| `DeckhouseRegistrySwitchReady`    | State of switching DKP and its components to use the new registry. `True` means Deckhouse successfully switched and is ready to operate.                                                                             |
 | `InClusterProxyReady`             | State of In-Cluster Proxy readiness. Checks that the In-Cluster Proxy has started successfully and is running.                                                                                                             |
 | `CleanupInClusterProxy`           | State of cleaning up the In-Cluster Proxy if it is not needed in the selected mode. Verifies that all related resources have been removed.                                                                                 |
 | `NodeServicesReady`               | State of Node Services Manager and Static-Pod registry readiness. Verifies that the Node Services Manager is successfully launched and operational, and that the Static-Pod registry has been successfully deployed by it. |
