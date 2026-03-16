@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -63,6 +64,10 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 	switch {
 	case k8serrors.IsNotFound(err):
 		caBundle := input.Values.Get(certCAValuesPath).String()
+		if caBundle == "" {
+			return errors.New("webhook certificate is not issued yet")
+		}
+
 		whConfigExists = false
 		whConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
 			ObjectMeta: v1.ObjectMeta{Name: mutatingWebhookConfigurationName},
