@@ -57,7 +57,9 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "nvidia_node_selector" (tuple . "any" "") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- $runAsSC := (get (include "helm_lib_module_pod_security_context_run_as_user_root" . | fromYaml) "securityContext") | default dict -}}
+      {{- $runtimeDefaultSC := (get (include "helm_lib_module_pod_security_context_runtime_default" . | fromYaml) "securityContext") | default dict -}}
+      {{- toYaml (dict "securityContext" (merge $runAsSC $runtimeDefaultSC)) | nindent 6 }}
       serviceAccountName: nvidia-dcgm-exporter
       automountServiceAccountToken: true
       containers:
@@ -84,8 +86,12 @@ spec:
           value: ":9400"
         - name: DCGM_EXPORTER_KUBERNETES
           value: "true"
+        - name: KUBERNETES_VIRTUAL_GPUS
+          value: "true"
         - name: DCGM_EXPORTER_COLLECTORS
           value: "/etc/dcgm-exporter/dcp-metrics-included.csv"
+        - name: DCGM_REMOTE_HOSTENGINE_INFO
+          value: "nvidia-dcgm:5555"
         - name: NODE_NAME
           valueFrom:
             fieldRef:
@@ -96,16 +102,54 @@ spec:
           runAsUser: 0
           capabilities:
             add: ["SYS_ADMIN"]
+          seccompProfile:
+            type: RuntimeDefault
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+          initialDelaySeconds: 5
+          periodSeconds: 10
         ports:
         - name: "metrics"
           containerPort: 9400
         volumeMounts:
+        - name: run-nvidia
+          mountPath: /run/nvidia
+          mountPropagation: HostToContainer
+        - name: nvidia-caps-dev
+          mountPath: /dev/nvidia-caps
+          readOnly: true
         - name: "pod-gpu-resources"
           readOnly: true
           mountPath: "/var/lib/kubelet/pod-resources"
+        - name: dcgm-metrics
+          mountPath: /etc/dcgm-exporter/dcp-metrics-included.csv
+          subPath: dcp-metrics-included.csv
       volumes:
+      - name: run-nvidia
+        hostPath:
+          path: "/run/nvidia"
+          type: Directory
+      - name: nvidia-caps-dev
+        hostPath:
+          path: "/dev/nvidia-caps"
+          type: Directory
       - name: "pod-gpu-resources"
         hostPath:
           path: "/var/lib/kubelet/pod-resources"
+      - name: dcgm-metrics
+        configMap:
+          name: nvidia-dcgm-metrics
+          items:
+          - key: dcp-metrics-included.csv
+            path: dcp-metrics-included.csv
+          optional: false
 {{- end }}
 {{- end }}

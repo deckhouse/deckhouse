@@ -29,7 +29,6 @@
 .button-tile {
   flex-direction: column;
   box-sizing: border-box;
-  gap: 16px;
   flex-basis: calc(33.3% - 16px);
   padding: 24px;
   border-radius: 4px;
@@ -56,6 +55,7 @@
 
   &__title {
     margin: 0;
+    margin-bottom: 16px;
     font-weight: variables.$font-weight-semibold;
     font-size: 20px;
     line-height: 100%;
@@ -68,6 +68,7 @@
 
   &__descr {
     margin: 0;
+    margin-bottom: 16px;
     font-weight: variables.$font-weight-regular;
     font-size: 14px;
     line-height: 24px;
@@ -76,32 +77,11 @@
   }
 
   &__stage {
-    border-radius: 16px;
-    padding: 2px 5px;
-    margin: 0;
-    font-weight: variables.$font-weight-bold;
-    font-size: variables.$font-size-tiny;
-    letter-spacing: 1px;
-    white-space: nowrap;
-    opacity: 70%;
-  }
-
-  &__stage-experimental {
-    background: variables.$color-warning;
-    color: variables.$color-inverse;
-    border: 1px solid variables.$color-muted;
-  }
-
-  &__stage-preview {
-    background: variables.$color-alt;
-    color: variables.$color-inverse;
-    border: 1px solid variables.$color-muted;
-  }
-
-  &__stage-deprecated {
-    background: variables.$color-danger;
-    color: variables.$color-inverse;
-    border: 1px solid variables.$color-main;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    align-self: stretch;
   }
 
   &__tags {

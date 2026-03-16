@@ -82,6 +82,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- gatekeeper.Up
 	ch <- gatekeeper.ConstraintViolation
 	ch <- gatekeeper.ConstraintInformation
+	ch <- gatekeeper.ConstraintViolationsTruncated
 }
 
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
@@ -149,6 +150,9 @@ func (e *Exporter) fetchConstraints(clientGVR controllerClient.Client) ([]gateke
 
 	constraintInformationMetrics := gatekeeper.ExportConstraintInformation(constraints)
 	allMetrics = append(allMetrics, constraintInformationMetrics...)
+
+	truncatedMetrics := gatekeeper.ExportViolationsTruncated(constraints)
+	allMetrics = append(allMetrics, truncatedMetrics...)
 
 	e.metrics = allMetrics
 

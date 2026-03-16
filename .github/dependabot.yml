@@ -241,6 +241,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/configtools/conversion"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/go_lib/dependency/k8s/drain"
   labels:
   - "type/dependencies"
@@ -287,6 +296,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/000-common/images/vxlan-offloading-fixer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/002-deckhouse/images/webhook-handler/operator"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

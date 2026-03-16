@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,6 @@
 
 package checker
 
-// Reason constants for checker results.
-// Must match Kubernetes condition reason pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-const (
-	ReasonDependencyLookupFailed    = "DependencyLookupFailed"
-	ReasonDependencyNotFound        = "DependencyNotFound"
-	ReasonDependencyNotEnabled      = "DependencyNotEnabled"
-	ReasonDependencyVersionMismatch = "DependencyVersionMismatch"
-	ReasonVersionLookupFailed       = "VersionLookupFailed"
-)
-
 // Checker evaluates a condition and returns whether a package should be enabled.
 //
 // Examples of checkers:
@@ -38,7 +28,20 @@ type Checker interface {
 
 // Result represents the outcome of a checker evaluation.
 type Result struct {
-	Enabled bool
-	Reason  string
-	Message string
+	Enabled bool   `json:"enabled"`
+	Reason  string `json:"reason,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+func Check(checkers ...Checker) Result {
+	for _, checker := range checkers {
+		check := checker.Check()
+		if !check.Enabled {
+			return check
+		}
+	}
+
+	return Result{
+		Enabled: true,
+	}
 }

@@ -5542,6 +5542,34 @@ alerts:
         Too many Ingress NGINX restarts detected.
       severity: "4"
       markupFormat: markdown
+    - name: NginxIngressPodsReportConfigurationHashDrift
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        The `{{ $labels.controller }}` Ingress NGINX Controller pods report different configuration hashes.
+        It can result in inconsistent processing of incoming requests.
+
+        To diagnose the issue, follow these steps:
+
+        1. Make sure that the pods of `{{ $labels.controller }}` Ingress NGINX Controller are not being updated at the moment. During an update, pods of a single controller may report different config hashes for some time.
+
+           ```bash
+           d8 k -n {{ $labels.namespace }} get pod -l app=controller,name={{ $labels.controller }}
+           ```
+
+        2. Check the associated metrics `nginx_ingress_controller_config_hash{namespace="d8-ingress-nginx", controller="{{ $labels.controller }}"}` manually to find the outliers.
+
+        3. Check the controller logs for any configuration errors resulting in the configuration drift across the pods:
+
+           ```bash
+           d8 k -n {{ $labels.namespace }} logs -l app=controller,name={{ $labels.controller }} -c controller --tail=10000
+           ```
+      summary: |
+        Ingress NGINX Controller pods report different configuration hashes.
+      severity: "4"
+      markupFormat: markdown
     - name: NginxIngressProfilingIsEnabled
       sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
       moduleUrl: 402-ingress-nginx

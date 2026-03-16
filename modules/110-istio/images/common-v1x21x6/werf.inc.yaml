@@ -1,6 +1,6 @@
 ---
-{{- $istioVersion := "1.21.6" }}
-{{- $kialiVersion := "v1.81.0" }}
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-21" $ ) }}
+{{- $kialiVersion := printf "v%s" (include "get_oss_version_by_id" (list "kiali-for-istio-1-21" $ )) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -11,24 +11,36 @@ git:
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+- url: {{ .SOURCE_REPO }}/istio/istio.git
+  tag: {{ $istioVersion }}
+  add: /
+  to: /src/istio
+  excludePaths:
+  - samples
+  - security/samples
+  - security/tools/jwt/samples
+  stageDependencies:
+    install:
+    - '**/*'
+- url: {{ .SOURCE_REPO }}/istio/kiali.git
+  tag: {{ $kialiVersion }}
+  add: /
+  to: /src/kiali
+  excludePaths:
+  - frontend
+  stageDependencies:
+    install:
+    - '**/*'
+- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
+  tag: {{ $kialiVersion }}
+  add: /
+  to: /src/kial-frontend-assets
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/istio.git /src/istio/
-  - cd /src/istio/
-  - git apply --verbose /patches/001-istio-apply_go.patch /patches/002-istio-gomod_gosum.patch /patches/003-istio-server_fmtText.patch
-  - rm -rf /src/istio/.git
-  - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali.git /src/kiali/
-  - cd /src/kiali/
-  - git apply --verbose /patches/001-kiali-go-mod.patch
-  - rm -rf /src/kiali/.git
-  - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali-frontend-assets.git /src/kial-frontend-assets/
-  - rm -rf /src/kiali-frontend-assets/.git
-
-  # getting rid of unused vulnerable code
-  - rm -rf /src/istio/samples
-  - rm -rf /src/istio/security/samples
-  - rm -rf /src/istio/security/tools/jwt/samples
-  - rm -rf /src/kiali/frontend
+  - cd /src/istio/ && git apply --verbose /patches/001-istio-apply_go.patch
+  - cd /src/istio/ && git apply --verbose /patches/002-istio-gomod_gosum.patch
+  - cd /src/istio/ && git apply --verbose /patches/003-istio-server_fmtText.patch
+  - cd /src/kiali/ && git apply --verbose /patches/001-kiali-go-mod.patch

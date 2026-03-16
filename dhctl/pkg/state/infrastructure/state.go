@@ -25,10 +25,12 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -109,6 +111,71 @@ func GetNodesStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClie
 		return nil, err
 	}
 
+	return extractNodesStatesFromSecrets(secrets)
+}
+
+func GetMasterNodesStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string][]byte, error) {
+	secrets, err := getMasterNodesStateSecretsFromCluster(ctx, kubeCl)
+	if err != nil {
+		return nil, err
+	}
+
+	statesForNgMap, err := extractNodesStatesFromSecrets(secrets)
+	if err != nil {
+		return nil, err
+	}
+
+	states, ok := statesForNgMap[global.MasterNodeGroupName]
+	if !ok {
+		return nil, fmt.Errorf("GetMasterNodesStateFromCluster: states for master node group not found")
+	}
+
+	return states.State, nil
+}
+
+func getMasterNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) ([]*v1.Secret, error) {
+	stateSelectors := []kubernetes.LabelSelector{
+		{
+			// terraform state has different label for node group
+			Label:    "node.deckhouse.io/node-group",
+			Operator: selection.Equals,
+			Vals:     []string{global.MasterNodeGroupName},
+		},
+		{
+			Label: manifests.NodeInfrastructureStateLabelKey,
+			Operator: selection.Exists,
+		},
+	}
+	
+	selector, err := kubernetes.GetLabelSelector(stateSelectors)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot build label selector for master node group: %w", err)
+	}
+
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector,
+	}
+
+	var nodeStateSecrets []*v1.Secret
+
+	err = retry.NewLoop("Get control-plane nodes infrastructure state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx, func() error {
+		nodeStateSecretsList, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).List(ctx, listOpts)
+		if err != nil {
+			return err
+		}
+
+		nodeStateSecrets = make([]*v1.Secret, 0, len(nodeStateSecretsList.Items))
+		for _, s := range nodeStateSecretsList.Items {
+			nodeStateSecrets = append(nodeStateSecrets, &s)
+		}
+
+		return nil
+	})
+
+	return nodeStateSecrets, err
+}
+
+func extractNodesStatesFromSecrets(secrets []*v1.Secret) (map[string]state.NodeGroupInfrastructureState, error) {
 	extractedState := make(map[string]state.NodeGroupInfrastructureState, len(secrets))
 
 	for _, nodeState := range secrets {
@@ -136,7 +203,7 @@ func GetNodesStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClie
 		extractedState[nodeGroup] = nodeGroupInfrastructureState
 	}
 
-	return extractedState, err
+	return extractedState, nil
 }
 
 func SaveNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte, logger log.Logger) error {

@@ -169,6 +169,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"simpleBridge":        "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
+		"candi":                          "imageHash-common-candi",
 		"checkKernelVersion":             "imageHash-common-checkKernelVersion",
 		"coredns":                        "imageHash-common-coredns",
 		"csiExternalAttacher131":         "imageHash-common-csiExternalAttacher131",
@@ -556,6 +557,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller": "imageHash-serviceWithHealthchecks-controller",
 	},
 	"terraformManager": map[string]interface{}{
+		"baseOpentofu":                "imageHash-terraformManager-baseOpentofu",
+		"baseTerraform":               "imageHash-terraformManager-baseTerraform",
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",
 		"terraformManagerAzure":       "imageHash-terraformManager-terraformManagerAzure",
 		"terraformManagerDvp":         "imageHash-terraformManager-terraformManagerDvp",
