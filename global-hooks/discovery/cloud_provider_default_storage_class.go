@@ -29,7 +29,8 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/cloud-provider-dvp",
+	Queue:        "/modules/cloud-provider-dvp",
+	OnAfterHelm:  &go_hook.OrderedConfig{Order: 10},
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "check_default_storage_class",
