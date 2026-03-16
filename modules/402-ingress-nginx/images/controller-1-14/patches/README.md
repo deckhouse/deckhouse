@@ -137,7 +137,7 @@ https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
 
 ### 021-go-mod.patch
 
-This patch sets go version to 1.25.7 to comply with current Deckhouse build image.
+This patch sets go version to 1.25 to comply with current Deckhouse build image.
 
 ### 022-stable-config-hash-metric-04.patch
 
