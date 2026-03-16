@@ -134,3 +134,11 @@ CVE-2026-24512
 CVE-2026-24513
 CVE-2026-24514
 https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
+
+### 021-go-mod.patch
+
+This patch sets go version to 1.25 to comply with current Deckhouse build image.
+
+### 022-stable-config-hash-metric-04.patch
+
+This patch updates the way config_hash controller metric is calculated so that all pods of a controller report the same value
