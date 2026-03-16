@@ -117,7 +117,7 @@ func TestModeDirect(t *testing.T) {
 
 			expect := ModeModel{
 				Mode:                constant.ModeDirect,
-				InClusterImagesRepo: constant.HostWithPath,
+				InClusterImagesRepo: "registry.d8-system.svc:5001/system/deckhouse",
 				RemoteImagesRepo:    "r.example.com/test",
 				RemoteData: Data{
 					ImagesRepo: "r.example.com/test",
@@ -140,7 +140,7 @@ func TestModeDirect(t *testing.T) {
 			require.NoError(t, err)
 
 			expect := Data{
-				ImagesRepo: constant.HostWithPath,
+				ImagesRepo: "registry.d8-system.svc:5001/system/deckhouse",
 				CA:         pki.CA.Cert,
 				Scheme:     "HTTPS",
 				Username:   "test-user",
@@ -161,10 +161,10 @@ func TestModeDirect(t *testing.T) {
 			expect := bashible.Config{
 				Mode:           string(constant.ModeDirect),
 				Version:        actual.Version,
-				ImagesBase:     constant.HostWithPath,
+				ImagesBase:     "registry.d8-system.svc:5001/system/deckhouse",
 				ProxyEndpoints: nil,
 				Hosts: map[string]bashible.ConfigHosts{
-					constant.Host: {
+					"registry.d8-system.svc:5001": {
 						Mirrors: []bashible.ConfigMirrorHost{
 							{
 								Host:   "r.example.com",
@@ -176,7 +176,7 @@ func TestModeDirect(t *testing.T) {
 								},
 								Rewrites: []bashible.ConfigRewrite{
 									{
-										From: constant.PathRegexp,
+										From: "^system/deckhouse",
 										To:   "test",
 									},
 								},
@@ -229,7 +229,7 @@ func TestModeProxy(t *testing.T) {
 
 			expect := ModeModel{
 				Mode:                constant.ModeProxy,
-				InClusterImagesRepo: constant.HostWithPath,
+				InClusterImagesRepo: "registry.d8-system.svc:5001/system/deckhouse",
 				RemoteImagesRepo:    "r.example.com/test",
 				RemoteData: Data{
 					ImagesRepo: "r.example.com/test",
@@ -253,8 +253,8 @@ func TestModeProxy(t *testing.T) {
 			require.NoError(t, err)
 
 			expect := Data{
-				ImagesRepo: constant.HostWithPath,
-				Scheme:     constant.SchemeHTTPS,
+				ImagesRepo: "registry.d8-system.svc:5001/system/deckhouse",
+				Scheme:     "HTTPS",
 				CA:         pki.CA.Cert,
 				Username:   pki.ROUser.Name,
 				Password:   pki.ROUser.Password,
@@ -274,14 +274,14 @@ func TestModeProxy(t *testing.T) {
 			expect := bashible.Config{
 				Mode:           string(constant.ModeProxy),
 				Version:        actual.Version,
-				ImagesBase:     constant.HostWithPath,
+				ImagesBase:     "registry.d8-system.svc:5001/system/deckhouse",
 				ProxyEndpoints: []string{"${discovered_node_ip}:5001"},
 				Hosts: map[string]bashible.ConfigHosts{
-					constant.Host: {
+					"registry.d8-system.svc:5001": {
 						Mirrors: []bashible.ConfigMirrorHost{
 							{
-								Host:   constant.ProxyHost,
-								Scheme: constant.Scheme,
+								Host:   "127.0.0.1:5001",
+								Scheme: "https",
 								CA:     pki.CA.Cert,
 								Auth: bashible.ConfigAuth{
 									Username: pki.ROUser.Name,
