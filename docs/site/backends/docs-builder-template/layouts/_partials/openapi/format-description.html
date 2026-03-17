@@ -6,6 +6,7 @@
 */}}
 {{- $desc := default "" . }}
 {{- $repl := printf "&lt;%s&gt;" "$1" }}
+{{- $replClosing := printf "&lt;/%s&gt;" "$1" }}
 {{- $sentinel := printf "%c" 57344 }}
 {{- if in $desc "`" }}
   {{- /* Use [^`]* (not +) so empty backtick pairs `` are matched and protected; else e.g. "`` `<x>foo</x>`" would match "` `" first and the second block would get <word> escaped */}}
@@ -15,11 +16,13 @@
     {{- $work = replace $work $block (printf "%sOPENAPI_BT_%d%s" $sentinel $idx $sentinel) }}
   {{- end }}
   {{- $work = replaceRE `<([a-zA-Z][a-zA-Z0-9-_]*)>` $repl $work }}
+  {{- $work = replaceRE `</([a-zA-Z][a-zA-Z0-9-_]*)>` $replClosing $work }}
   {{- range $idx, $block := $backtickBlocks }}
     {{- $work = replace $work (printf "%sOPENAPI_BT_%d%s" $sentinel $idx $sentinel) $block }}
   {{- end }}
   {{- partial "openapi/escape-code-blocks" ($work | markdownify) }}
 {{- else }}
   {{- $withEscapedPlaceholders := replaceRE `<([a-zA-Z][a-zA-Z0-9-]*)>` $repl $desc }}
+  {{- $withEscapedPlaceholders = replaceRE `</([a-zA-Z][a-zA-Z0-9-]*)>` $replClosing $withEscapedPlaceholders }}
   {{- $withEscapedPlaceholders | markdownify }}
 {{- end }}
