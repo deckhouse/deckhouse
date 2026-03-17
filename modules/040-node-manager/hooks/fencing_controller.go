@@ -31,7 +31,6 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -114,8 +113,8 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 		return err
 	}
 
-	nodesToKill := set.New()
-	nodesToDeletePod := set.New()
+	// key - node name, where pods have to be deleted, value - if value is false - node should not be deleted, if true - node should be deleted
+	operationNodes := make(map[string]bool)
 	for node, err := range sdkobjectpatch.SnapshotIter[fencingControllerNodeResult](input.Snapshots.Get(nodesSnapshot)) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
@@ -134,30 +133,24 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 				slog.String("current time", time.Now().String()),
 				slog.String("node lease time", nodeLease.Spec.RenewTime.Time.String()),
 			)
-			nodesToDeletePod.Add(node.Name)
-			if node.FencingMode != notifyMode &&
-				node.Type != nodeTypeStatic &&
-				node.Type != nodeTypeCloudStatic {
-				nodesToKill.Add(node.Name)
-			}
+			operationNodes[node.Name] = shouldDeleteNode(node)
 		}
 	}
 
-	if nodesToDeletePod.Size() == 0 {
+	if len(operationNodes) == 0 {
 		// nothing to delete and kill -> skip
 		return nil
 	}
 
-	input.Logger.Warn("Going to delete pods from nodes", slog.Int("count", nodesToDeletePod.Size()))
-	input.Logger.Warn("Going to kill nodes", slog.Int("count", nodesToKill.Size()))
+	input.Logger.Warn("Going to process nodes", slog.Int("count", len(operationNodes)))
 
-	// delete pods
-	for _, node := range nodesToDeletePod.Slice() {
-		input.Logger.Warn("Delete all pods from node", slog.String("name", node))
+	// process nodes
+	for nodeName, deleteNode := range operationNodes {
+		input.Logger.Warn("Delete all pods from node", slog.String("name", nodeName))
 		podsToDelete, err := kubeClient.CoreV1().Pods("").List(
 			context.TODO(),
 			metav1.ListOptions{
-				FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": node}).String(),
+				FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName}).String(),
 			},
 		)
 		if err != nil {
@@ -165,23 +158,27 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 			continue
 		}
 
-		GracePeriodSeconds := int64(0)
+		gracePeriodSeconds := int64(0)
 		for _, pod := range podsToDelete.Items {
 			input.Logger.Warn("Delete pod in namespace on node", slog.String("name", pod.Name), slog.String("namespace", pod.Namespace), slog.String("node", pod.Spec.NodeName))
 			err = kubeClient.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{
-				GracePeriodSeconds: &GracePeriodSeconds,
+				GracePeriodSeconds: &gracePeriodSeconds,
 			})
 			if err != nil {
 				input.Logger.Error("Can't delete pod", slog.String("name", pod.Name), log.Err(err))
 			}
 		}
-	}
 
-	// kill nodes
-	for _, node := range nodesToKill.Slice() {
-		input.Logger.Warn("Delete node", slog.String("name", node))
-		input.PatchCollector.DeleteInBackground("v1", "Node", "", node)
+		// delete node
+		if deleteNode {
+			input.Logger.Warn("Delete node", slog.String("name", nodeName))
+			input.PatchCollector.DeleteInBackground("v1", "Node", "", nodeName)
+		}
 	}
 
 	return nil
+}
+
+func shouldDeleteNode(node fencingControllerNodeResult) bool {
+	return node.FencingMode != notifyMode && node.Type != nodeTypeStatic && node.Type != nodeTypeCloudStatic
 }
