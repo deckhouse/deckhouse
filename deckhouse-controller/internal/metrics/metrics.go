@@ -92,7 +92,7 @@ const (
 	ModuleReleaseGroup          = "module_release_group"
 
 	// DeckhouseModuleVersionTelemetryGroup is the metrics group
-	DeckhouseModuleVersionTelemetryGroup = "deckhouse_module_version_telemetry"
+	DeckhouseModuleVersionTelemetryGroup = "deckhouse_module_version_telemetr"
 )
 
 // Group templates for dynamic metric names using fmt.Sprintf
