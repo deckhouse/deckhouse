@@ -29,8 +29,10 @@
     position: sticky;
   }
 
-  @include breakpoints.max-w(s) {
-    display: none;
+  @include breakpoints.max-w(xs) {
+    flex-direction: column;
+    align-items: start;
+    margin: 0 0 45px;
   }
 
   &--left {
@@ -116,6 +118,18 @@
       min-width: 297px;
       margin: 0;
     }
+
+    @include breakpoints.max-w(s) {
+      min-width: 220px;
+      padding-bottom: 20px;
+      gap: 10px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      min-width: 100%;
+      gap: 25px;
+      justify-content: space-between;
+    }
   }
 
   .breadcrumbs__container {
@@ -149,6 +163,18 @@
     @include breakpoints.max-w(m) {
       width: 215px;
       min-width: 215px;
+    }
+
+    @include breakpoints.max-w(s) {
+      width: 180px;
+      min-width: 180px;
+      margin-left: 0;
+    }
+
+    @include breakpoints.max-w(xs) {
+      justify-content: space-between;
+      width: 100%;
+      min-width: 100%;
     }
   }
 }
@@ -1419,7 +1445,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
     @include breakpoints.max-w(xs) {
       margin-bottom: 30px;
-      justify-content: center;
       font-size: 30px;
       font-weight: 700;
       line-height: 38px;

@@ -10,14 +10,6 @@ html {
     position: sticky;
     top: 0;
     z-index: 100;
-
-    @include breakpoints.max-w(s) {
-        margin-bottom: 20px
-    }
-
-    @include breakpoints.max-w(xs) {
-        margin-bottom: 30px
-    }
 }
 
 .header {
