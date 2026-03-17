@@ -1,5 +1,5 @@
 ---
-title: "Switching CNI from Flannel to Cilium"
+title: "Switching CNI from Flannel or Simple to Cilium"
 permalink: en/admin/configuration/network/internal/flannel-simple-to-cilium.html
 ---
 

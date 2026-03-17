@@ -1,5 +1,5 @@
 ---
-title: "Переключение CNI с Flannel на Cilium"
+title: "Переключение CNI с Flannel или Simple на Cilium"
 permalink: ru/admin/configuration/network/internal/flannel-simple-to-cilium.html
 lang: ru
 ---
