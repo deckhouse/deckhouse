@@ -16,7 +16,7 @@
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
-fromImage: builder/alpine-3.22
+fromImage: builder/alpine
 final: false
 shell:
   setup:
@@ -149,7 +149,7 @@ import:
 {{- if and (ne $.Env "development") (ne $.Env "local") }}
 ---
 image: web-frontend-init
-fromImage: builder/alpine-3.22
+fromImage: builder/alpine
 git:
 - add: /{{ .ModulePath }}docs/site/.werf/channels-convert.sh
   to: /scripts/channels-convert.sh
@@ -166,7 +166,7 @@ import:
 ---
 image: web-frontend
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
-fromImage: builder/alpine-3.22
+fromImage: builder/alpine
 {{- else }}
 fromImage: base/nginx
 imageSpec:
