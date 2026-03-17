@@ -86,7 +86,7 @@ data:
 			f.RunHook()
 		})
 
-		It("Hook should publish any violations in metrics", func() {
+		It("Hook should not publish any violations in metrics", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			metrics := f.MetricsCollector.CollectedMetrics()
 			Expect(metrics).To(HaveLen(0))
@@ -102,17 +102,23 @@ data:
 		It("Should detect and report one violation in metrics", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			Expect(metrics[0]).To(Equal(operation.MetricOperation{
-				Action: operation.ActionGaugeSet,
-				Name:   grantViolationMetricName,
-				Value:  ptr.To(1.0),
-				Labels: map[string]string{
-					"project":               "testproj",
-					"violating_object_name": "testcm",
-					"violating_resource":    "configmaps",
+			Expect(metrics).To(HaveLen(2))
+			Expect(metrics).To(ConsistOf(
+				operation.MetricOperation{
+					Group:  grantViolationMetricGroupPrefix + "testproj",
+					Action: operation.ActionExpireMetrics,
 				},
-			}))
+				operation.MetricOperation{
+					Action: operation.ActionGaugeSet,
+					Name:   grantViolationMetricName,
+					Value:  ptr.To(1.0),
+					Group:  grantViolationMetricGroupPrefix + "testproj",
+					Labels: map[string]string{
+						"project":               "testproj",
+						"violating_object_name": "testcm",
+						"violating_resource":    "configmaps",
+					},
+				}))
 		})
 	})
 
@@ -125,12 +131,17 @@ data:
 		It("Should detect and report 2 violations in metrics", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(2))
+			Expect(metrics).To(HaveLen(3))
 			Expect(metrics).To(ConsistOf(
+				operation.MetricOperation{
+					Group:  grantViolationMetricGroupPrefix + "testproj",
+					Action: operation.ActionExpireMetrics,
+				},
 				operation.MetricOperation{
 					Action: operation.ActionGaugeSet,
 					Name:   grantViolationMetricName,
 					Value:  ptr.To(1.0),
+					Group:  grantViolationMetricGroupPrefix + "testproj",
 					Labels: map[string]string{
 						"project":               "testproj",
 						"violating_object_name": "testcm",
@@ -141,6 +152,7 @@ data:
 					Action: operation.ActionGaugeSet,
 					Name:   grantViolationMetricName,
 					Value:  ptr.To(1.0),
+					Group:  grantViolationMetricGroupPrefix + "testproj",
 					Labels: map[string]string{
 						"project":               "testproj",
 						"violating_object_name": "secondcm",

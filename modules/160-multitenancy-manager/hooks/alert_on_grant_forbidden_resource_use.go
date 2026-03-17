@@ -9,6 +9,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -17,7 +18,8 @@ import (
 )
 
 const (
-	grantViolationMetricName = "d8_cluster_objects_grant_violated"
+	grantViolationMetricName        = "d8_cluster_objects_grant_violated"
+	grantViolationMetricGroupPrefix = "grant_"
 )
 
 type grant struct {
@@ -96,10 +98,13 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 			"violations", violations,
 		)
 
+		metricOpts := metrics.WithGroup(grantViolationMetricGroupPrefix + g.ObjectMeta.Name)
+		input.MetricsCollector.Expire(grantViolationMetricGroupPrefix + g.ObjectMeta.Name)
+
 		if len(violations) == 0 {
 			input.MetricsCollector.Set(grantViolationMetricName, 0, map[string]string{
 				"project": g.ObjectMeta.Name,
-			})
+			}, metricOpts)
 			continue
 		}
 
@@ -113,7 +118,7 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 				metricLabels["violating_resource"] = fmt.Sprintf("%s.%s", v.GVR.Resource, v.GVR.Group)
 			}
 
-			input.MetricsCollector.Set(grantViolationMetricName, 1, metricLabels)
+			input.MetricsCollector.Set(grantViolationMetricName, 1, metricLabels, metricOpts)
 		}
 
 		return nil
