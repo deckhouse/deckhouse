@@ -238,7 +238,7 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 	return nil
 }
 
-func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProtocol string, protocolMap map[string]string) {
+func updatePortProtocols(services *[]eeCrd.FederationPublicService, defaultProtocol string, protocolMap map[string]string) {
 	keys := make([]string, 0, len(protocolMap))
 	for key := range protocolMap {
 		keys = append(keys, key)

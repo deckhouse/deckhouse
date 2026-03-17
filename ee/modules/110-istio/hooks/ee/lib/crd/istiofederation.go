@@ -40,11 +40,11 @@ type IstioFederationStatus struct {
 
 // Warning! This struct is duplicated in images/metadata-exporter
 type FederationPrivateMetadata struct {
-	IngressGateways *[]FederationIngressGateways `json:"ingressGateways"`
-	PublicServices  *[]FederationPublicServices  `json:"publicServices"`
+	IngressGateways *[]FederationIngressGateway `json:"ingressGateways"`
+	PublicServices  *[]FederationPublicService  `json:"publicServices"`
 }
 
-type FederationIngressGateways struct {
+type FederationIngressGateway struct {
 	Address string `json:"address"`
 	Port    uint   `json:"port"`
 }
@@ -55,7 +55,7 @@ type FederationPublicServicePort struct {
 	Protocol string `json:"protocol"`
 }
 
-type FederationPublicServices struct {
+type FederationPublicService struct {
 	Hostname string                        `json:"hostname"`
 	Ports    []FederationPublicServicePort `json:"ports"`
 }

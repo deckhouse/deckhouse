@@ -1,10 +1,10 @@
 {{- if .Values.istio.federation.enabled }}
-{{- range $svc := .Values.istio.internal.federationsMergedPublicServices }}
+{{- range $svc := .Values.istio.internal.serviceEntries }}
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
 metadata:
-  name: {{ $svc.hostname | replace "." "-" }}
+  name: {{ $svc.name }}
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 spec:
@@ -30,7 +30,7 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: {{ $svc.hostname | replace "." "-" }}
+  name: {{ $svc.name }}
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 spec:

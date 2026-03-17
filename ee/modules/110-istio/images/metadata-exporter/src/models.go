@@ -16,8 +16,8 @@ type Node struct {
 	IsActive bool   `json:"isActive"`
 }
 
-// PublicServices struct for federation
-type PublicServices struct {
+// PublicService struct for federation
+type PublicService struct {
 	Hostname string `json:"hostname"`
 	Ports    []Port `json:"ports"`
 }
@@ -53,7 +53,7 @@ type AlliancePublicMetadata struct {
 
 type FederationPrivateMetadata struct {
 	IngressGateways *[]IngressGateway `json:"ingressGateways,omitempty"`
-	PublicServices  *[]PublicServices `json:"publicServices,omitempty"`
+	PublicServices  *[]PublicService  `json:"publicServices,omitempty"`
 }
 
 type MulticlusterPrivateMetadata struct {
