@@ -134,6 +134,10 @@ apiServer:
     {{- if ne .runType "ClusterBootstrap" }}
     - name: enable-admission-plugins
       value: "{{ $admissionPlugins | sortAlpha | join "," }}"
+    {{- if .apiserver.disableAdmissionPlugins }}
+    - name: disable-admission-plugins
+      value: {{ .apiserver.disableAdmissionPlugins | quote }}
+    {{- end }}
     - name: admission-control-config-file
       value: /etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml
     - name: kubelet-certificate-authority
