@@ -6943,7 +6943,6 @@ modules-having-alerts:
     - admission-policy-engine
     - cert-manager
     - chrony
-    - cloud-provider-dvp
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager
