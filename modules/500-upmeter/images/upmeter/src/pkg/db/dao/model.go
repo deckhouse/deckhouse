@@ -72,7 +72,7 @@ func parseEpisodesFromEntities(rows *sql.Rows) ([]check.Episode, error) {
 	if err != nil {
 		return nil, err
 	}
-	var episodes []check.Episode
+	episodes := make([]check.Episode, 0, len(records))
 	for _, r := range records {
 		episodes = append(episodes, r.Episode)
 	}

@@ -278,7 +278,7 @@ func lookupIPs(domain string, timeout time.Duration) ([]string, error) {
 		return nil, err
 	}
 
-	var ips []string
+	ips := make([]string, 0, len(addrs))
 	for _, addr := range addrs {
 		ips = append(ips, addr.IP.String())
 	}
