@@ -46,10 +46,10 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
-   * Watches for VolumeSnapshot и VolumeSnapshotContent resources.
+   * Watches for VolumeSnapshot and VolumeSnapshotContent resources.
    * Authorizes requests for controller metrics.
 
 The following external components interact with the module:
 
 1. **Kube-apiserver**: Uses the validation webhook to verify the created VolumeSnapshot and VolumeSnapshotContent resources.
-2. **Prometheus-main** — Collect metrics from the controller.
+2. **Prometheus-main**: Collects metrics from the controller.

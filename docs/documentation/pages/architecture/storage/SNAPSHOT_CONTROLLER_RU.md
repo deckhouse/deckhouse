@@ -2,7 +2,7 @@
 title: Модуль snapshot-controller
 permalink: ru/architecture/storage/snapshot-controller.html
 lang: ru
-search: snapshot-controller, snapshot, снимок, снапшот, снэпшот
+search: snapshot-controller, snapshot, снимок, снапшот, снапшот
 description: Архитектура модуля snapshot-controller в Deckhouse Kubernetes Platform.
 ---
 
@@ -32,7 +32,7 @@ description: Архитектура модуля snapshot-controller в Deckhous
 
    Для всех установленных CSI-драйверов используется один **snapshot-controller**, который следит за ресурсами VolumeSnapshot и VolumeSnapshotContent. При появлении нового ресурса VolumeSnapshot контроллер создает ресурс VolumeSnapshotContent и связывает эти ресурсы друг с другом так, что VolumeSnapshot ссылается на определенный VolumeSnapshotContent, а VolumeSnapshotContent также на этот VolumeSnapshot.
 
-   Создание снэпшота - это многоступенчатый процесс: сначала **snapshot-controller** создает объект VolumeSnapshotContent, затем sidecar **snapshotter** запускает создание снэпшота с помощью **csi-controller** на соответствующем узле и обновляет статус VolumeSnapshotContent (поля `snapshotHandle`, `creationTime`, `restoreSize`, `readyToUse` и `error`). **Snapshot-controller** читает статус VolumeSnapshotContent и обновляет статус ресурса VolumeSnapshot до тех пор, пока двунаправленная привязка не будет завершена и поле `readyToUse` не станет `true`. Аналогично обновляется поле `error` при возникновении сбоя.
+   Создание снапшота - это многоступенчатый процесс: сначала **snapshot-controller** создает объект VolumeSnapshotContent, затем sidecar **snapshotter** запускает создание снапшота с помощью **csi-controller** на соответствующем узле и обновляет статус VolumeSnapshotContent (поля `snapshotHandle`, `creationTime`, `restoreSize`, `readyToUse` и `error`). **Snapshot-controller** читает статус VolumeSnapshotContent и обновляет статус ресурса VolumeSnapshot до тех пор, пока двунаправленная привязка не будет завершена и поле `readyToUse` не станет `true`. Аналогично обновляется поле `error` при возникновении сбоя.
 
    Состоит из следующих контейнеров:
 
