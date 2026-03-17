@@ -183,7 +183,9 @@ func (m *MetaConfig) prepareRegistry() error {
 					"Please use one of the supported bootstrap modes: %v",
 				deckhouseSettings.Mode,
 				[]registry_const.ModeType{
-					registry_const.ModeUnmanaged, registry_const.ModeDirect,
+					registry_const.ModeUnmanaged,
+					registry_const.ModeDirect,
+					registry_const.ModeProxy,
 				},
 			)
 		case registry_const.ModeProxy:
@@ -193,7 +195,8 @@ func (m *MetaConfig) prepareRegistry() error {
 						"Please use one of the supported bootstrap modes for non-static cluster: %v",
 					deckhouseSettings.Mode,
 					[]registry_const.ModeType{
-						registry_const.ModeUnmanaged, registry_const.ModeDirect,
+						registry_const.ModeUnmanaged,
+						registry_const.ModeDirect,
 					},
 				)
 			}
