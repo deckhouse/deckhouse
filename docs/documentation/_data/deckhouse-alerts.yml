@@ -238,7 +238,7 @@ alerts:
         Check the "Security > Cluster Object Grant Violations" dashboard for detailed overview of violating objects.
       summary: |
         One or more resources not allowed by ClusterObjetsGrant are in use.
-      severity: "4"
+      severity: "6"
       markupFormat: markdown
     - name: CniCiliumNonStandardVXLANPortFound
       sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/configmap.yaml
