@@ -36,8 +36,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-func IsSequentialNodesBootstrap() bool {
-	return os.Getenv("DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP") == "false"
+func IsSequentialNodesBootstrap(cfg *config.MetaConfig) bool {
+	seqEnv := os.Getenv("DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP")
+	// vcd doesn't support parallel creating nodes in same vapp
+	// https://github.com/vmware/terraform-provider-vcd/issues/530
+	return seqEnv == "false" || cfg.ProviderName == "vcd"
 }
 
 func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
@@ -269,19 +272,33 @@ func ParallelBootstrapAdditionalNodes(
 	wg.Wait()
 	close(resultsChan)
 
+	var bootstrapErrors *multierror.Error
+
 	for candidate := range resultsChan {
 		if candidate.err != nil {
-			return nodesToWait, candidate.err
+			bootstrapErrors = multierror.Append(
+				bootstrapErrors, 
+				fmt.Errorf("Node %s error: %w", candidate.name, candidate.err),
+			)
+			// always output from logger
 		}
+
 		if candidate.buffNodeLog.Len() == 0 {
 			continue
 		}
+
+		ngLogger.LogInfoF("Output for node %s:\n", candidate.name)
 
 		scanner := bufio.NewScanner(candidate.buffNodeLog)
 		for scanner.Scan() {
 			ngLogger.LogInfoLn((scanner.Text()))
 		}
 	}
+
+	if err := bootstrapErrors.ErrorOrNil(); err != nil {
+		return nodesToWait, err
+	}
+
 	return nodesToWait, nil
 }
 
@@ -371,10 +388,17 @@ func ParallelCreateNodeGroup(
 		wg.Wait()
 		close(resultsChan)
 
+		var bootstrapErrors *multierror.Error
+
 		for ng := range resultsChan {
 			if ng.err != nil {
-				return ng.err
+				bootstrapErrors = multierror.Append(
+					bootstrapErrors, 
+					fmt.Errorf("Node group %s errors:\n%w", ng.name, ng.err),
+				)
+				// always output from logger
 			}
+
 			if ng.buffLog.Len() == 0 {
 				continue
 			}
@@ -385,6 +409,10 @@ func ParallelCreateNodeGroup(
 				log.InfoLn(scanner.Text())
 			}
 			currentPLogger.LogProcessEnd()
+		}
+
+		if err := bootstrapErrors.ErrorOrNil(); err != nil {
+			return err
 		}
 
 		return entity.WaitForNodesBecomeReady(ctx, kubeCl, ngWaitMap)
