@@ -576,7 +576,7 @@ status:
 			// serviceEntries should have ONE entry with endpoints from BOTH federations
 			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
 				{
-					"name": "my-svc.my-ns.svc.cluster.local-9c8cbb5bc",
+					"name": "my-svc-my-ns-svc-cluster-local-9c8cbb5bc",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
 					"ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}],
 					"endpoints": [
@@ -625,7 +625,7 @@ status:
 			// - unique-svc.ns.svc.cluster.local → port 80
 			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
 				{
-					"name": "dup-svc.ns.svc.cluster.local-6475d67dcb",
+					"name": "dup-svc-ns-svc-cluster-local-6475d67dcb",
 					"hostname": "dup-svc.ns.svc.cluster.local",
 					"ports": [
 						{"name": "http", "port": 8080, "protocol": "HTTP"},
@@ -636,7 +636,7 @@ status:
 					]
 				},
 				{
-					"name": "unique-svc.ns.svc.cluster.local-6475d67dcb",
+					"name": "unique-svc-ns-svc-cluster-local-6475d67dcb",
 					"hostname": "unique-svc.ns.svc.cluster.local",
 					"ports": [{"name": "http", "port": 80, "protocol": "HTTP"}],
 					"endpoints": [
@@ -700,7 +700,7 @@ status:
 			// cluster-y: svc.ns.svc.cluster.local:9090 → endpoints [10.0.0.2:15443]
 			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
 				{
-					"name": "svc.ns.svc.cluster.local-64465b95f6",
+					"name": "svc-ns-svc-cluster-local-64465b95f6",
 					"hostname": "svc.ns.svc.cluster.local",
 					"ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}],
 					"endpoints": [
@@ -708,7 +708,7 @@ status:
 					]
 				},
 				{
-					"name": "svc.ns.svc.cluster.local-85bb6b6b89",
+					"name": "svc-ns-svc-cluster-local-85bb6b6b89",
 					"hostname": "svc.ns.svc.cluster.local",
 					"ports": [{"name": "grpc", "port": 9090, "protocol": "HTTP2"}],
 					"endpoints": [
@@ -879,7 +879,7 @@ status:
 
 			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
 				{
-					"name": "my-svc.my-ns.svc.cluster.local-55b5c6469d",
+					"name": "my-svc-my-ns-svc-cluster-local-55b5c6469d",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
 					"ports": [
 						{
@@ -900,7 +900,7 @@ status:
 					]
 				},
 				{
-					"name": "my-svc.my-ns.svc.cluster.local-7f8594896",
+					"name": "my-svc-my-ns-svc-cluster-local-7f8594896",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
 					"ports": [
 						{
@@ -921,7 +921,7 @@ status:
 					]
 				},
 				{
-					"name": "my-svc.my-ns.svc.cluster.local-d797d8d68",
+					"name": "my-svc-my-ns-svc-cluster-local-d797d8d68",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
 					"ports": [
 						{
