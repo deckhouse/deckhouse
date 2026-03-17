@@ -254,9 +254,6 @@ func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, 
 	serverK8sLabeledSnap := input.Snapshots.Get(kubeAPIServK8sLabeledSnap)
 	serverCPLabeledSnap := input.Snapshots.Get(kubeAPIServCPLabeledSnap)
 
-	input.Logger.Info(fmt.Sprintf("serverK8sLabeledSnap, length %d: %s", len(serverK8sLabeledSnap), serverK8sLabeledSnap))
-	input.Logger.Info(fmt.Sprintf("serverCPLabeledSnap, length %d: %s", len(serverCPLabeledSnap), serverCPLabeledSnap))
-
 	podsCnt := 0
 	if c := len(serverK8sLabeledSnap); c > 0 {
 		podsCnt = c
@@ -270,7 +267,6 @@ func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeEndpointsSliceSnap, err)
 	}
-	input.Logger.Info(fmt.Sprintf("endpointsSnap, length %d: %s", len(endpointsSnap), endpointsSnap))
 
 	var endpoints []string
 	if len(endpointsSnap) > 0 {
@@ -287,7 +283,6 @@ func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, 
 	}
 
 	controlPlaneEnabled := module.IsEnabled("control-plane-manager", input)
-	input.Logger.Info(fmt.Sprintf("podsCnt %d, endpointsCnt %d, controlPlaneEnabled: %v", podsCnt, endpointsCnt, controlPlaneEnabled))
 	if controlPlaneEnabled && podsCnt != endpointsCnt {
 		msg := fmt.Sprintf("Not found k8s versions. Pods(%v) != Endpoints (%v) count", podsCnt, endpointsCnt)
 
