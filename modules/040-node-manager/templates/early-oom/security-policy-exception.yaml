@@ -1,0 +1,23 @@
+{{- if and (or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")) .Values.nodeManager.earlyOomEnabled }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: early-oom
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "early-oom")) | nindent 2 }}
+spec:
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          Allow the early-oom daemon to use hostPath volumes for access to host PSI metrics and process information.
+    hostPath:
+      allowedValues:
+        - path: /proc
+          readOnly: false
+          metadata:
+            description: Access to the host /proc filesystem is required to collect PSI metrics for OOM prevention
+{{- end }}

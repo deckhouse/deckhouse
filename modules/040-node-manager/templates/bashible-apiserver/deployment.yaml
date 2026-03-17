@@ -56,6 +56,7 @@ spec:
     metadata:
       labels:
         app: "bashible-apiserver"
+        security.deckhouse.io/security-policy-exception: bashible-apiserver
     spec:
       {{- include "helm_lib_node_selector"  (tuple . "master")  | nindent 6 }}
       {{- include "helm_lib_tolerations"    (tuple . "any-node" "uninitialized")  | nindent 6 }}
@@ -86,6 +87,7 @@ spec:
           - name: https
             hostPort: 4221
             containerPort: 4221
+            protocol: TCP
         livenessProbe:
           httpGet:
             path: /healthz
