@@ -2,7 +2,6 @@
   rules:
   - alert: ClusterObjectsGrantViolation
     expr: sum (d8_cluster_objects_grant_violated) != 0
-    for: 1s
     labels:
       severity_level: "4"
       tier: application
@@ -11,6 +10,6 @@
       plk_protocol_version: "1"
       summary: One or more resources not allowed by ClusterObjetsGrant are in use.
       description: |
-          One or more resources not allowed by ClusterObjectsGrant are in use in cluster.
+          One or more resources that are not allowed by ClusterObjectsGrant are in use within this cluster's projects.
 
-          See the "Security > Cluster Object Grant Violations" dashboard for detailed overview of violating objects.
+          Check the "Security > Cluster Object Grant Violations" dashboard for detailed overview of violating objects.

@@ -227,6 +227,19 @@ alerts:
         Cloud data discoverer found orphaned disks in the cloud.
       severity: "6"
       markupFormat: markdown
+    - name: ClusterObjectsGrantViolation
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/cluster_objects_grant_violation.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |
+        One or more resources that are not allowed by ClusterObjectsGrant are in use within this cluster's projects.
+
+        Check the "Security > Cluster Object Grant Violations" dashboard for detailed overview of violating objects.
+      summary: |
+        One or more resources not allowed by ClusterObjetsGrant are in use.
+      severity: "4"
+      markupFormat: markdown
     - name: CniCiliumNonStandardVXLANPortFound
       sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/configmap.yaml
       moduleUrl: 021-cni-cilium
@@ -6960,6 +6973,7 @@ modules-having-alerts:
     - monitoring-kubernetes
     - monitoring-kubernetes-control-plane
     - monitoring-ping
+    - multitenancy-manager
     - node-local-dns
     - node-manager
     - okmeter
