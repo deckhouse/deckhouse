@@ -51,7 +51,6 @@ func (lb *LoadBalancerService) shouldUseSWHC(ctx context.Context) bool {
 
 	ok, err := detectSWHCResource(ctx, lb.Service)
 	if err != nil {
-		// Detection failed — do not cache; retry on the next call.
 		klog.V(4).InfoS("shouldUseSWHC: detection failed, assuming SWHC unavailable", "err", err)
 		return false
 	}
@@ -111,7 +110,7 @@ func setServiceWithHealthchecksSpec(
 	loadBalancerClass *string,
 	loadBalancerIP string,
 ) error {
-	probes := make([]map[string]any, 0, len(ports))
+	probes := make([]any, 0, len(ports))
 	for _, p := range ports {
 		var target int64
 		if p.TargetPort.Type == intstr.Int {
@@ -146,7 +145,6 @@ func setServiceWithHealthchecksSpec(
 	}
 
 	if len(externalIPs) > 0 {
-		// SetNestedMap requires []any throughout — []string causes a panic in DeepCopyJSONValue.
 		externalIPsAny := make([]any, len(externalIPs))
 		for i, ip := range externalIPs {
 			externalIPsAny[i] = ip
