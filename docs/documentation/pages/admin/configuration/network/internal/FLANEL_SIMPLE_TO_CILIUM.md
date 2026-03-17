@@ -1,11 +1,10 @@
 ---
-title: "Migration from cni-simple-bridge/cni-flannel to cni-cilium"
-description: "Step-by-step procedure for migrating from cni-simple-bridge/cni-flannel to cni-cilium"
-permalink: en/user/network/cni_migration.html
+title: "Switching CNI from Flannel to Cilium"
+permalink: en/admin/configuration/network/internal/flannel-simple-to-cilium.html
 ---
 
 {% alert level="info" %}
-This guide is applicable to Deckhouse Kubernetes Platform **<= 1.74**.
+This guide is applicable to Deckhouse Kubernetes Platform **<= 1.75**.
 {% endalert %}
 
 {% alert level="warning" %}

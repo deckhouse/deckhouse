@@ -1,12 +1,11 @@
 ---
-title: "Миграция с cni-simple-bridge/cni-flannel на cni-cilium"
-description: "Последовательность действий для миграции с cni-simple-bridge/cni-flannel на cni-cilium"
-permalink: ru/user/network/cni_migration.html
+title: "Переключение CNI с Flannel на Cilium"
+permalink: ru/admin/configuration/network/internal/flannel-simple-to-cilium.html
 lang: ru
 ---
 
 {% alert level="info" %}
-Инструкция актуальна для Deckhouse Kubernetes Platform **<= 1.74**.
+Инструкция актуальна для Deckhouse Kubernetes Platform **<= 1.75**.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -113,7 +112,7 @@ lang: ru
    d8 k delete pods -A --all --wait=false
    ```
 
-1. Настройте внутренние LoadBalancer (при использовании). Для всех TargetGroup, входящих во внутренний балансировщик, установите параметр:
+1. Настройте внутренние балансировщики LoadBalancer (при использовании). Для всех TargetGroup, входящих во внутренний балансировщик, установите параметр:
 
    ```text
    Preserve client IP addresses = Off

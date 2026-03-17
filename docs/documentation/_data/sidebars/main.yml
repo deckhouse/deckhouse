@@ -518,9 +518,9 @@ entries:
                         ru: Настройка визуализации сетевого стека кластера
                       url: /admin/configuration/network/internal/visualization.html
                     - title:
-                        en: Switching CNI from Flannel to Cilium
-                        ru: Переключение CNI с Flannel на Cilium
-                      url: /admin/configuration/network/internal/flannel-to-cilium.html
+                        en: Switching CNI from Flannel or Simple to Cilium
+                        ru: Переключение CNI с Flannel или Simple на Cilium
+                      url: /admin/configuration/network/internal/flannel-simple-to-cilium.html
                 - title:
                     en: Incoming traffic balancing
                     ru: Балансировка входящего трафика
@@ -968,10 +968,6 @@ entries:
                 en: Configuring request retries with Istio
                 ru: Настройка retry для запросов с Istio
               url: /user/network/retry_istio.html
-            - title:
-                en: Migration from cni-simple-bridge/cni-flannel to cni-cilium
-                ru: Миграция с cni-simple-bridge/cni-flannel на cni-cilium
-              url: /user/network/cni_migration.html 
             - title:
                 en: Configuring resources for istio-proxy sidecars
                 ru: Настройка ресурсов для istio-proxy сайдкаров
