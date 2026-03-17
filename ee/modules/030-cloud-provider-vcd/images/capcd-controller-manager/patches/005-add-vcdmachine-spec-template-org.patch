@@ -1,34 +1,69 @@
-Subject: [PATCH] Add TemplateOrg field to VCDMachine spec
----
-Index: controllers/vcdmachine_controller.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
---- a/controllers/vcdmachine_controller.go	(revision fab75bca4f8a790138f8533a62906fb4eba201e7)
-+++ b/controllers/vcdmachine_controller.go	(date 1744972617471)
-@@ -553,7 +553,7 @@
- `
- 		// vcda-4391 fixed
- 		err = vdcManager.AddNewVM(vmName, vcdCluster.Name, 1,
--			vcdMachine.Spec.Catalog, vcdMachine.Spec.Template, vcdMachine.Spec.PlacementPolicy,
-+			vcdMachine.Spec.Catalog, vcdMachine.Spec.Template, vcdMachine.Spec.TemplateOrg, vcdMachine.Spec.PlacementPolicy,
- 			vcdMachine.Spec.SizingPolicy, vcdMachine.Spec.StorageProfile, guestCustScript, false)
- 		if err != nil {
- 			err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineCreationError, "", machine.Name, fmt.Sprintf("%v", err))
-Index: api/v1beta2/vcdmachine_types.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/api/v1beta2/vcdmachine_types.go b/api/v1beta2/vcdmachine_types.go
---- a/api/v1beta2/vcdmachine_types.go	(revision fab75bca4f8a790138f8533a62906fb4eba201e7)
-+++ b/api/v1beta2/vcdmachine_types.go	(date 1744972414293)
-@@ -46,6 +46,10 @@
+index 490444a4..afaf577e 100644
+--- a/api/v1beta2/vcdmachine_types.go
++++ b/api/v1beta2/vcdmachine_types.go
+@@ -19,7 +19,7 @@ package v1beta2
+ import (
+ 	"k8s.io/apimachinery/pkg/api/resource"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ )
+ 
+ const (
+@@ -29,6 +29,48 @@ const (
+ 	VCDProviderID    = "vmware-cloud-director"
+ )
+ 
++const (
++	VCDMachineMetadataTypeString   string = "String"
++	VCDMachineMetadataTypeNumber   string = "Number"
++	VCDMachineMetadataTypeBoolean  string = "Boolean"
++	VCDMachineMetadataTypeDateTime string = "DateTime"
++)
++
++// VCDMachineMetadata defines metadata for the VCDMachine
++// useful for organizing and categorizing your virtualization inventory
++type VCDMachineMetadata struct {
++	// INSERT METADATA FIELDS - metadata for the VCDMachine
++	// Important: Run "make" to regenerate code after modifying this file
++
++	// The key of the metadata item
++	// +kubebuilder:validation:MaxLength=256
++	// +kubebuilder:validation:MinLength=1
++	Key string `json:"key,omitempty"`
++
++	// The value of the metadata item
++	// +kubebuilder:validation:MaxLength=256
++	// +kubebuilder:validation:MinLength=1
++	Value string `json:"value,omitempty"`
++
++	// The type of the metadata. Can be one of `String`, `Number`, `Boolean` or `DateTime`.
++	// Default value is `String`.
++	// +kubebuilder:validation:Enum=String;Number;Boolean;DateTime
++	// +kubebuilder:default=String
++	// +optional
++	Type string `json:"type,omitempty"` // Type can be "string", "int", "bool", etc.
++
++	// The user access level for the metadata. Can be one of `READONLY`, `READWRITE` or `PRIVATE`.
++	// Default value is `READWRITE`.
++	// +kubebuilder:validation:Enum=READONLY;READWRITE;PRIVATE
++	// +kubebuilder:default=READWRITE
++	// +optional
++	UserAccess string `json:"userAccess,omitempty"` // UserAccess can be "read", "write", etc.
++
++	// Whether the metadata is a system metadata or not.
++	// +optional
++	IsSystem bool `json:"isSystem,omitempty"` // IsSystem indicates if the metadata is system-level or user-defined
++}
++
+ // VCDMachineSpec defines the desired state of VCDMachine
+ type VCDMachineSpec struct {
+ 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+@@ -46,6 +88,10 @@ type VCDMachineSpec struct {
  	// +optional
  	Template string `json:"template,omitempty"`
-
+ 
 +	// TemplateOrg is the organization of the template OVA that is to be used
 +	// +optional
 +	TemplateOrg string `json:"templateOrg,omitempty"`
@@ -36,3 +71,14 @@ diff --git a/api/v1beta2/vcdmachine_types.go b/api/v1beta2/vcdmachine_types.go
  	// SizingPolicy is the sizing policy to be used on this machine.
  	// If no sizing policy is specified, default sizing policy will be used to create the nodes
  	// +optional
+@@ -83,6 +129,10 @@ type VCDMachineSpec struct {
+ 	// Immutable field. machine.Name is used as VM name when this field is empty.
+ 	// +optional
+ 	VmNamingTemplate string `json:"vmNamingTemplate,omitempty"`
++
++	// Metadata for the VCDMachine
++	// +optional
++	Metadata []VCDMachineMetadata `json:"metadata,omitempty"`
+ }
+ 
+ // VCDMachineStatus defines the observed state of VCDMachine
