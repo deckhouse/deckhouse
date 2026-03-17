@@ -35,6 +35,9 @@ func createModuleConfigManifestTask(ctx context.Context, kubeCl *client.Kubernet
 	if err != nil {
 		panic(err)
 	}
+
+	unstructured.RemoveNestedField(mcUnstructMap, "metadata", "resourceVersion")
+
 	mcUnstruct := &unstructured.Unstructured{Object: mcUnstructMap}
 	return actions.ManifestTask{
 		Name: fmt.Sprintf(`ModuleConfig "%s"`, mc.GetName()),
