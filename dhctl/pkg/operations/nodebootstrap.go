@@ -142,7 +142,6 @@ func BootstrapAdditionalNodeForParallelRun(
 	index int,
 	step infrastructure.Step,
 	nodeGroupName, cloudConfig string,
-	isConverge bool,
 	infrastructureContext *infrastructure.Context,
 	runnerLogger log.Logger,
 ) error {
@@ -159,7 +158,10 @@ func BootstrapAdditionalNodeForParallelRun(
 			infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
 		},
 		RunnerLogger: runnerLogger,
+		// allow use state cache because in parallel run we cannot get correct output from user
+		AllowUseStateCache: true,
 	})
+
 	if err != nil {
 		return err
 	}
@@ -253,7 +255,6 @@ func ParallelBootstrapAdditionalNodes(
 				step,
 				nodeGroupName,
 				cloudConfig,
-				true,
 				infrastructureContext,
 				nodeLogger,
 			)
@@ -277,7 +278,7 @@ func ParallelBootstrapAdditionalNodes(
 	for candidate := range resultsChan {
 		if candidate.err != nil {
 			bootstrapErrors = multierror.Append(
-				bootstrapErrors, 
+				bootstrapErrors,
 				fmt.Errorf("Node %s error: %w", candidate.name, candidate.err),
 			)
 			// always output from logger
@@ -393,7 +394,7 @@ func ParallelCreateNodeGroup(
 		for ng := range resultsChan {
 			if ng.err != nil {
 				bootstrapErrors = multierror.Append(
-					bootstrapErrors, 
+					bootstrapErrors,
 					fmt.Errorf("Node group %s errors:\n%w", ng.name, ng.err),
 				)
 				// always output from logger
@@ -504,7 +505,7 @@ func checkNodeResourceExistsInClusterDuringBootstrap(ctx context.Context, params
 		// - infra utility fail with wait timeout
 		// - client fix cloud issue (like extend quota)
 		// - vm started and registered
-		// - client restart bootstrap 
+		// - client restart bootstrap
 		logger.LogDebugF("Has node state in cluster for '%s'. Skip checking node resource in cluster\n", nodeName)
 		return nil
 	}
