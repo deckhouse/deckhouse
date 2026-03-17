@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"d8.io/upmeter/pkg/check"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/server/ranges"
@@ -196,7 +198,7 @@ func (d *EpisodeDao30s) Stats() ([]string, error) {
 	for rows.Next() {
 		var startUnix, count int64
 		if err := rows.Scan(&startUnix, &count); err != nil {
-			// Ignore error, just continue
+			log.Errorf("stats rows.Scan: %v", err)
 			continue
 		}
 		stats = append(stats, fmt.Sprintf("%d %d", startUnix, count))
