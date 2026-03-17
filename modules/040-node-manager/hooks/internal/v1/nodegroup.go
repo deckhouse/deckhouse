@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"encoding/json"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -434,11 +435,38 @@ func (k Kubelet) IsEmpty() bool {
 
 type Fencing struct {
 	// Set custom settings for fencing controller
-	Mode string `json:"mode,omitempty"`
+	Mode     string           `json:"mode,omitempty"`
+	Watchdog *FencingWatchdog `json:"watchdog,omitempty"`
 }
 
 func (f Fencing) IsEmpty() bool {
 	return f.Mode == ""
+}
+
+type FencingWatchdog struct {
+	Timeout int64 `json:"timeout,omitempty"`
+}
+
+func (f *FencingWatchdog) UnmarshalJSON(data []byte) error {
+	type Alias struct {
+		Timeout string `json:"timeout,omitempty"`
+	}
+
+	var aux Alias
+
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
+		return err
+	}
+
+	duration, err := time.ParseDuration(aux.Timeout)
+	if err != nil {
+		return err
+	}
+
+	f.Timeout = int64(duration.Seconds())
+
+	return nil
 }
 
 type NodeGroupConditionType string

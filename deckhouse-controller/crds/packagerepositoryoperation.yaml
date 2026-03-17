@@ -137,7 +137,7 @@ spec:
                                 description: Error message.
                                 type: string
                               version:
-                                description: Version of the package that failed.
+                                description: Version of the package that failed to process.
                                 type: string
                             required:
                             - error

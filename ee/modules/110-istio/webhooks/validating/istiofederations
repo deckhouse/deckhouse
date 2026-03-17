@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+# Copyright 2026 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+configVersion: v1
+kubernetes:
+- name: istio_mc
+  group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  nameSelector:
+    matchNames:
+    - istio
+  jqFilter: |
+    {
+      "federationEnabled": .spec.settings.federation.enabled,
+    }
+kubernetesValidating:
+- name: istiofederations.deckhouse.io
+  group: main
+  includeSnapshotsFrom: ["istio_mc"]
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE"]
+    resources:   ["istiofederations"]
+    scope:       "Cluster"
+EOF
+}
+
+function __main__() {
+  federation_enabled=$(context::jq -r '.snapshots.istio_mc[]?.filterResult.federationEnabled')
+  if [ "$federation_enabled" != "true" ]; then
+    jq -nc '
+    {
+      "allowed": false,
+      "message": "IstioFederations can only be created when federation is enabled. Enable spec.settings.federation.enabled in the istio ModuleConfig."
+    }
+    ' > $VALIDATING_RESPONSE_PATH
+    exit 0
+  fi
+
+  jq -nc '{"allowed": true}' >"$VALIDATING_RESPONSE_PATH"
+}
+
+hook::run "$@"

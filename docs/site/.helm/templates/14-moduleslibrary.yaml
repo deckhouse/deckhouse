@@ -192,7 +192,7 @@ spec:
     kind: Deployment
     name: moduleslibrary
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: {{ pluck .Values.werf.env .Values.vpa.updateMode | first | default .Values.vpa.updateMode._default | quote }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

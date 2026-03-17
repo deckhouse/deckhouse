@@ -16,7 +16,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"k8s.io/utils/ptr"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -104,10 +105,10 @@ func (r *ZvirtClusterReconciler) reconcile(
 		Port: int32(port),
 	}
 
-	clusterScope.ZvirtCluster.Status.Ready = true
+	clusterScope.ZvirtCluster.Status.Initialization.Provisioned = ptr.To(true)
 
 	if err = r.checkZvirtClusterID(ctx, clusterScope.ZvirtCluster.Spec.ID); err != nil {
-		clusterScope.ZvirtCluster.Status.Ready = false
+		clusterScope.ZvirtCluster.Status.Initialization.Provisioned = ptr.To(false)
 		clusterScope.ZvirtCluster.Status.FailureReason = infrastructurev1.ClusterMisconfiguredReason
 		clusterScope.ZvirtCluster.Status.FailureMessage = err.Error()
 	}

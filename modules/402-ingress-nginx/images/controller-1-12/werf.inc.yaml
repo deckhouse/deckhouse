@@ -612,7 +612,7 @@ shell:
       mkdir -p ${dir};
       chown -R deckhouse:deckhouse ${dir};
     done
- 
+
   #remove owasp-modsecurity-crs unnecessary files and folders
   - rm -rf /etc/nginx/owasp-modsecurity-crs/*.md
   - rm -rf /etc/nginx/owasp-modsecurity-crs/docs
@@ -987,7 +987,6 @@ import:
   owner: "0"
   group: "0"
   includePaths:
-  - usr/bin/coreutils
   - usr/bin/test
   - usr/bin/chroot
   - usr/bin/cat

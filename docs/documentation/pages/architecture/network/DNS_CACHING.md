@@ -1,6 +1,8 @@
 ---
 title: "Caching DNS server in a cluster"
 permalink: en/architecture/network/dns-caching.html
+search: DNS caching, cluster DNS, DNS performance, DNS optimization
+description: Using caching DNS server in Deckhouse Kubernetes Platform to mitigate network delays.
 ---
 
 Standard DNS operation in Kubernetes comes with a series of issues

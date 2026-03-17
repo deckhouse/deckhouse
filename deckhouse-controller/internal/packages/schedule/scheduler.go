@@ -15,10 +15,9 @@
 package schedule
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
-
-	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/condition"
@@ -39,6 +38,10 @@ const (
 	// defaultBufferSize is the capacity of the scheduler's notification channel
 	// used to signal enable/disable events to consumers without blocking callers.
 	defaultBufferSize = 1000
+
+	reasonRequirementsKubernetes = "KubernetesRequirementsUnmet"
+	reasonRequirementsDeckhouse  = "DeckhouseRequirementsUnmet"
+	reasonRequirementsBootstrap  = "BootstrapRequirementsUnmet"
 )
 
 // Scheduler manages a dependency graph of packages and their lifecycle.
@@ -51,6 +54,7 @@ type Scheduler struct {
 
 	eventCh chan Event
 
+	dependencyGetter       dependency.Getter
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
@@ -79,6 +83,13 @@ func WithDeckhouseVersionGetter(deckhouseVersionGetter version.Getter) Option {
 func WithBootstrapCondition(cond condition.Condition) Option {
 	return func(s *Scheduler) {
 		s.bootstrapCondition = cond
+	}
+}
+
+// WithDependencyGetter sets the provider for the current dependency version.
+func WithDependencyGetter(getter dependency.Getter) Option {
+	return func(s *Scheduler) {
+		s.dependencyGetter = getter
 	}
 }
 
@@ -128,18 +139,18 @@ func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 	var checkers []checker.Checker
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, string(ConditionReasonRequirementsKubernetes)))
+		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
 	}
 
 	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, string(ConditionReasonRequirementsDeckhouse)))
+		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
 	}
 
 	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
-		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, string(ConditionReasonRequirementsBootstrap)))
+		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, reasonRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 {
+	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
 		deps := make(map[string]dependency.Dependency)
 		for name, dep := range constraints.Dependencies {
 			deps[name] = dependency.Dependency{
@@ -148,11 +159,11 @@ func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 			}
 		}
 
-		checkers = append(checkers, dependency.NewChecker(s.getVersion, deps))
+		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, deps))
 	}
 
 	if res := checker.Check(checkers...); !res.Enabled {
-		return newRequirementsErr(res.Reason, res.Message)
+		return errors.New(res.Message)
 	}
 
 	return nil
@@ -308,7 +319,7 @@ func (s *Scheduler) compute() []*node {
 			changed = true
 
 			if !n.status.Enabled {
-				s.send(Event{Name: n.name, Kind: EventDisable})
+				s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
 			}
 		}
 	}
@@ -355,14 +366,4 @@ func (s *Scheduler) canSchedule(n *node) bool {
 	}
 
 	return true
-}
-
-// getVersion returns the semver version of the named node, or nil if not found.
-func (s *Scheduler) getVersion(name string) *semver.Version {
-	n, ok := s.nodes[name]
-	if !ok || !n.status.Enabled {
-		return nil
-	}
-
-	return n.version
 }
