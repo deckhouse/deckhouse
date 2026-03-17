@@ -18,12 +18,15 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -44,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:                         "nodes_with_spot_taint",
 			WaitForSynchronization:       ptr.To(true),
-			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
 			ExecuteHookOnEvents:          ptr.To(true),
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
@@ -58,14 +61,6 @@ type nodeWithSpotTaint struct {
 	HasSpotTaint         bool
 	HasTerminationLabel  bool
 	HasDrainingAnnotation bool
-}
-
-func (n nodeWithSpotTaint) String() string {
-	return n.Name
-}
-
-func (n nodeWithSpotTaint) UnmarshalTo(obj interface{}) error {
-	return nil
 }
 
 func awsSpotTaintFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -101,8 +96,9 @@ func awsSpotTaintFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		result.HasDrainingAnnotation = true
 	}
 
-	// Only return nodes that have spot taint but don't have both label and annotation yet
-	if result.HasSpotTaint && !(result.HasTerminationLabel && result.HasDrainingAnnotation) {
+	// Only return nodes that have spot taint
+	// We'll check label and annotation presence in the handler
+	if result.HasSpotTaint {
 		return result, nil
 	}
 
@@ -112,8 +108,10 @@ func awsSpotTaintFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 func addTerminationMetadata(_ context.Context, input *go_hook.HookInput) error {
 	nodesSnapshot := input.Snapshots.Get("nodes_with_spot_taint")
 
-	for _, nodeData := range nodesSnapshot {
-		node := nodeData.(nodeWithSpotTaint)
+	for node, err := range sdkobjectpatch.SnapshotIter[nodeWithSpotTaint](nodesSnapshot) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes_with_spot_taint' snapshots: %w", err)
+		}
 
 		input.Logger.Info(
 			"Adding termination metadata for AWS spot-tainted node",
