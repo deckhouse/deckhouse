@@ -52,9 +52,9 @@ var errNoPackageMetadata = errors.New("package has no type labels and no package
 // (labels or package.yaml) but the type value is empty or not recognized.
 var errPackageTypeInvalid = errors.New("package type could not be determined")
 
-// errOldImage is returned when a release image has no type labels, no package.yaml,
+// errTooOldImage is returned when a release image has no type labels, no package.yaml,
 // and no module.yaml - it's too old to process - just warn the user.
-var errOldImage = errors.New("release image is too old to process: no type labels, no package.yaml, no module.yaml")
+var errTooOldImage = errors.New("release image is too old to process: no type labels, no package.yaml, no module.yaml")
 
 // isRepoNotFoundError checks if the error chain contains a registry NAME_UNKNOWN error,
 // which means the repository path does not exist in the registry.
@@ -160,7 +160,7 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 	for _, pkg := range packages {
 		pkgType := pkg.Type
 		if pkgType == "" {
-			// Don't show the legacy module as a package in PackageRepository.status.packages
+			// Skip packages without a resolved type (safety guard)
 			continue
 		}
 		s.repo.Status.Packages = append(s.repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{
@@ -360,23 +360,27 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	slices.SortFunc(foundTags, func(a, b *semver.Version) int { return a.Compare(b) })
 	latestTag := "v" + foundTags[len(foundTags)-1].String()
 
-	pkgType, err := s.detectPackageType(ctx, packageName, latestTag)
-	if err != nil {
-		// Legacy module (v1alpha1) or old image without any metadata
-		if errors.Is(err, errNoPackageMetadata) || errors.Is(err, errOldImage) {
+	pkgType, detectErr := s.detectPackageType(ctx, packageName, latestTag)
+	if detectErr != nil {
+		// The image we don't want to process until the module.yaml is placed in there
+		if errors.Is(detectErr, errTooOldImage) {
 			return &PackageProcessResult{
 				Failed: []failedVersion{{
-					Error: err.Error(),
+					Error: detectErr.Error(),
 				}},
 			}, nil
 		}
-		if errors.Is(err, errPackageTypeInvalid) {
+		// Legacy module (v1alpha1): has module.yaml but no labels/package.yaml.
+		// Create MPVs directly without assigning a package type.
+		if errors.Is(detectErr, errNoPackageMetadata) {
+			return s.processLegacyModuleVersions(ctx, packageName, foundTags)
+		}
+		if errors.Is(detectErr, errPackageTypeInvalid) {
 			return &PackageProcessResult{
-				Failed: []failedVersion{{Name: latestTag, Error: err.Error()}},
+				Failed: []failedVersion{{Name: latestTag, Error: detectErr.Error()}},
 			}, nil
 		}
-		// Environment / Network problem
-		return nil, err
+		return nil, detectErr
 	}
 
 	var failedVersions = make([]failedVersion, 0)
@@ -386,7 +390,7 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		var ensureErr error
 		switch pkgType {
 		case packageTypeModule:
-			ensureErr = s.ensureModulePackageVersion(ctx, packageName, version)
+			ensureErr = s.ensureModulePackageVersion(ctx, packageName, version, nil)
 		default:
 			ensureErr = s.ensureApplicationPackageVersion(ctx, packageName, version)
 		}
@@ -415,17 +419,114 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	}, nil
 }
 
+// processLegacyModuleVersions creates ModulePackageVersion resources for a legacy module (v1alpha1)
+// that has a /version path but no package type labels or package.yaml.
+func (s *OperationService) processLegacyModuleVersions(ctx context.Context, packageName string, foundTags []*semver.Version) (*PackageProcessResult, error) {
+	legacyLabels := map[string]string{
+		v1alpha1.ModulePackageVersionLabelLegacy: "true",
+	}
+
+	var failedVersions []failedVersion
+	for _, versionTag := range foundTags {
+		version := "v" + versionTag.String()
+
+		ensureErr := s.ensureModulePackageVersion(ctx, packageName, version, legacyLabels)
+		if ensureErr != nil {
+			s.logger.Warn(
+				"failed to create legacy module package version",
+				slog.String("package", packageName),
+				slog.String("version", version),
+				log.Err(ensureErr),
+			)
+			failedVersions = append(failedVersions, failedVersion{
+				Name:  version,
+				Error: "ensure legacy module package version: " + ensureErr.Error(),
+			})
+			continue
+		}
+	}
+
+	return &PackageProcessResult{
+		PackageType: packageTypeModule,
+		Done:        foundTags,
+		Failed:      failedVersions,
+	}, nil
+}
+
 // handleMissingVersionPath - fallback when <package>/version doesn't exist (NAME_UNKNOWN).
-// No /version path means the package is a legacy module (v1alpha1).
-func (s *OperationService) handleMissingVersionPath(_ context.Context, packageName string) (*PackageProcessResult, error) {
+// Checks the <package>/release path for legacy module (v1alpha1) version tags.
+// Creates ModulePackageVersion resources with registry-path-segment=release label.
+func (s *OperationService) handleMissingVersionPath(ctx context.Context, packageName string) (*PackageProcessResult, error) {
 	s.logger.Info(
-		"package has no /version path, treating as legacy module (v1alpha1)",
+		"package has no /version path, checking /release for legacy module (v1alpha1)",
 		slog.String("package", packageName),
 	)
+
+	rawTags, err := s.svc.Package(packageName).Release().ListTags(ctx)
+	if err != nil {
+		if isRepoNotFoundError(err) {
+			s.logger.Warn(
+				"package has neither /version nor /release path",
+				slog.String("package", packageName),
+			)
+			return &PackageProcessResult{
+				Failed: []failedVersion{{
+					Error: fmt.Sprintf("package %q has neither /version nor /release path", packageName),
+				}},
+			}, nil
+		}
+		return nil, fmt.Errorf("list release tags: %w", err)
+	}
+
+	foundTags := extractOnlySemverTags(rawTags)
+
+	if len(foundTags) == 0 {
+		s.logger.Warn(
+			"no semver tags found in /release path for package",
+			slog.String("package", packageName),
+		)
+		return &PackageProcessResult{
+			Failed: []failedVersion{{
+				Error: fmt.Sprintf("no semver release tags found for legacy module %q", packageName),
+			}},
+		}, nil
+	}
+
+	s.logger.Info(
+		"found legacy module versions in /release path",
+		slog.String("package", packageName),
+		slog.Int("versions", len(foundTags)),
+	)
+
+	legacyLabels := map[string]string{
+		v1alpha1.ModulePackageVersionLabelLegacy:              "true",
+		v1alpha1.ModulePackageVersionLabelRegistryPathSegment: "release",
+	}
+
+	var failedVersions []failedVersion
+	for _, versionTag := range foundTags {
+		version := "v" + versionTag.String()
+
+		ensureErr := s.ensureModulePackageVersion(ctx, packageName, version, legacyLabels)
+		if ensureErr != nil {
+			s.logger.Warn(
+				"failed to create legacy module package version",
+				slog.String("package", packageName),
+				slog.String("version", version),
+				log.Err(ensureErr),
+			)
+			failedVersions = append(failedVersions, failedVersion{
+				Name:  version,
+				Error: "ensure legacy module package version: " + ensureErr.Error(),
+			})
+			continue
+		}
+	}
+
 	return &PackageProcessResult{
-		Failed: []failedVersion{{
-			Error: fmt.Sprintf("%s: %s", errNoPackageMetadata.Error(), packageName),
-		}},
+		PackageType: packageTypeModule,
+		Done:        foundTags,
+		Failed:      failedVersions,
 	}, nil
 }
 
@@ -441,13 +542,13 @@ func (s *OperationService) handleMissingVersionPath(_ context.Context, packageNa
 //     - Not found → continue to step 3
 //  3. Check for module.yaml in version image
 //     - Found → legacy module (v1alpha1)
-//     - Not found → errOldImage (too old to process)
+//     - Not found → errTooOldImage (too old to process)
 //
 // Returns:
 //   - (packageTypeApplication or packageTypeModule, nil) - valid type detected
 //   - ("", errNoPackageMetadata) - module.yaml found but no package.yaml/labels, legacy module
 //   - ("", errPackageTypeInvalid) - type could not be determined or is unknown
-//   - ("", errOldImage) - no labels, no package.yaml, no module.yaml
+//   - ("", errTooOldImage) - no labels, no package.yaml, no module.yaml
 //   - ("", err) - hard error (network, tar corruption, etc.)
 func (s *OperationService) detectPackageType(ctx context.Context, packageName, latestTag string) (packageType, error) {
 	pkg := s.svc.Package(packageName)
@@ -511,7 +612,7 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 		"release image has no type labels, no package.yaml, no module.yaml",
 		slog.String("package", packageName),
 	)
-	return "", fmt.Errorf("%w: %s", errOldImage, packageName)
+	return "", fmt.Errorf("%w: %s", errTooOldImage, packageName)
 }
 
 type PackageProcessResult struct {
@@ -650,7 +751,7 @@ func (s *OperationService) EnsureApplicationPackage(ctx context.Context, package
 	return nil
 }
 
-func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packageName, version string) error {
+func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packageName, version string, extraLabels map[string]string) error {
 	mpvName := v1alpha1.MakeModulePackageVersionName(s.repo.Name, packageName, version)
 
 	pkgVersion := &v1alpha1.ModulePackageVersion{}
@@ -664,20 +765,24 @@ func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packa
 		return nil
 	}
 
-	// Create new ModulePackageVersion with draft label
+	labels := map[string]string{
+		"heritage": "deckhouse",
+		v1alpha1.ModulePackageVersionLabelRepository: s.repo.Name,
+		v1alpha1.ModulePackageVersionLabelPackage:    packageName,
+		v1alpha1.ModulePackageVersionLabelDraft:      "true",
+	}
+	for k, v := range extraLabels {
+		labels[k] = v
+	}
+
 	pkgVersion = &v1alpha1.ModulePackageVersion{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.ModulePackageVersionGVK.GroupVersion().String(),
 			Kind:       v1alpha1.ModulePackageVersionKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mpvName,
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-				v1alpha1.ModulePackageVersionLabelRepository: s.repo.Name,
-				v1alpha1.ModulePackageVersionLabelPackage:    packageName,
-				v1alpha1.ModulePackageVersionLabelDraft:      "true",
-			},
+			Name:   mpvName,
+			Labels: labels,
 		},
 		Spec: v1alpha1.ModulePackageVersionSpec{
 			PackageName:           packageName,

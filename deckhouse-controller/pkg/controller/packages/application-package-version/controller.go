@@ -240,6 +240,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	// Patch the status
 	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
 
+	if apv.Status.PackageMetadata != nil {
+		apv.Status.PackageMetadata.Changelog = packageMeta.Changelog
+	}
+
 	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
 
 	logger.Debug("patch package version status")

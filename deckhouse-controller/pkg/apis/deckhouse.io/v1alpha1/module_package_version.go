@@ -28,12 +28,14 @@ const (
 	ModulePackageVersionResource = "modulepackageversions"
 	ModulePackageVersionKind     = "ModulePackageVersion"
 
-	ModulePackageVersionLabelDraft           = "packages.deckhouse.io/draft"
-	ModulePackageVersionLabelPackage         = "packages.deckhouse.io/package"
-	ModulePackageVersionLabelRepository      = "packages.deckhouse.io/repository"
-	ModulePackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
+	ModulePackageVersionLabelLegacy              = "packages.deckhouse.io/legacy"
+	ModulePackageVersionLabelDraft               = "packages.deckhouse.io/draft"
+	ModulePackageVersionLabelPackage             = "packages.deckhouse.io/package"
+	ModulePackageVersionLabelRepository          = "packages.deckhouse.io/repository"
+	ModulePackageVersionLabelExistInRegistry     = "packages.deckhouse.io/exist-in-registry"
+	ModulePackageVersionLabelRegistryPathSegment = "packages.deckhouse.io/registry-path-segment"
 
-	ModulePackageVersionConditionTypeMetadataLoaded         = "MetadataLoaded"
+	ModulePackageVersionConditionTypeIsEnriched             = "IsEnriched"
 	ModulePackageVersionConditionReasonFetchErr             = "FetchingReleaseError"
 	ModulePackageVersionConditionReasonGetPackageRepoErr    = "GetPackageRepositoryError"
 	ModulePackageVersionConditionReasonGetRegistryClientErr = "GetRegistryClientError"
@@ -64,9 +66,9 @@ var _ runtime.Object = (*ModulePackageVersion)(nil)
 // +kubebuilder:resource:scope=Cluster,shortName=mpv
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName
-// +kubebuilder:printcolumn:name="TransitionTime",type="date",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime"
-// +kubebuilder:printcolumn:name="MetadataLoaded",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].status"
-// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].message"
+// +kubebuilder:printcolumn:name="TransitionTime",type="date",JSONPath=".status.conditions[?(@.type=='IsEnriched')].lastTransitionTime"
+// +kubebuilder:printcolumn:name="IsEnriched",type="string",JSONPath=".status.conditions[?(@.type=='IsEnriched')].status"
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='IsEnriched')].message"
 // +kubebuilder:printcolumn:name="UsedBy",type=integer,JSONPath=`.status.usedByCount`
 
 // ModulePackageVersion represents a version of a module package.
