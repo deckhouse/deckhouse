@@ -49,7 +49,7 @@ var _ = Describe("Istio hooks :: alliance_metadata_merge ::", func() {
 			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`[]`))
-			Expect(f.ValuesGet("istio.internal.federationsMergedPublicServices").String()).To(MatchJSON(`[]`))
+			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[]`))
 			Expect(f.ValuesGet("istio.internal.multiclusters").String()).To(MatchJSON(`[]`))
 			Expect(f.ValuesGet("istio.internal.remotePublicMetadata").String()).To(MatchJSON(`{}`))
 			Expect(f.ValuesGet("istio.internal.multiclustersNeedIngressGateway").Bool()).To(BeFalse())
@@ -432,42 +432,55 @@ status:
 		}
 `))
 
-			// federationsMergedPublicServices should contain deduplicated services sorted by hostname.
-			// federation-only-full-0 has hostname "bbb" with ingress bbb:222
-			// federation-only-full-1 has hostnames "ccc","ddd","eee","fff","ggg","hhh" with ingress ccc:222
-			// No overlapping hostnames, so 7 entries total.
-			Expect(f.ValuesGet("istio.internal.federationsMergedPublicServices").String()).To(MatchJSON(`[
+			// serviceEntries should be grouped by unique (hostname, endpoint-set).
+			// federation-only-full-0 has hostname "bbb" with ports 123, 777, 555 and endpoints [bbb:222]
+			//   → 1 entry with 3 ports (all share the same endpoint set).
+			// federation-only-full-1 has hostnames ccc, ddd, eee, fff, ggg, hhh all with endpoints [ccc:222]
+			//   → 6 entries, each with 1 port (different hostnames).
+			// Total: 7 entries, sorted by hostname then first port number.
+			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
 				{
+					"name": "bbb-687b4cd97",
 					"hostname": "bbb",
-					"ports": [{"name": "ppp", "port": 123, "protocol": "TCP"},{"name": "zzz", "port": 777, "protocol": "TCP"},{"name": "https-xxx", "port": 555, "protocol": "TLS"}],
+					"ports": [
+						{"name": "ppp", "port": 123, "protocol": "TCP"},
+						{"name": "https-xxx", "port": 555, "protocol": "TLS"},
+						{"name": "zzz", "port": 777, "protocol": "TCP"}
+					],
 					"endpoints": [{"address": "bbb", "port": 222}]
 				},
 				{
+					"name": "ccc-7bbfbb59bd",
 					"hostname": "ccc",
 					"ports": [{"name": "ppp", "port": 123, "protocol": "TCP"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				},
 				{
+					"name": "ddd-7bbfbb59bd",
 					"hostname": "ddd",
 					"ports": [{"name": "xxx", "port": 555, "protocol": "TCP"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				},
 				{
+					"name": "eee-7bbfbb59bd",
 					"hostname": "eee",
 					"ports": [{"name": "http-xxx", "port": 555, "protocol": "HTTP"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				},
 				{
+					"name": "fff-7bbfbb59bd",
 					"hostname": "fff",
 					"ports": [{"name": "https-xxx", "port": 555, "protocol": "TLS"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				},
 				{
+					"name": "ggg-7bbfbb59bd",
 					"hostname": "ggg",
 					"ports": [{"name": "grpc-xxx", "port": 555, "protocol": "HTTP2"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				},
 				{
+					"name": "hhh-7bbfbb59bd",
 					"hostname": "hhh",
 					"ports": [{"name": "tls-xxx", "port": 555, "protocol": "TLS"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
@@ -560,9 +573,10 @@ status:
 				}
 			]`))
 
-			// federationsMergedPublicServices should have ONE entry with endpoints from BOTH federations
-			Expect(f.ValuesGet("istio.internal.federationsMergedPublicServices").String()).To(MatchJSON(`[
+			// serviceEntries should have ONE entry with endpoints from BOTH federations
+			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
 				{
+					"name": "my-svc.my-ns.svc.cluster.local-9c8cbb5bc",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
 					"ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}],
 					"endpoints": [
@@ -602,20 +616,27 @@ status:
 			f.RunHook()
 		})
 
-		It("should not duplicate endpoints for the repeated hostname", func() {
+		It("should group ports by unique endpoint set and not duplicate endpoints", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			// The merged list should have 2 entries (2 unique hostnames), not 3.
-			// The duplicate hostname should use first-wins ports and have endpoints only once.
-			Expect(f.ValuesGet("istio.internal.federationsMergedPublicServices").String()).To(MatchJSON(`[
+			// All ports share the same endpoint set [3.3.3.3:15443], so the same hostname
+			// gets grouped into one ServiceEntry with multiple ports.
+			// - dup-svc.ns.svc.cluster.local → ports 8080, 9090 (grouped)
+			// - unique-svc.ns.svc.cluster.local → port 80
+			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
 				{
+					"name": "dup-svc.ns.svc.cluster.local-6475d67dcb",
 					"hostname": "dup-svc.ns.svc.cluster.local",
-					"ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}],
+					"ports": [
+						{"name": "http", "port": 8080, "protocol": "HTTP"},
+						{"name": "grpc", "port": 9090, "protocol": "HTTP2"}
+					],
 					"endpoints": [
 						{"address": "3.3.3.3", "port": 15443}
 					]
 				},
 				{
+					"name": "unique-svc.ns.svc.cluster.local-6475d67dcb",
 					"hostname": "unique-svc.ns.svc.cluster.local",
 					"ports": [{"name": "http", "port": 80, "protocol": "HTTP"}],
 					"endpoints": [
@@ -671,23 +692,272 @@ status:
 			f.RunHook()
 		})
 
-		It("should keep first federation's ports and log a warning about the conflict", func() {
+		It("should create separate entries for different endpoint sets, each with its own ports", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			// Ports should be from cluster-x (first-wins)
-			Expect(f.ValuesGet("istio.internal.federationsMergedPublicServices").String()).To(MatchJSON(`[
+			// Each federation has different endpoints, so each (hostname, endpoint-set) is unique.
+			// cluster-x: svc.ns.svc.cluster.local:8080 → endpoints [10.0.0.1:15443]
+			// cluster-y: svc.ns.svc.cluster.local:9090 → endpoints [10.0.0.2:15443]
+			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
 				{
+					"name": "svc.ns.svc.cluster.local-64465b95f6",
 					"hostname": "svc.ns.svc.cluster.local",
 					"ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}],
 					"endpoints": [
-						{"address": "10.0.0.1", "port": 15443},
+						{"address": "10.0.0.1", "port": 15443}
+					]
+				},
+				{
+					"name": "svc.ns.svc.cluster.local-85bb6b6b89",
+					"hostname": "svc.ns.svc.cluster.local",
+					"ports": [{"name": "grpc", "port": 9090, "protocol": "HTTP2"}],
+					"endpoints": [
 						{"address": "10.0.0.2", "port": 15443}
 					]
 				}
 			]`))
 
-			// Warning should be logged about the port mismatch
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("federation declares different ports for already known hostname"))
+			// No warning should be logged - different ports with different endpoints
+			Expect(string(f.LoggerOutput.Contents())).NotTo(ContainSubstring("port collision"))
+		})
+	})
+
+	Context("Three federations expose intersecting sets of public services", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-a
+spec:
+  trustDomain: "cluster.local"
+  metadataEndpoint: "https://cluster-a.example.com/metadata/"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - address: 1.1.1.1
+        port: 15443
+      - address: 1.1.1.2
+        port: 15443
+      publicServices:
+      - hostname: my-svc.my-ns.svc.cluster.local
+        ports:
+        - name: web
+          port: 8080
+          protocol: HTTP
+    public:
+      clusterUUID: uuid-a
+      rootCA: root-ca-a
+      authnKeyPub: pub-key-a
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-b
+spec:
+  trustDomain: "cluster.local"
+  metadataEndpoint: "https://cluster-b.example.com/metadata/"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - address: 2.2.2.2
+        port: 15443
+      - address: 2.2.2.3
+        port: 15443
+      publicServices:
+      - hostname: my-svc.my-ns.svc.cluster.local
+        ports:
+        - name: debug
+          port: 5000
+          protocol: HTTP
+        - name: www
+          port: 8080
+          protocol: HTTP
+    public:
+      clusterUUID: uuid-b
+      rootCA: root-ca-b
+      authnKeyPub: pub-key-b
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-c
+spec:
+  trustDomain: "cluster.local"
+  metadataEndpoint: "https://cluster-c.example.com/metadata/"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - address: 3.3.3.3
+        port: 15443
+      - address: 3.3.3.4
+        port: 15443
+      publicServices:
+      - hostname: my-svc.my-ns.svc.cluster.local
+        ports:
+        - name: websocket
+          port: 443
+          protocol: HTTP
+        - name: http
+          port: 8080
+          protocol: HTTP
+    public:
+      clusterUUID: uuid-b
+      rootCA: root-ca-b
+      authnKeyPub: pub-key-b
+`))
+			f.RunHook()
+		})
+
+		It("should merge public services by hostname with endpoints from both federations", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`[
+				{
+					"name": "cluster-a",
+					"trustDomain": "cluster.local",
+					"spiffeEndpoint": "https://cluster-a.example.com/metadata/public/spiffe-bundle-endpoint",
+					"ingressGateways": [
+						{"address": "1.1.1.1", "port": 15443},
+						{"address": "1.1.1.2", "port": 15443}
+					],
+					"ca": "",
+					"insecureSkipVerify": false,
+					"publicServices": [
+						{
+							"hostname": "my-svc.my-ns.svc.cluster.local",
+							"ports": [
+								{"name": "web", "port": 8080, "protocol": "HTTP"}
+							]
+						}
+					]
+				},
+				{
+					"name": "cluster-b",
+					"trustDomain": "cluster.local",
+					"spiffeEndpoint": "https://cluster-b.example.com/metadata/public/spiffe-bundle-endpoint",
+					"ingressGateways": [
+						{"address": "2.2.2.2", "port": 15443},
+						{"address": "2.2.2.3", "port": 15443}
+					],
+					"ca": "",
+					"insecureSkipVerify": false,
+					"publicServices": [
+						{
+							"hostname": "my-svc.my-ns.svc.cluster.local",
+							"ports": [
+								{"name": "debug", "port": 5000, "protocol": "HTTP"},
+								{"name": "www", "port": 8080, "protocol": "HTTP"}
+							]
+						}
+					]
+				},
+				{
+					"name": "cluster-c",
+					"trustDomain": "cluster.local",
+					"spiffeEndpoint": "https://cluster-c.example.com/metadata/public/spiffe-bundle-endpoint",
+					"ingressGateways": [
+						{"address": "3.3.3.3", "port": 15443},
+						{"address": "3.3.3.4", "port": 15443}
+					],
+					"ca": "",
+					"insecureSkipVerify": false,
+					"publicServices": [
+						{
+							"hostname": "my-svc.my-ns.svc.cluster.local",
+							"ports": [
+								{"name": "websocket", "port": 443, "protocol": "HTTP"},
+								{"name": "http", "port": 8080, "protocol": "HTTP"}
+							]
+						}
+					]
+				}
+			]`))
+
+			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
+				{
+					"name": "my-svc.my-ns.svc.cluster.local-55b5c6469d",
+					"hostname": "my-svc.my-ns.svc.cluster.local",
+					"ports": [
+						{
+							"name": "websocket",
+							"port": 443,
+							"protocol": "HTTP"
+						}
+					],
+					"endpoints": [
+						{
+							"address": "3.3.3.3",
+							"port": 15443
+						},
+						{
+							"address": "3.3.3.4",
+							"port": 15443
+						}
+					]
+				},
+				{
+					"name": "my-svc.my-ns.svc.cluster.local-7f8594896",
+					"hostname": "my-svc.my-ns.svc.cluster.local",
+					"ports": [
+						{
+						  "name": "debug",
+						  "port": 5000,
+						  "protocol": "HTTP"
+						}
+					],
+					"endpoints": [
+						{
+						  "address": "2.2.2.2",
+						  "port": 15443
+						},
+						{
+						  "address": "2.2.2.3",
+						  "port": 15443
+						}
+					]
+				},
+				{
+					"name": "my-svc.my-ns.svc.cluster.local-d797d8d68",
+					"hostname": "my-svc.my-ns.svc.cluster.local",
+					"ports": [
+						{
+							"name": "web",
+							"port": 8080,
+							"protocol": "HTTP"
+						}
+					],
+					"endpoints": [
+						{
+							"address": "1.1.1.1",
+							"port": 15443
+						},
+						{
+							"address": "1.1.1.2",
+							"port": 15443
+						},
+						{
+							"address": "2.2.2.2",
+							"port": 15443
+						},
+						{
+							"address": "2.2.2.3",
+							"port": 15443
+						},
+						{
+							"address": "3.3.3.3",
+							"port": 15443
+						},
+						{
+							"address": "3.3.3.4",
+							"port": 15443
+						}
+					]
+				}
+			]`))
 		})
 	})
 

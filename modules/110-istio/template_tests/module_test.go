@@ -84,7 +84,7 @@ const istioValues = `
       operatorVersionsToInstall: []
       versionsToInstall: []
       federations: []
-      federationsMergedPublicServices: []
+      serviceEntries: []
       multiclusters: []
       remoteAuthnKeypair:
         priv: aaa
@@ -342,8 +342,9 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
     - name: aaa
       port: 456
 `)
-			f.ValuesSetFromYaml("istio.internal.federationsMergedPublicServices", `
-- hostname: xxx.yyy
+			f.ValuesSetFromYaml("istio.internal.serviceEntries", `
+- name: xxx.yyy-6bff7489f5
+  hostname: xxx.yyy
   ports:
   - name: aaa
     port: 456
@@ -362,8 +363,8 @@ neighbour-0:
 		It("ServiceEntry and DestinationRule must be created, metadata-exporter and ingressgateway must be deployed", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			se := f.KubernetesResource("ServiceEntry", "d8-istio", "xxx-yyy")
-			dr := f.KubernetesResource("DestinationRule", "d8-istio", "xxx-yyy")
+			se := f.KubernetesResource("ServiceEntry", "d8-istio", "xxx.yyy-6bff7489f5")
+			dr := f.KubernetesResource("DestinationRule", "d8-istio", "xxx.yyy-6bff7489f5")
 
 			Expect(se.Exists()).To(BeTrue())
 			Expect(dr.Exists()).To(BeTrue())
@@ -443,8 +444,9 @@ neighbour-0:
       port: 8080
       protocol: HTTP
 `)
-			f.ValuesSetFromYaml("istio.internal.federationsMergedPublicServices", `
-- hostname: my-svc.my-ns.svc.cluster.local
+			f.ValuesSetFromYaml("istio.internal.serviceEntries", `
+- name: my-svc.my-ns.svc.cluster.local-9c8cbb5bc
+  hostname: my-svc.my-ns.svc.cluster.local
   ports:
   - name: http
     port: 8080
@@ -469,8 +471,8 @@ cluster-b:
 		It("should create a single merged ServiceEntry and DestinationRule with endpoints from both federations", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			se := f.KubernetesResource("ServiceEntry", "d8-istio", "my-svc-my-ns-svc-cluster-local")
-			dr := f.KubernetesResource("DestinationRule", "d8-istio", "my-svc-my-ns-svc-cluster-local")
+			se := f.KubernetesResource("ServiceEntry", "d8-istio", "my-svc.my-ns.svc.cluster.local-9c8cbb5bc")
+			dr := f.KubernetesResource("DestinationRule", "d8-istio", "my-svc.my-ns.svc.cluster.local-9c8cbb5bc")
 
 			Expect(se.Exists()).To(BeTrue())
 			Expect(dr.Exists()).To(BeTrue())
@@ -535,8 +537,9 @@ cluster-b:
       port: 9090
       protocol: HTTP2
 `)
-			f.ValuesSetFromYaml("istio.internal.federationsMergedPublicServices", `
-- hostname: svc-a.ns-a.svc.a.local
+			f.ValuesSetFromYaml("istio.internal.serviceEntries", `
+- name: svc-a.ns-a.svc.a.local-766f584864
+  hostname: svc-a.ns-a.svc.a.local
   ports:
   - name: http
     port: 8080
@@ -544,7 +547,8 @@ cluster-b:
   endpoints:
   - address: 1.1.1.1
     port: 15443
-- hostname: svc-b.ns-b.svc.b.local
+- name: svc-b.ns-b.svc.b.local-6d9f68f9b
+  hostname: svc-b.ns-b.svc.b.local
   ports:
   - name: grpc
     port: 9090
@@ -567,10 +571,10 @@ cluster-b:
 		It("should create separate ServiceEntry and DestinationRule for each hostname", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			seA := f.KubernetesResource("ServiceEntry", "d8-istio", "svc-a-ns-a-svc-a-local")
-			drA := f.KubernetesResource("DestinationRule", "d8-istio", "svc-a-ns-a-svc-a-local")
-			seB := f.KubernetesResource("ServiceEntry", "d8-istio", "svc-b-ns-b-svc-b-local")
-			drB := f.KubernetesResource("DestinationRule", "d8-istio", "svc-b-ns-b-svc-b-local")
+			seA := f.KubernetesResource("ServiceEntry", "d8-istio", "svc-a.ns-a.svc.a.local-766f584864")
+			drA := f.KubernetesResource("DestinationRule", "d8-istio", "svc-a.ns-a.svc.a.local-766f584864")
+			seB := f.KubernetesResource("ServiceEntry", "d8-istio", "svc-b.ns-b.svc.b.local-6d9f68f9b")
+			drB := f.KubernetesResource("DestinationRule", "d8-istio", "svc-b.ns-b.svc.b.local-6d9f68f9b")
 
 			Expect(seA.Exists()).To(BeTrue())
 			Expect(drA.Exists()).To(BeTrue())
