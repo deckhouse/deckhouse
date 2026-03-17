@@ -1,11 +1,5 @@
 # Changelog v1.72
 
-## [MALFORMED]
-
-
- - #14806 unknown section "operator-trivy"
- - #15204 unknown section "dashboard"
-
 ## Know before update
 
 
