@@ -58,4 +58,4 @@ description: Архитектура модуля terraform-manager в Deckhouse 
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-* **Prometheus-main** — сбор метрик **Terraform-auto-converger** и **Terraform-state-exporter**.
+* **prometheus-main** — сбор метрик terraform-auto-converger и terraform-state-exporter.

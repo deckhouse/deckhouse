@@ -24,16 +24,16 @@ The Cluster & Infrastructure subsystem also includes the following modules:
 * [`terraform-manager`](/modules/terraform-manager/): Provides tools for managing Terraform state within a Kubernetes cluster.
 * Modules for cloud providers supported by DKP:
 
-  * [`cloud-provider-aws`](/modules/cloud-provider-aws/);
-  * [`cloud-provider-azure`](/modules/cloud-provider-azure/);
-  * [`cloud-provider-dvp`](/modules/cloud-provider-dvp/);
-  * [`cloud-provider-dynamix`](/modules/cloud-provider-dynamix/);
-  * [`cloud-provider-gcp`](/modules/cloud-provider-gcp/);
-  * [`cloud-provider-huaweicloud`](/modules/cloud-provider-huaweicloud/);
-  * [`cloud-provider-openstack`](/modules/cloud-provider-openstack/);
-  * [`cloud-provider-vcd`](/modules/cloud-provider-vcd/);
-  * [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/);
-  * [`cloud-provider-yandex`](/modules/cloud-provider-yandex/);
-  * [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/).
+  * [`cloud-provider-aws`](/modules/cloud-provider-aws/)
+  * [`cloud-provider-azure`](/modules/cloud-provider-azure/)
+  * [`cloud-provider-dvp`](/modules/cloud-provider-dvp/)
+  * [`cloud-provider-dynamix`](/modules/cloud-provider-dynamix/)
+  * [`cloud-provider-gcp`](/modules/cloud-provider-gcp/)
+  * [`cloud-provider-huaweicloud`](/modules/cloud-provider-huaweicloud/)
+  * [`cloud-provider-openstack`](/modules/cloud-provider-openstack/)
+  * [`cloud-provider-vcd`](/modules/cloud-provider-vcd/)
+  * [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/)
+  * [`cloud-provider-yandex`](/modules/cloud-provider-yandex/)
+  * [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/)
 
-Only [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) is currently described in this section. Documentation for the remaining cloud provider modules will be added as it becomes available.
+Only [`cloud-provider-dvp`](cloud-provider-dvp.html) is currently described in this section. Documentation for the remaining cloud provider modules will be added as it becomes available.
