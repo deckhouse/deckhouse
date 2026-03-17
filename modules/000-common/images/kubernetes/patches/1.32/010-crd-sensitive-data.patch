@@ -2249,7 +2249,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 55d31fc8eda..b295d242dab 100644
+index 55d31fc8eda..7e6ed28577d 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -35,6 +35,7 @@ import (
@@ -2435,25 +2435,38 @@ index 55d31fc8eda..b295d242dab 100644
  		for _, storage := range crdInfo.storages {
  			// DestroyFunc have to be implemented in idempotent way,
  			// so the potential race with r.tearDown() (being called
-@@ -679,6 +768,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -679,6 +768,30 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		structuralSchemas[v.Name] = s
  	}
  
 +	hasSensitive := false
 +	sensitiveSchemas := map[string]*structuralschema.Structural{}
++	klog.V(1).Infof("MYTEST-DEBUG-buildCRD: building crdInfo for %s, featureGate CRDSensitiveData=%t",
++		crd.Name, utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData))
 +	if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData) {
 +		for vName, s := range structuralSchemas {
-+			if sensitive.HasSensitiveFields(s) {
++			hasSensitiveInVersion := sensitive.HasSensitiveFields(s)
++			klog.V(1).Infof("MYTEST-DEBUG-buildCRD: crd=%s version=%s hasSensitiveFields=%t sensitivePaths=%v",
++				crd.Name, vName, hasSensitiveInVersion, sensitive.CollectSensitivePaths(s))
++			if hasSensitiveInVersion {
 +				hasSensitive = true
 +				sensitiveSchemas[vName] = s
 +			}
 +		}
 +	}
++	klog.V(1).Infof("MYTEST-DEBUG-buildCRD: crd=%s final hasSensitiveFields=%t sensitiveVersions=%v",
++		crd.Name, hasSensitive, func() []string {
++			keys := make([]string, 0, len(sensitiveSchemas))
++			for k := range sensitiveSchemas {
++				keys = append(keys, k)
++			}
++			return keys
++		}())
 +
  	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
  	if err != nil {
  		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
-@@ -1036,9 +1136,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1036,9 +1149,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		deprecated:          deprecated,
  		warnings:            warnings,
  		storageVersion:      storageVersion,
