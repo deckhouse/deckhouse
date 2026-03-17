@@ -32,6 +32,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeAll: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cloud_provider_discovery_data",
