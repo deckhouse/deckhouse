@@ -35,6 +35,11 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+const (
+	stableDefaultAnnotation = "storageclass.kubernetes.io/is-default-class"
+	betaDefaultAnnotation   = "storageclass.beta.kubernetes.io/is-default-class"
+)
+
 type CloudConfig struct {
 	*config.CloudConfig
 }
@@ -184,8 +189,8 @@ func mergeStorageDomains(
 	for _, sc := range cloudSds {
 		annotations := sc.GetAnnotations()
 		annotToCheck := []string{
-			"storageclass.kubernetes.io/is-default-class",
-			"storageclass.beta.kubernetes.io/is-default-class",
+			stableDefaultAnnotation,
+			betaDefaultAnnotation,
 		}
 
 		isDefault := false

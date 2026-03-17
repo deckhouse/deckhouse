@@ -23,7 +23,6 @@ import (
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
@@ -90,11 +89,7 @@ func applyCloudProviderSecretFilter(obj *unstructured.Unstructured) (go_hook.Fil
 }
 
 func handleCloudProviderDefaultStorageClass(_ context.Context, input *go_hook.HookInput) error {
-	const (
-		discoveryPath = "global.discovery.cloudProviderDefaultStorageClass"
-		metricName    = "d8_cloud_provider_dvp_default_storage_class_drifted"
-		metricGroup   = "cloud_provider_dvp_default_storage_class"
-	)
+	const discoveryPath = "global.discovery.cloudProviderDefaultStorageClass"
 
 	// Read default storage class from Secret snapshot using UnmarshalToStruct
 	defaultSCSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "cloud_provider_discovery_data")
@@ -110,45 +105,10 @@ func handleCloudProviderDefaultStorageClass(_ context.Context, input *go_hook.Ho
 	if defaultSC != "" {
 		input.Values.Set(discoveryPath, defaultSC)
 		input.Logger.Info("Set cloud provider default storage class to global values", slog.String("storage_class", defaultSC))
-
-		// Detect drift
-		detectAndReportDrift(input, defaultSC, metricName, metricGroup)
 	} else {
 		input.Logger.Info("No default storage class found from cloud provider")
 		input.Values.Remove(discoveryPath)
-		input.MetricsCollector.Expire(metricName)
 	}
 
 	return nil
-}
-
-// detectAndReportDrift compares expected default SC with actual and reports metric if drifted
-func detectAndReportDrift(input *go_hook.HookInput, expectedSC, metricName, metricGroup string) {
-	actualDefaultSC := input.Values.Get("global.discovery.defaultStorageClass").String()
-
-	// No actual default SC in cluster yet - no drift
-	if actualDefaultSC == "" {
-		input.MetricsCollector.Expire(metricName)
-		return
-	}
-
-	// Check for drift
-	if actualDefaultSC != expectedSC {
-		input.Logger.Warn("Default storage class drift detected",
-			slog.String("expected", expectedSC),
-			slog.String("actual", actualDefaultSC),
-		)
-		input.MetricsCollector.Set(
-			metricName,
-			1.0,
-			map[string]string{
-				"expected": expectedSC,
-				"actual":   actualDefaultSC,
-			},
-			metrics.WithGroup(metricGroup),
-		)
-	} else {
-		// No drift - expire the metric
-		input.MetricsCollector.Expire(metricName)
-	}
 }

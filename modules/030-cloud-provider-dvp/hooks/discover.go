@@ -40,6 +40,11 @@ import (
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 )
 
+const (
+	stableDefaultAnnotation = "storageclass.kubernetes.io/is-default-class"
+	betaDefaultAnnotation   = "storageclass.beta.kubernetes.io/is-default-class"
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -279,9 +284,9 @@ func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {
 
 	isDefault := false
 	if sc.Annotations != nil {
-		if val, ok := sc.Annotations["storageclass.kubernetes.io/is-default-class"]; ok && strings.ToLower(val) == "true" {
+		if val, ok := sc.Annotations[stableDefaultAnnotation]; ok && strings.ToLower(val) == "true" {
 			isDefault = true
-		} else if val, ok := sc.Annotations["storageclass.beta.kubernetes.io/is-default-class"]; ok && strings.ToLower(val) == "true" {
+		} else if val, ok := sc.Annotations[betaDefaultAnnotation]; ok && strings.ToLower(val) == "true" {
 			isDefault = true
 		}
 	}

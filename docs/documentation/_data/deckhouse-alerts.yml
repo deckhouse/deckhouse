@@ -631,25 +631,6 @@ alerts:
         Cloud data discoverer cannot save data to a Kubernetes resource.
       severity: "6"
       markupFormat: markdown
-    - name: D8CloudProviderDVPDefaultStorageClassDrifted
-      sourceFile: modules/030-cloud-provider-dvp/monitoring/prometheus-rules/default-storage-class.yaml
-      moduleUrl: 030-cloud-provider-dvp
-      module: cloud-provider-dvp
-      edition: ce
-      description: |
-        The default StorageClass in the cluster ({{ $labels.actual }}) differs from the one configured by the cloud provider ({{ $labels.expected }}).
-
-        This may be the result of a manual change by a user. The cloud provider will not automatically revert this change.
-
-        To resolve this alert, choose one of the options:
-
-        - Revert the default StorageClass annotation back to {{ $labels.expected }}.
-        - Update the cloud provider configuration to use {{ $labels.actual }} as the default.
-        - Accept the difference and acknowledge that the default StorageClass has been intentionally changed.
-      summary: |
-        Default StorageClass differs from the cloud provider configuration.
-      severity: "7"
-      markupFormat: markdown
     - name: D8ClusterAutoscalerManagerPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cluster-autoscaler.tpl
       moduleUrl: 040-node-manager

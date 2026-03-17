@@ -20,7 +20,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -88,104 +87,6 @@ data:
 
 		It("global.discovery.cloudProviderDefaultStorageClass must be removed", func() {
 			Expect(f.ValuesGet("global.discovery.cloudProviderDefaultStorageClass").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("Drift detection: no drift", func() {
-		BeforeEach(func() {
-			f.ValuesSet("global.discovery.defaultStorageClass", "replicated")
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cloud-provider-discovery-data
-  namespace: kube-system
-data:
-  discovery-data.json: eyJzdG9yYWdlQ2xhc3NlcyI6W3sibmFtZSI6InJlcGxpY2F0ZWQiLCJpc0RlZmF1bHQiOnRydWV9XX0=
-`))
-			f.RunHook()
-		})
-
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		It("global.discovery.cloudProviderDefaultStorageClass must be set", func() {
-			Expect(f.ValuesGet("global.discovery.cloudProviderDefaultStorageClass").String()).To(Equal("replicated"))
-		})
-
-		It("Drift metric must be expired", func() {
-			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			Expect(metrics[0].Action).To(Equal(operation.ActionExpireMetrics))
-			Expect(metrics[0].Group).To(Equal("d8_cloud_provider_dvp_default_storage_class_drifted"))
-		})
-	})
-
-	Context("Drift detection: drift detected", func() {
-		BeforeEach(func() {
-			f.ValuesSet("global.discovery.defaultStorageClass", "local")
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cloud-provider-discovery-data
-  namespace: kube-system
-data:
-  discovery-data.json: eyJzdG9yYWdlQ2xhc3NlcyI6W3sibmFtZSI6InJlcGxpY2F0ZWQiLCJpc0RlZmF1bHQiOnRydWV9XX0=
-`))
-			f.RunHook()
-		})
-
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		It("global.discovery.cloudProviderDefaultStorageClass must be set to 'replicated'", func() {
-			Expect(f.ValuesGet("global.discovery.cloudProviderDefaultStorageClass").String()).To(Equal("replicated"))
-		})
-
-		It("Drift metric must be set to 1", func() {
-			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			Expect(metrics[0].Action).To(Equal(operation.ActionGaugeSet))
-			Expect(metrics[0].Name).To(Equal("d8_cloud_provider_dvp_default_storage_class_drifted"))
-			Expect(*metrics[0].Value).To(BeNumerically("==", 1.0))
-			Expect(metrics[0].Labels).To(HaveKeyWithValue("expected", "replicated"))
-			Expect(metrics[0].Labels).To(HaveKeyWithValue("actual", "local"))
-		})
-	})
-
-	Context("Drift detection: no actual default SC yet", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cloud-provider-discovery-data
-  namespace: kube-system
-data:
-  discovery-data.json: eyJzdG9yYWdlQ2xhc3NlcyI6W3sibmFtZSI6InJlcGxpY2F0ZWQiLCJpc0RlZmF1bHQiOnRydWV9XX0=
-`))
-			f.RunHook()
-		})
-
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		It("global.discovery.cloudProviderDefaultStorageClass must be set", func() {
-			Expect(f.ValuesGet("global.discovery.cloudProviderDefaultStorageClass").String()).To(Equal("replicated"))
-		})
-
-		It("Drift metric must be expired", func() {
-			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			Expect(metrics[0].Action).To(Equal(operation.ActionExpireMetrics))
-			Expect(metrics[0].Group).To(Equal("d8_cloud_provider_dvp_default_storage_class_drifted"))
 		})
 	})
 })
