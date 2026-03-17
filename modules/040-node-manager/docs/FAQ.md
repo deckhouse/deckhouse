@@ -28,9 +28,9 @@ To add a static node to a cluster (bare metal server or virtual machine), follow
 
    - If necessary, install additional operating system packages and configure the mount points that will be used on the node.
 
-1. Create a user with `s`udo` privileges:
+1. Create a user with `sudo` privileges:
 
-   - Add a new user (in this example, `caps`) with s`udo` privileges:
+   - Add a new user (in this example, `caps`) with `sudo` privileges:
 
      ```shell
      useradd -m -s /bin/bash caps
@@ -475,7 +475,7 @@ Refer to the description of the [NodeGroup](cr.html#nodegroup) custom resource f
 
 When the `InstanceClass` or `instancePrefix` parameters are modified, the process is similar to updating a Deployment in Kubernetes (changing `InstanceClass` results in creating a new MachineSet, and changing `instancePrefix` results in creating a new MachineDeployment). New instances will be created according to the value of the [`cloudInstances.maxSurgePerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxsurgeperzone) parameter. As the new instances are created, the old ones will be gradually removed, with a drain operation performed beforehand.
 
-During the disruption update, an evict of the pods from the node is performed. If any pod failes to evict, the evict is repeated every 20 seconds until a global timeout of 5 minutes is reached. After that, the pods that failed to evict are removed.
+During the disruption update, an evict of the pods from the node is performed. If any pod fails to evict, the evict is repeated every 20 seconds until a global timeout of 5 minutes is reached. After that, the pods that failed to evict are removed.
 
 ## How do I redeploy ephemeral machines in the cloud with a new configuration?
 
@@ -536,7 +536,7 @@ The most efficient way is to have some extra nodes "ready". In this case, you ca
 
 Here is how you should configure the target `NodeGroup`:
 
-1. Specify the number of "ready" nodes (or a percentage of the maximum number of nodes in the group) using the `cloudInstances.standby` paramter.
+1. Specify the number of "ready" nodes (or a percentage of the maximum number of nodes in the group) using the `cloudInstances.standby` parameter.
 1. If there are additional service components on nodes that are not handled by Deckhouse (e.g., the `filebeat` DaemonSet), you can specify the percentage of node resources they can consume via the `standbyHolder.overprovisioningRate` parameter.
 1. This feature requires that at least one group node is already running in the cluster. In other words, there must be either a single replica of the application, or the `cloudInstances.minPerZone` parameter must be set to `1`.
 
@@ -668,9 +668,9 @@ spec:
   - '*'
   content: |
     {{- if eq .cri "ContainerdV2" }}
-  # <Script to modify the configuration for ContainerdV2>
+  # <Script to modify the configuration for ContainerdV2>.
     {{- else }}
-  # <Script to modify the configuration for ContainerdV1>
+  # <Script to modify the configuration for ContainerdV1>.
     {{- end }}
   nodeGroups:
   - '*'
@@ -1129,7 +1129,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # The step can be arbitrary, as restarting the containerd service is not required7
+  # The step can be arbitrary, as restarting the containerd service is not required.
   weight: 0
   bundles:
     - '*'

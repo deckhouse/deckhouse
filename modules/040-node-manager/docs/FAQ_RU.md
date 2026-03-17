@@ -452,7 +452,7 @@ spec:
     bb-dnf-install "kernel-${desired_version}"
 ```
 
-## Какие параметры NodeGroup к чему приводят?
+## На что влияют параметры NodeGroup?
 
 | Параметр NG                           | Disruption update          | Перезаказ узлов   | Рестарт kubelet |
 |---------------------------------------|----------------------------|-------------------|-----------------|
@@ -667,9 +667,9 @@ spec:
   - '*'
   content: |
     {{- if eq .cri "ContainerdV2" }}
-  # <Скрипт для изменения конфигурации для ContainerdV2>
+  # <Скрипт для изменения конфигурации для ContainerdV2>.
     {{- else }}
-  # <Скрипт для изменения конфигурации для ContainerdV1>
+  # <Скрипт для изменения конфигурации для ContainerdV1>.
     {{- end }}
   nodeGroups:
   - '*'
@@ -881,7 +881,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # Для добавления файла перед шагом '032_configure_containerd.sh'
+  # Для добавления файла перед шагом '032_configure_containerd.sh'.
   weight: 31
   bundles:
     - '*'
@@ -931,7 +931,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
-  # Для добавления файла перед шагом '032_configure_containerd.sh'
+  # Для добавления файла перед шагом '032_configure_containerd.sh'.
   weight: 31
   bundles:
     - '*'
@@ -989,7 +989,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # Для добавления файла перед шагом '032_configure_containerd.sh'
+  # Для добавления файла перед шагом '032_configure_containerd.sh'.
   weight: 31
   bundles:
     - '*'
@@ -1026,7 +1026,7 @@ spec:
 После применения конфигурационного файла проверьте доступ к registry с узлов, используя команду:
 
 ```bash
-# Через cri-интерфейс
+# Через cri-интерфейс.
 crictl pull private.registry.example/image/repo:tag
 ```
 
@@ -2004,7 +2004,7 @@ containerd на GPU-узлах настраивается автоматичес
    Done
    ```
 
-## Как мониторить GPU?
+## Как выполнять мониторинг GPU?
 
 Deckhouse Kubernetes Platform автоматически устанавливает **DCGM Exporter**; метрики GPU попадают в Prometheus и доступны в Grafana.
 
