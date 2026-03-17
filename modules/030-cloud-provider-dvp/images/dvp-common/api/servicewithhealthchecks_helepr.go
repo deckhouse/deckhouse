@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -26,41 +27,45 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/klog/v2"
 )
 
-var (
-	swhcMu          sync.Mutex
-	swhcCachedUntil time.Time
-	swhcCachedOK    bool
-)
+const swhcCacheTTL = 5 * time.Minute
 
-func shouldUseSWHC(ctx context.Context, svc *Service) bool {
+type swhcCache struct {
+	mu          sync.Mutex
+	cachedUntil time.Time
+	cachedOK    bool
+}
+
+func (lb *LoadBalancerService) shouldUseSWHC(ctx context.Context) bool {
 	now := time.Now()
 
-	swhcMu.Lock()
-	if !swhcCachedUntil.IsZero() && now.Before(swhcCachedUntil) {
-		ok := swhcCachedOK
-		swhcMu.Unlock()
+	lb.swhcCache.mu.Lock()
+	if !lb.swhcCache.cachedUntil.IsZero() && now.Before(lb.swhcCache.cachedUntil) {
+		ok := lb.swhcCache.cachedOK
+		lb.swhcCache.mu.Unlock()
 		return ok
 	}
-	swhcMu.Unlock()
+	lb.swhcCache.mu.Unlock()
 
-	ok, err := detectSWHCResource(ctx, svc)
+	ok, err := detectSWHCResource(ctx, lb.Service)
 	if err != nil {
-		ok = false
+		// Detection failed — do not cache; retry on the next call.
+		klog.V(4).InfoS("shouldUseSWHC: detection failed, assuming SWHC unavailable", "err", err)
+		return false
 	}
 
-	swhcMu.Lock()
-	swhcCachedUntil = now.Add(5 * time.Minute)
-	swhcCachedOK = ok
-	swhcMu.Unlock()
+	lb.swhcCache.mu.Lock()
+	lb.swhcCache.cachedUntil = now.Add(swhcCacheTTL)
+	lb.swhcCache.cachedOK = ok
+	lb.swhcCache.mu.Unlock()
 
 	return ok
 }
 
 func detectSWHCResource(ctx context.Context, svc *Service) (bool, error) {
-	discovery := svc.clientset.Discovery()
-	res, err := discovery.ServerResourcesForGroupVersion("network.deckhouse.io/v1alpha1")
+	res, err := svc.clientset.Discovery().ServerResourcesForGroupVersion("network.deckhouse.io/v1alpha1")
 	if err != nil {
 		if isSWHCUnsupportedErr(err) {
 			return false, nil
@@ -84,19 +89,8 @@ func isSWHCUnsupportedErr(err error) bool {
 		return true
 	}
 	msg := strings.ToLower(err.Error())
-	if strings.Contains(msg, "no matches for kind") {
-		return true
-	}
-	if strings.Contains(msg, "could not find the requested resource") {
-		return true
-	}
-	if strings.Contains(msg, "the server could not find the requested resource") {
-		return true
-	}
-	if strings.Contains(msg, "servicewithhealthchecks") && strings.Contains(msg, "not found") {
-		return true
-	}
-	return false
+	return strings.Contains(msg, "no matches for kind") ||
+		strings.Contains(msg, "could not find the requested resource")
 }
 
 func newServiceWithHealthchecksUnstructured(namespace, name string) *unstructured.Unstructured {
@@ -116,7 +110,7 @@ func setServiceWithHealthchecksSpec(
 	externalIPs []string,
 	loadBalancerClass *string,
 	loadBalancerIP string,
-) {
+) error {
 	probes := make([]map[string]any, 0, len(ports))
 	for _, p := range ports {
 		var target int64
@@ -133,10 +127,15 @@ func setServiceWithHealthchecksSpec(
 		})
 	}
 
+	selectorAny := make(map[string]any, len(selector))
+	for k, v := range selector {
+		selectorAny[k] = v
+	}
+
 	spec := map[string]any{
 		"type":                  string(v1.ServiceTypeLoadBalancer),
 		"ports":                 servicePortsToUnstructured(ports),
-		"selector":              selector,
+		"selector":              selectorAny,
 		"externalTrafficPolicy": string(externalTrafficPolicy),
 		"healthcheck": map[string]any{
 			"initialDelaySeconds": int64(10),
@@ -147,7 +146,12 @@ func setServiceWithHealthchecksSpec(
 	}
 
 	if len(externalIPs) > 0 {
-		spec["externalIPs"] = externalIPs
+		// SetNestedMap requires []any throughout — []string causes a panic in DeepCopyJSONValue.
+		externalIPsAny := make([]any, len(externalIPs))
+		for i, ip := range externalIPs {
+			externalIPsAny[i] = ip
+		}
+		spec["externalIPs"] = externalIPsAny
 	}
 	if loadBalancerClass != nil {
 		spec["loadBalancerClass"] = *loadBalancerClass
@@ -156,7 +160,10 @@ func setServiceWithHealthchecksSpec(
 		spec["loadBalancerIP"] = loadBalancerIP
 	}
 
-	_ = unstructured.SetNestedMap(u.Object, spec, "spec")
+	if err := unstructured.SetNestedMap(u.Object, spec, "spec"); err != nil {
+		return fmt.Errorf("set SWHC spec: %w", err)
+	}
+	return nil
 }
 
 func servicePortsToUnstructured(ports []v1.ServicePort) []any {

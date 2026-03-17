@@ -40,6 +40,7 @@ const (
 
 type LoadBalancerService struct {
 	*Service
+	swhcCache swhcCache
 }
 
 type LoadBalancer struct {
@@ -50,7 +51,7 @@ type LoadBalancer struct {
 }
 
 func NewLoadBalancerService(service *Service) *LoadBalancerService {
-	return &LoadBalancerService{service}
+	return &LoadBalancerService{Service: service}
 }
 
 func (lb *LoadBalancerService) GetLoadBalancerByName(ctx context.Context, name string) (*corev1.Service, error) {
