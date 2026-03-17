@@ -18,8 +18,6 @@ package kubeclient
 
 import (
 	"context"
-	"fencing-agent/internal/domain"
-	"fencing-agent/internal/lib/logger/sl"
 	"fmt"
 	"log/slog"
 	"sync/atomic"
@@ -37,6 +35,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	"fencing-agent/internal/domain"
+	"fencing-agent/internal/lib/logger/sl"
 	"fencing-agent/internal/lib/validators"
 )
 
