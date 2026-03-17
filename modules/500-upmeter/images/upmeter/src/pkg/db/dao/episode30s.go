@@ -196,7 +196,8 @@ func (d *EpisodeDao30s) Stats() ([]string, error) {
 	for rows.Next() {
 		var startUnix, count int64
 		if err := rows.Scan(&startUnix, &count); err != nil {
-			return nil, fmt.Errorf("scan row: %w", err)
+			// Ignore error, just continue
+			continue
 		}
 		stats = append(stats, fmt.Sprintf("%d %d", startUnix, count))
 	}
