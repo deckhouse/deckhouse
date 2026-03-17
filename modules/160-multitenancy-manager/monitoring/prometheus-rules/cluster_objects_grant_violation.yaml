@@ -3,7 +3,7 @@
   - alert: ClusterObjectsGrantViolation
     expr: sum (d8_cluster_objects_grant_violated) != 0
     labels:
-      severity_level: "4"
+      severity_level: "6"
       tier: application
     annotations:
       plk_markup_format: "markdown"
