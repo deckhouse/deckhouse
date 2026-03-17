@@ -92,7 +92,7 @@ func safeEncodeString(s string) string {
 func serviceEntryName(hostname string, endpoints []eeCrd.FederationIngressGateway) string {
 	h := fnv.New32a()
 	h.Write([]byte(sortedEndpointsKey(endpoints)))
-	return hostname + "-" + safeEncodeString(fmt.Sprint(h.Sum32()))
+	return strings.ReplaceAll(hostname, ".", "-") + "-" + safeEncodeString(fmt.Sprint(h.Sum32()))
 }
 
 func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
