@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
@@ -30,8 +31,8 @@ import (
 )
 
 const (
+	terminationLabelKey      = "node.deckhouse.io/termination-in-progress"
 	spotDrainedAnnotationKey = "update.node.deckhouse.io/drained"
-	spotDrainedSource        = "spot-termination"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -44,14 +45,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents:          ptr.To(true),
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
-			FilterFunc:                   spotDrainedFilter,
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					terminationLabelKey: "true",
+				},
+			},
+			FilterFunc: spotDrainedFilter,
 		},
 	},
 }, handleSpotInstanceDeletion)
 
 type spotDrainedNode struct {
-	Name          string
-	DrainedSource string
+	Name                 string
+	HasTerminationLabel  bool
+	HasDrainedAnnotation bool
 }
 
 func spotDrainedFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -62,15 +69,28 @@ func spotDrainedFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 		return nil, err
 	}
 
-	drainedSource, ok := node.Annotations[spotDrainedAnnotationKey]
-	if !ok || drainedSource != spotDrainedSource {
-		return nil, nil
+	result := spotDrainedNode{
+		Name:                 node.Name,
+		HasTerminationLabel:  false,
+		HasDrainedAnnotation: false,
 	}
 
-	return spotDrainedNode{
-		Name:          node.Name,
-		DrainedSource: drainedSource,
-	}, nil
+	// Check if node has termination label (already filtered by LabelSelector, but check for safety)
+	if val, ok := node.Labels[terminationLabelKey]; ok && val == "true" {
+		result.HasTerminationLabel = true
+	}
+
+	// Check if node has drained annotation (any source)
+	if _, ok := node.Annotations[spotDrainedAnnotationKey]; ok {
+		result.HasDrainedAnnotation = true
+	}
+
+	// Only return nodes that have both label and drained annotation
+	if result.HasTerminationLabel && result.HasDrainedAnnotation {
+		return result, nil
+	}
+
+	return nil, nil
 }
 
 func handleSpotInstanceDeletion(_ context.Context, input *go_hook.HookInput) error {

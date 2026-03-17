@@ -33,8 +33,9 @@ metadata:
   name: node-spot-1
   labels:
     node.deckhouse.io/group: worker
+    node.deckhouse.io/termination-in-progress: "true"
   annotations:
-    update.node.deckhouse.io/drained: spot-termination
+    update.node.deckhouse.io/drained: aws-node-termination-handler
 spec:
   unschedulable: true
 status:

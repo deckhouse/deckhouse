@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: node-manager :: hooks :: handle_spot_termination ::", func() {
+var _ = Describe("cloud-provider-aws :: add_termination_metadata ::", func() {
 	const (
 		nodeWithSpotTaint = `
 ---
@@ -31,78 +31,60 @@ apiVersion: v1
 kind: Node
 metadata:
   name: node-1
-  labels:
-    node.deckhouse.io/group: worker
 spec:
   taints:
   - key: aws-node-termination-handler/spot-itn
-    effect: NoSchedule
     value: "1234567890"
-status:
-  conditions:
-  - status: "True"
-    type: Ready
+    effect: NoSchedule
 `
-
-		nodeWithSpotTaintAndDraining = `
+		nodeWithSpotTaintAndMetadata = `
 ---
 apiVersion: v1
 kind: Node
 metadata:
   name: node-2
   labels:
-    node.deckhouse.io/group: worker
+    node.deckhouse.io/termination-in-progress: "true"
   annotations:
-    update.node.deckhouse.io/draining: spot-termination
+    update.node.deckhouse.io/draining: "aws-node-termination-handler"
 spec:
   taints:
   - key: aws-node-termination-handler/spot-itn
-    effect: NoSchedule
     value: "1234567890"
-status:
-  conditions:
-  - status: "True"
-    type: Ready
+    effect: NoSchedule
 `
-
 		normalNode = `
 ---
 apiVersion: v1
 kind: Node
 metadata:
   name: node-3
-  labels:
-    node.deckhouse.io/group: worker
-spec:
-  taints: []
-status:
-  conditions:
-  - status: "True"
-    type: Ready
 `
 	)
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
-	Context("Node with spot termination taint", func() {
+	Context("Node with spot taint but no metadata", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(nodeWithSpotTaint))
 			f.RunHook()
 		})
 
-		It("Should execute successfully", func() {
+		It("Should add termination label and draining annotation", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(HaveLen(1))
 		})
 	})
 
-	Context("Node with spot taint and draining annotation", func() {
+	Context("Node with spot taint AND metadata (already processed)", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeWithSpotTaintAndDraining))
+			f.BindingContexts.Set(f.KubeStateSet(nodeWithSpotTaintAndMetadata))
 			f.RunHook()
 		})
 
-		It("Should execute successfully", func() {
+		It("Should NOT add metadata again (idempotent)", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(HaveLen(0)) // No patches
 		})
 	})
 
@@ -112,19 +94,21 @@ status:
 			f.RunHook()
 		})
 
-		It("Should execute successfully", func() {
+		It("Should do nothing", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(HaveLen(0))
 		})
 	})
 
-	Context("Multiple nodes with mixed states", func() {
+	Context("Multiple nodes with different states", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeWithSpotTaint + nodeWithSpotTaintAndDraining + normalNode))
+			f.BindingContexts.Set(f.KubeStateSet(nodeWithSpotTaint + nodeWithSpotTaintAndMetadata + normalNode))
 			f.RunHook()
 		})
 
-		It("Should execute successfully", func() {
+		It("Should only process nodes that need metadata", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(HaveLen(1)) // Only node-1
 		})
 	})
 })
