@@ -27,7 +27,6 @@ status:
       - Legacy feature
     description:
       en: Legacy test module
-      ru: Легаси тестовый модуль
     requirements:
       deckhouse: '>= 1.60'
       kubernetes: '>= 1.27'

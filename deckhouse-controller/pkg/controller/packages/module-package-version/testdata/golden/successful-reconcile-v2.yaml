@@ -30,7 +30,6 @@ status:
       - Fixed a bug
     description:
       en: Test module
-      ru: Тестовый модуль
     stage: GA
 ---
 apiVersion: deckhouse.io/v1alpha1

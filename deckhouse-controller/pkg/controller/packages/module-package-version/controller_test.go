@@ -245,7 +245,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					"package.yaml": `name: test-module
 description:
   en: Test module
-  ru: Тестовый модуль
 category: Networking
 stage: GA
 type: Module
@@ -279,7 +278,6 @@ version: "1.0.0"
 					"module.yaml": `name: test-module
 descriptions:
   en: Legacy test module
-  ru: Легаси тестовый модуль
 stage: Sandbox
 requirements:
   deckhouse: ">= 1.60"
@@ -313,7 +311,6 @@ requirements:
 					"module.yaml": `name: test-module
 descriptions:
   en: Legacy module from old registry
-  ru: Легаси модуль из старого реестра
 stage: Sandbox
 `,
 					"version.json": `{"version": "1.0.0"}`,

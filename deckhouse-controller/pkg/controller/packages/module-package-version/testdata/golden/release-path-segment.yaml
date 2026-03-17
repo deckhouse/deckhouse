@@ -25,7 +25,6 @@ status:
   packageMetadata:
     description:
       en: Legacy module from old registry
-      ru: Легаси модуль из старого реестра
     stage: Sandbox
 ---
 apiVersion: deckhouse.io/v1alpha1
