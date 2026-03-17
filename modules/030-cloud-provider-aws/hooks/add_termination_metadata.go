@@ -34,7 +34,7 @@ const (
 	awsSpotTaintKey = "aws-node-termination-handler/spot-itn"
 
 	// Deckhouse standard labels and annotations
-	terminationLabelKey  = "node.deckhouse.io/termination-in-progress"
+	terminationLabelKey   = "node.deckhouse.io/termination-in-progress"
 	drainingAnnotationKey = "update.node.deckhouse.io/draining"
 
 	// AWS-specific values
