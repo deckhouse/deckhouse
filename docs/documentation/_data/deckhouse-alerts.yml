@@ -639,14 +639,15 @@ alerts:
       description: |
         The default StorageClass in the cluster ({{ $labels.actual }}) differs from the one configured by the cloud provider ({{ $labels.expected }}).
 
-        This may have been changed manually by a user. The cloud provider will not automatically revert this change.
+        This may be the result of a manual change by a user. The cloud provider will not automatically revert this change.
 
-        To resolve this alert, either:
-        1. Revert the default StorageClass annotation back to {{ $labels.expected }}
-        2. Update the cloud provider configuration to use {{ $labels.actual }} as the default
-        3. Accept the drift and acknowledge that the default StorageClass has been intentionally changed
+        To resolve this alert, choose one of the options:
+
+        - Revert the default StorageClass annotation back to {{ $labels.expected }}.
+        - Update the cloud provider configuration to use {{ $labels.actual }} as the default.
+        - Accept the difference and acknowledge that the default StorageClass has been intentionally changed.
       summary: |
-        Default StorageClass has been changed manually and differs from cloud provider configuration
+        Default StorageClass differs from the cloud provider configuration.
       severity: "7"
       markupFormat: markdown
     - name: D8ClusterAutoscalerManagerPodIsNotReady
