@@ -119,11 +119,11 @@ func setServiceWithHealthchecksSpec(
 ) {
 	probes := make([]map[string]any, 0, len(ports))
 	for _, p := range ports {
-		var target int32
+		var target int64
 		if p.TargetPort.Type == intstr.Int {
-			target = p.TargetPort.IntVal
+			target = int64(p.TargetPort.IntVal)
 		} else {
-			target = p.Port
+			target = int64(p.Port)
 		}
 		probes = append(probes, map[string]any{
 			"mode": "TCP",
@@ -163,7 +163,7 @@ func servicePortsToUnstructured(ports []v1.ServicePort) []any {
 	out := make([]any, 0, len(ports))
 	for _, p := range ports {
 		m := map[string]any{
-			"port":     p.Port,
+			"port":     int64(p.Port),
 			"protocol": string(p.Protocol),
 		}
 		if p.Name != "" {
@@ -173,7 +173,7 @@ func servicePortsToUnstructured(ports []v1.ServicePort) []any {
 			m["appProtocol"] = *p.AppProtocol
 		}
 		if p.TargetPort.Type == intstr.Int {
-			m["targetPort"] = p.TargetPort.IntVal
+			m["targetPort"] = int64(p.TargetPort.IntVal)
 		} else if p.TargetPort.StrVal != "" {
 			m["targetPort"] = p.TargetPort.StrVal
 		}
