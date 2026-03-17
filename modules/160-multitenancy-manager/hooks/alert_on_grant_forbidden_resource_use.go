@@ -191,7 +191,6 @@ func scanClusterObjectsGrantRulesViolations(ctx context.Context, input *go_hook.
 			if v.GVR.Group != "" {
 				metricLabels["violating_resource"] = fmt.Sprintf("%s.%s", v.GVR.Resource, v.GVR.Group)
 			}
-
 			input.MetricsCollector.Set(grantViolationMetricName, 1, metricLabels, metricOpts)
 		}
 	}
