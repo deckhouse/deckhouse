@@ -163,7 +163,7 @@ func (m *DefaultingMutator) applyDefaultsIfNecessary(
 				continue
 			}
 
-			defaultResourceName, err := m.findDefaultValue(ctx, &grantPolicyRef, policy)
+			defaultValue, err := m.findDefaultValue(ctx, &grantPolicyRef, policy)
 			switch {
 			case errors.Is(err, errNoDefault):
 				continue
@@ -186,7 +186,7 @@ func (m *DefaultingMutator) applyDefaultsIfNecessary(
 			patches = append(patches, jsonPatchOperation{
 				Op:    "add",
 				Path:  pointer,
-				Value: defaultResourceName,
+				Value: defaultValue,
 			})
 
 			m.log.Info("injecting default value",

@@ -82,7 +82,7 @@ type ClusterObjectsGrantStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=pgrant;pgrants
 
 // ClusterObjectsGrant is the Schema for the clusterobjectsgrants API
 type ClusterObjectsGrant struct {

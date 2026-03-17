@@ -11,6 +11,9 @@ spec:
     kind: ClusterObjectsGrant
     listKind: ClusterObjectsGrantList
     plural: clusterobjectsgrants
+    shortNames:
+    - pgrant
+    - pgrants
     singular: clusterobjectsgrant
   scope: Cluster
   versions:
