@@ -1338,6 +1338,10 @@ entries:
                 en: Local-path-provisioner module
                 ru: Модуль local-path-provisioner
               url: /architecture/storage/local-path-provisioner.html
+            - title:
+                en: Snapshot-controller module
+                ru: Модуль snapshot-controller
+              url: /architecture/storage/snapshot-controller.html              
         - title:
             en: Observability subsystem
             ru: Подсистема Observability

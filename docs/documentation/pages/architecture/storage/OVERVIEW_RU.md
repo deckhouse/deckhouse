@@ -30,4 +30,9 @@ extractedLinksMax: 0
   * [`csi-vsphere`](/modules/csi-vsphere/);
   * [`csi-csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/).
 
-В подразделе на данный момент описан только [модуль local-path-provisioner](local-path-provisioner.html). Материалы по остальным модулям подсистемы Storage будут добавляться по мере готовности.
+В подразделе на данный момент описаны модули:
+
+* [local-path-provisioner](local-path-provisioner.html)
+* [snapshot-controller](snapshot-controller.html)
+
+Материалы по остальным модулям подсистемы Storage будут добавляться по мере готовности.
