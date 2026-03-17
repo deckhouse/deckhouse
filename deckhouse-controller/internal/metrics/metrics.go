@@ -91,8 +91,7 @@ const (
 	D8ModuleUpdatingGroup       = "d8_module_updating_group"
 	ModuleReleaseGroup          = "module_release_group"
 
-	// DeckhouseModuleVersionTelemetryGroup is the metrics group for d8_telemetry_deckhouse_module_version.
-	// Used to expire old series when the set of modules changes.
+	// DeckhouseModuleVersionTelemetryGroup is the metrics group
 	DeckhouseModuleVersionTelemetryGroup = "deckhouse_module_version_telemetry"
 )
 
