@@ -74,6 +74,10 @@
             &::before {
                 transform: rotate(-90deg);
             }
+
+            &:hover {
+                color: variables.$primary-700;
+            }
         }
 
         &> a {
