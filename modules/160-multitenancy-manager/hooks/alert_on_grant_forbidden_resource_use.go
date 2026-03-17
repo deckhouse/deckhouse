@@ -65,6 +65,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(checkIfGrantRulesAreViolated))
 
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: "/modules/160-multitenancy-manager",
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "grants",
+			Crontab: "*/2 * * * *",
+		},
+	},
+}, dependency.WithExternalDependencies(scanClusterObjectsGrantRulesViolations))
+
 func filterGrants(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	p := &grant{}
 	err := sdk.FromUnstructured(obj, p)
@@ -92,14 +102,15 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 			return fmt.Errorf("scan of project %s for violations: %w", g.ObjectMeta.Name, err)
 		}
 
-		log.InfoContext(ctx, "Violations scan completed",
+		log.InfoContext(ctx, "Completed violations scan for ClusterObjectsGrant",
 			"grant", g.ObjectMeta.Name,
 			"violations_count", len(violations),
 			"violations", violations,
 		)
 
-		metricOpts := metrics.WithGroup(grantViolationMetricGroupPrefix + g.ObjectMeta.Name)
-		input.MetricsCollector.Expire(grantViolationMetricGroupPrefix + g.ObjectMeta.Name)
+		metricsGroup := grantViolationMetricGroupPrefix + g.ObjectMeta.Name
+		metricOpts := metrics.WithGroup(metricsGroup)
+		input.MetricsCollector.Expire(metricsGroup)
 
 		if len(violations) == 0 {
 			input.MetricsCollector.Set(grantViolationMetricName, 0, map[string]string{
@@ -124,6 +135,68 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 		return nil
 	}
 
+	return nil
+}
+
+func scanClusterObjectsGrantRulesViolations(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	log := input.Logger
+	kube := dc.MustGetK8sClient()
+
+	log.InfoContext(ctx, "Starting periodic ClusterObjectsGrant violations scan")
+
+	grantList, err := kube.Dynamic().Resource(schema.GroupVersionResource{
+		Group:    "projects.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "clusterobjectsgrants",
+	}).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("fetch grants: %w", err)
+	}
+
+	for _, obj := range grantList.Items {
+		g := &grant{}
+		err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, g)
+		if err != nil {
+			return err
+		}
+
+		violations, err := validateGrantNotViolated(ctx, g, kube, log)
+		if err != nil {
+			return fmt.Errorf("scan of project %s for violations: %w", g.ObjectMeta.Name, err)
+		}
+
+		log.InfoContext(ctx, "Completed violations scan for ClusterObjectsGrant",
+			"grant", g.ObjectMeta.Name,
+			"violations_count", len(violations),
+			"violations", violations,
+		)
+
+		metricsGroup := grantViolationMetricGroupPrefix + g.ObjectMeta.Name
+		metricOpts := metrics.WithGroup(metricsGroup)
+		input.MetricsCollector.Expire(metricsGroup)
+
+		if len(violations) == 0 {
+			input.MetricsCollector.Set(grantViolationMetricName, 0, map[string]string{
+				"project": g.ObjectMeta.Name,
+			}, metricOpts)
+			continue
+		}
+
+		for _, v := range violations {
+			metricLabels := map[string]string{
+				"project":               g.ObjectMeta.Name,
+				"violating_object_name": v.Name,
+				"violating_resource":    v.GVR.Resource,
+			}
+			if v.GVR.Group != "" {
+				metricLabels["violating_resource"] = fmt.Sprintf("%s.%s", v.GVR.Resource, v.GVR.Group)
+			}
+
+			input.MetricsCollector.Set(grantViolationMetricName, 1, metricLabels, metricOpts)
+		}
+	}
+
+	log.InfoContext(ctx, "Finished periodic ClusterObjectsGrant violations scan")
 	return nil
 }
 
