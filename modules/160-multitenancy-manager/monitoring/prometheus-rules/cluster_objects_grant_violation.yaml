@@ -11,6 +11,6 @@
       plk_protocol_version: "1"
       summary: One or more resources not allowed by ClusterObjetsGrant are in use.
       description: |
-        One or more resources not allowed by ClusterObjetsGrant are in use in cluster.
+          One or more resources not allowed by ClusterObjetsGrant are in use in cluster.
 
           See the "Security > Cluster Object Grant Violations" dashboard for detailed overview of violating objects.
