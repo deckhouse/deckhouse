@@ -2504,10 +2504,10 @@ index 63919e60e77..5b797aa50e2 100644
  	}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
 new file mode 100644
-index 00000000000..3d616fd8e5a
+index 00000000000..3a9feab864d
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,118 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2557,6 +2557,7 @@ index 00000000000..3d616fd8e5a
 +	if u, ok := obj.(*unstructured.Unstructured); ok {
 +		before := len(u.Object)
 +		sensitive.StripSensitiveFields(u.Object, s.schema, true)
++		maskLastAppliedConfigAnnotation(u.Object, s.schema)
 +		klog.V(1).Infof("MYTEST-DEBUG-6: strippingGetter.Get stripped sensitive fields from object=%s (fields before=%d after=%d sensitiveFieldPaths=%v)",
 +			name, before, len(u.Object), sensitive.CollectSensitivePaths(s.schema))
 +	}
@@ -2581,6 +2582,7 @@ index 00000000000..3d616fd8e5a
 +		klog.V(1).Infof("MYTEST-DEBUG-9: strippingLister.List stripping %d items", len(list.Items))
 +		for i := range list.Items {
 +			sensitive.StripSensitiveFields(list.Items[i].Object, s.schema, true)
++			maskLastAppliedConfigAnnotation(list.Items[i].Object, s.schema)
 +		}
 +		klog.V(1).Infof("MYTEST-DEBUG-10: strippingLister.List done stripping %d items", len(list.Items))
 +	}
@@ -2617,6 +2619,7 @@ index 00000000000..3d616fd8e5a
 +			klog.V(1).Infof("MYTEST-DEBUG-15: strippingWatcher stripping sensitive fields from event type=%s object=%s/%s",
 +				event.Type, u.GetNamespace(), u.GetName())
 +			sensitive.StripSensitiveFields(u.Object, s.schema, true)
++			maskLastAppliedConfigAnnotation(u.Object, s.schema)
 +			klog.V(1).Infof("MYTEST-DEBUG-16: strippingWatcher done stripping event type=%s object=%s/%s",
 +				event.Type, u.GetNamespace(), u.GetName())
 +		}
