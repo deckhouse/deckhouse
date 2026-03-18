@@ -28,7 +28,7 @@ extractedLinksMax: 0
   * [`csi-s3`](/modules/csi-s3/);
   * [`csi-scsi-generic`](/modules/csi-scsi-generic/);
   * [`csi-vsphere`](/modules/csi-vsphere/);
-  * [`csi-csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/).
+  * [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/).
 
 В подразделе на данный момент описаны модули:
 

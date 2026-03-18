@@ -1,0 +1,28 @@
+{{/*
+  Renders description HTML: if source contains backticks, first escape <word> only outside backticks,
+  then markdownify + escape inside <code>. Otherwise, escape <word> in source, then markdownify.
+  Use printf "&lt;%s&gt;" "$1" so Hugo passes literal $1 to the regex (not template var $1).
+  Placeholder for backtick blocks uses U+E000 (PUA) so literal "{{BT0}}" etc. in the description is not corrupted.
+*/}}
+{{- $desc := default "" . }}
+{{- $repl := printf "&lt;%s&gt;" "$1" }}
+{{- $replClosing := printf "&lt;/%s&gt;" "$1" }}
+{{- $sentinel := printf "%c" 57344 }}
+{{- if in $desc "`" }}
+  {{- /* Use [^`]* (not +) so empty backtick pairs `` are matched and protected; else e.g. "`` `<x>foo</x>`" would match "` `" first and the second block would get <word> escaped */}}
+  {{- $backtickBlocks := findRE "`[^`]*`" $desc }}
+  {{- $work := $desc }}
+  {{- range $idx, $block := $backtickBlocks }}
+    {{- $work = replace $work $block (printf "%sOPENAPI_BT_%d%s" $sentinel $idx $sentinel) }}
+  {{- end }}
+  {{- $work = replaceRE `<([a-zA-Z][a-zA-Z0-9-_]*)>` $repl $work }}
+  {{- $work = replaceRE `</([a-zA-Z][a-zA-Z0-9-_]*)>` $replClosing $work }}
+  {{- range $idx, $block := $backtickBlocks }}
+    {{- $work = replace $work (printf "%sOPENAPI_BT_%d%s" $sentinel $idx $sentinel) $block }}
+  {{- end }}
+  {{- partial "openapi/escape-code-blocks" ($work | markdownify) }}
+{{- else }}
+  {{- $withEscapedPlaceholders := replaceRE `<([a-zA-Z][a-zA-Z0-9-]*)>` $repl $desc }}
+  {{- $withEscapedPlaceholders = replaceRE `</([a-zA-Z][a-zA-Z0-9-]*)>` $replClosing $withEscapedPlaceholders }}
+  {{- $withEscapedPlaceholders | markdownify }}
+{{- end }}
