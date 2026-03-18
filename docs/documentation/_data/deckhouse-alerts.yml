@@ -637,12 +637,10 @@ alerts:
       module: node-manager
       edition: ce
       description: |-
-        The {{$labels.pod}} Pod is {{$labels.phase}}.
-
         To check the Pod's status, run the following command:
 
         ```shell
-        d8 k -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
+        d8 k -n {{`{{$labels.namespace}}`}} logs {{`{{$labels.pod}}`}}
         ```
       summary: |
         The {{$labels.pod}} Pod is NOT Ready.
