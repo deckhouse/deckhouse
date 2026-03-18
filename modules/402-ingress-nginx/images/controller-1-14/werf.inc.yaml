@@ -1085,6 +1085,8 @@ shell:
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
   - /apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
   - /apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /apps/setcap    cap_net_bind_service=+ep /validation-chroot/usr/local/nginx/sbin/nginx
+  - /apps/setcap -v cap_net_bind_service=+ep /validation-chroot/usr/local/nginx/sbin/nginx
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
 imageSpec:
