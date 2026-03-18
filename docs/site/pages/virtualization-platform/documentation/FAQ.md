@@ -319,7 +319,7 @@ To provide the Windows virtual machine with the answer file,
 you need to specify provisioning with the type SysprepRef.
 You can also specify here other files in base64 format, that you need to successfully execute scripts inside the answer file.
 
-   ```yaml
+```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine
 metadata:
@@ -366,7 +366,7 @@ In addition, cloud images do not allow login by default — you must either add 
 
 Example configuration for updating the system and installing packages:
 
-   ```yaml
+```yaml
 #cloud-config
 # Update package lists
 package_update: true
@@ -386,7 +386,7 @@ runcmd:
 
 Example configuration for creating a user with a password and SSH key:
 
-   ```yaml
+```yaml
 #cloud-config
 # List of users to create
 users:
@@ -407,7 +407,7 @@ To generate a password hash, use the `mkpasswd --method=SHA-512 --rounds=4096` c
 
 Example configuration for creating a file with specified access permissions:
 
-   ```yaml
+```yaml
 #cloud-config
 # List of files to create
 write_files:
@@ -423,7 +423,7 @@ write_files:
 
 Example configuration for disk partitioning, filesystem creation, and mounting:
 
-   ```yaml
+```yaml
 #cloud-config
 # Disk partitioning setup
 disk_setup:
@@ -459,7 +459,7 @@ If additional networks are connected to a virtual machine, they must be configur
 
 Use the following example on distributions that use `systemd-networkd` (for example, Debian, CoreOS):
 
-   ```yaml
+```yaml
 #cloud-config
 write_files:
   - path: /etc/systemd/network/10-eth1.network
@@ -480,7 +480,7 @@ runcmd:
 
 Use the following example on Ubuntu and other distributions that use `Netplan`:
 
-   ```yaml
+```yaml
 #cloud-config
 write_files:
   - path: /etc/netplan/99-custom.yaml
@@ -505,7 +505,7 @@ runcmd:
 
 Use the following example on RHEL, CentOS and other distributions that use the `ifcfg` scheme with `NetworkManager`:
 
-   ```yaml
+```yaml
 #cloud-config
 write_files:
   - path: /etc/sysconfig/network-scripts/ifcfg-eth1
@@ -527,7 +527,7 @@ runcmd:
 
 Use the following example on Alpine Linux and other distributions that use the traditional `/etc/network/interfaces` format:
 
-   ```yaml
+```yaml
 #cloud-config
 write_files:
   - path: /etc/network/interfaces
@@ -555,7 +555,7 @@ The following assumptions will be used:
 
 Ansible inventory file example:
 
-   ```yaml
+```yaml
 ---
 all:
   vars:
