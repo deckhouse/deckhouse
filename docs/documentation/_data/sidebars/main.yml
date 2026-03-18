@@ -518,8 +518,8 @@ entries:
                         ru: Настройка визуализации сетевого стека кластера
                       url: /admin/configuration/network/internal/visualization.html
                     - title:
-                        en: Switching CNI from Flannel or Simple to Cilium
-                        ru: Переключение CNI с Flannel или Simple на Cilium
+                        en: Switching CNI from Flannel or Simple bridge to Cilium
+                        ru: Переключение CNI с Flannel или Simple bridge на Cilium
                       url: /admin/configuration/network/internal/flannel-simple-to-cilium.html
                 - title:
                     en: Incoming traffic balancing
