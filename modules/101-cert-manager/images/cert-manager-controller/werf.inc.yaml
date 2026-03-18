@@ -71,7 +71,7 @@ shell:
     cat /docs/README_RU.md | grep {{ $version }} || ( echo "ERROR: version v{{ $version }} not found in /docs/README_RU.md" && exit 1 )
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" ) }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
