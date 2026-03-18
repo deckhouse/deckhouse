@@ -95,7 +95,7 @@ Any extra master nodes aren't necessary, and using 2 nodes (or any other even nu
 
 Related guides:
 
-- [Working with static nodes...](/products/kubernetes-platform/documentation/v1/architecture/node.html#working-with-static-nodes)
+See also the [Working with static nodes](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/node-management/overview.html#working-with-static-nodes) section.
 
 ### Frontend nodes
 

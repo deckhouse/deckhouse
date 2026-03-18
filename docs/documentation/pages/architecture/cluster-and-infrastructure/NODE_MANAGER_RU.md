@@ -1,6 +1,6 @@
 ---
 title: Модуль node-manager
-permalink: ru/architecture/cluster-and-infrastructure/node-manager.html
+permalink: ru/architecture/cluster-and-infrastructure/node-management/node-manager.html
 lang: ru
 search: архитектура node-manager
 description: Архитектура модуля node-manager в Deckhouse Kubernetes Platform.

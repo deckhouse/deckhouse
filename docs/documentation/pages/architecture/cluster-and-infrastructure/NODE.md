@@ -1,6 +1,6 @@
 ---
 title: "Node management"
-permalink: en/architecture/cluster-and-infrastructure/node.html
+permalink: en/architecture/cluster-and-infrastructure/node-management/overview.html
 search: node management architecture, node lifecycle
 description: Node management in Deckhouse Kubernetes Platform — node types, provisioning mechanics, automatic deployment.
 ---
