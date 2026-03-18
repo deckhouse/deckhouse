@@ -175,7 +175,8 @@ mv "${pki_path}/token-key.pem" "${pki_path}/token.key"
 rm -f "${pki_path}/auth.csr" \
       "${pki_path}/distribution.csr" \
       "${pki_path}/token.csr" \
-      "${pki_path}/profiles.json"
+      "${pki_path}/profiles.json" \
+      "${pki_path}/ca.key"
 
 # Prepare auth manifest
 bb-sync-file "${auth_path}/config.yaml" - << EOF
