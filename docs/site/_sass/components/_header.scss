@@ -830,9 +830,8 @@ html {
     z-index: 80;
     transition: .2s;
 
-    @include breakpoints.max-w(xxs) {
-        padding-top: 13px;
-        margin-top: 138px;
+    @media (max-width: 400px) {
+        padding-top: 140px;
     }
 
     &.show {
