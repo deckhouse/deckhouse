@@ -120,8 +120,7 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		r.logger.Debug("validating webhook deletion", slog.String("deletion_timestamp", webhook.DeletionTimestamp.String()))
 
 		// TODO: retries
-		res, err := r.handleDeleteValidatingWebhook(ctx, webhook)
-		if err != nil {
+		if err := r.handleDeleteValidatingWebhook(ctx, webhook); err != nil {
 			r.logger.Warn("delete validating webhook", log.Err(err))
 
 			return res, err
@@ -129,8 +128,7 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return res, nil
 	}
 
-	res, err = r.handleProcessValidatingWebhook(ctx, webhook)
-	if err != nil {
+	if err = r.handleProcessValidatingWebhook(ctx, webhook); err != nil {
 		r.logger.Warn("process validating webhook", log.Err(err))
 
 		return res, err
@@ -139,32 +137,30 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return res, nil
 }
 
-func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context.Context, vwh *deckhouseiov1alpha1.ValidationWebhook) (ctrl.Result, error) {
-	var res ctrl.Result
-
+func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context.Context, vwh *deckhouseiov1alpha1.ValidationWebhook) error {
 	logger := r.logger.With(slog.String("webhook", vwh.Name))
 
 	webhookDir := r.webhookDir(vwh.Name)
 	if err := os.MkdirAll(webhookDir, validationWebhookDirectoryPerms); err != nil {
 		logger.Error("failed to create directory", slog.String("path", webhookDir), log.Err(err))
-		return res, fmt.Errorf("create dir %s: %w", webhookDir, err)
+		return fmt.Errorf("create dir %s: %w", webhookDir, err)
 	}
 
 	buf, err := templater.RenderValidationTemplate(r.pythonTemplate, vwh)
 	if err != nil {
-		return res, fmt.Errorf("render template: %w", err)
+		return fmt.Errorf("render template: %w", err)
 	}
 
 	webhookFile := r.webhookFilePath(vwh.Name)
 	isChanged := r.isWebhookFileChanged(webhookFile, buf.Bytes())
 	if !isChanged {
 		logger.Debug("webhook file not changed, skipping webhook file update")
-		return res, nil
+		return nil
 	}
 
 	if err := os.WriteFile(webhookFile, buf.Bytes(), validationWebhookFilePerms); err != nil {
 		logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
-		return res, fmt.Errorf("write file %s: %w", webhookFile, err)
+		return fmt.Errorf("write file %s: %w", webhookFile, err)
 	}
 
 	r.isReloadShellNeed.Store(true)
@@ -178,19 +174,17 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 			if removeErr := os.Remove(webhookFile); removeErr != nil {
 				logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
 			}
-			return res, fmt.Errorf("add finalizer: %w", err)
+			return fmt.Errorf("add finalizer: %w", err)
 		}
 	}
 
-	return res, nil
+	return nil
 }
 
-func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.Context, vh *deckhouseiov1alpha1.ValidationWebhook) (ctrl.Result, error) {
-	var res ctrl.Result
-
+func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.Context, vh *deckhouseiov1alpha1.ValidationWebhook) error {
 	webhookFile := r.webhookFilePath(vh.Name)
 	if err := os.Remove(webhookFile); err != nil && !os.IsNotExist(err) {
-		return res, fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
+		return fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
 	}
 
 	r.isReloadShellNeed.Store(true)
@@ -201,11 +195,11 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 		controllerutil.RemoveFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
 
 		if err := r.client.Update(ctx, vh); err != nil {
-			return res, fmt.Errorf("remove finalizer for %s: %w", vh.Name, err)
+			return fmt.Errorf("remove finalizer for %s: %w", vh.Name, err)
 		}
 	}
 
-	return res, nil
+	return nil
 }
 
 // isWebhookFileChanged returns true if the webhook file has changed.
