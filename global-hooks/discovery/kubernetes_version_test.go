@@ -641,6 +641,7 @@ status:
 	Context("Remove objects", func() {
 		initVers := []string{"1.21.20", "1.20.2", "1.19.4"}
 		k8sVer := initVers[2]
+		k8sVerToChange := initVers[0]
 
 		endpointsState := stateEndpoints(endpointsMul)
 
@@ -685,14 +686,13 @@ status:
 					f.RunHook()
 				})
 
-				It("without endpoints hook should return error and does not change k8s version into values", func() {
-					assertValues(k8sVer, initVers)
-					assertErrorVersionNotFound()
+				It("with single endpoint hook should request version and change k8s version in values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					assertValues(k8sVerToChange, []string{k8sVerToChange})
 				})
 
-				It("does not change k8s version into file", func() {
-					assertVersionInFile(k8sVer)
-					assertErrorVersionNotFound()
+				It("change k8s version into file", func() {
+					Expect(f).To(ExecuteSuccessfully())
 				})
 			})
 		})

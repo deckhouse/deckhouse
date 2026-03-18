@@ -284,7 +284,7 @@ func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, 
 
 	controlPlaneEnabled := module.IsEnabled("control-plane-manager", input)
 
-	if controlPlaneEnabled && podsCnt != endpointsCnt {
+	if controlPlaneEnabled && podsCnt < endpointsCnt {
 		versions := input.Values.Get("global.discovery.kubernetesVersions")
 		minVer := input.Values.Get("global.discovery.kubernetesVersion")
 		// need return err for retry if k8s versions not found
@@ -293,12 +293,13 @@ func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, 
 		// in bash hook we don't subscribe for deleting pods
 		// it is emulating this behaviour
 		if !versions.Exists() || !minVer.Exists() {
-			msg := fmt.Sprintf("Not found k8s versions. Pods(%v) != Endpoints (%v) count", podsCnt, endpointsCnt)
+			msg := fmt.Sprintf("Not found k8s versions. Pods(%v) < Endpoints (%v) count", podsCnt, endpointsCnt)
 			return nil, errors.New(msg)
 		}
 
-		msg := fmt.Sprintf("Pods(%v) != Endpoints (%v) count", podsCnt, endpointsCnt)
+		msg := fmt.Sprintf("Pods(%v) < Endpoints (%v) count", podsCnt, endpointsCnt)
 		input.Logger.Warn(msg)
+		return nil, nil
 	}
 
 	return endpoints, nil
