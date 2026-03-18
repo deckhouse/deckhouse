@@ -53,9 +53,9 @@ build:
 {{- $_ := set . "prefix" "" }}
 {{- $_ := set . "gitPrefix" "" }}
 ---
-# Base Images
-{{- include "parse_base_images_map" . }}
----
+# Base Images not cached
+{{- $_ := include "parse_base_images_map" . }}
+
 # version map
 {{- include "parse_version_map" . }}
 {{- include "base_k8s_versions" . }}
