@@ -277,16 +277,16 @@ for var in \$(compgen -e REGISTRY); do
 done
 
 start_service() {
-    local service_name=\${1}
-    local log_path=\${2}
+    local log_path=\${1}
+    local bin_path=\${2}
     shift 2
-    local command=(\${@})
+    local args=("\$@")
 
-    if pgrep -x "\${service_name}" > /dev/null; then
-        echo "\${service_name}: already running"
+    if pgrep -f "\${bin_path}" > /dev/null; then
+        echo "\${bin_path}: already running"
     else
-        "\${command[@]}" > "\${log_path}" 2>&1 &
-        echo "\${service_name}: started"
+        "\${bin_path}" "\${args[@]}" > "\${log_path}" 2>&1 &
+        echo "\${bin_path}: started"
     fi
 }
 
@@ -318,7 +318,7 @@ liveness_probe() {
 
 # auth
 echo "Starting registry auth..."
-start_service "ign-auth" "${log_path}/auth.log" /opt/deckhouse/bin/ign-auth -logtostderr "${auth_path}/config.yaml"
+start_service "${log_path}/auth.log" /opt/deckhouse/bin/ign-auth -logtostderr "${auth_path}/config.yaml"
 
 if ! liveness_probe "https://127.0.0.1:5051" "${pki_path}/ca.crt"; then
     echo "Registry auth failed, see ${log_path}/auth.log"
@@ -327,7 +327,7 @@ fi
 
 # distribution
 echo "Starting registry distribution..."
-start_service "ign-registry" "${log_path}/distribution.log" /opt/deckhouse/bin/ign-registry serve "${distribution_path}/config.yaml"
+start_service "${log_path}/distribution.log" /opt/deckhouse/bin/ign-registry serve "${distribution_path}/config.yaml"
 
 if ! liveness_probe "https://${discovered_node_ip}:5001" "${pki_path}/ca.crt"; then
     echo "Registry distribution failed, see ${log_path}/distribution.log"
@@ -342,35 +342,35 @@ bb-sync-file "${igniter_stop_sh}" - << EOF
 #!/bin/bash
 
 stop_service() {
-    local service_name=\${1}
+    local bin_path=\${1}
     local max_attempts=20
     local sleep_interval=1
     local count=0
 
-    pkill -x "\${service_name}" || true
+    pkill -f "\${bin_path}" || true
 
     while [[ \${count} -lt \${max_attempts} ]]; do
         if [[ \${count} -ne 0 ]]; then
-            echo "Waiting for \${service_name} (\${count}/\${max_attempts})"
+            echo "Waiting for \${bin_path} (\${count}/\${max_attempts})"
             sleep \${sleep_interval}
         fi
 
-        if ! pgrep -x "\${service_name}" > /dev/null; then
-            echo "\${service_name}: stopped"
+        if ! pgrep -f "\${bin_path}" > /dev/null; then
+            echo "\${bin_path}: stopped"
             return 0
         fi
 
         count=\$((count + 1))
     done
 
-    echo "\${service_name}: timeout, sending SIGKILL"
-    pkill -9 -x "\${service_name}" || true
-    echo "\${service_name}: stopped"
+    echo "\${bin_path}: timeout, sending SIGKILL"
+    pkill -9 -f "\${bin_path}" || true
+    echo "\${bin_path}: stopped"
     return 0
 }
 
-stop_service "ign-registry"
-stop_service "ign-auth"
+stop_service "/opt/deckhouse/bin/ign-registry"
+stop_service "/opt/deckhouse/bin/ign-auth"
 
 echo "All services stopped"
 EOF
