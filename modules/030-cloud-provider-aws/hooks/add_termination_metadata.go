@@ -57,9 +57,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, addTerminationMetadata)
 
 type nodeWithSpotTaint struct {
-	Name                 string
-	HasSpotTaint         bool
-	HasTerminationLabel  bool
+	Name                  string
+	HasSpotTaint          bool
+	HasTerminationLabel   bool
 	HasDrainingAnnotation bool
 }
 
