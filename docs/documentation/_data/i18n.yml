@@ -422,8 +422,8 @@ common:
     en: more
     ru: подробнее
   requirements_modules_optional_text_second: 
-    en: about optional dependencies1
-    ru: про необязательные зависимости1
+    en: about optional dependencies
+    ru: про необязательные зависимости
   requirements_modules_optional_text_for_link:
     en: optional-module-requirements
     ru: необязательные-зависимости
