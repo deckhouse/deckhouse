@@ -15,7 +15,7 @@
 {{- if has (.registry).mode (list "Proxy" "Local") }}
 
 remove_pod() {
-    pod_prefix="${1}"
+    local pod_prefix="${1}"
 
     if [ -z "${pod_prefix}" ]; then
         echo "Empty prefix, skip"
@@ -276,10 +276,10 @@ for var in \$(compgen -e REGISTRY); do
 done
 
 start_service() {
-    service_name=\$1
-    log_path=\$2
+    local service_name=\${1}
+    local log_path=\${2}
     shift 2
-    command=(\$@)
+    local command=(\${@})
 
     if pgrep -x "\${service_name}" > /dev/null; then
         echo "\${service_name}: already running"
@@ -290,17 +290,28 @@ start_service() {
 }
 
 liveness_probe() {
-    address=\$1
-    ca_path=\$2
-    max_attempts=30
+    local address=\${1}
+    local ca_path=\${2}
+    local max_attempts=30
+    local sleep_interval=1
+    local count=0
 
-    for (( attempt=1; attempt <= \${max_attempts}; attempt++ )); do
-        response=\$(d8-curl --cacert "\${ca_path}" -s -o /dev/null -w "%{http_code}" "\${address}")
+    while [[ \${count} -lt \${max_attempts} ]]; do
+        if [[ \${count} -ne 0 ]]; then
+            echo "Waiting for \${address} (\${count}/\${max_attempts})"
+            sleep \${sleep_interval}
+        fi
+
+        local response=\$(d8-curl --cacert "\${ca_path}" -s -o /dev/null -w "%{http_code}" "\${address}")
         if [[ "\${response}" == "200" ]]; then
+            echo "\${address} is reachable"
             return 0
         fi
-        sleep 1
+
+        count=\$((count + 1))
     done
+
+    echo "\${address} not reachable (timeout \${sleep_interval}s * \${max_attempts})"
     return 1
 }
 
@@ -330,20 +341,31 @@ bb-sync-file "${igniter_stop_sh}" - << EOF
 #!/bin/bash
 
 stop_service() {
-    service_name=\$1
+    local service_name=\${1}
+    local max_attempts=20
+    local sleep_interval=1
+    local count=0
+
     pkill -x "\${service_name}" || true
-    
-    wait_time=0
-    while pgrep -x "\${service_name}" > /dev/null; do
-        sleep 1
-        ((wait_time++))
-        if [ \${wait_time} -gt 20 ]; then
-            echo "\${service_name}: timeout, sending SIGKILL"
-            pkill -9 -x "\${service_name}"
-            break
+
+    while [[ \${count} -lt \${max_attempts} ]]; do
+        if [[ \${count} -ne 0 ]]; then
+            echo "Waiting for \${service_name} (\${count}/\${max_attempts})"
+            sleep \${sleep_interval}
         fi
+
+        if ! pgrep -x "\${service_name}" > /dev/null; then
+            echo "\${service_name}: stopped"
+            return 0
+        fi
+
+        count=\$((count + 1))
     done
+
+    echo "\${service_name}: timeout, sending SIGKILL"
+    pkill -9 -x "\${service_name}" || true
     echo "\${service_name}: stopped"
+    return 0
 }
 
 stop_service "ign-registry"
