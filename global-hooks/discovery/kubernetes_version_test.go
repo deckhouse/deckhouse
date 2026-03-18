@@ -693,6 +693,7 @@ status:
 
 				It("change k8s version into file", func() {
 					Expect(f).To(ExecuteSuccessfully())
+					assertVersionInFile(k8sVerToChange)
 				})
 			})
 		})
