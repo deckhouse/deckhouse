@@ -1,7 +1,7 @@
 {{- $shellOperatorVersion := "v1.9.3"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: base/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell-operator
@@ -21,10 +21,10 @@ import:
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl
   before: setup
-- image: tools/tini
+- from: {{ index $.Images "tools/tini" }}
   add: /usr/bin/tini
   before: setup
-- image: tools/bash
+- from: {{ index $.Images "tools/bash" }}
   add: /usr/bin/bash
   to: /bin/bash
   before: setup
@@ -32,26 +32,26 @@ import:
   add: /shell-operator/sh
   to: /bin/sh
   before: setup
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   before: setup
-- image: tools/sed
+- from: {{ index $.Images "tools/sed" }}
   add: /usr/bin/sed
   before: setup
-- image: tools/grep
+- from: {{ index $.Images "tools/grep" }}
   add: /usr/bin/grep
   before: setup
-- image: tools/gawk
+- from: {{ index $.Images "tools/gawk" }}
   add: /
   to: /
   includePaths:
   - usr/bin/awk
   - usr/bin/gawk
   before: setup
-- image: tools/findutils
+- from: {{ index $.Images "tools/findutils" }}
   add: /usr/bin/find
   before: setup
-- image: tools/coreutils
+- from: {{ index $.Images "tools/coreutils" }}
   add: /
   to: /
   includePaths:
@@ -167,7 +167,7 @@ imageSpec:
     entrypoint: ["/usr/bin/tini", "--", "/shell-operator"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: builder/src
+from: {{ index $.Images "builder/src" }}
 final: false
 secrets:
 - id: SOURCE_REPO
@@ -178,7 +178,7 @@ shell:
   - rm -r /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

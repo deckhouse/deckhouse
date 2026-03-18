@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: base/scratch
+from: {{ index $.Images "base/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
   to: /candi
@@ -41,7 +41,7 @@ shell:
 ---
 image: terraform-provider-azure
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:

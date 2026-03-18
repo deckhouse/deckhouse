@@ -89,7 +89,7 @@ shell:
   {{- $runc_version := index $containerd2runc $containerd_version }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /out
