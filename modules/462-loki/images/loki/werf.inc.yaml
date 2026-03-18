@@ -1,4 +1,4 @@
-{{- $LokiVersion := "v2.9.15" }}
+{{- $LokiVersion := "v3.5.12" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

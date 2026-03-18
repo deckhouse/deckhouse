@@ -1,0 +1,14 @@
+[Unit]
+Description=Docker Auth Server (cesanta/docker_auth)
+After=network.target
+
+[Service]
+Type=simple
+User={{ docker_auth_user }}
+Group={{ docker_auth_user }}
+ExecStart={{ docker_auth_binary }} {{ docker_auth_config_dir }}/config.yml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

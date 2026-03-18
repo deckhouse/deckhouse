@@ -1,0 +1,17 @@
+---
+- name: Restart docker-registry
+  ansible.builtin.systemd:
+    name: docker-registry
+    state: restarted
+    daemon_reload: true
+
+- name: Restart docker-auth
+  ansible.builtin.systemd:
+    name: docker-auth
+    state: restarted
+    daemon_reload: true
+
+- name: Reload nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded

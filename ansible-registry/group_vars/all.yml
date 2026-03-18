@@ -1,0 +1,14 @@
+registry_domain: dev-registry.okmetric.com
+
+# Override passwords here or via --extra-vars / ansible-vault
+registry_users:
+  admin:
+    password: U0KmgDbNrf0cE6agSjpTKs4JOvub7jfw
+  rw:
+    password: 3VSB4HCdjsu9BHbfCnME3p56xBsjEJ8F
+  ro:
+    password: DuFbjVIrCOISIU7K5ZfQwwng65rEl9DC
+  cleanup:
+    password: 7Ui1JSnd80NIE12GynIaPyopaaukj6KB
+
+certbot_email: admin@okmetric.com

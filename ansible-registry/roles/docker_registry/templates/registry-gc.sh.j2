@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+
+echo "$(date '+%Y-%m-%d %H:%M:%S') Starting registry garbage collection"
+
+systemctl stop docker-registry.service
+
+{{ registry_binary }} garbage-collect \
+  {{ registry_config_dir }}/config.yml \
+  --delete-untagged
+
+systemctl start docker-registry.service
+
+echo "$(date '+%Y-%m-%d %H:%M:%S') Garbage collection complete"

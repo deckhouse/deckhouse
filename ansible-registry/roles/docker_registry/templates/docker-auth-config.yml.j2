@@ -1,0 +1,26 @@
+server:
+  addr: "{{ docker_auth_listen_addr }}"
+
+token:
+  issuer: "{{ token_issuer }}"
+  expiration: {{ token_expiration }}
+  certificate: "{{ docker_auth_config_dir }}/token.crt"
+  key: "{{ docker_auth_config_dir }}/token.key"
+  disable_legacy_key_id: true
+
+users:
+{% for name, opts in registry_users.items() %}
+  "{{ name }}":
+    password: "{{ opts.password | password_hash('bcrypt') }}"
+{% endfor %}
+
+acl:
+{% for entry in registry_acl %}
+  - actions:
+{% for action in entry.actions %}
+    - "{{ action }}"
+{% endfor %}
+    comment: "{{ entry.comment }}"
+    match:
+      account: "{{ entry.match.account }}"
+{% endfor %}

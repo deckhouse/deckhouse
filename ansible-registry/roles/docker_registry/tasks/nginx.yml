@@ -1,0 +1,123 @@
+---
+# --- Add nginx.org mainline repository ---
+
+- name: Add nginx.org signing key
+  ansible.builtin.apt_key:
+    url: https://nginx.org/keys/nginx_signing.key
+    keyring: /usr/share/keyrings/nginx-archive-keyring.gpg
+    state: present
+
+- name: Add nginx.org mainline repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/mainline/ubuntu/ {{ ansible_distribution_release }} nginx"
+    filename: nginx-mainline
+    state: present
+
+- name: Pin nginx packages from nginx.org
+  ansible.builtin.copy:
+    dest: /etc/apt/preferences.d/99-nginx
+    content: |
+      Package: nginx*
+      Pin: origin nginx.org
+      Pin-Priority: 900
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+# --- Certbot ---
+
+- name: Install certbot
+  ansible.builtin.apt:
+    name:
+      - certbot
+    state: present
+
+- name: Create certbot webroot directory
+  ansible.builtin.file:
+    path: "{{ certbot_webroot }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+# --- Initial certificate acquisition ---
+
+- name: Remove default nginx config
+  ansible.builtin.file:
+    path: /etc/nginx/conf.d/default.conf
+    state: absent
+
+- name: Check if TLS certificate already exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ registry_domain }}/fullchain.pem"
+  register: tls_cert_stat
+
+- name: Deploy temporary HTTP-only nginx config for ACME challenge
+  when: not tls_cert_stat.stat.exists
+  ansible.builtin.copy:
+    dest: /etc/nginx/conf.d/registry.conf
+    content: |
+      server {
+          listen 80;
+          server_name {{ registry_domain }};
+
+          location /.well-known/acme-challenge/ {
+              root {{ certbot_webroot }};
+          }
+
+          location / {
+              return 444;
+          }
+      }
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Ensure nginx is started (for ACME challenge)
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Flush handlers to apply temp nginx config
+  ansible.builtin.meta: flush_handlers
+
+- name: Obtain TLS certificate with certbot
+  when: not tls_cert_stat.stat.exists
+  ansible.builtin.command:
+    cmd: >-
+      certbot certonly --webroot
+      -w {{ certbot_webroot }}
+      -d {{ registry_domain }}
+      --email {{ certbot_email }}
+      --agree-tos
+      --non-interactive
+  changed_when: true
+
+# --- Full nginx configuration ---
+
+- name: Deploy nginx registry vhost
+  ansible.builtin.template:
+    src: nginx-registry.conf.j2
+    dest: /etc/nginx/conf.d/registry.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Deploy certbot renewal hook to reload nginx
+  ansible.builtin.copy:
+    dest: /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+    content: |
+      #!/bin/bash
+      systemctl reload nginx
+    owner: root
+    group: root
+    mode: "0755"

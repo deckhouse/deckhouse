@@ -1,0 +1,6 @@
+---
+- name: Deploy Docker Registry with token authentication
+  hosts: registry
+  become: true
+  roles:
+    - docker_registry
