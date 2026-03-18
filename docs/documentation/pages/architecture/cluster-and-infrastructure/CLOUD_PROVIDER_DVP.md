@@ -1,6 +1,6 @@
 ---
 title: Cloud-provider-dvp module
-permalink: en/architecture/cluster-and-infrastructure/cloud-provider-dvp.html
+permalink: en/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dvp.html
 search: cloud-provider-dvp, cloud provider dvp, deckhouse virtualization platform
 description: Architecture of the cloud-provider-dvp module in Deckhouse Kubernetes Platform.
 ---
@@ -21,7 +21,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Cloud-provider-dvp architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dvp.png)
+![Cloud-provider-dvp architecture](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dvp.png)
 
 ## Module components
 
@@ -59,7 +59,7 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-4. **CSI driver (DVP)**: It is an implementation of the CSI driver for DVP. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](csi-driver.html).
+4. **CSI driver (DVP)**: It is an implementation of the CSI driver for DVP. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../infrastructure/csi-driver.html).
 
    CSI driver (DVP) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter )) sidecar container.
 

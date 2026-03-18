@@ -13,9 +13,9 @@ The Cluster & Infrastructure subsystem is responsible for the infrastructure lay
 
 This section describes:
 
-* The mechanisms for managing all node types used in DKP, as well as [hybrid node groups and clusters](hybrid-nodegroups-and-clusters.html).
-* The reference [CSI driver](csi-driver.html) architecture used in DKP.
-* [Bashible](bashible.html) service, which is a key component of the Cluster & Infrastructure subsystem. Bashible is used by the [`node-manager`](/modules/node-manager/) module to manage node configuration.
+* The mechanisms for managing all node types used in DKP, as well as [hybrid node groups and clusters](node-management/hybrid-nodegroups-and-clusters.html).
+* The reference [CSI driver](infrastructure/csi-driver.html) architecture used in DKP.
+* [Bashible](node-management/bashible.html) service, which is a key component of the Cluster & Infrastructure subsystem. Bashible is used by the [`node-manager`](/modules/node-manager/) module to manage node configuration.
 
 The Cluster & Infrastructure subsystem also includes the following modules:
 
@@ -36,4 +36,4 @@ The Cluster & Infrastructure subsystem also includes the following modules:
   * [`cloud-provider-yandex`](/modules/cloud-provider-yandex/)
   * [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/)
 
-Only [`cloud-provider-dvp`](cloud-provider-dvp.html) is currently described in this section. Documentation for the remaining cloud provider modules will be added as it becomes available.
+Only [`cloud-provider-dvp`](cloud-providers/cloud-provider-dvp.html) is currently described in this section. Documentation for the remaining cloud provider modules will be added as it becomes available.

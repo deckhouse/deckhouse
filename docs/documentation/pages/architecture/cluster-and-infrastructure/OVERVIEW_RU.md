@@ -14,9 +14,9 @@ extractedLinksMax: 0
 
 В разделе описаны:
 
-* Механизмы управления всеми используемыми в DKP типами узлов, а также [гибридными группами узлов и кластерами](hybrid-nodegroups-and-clusters.html).
-* Типовая архитектура [CSI-драйвера](csi-driver.html), используемая в DKP.
-* Служба [bashible](bashible.html), которая является ключевым компонентом подсистемы Cluster & Infrastructure. Bashible используется модулем [`node-manager`](/modules/node-manager/) для управления конфигурацией узлов.
+* Механизмы управления всеми используемыми в DKP типами узлов, а также [гибридными группами узлов и кластерами](node-management/hybrid-nodegroups-and-clusters.html).
+* Типовая архитектура [CSI-драйвера](infrastructure/csi-driver.html), используемая в DKP.
+* Служба [bashible](node-management/bashible.html), которая является ключевым компонентом подсистемы Cluster & Infrastructure. Bashible используется модулем [`node-manager`](/modules/node-manager/) для управления конфигурацией узлов.
 
 В подсистему Cluster & Infrastructure также входят следующие модули:
 
@@ -37,5 +37,5 @@ extractedLinksMax: 0
   * [`cloud-provider-yandex`](/modules/cloud-provider-yandex/);
   * [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/).
 
-В подразделе на данный момент описан только модуль [`cloud-provider-dvp`](cloud-provider-dvp.html).
+В подразделе на данный момент описан только модуль [`cloud-provider-dvp`](cloud-providers/cloud-provider-dvp.html).
 Материалы по модулям остальных облачных провайдеров будут добавляться по мере готовности.

@@ -1,6 +1,6 @@
 ---
 title: Модуль cloud-provider-dvp
-permalink: ru/architecture/cluster-and-infrastructure/cloud-provider-dvp.html
+permalink: ru/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dvp.html
 lang: ru
 search: cloud-provider-dvp, cloud provider dvp, deckhouse virtualization platform
 description: Архитектура модуля cloud-provider-dvp в Deckhouse Kubernetes Platform.
@@ -22,7 +22,7 @@ description: Архитектура модуля cloud-provider-dvp в Deckhouse
 Архитектура модуля [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля cloud-provider-dvp](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dvp.ru.png)
+![Архитектура модуля cloud-provider-dvp](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dvp.ru.png)
 
 ## Компоненты модуля
 
@@ -60,7 +60,7 @@ description: Архитектура модуля cloud-provider-dvp в Deckhouse
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-4. **CSI-драйвер (DVP)** — реализация CSI-драйвера для DVP. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](csi-driver.html).
+4. **CSI-драйвер (DVP)** — реализация CSI-драйвера для DVP. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-driver.html).
 
    CSI-драйвер (DVP) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 
