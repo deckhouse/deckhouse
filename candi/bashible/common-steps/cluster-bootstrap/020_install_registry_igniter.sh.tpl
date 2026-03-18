@@ -21,15 +21,28 @@ bb-set-proxy
 
 # Prepare vars
 discovered_node_ip="$(bb-d8-node-ip)"
-pki_path="${REGISTRY_MODULE_IGNITER_DIR}/pki"
+
+base_path="${REGISTRY_MODULE_IGNITER_DIR}"
+pki_path="${base_path}/pki"
+auth_path="${base_path}/auth"
+distribution_path="${base_path}/distribution"
+log_path="${base_path}/logs"
+data_path="/opt/deckhouse/registry/local_data"
+
+igniter_stop_sh="${base_path}/stop_registry_igniter.sh"
+igniter_start_sh="${base_path}/start_registry_igniter.sh"
+
+static_pod_file="/etc/kubernetes/manifests/registry-nodeservices.yaml"
 
 # Create the directories
-mkdir -p "${REGISTRY_MODULE_IGNITER_DIR}" \
-        "${REGISTRY_MODULE_IGNITER_DIR}/pki" \
-        "${REGISTRY_MODULE_IGNITER_DIR}/logs" \
-        /opt/deckhouse/registry/local_data
+mkdir -p "${base_path}" \
+         "${pki_path}" \
+         "${auth_path}" \
+         "${distribution_path}" \
+         "${log_path}" \
+         "${data_path}"
 
-# Prepare certs
+# Generate certs
 bb-sync-file "${pki_path}/ca.crt" - << EOF
 {{ .registry.bootstrap.init.ca.cert }}
 EOF
@@ -122,13 +135,13 @@ mv "${pki_path}/token.pem" "${pki_path}/token.crt"
 mv "${pki_path}/token-key.pem" "${pki_path}/token.key"
 
 # Cleanup
-rm "${pki_path}/auth.csr"\
-    "${pki_path}/distribution.csr" \
-    "${pki_path}/token.csr" \
-    "${pki_path}/profiles.json"
+rm -f "${pki_path}/auth.csr" \
+      "${pki_path}/distribution.csr" \
+      "${pki_path}/token.csr" \
+      "${pki_path}/profiles.json"
 
 # Prepare auth manifest
-bb-sync-file "${REGISTRY_MODULE_IGNITER_DIR}/auth_config.yaml" - << EOF
+bb-sync-file "${auth_path}/config.yaml" - << EOF
 server:
   addr: "127.0.0.1:5051"
   real_ip_header: "X-Forwarded-For"
@@ -161,14 +174,14 @@ acl:
 EOF
 
 # Prepare distribution manifest
-bb-sync-file "${REGISTRY_MODULE_IGNITER_DIR}/distribution_config.yaml" - << EOF
+bb-sync-file "${distribution_path}/config.yaml" - << EOF
 version: 0.1
 log:
   level: info
 
 storage:
   filesystem:
-    rootdirectory: /opt/deckhouse/registry/local_data
+    rootdirectory: "${data_path}"
   delete:
     enabled: true
   redirect:
@@ -217,7 +230,7 @@ auth:
 EOF
 
 # Prepare start script
-bb-sync-file "${REGISTRY_MODULE_IGNITER_DIR}/start_registry_igniter.sh" - << EOF
+bb-sync-file "${igniter_start_sh}" - << EOF
 #!/bin/bash
 
 for var in \$(compgen -e REGISTRY); do
@@ -241,8 +254,8 @@ echo "Awaiting the startup of the registry storage and Docker registry..."
 max_attempts=30
 docker_registry_started=false
 
-check_and_run "ign-auth" "/opt/deckhouse/bin/ign-auth -logtostderr ${REGISTRY_MODULE_IGNITER_DIR}/auth_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/auth.log"
-check_and_run "ign-registry" "/opt/deckhouse/bin/ign-registry serve ${REGISTRY_MODULE_IGNITER_DIR}/distribution_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/distribution.log"
+check_and_run "ign-auth" "/opt/deckhouse/bin/ign-auth -logtostderr \"${auth_path}/config.yaml\"" "${log_path}/auth.log"
+check_and_run "ign-registry" "/opt/deckhouse/bin/ign-registry serve \"${distribution_path}/config.yaml\"" "${log_path}/distribution.log"
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
     response=\$(d8-curl --cacert "${pki_path}/ca.crt" -s -o /dev/null -w "%{http_code}" https://${discovered_node_ip}:5001)
@@ -253,15 +266,15 @@ for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
     sleep 1
 done
 if [ "\$docker_registry_started" = false ]; then
-    echo "Failed to confirm the startup of Docker registry after \$max_attempts attempts. Please check the logs at ${REGISTRY_MODULE_IGNITER_DIR}/logs/distribution.log"
+    echo "Failed to confirm the startup of Docker registry after \$max_attempts attempts. Please check the logs at \"${log_path}/distribution.log\""
     exit 1
 fi
 
-echo "All services are starting in the background and logs are being written to ${REGISTRY_MODULE_IGNITER_DIR}/logs"
+echo "All services are starting in the background and logs are being written to \"${log_path}\""
 EOF
 
 # Prepare stop script
-bb-sync-file "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh" - << EOF
+bb-sync-file "${igniter_stop_sh}" - << EOF
 #!/bin/bash
 
 stop_service() {
@@ -286,14 +299,13 @@ stop_service "ign-auth"
 echo "All services have been stopped."
 EOF
 
-chmod a+x "${REGISTRY_MODULE_IGNITER_DIR}/start_registry_igniter.sh"
-chmod a+x "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh"
-
+chmod a+x "${igniter_stop_sh}"
+chmod a+x "${igniter_start_sh}"
 
 # Switching registry from static pod to igniter
-rm -f /etc/kubernetes/manifests/registry-nodeservices.yaml
-bash "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh"
-bash "${REGISTRY_MODULE_IGNITER_DIR}/start_registry_igniter.sh"
+rm -f "${static_pod_file}"
+bash "${igniter_stop_sh}"
+bash "${igniter_start_sh}"
 
 # Unset proxy envs
 bb-unset-proxy

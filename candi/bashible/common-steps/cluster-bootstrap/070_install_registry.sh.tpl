@@ -14,8 +14,8 @@
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
 
-{{ $imgDockerDistribution := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerDistribution") }}
-{{ $imgDockerAuth := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerAuth") }}
+{{ $img_docker_distribution := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerDistribution") }}
+{{ $img_docker_auth := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerAuth") }}
 
 check_container_running() {
   local container_name=$1
@@ -45,113 +45,43 @@ bb-set-proxy
 
 # Prepare vars
 discovered_node_ip="$(bb-d8-node-ip)"
-static_pod_path=$(bb-tmp-file)
-pki_path="/etc/kubernetes/registry/pki"
+
+static_pod_tmp_file=$(bb-tmp-file)
+static_pod_dest_path="/etc/kubernetes/manifests"
+static_pod_dest_file="${static_pod_dest_path}/registry-nodeservices.yaml"
+
+base_path="/etc/kubernetes/registry"
+pki_path="${base_path}/pki"
+auth_path="${base_path}/auth"
+distribution_path="${base_path}/distribution"
+data_path="/opt/deckhouse/registry/local_data"
+
+# igniter
+igniter_pki_path="${REGISTRY_MODULE_IGNITER_DIR}/pki"
+igniter_stop_sh="${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh"
 
 # Create the directories
-mkdir -p /etc/kubernetes/registry/{auth,distribution,pki} \
-        /opt/deckhouse/registry/local_data
+mkdir -p "${base_path}" \
+         "${pki_path}" \
+         "${auth_path}" \
+         "${distribution_path}" \
+         "${data_path}" \
+         "${static_pod_dest_path}"
 
 # Prepare certs
-bb-sync-file "${pki_path}/ca.crt" - << EOF
-{{ .registry.bootstrap.init.ca.cert }}
-EOF
-
-bb-sync-file "${pki_path}/ca.key" - << EOF
-{{ .registry.bootstrap.init.ca.key }}
-EOF
-
+cp "${igniter_pki_path}/ca.crt" "${pki_path}/ca.crt"
+cp "${igniter_pki_path}/auth.key" "${pki_path}/auth.key"
+cp "${igniter_pki_path}/auth.crt" "${pki_path}/auth.crt"
+cp "${igniter_pki_path}/distribution.key" "${pki_path}/distribution.key"
+cp "${igniter_pki_path}/distribution.crt" "${pki_path}/distribution.crt"
+cp "${igniter_pki_path}/token.key" "${pki_path}/token.key"
+cp "${igniter_pki_path}/token.crt" "${pki_path}/token.crt"
 {{- with ((.registry.bootstrap).proxy).ca }}
-bb-sync-file "${pki_path}/upstream-registry-ca.crt" - << EOF
-{{ . }}
-EOF
+cp "${igniter_pki_path}/upstream-registry-ca.crt" "${pki_path}/upstream-registry-ca.crt"
 {{- end }}
 
-bb-sync-file "${pki_path}/profiles.json" - << EOF
-{
-    "signing": {
-        "default": {
-            "expiry": "87600h"
-        },
-        "profiles": {
-            "client-server": {
-                "expiry": "87600h",
-                "usages": [
-                    "signing",
-                    "digital signature",
-                    "key encipherment",
-                    "client auth",
-                    "server auth"
-                ]
-            },
-            "auth-token": {
-                "expiry": "87600h",
-                "usages": [
-                    "signing",
-                    "digital signature",
-                    "key encipherment",
-                    "client auth",
-                    "server auth"
-                ]
-            }
-        }
-    }
-}
-EOF
-
-client_server_csr_json=$(cat << EOF
-{
-  "hosts": ["127.0.0.1", "localhost", "registry.d8-system.svc", "${discovered_node_ip}"],
-  "key": {"algo": "rsa", "size": 2048}
-}
-EOF
-)
-
-auth_token_csr_json=$(cat << EOF
-{
-  "key": {"algo": "rsa", "size": 2048}
-}
-EOF
-)
-
-# Auth certs
-echo "$client_server_csr_json" | /opt/deckhouse/bin/cfssl gencert \
-  -cn="registry-auth" \
-  -ca="${pki_path}/ca.crt" \
-  -ca-key="${pki_path}/ca.key" \
-  -config="${pki_path}/profiles.json" \
-  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${pki_path}/auth"
-mv "${pki_path}/auth.pem" "${pki_path}/auth.crt"
-mv "${pki_path}/auth-key.pem" "${pki_path}/auth.key"
-
-# Distribution certs
-echo "$client_server_csr_json" | /opt/deckhouse/bin/cfssl gencert \
-  -cn="registry-distribution" \
-  -ca="${pki_path}/ca.crt" \
-  -ca-key="${pki_path}/ca.key" \
-  -config="${pki_path}/profiles.json" \
-  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${pki_path}/distribution"
-mv "${pki_path}/distribution.pem" "${pki_path}/distribution.crt"
-mv "${pki_path}/distribution-key.pem" "${pki_path}/distribution.key"
-
-# Auth token certs
-echo "$auth_token_csr_json" | /opt/deckhouse/bin/cfssl gencert \
-  -cn="registry-auth-token" \
-  -ca="${pki_path}/ca.crt" \
-  -ca-key="${pki_path}/ca.key" \
-  -config="${pki_path}/profiles.json" \
-  -profile="auth-token" - | /opt/deckhouse/bin/cfssljson -bare "${pki_path}/token"
-mv "${pki_path}/token.pem" "${pki_path}/token.crt"
-mv "${pki_path}/token-key.pem" "${pki_path}/token.key"
-
-# Cleanup
-rm "${pki_path}/auth.csr"\
-    "${pki_path}/distribution.csr" \
-    "${pki_path}/token.csr" \
-    "${pki_path}/profiles.json"
-
 # Prepare auth manifest
-bb-sync-file "/etc/kubernetes/registry/auth/config.yaml" - << EOF
+bb-sync-file "${auth_path}/config.yaml" - << EOF
 server:
   addr: "127.0.0.1:5051"
   real_ip_header: "X-Forwarded-For"
@@ -184,7 +114,7 @@ acl:
 EOF
 
 # Prepare distribution manifest
-bb-sync-file "/etc/kubernetes/registry/distribution/config.yaml" - << EOF
+bb-sync-file "${distribution_path}/config.yaml" - << EOF
 version: 0.1
 log:
   level: info
@@ -240,7 +170,7 @@ auth:
 EOF
 
 # Prepare static pod manifest
-bb-sync-file "${static_pod_path}" - << EOF
+bb-sync-file "${static_pod_tmp_file}" - << EOF
 apiVersion: v1
 kind: Pod
 metadata:
@@ -267,7 +197,7 @@ spec:
   hostNetwork: true
   containers:
   - name: distribution
-    image: {{ $imgDockerDistribution }}
+    image: {{ $img_docker_distribution }}
     imagePullPolicy: IfNotPresent
     args:
       - serve
@@ -317,7 +247,7 @@ spec:
       - mountPath: /pki
         name: pki
   - name: auth
-    image: {{ $imgDockerAuth }}
+    image: {{ $img_docker_auth }}
     imagePullPolicy: IfNotPresent
     ports:
       - name: auth
@@ -355,37 +285,40 @@ spec:
   # PKI
   - name: pki
     hostPath:
-      path: /etc/kubernetes/registry/pki
+      path: "${pki_path}"
       type: Directory
   # Configuration
   - name: auth-config
     hostPath:
-      path: /etc/kubernetes/registry/auth
+      path: "${auth_path}"
       type: DirectoryOrCreate
   - name: distribution-config
     hostPath:
-      path: /etc/kubernetes/registry/distribution
+      path: "${distribution_path}"
       type: DirectoryOrCreate
   # Data
   - name: data
     hostPath:
-      path: /opt/deckhouse/registry/local_data
+      path: "${data_path}"
       type: DirectoryOrCreate
 EOF
 
-# Prepull static pod images
-crictl pull {{ $imgDockerDistribution }}
-crictl pull {{ $imgDockerAuth }}
 
-# Switching registry to static pod
-bash "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh"
-mv "${static_pod_path}" /etc/kubernetes/manifests/registry-nodeservices.yaml
-
-# Check containers
-check_container_running auth
-check_container_running distribution
+# Check registry-proxy
 check_container_running registry-proxy
 check_container_running registry-proxy-reloader
+
+# Prepull static pod images
+crictl pull {{ $img_docker_distribution }}
+crictl pull {{ $img_docker_auth }}
+
+# Switching igniter to static pod
+bash "${igniter_stop_sh}"
+mv "${static_pod_tmp_file}" "${static_pod_dest_file}"
+
+# Check static pod
+check_container_running auth
+check_container_running distribution
 
 # Unset proxy envs
 bb-unset-proxy
