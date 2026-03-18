@@ -38,7 +38,7 @@ lang: ru
 
 ### Исправления
 
-- [vd] Исправлено зависание при создании виртуальных дисков в режиме `WaitForFirstConsumer` на нодах с taints.
+- [vd] Исправлено зависание при создании виртуальных дисков в режиме `WaitForFirstConsumer` на узлах с taints.
 - [vm] Если в `.spec.networks` указана только сеть `Main`, то больше не требуется включенный модуль `sdn`.
 - [vm] Исправлена миграция виртуальной машины с дисками, подключенными через [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) (hotplug): целевой под мог превысить лимиты по памяти (`OOMKilled`).
 - [vmbda] Исправлена некорректная фаза `Pending` ресурса [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) во время миграции виртуальной машины.
