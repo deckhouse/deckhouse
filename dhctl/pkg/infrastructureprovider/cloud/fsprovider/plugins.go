@@ -33,7 +33,7 @@ import (
 var (
 	terraformManagerDir = "/tmp/terraform-manager"
 	downloadCandiPath   = "/tmp/deckhouse/candi/"
-	versionFile         = "terraform-versions.yml"
+	versionFile         = "terraform_versions.yml"
 )
 
 type pluginsProvider struct {
