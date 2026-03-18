@@ -640,7 +640,7 @@ alerts:
         To check the Pod's status, run the following command:
 
         ```shell
-        d8 k -n {{`{{$labels.namespace}}`}} logs {{`{{$labels.pod}}`}}
+        d8 k -n {{$labels.namespace}} logs {{$labels.pod}}
         ```
       summary: |
         The {{$labels.pod}} Pod is NOT Ready.
