@@ -18,25 +18,25 @@
 {{ $img_docker_auth := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerAuth") }}
 
 check_container_running() {
-  local container_name=$1
+  local container_name=${1}
   local max_retries=20
   local sleep_interval=10
   local count=0
 
-  while [[ $count -lt $max_retries ]]; do
-    if crictl ps -o json | jq -e --arg name "$container_name" '.containers[] | select(.metadata.name == $name and .state == "CONTAINER_RUNNING")' > /dev/null; then
-      echo "$container_name is running"
+  while [[ ${count} -lt ${max_retries} ]]; do
+    if crictl ps -o json | jq -e --arg name "${container_name}" '.containers[] | select(.metadata.name == $name and .state == "CONTAINER_RUNNING")' > /dev/null; then
+      echo "${container_name}: running"
       return 0
     fi
     count=$((count + 1))
 
-    if [[ $count -ge $max_retries ]]; then
-      echo "$container_name not running in $sleep_interval*$max_retries"
+    if [[ ${count} -ge ${max_retries} ]]; then
+      echo "${container_name} not running (timeout ${sleep_interval}s × ${max_retries})"
       exit 1
     fi
 
-    sleep $sleep_interval
-    echo "wait for the $container_name to start $count"
+    sleep ${sleep_interval}
+    echo "Waiting for ${container_name} (${count}/${max_retries})"
   done
 }
 

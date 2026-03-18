@@ -15,44 +15,39 @@
 {{- if has (.registry).mode (list "Proxy" "Local") }}
 
 remove_pod() {
-    pod_prefix="$1"
+    pod_prefix="${1}"
 
     if [ -z "${pod_prefix}" ]; then
-        echo "Pod prefix is empty, skipping"
+        echo "Empty prefix, skip"
         return 0
     fi
 
     if ! command -v crictl > /dev/null 2>&1; then
-        echo "Crictl not found, skipping"
+        echo "crictl not found, skip"
         return 0
     fi
 
     if ! crictl info > /dev/null 2>&1; then
-        echo "Containerd not configured or not running, skipping"
+        echo "containerd not ready, skip"
         return 0
     fi
 
     pods=$(crictl pods -o json | jq -r --arg PREFIX "${pod_prefix}" '
-        .items[]? | 
-        select(.metadata.name | startswith($PREFIX)) | 
+        .items[]? |
+        select(.metadata.name | startswith($PREFIX)) |
         .id
     ' 2>/dev/null)
 
     if [ -z "${pods}" ]; then
-        echo "  No pods found with prefix '${pod_prefix}', skipping"
+        echo "No pods for '${pod_prefix}', skip"
         return 0
     fi
 
-    for pod in $pods; do
-        if crictl stopp "${pod}" > /dev/null 2>&1; then
-            echo "${pod} pod stopped"
-        fi
-        if crictl rmp "${pod}" > /dev/null 2>&1; then
-            echo "${pod} pod removed"
-        fi
+    for pod in ${pods}; do
+        crictl stopp "${pod}" > /dev/null 2>&1 || true
+        crictl rmp "${pod}" > /dev/null 2>&1 || true
     done
-
-    echo "All pods with prefix '$pod_prefix' have been removed"
+    echo "Pods '${pod_prefix}' removed"
 }
 
 bb-package-install "module-registry-auth:{{ .images.registry.dockerAuth }}" "module-registry-distribution:{{ .images.registry.dockerDistribution }}" "cfssl:{{ .images.registrypackages.cfssl165 }}"
@@ -147,7 +142,7 @@ EOF
 )
 
 # Auth certs
-echo "$client_server_csr_json" | /opt/deckhouse/bin/cfssl gencert \
+echo "${client_server_csr_json}" | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-auth" \
   -ca="${pki_path}/ca.crt" \
   -ca-key="${pki_path}/ca.key" \
@@ -157,7 +152,7 @@ mv "${pki_path}/auth.pem" "${pki_path}/auth.crt"
 mv "${pki_path}/auth-key.pem" "${pki_path}/auth.key"
 
 # Distribution certs
-echo "$client_server_csr_json" | /opt/deckhouse/bin/cfssl gencert \
+echo "${client_server_csr_json}" | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-distribution" \
   -ca="${pki_path}/ca.crt" \
   -ca-key="${pki_path}/ca.key" \
@@ -167,7 +162,7 @@ mv "${pki_path}/distribution.pem" "${pki_path}/distribution.crt"
 mv "${pki_path}/distribution-key.pem" "${pki_path}/distribution.key"
 
 # Auth token certs
-echo "$auth_token_csr_json" | /opt/deckhouse/bin/cfssl gencert \
+echo "${auth_token_csr_json}" | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-auth-token" \
   -ca="${pki_path}/ca.crt" \
   -ca-key="${pki_path}/ca.key" \
@@ -277,7 +272,7 @@ bb-sync-file "${igniter_start_sh}" - << EOF
 
 # Unset all registry env
 for var in \$(compgen -e REGISTRY); do
-    unset \$var
+    unset \${var}
 done
 
 start_service() {
@@ -287,10 +282,10 @@ start_service() {
     command=(\$@)
 
     if pgrep -x "\${service_name}" > /dev/null; then
-        echo "\${service_name} is already running."
+        echo "\${service_name}: already running"
     else
         "\${command[@]}" > "\${log_path}" 2>&1 &
-        echo "\${service_name} started."
+        echo "\${service_name}: started"
     fi
 }
 
@@ -310,24 +305,24 @@ liveness_probe() {
 }
 
 # auth
-echo "Awaiting the startup of registry auth..."
+echo "Starting registry auth..."
 start_service "ign-auth" "${log_path}/auth.log" /opt/deckhouse/bin/ign-auth -logtostderr "${auth_path}/config.yaml"
 
 if ! liveness_probe "https://127.0.0.1:5051" "${pki_path}/ca.crt"; then
-    echo 'Failed to confirm the startup of registry auth. Please check the logs at "${log_path}/auth.log"'
+    echo "Registry auth failed, see ${log_path}/auth.log"
     exit 1
 fi
 
 # distribution
-echo "Awaiting the startup of registry distribution..."
+echo "Starting registry distribution..."
 start_service "ign-registry" "${log_path}/distribution.log" /opt/deckhouse/bin/ign-registry serve "${distribution_path}/config.yaml"
 
 if ! liveness_probe "https://${discovered_node_ip}:5001" "${pki_path}/ca.crt"; then
-    echo 'Failed to confirm the startup of registry distribution. Please check the logs at "${log_path}/distribution.log"'
+    echo "Registry distribution failed, see ${log_path}/distribution.log"
     exit 1
 fi
 
-echo "All services are starting in the background. Logs are being written to ${log_path}"
+echo "Services started, logs: ${log_path}"
 EOF
 
 # Prepare stop script
@@ -342,19 +337,19 @@ stop_service() {
     while pgrep -x "\${service_name}" > /dev/null; do
         sleep 1
         ((wait_time++))
-        if [ \$wait_time -gt 20 ]; then
-            echo "Process \${service_name} has not completed in 20 seconds, SIGKILL is being sent..."
+        if [ \${wait_time} -gt 20 ]; then
+            echo "\${service_name}: timeout, sending SIGKILL"
             pkill -9 -x "\${service_name}"
             break
         fi
     done
-    echo "\${service_name} stopped"
+    echo "\${service_name}: stopped"
 }
 
 stop_service "ign-registry"
 stop_service "ign-auth"
 
-echo "All services have been stopped."
+echo "All services stopped"
 EOF
 
 chmod a+x "${igniter_stop_sh}"
