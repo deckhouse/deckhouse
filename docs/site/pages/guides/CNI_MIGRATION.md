@@ -35,7 +35,7 @@ Supported CNI switching modes:
 
 There are several methods to switch CNI in a DKP cluster.
 
-## Method 1: Using the d8 cni-migration command group of the d8 utility (automated switching)
+## Method 1: Using the d8 network cni-migration command group of the d8 utility (automated switching)
 
 The [d8](/products/kubernetes-platform/documentation/v1/cli/d8/reference/) utility provides a command group for managing the migration process.
 
@@ -44,7 +44,7 @@ The [d8](/products/kubernetes-platform/documentation/v1/cli/d8/reference/) utili
 To start the process, execute the `switch` command, specifying the target CNI (e.g., `cilium`, `flannel`, or `simple-bridge`):
 
 ```bash
-d8 cni-migration switch --to-cni cilium
+d8 network cni-migration switch --to-cni cilium
 ```
 
 This command will create the necessary resource in the cluster and start the migration controller. DKP will automatically deploy the necessary components: Manager and Agents in the `d8-system` namespace.
@@ -54,7 +54,7 @@ This command will create the necessary resource in the cluster and start the mig
 To monitor the progress in real-time, use the command:
 
 ```bash
-d8 cni-migration watch
+d8 network cni-migration watch
 ```
 
 You will see a dynamic interface with the following information:
@@ -79,7 +79,7 @@ Main phases of the process:
 After the migration status changes to `Succeeded`, you must remove the migration resources (controllers and agents) so that they do not consume cluster resources. To do this, use the command:
 
 ```bash
-d8 cni-migration cleanup
+d8 network cni-migration cleanup
 ```
 
 ## Method 2: Using the d8 k commands (manual switching)
