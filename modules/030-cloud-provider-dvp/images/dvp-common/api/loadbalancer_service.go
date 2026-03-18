@@ -106,8 +106,8 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	lbKey := lbLabelKey(name)
 	klog.InfoS("updateLoadBalancerService: start", "lbName", name, "lbKey", lbKey)
 	nodes := loadBalancer.Nodes
-	if filtredNpdes, err := lb.filterHealthyNodes(ctx, service, loadBalancer.Nodes); err == nil {
-		nodes = filtredNpdes
+	if filteredNodes, err := lb.filterHealthyNodes(ctx, service, loadBalancer.Nodes); err == nil {
+		nodes = filteredNodes
 		klog.InfoS("updateLoadBalancerService: filtered nodes", "lbName", name, "filteredNodes", nodes)
 	}
 	if err := lb.ensureNodeLabels(ctx, nodes, lbKey); err != nil {
@@ -168,9 +168,9 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 	lbKey := lbLabelKey(name)
 	klog.InfoS("createLoadBalancerService: start", "lbName", name, "lbKey", lbKey)
 	nodes := loadBalancer.Nodes
-	if filtredNpdes, err := lb.filterHealthyNodes(ctx, service, loadBalancer.Nodes); err == nil {
-		nodes = filtredNpdes
-		klog.InfoS("updateLoadBalancerService: filtered nodes", "lbName", name, "filteredNodes", nodes)
+	if filteredNodes, err := lb.filterHealthyNodes(ctx, service, loadBalancer.Nodes); err == nil {
+		nodes = filteredNodes
+		klog.InfoS("createLoadBalancerService: filtered nodes", "lbName", name, "filteredNodes", nodes)
 	}
 	if err := lb.ensureNodeLabels(ctx, nodes, lbKey); err != nil {
 		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)

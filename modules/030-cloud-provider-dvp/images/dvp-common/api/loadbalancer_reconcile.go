@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
@@ -33,27 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CreateOrUpdateLoadBalancer creates or updates a LoadBalancer.
-// If the cluster supports ServiceWithHealthchecks (SWHC), it is preferred over a plain Service.
-// On create: SWHC is tried first when supported; falls back to a plain Service otherwise.
-// On update: the existing resource type is preserved — SWHC is updated if it already exists,
-// plain Service is updated if it already exists, and SWHC creation is attempted for new resources.
 func (lb *LoadBalancerService) CreateOrUpdateLoadBalancer(
 	ctx context.Context,
 	loadBalancer LoadBalancer,
 ) (*corev1.Service, error) {
-	// Prefer SWHC when supported.
-	if lb.shouldUseSWHC(ctx) {
-		svc, err := lb.CreateOrUpdateServiceWithHealthchecks(ctx, loadBalancer)
-		if err != nil {
-			return nil, err
-		}
-		if svc != nil {
-			return svc, nil
-		}
-	}
-
-	// Fall back to plain Service.
 	svc, err := lb.GetLoadBalancerByName(ctx, loadBalancer.Name)
 	if err != nil {
 		return nil, err
@@ -61,10 +45,20 @@ func (lb *LoadBalancerService) CreateOrUpdateLoadBalancer(
 	if svc != nil {
 		return lb.updateLoadBalancerService(ctx, svc, loadBalancer)
 	}
+
+	if lb.shouldUseSWHC(ctx) {
+		svc, err := lb.CreateOrUpdateServiceWithHealthchecks(ctx, loadBalancer)
+		if err == nil {
+			return svc, nil
+		}
+		if !isSWHCUnsupportedErr(err) {
+			return nil, err
+		}
+	}
+
 	return lb.createLoadBalancerService(ctx, loadBalancer)
 }
 
-// DeleteLoadBalancerByName deletes the LoadBalancer service (plain or SWHC) and cleans up VM labels.
 func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, name string) (retErr error) {
 	defer func() {
 		if err := lb.removeVMLabelsByKey(ctx, lbLabelKey(name)); err != nil {
@@ -75,7 +69,6 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 		}
 	}()
 
-	// Try to delete the plain Service first.
 	svc, err := lb.GetLoadBalancerByName(ctx, name)
 	if err != nil {
 		klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
@@ -88,8 +81,6 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 		}
 	}
 
-	// Always attempt to delete the SWHC resource as well — it may exist even when
-	// no plain child Service is visible (e.g. partial creation).
 	if err := lb.DeleteServiceWithHealthchecksByName(ctx, name); err != nil {
 		return err
 	}
@@ -97,36 +88,56 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 	return nil
 }
 
-func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *corev1.Service, nodes []*corev1.Node) ([]*corev1.Node, error) { //nolint:unparam
+func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *corev1.Service, nodes []*corev1.Node) ([]*corev1.Node, error) { // nolint:unparam
 	if svc.Spec.ExternalTrafficPolicy != corev1.ServiceExternalTrafficPolicyTypeLocal ||
 		svc.Spec.HealthCheckNodePort == 0 {
 		return nodes, nil
 	}
 
 	cs := &ComputeService{Service: lb.Service}
-	httpClient := &http.Client{Timeout: 3 * time.Second}
+	client := &http.Client{Timeout: 3 * time.Second}
+
+	type result struct {
+		node    *corev1.Node
+		healthy bool
+	}
+
+	results := make([]result, len(nodes))
+	var wg sync.WaitGroup
+
+	for i, n := range nodes {
+		wg.Add(1)
+		go func(i int, n *corev1.Node) {
+			defer wg.Done()
+			vm, err := cs.GetVMByHostname(ctx, n.Name)
+			if err != nil {
+				return
+			}
+			ips, _, err := cs.GetVMIPAddresses(vm)
+			if err != nil || len(ips) == 0 {
+				return
+			}
+
+			url := "http://" + net.JoinHostPort(ips[0], strconv.Itoa(int(svc.Spec.HealthCheckNodePort))) + "/healthz"
+			req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+			resp, err := client.Do(req)
+			if err == nil && resp != nil && resp.StatusCode == http.StatusOK {
+				_ = resp.Body.Close()
+				results[i] = result{node: n, healthy: true}
+				return
+			}
+			if resp != nil {
+				_ = resp.Body.Close()
+			}
+		}(i, n)
+	}
+
+	wg.Wait()
 
 	healthy := make([]*corev1.Node, 0, len(nodes))
-	for _, n := range nodes {
-		vm, err := cs.GetVMByHostname(ctx, n.Name)
-		if err != nil {
-			continue
-		}
-		ips, _, err := cs.GetVMIPAddresses(vm)
-		if err != nil || len(ips) == 0 {
-			continue
-		}
-
-		url := "http://" + net.JoinHostPort(ips[0], strconv.Itoa(int(svc.Spec.HealthCheckNodePort))) + "/healthz"
-		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		resp, err := httpClient.Do(req)
-		if err == nil && resp != nil && resp.StatusCode == http.StatusOK {
-			_ = resp.Body.Close()
-			healthy = append(healthy, n)
-			continue
-		}
-		if resp != nil {
-			_ = resp.Body.Close()
+	for _, r := range results {
+		if r.healthy {
+			healthy = append(healthy, r.node)
 		}
 	}
 	return healthy, nil
@@ -197,7 +208,6 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 	return nil
 }
 
-// lbLabelKey builds a Kubernetes-label-safe key for a LoadBalancer with the given name.
 func lbLabelKey(lbName string) string {
 	prettified := strings.ToLower(strings.ReplaceAll(lbName, "-", ""))
 	max := 63 - len(DVPLoadBalancerLabelPrefix)

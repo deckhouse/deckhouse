@@ -79,11 +79,12 @@ func (lb *LoadBalancerService) updateServiceWithHealthchecks(
 	serviceLabels := loadBalancer.ServiceLabels
 
 	lbKey := lbLabelKey(name)
-	klog.InfoS("updateLoadBalancerService: start", "lbName", name, "lbKey", lbKey)
+	klog.InfoS("updateServiceWithHealthchecks: start", "lbName", name, "lbKey", lbKey)
+
 	nodes := loadBalancer.Nodes
-	if filtredNpdes, err := lb.filterHealthyNodes(ctx, service, loadBalancer.Nodes); err == nil {
-		nodes = filtredNpdes
-		klog.InfoS("updateLoadBalancerService: filtered nodes", "lbName", name, "filteredNodes", nodes)
+	if filteredNodes, err := lb.filterHealthyNodes(ctx, service, loadBalancer.Nodes); err == nil {
+		nodes = filteredNodes
+		klog.InfoS("updateServiceWithHealthchecks: filtered nodes", "lbName", name, "filteredNodes", nodes)
 	}
 	if err := lb.ensureNodeLabels(ctx, nodes, lbKey); err != nil {
 		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
@@ -95,7 +96,7 @@ func (lb *LoadBalancerService) updateServiceWithHealthchecks(
 	u.SetAnnotations(service.Annotations)
 	u.SetLabels(serviceLabels)
 
-	setServiceWithHealthchecksSpec(
+	if err := setServiceWithHealthchecksSpec(
 		u,
 		ports,
 		service.Spec.ExternalTrafficPolicy,
@@ -103,7 +104,9 @@ func (lb *LoadBalancerService) updateServiceWithHealthchecks(
 		service.Spec.ExternalIPs,
 		service.Spec.LoadBalancerClass,
 		service.Spec.LoadBalancerIP,
-	)
+	); err != nil {
+		return nil, err
+	}
 
 	if err := lb.client.Update(ctx, u); err != nil {
 		return nil, err
@@ -125,11 +128,12 @@ func (lb *LoadBalancerService) createServiceWithHealthchecks(
 	serviceLabels := loadBalancer.ServiceLabels
 
 	lbKey := lbLabelKey(name)
-	klog.InfoS("createLoadBalancerService: start", "lbName", name, "lbKey", lbKey)
+	klog.InfoS("createServiceWithHealthchecks: start", "lbName", name, "lbKey", lbKey)
+
 	nodes := loadBalancer.Nodes
-	if filtredNpdes, err := lb.filterHealthyNodes(ctx, service, loadBalancer.Nodes); err == nil {
-		nodes = filtredNpdes
-		klog.InfoS("updateLoadBalancerService: filtered nodes", "lbName", name, "filteredNodes", nodes)
+	if filteredNodes, err := lb.filterHealthyNodes(ctx, service, loadBalancer.Nodes); err == nil {
+		nodes = filteredNodes
+		klog.InfoS("createServiceWithHealthchecks: filtered nodes", "lbName", name, "filteredNodes", nodes)
 	}
 	if err := lb.ensureNodeLabels(ctx, nodes, lbKey); err != nil {
 		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
@@ -142,7 +146,7 @@ func (lb *LoadBalancerService) createServiceWithHealthchecks(
 	u.SetAnnotations(service.Annotations)
 	u.SetLabels(serviceLabels)
 
-	setServiceWithHealthchecksSpec(
+	if err := setServiceWithHealthchecksSpec(
 		u,
 		ports,
 		service.Spec.ExternalTrafficPolicy,
@@ -150,7 +154,9 @@ func (lb *LoadBalancerService) createServiceWithHealthchecks(
 		service.Spec.ExternalIPs,
 		service.Spec.LoadBalancerClass,
 		service.Spec.LoadBalancerIP,
-	)
+	); err != nil {
+		return nil, err
+	}
 
 	if err := lb.client.Create(ctx, u); err != nil {
 		return nil, err
