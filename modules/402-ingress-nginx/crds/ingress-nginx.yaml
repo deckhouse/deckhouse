@@ -1117,6 +1117,15 @@ spec:
                   default: false
                   description: |
                     Enables validation for Ingress rule annotations.
+                validationSandboxMode:
+                  type: string
+                  enum: ["Disabled", "Standard", "Full"]
+                  description: |
+                    Selects the validation isolation mode for controller version `1.14`.
+
+                    * `Disabled` uses the regular `nginx -t` validation path without additional isolation.
+                    * `Standard` runs validation via `/usr/bin/unshare -S 64535 -R /validation-chroot` with a dedicated minimal `/validation-chroot` and a separate temporary directory for validation configs. This mode is more compatible with hardened hosts, but it does not provide ptrace-based runtime file access checks or seccomp filtering from `/usr/bin/sandbox`.
+                    * `Full` runs validation via `/usr/bin/sandbox` using the ptrace-based sandbox runner. This is the strongest mode because it keeps seccomp filtering and runtime path checks, but it requires host support for ptrace-based sandboxing.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -1913,6 +1922,8 @@ spec:
                   rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
                 - message: .spec.nginxProfilingEnabled experimental option available only in version 1.10
                   rule: "!has(self.nginxProfilingEnabled) || !self.nginxProfilingEnabled || (self.controllerVersion in ['1.10'])"
+                - message: .spec.validationSandboxMode values "Standard" and "Full" are available only in version 1.14
+                  rule: "!has(self.validationSandboxMode) || self.validationSandboxMode in ['Disabled'] || (has(self.controllerVersion) && self.controllerVersion in ['1.14'])"
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class

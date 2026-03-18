@@ -78,8 +78,7 @@ func run(argv []string) int {
 		MemoryLimit: sandboxMemoryLimit,
 	}
 
-	var res runner.Result
-	res, err = runWithPtrace(args, allow, trace, workDir, traceHandler, limit, debug)
+	res, err := runWithPtrace(args, allow, trace, workDir, traceHandler, limit, debug)
 	if err != nil {
 		log.Printf("seccomp build (ptrace): %v", err)
 		return 1

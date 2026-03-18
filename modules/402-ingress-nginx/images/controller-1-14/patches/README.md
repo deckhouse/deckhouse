@@ -126,10 +126,6 @@ This patch is no longer needed because the related changes are already included 
 
 This patch fixes HTTP-to-HTTPS redirect host selection in `lua_ingress`: when `Host` differs from the actual request host (for example with absolute-form requests), redirect now uses the request host (`$host`) instead of raw `Host` header to prevent redirects to arbitrary domains.
 
-### 021-added-sandbox-for-validation.patch
-
-This patch runs `nginx -t` via `/usr/bin/sandbox` and executes validation in `unshare`/`chroot` context to keep configuration checks isolated.
-
 ### cve-03022026.patch (Already exist)
 
 Fixes the following CVEs:
@@ -159,3 +155,13 @@ The fix is to use registration when checking if informer has been synced.
 ### 025-santize-xff-headers-when-redirecting-from-www.patch
 
 This patch adds validating `X-Forwarded-Port` and `X-Forwarded-Proto` when redirecting from/to www.
+
+### 026-added-sandbox-for-validation.patch
+
+This patch switches `nginx -t` execution according to `spec.validationSandboxMode` for ingress-nginx `1.14`:
+
+- `Disabled`: uses the regular `nginx -t` path without sandbox isolation.
+- `Standard`: runs validation via `/usr/bin/unshare -S 64535 -R /validation-chroot ...`.
+- `Full`: runs validation via `/usr/bin/sandbox` using the ptrace-based sandbox runner.
+
+Both `Full` and `Standard` modes keep the full cluster-wide validation context enabled. The `Standard` mode uses a dedicated minimal `/validation-chroot`, but it is weaker than the full sandbox because it does not use the ptrace-based runtime file checks or seccomp filtering from `/usr/bin/sandbox`.
