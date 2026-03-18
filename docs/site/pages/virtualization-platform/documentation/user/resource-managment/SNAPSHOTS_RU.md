@@ -278,6 +278,7 @@ d8 k get vmop <vmop-name> -o json | jq '.status.resources'
 ```bash
 d8 k label vm <vm-name> label-name=label-value
 ```
+
 {% endalert %}
 
 Клонирование создает копию ВМ, поэтому ресурсы новой ВМ должны иметь уникальные имена. Для этого используются параметры `nameReplacements` и/или `customization`:

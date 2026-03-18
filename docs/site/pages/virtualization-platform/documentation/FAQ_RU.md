@@ -735,13 +735,13 @@ Golden image — это предварительно настроенный об
 
 1. Установите и настройте qemu-guest-agent (рекомендуется):
 
-  - Для RHEL/CentOS:
+- Для RHEL/CentOS:
 
     ```bash
     yum install -y qemu-guest-agent
     ```
 
-  - Для Debian/Ubuntu:
+- Для Debian/Ubuntu:
 
     ```bash
     apt-get update
@@ -766,14 +766,14 @@ Golden image — это предварительно настроенный об
 
 1. Очистите сетевые настройки:
 
-  - Для RHEL:
+- Для RHEL:
 
     ```bash
     nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
     rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
     ```
 
-  - Для Debian/Ubuntu:
+- Для Debian/Ubuntu:
 
     ```bash
     rm -f /etc/network/interfaces.d/*
@@ -801,13 +801,13 @@ Golden image — это предварительно настроенный об
 
 1. Очистите кэш пакетных менеджеров:
 
-  - Для RHEL:
+- Для RHEL:
 
     ```bash
     yum clean all
     ```
 
-  - Для Debian/Ubuntu:
+- Для Debian/Ubuntu:
 
     ```bash
     apt-get clean
@@ -834,13 +834,13 @@ Golden image — это предварительно настроенный об
 
    Для RHEL: выполните сброс и восстановление контекстов SELinux (выберите один из вариантов):
 
-  - Вариант 1: Проверка и восстановление контекстов сразу:
+- Вариант 1: Проверка и восстановление контекстов сразу:
 
     ```bash
     restorecon -R /
     ```
 
-  - Вариант 2: Запланировать relabel при следующей загрузке:
+- Вариант 2: Запланировать relabel при следующей загрузке:
 
     ```bash
     touch /.autorelabel

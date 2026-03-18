@@ -278,6 +278,7 @@ Labels are not copied from the source VM to the clone. This prevents Service tra
 ```bash
 d8 k label vm <vm-name> label-name=label-value
 ```
+
 {% endalert %}
 
 Cloning creates a copy of a VM, so the resources of the new VM must have unique names. To do this, use the `nameReplacements` and/or `customization` parameters:
