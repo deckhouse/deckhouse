@@ -687,11 +687,11 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 {% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).{% endalert %}
 
-Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
+Для автоматизации обновления istio-сайдкаров установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
 
 ## Настройка ресурсов istio-proxy sidecar
 
-Для переопределения глобальных ограничений ресурсов для istio-proxy sidecar в отдельных рабочих нагрузках через аннотации, поддерживаются следующие аннотации:
+Для переопределения глобальных ограничений ресурсов для istio-proxy sidecar в отдельных рабочих нагрузках происходит через аннотации. Поддерживаются следующие аннотации:
 
 ### Поддерживаемые аннотации
 
