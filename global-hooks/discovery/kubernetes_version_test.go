@@ -180,6 +180,10 @@ ports:
 		Expect(f.GoHookError.Error()).Should(ContainSubstring(`k8s versions not found`))
 	}
 
+	assertErrorPodsLTEndpoints := func() {
+		Expect(f.GoHookError.Error()).Should(MatchRegexp(`^Kube-apiserver Pods(.*) count less than kubernetes Endpoints(.*) count$`))
+	}
+
 	assertNoFile := func() {
 		_, err := os.ReadFile(kubeVersionFileName)
 		Expect(os.IsNotExist(err)).To(BeTrue())
@@ -712,12 +716,12 @@ status:
 
 				It("does not change k8s version with versions array with one version into values", func() {
 					assertValues(k8sVer, initVers)
-					assertErrorVersionNotFound()
+					assertErrorPodsLTEndpoints()
 				})
 
 				It("does not change k8s version into file", func() {
 					assertVersionInFile(k8sVer)
-					assertErrorVersionNotFound()
+					assertErrorPodsLTEndpoints()
 				})
 			})
 		}
