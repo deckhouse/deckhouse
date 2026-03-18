@@ -1,0 +1,118 @@
+diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
+index 703bf35fe..3cbde3c47 100644
+--- a/internal/ingress/controller/nginx.go
++++ b/internal/ingress/controller/nginx.go
+@@ -70,8 +70,9 @@ import (
+ )
+ 
+ const (
+-	tempNginxPattern = "nginx-cfg"
+-	emptyUID         = "-1"
++	tempNginxPattern    = "nginx-cfg"
++	validationTmpDirEnv = "VALIDATION_NGINX_TMPDIR"
++	emptyUID            = "-1"
+ )
+ 
+ // NewNGINXController creates a new NGINX Ingress controller.
+@@ -650,7 +651,11 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
+ 	if len(cfg) == 0 {
+ 		return fmt.Errorf("invalid NGINX configuration (empty)")
+ 	}
+-	tmpfile, err := os.CreateTemp(filepath.Join(os.TempDir(), "nginx"), tempNginxPattern)
++	tmpDir := filepath.Join(os.TempDir(), "nginx")
++	if validationTmpDir := os.Getenv(validationTmpDirEnv); validationTmpDir != "" {
++		tmpDir = validationTmpDir
++	}
++	tmpfile, err := os.CreateTemp(tmpDir, tempNginxPattern)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -659,7 +664,11 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
+ 	if err != nil {
+ 		return err
+ 	}
+-	out, err := n.command.Test(tmpfile.Name())
++	cfgPathForTest := tmpfile.Name()
++	if os.Getenv(validationTmpDirEnv) != "" {
++		cfgPathForTest = filepath.Join("/tmp", "nginx", filepath.Base(tmpfile.Name()))
++	}
++	out, err := n.command.Test(cfgPathForTest)
+ 	if err != nil {
+ 		// this error is different from the rest because it must be clear why nginx is not working
+ 		oe := fmt.Sprintf(`
+@@ -1129,11 +1138,15 @@ func (n *NGINXController) createLuaConfig(cfg *ngx_config.Configuration) error {
+ func cleanTempNginxCfg() error {
+ 	var files []string
+ 
+-	err := filepath.Walk(filepath.Join(os.TempDir(), "nginx"), func(path string, info os.FileInfo, err error) error {
++	tempDir := filepath.Join(os.TempDir(), "nginx")
++	if validationTmpDir := os.Getenv(validationTmpDirEnv); validationTmpDir != "" {
++		tempDir = validationTmpDir
++	}
++	err := filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
+ 		if err != nil {
+ 			return err
+ 		}
+-		if info.IsDir() && path != filepath.Join(os.TempDir(), "nginx") {
++		if info.IsDir() && path != tempDir {
+ 			return filepath.SkipDir
+ 		}
+ 
+diff --git a/internal/ingress/controller/util.go b/internal/ingress/controller/util.go
+index 776440658..1700036ac 100644
+--- a/internal/ingress/controller/util.go
++++ b/internal/ingress/controller/util.go
+@@ -98,9 +98,10 @@ func rlimitMaxNumFiles() int {
+ }
+ 
+ const (
+-	defBinary  = "/usr/bin/nginx"
+-	cfgPath    = "/etc/nginx/nginx.conf"
+-	luaCfgPath = "/etc/nginx/lua/cfg.json"
++	defBinary        = "/usr/bin/nginx"
++	defSandboxBinary = "/usr/bin/sandbox"
++	cfgPath          = "/etc/nginx/nginx.conf"
++	luaCfgPath       = "/etc/nginx/lua/cfg.json"
+ )
+ 
+ // NginxExecTester defines the interface to execute
+@@ -112,14 +113,16 @@ type NginxExecTester interface {
+ 
+ // NginxCommand stores context around a given nginx executable path
+ type NginxCommand struct {
+-	Binary string
++	Binary        string
++	SandboxBinary string
+ }
+ 
+ // NewNginxCommand returns a new NginxCommand from which path
+ // has been detected from environment variable NGINX_BINARY or default
+ func NewNginxCommand() NginxCommand {
+ 	command := NginxCommand{
+-		Binary: defBinary,
++		Binary:        defBinary,
++		SandboxBinary: defSandboxBinary,
+ 	}
+ 
+ 	binary := os.Getenv("NGINX_BINARY")
+@@ -142,8 +145,19 @@ func (nc NginxCommand) ExecCommand(args ...string) *exec.Cmd {
+ 
+ // Test checks if config file is a syntax valid nginx configuration
+ func (nc NginxCommand) Test(cfg string) ([]byte, error) {
++	cmdArgs := []string{"-c", cfg, "-t", "-e", "/dev/null"}
++	switch os.Getenv("VALIDATION_SANDBOX_MODE") {
++	case "Full":
++		sandboxArgs := append([]string{"--", "/usr/bin/unshare", "--map-current-user", "-n", "-R", "/chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
++		//nolint:gosec // Ignore G204 error
++		return exec.Command(nc.SandboxBinary, sandboxArgs...).CombinedOutput()
++	case "Standard":
++		standardArgs := append([]string{"-S", "64535", "-R", "/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
++		//nolint:gosec // Ignore G204 error
++		return exec.Command("/usr/bin/unshare", standardArgs...).CombinedOutput()
++	}
+ 	//nolint:gosec // Ignore G204 error
+-	return exec.Command(nc.Binary, "-c", cfg, "-t", "-e", "/dev/null").CombinedOutput()
++	return exec.Command(nc.Binary, cmdArgs...).CombinedOutput()
+ }
+ 
+ // getSysctl returns the value for the specified sysctl setting

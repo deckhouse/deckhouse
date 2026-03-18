@@ -3,7 +3,8 @@
 {{- if and $context.Values.ingressNginx.internal $context.Values.ingressNginx.internal.ingressControllers }}
   {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
     {{- $controllerVersion := ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
-    {{- if eq $controllerVersion "1.14" }}
+    {{- $validationSandboxMode := ($crd.spec.validationSandboxMode | default "Disabled") }}
+    {{- if and (eq $controllerVersion "1.14") (ne $validationSandboxMode "Disabled") }}
       {{- $_ := set $validatorFullState "enabled" true }}
     {{- end }}
   {{- end }}
@@ -16,6 +17,16 @@ metadata:
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 automountServiceAccountToken: false
+{{- if index $validatorFullState "enabled" }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: validator-full
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+automountServiceAccountToken: false
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -121,7 +132,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: validator
+    name: validator-full
     namespace: d8-ingress-nginx
 roleRef:
   apiGroup: rbac.authorization.k8s.io
