@@ -138,6 +138,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-monitoring:prometheus",
 	"system:serviceaccount:d8-monitoring:trickster",
 	"system:serviceaccount:d8-monitoring:x509-certificate-exporter",
+	"system:serviceaccount:d8-multitenancy-manager:cluster-objects-controller",
 	"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager",
 	"system:serviceaccount:d8-openvpn:openvpn",
 	"system:serviceaccount:d8-operator-prometheus:operator-prometheus",

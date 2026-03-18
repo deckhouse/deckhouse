@@ -5,6 +5,7 @@ go 1.25.6
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/Masterminds/sprig/v3 v3.3.0
+	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/clarketm/json v1.15.7
 	github.com/cloudflare/cfssl v1.6.5
@@ -96,6 +97,7 @@ require k8s.io/klog v1.0.0 // indirect
 require (
 	cel.dev/expr v0.19.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
+	github.com/PaesslerAG/gval v1.0.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
