@@ -5,6 +5,7 @@ metadata:
   name: registry-modules-watcher
   annotations:
     "werf.io/replicas-on-creation": "1"
+    "pod-reloader.deckhouse.io/auto": "true"
   labels:
     app: registry-modules-watcher
 spec:
