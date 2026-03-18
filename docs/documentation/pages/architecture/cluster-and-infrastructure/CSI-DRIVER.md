@@ -69,15 +69,15 @@ The CSI driver consists of the following components:
 Some sidecar containers from the external controller list (for example, snapshotter) may be absent in the Deployment of specific `cloud-provider-*` modules if the corresponding functionality is not supported by the CSI driver implementation.
 {% endalert %}
 
-## Module interactions
+## Driver interactions
 
-The module interacts with the following components:
+The driver interacts with the following components:
 
 1. **Kube-apiserver**: Monitors PersistentVolumeClaim, VolumeAttachment, and VolumeSnapshotContent resources.
 
 2. **Cloud infrastructure** (or a virtualization system): Creates and deletes volumes, attaches and detaches volumes from nodes, and manages snapshots.
 
-The following external components interact with the module:
+The following external components interact with the driver:
 
 1. [Kubelet](../kubernetes-and-scheduling/kubelet.html):
 
