@@ -233,44 +233,59 @@ EOF
 bb-sync-file "${igniter_start_sh}" - << EOF
 #!/bin/bash
 
+# Unset all registry env
 for var in \$(compgen -e REGISTRY); do
     unset \$var
 done
 
-check_and_run() {
+start_service() {
     service_name=\$1
-    command=\$2
-    log_path=\$3
+    log_path=\$2
+    shift 2
+    command=(\$@)
 
-    if pgrep -x "\$service_name" > /dev/null; then
-        echo "\$service_name is already running."
+    if pgrep -x "\${service_name}" > /dev/null; then
+        echo "\${service_name} is already running."
     else
-        \$command > \$log_path 2>&1 &
-        echo "\$service_name started."
+        "\${command[@]}" > "\${log_path}" 2>&1 &
+        echo "\${service_name} started."
     fi
 }
 
-echo "Awaiting the startup of the registry storage and Docker registry..."
-max_attempts=30
-docker_registry_started=false
+liveness_probe() {
+    address=\$1
+    ca_path=\$2
+    max_attempts=30
 
-check_and_run "ign-auth" "/opt/deckhouse/bin/ign-auth -logtostderr \"${auth_path}/config.yaml\"" "${log_path}/auth.log"
-check_and_run "ign-registry" "/opt/deckhouse/bin/ign-registry serve \"${distribution_path}/config.yaml\"" "${log_path}/distribution.log"
+    for (( attempt=1; attempt <= \${max_attempts}; attempt++ )); do
+        response=\$(d8-curl --cacert "\${ca_path}" -s -o /dev/null -w "%{http_code}" "\${address}")
+        if [[ "\${response}" == "200" ]]; then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
 
-for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
-    response=\$(d8-curl --cacert "${pki_path}/ca.crt" -s -o /dev/null -w "%{http_code}" https://${discovered_node_ip}:5001)
-    if [[ "\$response" == "200" ]]; then
-        docker_registry_started=true
-        break
-    fi
-    sleep 1
-done
-if [ "\$docker_registry_started" = false ]; then
-    echo "Failed to confirm the startup of Docker registry after \$max_attempts attempts. Please check the logs at \"${log_path}/distribution.log\""
+# auth
+echo "Awaiting the startup of registry auth..."
+start_service "ign-auth" "${log_path}/auth.log" /opt/deckhouse/bin/ign-auth -logtostderr "${auth_path}/config.yaml"
+
+if ! liveness_probe "https://127.0.0.1:5051" "${pki_path}/ca.crt"; then
+    echo 'Failed to confirm the startup of registry auth. Please check the logs at "${log_path}/auth.log"'
     exit 1
 fi
 
-echo "All services are starting in the background and logs are being written to \"${log_path}\""
+# distribution
+echo "Awaiting the startup of registry distribution..."
+start_service "ign-registry" "${log_path}/distribution.log" /opt/deckhouse/bin/ign-registry serve "${distribution_path}/config.yaml"
+
+if ! liveness_probe "https://${discovered_node_ip}:5001" "${pki_path}/ca.crt"; then
+    echo 'Failed to confirm the startup of registry distribution. Please check the logs at "${log_path}/distribution.log"'
+    exit 1
+fi
+
+echo "All services are starting in the background. Logs are being written to ${log_path}"
 EOF
 
 # Prepare stop script
@@ -279,18 +294,19 @@ bb-sync-file "${igniter_stop_sh}" - << EOF
 
 stop_service() {
     service_name=\$1
-    pkill -x \$service_name || true
+    pkill -x "\${service_name}" || true
+    
     wait_time=0
-    while ps -C \$service_name > /dev/null; do
+    while pgrep -x "\${service_name}" > /dev/null; do
         sleep 1
         ((wait_time++))
         if [ \$wait_time -gt 20 ]; then
-            echo "Process \$service_name has not completed in 20 seconds, SIGKILL is being sent..."
-            pkill -9 -x \$service_name
+            echo "Process \${service_name} has not completed in 20 seconds, SIGKILL is being sent..."
+            pkill -9 -x "\${service_name}"
             break
         fi
     done
-    echo "\$service_name stopped"
+    echo "\${service_name} stopped"
 }
 
 stop_service "ign-registry"
