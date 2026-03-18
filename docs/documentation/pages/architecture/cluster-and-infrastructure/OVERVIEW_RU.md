@@ -14,16 +14,16 @@ extractedLinksMax: 0
 
 В разделе описаны:
 
-* Механизмы управления всеми используемыми в DKP типами узлов, а также [гибридными группами узлов и кластерами](hybrid-nodegroups-and-clusters.html).
-* Типовая архитектура [CSI-драйвера](csi-driver.html), используемая в DKP.
-* Служба [Bashible](bashible.html), которая является ключевым компонентом подсистемы Cluster & Infrastructure. Bashible используется модулем [`node-manager`](/modules/node-manager/) для управления конфигурацией узлов.
+* Механизмы управления всеми используемыми в DKP типами узлов, а также [гибридными группами узлов и кластерами](node-management/hybrid-nodegroups-and-clusters.html).
+* Типовая архитектура [CSI-драйвера](infrastructure/csi-driver.html), используемая в DKP.
+* Служба [bashible](node-management/bashible.html), которая является ключевым компонентом подсистемы Cluster & Infrastructure. Bashible используется модулем [`node-manager`](/modules/node-manager/) для управления конфигурацией узлов.
 
 В подсистему Cluster & Infrastructure также входят следующие модули:
 
 * [`chrony`](/modules/chrony/) — обеспечивает синхронизацию времени на всех узлах кластера;
 * [`registry-packages-proxy`](/modules/registry-packages-proxy/) — предоставляет внутренний прокси-сервер для пакетов хранилища образов контейнеров;
 * [`terraform-manager`](/modules/terraform-manager/) — предоставляет инструменты для работы с состоянием Terraform в Kubernetes-кластере;
-* модули поддерживаемых DKP облачных провайдеров:
+* модули облачных провайдеров, поддерживаемых DKP:
 
   * [`cloud-provider-aws`](/modules/cloud-provider-aws/);
   * [`cloud-provider-azure`](/modules/cloud-provider-azure/);
@@ -37,5 +37,5 @@ extractedLinksMax: 0
   * [`cloud-provider-yandex`](/modules/cloud-provider-yandex/);
   * [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/).
 
-В подразделе на данный момент описан только модуль [`cloud-provider-dvp`](/modules/cloud-provider-dvp/).
+В подразделе на данный момент описан только модуль [`cloud-provider-dvp`](cloud-providers/cloud-provider-dvp.html).
 Материалы по модулям остальных облачных провайдеров будут добавляться по мере готовности.

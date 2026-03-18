@@ -1,6 +1,6 @@
 ---
 title: Terraform-manager module
-permalink: en/architecture/cluster-and-infrastructure/terraform-manager.html
+permalink: en/architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
 search: terraform manager, terraform
 description: Architecture of the terraform-manager module in Deckhouse Kubernetes Platform for managing Terraform state and cluster infrastructure resources.
 ---
@@ -21,7 +21,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`terraform-manager`](/modules/terraform-manager/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Terraform-manager architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-terraform-manager.png)
+![Terraform-manager architecture](../../../../images/architecture/cluster-and-infrastructure/c4-l2-terraform-manager.png)
 
 ## Module components
 
@@ -57,4 +57,4 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
-* **Prometheus-main**: Collects metrics from **Terraform-auto-converger** and **Terraform-state-exporter**.
+* **prometheus-main**: Collects metrics from terraform-auto-converger and terraform-state-exporter.
