@@ -6,23 +6,18 @@ lang: en
 layout: sidebar-guides
 ---
 
-This document describes the procedure for changing the network plugin (CNI) in a Deckhouse Kubernetes Platform cluster. **This guide is applicable for DKP version 1.76 and above.** The tool used in Deckhouse allows performing the automated migration (e.g., from Flannel to Cilium) with minimal application downtime and without a full restart of the cluster nodes.
-
-For DKP version 1.75 and earlier, use the [Switching CNI from Flannel or Simple bridge to Cilium](/products/kubernetes-platform/documentation/v1/admin/configuration/network/internal/flannel-simple-to-cilium.html) guide.
+This document describes the procedure for changing the network plugin (CNI) in a Deckhouse Kubernetes Platform cluster. The tool used in Deckhouse allows performing the automated migration (e.g., from Flannel to Cilium) with minimal application downtime and without a full restart of the cluster nodes.
 
 {% alert level="danger" %}
-
+* This guide is applicable for DKP version 1.76 and above. For DKP version 1.75 and earlier, use the [Switching CNI from Flannel or Simple bridge to Cilium](/products/kubernetes-platform/documentation/v1/admin/configuration/network/internal/flannel-simple-to-cilium.html) guide.
 * The tool is not intended for switching to any (third-party) CNI.
-* During the migration process, the target CNI module (`ModuleConfig.spec.enabled: true`) will be automatically enabled, which must be pre-configured by the user/administrator.
-
+* During the migration process, the target CNI module (`ModuleConfig.spec.enabled: true`) will be automatically enabled, which must be pre-configured by the cluster administrator.
 {% endalert %}
 
 {% alert level="warning" %}
-
 * During the migration process, all pods in the cluster using the network (in PodNetwork) created by the current CNI will be restarted. This will cause an interruption in service availability. To minimize the risks of losing critical data, it is highly recommended to stop the operation of the most critical application services yourself before carrying out the work.
 * It is recommended to carry out work during an agreed maintenance window.
 * Before carrying out work, it is necessary to disable external cluster management systems (CI/CD, GitOps, ArgoCD, etc.) that may conflict with the process (e.g., trying to restore deleted pods prematurely or rolling back settings). Also, ensure that the cluster management system does not enable the old CNI module.
-
 {% endalert %}
 
 Supported CNI switching modes:
