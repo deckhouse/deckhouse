@@ -273,104 +273,149 @@ bb-sync-file "${igniter_start_sh}" - << EOF
 
 # Unset all registry env
 for var in \$(compgen -e REGISTRY); do
-    unset \${var}
+    unset "\${var}"
 done
 
-start_service() {
+start_and_wait() {
     local log_path=\${1}
     local bin_path=\${2}
     shift 2
     local args=("\$@")
 
-    if pgrep -f "\${bin_path}" > /dev/null; then
+    local sleep_interval=1
+    local max_attempts=20
+
+    echo "Starting and waiting background process: \${bin_path}"
+
+    if pgrep -f "\${bin_path}" > /dev/null 2>&1; then
         echo "\${bin_path}: already running"
-    else
-        "\${bin_path}" "\${args[@]}" > "\${log_path}" 2>&1 &
-        echo "\${bin_path}: started"
+        return 0
     fi
+
+    "\${bin_path}" "\${args[@]}" > "\${log_path}" 2>&1 &
+
+    for ((i=1; i<=max_attempts; i++)); do
+        if [[ \${i} -ne 1 ]]; then
+            sleep \${sleep_interval}
+        fi
+
+        echo "Attempt: \${i}/\${max_attempts}"
+        if pgrep -f "\${bin_path}" > /dev/null 2>&1; then
+            echo "\${bin_path}: started"
+            return 0
+        fi
+    done
+
+    echo "\${bin_path}: failed to start (timeout \${sleep_interval}s * \${max_attempts})"
+    return 1
 }
 
 liveness_probe() {
     local address=\${1}
     local ca_path=\${2}
-    local max_attempts=30
-    local sleep_interval=1
-    local count=0
 
-    while [[ \${count} -lt \${max_attempts} ]]; do
-        if [[ \${count} -ne 0 ]]; then
-            echo "Waiting for \${address} (\${count}/\${max_attempts})"
+    local sleep_interval=1
+    local max_attempts=30
+
+    echo "Waiting liveness probe: \${address}"
+
+    for ((i=1; i<=max_attempts; i++)); do
+        if [[ \${i} -ne 1 ]]; then
+            echo "Attempt: \${i}/\${max_attempts}"
             sleep \${sleep_interval}
         fi
 
-        local response=\$(d8-curl --cacert "\${ca_path}" -s -o /dev/null -w "%{http_code}" "\${address}")
+        local response=\$(d8-curl --cacert "\${ca_path}" -s -o /dev/null -w "%{http_code}" "\${address}" 2>/dev/null)
         if [[ "\${response}" == "200" ]]; then
             echo "\${address} is reachable"
             return 0
         fi
-
-        count=\$((count + 1))
     done
 
-    echo "\${address} not reachable (timeout \${sleep_interval}s * \${max_attempts})"
+    echo "\${address}: not reachable (timeout \${sleep_interval}s * \${max_attempts})"
     return 1
 }
 
-# auth
 echo "Starting registry auth..."
-start_service "${log_path}/auth.log" /opt/deckhouse/bin/ign-auth -logtostderr "${auth_path}/config.yaml"
-
+if ! start_and_wait "${log_path}/auth.log" /opt/deckhouse/bin/ign-auth -logtostderr "${auth_path}/config.yaml"; then
+    echo "ERROR: registry auth failed to start, see ${log_path}/auth.log"
+    exit 1
+fi
 if ! liveness_probe "https://127.0.0.1:5051" "${pki_path}/ca.crt"; then
-    echo "Registry auth failed, see ${log_path}/auth.log"
+    echo "ERROR: registry auth liveness probe failed, see ${log_path}/auth.log"
     exit 1
 fi
 
-# distribution
 echo "Starting registry distribution..."
-start_service "${log_path}/distribution.log" /opt/deckhouse/bin/ign-registry serve "${distribution_path}/config.yaml"
-
+if ! start_and_wait "${log_path}/distribution.log" /opt/deckhouse/bin/ign-registry serve "${distribution_path}/config.yaml"; then
+    echo "ERROR: registry distribution failed to start, see ${log_path}/distribution.log"
+    exit 1
+fi
 if ! liveness_probe "https://${discovered_node_ip}:5001" "${pki_path}/ca.crt"; then
-    echo "Registry distribution failed, see ${log_path}/distribution.log"
+    echo "ERROR: registry distribution liveness probe failed, see ${log_path}/distribution.log"
     exit 1
 fi
 
-echo "Services started, logs: ${log_path}"
+echo "All services started successfully, logs: ${log_path}"
 EOF
 
 # Prepare stop script
 bb-sync-file "${igniter_stop_sh}" - << EOF
 #!/bin/bash
 
-stop_service() {
+kill_and_wait() {
     local bin_path=\${1}
-    local max_attempts=20
+
+    echo "Stopping and waiting background process: \${bin_path}"
+
+    pkill -f "\${bin_path}" 2>/dev/null || true
+
     local sleep_interval=1
-    local count=0
-
-    pkill -f "\${bin_path}" || true
-
-    while [[ \${count} -lt \${max_attempts} ]]; do
-        if [[ \${count} -ne 0 ]]; then
-            echo "Waiting for \${bin_path} (\${count}/\${max_attempts})"
+    local max_attempts=20
+    for ((i=1; i<=max_attempts; i++)); do
+        if [[ \${i} -ne 1 ]]; then
+            echo "Attempt: \${i}/\${max_attempts}"
             sleep \${sleep_interval}
         fi
 
-        if ! pgrep -f "\${bin_path}" > /dev/null; then
+        if ! pgrep -f "\${bin_path}" > /dev/null 2>&1; then
             echo "\${bin_path}: stopped"
             return 0
         fi
-
-        count=\$((count + 1))
     done
 
-    echo "\${bin_path}: timeout, sending SIGKILL"
-    pkill -9 -f "\${bin_path}" || true
-    echo "\${bin_path}: stopped"
-    return 0
+    echo "\${bin_path}: timeout, sending SIGKILL and wait"
+    pkill -9 -f "\${bin_path}" 2>/dev/null || true
+
+    local sleep_interval=1
+    local max_attempts=5
+    for ((i=1; i<=max_attempts; i++)); do
+        if [[ \${i} -ne 1 ]]; then
+            echo "Attempt: \${i}/\${max_attempts}"
+            sleep \${sleep_interval}
+        fi
+
+        if ! pgrep -f "\${bin_path}" > /dev/null 2>&1; then
+            echo "\${bin_path}: stopped (forced)"
+            return 0
+        fi
+    done
+
+    echo "\${bin_path}: still running after SIGKILL."
+    return 1
 }
 
-stop_service "/opt/deckhouse/bin/ign-registry"
-stop_service "/opt/deckhouse/bin/ign-auth"
+echo "Stopping registry distribution..."
+if ! kill_and_wait "/opt/deckhouse/bin/ign-registry"; then
+    echo "ERROR: Failed to stop registry distribution, see ${log_path}/distribution.log"
+    exit 1
+fi
+
+echo "Stopping registry auth..."
+if ! kill_and_wait "/opt/deckhouse/bin/ign-auth"; then
+    echo "ERROR: Failed to stop registry auth, see ${log_path}/auth.log"
+    exit 1
+fi
 
 echo "All services stopped"
 EOF

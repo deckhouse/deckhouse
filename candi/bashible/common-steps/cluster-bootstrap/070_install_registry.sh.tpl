@@ -21,23 +21,22 @@ check_container_running() {
   local container_name=${1}
   local max_attempts=20
   local sleep_interval=10
-  local count=0
 
-  while [[ ${count} -lt ${max_attempts} ]]; do
-    if [[ ${count} -ne 0 ]]; then
-      echo "Waiting for ${container_name} (${count}/${max_attempts})"
+  echo "Checking container: ${container_name}"
+
+  for ((i=1; i<=max_attempts; i++)); do
+    if [[ ${i} -ne 1 ]]; then
+      echo "Attempt: ${i}/${max_attempts}"
       sleep ${sleep_interval}
     fi
 
-    if crictl ps -o json | jq -e --arg name "${container_name}" '.containers[] | select(.metadata.name == $name and .state == "CONTAINER_RUNNING")' > /dev/null; then
+    if crictl ps -o json | jq -e --arg name "${container_name}" '.containers[] | select(.metadata.name == $name and .state == "CONTAINER_RUNNING")' > /dev/null 2>&1; then
       echo "${container_name}: running"
       return 0
     fi
-
-    count=$((count + 1))
   done
 
-  echo "${container_name} not running (timeout ${sleep_interval}s * ${max_attempts})"
+  echo "${container_name}: not running (timeout ${sleep_interval}s * ${max_attempts})"
   exit 1
 }
 
