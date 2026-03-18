@@ -257,6 +257,13 @@ tests:
     object: test_samples/security_policy_exceptions/pods/028-allowed-by-exception-hostport-despite-empty-ranges.yaml
     assertions:
     - violations: no
+  - name: 024-049-allowed-hostnetwork-with-hostport-only-exception
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/024-allow-hostport-only.yaml
+    object: test_samples/security_policy_exceptions/pods/049-allowed-hostnetwork-with-hostport-only-exception.yaml
+    assertions:
+    - violations: no
   - name: 043-disallowed-no-exception-hostnetwork-true
     inventory:
     - ../common/test_samples/ns.yaml
