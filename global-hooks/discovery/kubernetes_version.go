@@ -298,8 +298,7 @@ func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, 
 		}
 
 		msg := fmt.Sprintf("Kube-apiserver Pods(%v) count less than kubernetes Endpoints(%v) count", podsCnt, endpointsCnt)
-		input.Logger.Warn(msg)
-		return nil, nil
+		return nil, errors.New(msg)
 	}
 
 	return endpoints, nil
