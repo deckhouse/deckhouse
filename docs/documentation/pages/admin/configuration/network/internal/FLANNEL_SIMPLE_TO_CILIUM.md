@@ -35,6 +35,19 @@ To perform the migration, follow these steps:
    d8 k -n d8-cni-cilium get pods
    ```
 
+   Example output:
+
+   ```console
+   NAME                      READY STATUS  RESTARTS    AGE
+   agent-5zzfv               2/2   Running 5 (23m ago) 26m
+   agent-gqb2b               2/2   Running 5 (23m ago) 26m
+   agent-wtv4p               2/2   Running 5 (23m ago) 26m
+   operator-856d69fd49-mlglv 2/2   Running 0           26m
+   safe-agent-updater-26qpk  3/3   Running 0           26m
+   safe-agent-updater-qlbrh  3/3   Running 0           26m
+   safe-agent-updater-wjjr5  3/3   Running 0           26m
+   ```
+
    If the Cilium agent pods do not transition to the `Ready` state:
 
    - Save the `d8-kube-proxy` manifest:
@@ -57,8 +70,6 @@ To perform the migration, follow these steps:
      d8 k -n kube-system delete pod -l k8s-app=kube-proxy
      ```
 
-1. Disable `cni-simple-bridge` or `cni-flannel`. Perform this step only after the Cilium pods have reached the `Ready` state.
-
 1. Save the DaemonSet manifest:
 
    ```shell
@@ -67,18 +78,18 @@ To perform the migration, follow these steps:
    d8 k -n d8-cni-flannel get ds flannel -o yaml > flannel.yaml
    ```
 
-1. Delete the `validating webhook` (if present):
-
-   ```shell
-   d8 k delete validatingwebhookconfigurations.admissionregistration.k8s.io d8-deckhouse-validating-webhook-handler-hooks
-   ```
-
-1. Disable the corresponding module:
+1. Disable `cni-simple-bridge` or `cni-flannel`. Perform this step only after the Cilium pods have reached the `Ready` state:
 
    ```shell
    d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-simple-bridge
    # or
    d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-flannel
+   ```
+
+1. Delete the `validating webhook` (if present):
+
+   ```shell
+   d8 k delete validatingwebhookconfigurations.admissionregistration.k8s.io d8-deckhouse-validating-webhook-handler-hooks
    ```
 
 1. Delete the namespace of the old CNI (if it was not removed automatically):
