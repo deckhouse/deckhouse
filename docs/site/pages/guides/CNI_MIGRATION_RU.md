@@ -8,6 +8,8 @@ layout: sidebar-guides
 
 Документ описывает процедуру смены сетевого плагина (CNI) в кластере Deckhouse Kubernetes Platform. **Данная инструкция применима для DKP версии 1.76 и выше.** Используемый в DKP инструмент позволяет выполнить автоматизированную миграцию (например, с Flannel на Cilium) с минимальным простоем приложений и без полной перезагрузки узлов кластера.
 
+Для DKP версии 1.75 и ниже используйте инструкцию [«Переключение CNI с Flannel или Simple bridge на Cilium»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/internal/flannel-simple-to-cilium.html).
+
 {% alert level="danger" %}
 
 * Инструмент не предназначен для переключения на любой (сторонний) CNI.
@@ -146,149 +148,6 @@ d8 k delete cnimigration migration-to-cilium
 ```
 
 Это действие даст DKP сигнал удалить все ранее созданные ресурсы в кластере.
-
-{% offtopic title="Устаревший способ переключения CNI c Flannel на Cilium..." %}
-
-1. Выключите [модуль `kube-proxy`](/modules/kube-proxy/):
-
-   ```shell
-   d8 k apply -f - << EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: kube-proxy
-   spec:
-     enabled: false
-   EOF
-   ```
-
-1. Включите [модуль `cni-cilium`](/modules/cni-cilium/):
-
-   ```shell
-   d8 k create -f - << EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: cni-cilium
-   spec:
-     version: 1
-     enabled: true
-     settings:
-     tunnelMode: VXLAN
-   EOF
-   ```
-
-1. Убедитесь, что все агенты Cilium перешли в статус `Running`:
-
-   ```shell
-   d8 k get po -n d8-cni-cilium
-   ```
-
-   Пример вывода:
-
-   ```console
-   NAME                      READY STATUS  RESTARTS    AGE
-   agent-5zzfv               2/2   Running 5 (23m ago) 26m
-   agent-gqb2b               2/2   Running 5 (23m ago) 26m
-   agent-wtv4p               2/2   Running 5 (23m ago) 26m
-   operator-856d69fd49-mlglv 2/2   Running 0           26m
-   safe-agent-updater-26qpk  3/3   Running 0           26m
-   safe-agent-updater-qlbrh  3/3   Running 0           26m
-   safe-agent-updater-wjjr5  3/3   Running 0           26m
-   ```
-
-1. Перезагрузите master-узлы.
-
-1. Перезагрузите остальные узлы кластера.
-
-   > Если агенты Cilium не переходят в статус `Running`, перезагрузите проблемные узлы.
-
-1. Выключите [модуль `cni-flannel`](/modules/cni-flannel/):
-
-   ```shell
-   d8 k apply -f - << EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: cni-flannel
-   spec:
-     enabled: false
-   EOF
-   ```
-
-1. Включите [модуль `node-local-dns`](/modules/node-local-dns/):
-
-   ```shell
-   d8 k apply -f - << EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: node-local-dns
-   spec:
-     enabled: true
-   EOF
-   ```
-
-   После включения модуля дождитесь перехода всех агентов Cilium в состояние `Running`.
-
-1. Убедитесь, что переключение CNI с Flannel на Cilium прошло успешно.
-
-Чтобы убедиться в том, что переключение CNI с Flannel на Cilium прошло успешно:
-
-1. Проверьте очередь Deckhouse.
-
-   * В случае одного master-узла:
-
-     ```shell
-     d8 system queue list
-     ```
-
-   * В случае мультимастерной инсталляции:
-
-     ```shell
-     d8 system queue list
-     ```
-
-1. Проверьте агенты Cilium. Они должны быть в статусе `Running`:
-
-   ```shell
-   d8 k get po -n d8-cni-cilium
-   ```
-
-   Пример вывода:
-
-   ```console
-   NAME        READY STATUS  RESTARTS    AGE
-   agent-5zzfv 2/2   Running 5 (23m ago) 26m
-   agent-gqb2b 2/2   Running 5 (23m ago) 26m
-   agent-wtv4p 2/2   Running 5 (23m ago) 26m
-   ```
-
-1. Проверьте, что модуль `cni-flannel` выключен:
-
-   ```shell
-   d8 k get modules | grep flannel
-   ```
-
-   Пример вывода:
-
-   ```console
-   cni-flannel                         35     Disabled    Embedded
-   ```
-
-1. Проверьте, что модуль `node-local-dns` включен:
-
-   ```shell
-   d8 k get modules | grep node-local-dns
-   ```
-
-   Пример вывода:
-
-   ```console
-   node-local-dns                      350    Enabled     Embedded     Ready
-   ```
-
-{% endofftopic %}
 
 ## Устранение неполадок
 
