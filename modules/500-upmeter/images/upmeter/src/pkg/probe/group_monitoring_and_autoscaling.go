@@ -60,7 +60,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			group:  groupMonitoringAndAutoscaling,
 			probe:  "observability-recording",
 			check:  "observability-rules-group-recording",
-			period: time.Minute,
+			period: 10 * time.Minute,
 			config: checker.ObservabilityRulesGroupRecordingLifecycle{
 				Access:           access,
 				PreflightChecker: controlPlanePinger,
@@ -174,7 +174,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			group:  groupMonitoringAndAutoscaling,
 			probe:  "alertmanager",
 			check:  "observability-rules-group-alert",
-			period: time.Minute,
+			period: 10 * time.Minute,
 			config: checker.ObservabilityRulesGroupAlertLifecycle{
 				Access:           access,
 				PreflightChecker: controlPlanePinger,
