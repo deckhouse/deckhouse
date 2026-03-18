@@ -296,10 +296,10 @@ start_and_wait() {
 
     for ((i=1; i<=max_attempts; i++)); do
         if [[ \${i} -ne 1 ]]; then
+            echo "Attempt: \${i}/\${max_attempts}"
             sleep \${sleep_interval}
         fi
 
-        echo "Attempt: \${i}/\${max_attempts}"
         if pgrep -f "\${bin_path}" > /dev/null 2>&1; then
             echo "\${bin_path}: started"
             return 0
