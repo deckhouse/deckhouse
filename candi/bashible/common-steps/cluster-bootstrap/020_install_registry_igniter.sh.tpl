@@ -14,6 +14,47 @@
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
 
+remove_pod() {
+    pod_prefix="$1"
+
+    if [ -z "${pod_prefix}" ]; then
+        echo "Pod prefix is empty, skipping"
+        return 0
+    fi
+
+    if ! command -v crictl > /dev/null 2>&1; then
+        echo "Crictl not found, skipping"
+        return 0
+    fi
+
+    if ! crictl info > /dev/null 2>&1; then
+        echo "Containerd not configured or not running, skipping"
+        return 0
+    fi
+
+    pods=$(crictl pods -o json | jq -r --arg PREFIX "${pod_prefix}" '
+        .items[]? | 
+        select(.metadata.name | startswith($PREFIX)) | 
+        .id
+    ' 2>/dev/null)
+
+    if [ -z "${pods}" ]; then
+        echo "  No pods found with prefix '${pod_prefix}', skipping"
+        return 0
+    fi
+
+    for pod in $pods; do
+        if crictl stopp "${pod}" > /dev/null 2>&1; then
+            echo "${pod} pod stopped"
+        fi
+        if crictl rmp "${pod}" > /dev/null 2>&1; then
+            echo "${pod} pod removed"
+        fi
+    done
+
+    echo "All pods with prefix '$pod_prefix' have been removed"
+}
+
 bb-package-install "module-registry-auth:{{ .images.registry.dockerAuth }}" "module-registry-distribution:{{ .images.registry.dockerDistribution }}" "cfssl:{{ .images.registrypackages.cfssl165 }}"
 
 # Prepare proxy envs
@@ -33,6 +74,7 @@ igniter_stop_sh="${base_path}/stop_registry_igniter.sh"
 igniter_start_sh="${base_path}/start_registry_igniter.sh"
 
 static_pod_file="/etc/kubernetes/manifests/registry-nodeservices.yaml"
+static_pod_name="registry-nodeservices"
 
 # Create the directories
 mkdir -p "${base_path}" \
@@ -318,8 +360,13 @@ EOF
 chmod a+x "${igniter_stop_sh}"
 chmod a+x "${igniter_start_sh}"
 
-# Switching registry from static pod to igniter
+# Switching static pod to igniter
+
+# Stop static pod
 rm -f "${static_pod_file}"
+remove_pod "${static_pod_name}"
+
+# Start igniter
 bash "${igniter_stop_sh}"
 bash "${igniter_start_sh}"
 
