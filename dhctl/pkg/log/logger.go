@@ -35,11 +35,13 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	ext_logger "github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
 var (
 	defaultLogger Logger
-	emptyLogger   Logger = &SilentLogger{}
+	emptyLogger   Logger         = &SilentLogger{}
+	loggerWrapper *LoggerWrapper = &LoggerWrapper{InternalLogger: defaultLogger}
 )
 
 func init() {
@@ -59,6 +61,15 @@ type debugLogWriter struct {
 
 type klogWriterWrapper struct {
 	logger Logger
+}
+
+type LoggerWrapper struct {
+	InternalLogger Logger
+	ExternalLogger ext_logger.Logger
+}
+
+func (w *LoggerWrapper) SetExternal(l ext_logger.Logger) {
+	w.ExternalLogger = l
 }
 
 func newKlogWriterWrapper(logger Logger) *klogWriterWrapper {
@@ -617,6 +628,10 @@ func GetProcessLogger() ProcessLogger {
 
 func GetDefaultLogger() Logger {
 	return defaultLogger
+}
+
+func GetDefaultLoggerWrapper() *LoggerWrapper {
+	return loggerWrapper
 }
 
 func GetSilentLogger() Logger {
