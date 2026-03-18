@@ -685,7 +685,7 @@ ansible -m shell -a "uptime" -i inventory.yaml all
 
    Пример вывода:
 
-   ```txt
+   ```console
     {"size":"58G","storageClass":"linstor-thick-data-r1"}
    ```
 
@@ -698,7 +698,7 @@ ansible -m shell -a "uptime" -i inventory.yaml all
 
    Пример вывода:
 
-   ```txt
+   ```console
    moduleconfig.deckhouse.io/virtualization patched
    ```
 
@@ -710,7 +710,7 @@ ansible -m shell -a "uptime" -i inventory.yaml all
 
    Пример вывода:
 
-   ```txt
+   ```console
    {"size":"59G","storageClass":"linstor-thick-data-r1"}
    ```
 
@@ -722,7 +722,7 @@ ansible -m shell -a "uptime" -i inventory.yaml all
 
    Пример вывода:
 
-   ```txt
+   ```console
    NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
    dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
    ```
@@ -893,19 +893,19 @@ Golden image — это предварительно настроенный об
    Альтернативно, создайте `ClusterVirtualImage`, чтобы образ был доступен на уровне кластера для всех проектов:
 
    ```bash
-    d8 k apply -f -<<EOF
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: <image-name>
-    spec:
-      dataSource:
-        type: ObjectRef
-        objectRef:
-          kind: VirtualDisk
-          name: <source-disk-name>
-          namespace: <namespace>
-    EOF
+   d8 k apply -f -<<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: <image-name>
+   spec:
+     dataSource:
+       type: ObjectRef
+       objectRef:
+         kind: VirtualDisk
+         name: <source-disk-name>
+         namespace: <namespace>
+   EOF
    ```
 
 1. Создайте диск ВМ из созданного образа:
