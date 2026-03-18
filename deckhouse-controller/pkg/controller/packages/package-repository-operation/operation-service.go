@@ -535,21 +535,24 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("get application package version: %w", err)
 	}
-
 	// Version already exists
 	if err == nil {
 		// Version marked as not exist in registry
 		_, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry]
 		if ok {
-			logger.Debug("version marked as not exist in registry, checking if image exists")
+			logger.Debug("version marked as not exist in registry, checking if bundle image exists")
 
 			err := s.svc.Package(packageName).CheckImageExists(ctx, version)
+			if err != nil && !errors.Is(err, regClient.ErrImageNotFound) {
+				logger.Debug("bundle image not found", log.Err(err))
+				return nil
+			}
 			if err != nil {
-				logger.Debug("failed to check image exists", log.Err(err))
-				return fmt.Errorf("check image exists: %w", err)
+				logger.Warn("check bundle image exists", log.Err(err))
+				return fmt.Errorf("check bundle image exists: %w", err)
 			}
 
-			logger.Debug("image exists, updating package version")
+			logger.Debug("bundle image exists, marking package version as draft")
 
 			original := pkgVersion.DeepCopy()
 
