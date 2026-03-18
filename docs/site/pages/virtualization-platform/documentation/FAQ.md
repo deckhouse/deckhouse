@@ -13,75 +13,73 @@ We need to download it and publish it on some http-service available from the cl
 
 1. Create an empty disk for OS installation:
 
-    ```bash
-    d8 k apply -f -<<EOF
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: VirtualDisk
-    metadata:
-      name: win-disk
-      namespace: default
-    spec:
-      persistentVolumeClaim:
-        size: 100Gi
-        storageClassName: local-path
-    EOF
-    ```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualDisk
+   metadata:
+     name: win-disk
+     namespace: default
+   spec:
+     persistentVolumeClaim:
+       size: 100Gi
+       storageClassName: local-path
+   ```
 
 1. Create resources with iso-images of Windows OS and virtio drivers:
 
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: win-11-iso
-    spec:
-      dataSource:
-        type: HTTP
-        http:
-          url: "http://example.com/win11.iso"
-    ```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: win-11-iso
+   spec:
+     dataSource:
+       type: HTTP
+       http:
+         url: "http://example.com/win11.iso"
+   ```
 
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: win-virtio-iso
-    spec:
-      dataSource:
-        type: HTTP
-        http:
-          url: "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
-    ```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: win-virtio-iso
+   spec:
+     dataSource:
+       type: HTTP
+       http:
+         url: "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
+   ```
 
 1. Create a virtual machine:
 
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: VirtualMachine
-    metadata:
-      name: win-vm
-      namespace: default
-      labels:
-        vm: win
-    spec:
-      virtualMachineClassName: generic
-      runPolicy: Manual
-      osType: Windows
-      bootloader: EFI
-      cpu:
-        cores: 6
-        coreFraction: 50%
-      memory:
-        size: 8Gi
-      enableParavirtualization: true
-      blockDeviceRefs:
-        - kind: VirtualDisk
-          name: win-disk
-        - kind: ClusterVirtualImage
-          name: win-11-iso
-        - kind: ClusterVirtualImage
-          name: win-virtio-iso
-    ```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualMachine
+   metadata:
+     name: win-vm
+     namespace: default
+     labels:
+       vm: win
+   spec:
+     virtualMachineClassName: generic
+     runPolicy: Manual
+     osType: Windows
+     bootloader: EFI
+     cpu:
+       cores: 6
+       coreFraction: 50%
+     memory:
+       size: 8Gi
+     enableParavirtualization: true
+     blockDeviceRefs:
+       - kind: VirtualDisk
+         name: win-disk
+       - kind: ClusterVirtualImage
+         name: win-11-iso
+       - kind: ClusterVirtualImage
+         name: win-virtio-iso
+   ```
 
 1. After creating the resource, start the VM:
 
@@ -91,6 +89,8 @@ We need to download it and publish it on some http-service available from the cl
 
 1. You need to connect to it and use the graphical wizard to add the `virtio` drivers
    and perform the OS installation.
+
+   Command to connect:
 
    ```bash
    d8 v vnc -n default win-vm
@@ -319,7 +319,7 @@ To provide the Windows virtual machine with the answer file,
 you need to specify provisioning with the type SysprepRef.
 You can also specify here other files in base64 format, that you need to successfully execute scripts inside the answer file.
 
-```yaml
+   ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine
 metadata:
@@ -366,7 +366,7 @@ In addition, cloud images do not allow login by default — you must either add 
 
 Example configuration for updating the system and installing packages:
 
-```yaml
+   ```yaml
 #cloud-config
 # Update package lists
 package_update: true
@@ -386,7 +386,7 @@ runcmd:
 
 Example configuration for creating a user with a password and SSH key:
 
-```yaml
+   ```yaml
 #cloud-config
 # List of users to create
 users:
@@ -407,7 +407,7 @@ To generate a password hash, use the `mkpasswd --method=SHA-512 --rounds=4096` c
 
 Example configuration for creating a file with specified access permissions:
 
-```yaml
+   ```yaml
 #cloud-config
 # List of files to create
 write_files:
@@ -423,7 +423,7 @@ write_files:
 
 Example configuration for disk partitioning, filesystem creation, and mounting:
 
-```yaml
+   ```yaml
 #cloud-config
 # Disk partitioning setup
 disk_setup:
@@ -459,7 +459,7 @@ If additional networks are connected to a virtual machine, they must be configur
 
 Use the following example on distributions that use `systemd-networkd` (for example, Debian, CoreOS):
 
-```yaml
+   ```yaml
 #cloud-config
 write_files:
   - path: /etc/systemd/network/10-eth1.network
@@ -480,7 +480,7 @@ runcmd:
 
 Use the following example on Ubuntu and other distributions that use `Netplan`:
 
-```yaml
+   ```yaml
 #cloud-config
 write_files:
   - path: /etc/netplan/99-custom.yaml
@@ -505,7 +505,7 @@ runcmd:
 
 Use the following example on RHEL, CentOS and other distributions that use the `ifcfg` scheme with `NetworkManager`:
 
-```yaml
+   ```yaml
 #cloud-config
 write_files:
   - path: /etc/sysconfig/network-scripts/ifcfg-eth1
@@ -527,7 +527,7 @@ runcmd:
 
 Use the following example on Alpine Linux and other distributions that use the traditional `/etc/network/interfaces` format:
 
-```yaml
+   ```yaml
 #cloud-config
 write_files:
   - path: /etc/network/interfaces
@@ -555,7 +555,7 @@ The following assumptions will be used:
 
 Ansible inventory file example:
 
-```yaml
+   ```yaml
 ---
 all:
   vars:
@@ -633,45 +633,45 @@ The virtual machine operates within a Kubernetes cluster, so directing network t
 
    For example, consider a virtual machine with the label `vm: frontend-0`, an HTTP service exposed on ports 80 and 443, and SSH access on port 22:
 
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: VirtualMachine
-    metadata:
-      name: frontend-0
-      namespace: dev
-      labels:
-        vm: frontend-0
-    spec: ...
-    ```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualMachine
+   metadata:
+     name: frontend-0
+     namespace: dev
+     labels:
+       vm: frontend-0
+   spec: ...
+   ```
 
 1. To route network traffic to the virtual machine's ports, create the following Service:
 
    This Service listens on ports 80 and 443 and forwards traffic to the target virtual machine’s ports 80 and 443. SSH access from outside the cluster is provided on port 2211.
 
-    ```yaml
-    apiVersion: v1
-    kind: Service
-    metadata:
-      name: frontend-0-svc
-      namespace: dev
-    spec:
-      type: LoadBalancer
-      ports:
-      - name: ssh
-        port: 2211
-        protocol: TCP
-        targetPort: 22
-      - name: http
-        port: 80
-        protocol: TCP
-        targetPort: 80
-      - name: https
-        port: 443
-        protocol: TCP
-        targetPort: 443
-      selector:
-        vm: frontend-0
-    ```
+   ```yaml
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: frontend-0-svc
+     namespace: dev
+   spec:
+     type: LoadBalancer
+     ports:
+     - name: ssh
+       port: 2211
+       protocol: TCP
+       targetPort: 22
+     - name: http
+       port: 80
+       protocol: TCP
+       targetPort: 80
+     - name: https
+       port: 443
+       protocol: TCP
+       targetPort: 443
+     selector:
+       vm: frontend-0
+   ```
 
 ## How to increase the DVCR size?
 
@@ -679,53 +679,53 @@ To increase the disk size for DVCR, you must set a larger size in the `virtualiz
 
 1. Check the current DVCR size:
 
-    ```shell
-    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-    ```
+   ```shell
+   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+   ```
 
    Example output:
 
-    ```console
+   ```txt
     {"size":"58G","storageClass":"linstor-thick-data-r1"}
-    ```
+   ```
 
 1. Set the size:
 
-    ```shell
-    d8 k patch mc virtualization \
-      --type merge -p '{"spec": { "settings": { "dvcr": { "storage": { "persistentVolumeClaim": {"size": "59G"}}}}}}'
-    ```
+   ```shell
+   d8 k patch mc virtualization \
+     --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
+   ```
 
    Example output:
 
-    ```console
-    moduleconfig.deckhouse.io/virtualization patched
-    ```
+   ```txt
+   moduleconfig.deckhouse.io/virtualization patched
+   ```
 
 1. Check the resizing:
 
-    ```shell
-    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-    ```
+   ```shell
+   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+   ```
 
    Example output:
 
-    ```console
-    {"size":"59G","storageClass":"linstor-thick-data-r1"}
-    ```
+   ```txt
+   {"size":"59G","storageClass":"linstor-thick-data-r1"}
+   ```
 
 1. Check the current status of the DVCR:
 
-    ```shell
-    d8 k get pvc dvcr -n d8-virtualization
-    ```
+   ```shell
+   d8 k get pvc dvcr -n d8-virtualization
+   ```
 
    Example output:
 
-    ```console
-    NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
-    dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
-    ```
+   ```txt
+   NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
+   dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
+   ```
 
 ## How to create a golden image for Linux?
 
@@ -892,7 +892,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
    Alternatively, create a `ClusterVirtualImage` to make the image available at the cluster level for all projects:
 
-    ```bash
+   ```bash
     d8 k apply -f -<<EOF
     apiVersion: virtualization.deckhouse.io/v1alpha2
     kind: ClusterVirtualImage
@@ -906,7 +906,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
           name: <source-disk-name>
           namespace: <namespace>
     EOF
-    ```
+   ```
 
 1. Create a VM disk from the created image:
 

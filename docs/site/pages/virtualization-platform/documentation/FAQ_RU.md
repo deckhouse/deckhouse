@@ -11,73 +11,73 @@ lang: ru
 
 1. Создайте пустой диск для установки ОС:
 
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: VirtualDisk
-    metadata:
-      name: win-disk
-      namespace: default
-    spec:
-      persistentVolumeClaim:
-        size: 100Gi
-        storageClassName: local-path
-    ```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualDisk
+   metadata:
+     name: win-disk
+     namespace: default
+   spec:
+     persistentVolumeClaim:
+       size: 100Gi
+       storageClassName: local-path
+   ```
 
 1. Создайте ресурсы с ISO-образами ОС Windows и драйверами virtio:
 
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: win-11-iso
-    spec:
-      dataSource:
-        type: HTTP
-        http:
-          url: "http://example.com/win11.iso"
-    ```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: win-11-iso
+   spec:
+     dataSource:
+       type: HTTP
+       http:
+         url: "http://example.com/win11.iso"
+   ```
 
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: win-virtio-iso
-    spec:
-      dataSource:
-        type: HTTP
-        http:
-          url: "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
-    ```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: win-virtio-iso
+   spec:
+     dataSource:
+       type: HTTP
+       http:
+         url: "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
+   ```
 
 1. Создайте виртуальную машину:
 
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: VirtualMachine
-    metadata:
-      name: win-vm
-      namespace: default
-      labels:
-        vm: win
-    spec:
-      virtualMachineClassName: generic
-      runPolicy: Manual
-      osType: Windows
-      bootloader: EFI
-      cpu:
-        cores: 6
-        coreFraction: 50%
-      memory:
-        size: 8Gi
-      enableParavirtualization: true
-      blockDeviceRefs:
-        - kind: VirtualDisk
-          name: win-disk
-        - kind: ClusterVirtualImage
-          name: win-11-iso
-        - kind: ClusterVirtualImage
-          name: win-virtio-iso
-    ```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualMachine
+   metadata:
+     name: win-vm
+     namespace: default
+     labels:
+       vm: win
+   spec:
+     virtualMachineClassName: generic
+     runPolicy: Manual
+     osType: Windows
+     bootloader: EFI
+     cpu:
+       cores: 6
+       coreFraction: 50%
+     memory:
+       size: 8Gi
+     enableParavirtualization: true
+     blockDeviceRefs:
+       - kind: VirtualDisk
+         name: win-disk
+       - kind: ClusterVirtualImage
+         name: win-11-iso
+       - kind: ClusterVirtualImage
+         name: win-virtio-iso
+   ```
 
 1. После создания ресурса запустите ВМ:
 
@@ -633,45 +633,45 @@ ansible -m shell -a "uptime" -i inventory.yaml all
 
    В качестве примера приведена виртуальная машина с меткой `vm: frontend-0`, HTTP-сервисом, опубликованным на портах 80 и 443, и открытым SSH на порту 22:
 
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: VirtualMachine
-    metadata:
-      name: frontend-0
-      namespace: dev
-      labels:
-        vm: frontend-0
-    spec: ...
-    ```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualMachine
+   metadata:
+     name: frontend-0
+     namespace: dev
+     labels:
+       vm: frontend-0
+   spec: ...
+   ```
 
 1. Чтобы направить сетевой трафик на порты виртуальной машины, создайте Service:
 
    Следующий Service обеспечивает доступ к виртуальной машине: он слушает порты 80 и 443 и перенаправляет трафик на соответствующие порты целевой виртуальной машины. SSH-доступ извне предоставляется по порту 2211:
 
-    ```yaml
-    apiVersion: v1
-    kind: Service
-    metadata:
-      name: frontend-0-svc
-      namespace: dev
-    spec:
-      type: LoadBalancer
-      ports:
-      - name: ssh
-        port: 2211
-        protocol: TCP
-        targetPort: 22
-      - name: http
-        port: 80
-        protocol: TCP
-        targetPort: 80
-      - name: https
-        port: 443
-        protocol: TCP
-        targetPort: 443
-      selector:
-        vm: frontend-0
-    ```
+   ```yaml
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: frontend-0-svc
+     namespace: dev
+   spec:
+     type: LoadBalancer
+     ports:
+     - name: ssh
+       port: 2211
+       protocol: TCP
+       targetPort: 22
+     - name: http
+       port: 80
+       protocol: TCP
+       targetPort: 80
+     - name: https
+       port: 443
+       protocol: TCP
+       targetPort: 443
+     selector:
+       vm: frontend-0
+   ```
 
 ## Как увеличить размер DVCR?
 
@@ -679,9 +679,9 @@ ansible -m shell -a "uptime" -i inventory.yaml all
 
 1. Проверьте текущий размер DVCR:
 
-    ```shell
-    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-    ```
+   ```shell
+   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+   ```
 
    Пример вывода:
 
@@ -691,41 +691,41 @@ ansible -m shell -a "uptime" -i inventory.yaml all
 
 1. Задайте размер:
 
-    ```shell
-    d8 k patch mc virtualization \
-      --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
-    ```
+   ```shell
+   d8 k patch mc virtualization \
+     --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
+   ```
 
    Пример вывода:
 
    ```txt
-    moduleconfig.deckhouse.io/virtualization patched
-    ```
+   moduleconfig.deckhouse.io/virtualization patched
+   ```
 
 1. Проверьте изменение размера:
 
-    ```shell
-    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-    ```
+   ```shell
+   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+   ```
 
    Пример вывода:
 
-    ```txt
-    {"size":"59G","storageClass":"linstor-thick-data-r1"}
-    ```
+   ```txt
+   {"size":"59G","storageClass":"linstor-thick-data-r1"}
+   ```
 
 1. Проверьте текущее состояние DVCR:
 
-    ```shell
-    d8 k get pvc dvcr -n d8-virtualization
-    ```
+   ```shell
+   d8 k get pvc dvcr -n d8-virtualization
+   ```
 
    Пример вывода:
 
-    ```txt
-    NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
-    dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
-    ```
+   ```txt
+   NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
+   dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
+   ```
 
 ## Как создать golden image для Linux?
 
@@ -892,7 +892,7 @@ Golden image — это предварительно настроенный об
 
    Альтернативно, создайте `ClusterVirtualImage`, чтобы образ был доступен на уровне кластера для всех проектов:
 
-    ```bash
+   ```bash
     d8 k apply -f -<<EOF
     apiVersion: virtualization.deckhouse.io/v1alpha2
     kind: ClusterVirtualImage
@@ -906,7 +906,7 @@ Golden image — это предварительно настроенный об
           name: <source-disk-name>
           namespace: <namespace>
     EOF
-    ```
+   ```
 
 1. Создайте диск ВМ из созданного образа:
 
