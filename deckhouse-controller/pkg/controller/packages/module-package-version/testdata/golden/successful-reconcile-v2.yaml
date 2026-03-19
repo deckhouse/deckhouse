@@ -20,7 +20,7 @@ status:
     message: ""
     reason: ""
     status: "True"
-    type: IsEnriched
+    type: MetadataLoaded
   packageMetadata:
     category: Networking
     changelog:

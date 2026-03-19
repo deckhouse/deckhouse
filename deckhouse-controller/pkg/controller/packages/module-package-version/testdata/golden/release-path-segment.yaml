@@ -21,7 +21,7 @@ status:
     message: ""
     reason: ""
     status: "True"
-    type: IsEnriched
+    type: MetadataLoaded
   packageMetadata:
     description:
       en: Legacy module from old registry

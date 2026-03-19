@@ -21,7 +21,7 @@ status:
     message: 'failed to get image: registry error'
     reason: GetImageError
     status: "False"
-    type: IsEnriched
+    type: MetadataLoaded
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

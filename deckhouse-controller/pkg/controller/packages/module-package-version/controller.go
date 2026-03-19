@@ -362,7 +362,7 @@ func convertLicensingEditions(editions map[string]PackageEdition) map[string]v1a
 }
 
 func (r *reconciler) markEnriched(mpv *v1alpha1.ModulePackageVersion) {
-	condType := v1alpha1.ModulePackageVersionConditionTypeIsEnriched
+	condType := v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded
 	now := metav1.NewTime(r.dc.GetClock().Now())
 
 	for idx, cond := range mpv.Status.Conditions {
@@ -383,7 +383,7 @@ func (r *reconciler) markEnriched(mpv *v1alpha1.ModulePackageVersion) {
 }
 
 func (r *reconciler) markEnrichmentFailed(mpv *v1alpha1.ModulePackageVersion, reason, message string) {
-	condType := v1alpha1.ModulePackageVersionConditionTypeIsEnriched
+	condType := v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded
 	now := metav1.NewTime(r.dc.GetClock().Now())
 
 	for idx, cond := range mpv.Status.Conditions {
