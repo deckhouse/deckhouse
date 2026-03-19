@@ -4,4 +4,4 @@
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
   id: autoscaler
-  version: 1.5.1
+  version: 1.6.0

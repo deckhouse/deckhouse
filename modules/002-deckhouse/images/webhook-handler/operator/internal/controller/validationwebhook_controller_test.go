@@ -34,6 +34,11 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+func init() {
+	// delete all files in hooks directory
+	os.RemoveAll("hooks")
+}
+
 func setupTestReconciler() (*ValidationWebhookReconciler, client.Client) {
 	// create fake kubernetes client
 	sch := runtime.NewScheme()
@@ -141,7 +146,7 @@ func TestTemplateNoContext(t *testing.T) {
 	err = k8sClient.Create(context.Background(), vh)
 	assert.NoError(t, err)
 
-	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
+	err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	// test equality
@@ -161,7 +166,7 @@ func TestTemplateTwoContext(t *testing.T) {
 	err = k8sClient.Create(context.Background(), vh)
 	assert.NoError(t, err)
 
-	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
+	err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	// test equality
@@ -181,7 +186,7 @@ func TestTemplateEqual(t *testing.T) {
 	err = k8sClient.Create(context.Background(), vh)
 	assert.NoError(t, err)
 
-	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
+	err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	ref, err := os.ReadFile("testdata/validating/golden/prometheusremotewrite.py")
@@ -202,7 +207,7 @@ func TestTemplateIncludeSnapshotsFrom(t *testing.T) {
 	err = k8sClient.Create(context.Background(), vh)
 	assert.NoError(t, err)
 
-	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
+	err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	ref, err := os.ReadFile("testdata/validating/golden/publicdomaintemplate.py")
@@ -212,4 +217,52 @@ func TestTemplateIncludeSnapshotsFrom(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, string(ref), string(res))
+}
+
+func TestNoReloadIfWebhookFileNotChanged(t *testing.T) {
+	r, k8sClient := setupTestReconciler()
+
+	vh, err := getStructFromYamlFile("testdata/validating/no-reload-if-webhook-file-not-changed.yaml")
+	assert.NoError(t, err)
+
+	err = k8sClient.Create(context.Background(), vh)
+	assert.NoError(t, err)
+
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.NoError(t, err)
+
+	r.isReloadShellNeed.Store(false)
+
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.NoError(t, err)
+
+	assert.Equal(t, false, r.isReloadShellNeed.Load())
+}
+
+func TestReloadOnWebhookFileChange(t *testing.T) {
+	r, k8sClient := setupTestReconciler()
+
+	vh, err := getStructFromYamlFile("testdata/validating/reload-on-webhook-file-change.yaml")
+	assert.NoError(t, err)
+
+	err = k8sClient.Create(context.Background(), vh)
+	assert.NoError(t, err)
+
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.NoError(t, err)
+
+	r.isReloadShellNeed.Store(false)
+
+	// Re-fetch so we have the latest resource version (reconcile may have added finalizer)
+	err = k8sClient.Get(context.Background(), types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}, vh)
+	assert.NoError(t, err)
+
+	vh.Handler.Python = ""
+	err = k8sClient.Update(context.Background(), vh)
+	assert.NoError(t, err)
+
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.NoError(t, err)
+
+	assert.Equal(t, true, r.isReloadShellNeed.Load())
 }

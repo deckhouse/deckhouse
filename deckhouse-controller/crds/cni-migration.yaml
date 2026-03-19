@@ -1,0 +1,94 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: cnimigrations.network.deckhouse.io
+spec:
+  group: network.deckhouse.io
+  scope: Cluster
+  names:
+    plural: cnimigrations
+    singular: cnimigration
+    kind: CNIMigration
+    shortNames:
+      - cnim
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration for CNI migration.
+          properties:
+            spec:
+              type: object
+              description: |
+                Defines the desired state of CNI migration.
+              properties:
+                targetCNI:
+                  type: string
+                  description: |
+                    The target CNI to migrate to.
+            status:
+              type: object
+              description: |
+                Defines the observed state of CNI migration.
+              properties:
+                phase:
+                  type: string
+                  description: |
+                    The current step of the migration process.
+                currentCNI:
+                  type: string
+                  description: |
+                    The detected CNI from which the switch is being made.
+                nodesTotal:
+                  type: integer
+                  description: |
+                    The total number of nodes involved in the migration.
+                nodesSucceeded:
+                  type: integer
+                  description: |
+                    The number of nodes that have successfully completed the current phase.
+                nodesFailed:
+                  type: integer
+                  description: |
+                    The number of nodes where an error occurred.
+                failedSummary:
+                  type: array
+                  description: |
+                    Details about nodes that failed the migration.
+                  items:
+                    type: object
+                    properties:
+                      node:
+                        type: string
+                      reason:
+                        type: string
+                conditions:
+                  type: array
+                  description: |
+                    Reflect the state of the migration as a whole.
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message

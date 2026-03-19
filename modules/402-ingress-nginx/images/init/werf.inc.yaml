@@ -1,14 +1,12 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2025-09-18"
 import:
 - image: tools/coreutils
   add: /
   to: /
   before: setup
   includePaths:
-  - usr/bin/coreutils
   - usr/bin/mkdir
   - usr/bin/touch
   - usr/bin/ln

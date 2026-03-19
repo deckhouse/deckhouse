@@ -1,6 +1,7 @@
 ---
 title: "Module development and debugging"
 permalink: en/architecture/module-development/development/
+description: Tools and approaches for developing and debugging Deckhouse Kubernetes Platform modules, including local testing and troubleshooting.
 ---
 
 When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) resource is used for this purpose.
@@ -364,6 +365,12 @@ To approve the module release, apply the annotation:
 
 ```shell
 d8 k annotate mr p-o-test-v0.7.25 modules.deckhouse.io/approved="true"
+```
+
+This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
+
+```shell
+d8 system module approve p-o-test v0.7.25
 ```
 
 Example output after approval:

@@ -16,7 +16,9 @@
                     {{- item[0] -}}
                 </a>
                 <div class="oss__item-description">
-                    {%- if item[1].version -%}
+                    {%- if item[1].versions and item[1].versions.size > 0 -%}
+                    <p>Version{% if item[1].versions.size > 1 %}s{% endif %}: {{ item[1].versions | join: ", " }}</p>
+                    {%- elsif item[1].version -%}
                     <p>Version: {{ item[1].version }}</p>
                     {%- endif -%}
                     {{- item[1].description }}

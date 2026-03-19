@@ -208,8 +208,6 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 	}
 
 	// Module package controllers (feature flag)
@@ -254,7 +252,7 @@ func NewDeckhouseController(
 
 		// set some version for the modules overridden by mpos
 		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
-			return "v2.0.0", nil
+			return defaultModuleVersion, nil
 		}
 
 		return module.GetVersion(), nil
@@ -345,7 +343,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	packageOperator, err := packageoperator.New(operator.ModuleManager, dc, logger)
+	packageOperator, err := packageoperator.New(runtimeManager.GetClient(), operator.ModuleManager, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}

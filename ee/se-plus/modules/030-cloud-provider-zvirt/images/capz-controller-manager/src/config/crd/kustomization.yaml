@@ -3,7 +3,7 @@
 # It should be run by config/default
 
 commonLabels:
-  cluster.x-k8s.io/v1beta1: v1
+  cluster.x-k8s.io/v1beta2: v1
 
 resources:
 - bases/infrastructure.cluster.x-k8s.io_zvirtclusters.yaml
