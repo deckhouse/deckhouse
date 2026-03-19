@@ -9,7 +9,6 @@ import:
   to: /
   before: setup
   includePaths:
-  - usr/bin/coreutils
   - usr/bin/rm
   - usr/bin/cp
 - image: tools/bash

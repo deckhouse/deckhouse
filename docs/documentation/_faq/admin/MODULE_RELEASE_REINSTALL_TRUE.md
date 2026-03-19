@@ -55,7 +55,7 @@ To download the image and reinstall the module that caused the problem:
 
 After adding the annotation, the module image is re-downloaded from the registry, the module is validated with the current settings from `ModuleConfig`, and installed in the cluster. After successful reinstallation, the annotation is automatically removed from `ModuleRelease`.
 
-To verify that the module has been successfully reinstalled and all module pods is working, use the command:
+To verify that the module has been successfully reinstalled and all module pods are working, use the command:
 
 ```shell
 d8 k -n d8-<module-name> get pods
