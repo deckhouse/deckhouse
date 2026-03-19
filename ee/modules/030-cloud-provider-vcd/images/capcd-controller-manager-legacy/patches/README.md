@@ -10,6 +10,8 @@ Files:
 Changes:
 
 - This patch is for our usage cases of cluster-api cloud provider.
+- Update klog to klog/v2 in controllers and main.go
+- Update CAPI imports from v1beta1 to v1beta2 (api/core/v1beta2, api/bootstrap/kubeadm/v1beta2, etc.)
 
 ### 002-go-mod.patch
 
@@ -21,12 +23,16 @@ Files:
 Changes:
 
 - Update dependencies
+- Update cluster-api from v1.4.0 to v1.12.3 (v1beta2 contract)
+- Update kubernetes dependencies to v0.34.3
+- Update controller-runtime to v0.22.5
+- Add google.golang.org/genproto excludes to resolve dependency conflicts
 
 ### 003-klog.patch
 
 Files:
 
-- capisdk/defined_entity.go
+- pkg/capisdk/defined_entity.go
 
 Changes:
 
@@ -36,29 +42,19 @@ Changes:
 
 Files:
 
-- controllers/vcdmachine_controller.go
 - api/v1beta2/vcdmachine_types.go
 
 Changes:
 
-- Add TemplateOrg field to VCDMachine spec
+- Add TemplateOrg field to VCDMachine spec to specify the organization of the template OVA
 
 ### 006-add-metadata.patch
 
 Files:
 
-- api/v1alpha4/zz_generated.deepcopy.go
-- api/v1beta1/zz_generated.deepcopy.go
 - api/v1beta2/vcdmachine_types.go
-- api/v1beta2/zz_generated.deepcopy.go
-- config/crd/bases/infrastructure.cluster.x-k8s.io_vcdclusters.yaml
-- config/crd/bases/infrastructure.cluster.x-k8s.io_vcdclustertemplates.yaml
-- config/crd/bases/infrastructure.cluster.x-k8s.io_vcdmachines.yaml
-- config/crd/bases/infrastructure.cluster.x-k8s.io_vcdmachinetemplates.yaml
-- config/rbac/role.yaml
-- config/webhook/manifests.yaml
-- controllers/vcdmachine_controller.go
 
 Changes:
 
-- Add metadata field for VM
+- Add metadata support for VCDMachine (metadata types, structure and field in Spec)
+- Allows adding custom metadata to virtual machines for organizing and categorizing inventory
