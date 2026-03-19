@@ -43,7 +43,7 @@ description: Архитектура модуля cloud-provider-openstack в Dec
 
    * **openstack-cloud-controller-manager**.
 
-2. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-openstack`. Например, для OpenStack — это такие параметры, как список зон доступности, ресурсов StorageClass и т.д.
+2. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-openstack`.
 
    Состоит из следующих контейнеров:
 
