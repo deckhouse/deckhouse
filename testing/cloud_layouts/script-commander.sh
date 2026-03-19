@@ -202,7 +202,7 @@ function prepare_environment() {
     CLOUD_ID=$LAYOUT_YANDEX_CLOUD_ID
     FOLDER_ID=$LAYOUT_YANDEX_FOLDER_ID
     SERVICE_ACCOUNT_JSON=$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
-    ssh_user="redos"
+    ssh_user="cloud-user"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
