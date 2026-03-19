@@ -121,6 +121,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
   - go mod vendor && go mod verify
+  - '[ -f vendor/github.com/cilium/checkmate/check.go ] && sed -i "/var _ testing.TB =/d" vendor/github.com/cilium/checkmate/check.go || true'
   - sudo -u cilium PATH=${PATH} make -C proxylib all
   - sudo -u cilium PATH=${PATH} mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so

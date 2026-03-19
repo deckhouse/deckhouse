@@ -25,6 +25,7 @@ shell:
   - export GOOS=linux GOARCH=amd64
   - cd /src/cilium
   - go mod vendor && go mod verify
+  - '[ -f vendor/github.com/cilium/checkmate/check.go ] && sed -i "/var _ testing.TB =/d" vendor/github.com/cilium/checkmate/check.go || true'
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
