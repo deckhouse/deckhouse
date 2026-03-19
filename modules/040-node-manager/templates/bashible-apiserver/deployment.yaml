@@ -142,10 +142,13 @@ spec:
       noProxy:
         {{- $noProxy | toYaml | nindent 8 }}
     {{- end }}
+    clusterUUID: "{{ .Values.global.discovery.clusterUUID | default "00000000-0000-0000-0000-000000000000" }}"
     bootstrapTokens:
       {{- $.Values.nodeManager.internal.bootstrapTokens | toYaml | nindent 6 }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
+    clusterMasterEndpoints:
+      {{- $.Values.nodeManager.internal.clusterMasterEndpoints | default (list) | toYaml | nindent 6 }}
     {{- if hasKey $.Values.nodeManager.internal "kubernetesAPIProxyDiscoveryCert" }}
     apiserverProxyCerts:
       crt: |
@@ -155,8 +158,6 @@ spec:
     {{- end }}
     {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
     packagesProxy:
-      addresses:
-        {{- $.Values.nodeManager.internal.packagesProxy.addresses | toYaml | nindent 8 }}
       token: {{ $.Values.nodeManager.internal.packagesProxy.token | toYaml }}
     {{- end }}
     {{- if $.Values.nodeManager.internal.kubernetesCA }}

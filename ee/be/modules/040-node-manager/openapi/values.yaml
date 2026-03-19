@@ -71,13 +71,51 @@ properties:
         type: boolean
       clusterMasterAddresses:
         type: array
+        x-doc-deprecated: true
         description: |
+          Deprecated. Use `clusterMasterEndpoints`.
+
           Array of API servers addresses.
         x-examples:
           - ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
         items:
           type: string
           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
+      clusterMasterEndpoints:
+        type: array
+        description: |
+          Array of cluster master endpoints with ports for kube-apiserver and registry-packages-proxy services.
+        default: []
+        x-examples:
+          - [
+              {"address":"10.0.0.1","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},
+              {"address":"10.0.0.2","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},
+              {"address":"10.0.0.3","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}
+            ]
+        items:
+          type: object
+          additionalProperties: false
+          required:
+            - address
+            - kubeApiPort
+            - rppServerPort
+            - rppBootstrapServerPort
+          properties:
+            address:
+              type: string
+              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+            kubeApiPort:
+              type: integer
+              minimum: 1
+              maximum: 65535
+            rppServerPort:
+              type: integer
+              minimum: 1
+              maximum: 65535
+            rppBootstrapServerPort:
+              type: integer
+              minimum: 1
+              maximum: 65535
 
       packagesProxy:
         type: object

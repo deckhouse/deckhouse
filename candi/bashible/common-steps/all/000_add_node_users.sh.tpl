@@ -16,11 +16,15 @@
 # The step is 000_ because we need to be able to create users before possible errors occur in other steps and not lose access to the node
 
 {{- if eq .runType "Normal" }}
+  {{- $clusterMasterKubeAPIEndpoints := list -}}
+  {{- range $endpoint := .normal.clusterMasterEndpoints -}}
+    {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) -}}
+  {{- end -}}
   {{- if .nodeUsers }}
 node_users_json='{{ .nodeUsers | toJson}}'
   {{- end }}
 
-API_SERVERS="{{ .normal.apiserverEndpoints | join " " }}"
+API_SERVERS="{{ $clusterMasterKubeAPIEndpoints | join " " }}"
 read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
 
 
@@ -358,4 +362,3 @@ set +e
 main
 set -e
 {{- end  }}
-

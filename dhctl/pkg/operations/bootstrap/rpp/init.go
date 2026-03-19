@@ -45,6 +45,7 @@ func Init(ctx context.Context, params InitParams, opts ...InitOpt) (Cleanup, err
 	clusterDomain := params.MetaConfig.GetClusterDomain()
 
 	rpp := NewRegistryPackagesProxy(clusterDomain, configGetter, params.LoggerProvider).
+		WithClusterUUID(params.MetaConfig.UUID).
 		WithSignCheck(params.SignCheck).
 		WithDirectoryConfig(params.DirsConfig)
 

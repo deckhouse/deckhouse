@@ -364,3 +364,42 @@ func TestEnrichProxyData(t *testing.T) {
 		})
 	})
 }
+
+func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
+	cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+	cfg.ClusterMasterEndpoints = []ClusterMasterEndpoint{
+		{
+			Address:                "127.0.0.1",
+			RPPServerPort:          5444,
+			RPPBootstrapServerPort: 4300,
+		},
+	}
+
+	data, err := cfg.ConfigForBashibleBundleTemplate("10.0.0.2")
+	require.NoError(t, err)
+
+	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]interface{})
+	require.True(t, ok)
+	require.Len(t, endpoints, 1)
+	require.Equal(t, map[string]interface{}{
+		"address":                "127.0.0.1",
+		"rppServerPort":          5444,
+		"rppBootstrapServerPort": 4300,
+	}, endpoints[0])
+}
+
+func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing.T) {
+	cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+
+	data, err := cfg.ConfigForBashibleBundleTemplate("10.0.0.2")
+	require.NoError(t, err)
+
+	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]interface{})
+	require.True(t, ok)
+	require.Len(t, endpoints, 1)
+	require.Equal(t, map[string]interface{}{
+		"address":                "127.0.0.1",
+		"rppServerPort":          5444,
+		"rppBootstrapServerPort": 4300,
+	}, endpoints[0])
+}
