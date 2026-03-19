@@ -78,8 +78,8 @@ func patchServiceWithManyPorts(_ context.Context, input *go_hook.HookInput) erro
 		input.PatchCollector.Delete(
 			"v1",
 			"Service",
-			serviceInfoObj.Namespace,
 			serviceInfoObj.Name,
+			serviceInfoObj.Namespace,
 		)
 	}
 	return nil
