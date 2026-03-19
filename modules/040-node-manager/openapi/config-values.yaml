@@ -34,3 +34,34 @@ properties:
       Set to 'true' to disable CAPI in case of potentially cluster-damaging changes.
 
       > **Warning.** Use this flag only if you know why you are doing it and clearly understand the consequences.
+  clusterAutoscaler:
+    type: object
+    default: {}
+    description: |
+      Cluster Autoscaler parameters.
+    properties:
+      newPodScaleUpDelay:
+        type: string
+        default: "0s"
+        x-examples:
+        - "30s"
+        - "2m"
+        description: |
+          Pods younger than this value will not be considered for scale-up.
+          Can be increased for individual pods through the annotation `cluster-autoscaler.kubernetes.io/pod-scale-up-delay`.
+
+          Useful for HPA scenarios where rapid pod churn should not trigger new node provisioning.
+      minReplicaCount:
+        type: integer
+        default: 1
+        minimum: 0
+        x-examples:
+        - 0
+        - 1
+        - 2
+        description: |
+          Minimum number of replicas that a ReplicaSet or ReplicationController should have
+          to allow their pods deletion in scale-down. If a controller has fewer replicas than
+          this value, its pods will not be evicted during node scale-down.
+
+          The default value of `1` protects single-replica deployments from being disrupted during scale-down.
