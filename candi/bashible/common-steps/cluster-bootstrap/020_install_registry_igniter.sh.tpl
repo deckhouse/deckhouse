@@ -34,7 +34,7 @@ pod_kill_and_wait() {
     return 0
   fi
 
-  pods=$(crictl pods -o json | jq -r --arg PREFIX "${pod_prefix}" '
+  local pods=$(crictl pods -o json 2>/dev/null | jq -r --arg PREFIX "${pod_prefix}" '
     .items[]? |
     select(.metadata.name | startswith($PREFIX)) |
     .id
