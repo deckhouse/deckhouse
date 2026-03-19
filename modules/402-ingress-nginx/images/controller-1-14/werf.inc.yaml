@@ -630,6 +630,7 @@ shell:
   - |
     bash -eu -c '
     writeDirs=(
+      /chroot/tmp/nginx
       /chroot/etc/nginx
       /chroot/usr/local
       /chroot/etc/ingress-controller
@@ -648,7 +649,6 @@ shell:
       /chroot/var/lib/nginx/proxy
       /chroot/var/lib/nginx/scgi
       /chroot/var/lib/nginx/uwsgi
-      /chroot/tmp/nginx
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
@@ -891,8 +891,7 @@ shell:
   - mknod -m 0666 /chroot/dev/tty c 5 0
 
   - mkdir -p /chroot/modules_mount
-  - mkdir -p modules_mount
-  - ln -s /modules_mount /chroot/modules_mount
+  - ln -s /chroot/modules_mount /modules_mount
 
   # Utils for final image
   - cp -a /tools/setcap /apps
@@ -911,7 +910,7 @@ import:
   - modules_mount
   - var/log
   - etc/nginx
-  - tmp/nginx
+  - tmp
   - etc/ingress-controller
   - var/log/nginx
   - sbin/nginx
@@ -991,10 +990,6 @@ import:
   - usr/bin/cat
   - usr/bin/cp
   - usr/bin/tail
-  before: install
-- image: tools/libcap
-  add: /usr/sbin/setcap
-  to: /apps/setcap
   before: install
 git:
 {{- include "image mount points" $ }}
