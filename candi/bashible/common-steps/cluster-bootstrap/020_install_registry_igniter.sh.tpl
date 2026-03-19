@@ -54,10 +54,8 @@ pod_kill_and_wait() {
 
   echo "${pod_prefix}: waiting for removal..."
   for ((i=1; i<=max_attempts; i++)); do
-    if [[ ${i} -ne 1 ]]; then
-      echo "Attempt: ${i}/${max_attempts}"
-      sleep ${sleep_interval}
-    fi
+    echo "Attempt: ${i}/${max_attempts}"
+    sleep ${sleep_interval}
 
     local remaining_pods=$(crictl pods -o json 2>/dev/null | jq -r --arg PREFIX "${pod_prefix}" '
       .items[]? |
@@ -320,10 +318,8 @@ start_and_wait() {
     "\${bin_path}" "\${args[@]}" > "\${log_path}" 2>&1 &
 
     for ((i=1; i<=max_attempts; i++)); do
-        if [[ \${i} -ne 1 ]]; then
-            echo "Attempt: \${i}/\${max_attempts}"
-            sleep \${sleep_interval}
-        fi
+        echo "Attempt: \${i}/\${max_attempts}"
+        sleep \${sleep_interval}
 
         if pgrep -f "\${bin_path}" > /dev/null 2>&1; then
             echo "\${bin_path}: started"
