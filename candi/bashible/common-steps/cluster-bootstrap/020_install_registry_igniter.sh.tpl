@@ -14,40 +14,63 @@
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
 
-remove_pod() {
-    local pod_prefix="${1}"
+pod_kill_and_wait() {
+  local pod_prefix="${1}"
+  local sleep_interval=1
+  local max_attempts=20
 
-    if [ -z "${pod_prefix}" ]; then
-        echo "Empty prefix, skip"
-        return 0
+  if [ -z "${pod_prefix}" ]; then
+    echo "Empty prefix, skip"
+    return 0
+  fi
+
+  if ! command -v crictl > /dev/null 2>&1; then
+    echo "crictl not found, skip"
+    return 0
+  fi
+
+  if ! crictl info > /dev/null 2>&1; then
+    echo "containerd not ready, skip"
+    return 0
+  fi
+
+  pods=$(crictl pods -o json | jq -r --arg PREFIX "${pod_prefix}" '
+    .items[]? |
+    select(.metadata.name | startswith($PREFIX)) |
+    .id
+  ' 2>/dev/null)
+
+  if [ -z "${pods}" ]; then
+    echo "${pod_prefix}: no pods, skip"
+    return 0
+  fi
+
+  for pod in ${pods}; do
+    crictl stopp "${pod}" > /dev/null 2>&1 || true
+    crictl rmp "${pod}" > /dev/null 2>&1 || true
+  done
+
+  echo "${pod_prefix}: waiting for removal..."
+  for ((i=1; i<=max_attempts; i++)); do
+    if [[ ${i} -ne 1 ]]; then
+      echo "Attempt: ${i}/${max_attempts}"
+      sleep ${sleep_interval}
     fi
 
-    if ! command -v crictl > /dev/null 2>&1; then
-        echo "crictl not found, skip"
-        return 0
-    fi
-
-    if ! crictl info > /dev/null 2>&1; then
-        echo "containerd not ready, skip"
-        return 0
-    fi
-
-    pods=$(crictl pods -o json | jq -r --arg PREFIX "${pod_prefix}" '
-        .items[]? |
-        select(.metadata.name | startswith($PREFIX)) |
-        .id
+    local remaining_pods=$(crictl pods -o json 2>/dev/null | jq -r --arg PREFIX "${pod_prefix}" '
+      .items[]? |
+      select(.metadata.name | startswith($PREFIX)) |
+      .id
     ' 2>/dev/null)
 
-    if [ -z "${pods}" ]; then
-        echo "No pods for '${pod_prefix}', skip"
-        return 0
+    if [ -z "${remaining_pods}" ]; then
+      echo "${pod_prefix}: successfully removed"
+      return 0
     fi
+  done
 
-    for pod in ${pods}; do
-        crictl stopp "${pod}" > /dev/null 2>&1 || true
-        crictl rmp "${pod}" > /dev/null 2>&1 || true
-    done
-    echo "Pods '${pod_prefix}' removed"
+  echo "${pod_prefix}: failed to remove (timeout ${sleep_interval}s * ${max_attempts})"
+  exit 1
 }
 
 bb-package-install "module-registry-auth:{{ .images.registry.dockerAuth }}" "module-registry-distribution:{{ .images.registry.dockerDistribution }}" "cfssl:{{ .images.registrypackages.cfssl165 }}"
@@ -427,7 +450,7 @@ chmod a+x "${igniter_start_sh}"
 
 # Stop static pod
 rm -f "${static_pod_file}"
-remove_pod "${static_pod_name}"
+pod_kill_and_wait "${static_pod_name}"
 
 # Start igniter
 bash "${igniter_stop_sh}"
