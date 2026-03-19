@@ -1,5 +1,6 @@
 ---
 title: "Модуль cni-cilium: примеры"
+description: Примеры настройки Egress Gateway и экспорта данных Hubble для модуля cni-cilium.
 ---
 
 ## Egress Gateway
