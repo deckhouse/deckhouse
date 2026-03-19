@@ -55,3 +55,34 @@ Changes:
 - Add TemplateOrg field to VCDMachine spec to specify the organization of the template OVA
 - Add metadata support for VCDMachine (metadata types, structure and field in Spec)
 - Allows adding custom metadata to virtual machines for organizing and categorizing inventory
+
+### 006-update-api-imports.patch
+
+Files:
+
+- api/v1beta1/vcdcluster_types.go
+- api/v1beta1/vcdmachine_types.go
+- api/v1beta1/zz_generated.conversion.go
+- api/v1beta1/zz_generated.deepcopy.go
+- api/v1alpha4/vcdcluster_types.go
+- api/v1alpha4/vcdmachine_types.go
+- api/v1alpha4/zz_generated.conversion.go
+- api/v1alpha4/zz_generated.deepcopy.go
+
+Changes:
+
+- Update CAPI imports in api/v1beta1 and api/v1alpha4 files from v1beta1 to v1beta2 paths
+- Required for backward compatibility API conversion to work with CAPI v1.12.3
+
+### 007-update-test-imports.patch
+
+Files:
+
+- tests/e2e/utils/cluster_upgrade_utils.go
+- tests/e2e/utils/node_pool_scaling_utils.go
+- tests/e2e/workload_cluster_upgrade_test.go
+- tests/e2e/workload_cluster_resize_test.go
+
+Changes:
+
+- Update CAPI imports in test files from v1beta1 to v1beta2 paths
