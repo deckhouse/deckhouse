@@ -2,7 +2,7 @@
 000-common/                              @name212 @090809 @sprait
 002-deckhouse/                           @ldmonster
 007-registrypackages/                    @RomanenkoDenys @name212 @090809 @sprait
-015-admission-policy-engine/             @nabokihms
+015-admission-policy-engine/             @nabokihms @AlwxSin
 021-cni-cilium/                          @AndreyPavlovFlant @apolovov
 025-static-routing-manager/              @AndreyPavlovFlant @apolovov
 030-cloud-provider-*/                    @aleksey-su
@@ -22,11 +22,11 @@
 040-terraform-manager/                   @name212 @090809 @aleksey-su
 042-kube-dns/                            @AndreyPavlovFlant @apolovov
 050-network-policy-engine/               @AndreyPavlovFlant @apolovov
-101-cert-manager/                        @Suselz
+101-cert-manager/                        @Suselz @AlwxSin
 110-istio/                               @skurbatov @apolovov
-140-user-authz/                          @nabokihms
-150-user-authn/                          @nabokihms
-160-multitenancy-manager/                @nabokihms
+140-user-authz/                          @nabokihms @AlwxSin
+150-user-authn/                          @nabokihms @AlwxSin
+160-multitenancy-manager/                @nabokihms @AlwxSin
 200-operator-prometheus/                 @vladimirGuryanov @lazovskiy
 300-prometheus/                          @vladimirGuryanov @lazovskiy
 301-prometheus-*/                        @vladimirGuryanov @lazovskiy
@@ -44,14 +44,14 @@
 462-loki/                                @vladimirGuryanov @lazovskiy
 470-chrony/                              @name212 @090809
 491-containerized-data-importer          @fl64
-500-basic-auth/                          @nabokihms
+500-basic-auth/                          @nabokihms @AlwxSin
 500-openvpn/                             @AndreyPavlovFlant @apolovov
 500-cilium-hubble/                       @AndreyPavlovFlant @apolovov
 500-dashboard/                           @shvgn
 500-upmeter/                             @vladimirGuryanov @lazovskiy
 500-okmeter/                             @vladimirGuryanov @lazovskiy
-600-secret-copier/                       @nabokihms
-600-namespace-configurator/              @nabokihms
+600-secret-copier/                       @nabokihms @AlwxSin
+600-namespace-configurator/              @nabokihms @AlwxSin
 610-service-with-healthchecks            @AndreyPavlovFlant @apolovov
 800-deckhouse-tools/                     @RomanenkoDenys @name212 @090809
 810-documentation/                       @z9r5
