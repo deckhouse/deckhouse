@@ -217,7 +217,6 @@ spec:
         name: controller
         {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         securityContext:
-          readOnlyRootFilesystem: true
           runAsNonRoot: false
           runAsUser: 0
           runAsGroup: 0
