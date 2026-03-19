@@ -727,9 +727,11 @@ spec:
                   description: |
                     Выбирает режим изоляции валидации для версии контроллера `1.14`.
 
-                    * `Disabled` использует обычный путь валидации через `nginx -t` без дополнительной изоляции.
-                    * `Standard` запускает валидацию через `/usr/bin/unshare -S 64535 -R /chroot/validation-chroot`, используя отдельный минимальный validation-root, вложенный в `/chroot`, и отдельный временный каталог для validation-конфигов. Этот режим лучше совместим с hardened-hosts, но не даёт ptrace-based runtime-проверок доступа к файлам и seccomp-фильтрации из `/usr/bin/sandbox`.
-                    * `Full` запускает валидацию через `/usr/bin/sandbox` с ptrace-based sandbox runner. Это самый строгий режим: он сохраняет seccomp-фильтрацию и runtime-проверки путей, но требует поддержки ptrace-based sandboxing со стороны хоста.
+                    Поддерживаемые режимы:
+                                         
+                    * `Disabled` — использует обычный путь валидации через `nginx -t` без дополнительной изоляции.
+                    * `Standard` — запускает валидацию через `/usr/bin/unshare -S 64535 -R /validation-chroot`, используя отдельный минимальный `/validation-chroot` и отдельный временный каталог для validation-конфигов. Этот режим лучше совместим с hardened-hosts, но не даёт ptrace-based runtime-проверок доступа к файлам и seccomp-фильтрации из `/usr/bin/sandbox`.
+                    * `Full` — запускает валидацию через `/usr/bin/sandbox` с ptrace-based sandbox runner. Это самый строгий режим: он сохраняет seccomp-фильтрацию и runtime-проверки путей, но требует поддержки ptrace-based sandboxing со стороны хоста.
                 nodeSelector:
                   description: |
                     Аналогично параметру `spec.nodeSelector` у подов.
