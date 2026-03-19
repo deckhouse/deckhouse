@@ -4,12 +4,13 @@ permalink: ru/virtualization-platform/documentation/faq.html
 lang: ru
 ---
 
-## Как установить ОС в виртуальной машине из ISO-образа?
+## Виртуальные машины
 
-Рассмотрим пример установки ОС из ISO-образа ОС Windows.
-Для этого загрузите и опубликуйте его на каком-либо HTTP-сервисе, доступном из кластера.
+### Как установить ОС в виртуальной машине из ISO-образа?
 
-1. Создайте пустой диск для установки ОС:
+Ниже приведён типовой сценарий установки гостевой ОС Windows с ISO-образа. Перед началом разместите ISO на HTTP-ресурсе, доступном из кластера.
+
+1. Создайте пустой [VirtualDisk](/modules/virtualization/stable/cr.html#virtualdisk) для установки ОС:
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -23,7 +24,7 @@ lang: ru
        storageClassName: local-path
    ```
 
-1. Создайте ресурсы с ISO-образами ОС Windows и драйверами virtio:
+1. Создайте ресурсы [ClusterVirtualImage](/modules/virtualization/stable/cr.html#clustervirtualimage) для ISO-образа ОС Windows и дистрибутива драйверов `VirtIO`:
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -79,41 +80,38 @@ lang: ru
          name: win-virtio-iso
    ```
 
-1. После создания ресурса запустите ВМ:
+1. Запустите виртуальную машину:
 
    ```bash
    d8 v start win-vm
    ```
 
-1. К ней необходимо подключиться и с помощью графического установщика
-   выполнить установку ОС и драйверов `virtio`.
+1. Подключитесь к консоли ВМ и завершите установку ОС и драйверов `VirtIO` при помощи графического установщика.
 
-   Команда для подключения:
-
-   ```bash
-   d8 v vnc -n default win-vm
-   ```
-
-1. После окончания установки перезагрузите виртуальную машину.
-
-1. Для продолжения работы с виртуальной машиной также используйте команду:
+   Подключение к VNC:
 
    ```bash
    d8 v vnc -n default win-vm
    ```
 
-## Как предоставить файл ответов Windows(Sysprep)?
+1. После завершения установки перезагрузите виртуальную машину.
 
-Чтобы выполнить автоматическую установку Windows,
-создайте файл ответов (обычно именуются unattend.xml или autounattend.xml).
-Для примера возьмем файл, позволяющий:
+1. Для дальнейшей работы снова подключитесь по VNC:
 
-- Добавить русский язык и раскладку;
-- Указать расположение virtio драйверов необходимых для установки
-  (поэтому важен порядок дисковых устройств в спецификации ВМ);
-- Разметить диски для установки windows на ВМ c EFI;
-- Создать в группе администраторов пользователя *cloud* с паролем *cloud*;
-- Создать непривилегированного пользователя *user* с паролем *user*.
+   ```bash
+   d8 v vnc -n default win-vm
+   ```
+
+### Как предоставить файл ответов Windows (Sysprep)?
+
+Автоматическая установка Windows выполняется с файлом ответов (`unattend.xml` или `autounattend.xml`).
+
+В примере ниже файл ответов:
+
+- задаёт русский язык интерфейса и раскладку;
+- подключает драйверы `VirtIO` для этапа установки (порядок устройств в `blockDeviceRefs` у ресурса [VirtualMachine](/modules/virtualization/stable/cr.html#virtualmachine) должен совпадать с путями в файле);
+- создаёт разметку диска для установки с EFI;
+- создаёт пользователя `cloud` (администратор, пароль `cloud`) и пользователя `user` (пароль `user`).
 
 <details><summary><b>autounattend.xml</b></summary>
 
@@ -306,63 +304,62 @@ lang: ru
 
 </details>
 
-Создайте секрет из этого xml файла:
+1. Сохраните файл ответов в `autounattend.xml` (воспользуйтесь примером из блока выше или измените его под свои требования).
 
-```bash
-d8 k create secret generic sysprep-config --type="provisioning.virtualization.deckhouse.io/sysprep" --from-file=./autounattend.xml
-```
+1. Создайте Secret с типом `provisioning.virtualization.deckhouse.io/sysprep`:
 
-Затем можно создать виртуальную машину, которая в процессе установки будет использовать файл ответов.
+   ```bash
+   d8 k create secret generic sysprep-config --type="provisioning.virtualization.deckhouse.io/sysprep" --from-file=./autounattend.xml
+   ```
 
-Чтобы предоставить виртуальной машине Windows файл ответов, необходимо указать provisioning с типом SysprepRef.
-Вы также можете указать здесь другие файлы в формате base64, необходимые для успешного выполнения скриптов внутри файла ответов.
+1. Создайте виртуальную машину, которая в процессе установки будет использовать файл ответов. Укажите в спецификации `provisioning` с типом `SysprepRef`. При необходимости добавьте в спецификацию другие файлы в формате Base64, необходимые для успешного выполнения скриптов внутри файла ответов.
 
-```yaml
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: VirtualMachine
-metadata:
-  name: win-vm
-  namespace: default
-  labels:
-    vm: win
-spec:
-  virtualMachineClassName: generic
-  provisioning:
-    type: SysprepRef
-    sysprepRef:
-      kind: Secret
-      name: sysprep-config
-  runPolicy: AlwaysOn
-  osType: Windows
-  bootloader: EFI
-  cpu:
-    cores: 6
-    coreFraction: 50%
-  memory:
-    size: 8Gi
-  enableParavirtualization: true
-  blockDeviceRefs:
-    - kind: VirtualDisk
-      name: win-disk
-    - kind: ClusterVirtualImage
-      name: win-11-iso
-    - kind: ClusterVirtualImage
-      name: win-virtio-iso
-```
+   ```yaml
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualMachine
+   metadata:
+     name: win-vm
+     namespace: default
+     labels:
+       vm: win
+   spec:
+     virtualMachineClassName: generic
+     provisioning:
+       type: SysprepRef
+       sysprepRef:
+         kind: Secret
+         name: sysprep-config
+     runPolicy: AlwaysOn
+     osType: Windows
+     bootloader: EFI
+     cpu:
+       cores: 6
+       coreFraction: 50%
+     memory:
+       size: 8Gi
+     enableParavirtualization: true
+     blockDeviceRefs:
+       - kind: VirtualDisk
+         name: win-disk
+       - kind: ClusterVirtualImage
+         name: win-11-iso
+       - kind: ClusterVirtualImage
+         name: win-virtio-iso
+   ```
 
-## Как использовать cloud-init для конфигурирования виртуальных машин?
+### Как использовать cloud-init для конфигурирования виртуальных машин?
 
-Cloud-Init — это инструмент для автоматической настройки виртуальных машин при первом запуске. Конфигурация записывается в формате YAML и должна начинаться с заголовка `#cloud-config`.
+[Cloud-init](https://cloudinit.readthedocs.io/) применяется для первичной настройки гостевой ОС при первом запуске. Конфигурация задаётся в YAML и начинается с директивы `#cloud-config`.
 
 {% alert level="warning" %}
-При использовании cloud-образов (например, официальных образов дистрибутивов) необходимо обязательно предоставить конфигурацию cloud-init. Без неё на некоторых дистрибутивах не настраивается сетевое подключение, и виртуальная машина становится недоступной в сети, даже если подключена основная сеть (Main).
+Для образов, рассчитанных на cloud-init (в том числе официальных cloud-образов дистрибутивов), конфигурацию cloud-init нужно передать явно: иначе на части дистрибутивов не поднимается сеть, и ВМ оказывается недоступна по сети даже при подключении основной сети (Main).
 
 Кроме того, в cloud-образах по умолчанию отключена возможность входа в систему — необходимо добавить SSH-ключи для пользователя по умолчанию либо создать нового пользователя с SSH-доступом, иначе доступ к виртуальной машине будет невозможен.
 {% endalert %}
 
-### Обновление и установка пакетов
+#### Обновление и установка пакетов
 
-Пример конфигурации для обновления системы и установки пакетов:
+Пример `cloud-config` для обновления системы и установки пакетов из списка:
 
 ```yaml
 #cloud-config
@@ -380,9 +377,9 @@ runcmd:
   - systemctl enable --now nginx.service
 ```
 
-### Создание пользователя
+#### Создание пользователя
 
-Пример конфигурации для создания пользователя с паролем и SSH-ключом:
+Пример `cloud-config` для создания локального пользователя с паролем и SSH-ключом:
 
 ```yaml
 #cloud-config
@@ -390,7 +387,7 @@ runcmd:
 users:
   - name: cloud                    # Имя пользователя
     passwd: "$6$rounds=4096$saltsalt$..."  # Хеш пароля (SHA-512)
-    lock_passwd: false            # Не блокировать учетную запись
+    lock_passwd: false            # Не блокировать учётную запись
     sudo: ALL=(ALL) NOPASSWD:ALL  # Права sudo без запроса пароля
     shell: /bin/bash              # Оболочка по умолчанию
     ssh-authorized-keys:          # SSH-ключи для доступа
@@ -399,11 +396,15 @@ users:
 ssh_pwauth: true
 ```
 
-Для генерации хеша пароля используйте команду `mkpasswd --method=SHA-512 --rounds=4096`.
+Чтобы получить хеш пароля для поля `passwd`, выполните команду:
 
-### Создание файла с нужными правами
+```shell
+mkpasswd --method=SHA-512 --rounds=4096
+```
 
-Пример конфигурации для создания файла с заданными правами доступа:
+#### Создание файла с нужными правами
+
+Пример `cloud-config` для создания файла с заданными правами доступа:
 
 ```yaml
 #cloud-config
@@ -417,9 +418,9 @@ write_files:
     permissions: '0755'           # Права доступа (восьмеричный формат)
 ```
 
-### Настройка диска и файловой системы
+#### Настройка диска и файловой системы
 
-Пример конфигурации для разметки диска, создания файловой системы и монтирования:
+Пример `cloud-config` для разметки диска, создания файловой системы и монтирования:
 
 ```yaml
 #cloud-config
@@ -443,19 +444,19 @@ mounts:
   - ["/dev/sdb1", "/mnt/data", "ext4", "defaults", "0", "2"]
 ```
 
-### Настройка сетевых интерфейсов для дополнительных сетей
-
-Подробнее о подключении дополнительных сетей к виртуальной машине см. в разделе [Дополнительные сетевые интерфейсы](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#дополнительные-сетевые-интерфейсы).
+#### Настройка сетевых интерфейсов для дополнительных сетей
 
 {% alert level="warning" %}
 Настройки, описанные в этом разделе, применяются только для дополнительных сетей. Основная сеть (Main) настраивается автоматически через cloud-init и не требует ручной конфигурации.
 {% endalert %}
 
-Если к виртуальной машине подключены дополнительные сети, их необходимо настроить вручную через cloud-init: используйте `write_files` для создания конфигурационных файлов и `runcmd` для применения настроек.
+Если к виртуальной машине подключены дополнительные сети, их необходимо настроить вручную через cloud-init: конфигурационные файлы создаются в `write_files`, применение настроек — в `runcmd`.
 
-#### Для systemd-networkd
+Подробнее о подключении дополнительных сетей к виртуальной машине см. в разделе [Дополнительные сетевые интерфейсы](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#дополнительные-сетевые-интерфейсы).
 
-Пример для дистрибутивов, использующих `systemd-networkd` (например, Debian, CoreOS):
+##### Для systemd-networkd
+
+Пример `cloud-config` для дистрибутивов, использующих `systemd-networkd` (Debian, CoreOS и др.):
 
 ```yaml
 #cloud-config
@@ -474,9 +475,9 @@ runcmd:
   - systemctl restart systemd-networkd
 ```
 
-#### Для Netplan (Ubuntu)
+##### Для Netplan (Ubuntu)
 
-Пример для Ubuntu и других дистрибутивов, использующих `Netplan`:
+Пример `cloud-config` для Ubuntu и других систем, использующих `Netplan`:
 
 ```yaml
 #cloud-config
@@ -499,9 +500,9 @@ runcmd:
   - netplan apply
 ```
 
-#### Для ifcfg (RHEL/CentOS)
+##### Для ifcfg (RHEL/CentOS)
 
-Пример для RHEL, CentOS и других дистрибутивов, использующих схему `ifcfg` с `NetworkManager`:
+Пример `cloud-config` для RHEL-совместимых дистрибутивов, использующих схему `ifcfg` и `NetworkManager`:
 
 ```yaml
 #cloud-config
@@ -521,9 +522,9 @@ runcmd:
   - nmcli connection up eth1
 ```
 
-#### Для Alpine Linux
+##### Для Alpine Linux
 
-Пример для Alpine Linux и других дистрибутивов, использующих традиционный формат `/etc/network/interfaces`:
+Пример `cloud-config` для дистрибутивов, использующих традиционный формат `/etc/network/interfaces` (Alpine и аналоги):
 
 ```yaml
 #cloud-config
@@ -541,43 +542,43 @@ runcmd:
   - /etc/init.d/networking restart
 ```
 
-## Как использовать Ansible для конфигурирования виртуальных машин?
+### Как использовать Ansible для конфигурирования виртуальных машин?
 
-[Ansible](https://docs.ansible.com/ansible/latest/index.html) — это инструмент автоматизации, который позволяет выполнять задачи на удаленных серверах с использованием протокола SSH. В данном примере мы рассмотрим, как использовать Ansible для управления виртуальными машинами расположенных в проекте demo-app.
+[Ansible](https://docs.ansible.com/ansible/latest/index.html) — это инструмент автоматизации, который позволяет выполнять задачи на удаленных серверах с использованием протокола SSH. В данном примере мы рассмотрим, как использовать Ansible для управления виртуальными машинами расположенных в проекте `demo-app`.
 
 В рамках примера предполагается, что:
 
-- У вас есть виртуальная машина с именем frontend в проекте demo-app.
-- На виртуальной машине создан пользователь cloud для доступа по SSH.
-- Приватный SSH-ключ пользователя хранится в файле /home/user/.ssh/id_rsa на сервере Ansible.
+- в неймспейсе `demo-app` есть ВМ `frontend`.
+- в ВМ есть пользователь `cloud` с доступом по SSH.
+- на машине, где запускается Ansible, приватный SSH-ключ хранится в файле `/home/user/.ssh/id_rsa`.
 
-Пример inventory-файла:
+1. Создайте файл `inventory.yaml`:
 
-```yaml
----
-all:
-  vars:
-    ansible_ssh_common_args: '-o ProxyCommand="d8 v port-forward --stdio=true %h %p"'
-    # Пользователь по умолчанию, для доступа по SSH.
-    ansible_user: cloud
-    # Путь к приватному ключу.
-    ansible_ssh_private_key_file: /home/user/.ssh/id_rsa
-  hosts:
-    # Название узла в формате <название ВМ>.<название проекта>.
-    frontend.demo-app:
+   ```yaml
+   ---
+   all:
+     vars:
+       ansible_ssh_common_args: '-o ProxyCommand="d8 v port-forward --stdio=true %h %p"'
+       # Пользователь по умолчанию, для доступа по SSH.
+       ansible_user: cloud
+       # Путь к приватному ключу.
+       ansible_ssh_private_key_file: /home/user/.ssh/id_rsa
+     hosts:
+       # Название узла в формате <название ВМ>.<название проекта>.
+       frontend.demo-app:
 
-```
+   ```
 
-Чтобы проверить значение аптайма виртуальной машины, используйте следующую команду:
+1. Проверьте значение `uptime` виртуальной машины:
 
-```bash
-ansible -m shell -a "uptime" -i inventory.yaml all
+   ```bash
+   ansible -m shell -a "uptime" -i inventory.yaml all
 
-# frontend.demo-app | CHANGED | rc=0 >>
-# 12:01:20 up 2 days,  4:59,  0 users,  load average: 0.00, 0.00, 0.00
-```
+   # frontend.demo-app | CHANGED | rc=0 >>
+   # 12:01:20 up 2 days,  4:59,  0 users,  load average: 0.00, 0.00, 0.00
+   ```
 
-Если вы не хотите использовать файл inventory, можно передать все параметры прямо в командной строке:
+Если вы не хотите использовать файл inventory, передайте все параметры прямо в командной строке:
 
 ```bash
 ansible -m shell -a "uptime" \
@@ -588,13 +589,11 @@ ansible -m shell -a "uptime" \
   all
 ```
 
-## Как автоматически сгенерировать inventory для Ansible?
+### Как автоматически сгенерировать inventory для Ansible?
 
 {% alert level="warning" %}
 Для использования команды `d8 v ansible-inventory` требуется версия `d8` v0.27.0 или выше.
-{% endalert %}
 
-{% alert level="warning" %}
 Команда работает только для виртуальных машин, у которых подключена основная сеть кластера (Main).
 {% endalert %}
 
@@ -602,32 +601,32 @@ ansible -m shell -a "uptime" \
 
 Команда включает в инвентарь только виртуальные машины с назначенными IP-адресами в состоянии `Running`. Имена хостов формируются в формате `<vmname>.<namespace>` (например, `frontend.demo-app`).
 
-При необходимости настройте переменные хоста через аннотации (например, пользователя для SSH):
+1. При необходимости задайте переменные хоста через аннотации (например, пользователя для SSH):
 
-```bash
-d8 k -n demo-app annotate vm frontend provisioning.virtualization.deckhouse.io/ansible_user="cloud"
-```
+   ```bash
+   d8 k -n demo-app annotate vm frontend provisioning.virtualization.deckhouse.io/ansible_user="cloud"
+   ```
 
-Используйте команду напрямую:
+1. Запустите Ansible с динамически сформированным инвентарём:
 
-```bash
-ANSIBLE_INVENTORY_ENABLED=yaml ansible -m shell -a "uptime" all -i <(d8 v ansible-inventory -n demo-app -o yaml)
-```
+   ```bash
+   ANSIBLE_INVENTORY_ENABLED=yaml ansible -m shell -a "uptime" all -i <(d8 v ansible-inventory -n demo-app -o yaml)
+   ```
 
 {% alert level="info" %}
 Конструкция `<(...)` необходима, потому что Ansible ожидает файл или скрипт в качестве источника списка хостов. Простое указание команды в кавычках не сработает — Ansible попытается выполнить строку как скрипт. Конструкция `<(...)` передаёт вывод команды как файл, который Ansible может прочитать.
 {% endalert %}
 
-Или сохраните инвентарь в файл:
+1. Либо сохраните инвентарь в файл и выполните проверку:
 
-```bash
-d8 v ansible-inventory --list -o yaml -n demo-app > inventory.yaml
-ansible -m shell -a "uptime" -i inventory.yaml all
-```
+   ```bash
+   d8 v ansible-inventory --list -o yaml -n demo-app > inventory.yaml
+   ansible -m shell -a "uptime" -i inventory.yaml all
+   ```
 
-## Как перенаправить трафик на виртуальную машину?
+### Как перенаправить трафик на виртуальную машину?
 
-Виртуальная машина функционирует в кластере Kubernetes, поэтому направление сетевого трафика к ней осуществляется аналогично направлению трафика к подам. Для маршрутизации сетевого трафика на виртуальную машину применяется стандартный механизм Kubernetes — ресурс Service, который выбирает целевые объекты по меткам (label selector).
+Виртуальная машина функционирует в кластере Kubernetes, поэтому направление сетевого трафика к ней осуществляется аналогично направлению трафика к подам. Для маршрутизации сетевого трафика на виртуальную машину применяется стандартный механизм Kubernetes — ресурс Service, который выбирает целевые объекты по лейблам (label selector).
 
 1. Создайте сервис с требуемыми настройками.
 
@@ -673,67 +672,15 @@ ansible -m shell -a "uptime" -i inventory.yaml all
        vm: frontend-0
    ```
 
-## Как увеличить размер DVCR?
+## Образы
 
-Чтобы увеличить размер диска для DVCR, необходимо установить больший размер в конфигурации модуля `virtualization`, чем текущий размер.
-
-1. Проверьте текущий размер DVCR:
-
-   ```shell
-   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-   ```
-
-   Пример вывода:
-
-   ```console
-    {"size":"58G","storageClass":"linstor-thick-data-r1"}
-   ```
-
-1. Задайте размер:
-
-   ```shell
-   d8 k patch mc virtualization \
-     --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
-   ```
-
-   Пример вывода:
-
-   ```console
-   moduleconfig.deckhouse.io/virtualization patched
-   ```
-
-1. Проверьте изменение размера:
-
-   ```shell
-   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-   ```
-
-   Пример вывода:
-
-   ```console
-   {"size":"59G","storageClass":"linstor-thick-data-r1"}
-   ```
-
-1. Проверьте текущее состояние DVCR:
-
-   ```shell
-   d8 k get pvc dvcr -n d8-virtualization
-   ```
-
-   Пример вывода:
-
-   ```console
-   NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
-   dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
-   ```
-
-## Как создать golden image для Linux?
+### Как создать golden image для Linux?
 
 Golden image — это предварительно настроенный образ виртуальной машины, который можно использовать для быстрого создания новых ВМ с уже установленным программным обеспечением и настройками.
 
 1. Создайте виртуальную машину, установите на неё необходимое программное обеспечение и выполните все требуемые настройки.
 
-1. Установите и настройте qemu-guest-agent (рекомендуется):
+1. Установите и настройте `qemu-guest-agent` (рекомендуется):
 
    - Для RHEL/CentOS:
 
@@ -834,26 +781,26 @@ Golden image — это предварительно настроенный об
 
    Для RHEL: выполните сброс и восстановление контекстов SELinux (выберите один из вариантов):
 
-   - Вариант 1: Проверка и восстановление контекстов сразу:
+   - Вариант 1: Проверка и восстановление контекстов немедленно:
 
      ```bash
      restorecon -R /
      ```
 
-   - Вариант 2: Запланировать relabel при следующей загрузке:
+   - Вариант 2: Запланировать `relabel` при следующей загрузке:
 
      ```bash
      touch /.autorelabel
      ```
 
-1. Убедитесь, что в `/etc/fstab` используются UUID или LABEL вместо имён устройств (например, `/dev/sdX`). Для проверки выполните:
+1. Проверьте, что в `/etc/fstab` указаны UUID или `LABEL`, а не имена вида `/dev/sdX`:
 
    ```bash
    blkid
    cat /etc/fstab
    ```
 
-1. Очистите состояние cloud-init, логи и seed (рекомендуемый способ):
+1. Сбросьте состояние cloud-init (логи и seed):
 
    ```bash
    cloud-init clean --logs --seed
@@ -872,7 +819,7 @@ Golden image — это предварительно настроенный об
    poweroff
    ```
 
-1. Создайте ресурс `VirtualImage` из диска подготовленной ВМ:
+1. Создайте ресурс [VirtualImage](/modules/virtualization/stable/cr.html#virtualimage), указав исходный ресурс [VirtualDisk](/modules/virtualization/stable/cr.html#virtualdisk) подготовленной ВМ:
 
    ```bash
    d8 k apply -f -<<EOF
@@ -890,7 +837,7 @@ Golden image — это предварительно настроенный об
    EOF
    ```
 
-   Альтернативно, создайте `ClusterVirtualImage`, чтобы образ был доступен на уровне кластера для всех проектов:
+   Либо создайте ресурс [ClusterVirtualImage](/modules/virtualization/stable/cr.html#clustervirtualimage), чтобы образ был доступен на уровне кластера для всех проектов:
 
    ```bash
    d8 k apply -f -<<EOF
@@ -908,7 +855,7 @@ Golden image — это предварительно настроенный об
    EOF
    ```
 
-1. Создайте диск ВМ из созданного образа:
+1. Создайте новый ресурс [VirtualDisk](/modules/virtualization/stable/cr.html#virtualdisk) из полученного образа:
 
    ```bash
    d8 k apply -f -<<EOF
@@ -926,13 +873,69 @@ Golden image — это предварительно настроенный об
    EOF
    ```
 
-После выполнения этих шагов у вас будет golden image, который можно использовать для быстрого создания новых виртуальных машин с предустановленным программным обеспечением и настройками.
+После выполнения всех шагов у вас будет Golden image, который можно использовать для быстрого создания новых виртуальных машин с предустановленным программным обеспечением и настройками.
 
-## Как восстановить кластер, если после смены лицензии образы из registry.deckhouse.io не загружаются?
+## Прочее
+
+### Как увеличить размер DVCR?
+
+Размер тома DVCR задаётся в `ModuleConfig` модуля `virtualization` (`spec.settings.dvcr.storage.persistentVolumeClaim.size`). Новое значение должно быть больше текущего.
+
+1. Проверьте текущий размер DVCR:
+
+   ```shell
+   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+   ```
+
+   Пример вывода:
+
+   ```console
+    {"size":"58G","storageClass":"linstor-thick-data-r1"}
+   ```
+
+1. Увеличьте `size` через `patch` (подставьте нужное значение):
+
+   ```shell
+   d8 k patch mc virtualization \
+     --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
+   ```
+
+   Пример вывода:
+
+   ```console
+   moduleconfig.deckhouse.io/virtualization patched
+   ```
+
+1. Убедитесь, что в `ModuleConfig` отображается новый размер:
+
+   ```shell
+   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+   ```
+
+   Пример вывода:
+
+   ```console
+   {"size":"59G","storageClass":"linstor-thick-data-r1"}
+   ```
+
+1. Проверьте текущее состояние DVCR:
+
+   ```shell
+   d8 k get pvc dvcr -n d8-virtualization
+   ```
+
+   Пример вывода:
+
+   ```console
+   NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
+   dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
+   ```
+
+### Как восстановить кластер, если после смены лицензии образы из registry.deckhouse.io не загружаются?
 
 После смены лицензии на кластере с `containerd v1` и удаления устаревшей лицензии образы из `registry.deckhouse.io` могут перестать загружаться. При этом на узлах остаётся устаревший файл конфигурации `/etc/containerd/conf.d/dvcr.toml`, который не удаляется автоматически. Из-за него не запускается модуль `registry`, без которого не работает DVCR.
 
-Чтобы это исправить, примените манифест NodeGroupConfiguration (NGC): он удалит файл на узлах. После запуска модуля `registry` манифест нужно удалить, так как это разовое исправление.
+Манифест NodeGroupConfiguration (NGC) после применения удалит файл на узлах. После запуска модуля `registry` манифест нужно удалить, так как это разовое исправление.
 
 1. Сохраните манифест в файл (например, `containerd-dvcr-remove-old-config.yaml`):
 
@@ -960,7 +963,7 @@ Golden image — это предварительно настроенный об
        rm -f /etc/containerd/conf.d/dvcr.toml
    ```
 
-1. Примените манифест:
+1. Примените сохранённый манифест:
 
    ```bash
    d8 k apply -f containerd-dvcr-remove-old-config.yaml
@@ -984,7 +987,7 @@ Golden image — это предварительно настроенный об
        type: Ready
    ```
 
-1. Удалите манифест NGC:
+1. Удалите разовый манифест `NodeGroupConfiguration`:
 
    ```bash
    d8 k delete -f containerd-dvcr-remove-old-config.yaml
