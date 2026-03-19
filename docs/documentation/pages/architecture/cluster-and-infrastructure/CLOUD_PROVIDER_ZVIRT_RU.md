@@ -53,7 +53,7 @@ description: Архитектура модуля cloud-provider-zvirt в Deckhou
 
    * **zvirt-cloud-controller-manager**.
 
-3. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-zvirt`. 
+3. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-zvirt`.
 
    Состоит из следующих контейнеров:
 
