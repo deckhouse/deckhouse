@@ -920,10 +920,8 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("legacy module without metadata", func() {
-		// No labels on any image, no package.yaml, but module.yaml present → legacy module (v1alpha1).
-		// Case 2: /version path exists, detectPackageType returns errNoPackageMetadata.
-		// Should create ModulePackageVersion and ModulePackage resources (type Module).
+	suite.Run("version image without metadata", func() {
+		// No labels on version image, no package.yaml - errTooOldImage, treated as skip (no resources created).
 		segmentAwareMock := &segmentAwareMockClient{
 			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 				return []string{"test-package"}, nil
@@ -931,13 +929,8 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			packageListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 				return []string{"v1.0.0"}, nil
 			},
-			// No versionGetImageConfigFunc → release image has no labels
-			// versionExtractFunc returns module.yaml (no package.yaml) → legacy module detection
-			versionExtractFunc: func() io.ReadCloser {
-				return buildTarWithFiles(map[string]string{
-					"module.yaml": "weight: 900\n",
-				})
-			},
+			// No versionGetImageConfigFunc → version image has no labels
+			// No versionExtractFunc → no package.yaml in version image
 		}
 		psm := createMockPSM(segmentAwareMock)
 
@@ -956,8 +949,8 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 	suite.Run("legacy module from old registry", func() {
 		// The /version path doesn't exist in old registries → NAME_UNKNOWN from ListTags on version segment.
-		// Case 1: /version missing, /release has semver tags + channel names.
-		// Should create ModulePackageVersion (with registry-path-segment=release label) and ModulePackage.
+		// Fallback to /release path - has semver tags + channel names.
+		// Should create ModulePackageVersion (with legacy=true label) and ModulePackage.
 		segmentAwareMock := &segmentAwareMockClient{
 			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 				return []string{"test-package"}, nil

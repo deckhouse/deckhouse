@@ -7,6 +7,7 @@ metadata:
     packages.deckhouse.io/package: test-module
     packages.deckhouse.io/repository: deckhouse
     packages.deckhouse.io/draft: "true"
+    packages.deckhouse.io/legacy: "true"
 spec:
   packageName: test-module
   packageRepositoryName: deckhouse

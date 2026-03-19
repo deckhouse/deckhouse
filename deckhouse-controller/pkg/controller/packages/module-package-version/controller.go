@@ -147,21 +147,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, logger *log.Logge
 
 	// Determine registry path segment: "version" (default) or "release" (legacy)
 	pathSegment := defaultPathSegment
-	if seg, ok := mpv.Labels[v1alpha1.ModulePackageVersionLabelRegistryPathSegment]; ok && seg != "" {
-		if !isValidPathSegment(seg) {
-			r.markEnrichmentFailed(
-				mpv,
-				v1alpha1.ModulePackageVersionConditionReasonGetRegistryClientErr,
-				fmt.Sprintf("invalid registry-path-segment label value: %q, expected %q or %q", seg, "version", "release"),
-			)
-
-			if patchErr := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); patchErr != nil {
-				return fmt.Errorf("patch status ModulePackageVersion %s: %w", mpv.Name, patchErr)
-			}
-
-			return fmt.Errorf("invalid registry-path-segment label value: %q", seg)
-		}
-		pathSegment = seg
+	if mpv.Labels[v1alpha1.ModulePackageVersionLabelLegacy] == "true" {
+		pathSegment = "release"
 	}
 
 	registryPath := path.Join(packageRepo.Spec.Registry.Repo, mpv.Spec.PackageName, pathSegment)
@@ -266,10 +253,6 @@ func (r *reconciler) handleDelete(ctx context.Context, mpv *v1alpha1.ModulePacka
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func isValidPathSegment(seg string) bool {
-	return seg == "version" || seg == "release"
 }
 
 func enrichWithMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata) *v1alpha1.ModulePackageVersion {

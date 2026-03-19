@@ -28,12 +28,11 @@ const (
 	ModulePackageVersionResource = "modulepackageversions"
 	ModulePackageVersionKind     = "ModulePackageVersion"
 
-	ModulePackageVersionLabelLegacy              = "packages.deckhouse.io/legacy"
-	ModulePackageVersionLabelDraft               = "packages.deckhouse.io/draft"
-	ModulePackageVersionLabelPackage             = "packages.deckhouse.io/package"
-	ModulePackageVersionLabelRepository          = "packages.deckhouse.io/repository"
-	ModulePackageVersionLabelExistInRegistry     = "packages.deckhouse.io/exist-in-registry"
-	ModulePackageVersionLabelRegistryPathSegment = "packages.deckhouse.io/registry-path-segment"
+	ModulePackageVersionLabelLegacy          = "packages.deckhouse.io/legacy"
+	ModulePackageVersionLabelDraft           = "packages.deckhouse.io/draft"
+	ModulePackageVersionLabelPackage         = "packages.deckhouse.io/package"
+	ModulePackageVersionLabelRepository      = "packages.deckhouse.io/repository"
+	ModulePackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
 
 	ModulePackageVersionConditionTypeIsEnriched             = "IsEnriched"
 	ModulePackageVersionConditionReasonFetchErr             = "FetchingReleaseError"

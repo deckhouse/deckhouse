@@ -6,8 +6,8 @@ metadata:
   finalizers:
   - modulepackageversion.deckhouse.io/used-by-module
   labels:
+    packages.deckhouse.io/legacy: "true"
     packages.deckhouse.io/package: test-module
-    packages.deckhouse.io/registry-path-segment: release
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-module-v1.0.0
   resourceVersion: "4"

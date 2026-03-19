@@ -298,7 +298,7 @@ requirements:
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("release path segment label", func() {
+	suite.Run("legacy module from old registry", func() {
 		dc := dependency.NewMockedContainer()
 		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: func() (*crv1.Manifest, error) {
@@ -340,25 +340,6 @@ stage: Sandbox
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("invalid path segment label", func() {
-		suite.setupController("invalid-path-segment.yaml")
-
-		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: mpv.Name},
-		})
-		require.NoError(suite.T(), err)
-
-		// Verify IsEnriched condition is False with error message
-		var updated v1alpha1.ModulePackageVersion
-		err = suite.kubeClient.Get(ctx, types.NamespacedName{Name: mpv.Name}, &updated)
-		require.NoError(suite.T(), err)
-
-		require.Len(suite.T(), updated.Status.Conditions, 1)
-		assert.Equal(suite.T(), v1alpha1.ModulePackageVersionConditionTypeIsEnriched, updated.Status.Conditions[0].Type)
-		assert.Equal(suite.T(), "False", string(updated.Status.Conditions[0].Status))
-		assert.Contains(suite.T(), updated.Status.Conditions[0].Message, "invalid registry-path-segment")
-	})
 
 	suite.Run("non-draft resource skip", func() {
 		suite.setupController("non-draft-resource.yaml")
