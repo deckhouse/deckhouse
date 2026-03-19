@@ -514,9 +514,8 @@ func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error)
 		return nil, fmt.Errorf("Failed to generate NodeUser: %w", err)
 	}
 
-	c, cancel := s.ctx.WithTimeout(10 * time.Second)
-	defer cancel()
-	err = entity.CreateOrUpdateNodeUser(c, s.ctx, nodeUser, nil)
+	
+	err = entity.CreateOrUpdateNodeUser(s.ctx.Ctx(), s.ctx, nodeUser, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create or update NodeUser: %w", err)
 	}
