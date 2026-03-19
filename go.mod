@@ -155,7 +155,6 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
-	github.com/Masterminds/vcs v1.13.3 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/alecthomas/chroma/v2 v2.15.0 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
@@ -180,7 +179,6 @@ require (
 	github.com/containerd/stargz-snapshotter/estargz v0.18.1 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.3.6 // indirect
 	github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f // indirect
 	github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3 // indirect
@@ -316,12 +314,11 @@ require (
 	github.com/vmware/go-vcloud-director/v3 v3.0.0-alpha.31 // indirect
 	github.com/wI2L/jsondiff v0.5.0 // indirect
 	github.com/weppos/publicsuffix-go v0.50.1-0.20250829105427-5340293a34a1 // indirect
-	github.com/werf/3p-helm v0.0.0-20260226105203-2bf4ce55336e // indirect
 	github.com/werf/common-go v0.0.0-20251113140850-a1a98e909e9b // indirect
 	github.com/werf/kubedog v0.13.1-0.20260115171811-304218f24308 // indirect
 	github.com/werf/lockgate v0.1.1 // indirect
 	github.com/werf/logboek v0.6.1 // indirect
-	github.com/werf/nelm v1.22.1-0.20260226105851-08c852246d12
+	github.com/werf/nelm v1.23.0
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
