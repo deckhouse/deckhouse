@@ -1,6 +1,9 @@
+---
+---
+
+
 @use "components/common/_variables.scss";
 @use 'components/common/_mixins.scss';
-@use 'components/common/_breakpoints.scss';
 
 .docs.faq__container {
     .docs__wrap-title {
@@ -31,10 +34,10 @@
         line-height: 24px;
         letter-spacing: 0.16px;
         color: mixins.$ntrl-400;
+        cursor: pointer;
 
         &.active {
             color: variables.$primary-700;
-            cursor: pointer;
         }
     }
 

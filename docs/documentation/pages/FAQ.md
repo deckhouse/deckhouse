@@ -15,3 +15,7 @@ The page contains frequently asked questions about configuring and using the Dec
 <button class="show__containers--collapse">Collapse all</button>
 
 {% include faq-list.liquid %}
+
+{%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<link href='/assets/css/faq.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<script type="text/javascript" src="/assets/js/faq.js?v={{ assetHash }}"></script>
