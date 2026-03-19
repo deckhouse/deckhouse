@@ -5,7 +5,7 @@ search: local-path-provisioner, hostpath
 description: Architecture of the local-path-provisioner module in Deckhouse Kubernetes Platform.
 ---
 
-The `local-path-provisioner` module provides the local storage on Kubernetes nodes using HostPath volumes. Creates StorageClass resources to manage the allocation of local storage.
+The `local-path-provisioner` module provides the local storage on Kubernetes nodes using `HostPath` volumes and creates StorageClass resources to manage the allocation of local storage.
 
 For more details about module, refer to the [corresponding documentation section](/modules/local-path-provisioner/).
 
@@ -27,10 +27,10 @@ The Level 2 C4 architecture of the [`local-path-provisioner`](/modules/local-pat
 
 The module consists of the following components:
 
-1. **Local-path-provisioner**: It performs the following actions when a Pod orders a disk:
+1. **Local-path-provisioner**: It performs the following actions when a pod orders a disk:
 
-   * creates a HostPath PersistentVolume;
-   * creates a local disk folder on the desired node along the path consisting of the path parameter of [LocalPathProvisioner custom resource](https://deckhouse.ru/modules/local-path-provisioner/cr.html#localpathprovisioner-v1alpha1-spec-path), the PersistentVolume name and the PersistentVolumeClaim name.
+   * Creates a PersistentVolume of the `HostPath` volume type.
+   * Creates a local disk directory for the volume on the target node. The directory path is based on the [`path`](/modules/local-path-provisioner/cr.html#localpathprovisioner-v1alpha1-spec-path) parameter of the LocalPathProvisioner custom resource, as well as the PersistentVolume and PersistentVolumeClaim names.
 
    It consists of a single container:
 
