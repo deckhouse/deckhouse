@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index f1ee9e18..f8d0b138 100644
+index f1ee9e1..f8d0b13 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,129 +1,134 @@
@@ -221,7 +221,7 @@ index f1ee9e18..f8d0b138 100644
 +	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
  )
 diff --git a/go.sum b/go.sum
-index 9ddd255a..a4aa5511 100644
+index 9ddd255..a4aa551 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,101 +1,97 @@
