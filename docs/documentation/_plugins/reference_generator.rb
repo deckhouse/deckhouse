@@ -146,6 +146,10 @@ module ReferenceGenerator
         description = escape_liquid_tags(data['description'])
         result += "<p>#{description}</p>\n"
       end
+      if data['version'].to_s.strip != ''
+        version = escape_liquid_tags(data['version'].to_s)
+        result += "<p><strong>Version:</strong> #{version}</p>\n"
+      end
 
       # Render flags
       result += render_flags(data['flags'], depth) if data['flags'] && data['flags'].size > 0
