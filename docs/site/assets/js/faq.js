@@ -8,8 +8,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const faqTitle = faqContainer.querySelectorAll('h3');
-    collapseButton.classList.add('active');
+    expandButton.classList.add('active');
     const faqContent = faqContainer.querySelectorAll('h3 + div');
+    const sectionMap = new Map();
 
     function findContent(element) {
         let content = element.nextElementSibling;
@@ -45,9 +46,34 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    function showSectionByHash(onlyTarget) {
+        const hash = decodeURIComponent(window.location.hash.replace('#', ''));
+        const title = hash ? document.getElementById(hash) : null;
+
+        if (!title || !sectionMap.has(title)) {
+            return;
+        }
+
+        if (onlyTarget) {
+            sectionMap.forEach((content, title) => {
+                title.classList.toggle('hide');
+                content.classList.toggle('hidden');
+            });
+            return;
+        }
+
+        const content = sectionMap.get(title);
+        title.classList.remove('hide');
+        content.classList.remove('hidden');
+    }
+
     faqTitle.forEach(title => {
         const content = findContent(title);
-        
+
+        sectionMap.set(title, content);
+        title.classList.add('hide');
+        content.classList.add('hidden');
+
         title.addEventListener('click', () => {
             if (!content) {
                 return;
@@ -55,5 +81,11 @@ document.addEventListener('DOMContentLoaded', function () {
             title.classList.toggle('hide');
             content.classList.toggle('hidden');
         });
+    });
+
+    showSectionByHash(true);
+
+    window.addEventListener('hashchange', () => {
+        showSectionByHash(false);
     });
 })

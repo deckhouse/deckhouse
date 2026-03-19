@@ -31,10 +31,10 @@
         line-height: 24px;
         letter-spacing: 0.16px;
         color: mixins.$ntrl-400;
-        cursor: pointer;
 
         &.active {
             color: variables.$primary-700;
+            cursor: pointer;
         }
     }
 
