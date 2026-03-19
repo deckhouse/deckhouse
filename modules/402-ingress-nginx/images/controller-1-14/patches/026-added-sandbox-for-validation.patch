@@ -106,7 +106,7 @@ index 776440658..1700036ac 100644
 +		//nolint:gosec // Ignore G204 error
 +		return exec.Command(nc.SandboxBinary, sandboxArgs...).CombinedOutput()
 +	case "Standard":
-+		standardArgs := append([]string{"-S", "64535", "-R", "/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
++		standardArgs := append([]string{"-S", "64535", "-R", "/chroot/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
 +		//nolint:gosec // Ignore G204 error
 +		return exec.Command("/usr/bin/unshare", standardArgs...).CombinedOutput()
 +	}

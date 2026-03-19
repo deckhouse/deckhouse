@@ -1124,7 +1124,7 @@ spec:
                     Selects the validation isolation mode for controller version `1.14`.
 
                     * `Disabled` uses the regular `nginx -t` validation path without additional isolation.
-                    * `Standard` runs validation via `/usr/bin/unshare -S 64535 -R /validation-chroot` with a dedicated minimal `/validation-chroot` and a separate temporary directory for validation configs. This mode is more compatible with hardened hosts, but it does not provide ptrace-based runtime file access checks or seccomp filtering from `/usr/bin/sandbox`.
+                    * `Standard` runs validation via `/usr/bin/unshare -S 64535 -R /chroot/validation-chroot` with a dedicated minimal validation root nested under `/chroot` and a separate temporary directory for validation configs. This mode is more compatible with hardened hosts, but it does not provide ptrace-based runtime file access checks or seccomp filtering from `/usr/bin/sandbox`.
                     * `Full` runs validation via `/usr/bin/sandbox` using the ptrace-based sandbox runner. This is the strongest mode because it keeps seccomp filtering and runtime path checks, but it requires host support for ptrace-based sandboxing.
                 nodeSelector:
                   type: object

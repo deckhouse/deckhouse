@@ -893,82 +893,89 @@ shell:
   - mkdir -p /chroot/modules_mount
   - ln -s /chroot/modules_mount /modules_mount
 
-  # Minimal root for degraded validation mode on hosts where ptrace/userns-based sandboxing is unavailable.
+  # Minimal root for Standard validation mode on hosts where ptrace/userns-based sandboxing is unavailable.
   - |
     bash -eu -c '
     validationDirs=(
-      /validation-chroot/bin
-      /validation-chroot/dev
-      /validation-chroot/etc
-      /validation-chroot/etc/nginx
-      /validation-chroot/etc/ingress-controller
-      /validation-chroot/etc/ingress-controller/auth
-      /validation-chroot/etc/ingress-controller/geoip
-      /validation-chroot/etc/ingress-controller/lua
-      /validation-chroot/etc/ingress-controller/nginx
-      /validation-chroot/etc/ingress-controller/resolv
-      /validation-chroot/etc/ingress-controller/ssl
-      /validation-chroot/etc/ingress-controller/telemetry
-      /validation-chroot/lib
-      /validation-chroot/modules_mount/etc/nginx/modules/otel
-      /validation-chroot/opt/modsecurity/var/audit
-      /validation-chroot/opt/modsecurity/var/log
-      /validation-chroot/opt/modsecurity/var/upload
-      /validation-chroot/proc
-      /validation-chroot/run
-      /validation-chroot/tmp/nginx
-      /validation-chroot/usr/lib
-      /validation-chroot/usr/local
-      /validation-chroot/usr/ssl
-      /validation-chroot/var/log/audit
-      /validation-chroot/var/log/nginx
+      /chroot/validation-chroot/bin
+      /chroot/validation-chroot/dev
+      /chroot/validation-chroot/etc
+      /chroot/validation-chroot/etc/nginx
+      /chroot/validation-chroot/etc/ingress-controller
+      /chroot/validation-chroot/etc/ingress-controller/auth
+      /chroot/validation-chroot/etc/ingress-controller/geoip
+      /chroot/validation-chroot/etc/ingress-controller/lua
+      /chroot/validation-chroot/etc/ingress-controller/nginx
+      /chroot/validation-chroot/etc/ingress-controller/resolv
+      /chroot/validation-chroot/etc/ingress-controller/ssl
+      /chroot/validation-chroot/etc/ingress-controller/telemetry
+      /chroot/validation-chroot/lib
+      /chroot/validation-chroot/modules_mount/etc/nginx/modules/otel
+      /chroot/validation-chroot/opt/modsecurity/var/audit
+      /chroot/validation-chroot/opt/modsecurity/var/log
+      /chroot/validation-chroot/opt/modsecurity/var/upload
+      /chroot/validation-chroot/proc
+      /chroot/validation-chroot/run
+      /chroot/validation-chroot/tmp/nginx
+      /chroot/validation-chroot/usr/lib
+      /chroot/validation-chroot/usr/local
+      /chroot/validation-chroot/usr/ssl
+      /chroot/validation-chroot/var/log/audit
+      /chroot/validation-chroot/var/log/nginx
     );
     for dir in "${validationDirs[@]}"; do
       mkdir -p "${dir}";
     done
 
-    cp -a /chroot/etc/nginx/. /validation-chroot/etc/nginx/
-    cp -a /chroot/etc/ingress-controller/. /validation-chroot/etc/ingress-controller/
-    cp -a /chroot/etc/passwd /chroot/etc/group /chroot/etc/hosts /validation-chroot/etc/
-    cp -a /chroot/etc/ld-musl-x86_64.path /validation-chroot/etc/
+    cp -a /chroot/etc/nginx/. /chroot/validation-chroot/etc/nginx/
+    cp -a /chroot/etc/ingress-controller/. /chroot/validation-chroot/etc/ingress-controller/
+    cp -a /chroot/etc/passwd /chroot/etc/group /chroot/etc/hosts /chroot/validation-chroot/etc/
+    cp -a /chroot/etc/ld-musl-x86_64.path /chroot/validation-chroot/etc/
 
-    cp -al /chroot/bin/bash /chroot/bin/sh /validation-chroot/bin/
-    cp -al /chroot/lib/. /validation-chroot/lib/
-    cp -al /chroot/usr/lib/. /validation-chroot/usr/lib/
-    cp -al /chroot/usr/local/lib /validation-chroot/usr/local/
-    cp -al /chroot/usr/local/modsecurity /validation-chroot/usr/local/
-    cp -al /chroot/usr/local/nginx /validation-chroot/usr/local/
+    cp -al /chroot/bin/bash /chroot/bin/sh /chroot/validation-chroot/bin/
+    cp -al /chroot/lib/. /chroot/validation-chroot/lib/
+    cp -al /chroot/usr/lib/. /chroot/validation-chroot/usr/lib/
+    cp -al /chroot/usr/local/lib /chroot/validation-chroot/usr/local/
+    cp -al /chroot/usr/local/modsecurity /chroot/validation-chroot/usr/local/
+    cp -al /chroot/usr/local/nginx /chroot/validation-chroot/usr/local/
 
     if [ -d /chroot/modules_mount/etc/nginx/modules/otel ]; then
-      cp -al /chroot/modules_mount/etc/nginx/modules/otel/. /validation-chroot/modules_mount/etc/nginx/modules/otel/
+      cp -al /chroot/modules_mount/etc/nginx/modules/otel/. /chroot/validation-chroot/modules_mount/etc/nginx/modules/otel/
     fi
     if [ -f /chroot/usr/ssl/openssl.cnf ]; then
-      cp -al /chroot/usr/ssl/openssl.cnf /validation-chroot/usr/ssl/
+      cp -al /chroot/usr/ssl/openssl.cnf /chroot/validation-chroot/usr/ssl/
     fi
 
-    find /chroot -mindepth 1 -maxdepth 1 -type f -exec cp -al {} /validation-chroot/ \;
+    find /chroot -mindepth 1 -maxdepth 1 -type f -exec cp -al {} /chroot/validation-chroot/ \;
 
-    touch /validation-chroot/etc/ingress-controller/lua/cfg.json
-    touch /validation-chroot/etc/ingress-controller/nginx/nginx.conf
-    touch /validation-chroot/etc/ingress-controller/resolv/resolv.conf
-    touch /validation-chroot/etc/ingress-controller/telemetry/opentelemetry.toml
-    touch /validation-chroot/var/log/modsec_audit.log
+    rm -rf /chroot/lib /chroot/usr/lib /chroot/usr/local/lib /chroot/usr/local/modsecurity /chroot/usr/local/nginx
+    ln -s validation-chroot/lib /chroot/lib
+    ln -s ../validation-chroot/usr/lib /chroot/usr/lib
+    ln -s ../../validation-chroot/usr/local/lib /chroot/usr/local/lib
+    ln -s ../../validation-chroot/usr/local/modsecurity /chroot/usr/local/modsecurity
+    ln -s ../../validation-chroot/usr/local/nginx /chroot/usr/local/nginx
+
+    touch /chroot/validation-chroot/etc/ingress-controller/lua/cfg.json
+    touch /chroot/validation-chroot/etc/ingress-controller/nginx/nginx.conf
+    touch /chroot/validation-chroot/etc/ingress-controller/resolv/resolv.conf
+    touch /chroot/validation-chroot/etc/ingress-controller/telemetry/opentelemetry.toml
+    touch /chroot/validation-chroot/var/log/modsec_audit.log
 
     chown -R deckhouse:deckhouse \
-      /validation-chroot/etc/ingress-controller \
-      /validation-chroot/opt/modsecurity/var \
-      /validation-chroot/tmp/nginx \
-      /validation-chroot/var/log/audit \
-      /validation-chroot/var/log/modsec_audit.log \
-      /validation-chroot/var/log/nginx
+      /chroot/validation-chroot/etc/ingress-controller \
+      /chroot/validation-chroot/opt/modsecurity/var \
+      /chroot/validation-chroot/tmp/nginx \
+      /chroot/validation-chroot/var/log/audit \
+      /chroot/validation-chroot/var/log/modsec_audit.log \
+      /chroot/validation-chroot/var/log/nginx
     '
-  - mknod -m 0666 /validation-chroot/dev/null c 1 3
-  - mknod -m 0666 /validation-chroot/dev/random c 1 8
-  - mknod -m 0666 /validation-chroot/dev/urandom c 1 9
-  - mknod -m 0666 /validation-chroot/dev/full c 1 7
-  - mknod -m 0666 /validation-chroot/dev/ptmx c 5 2
-  - mknod -m 0666 /validation-chroot/dev/zero c 1 5
-  - mknod -m 0666 /validation-chroot/dev/tty c 5 0
+  - mknod -m 0666 /chroot/validation-chroot/dev/null c 1 3
+  - mknod -m 0666 /chroot/validation-chroot/dev/random c 1 8
+  - mknod -m 0666 /chroot/validation-chroot/dev/urandom c 1 9
+  - mknod -m 0666 /chroot/validation-chroot/dev/full c 1 7
+  - mknod -m 0666 /chroot/validation-chroot/dev/ptmx c 5 2
+  - mknod -m 0666 /chroot/validation-chroot/dev/zero c 1 5
+  - mknod -m 0666 /chroot/validation-chroot/dev/tty c 5 0
 
   # Utils for final image
   - cp -a /tools/setcap /apps
@@ -984,7 +991,6 @@ import:
   to: /
   includePaths:
   - chroot
-  - validation-chroot
   - modules_mount
   - var/log
   - etc/nginx
@@ -1085,8 +1091,8 @@ shell:
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
   - /apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
   - /apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - /apps/setcap    cap_net_bind_service=+ep /validation-chroot/usr/local/nginx/sbin/nginx
-  - /apps/setcap -v cap_net_bind_service=+ep /validation-chroot/usr/local/nginx/sbin/nginx
+  - /apps/setcap    cap_net_bind_service=+ep /chroot/validation-chroot/usr/local/nginx/sbin/nginx
+  - /apps/setcap -v cap_net_bind_service=+ep /chroot/validation-chroot/usr/local/nginx/sbin/nginx
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
 imageSpec:
