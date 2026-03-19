@@ -87,3 +87,14 @@ Files:
 Changes:
 
 - Add support for the `vcd.cpi.flant.com/load-balancer-ip` annotation
+
+### 008-fix-ccm-command-signature.patch
+
+Files:
+
+- cmd/ccm/main.go
+
+Changes:
+
+- Fix NewCloudControllerManagerCommand call signature for k8s.io v0.34.3
+- In k8s.io v0.34.3, the function signature changed to include an additional `map[string]string` parameter for feature gates between `DefaultInitFuncConstructors` and `NamedFlagSets`
