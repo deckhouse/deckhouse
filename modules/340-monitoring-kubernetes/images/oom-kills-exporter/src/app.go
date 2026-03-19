@@ -100,16 +100,16 @@ func (a *app) prometheusCount(containerLabels map[string]string) {
 	counter.Add(1)
 }
 
-func (a *app) getContainerIDFromLog(log string) (podUID, containerID string) {
-	podUID = ""
-	containerID = ""
+func (a *app) getContainerIDFromLog(log string) (string, string) {
+	podUID := ""
+	containerID := ""
 
 	if matches := a.kmesgRE.FindStringSubmatch(log); matches != nil {
 		podUID = matches[1]
 		containerID = matches[2]
 	}
 
-	return
+	return podUID, containerID
 }
 
 func (a *app) buildPrometheusLabels(containerLabels map[string]string) prometheus.Labels {
@@ -168,7 +168,8 @@ func copyLabels(labels map[string]string) map[string]string {
 }
 
 func prepareLabels(a *app) []string {
-	var labels []string
+	labels := make([]string, 0, len(a.containerLabels))
+
 	for _, label := range a.containerLabels {
 		labels = append(labels, strings.ReplaceAll(label, ".", "_"))
 	}

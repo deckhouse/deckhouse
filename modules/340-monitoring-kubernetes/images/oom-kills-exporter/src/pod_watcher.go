@@ -18,14 +18,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-
-	"github.com/golang/glog"
 )
 
 func (a *app) startPodWatcher(ctx context.Context) {
@@ -62,7 +61,7 @@ func (a *app) startPodWatcher(ctx context.Context) {
 		glog.Fatal(err)
 	}
 
-	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err = podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			a.kubeAPIOK.Store(true)
 			a.syncPod(obj)
@@ -77,6 +76,10 @@ func (a *app) startPodWatcher(ctx context.Context) {
 		},
 	})
 
+	if err != nil {
+		glog.Fatalf("Failed to add event handler to pod informer: %v", err)
+	}
+
 	factory.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), podInformer.HasSynced) {
 		glog.Fatal("pod informer cache sync failed")
@@ -85,8 +88,6 @@ func (a *app) startPodWatcher(ctx context.Context) {
 	a.kubeAPIOK.Store(true)
 	a.isReady.Store(true)
 	a.podIndexer = podInformer.GetIndexer()
-
-	return
 }
 
 func (a *app) syncPod(obj interface{}) {
