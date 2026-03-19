@@ -17,7 +17,7 @@
 pod_kill_and_wait() {
   local pod_prefix="${1}"
   local sleep_interval=1
-  local max_attempts=20
+  local max_attempts=10
 
   if [ -z "${pod_prefix}" ]; then
     echo "Empty prefix, skip"
@@ -306,7 +306,7 @@ start_and_wait() {
     local args=("\$@")
 
     local sleep_interval=1
-    local max_attempts=20
+    local max_attempts=10
 
     echo "Starting and waiting background process: \${bin_path}"
 
@@ -338,7 +338,7 @@ liveness_probe() {
     local ca_path=\${2}
 
     local sleep_interval=1
-    local max_attempts=30
+    local max_attempts=20
 
     echo "Waiting liveness probe: \${address}"
 
@@ -394,7 +394,7 @@ kill_and_wait() {
     pkill -f "\${bin_path}" 2>/dev/null || true
 
     local sleep_interval=1
-    local max_attempts=20
+    local max_attempts=10
     for ((i=1; i<=max_attempts; i++)); do
         if [[ \${i} -ne 1 ]]; then
             echo "Attempt: \${i}/\${max_attempts}"
