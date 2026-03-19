@@ -1,5 +1,5 @@
 ---
-title: "Administrator guide"
+title: "Deckhouse Virtualization Platform administrator guide"
 permalink: en/virtualization-platform/documentation/admin/overview.html
 lang: en
 ---

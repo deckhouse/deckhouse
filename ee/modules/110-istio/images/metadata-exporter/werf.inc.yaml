@@ -8,7 +8,7 @@ import:
   owner: "64535"
   group: "64535"
   after: setup
-- image: tools/curl-curl-8_17_0
+- image: tools/curl-curl-8_18_0
   add: /usr/bin/curl-static
   to: /usr/bin/curl
   owner: "64535"

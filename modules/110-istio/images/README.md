@@ -1,13 +1,13 @@
 ## How it built
 
-### Building common-v1x19x7 and common-v1x21x6 images
+### Building common-v1x21x6 images
   - final image based on `common/src-artifact` image
   - includes:
     - src of istio *(loaded from fox)*
     - patches in src of istio for fix healthcheck of operator
     - patches in src of istio for fix CVE
 
-### Building cni-v1x19x7 and cni-v1x21x6 images from sources
+### Building cni-v1x21x6 images from sources
   - final image based on `common/distroless` image
     - includes:
      - binaries install-cni *(built from src)*
@@ -18,7 +18,7 @@
     - binaries install-cni *(built from src)*
     - binaries istio-cni *(built from src)*
 
-### Building operator-v1x19x7 and operator-v1x21x6 images from sources
+### Building operator-v1x21x6 images from sources
   - final image based on `common/distroless` image
     - includes:
       - binaries operator *(built from src)*
@@ -29,7 +29,7 @@
       - binaries operator *(built from src)*
       - manifests of istio *(loaded from common-ver artifact)*
 
-### Building pilot-v1x19x7 and pilot-v1x21x6 images from sources
+### Building pilot-v1x21x6 images from sources
   - final image based on `common/distroless` image
     - includes:
       - binaries pilot-discovery *(built from src)*
@@ -39,20 +39,6 @@
       - src of istio *(loaded from common-ver artifact)*
       - binaries pilot-discovery *(built from src)*
       - templates for envoy bootstrap *(loaded from common-ver artifact)*
-
-
-### Building proxy-v1x19x7 image
-  - final image based on `common/alt-p11` image
-    - includes:
-      - package ca-certificates from repo:p11
-      - binaries iptables *(built from src)*
-      - binaries pilot-agent *(built from src)*
-      - templates for envoy bootstrap *(loaded from common-ver artifact)*
-      - binaries envoy *(!!!from image loaded from hub.docker.com)*
-  - image for build pilot-agent based on `builder/golang-alpine-1.23` image
-    - includes:
-        - src of istio/proxy *(loaded from fox)*
-        - binaries pilot-agent *(built from src)*
 
 ### Building proxy-v1x21x6 image
   - final image based on `common/alt-p11` image

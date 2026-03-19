@@ -76,7 +76,7 @@ var initValues = `{
 	"global": {
 		"clusterIsBootstrapped": true,
 		"clusterConfiguration": {
-			"kubernetesVersion": "1.30"
+			"kubernetesVersion": "1.31"
 		},
 		"modulesImages": {
 			"registry": {
@@ -118,6 +118,7 @@ func (suite *ControllerTestSuite) SetupSuite() {
 
 func (suite *ControllerTestSuite) SetupSubTest() {
 	dependency.TestDC.CRClient = cr.NewClientMock(suite.T())
+	dependency.TestDC.CRClient.DigestMock.Optional().Return("sha256:test", nil)
 	dependency.TestDC.HTTPClient.DoMock.
 		Expect(&http.Request{}).
 		Return(&http.Response{

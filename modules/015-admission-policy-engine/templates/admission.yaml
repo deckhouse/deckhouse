@@ -70,6 +70,7 @@ spec:
         )
         || request.userInfo.username.startsWith('system:serviceaccount:d8-')
         || request.userInfo.username.startsWith('system:serviceaccount:kube-')
+        || request.userInfo.username.startsWith('system:sudouser')
       reason: Forbidden
       message: "Pods with label 'gatekeeper.sh/operation=webhook' are not allowed" 
 ---
@@ -110,6 +111,7 @@ spec:
         )
         || request.userInfo.username.startsWith("system:serviceaccount:d8-")
         || request.userInfo.username.startsWith("system:serviceaccount:kube-")
+        || request.userInfo.username.startsWith("system:sudouser")
       message: Setting gatekeeper.sh/operation=webhook in pod template is forbidden
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
@@ -144,6 +146,7 @@ spec:
         )
         || request.userInfo.username.startsWith("system:serviceaccount:d8-")
         || request.userInfo.username.startsWith("system:serviceaccount:kube-")
+        || request.userInfo.username.startsWith("system:sudouser")
       message: Setting gatekeeper.sh/operation=webhook in CronJob pod template is forbidden
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}

@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Масштабирование приложений и управление ресурсами"
 permalink: ru/admin/configuration/app-scaling/overview.html
 description: "Настройка масштабирования приложений и управления подами в Deckhouse Kubernetes Platform. HPA, VPA, вытеснение подов и оптимизация ресурсов для высокой доступности."
 lang: ru

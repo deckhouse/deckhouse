@@ -125,6 +125,14 @@ linters-settings:
           name: node-manager:nvidia-gpu:node-feature-discovery-worker
         - kind: RoleBinding
           name: node-manager:nvidia-gpu:node-feature-discovery-worker
+        - kind: Role
+          name: d8:node-manager:bashible:rpp
+        - kind: RoleBinding
+          name: d8:node-manager:bashible:rpp
+        - kind: Role
+          name: node-manager:kubernetes-api-proxy
+        - kind: RoleBinding
+          name: node-manager:kubernetes-api-proxy
   module:
     conversions:
       disable: true
@@ -132,6 +140,9 @@ linters-settings:
       license:
         files:
           - images/nvidia-dcgm/scripts/llvm.sh
+          - images/caps-controller-manager/src/bin/controller-gen
+          - images/bashible-apiserver/src/hack/update-codegen.sh
+          - images/bashible-apiserver/src/hack/kube_codegen.sh
   openapi:
     exclude-rules:
       enum:

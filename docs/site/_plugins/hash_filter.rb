@@ -3,7 +3,8 @@ module Jekyll
     require 'digest'
 
     def sha256(input)
-      Digest::SHA256.hexdigest(input)
+      input_str = input.is_a?(String) ? input : input.to_s
+      Digest::SHA256.hexdigest(input_str)
     end
   end
 end

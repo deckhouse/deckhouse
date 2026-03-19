@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package main
 
 import (
@@ -24,6 +25,7 @@ import (
 
 	"dvp-common/api"
 	"dvp-common/config"
+
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 
@@ -80,10 +82,20 @@ func (d *Discoverer) DiscoveryData(
 ) ([]byte, error) {
 	discoveryData := &cloudDataV1.DVPCloudProviderDiscoveryData{}
 	if len(cloudProviderDiscoveryData) > 0 {
-		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+		err := json.Unmarshal(cloudProviderDiscoveryData, discoveryData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
 		}
+	}
+
+	if discoveryData.APIVersion == "" {
+		discoveryData.APIVersion = "deckhouse.io/v1"
+	}
+	if discoveryData.Kind == "" {
+		discoveryData.Kind = "DVPCloudDiscoveryData"
+	}
+	if len(discoveryData.Zones) == 0 {
+		discoveryData.Zones = []string{"default"}
 	}
 
 	dvpClient, err := d.config.client()

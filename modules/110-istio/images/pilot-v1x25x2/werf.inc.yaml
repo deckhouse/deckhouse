@@ -1,5 +1,5 @@
 ---
-{{- $istioVersion := "1.25.2" }}
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-25" $ ) }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.25.2 -> v1x25x2 */}}
 ---
 # Based on https://github.com/istio/istio/blob/1.25.2/pilot/docker/Dockerfile.pilot

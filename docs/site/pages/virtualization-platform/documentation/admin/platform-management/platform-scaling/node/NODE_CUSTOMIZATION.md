@@ -39,7 +39,7 @@ cloudProvider:
     externalNetworkNames:
     - public
     instances:
-      imageName: ubuntu-22-04-cloud-amd64
+      imageName: ubuntu-24-04-cloud-amd64
       mainNetwork: kube
       securityGroups:
       - kube
@@ -84,7 +84,7 @@ nodeGroup:
     containerLogMaxSize: 50Mi
     resourceReservation:
       mode: "Off"
-  kubernetesVersion: "1.30"
+  kubernetesVersion: "1.31"
   manualRolloutID: ""
   name: master
   nodeTemplate:

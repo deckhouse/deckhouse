@@ -1,5 +1,5 @@
 ---
-title: Введение в документацию
+title: Документация Deckhouse Kubernetes Platform
 permalink: ru/
 description: Документация Deckhouse Kubernetes Platform.
 lang: ru

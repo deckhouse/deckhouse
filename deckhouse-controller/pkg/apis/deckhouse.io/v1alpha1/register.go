@@ -62,10 +62,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ModuleSourceList{},
 		&ModuleRelease{},
 		&ModuleReleaseList{},
-		&ModuleUpdatePolicy{},
-		&ModuleUpdatePolicyList{},
-		&ModulePullOverride{},
-		&ModulePullOverrideList{},
 		&ModuleDocumentation{},
 		&ModuleDocumentationList{},
 		&ModuleSettingsDefinition{},
@@ -85,6 +81,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ApplicationPackageList{},
 		&Application{},
 		&ApplicationList{},
+		&ModulePackageVersion{},
+		&ModulePackageVersionList{},
+		&ModulePackage{},
+		&ModulePackageList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

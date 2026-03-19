@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package controller
 
 import (
@@ -22,8 +23,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	dvpapi "dvp-common/api"
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
@@ -36,7 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/utils/ptr"
-	clusterv1b1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1b2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	capiutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
@@ -46,6 +45,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	dvpapi "dvp-common/api"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 
@@ -75,7 +76,7 @@ type DeckhouseMachineReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
+func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) { // nolint:nonamedreturns
 	logger := log.FromContext(ctx)
 
 	dvpMachine := &infrastructurev1a1.DeckhouseMachine{}
@@ -107,7 +108,7 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	dvpCluster := &infrastructurev1a1.DeckhouseCluster{}
 	err = r.Client.Get(ctx, types.NamespacedName{
-		Namespace: cluster.Spec.InfrastructureRef.Namespace,
+		Namespace: cluster.Namespace,
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}, dvpCluster)
 	if err != nil {
@@ -129,6 +130,15 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
+	// Migrate old CR's to v1beta2 conditions
+	defer func() {
+		normalizeLegacyConditions(dvpMachine)
+		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
+			result = ctrl.Result{}
+			reterr = err
+		}
+	}()
+
 	// Always patch the dvpMachine when exiting this function, so we can persist any DeckhouseMachine changes.
 	defer func() {
 		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
@@ -146,21 +156,35 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return r.reconcileUpdates(ctx, logger, cluster, machine, dvpMachine)
 }
 
+func normalizeLegacyConditions(dvpMachine *infrastructurev1a1.DeckhouseMachine) {
+	for i := range dvpMachine.Status.Conditions {
+		c := &dvpMachine.Status.Conditions[i]
+
+		if c.Reason == "" {
+			c.Reason = "MigratedFromBeta1"
+		}
+		if c.Message == "" {
+			c.Message = "Condition restored during migration to v1beta2"
+		}
+		if c.LastTransitionTime.IsZero() {
+			c.LastTransitionTime = metav1.Now()
+		}
+	}
+}
+
 func patchDeckhouseMachine(
 	ctx context.Context,
 	patchHelper *patch.Helper,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 	options ...patch.Option,
 ) error {
-	conditions.SetSummary(dvpMachine,
-		conditions.WithConditions(infrastructurev1a1.VMReadyCondition),
-	)
+	// No SetSummary in v1beta2; individual conditions should be updated with conditions.Set() elsewhere.
 
 	// Patch the object, ignoring conflicts on the conditions owned by this controller.
 	options = append(options,
-		patch.WithOwnedConditions{Conditions: []clusterv1b1.ConditionType{
-			clusterv1b1.ReadyCondition,
-			infrastructurev1a1.VMReadyCondition,
+		patch.WithOwnedConditions{Conditions: []string{
+			string(clusterv1b2.ReadyCondition),
+			string(infrastructurev1a1.VMReadyCondition),
 		}},
 	)
 	return patchHelper.Patch(ctx, dvpMachine, options...)
@@ -169,8 +193,8 @@ func patchDeckhouseMachine(
 func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	ctx context.Context,
 	logger logr.Logger,
-	cluster *clusterv1b1.Cluster,
-	machine *clusterv1b1.Machine,
+	cluster *clusterv1b2.Cluster,
+	machine *clusterv1b2.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 ) (ctrl.Result, error) {
 	if dvpMachine.Status.FailureReason != nil || dvpMachine.Status.FailureMessage != nil {
@@ -183,27 +207,30 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		return ctrl.Result{}, nil
 	}
 
-	if !cluster.Status.InfrastructureReady {
+	if !conditions.IsTrue(cluster, clusterv1b2.InfrastructureReadyCondition) {
 		logger.Info("Waiting for Cluster infrastructure to become Ready")
-		conditions.MarkFalse(
-			dvpMachine,
-			infrastructurev1a1.VMReadyCondition,
-			infrastructurev1a1.WaitingForClusterInfrastructureReason,
-			clusterv1b1.ConditionSeverityInfo,
-			"",
-		)
+		conditions.Set(dvpMachine, metav1.Condition{
+			Type:               string(infrastructurev1a1.VMReadyCondition),
+			Status:             metav1.ConditionFalse,
+			Reason:             infrastructurev1a1.WaitingForClusterInfrastructureReason,
+			Message:            "Cluster infrastructure is not ready yet",
+			LastTransitionTime: metav1.Now(),
+		})
+
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	if machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap cloud-init secret reference is missing from Machine")
-		conditions.MarkFalse(
-			dvpMachine,
-			infrastructurev1a1.VMReadyCondition,
-			infrastructurev1a1.WaitingForBootstrapScriptReason,
-			clusterv1b1.ConditionSeverityInfo,
-			"",
-		)
+
+		conditions.Set(dvpMachine, metav1.Condition{
+			Type:               string(infrastructurev1a1.VMReadyCondition),
+			Status:             metav1.ConditionFalse, // False instead of MarkFalse
+			Reason:             infrastructurev1a1.WaitingForBootstrapScriptReason,
+			Message:            "Bootstrap cloud-init secret is missing",
+			LastTransitionTime: metav1.Now(),
+		})
+
 		return ctrl.Result{}, nil
 	}
 
@@ -212,14 +239,15 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	vm, err := r.getOrCreateVM(ctx, machine, dvpMachine)
 	if err != nil {
 		logger.Info("No VM can be found or created for Machine, see DeckhouseMachine status for details")
-		conditions.MarkFalse(
-			dvpMachine,
-			infrastructurev1a1.VMReadyCondition,
-			infrastructurev1a1.VMErrorReason,
-			clusterv1b1.ConditionSeverityError,
-			"No VM can be found or created for Machine: %v",
-			err,
-		)
+
+		conditions.Set(dvpMachine, metav1.Condition{
+			Type:               string(infrastructurev1a1.VMReadyCondition),
+			Status:             metav1.ConditionFalse, // VMReady = False
+			Reason:             infrastructurev1a1.VMErrorReason,
+			Message:            fmt.Sprintf("No VM can be found or created for Machine: %v", err),
+			LastTransitionTime: metav1.Now(),
+		})
+
 		return ctrl.Result{}, fmt.Errorf("find or create VM: %w", err)
 	}
 	logger = logger.WithValues("vm_name", vm.Name, "vm_ns", vm.Namespace)
@@ -227,8 +255,8 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	// Node usually joins the cluster if the CSR generated by kubelet with the node name is approved.
 	// The approval happens if the Machine InternalDNS matches the node name, so we add it here along with hostname.
 	dvpMachine.Status.Addresses = []infrastructurev1a1.VMAddress{
-		{Type: clusterv1b1.MachineHostName, Address: vm.Name},
-		{Type: clusterv1b1.MachineInternalDNS, Address: vm.Name},
+		{Type: clusterv1b2.MachineHostName, Address: vm.Name},
+		{Type: clusterv1b2.MachineInternalDNS, Address: vm.Name},
 	}
 	dvpMachine.Spec.ProviderID = ProviderIDPrefix + vm.Name
 
@@ -236,11 +264,18 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	case v1alpha2.MachineRunning:
 		// If VM is running, fetch its IP addr and add it to dvpMachine.Status.Addresses
 		logger.Info("VM is Running")
-		conditions.MarkTrue(dvpMachine, infrastructurev1a1.VMReadyCondition)
-		dvpMachine.Status.Ready = true
+		conditions.Set(dvpMachine, metav1.Condition{
+			Type:               string(infrastructurev1a1.VMReadyCondition),
+			Status:             metav1.ConditionTrue,
+			Reason:             "VMRunning",
+			Message:            "VM is running and ready",
+			LastTransitionTime: metav1.Now(),
+		})
+		infraReady := true
+		dvpMachine.Status.Initialization.Provisioned = &infraReady
 		dvpMachine.Status.Addresses = append(dvpMachine.Status.Addresses, []infrastructurev1a1.VMAddress{
-			{Type: clusterv1b1.MachineInternalIP, Address: vm.Status.IPAddress},
-			{Type: clusterv1b1.MachineExternalIP, Address: vm.Status.IPAddress},
+			{Type: clusterv1b2.MachineInternalIP, Address: vm.Status.IPAddress},
+			{Type: clusterv1b2.MachineExternalIP, Address: vm.Status.IPAddress},
 		}...)
 
 		// TODO(mvasl) DVP does not support detaching of provisioning secrets yet, but one day it will.
@@ -254,36 +289,44 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		// 	}
 		// }
 	case v1alpha2.MachineStopped:
-		// VM is stopped. With "AlwaysOnUnlessStoppedManually" run policy this can be expected
-		// (e.g., manual stop for maintenance). We do not force-start the VM here.
-		logger.Info("VM is in Stopped state; manual stop is allowed by runPolicy. Not forcing start", "state", vm.Status.Phase)
-		dvpMachine.Status.Ready = false
-		conditions.MarkFalse(
-			dvpMachine,
-			infrastructurev1a1.VMReadyCondition,
-			infrastructurev1a1.VMInStoppedStateReason,
-			clusterv1b1.ConditionSeverityWarning,
-			"VM is in Stopped state; manual stop is allowed by runPolicy. Not forcing start",
-		)
+		// VM is stopped, this is unexpected as we use "AlwaysOn" run policy for VM's here.
+		// Let's wait and see what happens as this may be a part of migration process or this is a bug in the DVP VM controller.
+		logger.Info("VM is in Stopped state, waiting for DVP to bring it back up", "state", vm.Status.Phase)
+		// dvpMachine.Status.Ready = false
+		infraReady := false
+		dvpMachine.Status.Initialization.Provisioned = &infraReady
+
+		conditions.Set(dvpMachine, metav1.Condition{
+			Type:               string(infrastructurev1a1.VMReadyCondition),
+			Status:             metav1.ConditionFalse, // False instead of MarkFalse
+			Reason:             infrastructurev1a1.VMInStoppedStateReason,
+			Message:            "VM is in Stopped state, waiting for DVP to bring it back up",
+			LastTransitionTime: metav1.Now(),
+		})
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	case v1alpha2.MachineDegraded:
 		// If VM is in some bad state and cannot be booted up, check if it has NodeRef.
-		// If the machine has a NodeRef then it must have been working at some point,
-		// so the error could be something temporary.
-		// If not, it is more likely a configuration error, so we record failure and never retry.
+		// The machine having a NodeRef means it was working at some point, so this could be temporary.
+		// If not, it is more likely a configuration/resource error, so we record failure and never retry.
+
 		logger.Error(fmt.Errorf("VM in degraded state"), "VM failed",
 			"vm_phase", vm.Status.Phase,
 			"vm_name", vm.Name,
-			"has_node_ref", machine.Status.NodeRef != nil,
+			"has_node_ref", machine.Status.NodeRef.Name != "",
 			"requested_memory", dvpMachine.Spec.Memory.String(),
 			"requested_cpu_cores", dvpMachine.Spec.CPU.Cores,
 			"vm_class", dvpMachine.Spec.VMClassName,
 		)
 
-		if machine.Status.NodeRef == nil {
+		infraReady := false
+		dvpMachine.Status.Initialization.Provisioned = &infraReady
+
+		if machine.Status.NodeRef.Name == "" {
 			// VM never successfully started - likely a resource or configuration error
 			err = fmt.Errorf("VM state %q indicates failure, likely due to resource constraints or configuration error", vm.Status.Phase)
-			dvpMachine.Status.FailureReason = ptr.To(string(capierrors.CreateMachineError))
+
+			// choose one; UpdateMachineError is ok, CreateMachineError might be even more accurate if available in your capierrors version
+			dvpMachine.Status.FailureReason = ptr.To(string(capierrors.UpdateMachineError))
 			dvpMachine.Status.FailureMessage = ptr.To(fmt.Sprintf(
 				"VM failed to start (vmClass: %s, memory: %s, CPU: %d cores). Check parent DVP cluster for detailed error: %s",
 				dvpMachine.Spec.VMClassName,
@@ -298,27 +341,29 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 			)
 		}
 
-		conditions.MarkFalse(
-			dvpMachine,
-			infrastructurev1a1.VMReadyCondition,
-			infrastructurev1a1.VMInFailedStateReason,
-			clusterv1b1.ConditionSeverityError,
-			"VM in degraded state: %s",
-			vm.Status.Phase,
-		)
+		conditions.Set(dvpMachine, metav1.Condition{
+			Type:               string(infrastructurev1a1.VMReadyCondition),
+			Status:             metav1.ConditionFalse,
+			Reason:             infrastructurev1a1.VMInFailedStateReason,
+			Message:            fmt.Sprintf("VM in degraded state: %s", vm.Status.Phase),
+			LastTransitionTime: metav1.Now(),
+		})
+
 		return ctrl.Result{}, nil
 	default:
 		// The other states are normal (for example, migration or shutdown) but we don't want to proceed until it's up
 		// due to potential conflict or unexpected actions
 		logger.Info("Waiting for VM state to become Running", "state", vm.Status.Phase)
-		dvpMachine.Status.Ready = false
-		conditions.MarkUnknown(
-			dvpMachine,
-			infrastructurev1a1.VMReadyCondition,
-			infrastructurev1a1.VMNotReadyReason,
-			"VM is not ready, state is %s",
-			vm.Status.Phase,
-		)
+		// dvpMachine.Status.Ready = false
+		infraReady := false
+		dvpMachine.Status.Initialization.Provisioned = &infraReady
+		conditions.Set(dvpMachine, metav1.Condition{
+			Type:               string(infrastructurev1a1.VMReadyCondition),
+			Status:             metav1.ConditionUnknown,
+			Reason:             infrastructurev1a1.VMNotReadyReason,
+			Message:            fmt.Sprintf("VM is not ready, state is %s", vm.Status.Phase),
+			LastTransitionTime: metav1.Now(),
+		})
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
@@ -330,7 +375,7 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	ctx context.Context,
 	logger logr.Logger,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
-) (ctrl.Result, error) {
+) (ctrl.Result, error) { // nolint:unparam
 	logger.Info("Reconciling DeckhouseMachine delete operation")
 
 	vm, err := r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
@@ -362,9 +407,10 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	// Try to delete VM with timeout
 	vmDeletionFailed := false
 	if err = r.DVP.ComputeService.DeleteVM(ctx, dvpMachine.Name); err != nil {
-		if errors.Is(err, cloudprovider.InstanceNotFound) {
+		switch {
+		case errors.Is(err, cloudprovider.InstanceNotFound):
 			logger.Info("VirtualMachine already deleted during DeleteVM call, continuing")
-		} else if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") { // Check if it's a timeout error - in this case, proceed with cleanup
+		case errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout"): // Check if it's a timeout error - in this case, proceed with cleanup
 			logger.Error(err, "VM deletion timed out, VM may still be terminating in parent DVP cluster. Proceeding with cleanup to unblock DeckhouseMachine deletion.",
 				"vm_name", dvpMachine.Name,
 			)
@@ -378,7 +424,7 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 			dvpMachine.Annotations[OrphanedVMTimestampAnnotation] = time.Now().Format(time.RFC3339)
 
 			// Continue with disk cleanup despite VM deletion timeout
-		} else {
+		default:
 			// For other errors, fail the reconciliation
 			return ctrl.Result{}, fmt.Errorf("delete VirtualMachine: %w", err)
 		}
@@ -411,13 +457,10 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 
 func (r *DeckhouseMachineReconciler) getOrCreateVM(
 	ctx context.Context,
-	machine *clusterv1b1.Machine,
+	machine *clusterv1b2.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
-) (
-	vm *v1alpha2.VirtualMachine,
-	err error,
-) {
-	vm, err = r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
+) (*v1alpha2.VirtualMachine, error) {
+	vm, err := r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
 	if err != nil {
 		if errors.Is(err, cloudprovider.InstanceNotFound) {
 			vm, err = r.createVM(ctx, machine, dvpMachine)
@@ -432,7 +475,7 @@ func (r *DeckhouseMachineReconciler) getOrCreateVM(
 // cleanupVMResources removes resources created during VM provisioning
 func (r *DeckhouseMachineReconciler) cleanupVMResources(
 	ctx context.Context,
-	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine, // nolint:unparam
 	cloudInitSecretName string,
 	createdDiskNames []string,
 ) {
@@ -463,13 +506,13 @@ func (r *DeckhouseMachineReconciler) cleanupVMResources(
 
 func (r *DeckhouseMachineReconciler) createVM(
 	ctx context.Context,
-	machine *clusterv1b1.Machine,
+	machine *clusterv1b2.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 ) (*v1alpha2.VirtualMachine, error) {
 	logger := log.FromContext(ctx)
 
 	if machine.Spec.Bootstrap.DataSecretName == nil {
-		return nil, fmt.Errorf("clusterv1b1.Machine does not contain bootstrap script")
+		return nil, fmt.Errorf("clusterv1b2.Machine does not contain bootstrap script")
 	}
 
 	// Validate VirtualMachineClass and image exist before creating VM
@@ -477,31 +520,8 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("resource validation failed: %w", err)
 	}
 
-	var cloudInitSecretName string
 	var createdDiskNames []string
-
-	bootDiskName := dvpMachine.Name + "-boot"
-	bootDisk, err := r.DVP.DiskService.CreateDiskFromDataSource(
-		ctx,
-		r.ClusterUUID,
-		dvpMachine.Name,
-		bootDiskName,
-		dvpMachine.Spec.RootDiskSize,
-		dvpMachine.Spec.RootDiskStorageClass,
-		&v1alpha2.VirtualDiskDataSource{
-			Type: v1alpha2.DataSourceTypeObjectRef,
-			ObjectRef: &v1alpha2.VirtualDiskObjectRef{
-				Kind: v1alpha2.VirtualDiskObjectRefKind(dvpMachine.Spec.BootDiskImageRef.Kind),
-				Name: dvpMachine.Spec.BootDiskImageRef.Name,
-			},
-		},
-	)
-	if err != nil {
-		logger.Info("Boot disk creation failed, cleaning up created resources", "error", err.Error())
-		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
-		return nil, fmt.Errorf("Cannot create boot disk: %w", err)
-	}
-	createdDiskNames = append(createdDiskNames, bootDiskName)
+	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
 
 	bootstrapDataSecret := &corev1.Secret{}
 	if err := r.Client.Get(
@@ -521,29 +541,16 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
 	}
 
-	cloudInitSecretName = "cloud-init-" + dvpMachine.Name
-	// CreateCloudInitProvisioningSecret is idempotent - it will update existing secret if it already exists
-	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, string(r.ClusterUUID), dvpMachine.Name, cloudInitSecretName, cloudInitScript); err != nil {
-		logger.Info("Cloud-init secret creation failed, cleaning up created resources", "error", err.Error())
-		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
-		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
-	}
+	bootDiskName := dvpMachine.Name + "-boot"
 	blockDeviceRefs := []v1alpha2.BlockDeviceSpecRef{
-		{Kind: v1alpha2.DiskDevice, Name: bootDisk.Name},
+		{Kind: v1alpha2.DiskDevice, Name: bootDiskName},
 	}
 
-	for i, d := range dvpMachine.Spec.AdditionalDisks {
+	for i := range dvpMachine.Spec.AdditionalDisks {
 		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
-		addDisk, err := r.DVP.DiskService.CreateDisk(ctx, r.ClusterUUID, dvpMachine.Name, addDiskName, d.Size.Value(), d.StorageClass)
-		if err != nil {
-			logger.Info("Additional disk creation failed, cleaning up created resources", "error", err.Error(), "diskName", addDiskName)
-			r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
-			return nil, fmt.Errorf("Cannot create additional disk %s: %w", addDiskName, err)
-		}
-		createdDiskNames = append(createdDiskNames, addDiskName)
 		blockDeviceRefs = append(blockDeviceRefs, v1alpha2.BlockDeviceSpecRef{
 			Kind: v1alpha2.DiskDevice,
-			Name: addDisk.Name,
+			Name: addDiskName,
 		})
 	}
 
@@ -641,6 +648,71 @@ func (r *DeckhouseMachineReconciler) createVM(
 			dvpMachine.Spec.Memory.String(),
 			dvpMachine.Spec.CPU.Cores,
 			err)
+	}
+
+	if err = r.DVP.ComputeService.CreateCloudInitProvisioningSecret(
+		ctx,
+		r.ClusterUUID,
+		dvpMachine.Name,
+		cloudInitSecretName,
+		cloudInitScript,
+		vm.Name,
+		vm.UID,
+	); err != nil {
+		logger.Info("Cloud-init secret creation failed, cleaning up created resources", "error", err.Error())
+		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
+		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
+	}
+
+	if _, err = r.DVP.DiskService.CreateDiskFromDataSource(
+		ctx,
+		r.ClusterUUID,
+		dvpMachine.Name,
+		bootDiskName,
+		dvpMachine.Spec.RootDiskSize,
+		dvpMachine.Spec.RootDiskStorageClass,
+		&v1alpha2.VirtualDiskDataSource{
+			Type: v1alpha2.DataSourceTypeObjectRef,
+			ObjectRef: &v1alpha2.VirtualDiskObjectRef{
+				Kind: v1alpha2.VirtualDiskObjectRefKind(dvpMachine.Spec.BootDiskImageRef.Kind),
+				Name: dvpMachine.Spec.BootDiskImageRef.Name,
+			},
+		},
+		[]metav1.OwnerReference{
+			{
+				APIVersion: "virtualization.deckhouse.io/v1alpha2",
+				Kind:       "VirtualMachine",
+				Name:       vm.Name,
+				UID:        vm.UID,
+			},
+		},
+	); err != nil {
+		logger.Info("Boot disk creation failed, cleaning up created resources", "error", err.Error())
+		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
+		return nil, fmt.Errorf("Cannot create boot disk: %w", err)
+	}
+	createdDiskNames = append(createdDiskNames, bootDiskName)
+
+	for i, d := range dvpMachine.Spec.AdditionalDisks {
+		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
+		if _, err = r.DVP.DiskService.CreateDisk(
+			ctx,
+			r.ClusterUUID,
+			dvpMachine.Name,
+			addDiskName,
+			d.Size.Value(),
+			d.StorageClass,
+			[]metav1.OwnerReference{{
+				APIVersion: "virtualization.deckhouse.io/v1alpha2",
+				Kind:       "VirtualMachine",
+				Name:       vm.Name,
+				UID:        vm.UID,
+			}}); err != nil {
+			logger.Info("Additional disk creation failed, cleaning up created resources", "error", err.Error(), "diskName", addDiskName)
+			r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
+			return nil, fmt.Errorf("Cannot create additional disk %s: %w", addDiskName, err)
+		}
+		createdDiskNames = append(createdDiskNames, addDiskName)
 	}
 
 	return vm, nil

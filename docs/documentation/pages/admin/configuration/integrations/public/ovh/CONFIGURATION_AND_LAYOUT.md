@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in OVH Cloud
 permalink: en/admin/integrations/public/ovh/configuration-and-layout-scheme.html
 cloud_type: ovh
 ---

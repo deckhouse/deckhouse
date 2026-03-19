@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Масштабирование платформы и управление узлами"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/platform-scaling/overview.html
 lang: ru
 ---

@@ -1,5 +1,6 @@
 ---
-title: Alert management
+title: Web interface for managing alerts
+description: "Alertmanager web interface for managing alerts in Deckhouse Kubernetes Platform. Viewing alert information, severity levels, temporary silencing of notifications."
 permalink: en/user/web/alertmanager.html
 ---
 

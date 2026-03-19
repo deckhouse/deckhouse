@@ -36,7 +36,7 @@ masterNodeGroup:
     instanceType: m5.xlarge
     # ID образа виртуальной машины в Amazon.
     # Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
-    ami: ami-0caef02b518350c8b
+    ami: ami-0aad10862ade98f27
     # Размер диска для виртуальной машины master-узла.
     diskSizeGb: 30
     # Используемый тип диска для виртуальной машины master-узла.
@@ -49,7 +49,7 @@ nodeGroups:
     replicas: 2
     instanceClass:
       instanceType: t2.medium
-      ami: ami-0caef02b518350c8b
+      ami: ami-0aad10862ade98f27
     additionalTags:
       backup: srv1
 tags:
@@ -82,7 +82,7 @@ withNAT:
     zone: eu-central-1a
     instanceClass:
       instanceType: m5.large
-      ami: ami-0caef02b518350c8b
+      ami: ami-0aad10862ade98f27
       diskType: gp3
 masterNodeGroup:
   # Количество master-узлов.
@@ -93,7 +93,7 @@ masterNodeGroup:
     instanceType: m5.xlarge
     # ID образа виртуальной машины в Amazon.
     # Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
-    ami: ami-0caef02b518350c8b
+    ami: ami-0aad10862ade98f27
     # Размер диска для виртуальной машины master-узла.
     diskSizeGb: 30
     # Используемый тип диска для виртуальной машины master-узла.
@@ -106,7 +106,7 @@ nodeGroups:
     replicas: 2
     instanceClass:
       instanceType: t2.medium
-      ami: ami-0caef02b518350c8b
+      ami: ami-0aad10862ade98f27
     additionalTags:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"

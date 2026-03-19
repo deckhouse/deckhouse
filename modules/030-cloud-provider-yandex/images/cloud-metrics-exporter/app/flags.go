@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	ApiKey            = ""
-	ApiKeyFilePath    = ""
+	APIKey            = ""
+	APIKeyFilePath    = ""
 	FolderID          = ""
 	ListenAddress     = "127.0.0.1:9000"
 	Services          = make([]string, 0)
@@ -36,11 +36,11 @@ var (
 func InitFlags(cmd *kingpin.Application) {
 	cmd.Flag("api-key", "API key for service account").
 		Envar("API_KEY").
-		StringVar(&ApiKey)
+		StringVar(&APIKey)
 
 	cmd.Flag("api-key-file", "API key file path for service account").
 		Envar("API_KEY_PATH").
-		StringVar(&ApiKeyFilePath)
+		StringVar(&APIKeyFilePath)
 
 	cmd.Flag("folder-id", "Yandex folder id").
 		Envar("FOLDER_ID").
@@ -59,7 +59,7 @@ func InitFlags(cmd *kingpin.Application) {
 
 	cmd.Flag("v", "Logger verbosity").
 		Envar("LOGGER_LEVEL").
-		Default(strconv.Itoa(int(LoggerLevel))).
+		Default(strconv.Itoa(LoggerLevel)).
 		IntVar(&LoggerLevel)
 
 	cmd.Flag("services", "List services for '/metrics' path").

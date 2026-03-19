@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: Platform update
 permalink: en/admin/configuration/update/
 description: "Manage updates for Deckhouse Kubernetes Platform. Safe rolling updates, notifications, and configuration management for platform and cluster components."
 ---

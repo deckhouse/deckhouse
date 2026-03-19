@@ -38,7 +38,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -202,6 +203,8 @@ func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *co
 }
 
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
+	var preflightRunner *preflight.Preflight
+
 	restore := b.applyParams()
 	defer restore()
 
@@ -223,7 +226,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
 	preparatorParams.WithPhaseBootstrap()
 	preparatorParams.WithPreflightChecks(infrastructureprovider.PreflightChecks{
-		DVPValidateKubeAPI: !app.PreflightSkipDVPKubeconfigCheck,
+		DVPValidateKubeAPI: true,
 	})
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
@@ -235,6 +238,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	log.DebugLn("MetaConfig was loaded")
+
+	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
 	// Check if static cluster without ssh-host
 	if metaConfig.IsStatic() && len(app.SSHHosts) == 0 {
@@ -301,6 +306,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	stateCache := cache.Global()
+	configHash := state.ConfigHash(app.ConfigPaths)
 
 	if app.DropCache {
 		stateCache.Clean()
@@ -347,11 +353,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	bootstrapState := NewBootstrapState(stateCache)
 
-	preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
-	if err := preflightChecker.Global(ctx); err != nil {
-		return err
-	}
-
 	if shouldStop, err := b.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true, stateCache); err != nil {
 		return err
 	} else if shouldStop {
@@ -369,11 +370,30 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	defer cleanup()
 
+	globalPreflightSuite := suites.NewGlobalSuite(suites.GlobalDeps{
+		MetaConfig:    metaConfig,
+		InstallConfig: deckhouseInstallConfig,
+	})
+
 	if metaConfig.ClusterType == config.CloudClusterType {
-		err = preflightChecker.Cloud(ctx)
-		if err != nil {
+
+		cloudPreflightSuite := suites.NewCloudSuite(suites.CloudDeps{
+			InstallConfig: deckhouseInstallConfig,
+			MetaConfig:    metaConfig,
+		})
+		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
+			MetaConfig: metaConfig,
+			Node:       b.NodeInterface,
+		})
+
+		preflightRunner = preflight.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
+		preflightRunner.UseCache(bootstrapState)
+		preflightRunner.SetCacheSalt(configHash)
+		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
+		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
 			return err
 		}
+
 		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
 			baseRunner, err := b.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
 			if err != nil {
@@ -453,11 +473,26 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-	} else {
-		err = preflightChecker.Static(ctx)
-		if err != nil {
+		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
+	} else {
+
+		staticPreflightSuite := suites.NewStaticSuite(suites.StaticDeps{
+			Node:       b.NodeInterface,
+			MetaConfig: metaConfig,
+		})
+		preflightRunner = preflight.New(globalPreflightSuite, staticPreflightSuite)
+		preflightRunner.UseCache(bootstrapState)
+		preflightRunner.SetCacheSalt(configHash)
+		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
+		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
+			return err
+		}
+		if err = preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
+			return err
+		}
+
 		var static struct {
 			NodeIP string `json:"nodeIP"`
 		}
@@ -505,13 +540,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		}
 	}
 
-	if metaConfig.ClusterType == config.CloudClusterType {
-		err = preflightChecker.PostCloud(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
@@ -537,7 +565,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	installParams := InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error {
-			return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil, true)
+			return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, nil, true)
 		},
 		State: bootstrapState,
 	}
@@ -589,7 +617,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, metaConfig, installDeckhouseResult, false)
+	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false)
 	if err != nil {
 		return err
 	}
@@ -704,9 +732,7 @@ func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
 	bootstrapAdditionalTerraNodeGroups := BootstrapTerraNodes
-	if operations.IsSequentialNodesBootstrap() || metaConfig.ProviderName == "vcd" {
-		// vcd doesn't support parallel creating nodes in same vapp
-		// https://github.com/vmware/terraform-provider-vcd/issues/530
+	if operations.IsSequentialNodesBootstrap(metaConfig) {
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
@@ -728,6 +754,7 @@ func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client
 		return nil
 	})
 }
+
 func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resources) (template.Resources, template.Resources) {
 	before := make(template.Resources, 0, len(resourcesToCreate))
 	after := make(template.Resources, 0, len(resourcesToCreate))
@@ -747,7 +774,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 	return before, after
 }
 
-func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult, skipChecks bool) error {
+func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, result *InstallDeckhouseResult, skipChecks bool) error {
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
 		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
@@ -770,10 +797,10 @@ func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resou
 	}
 
 	return log.Process("bootstrap", "Create Resources", func() error {
+		var err error
 		checkers := make([]resources.Checker, 0)
 		if !skipChecks {
-			var err error
-			checkers, err = resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
+			checkers, err = resources.GetCheckers(kubeCl, resourcesToCreate, nil)
 			if err != nil {
 				return err
 			}

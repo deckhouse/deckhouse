@@ -18,6 +18,14 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+const (
+	NodeTypeStatic         NodeType = "Static"
+	NodeTypeCloudEphemeral NodeType = "CloudEphemeral"
+	NodeTypeCloudPermanent NodeType = "CloudPermanent"
+	NodeTypeCloudStatic    NodeType = "CloudStatic"
 )
 
 // NodeType type of node
@@ -54,11 +62,58 @@ type NodeGroupSpec struct {
 
 // CloudInstances is an extra parameters for NodeGroup with type Cloud.
 type CloudInstances struct {
+	// Quick shutdown results in faster drain. Optional
+	QuickShutdown *bool `json:"quickShutdown,omitempty"`
+
+	// List of availability zones to create instances in.
+	Zones []string `json:"zones"`
+
 	// Minimal amount of instances for the group in each zone. Required.
 	MinPerZone *int32 `json:"minPerZone,omitempty"`
 
 	// Maximum amount of instances for the group in each zone. Required.
 	MaxPerZone *int32 `json:"maxPerZone,omitempty"`
+
+	// Maximum amount of unavailable instances (during rollout) in the group in each zone.
+	MaxUnavailablePerZone *int32 `json:"maxUnavailablePerZone,omitempty"`
+
+	// Maximum amount of instances to rollout simultaneously in the group in each zone.
+	MaxSurgePerZone *int32 `json:"maxSurgePerZone,omitempty"`
+
+	// Overprovisioned Nodes for this NodeGroup.
+	Standby *intstr.IntOrString `json:"standby,omitempty"`
+
+	// Settings for overprovisioned Node holder.
+	StandbyHolder StandbyHolder `json:"standbyHolder,omitempty"`
+
+	// Reference to a ClassInstance resource. Required.
+	ClassReference ClassReference `json:"classReference"`
+
+	// Priority setting for autoscaler expander
+	Priority *int32 `json:"priority,omitempty"`
+}
+
+type StandbyHolder struct {
+	// Percent of the node-group's node capacity which will be overprovisioned with standby-holder pod.
+	OverprovisioningRate *int64 `json:"overprovisioningRate,omitempty"`
+	// Deprecated: Describes the amount of resources, that will not be held by standby holder.
+	NotHeldResources Resources `json:"notHeldResources,omitempty"`
+}
+
+type Resources struct {
+	// Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
+	CPU intstr.IntOrString `json:"cpu,omitempty"`
+
+	// Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
+	Memory intstr.IntOrString `json:"memory,omitempty"`
+}
+
+type ClassReference struct {
+	// Kind of a ClassReference resource: OpenStackInstanceClass, GCPInstanceClass, ...
+	Kind string `json:"kind,omitempty"`
+
+	// Name of a ClassReference resource.
+	Name string `json:"name,omitempty"`
 }
 
 type NodeGroupStatus struct {

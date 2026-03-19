@@ -1,0 +1,39 @@
+Subject: [PATCH] force persist state
+---
+Index: internal/backend/local/hook_state.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/backend/local/hook_state.go b/internal/backend/local/hook_state.go
+--- a/internal/backend/local/hook_state.go	(revision 8053640205da25b2504ea64a36c951cb3fe52bcf)
++++ b/internal/backend/local/hook_state.go	(date 1770929267983)
+@@ -79,7 +79,8 @@
+ 		if err := h.StateMgr.WriteState(new); err != nil {
+ 			return tofu.HookActionHalt, err
+ 		}
+-		if mgrPersist, ok := h.StateMgr.(statemgr.Persister); ok && h.PersistInterval != 0 && h.Schemas != nil {
++		// remove h.PersistInterval != 0 check for force persist
++		if mgrPersist, ok := h.StateMgr.(statemgr.Persister); ok && h.Schemas != nil {
+ 			if h.shouldPersist() {
+ 				err := mgrPersist.PersistState(h.Schemas)
+ 				if err != nil {
+Index: internal/backend/local/backend_apply.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/backend/local/backend_apply.go b/internal/backend/local/backend_apply.go
+--- a/internal/backend/local/backend_apply.go	(revision 8053640205da25b2504ea64a36c951cb3fe52bcf)
++++ b/internal/backend/local/backend_apply.go	(date 1770929210672)
+@@ -30,7 +30,9 @@
+ var testHookStopPlanApply func()
+
+ const (
+-	defaultPersistInterval                 = 20 // arbitrary interval that's hopefully a sweet spot
++	// defaultPersistInterval
++	// we redeclare default for force persist
++	defaultPersistInterval                 = 0
+ 	persistIntervalEnvironmentVariableName = "TF_STATE_PERSIST_INTERVAL"
+ )
+

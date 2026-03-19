@@ -48,7 +48,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
-	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
@@ -63,6 +63,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
+	modulev2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
+	modulepackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package"
+	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -84,6 +87,9 @@ const (
 
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	defaultModuleVersion    = "v2.0.0"
+
+	envEnablePackageSystem  = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
+	envEnableModulePackages = "DECKHOUSE_ENABLE_MODULE_PACKAGES"
 )
 
 type DeckhouseController struct {
@@ -189,7 +195,6 @@ func NewDeckhouseController(
 				&v1alpha1.ModuleRelease{}:       {},
 				&v1alpha1.ModuleSource{}:        {},
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
-				&v1alpha1.ModulePullOverride{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},
 				&v1alpha1.DeckhouseRelease{}:    {},
 			},
@@ -197,12 +202,19 @@ func NewDeckhouseController(
 	}
 
 	// Package system controllers (feature flag)
-	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
+	if os.Getenv(envEnablePackageSystem) == "true" {
 		opts.Cache.ByObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
+	}
+
+	// Module package controllers (feature flag)
+	if os.Getenv(envEnableModulePackages) == "true" {
+		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
 	}
 
 	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
@@ -240,7 +252,7 @@ func NewDeckhouseController(
 
 		// set some version for the modules overridden by mpos
 		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
-			return "v2.0.0", nil
+			return defaultModuleVersion, nil
 		}
 
 		return module.GetVersion(), nil
@@ -331,7 +343,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	packageOperator, err := packageoperator.New(getModuleVersion(runtimeManager), operator.ModuleManager, dc, logger)
+	packageOperator, err := packageoperator.New(runtimeManager.GetClient(), operator.ModuleManager, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -348,8 +360,10 @@ func NewDeckhouseController(
 	})
 
 	// Package system controllers (feature flag)
-	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
+	if os.Getenv(envEnablePackageSystem) == "true" {
 		logger.Info("Package system controllers are enabled")
+
+		packageOperator.Run()
 
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {
@@ -372,11 +386,31 @@ func NewDeckhouseController(
 		}
 	}
 
+	// Module package controllers (feature flag)
+	if os.Getenv(envEnableModulePackages) == "true" {
+		logger.Info("Module package controllers are enabled")
+
+		err = modulepackage.RegisterController(runtimeManager, dc, logger.Named("module-package-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register module package controller: %w", err)
+		}
+
+		err = modulepackageversion.RegisterController(runtimeManager, dc, logger.Named("module-package-version-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register module package version controller: %w", err)
+		}
+
+		err = modulev2.RegisterController(runtimeManager, dc, logger.Named("module-v2-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register module v2 controller: %w", err)
+		}
+	}
+
 	validation.RegisterAdmissionHandlers(
 		operator.AdmissionServer,
 		runtimeManager.GetClient(),
 		operator.ModuleManager,
-		packageOperator.Manager(),
+		packageOperator,
 		configtools.NewValidator(operator.ModuleManager, conversionsStore),
 		loader,
 		operator.MetricStorage,
@@ -474,26 +508,5 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		}
 
 		c.embeddedPolicy.Set(settings)
-	}
-}
-
-// getModuleVersion returns the module version received from the API controller-runtime
-func getModuleVersion(runtimeManager manager.Manager) func(ctx context.Context, moduleName string) (string, error) {
-	return func(ctx context.Context, moduleName string) (string, error) {
-		module := new(v1alpha1.Module)
-		err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
-		})
-
-		if err != nil {
-			return "", fmt.Errorf("failed to get module %q version from cluster: %w", moduleName, err)
-		}
-
-		// set a default version for modules overridden by ModulePullOverride (MPOS)
-		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
-			return defaultModuleVersion, nil
-		}
-
-		return module.GetVersion(), nil
 	}
 }

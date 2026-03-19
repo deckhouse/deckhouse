@@ -1,5 +1,5 @@
 ---
-title: Storage and load balancing
+title: Storage and load balancing in zVirt
 permalink: en/admin/integrations/virtualization/zvirt/storage.html
 ---
 

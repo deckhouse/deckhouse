@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: High reliability and availability
 permalink: en/admin/configuration/high-reliability-and-availability/
 description: High reliability and availability
 ---

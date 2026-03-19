@@ -36,25 +36,16 @@
       <li>Пароль пользователя (для sudo) — пароль пользователя, если установлен. Будет использоваться для повышения привилегий через sudo. <i>Оставьте пустым, если для sudo не требуется пароль.</i></li>
       <li>Приватный ключ — приватная часть SSH-ключа, с помощью которого будет осуществляться подключение к машинам. Здесь можно как загрузить файл ключа, так и ввести ключ вручную.
 {% offtopic title="Как узнать приватный ключ..." %}
-Приватный ключ лежит в файле `~/.ssh/id_rsa`. Получить его можно командой `cat ~/.ssh/id_rsa`. Пример вывода:
+Приватный ключ лежит в файле `~/.ssh/<SSH_PRIVATE_KEY_FILE>`. Получить его можно командой `cat ~/.ssh/<SSH_PRIVATE_KEY_FILE>`. Пример вывода (для ключа с ED25519-шифрованием):
 {% capture command %}
 ```bash
-$ cat ~/.ssh/id_rsa
+$ cat ~/.ssh/id_ed25519
 -----BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
-NhAAAAAwEAAQAAAYEArNTeZ5+4HBiqbNji3kwh+hzdqd0yKR3MtQvQkAbtsoe5PqZ9ItN0
-jGnRRD6HtLKOBt2cJsBqVfRinJq5yE1/9fGQtUkyxiYphwRl4pnr9+6iOvw+TmmyfOhKv6
-dIsagnXwRKye/x/6My8t19Qik4Z/+YqLYmz978Po8xVp5ni38m4Gd9NN6vU+ANVOGfZFLS
-5FDMsc92tGcUVa1dP4gEnaMNi3JHOgfdgTAHbyCNCUU/HhZ6QvbUIq0lAFG7ZVyhjNvcQG
-kJWEHzpvvEbl5HGtOwSdXd/WIa4Y+gNtYB3XFCmDE9IkbOkfN1Ec9+r3ORVtBVNXvgyL11
-EP9UGUUOpd/RbB0zgGzXwghjCbtjCGp644CQCNFnsNNLfpD8ByvxoLc2BvAce2CyWg4HwB
-9WQSrJfSsTw9pHXbeUtMXmA6Npef4+z98Jmf8eMjob5pQlrLrjiK98KVV83cGSlPYFEEEY
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
 ...
-wTE6tai//nIkG5P7+xfFbVmDMhnfDCNAHGwtcPWIe7IF3i0HdXclrhj7V2RdmRjLfvVvP8
-kojuXUdIiqqlKxinen+GQZmAdZHvSLnT9VVKUvgFENhxK9XE7ZU1z/j9/rNg1BoJxhDkdF
-vSIH/QtZr3hNkAAAAjemhiZXJ0QE1hY0Jvb2stUHJvLUtvbnN0YW50aW4ubG9jYWw=
+AAAEB3AcmUCQ9dd7fPhIYpQe1pBhZEanld6ZgJHmyD8XO460T3766IVjzrA+Vpgvu1l2IL
+RTAeNZpi2e6dqGhsbK6cAAAAGHpoYmVydEB6aGJlcnQtMjB3bnMxeGowOQECAwQF
 -----END OPENSSH PRIVATE KEY-----
-
 ```
 {% endcapture %}
 {{ command | markdownify }}

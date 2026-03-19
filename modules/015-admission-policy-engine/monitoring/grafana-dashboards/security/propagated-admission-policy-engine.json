@@ -754,7 +754,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type, name)",
+          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\", violating_name!=\"\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type, name)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -765,6 +765,7 @@
         }
       ],
       "title": "OPA Violations",
+      "description": "⚠️ This table shows up to 200 violations per constraint (--constraint-violations-limit). If a constraint has more violations, some may not appear here. Check d8_gatekeeper_exporter_constraint_violations_truncated metric or use d8 k to see .status.totalViolations.",
       "transformations": [
         {
           "id": "filterFieldsByName",

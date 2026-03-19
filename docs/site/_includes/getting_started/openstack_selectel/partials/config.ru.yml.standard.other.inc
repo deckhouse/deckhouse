@@ -24,6 +24,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
@@ -134,7 +135,7 @@ standard:
     volumeType: fast.ru-3a
     instanceClass:
       flavorName: c2m2-d0
-      imageName: ubuntu-22-04
+      imageName: ubuntu-24-04
       rootDiskSize: 20
   # [<en>] Network name for external communication. Default is external-network
   # [<ru>] Имя сети для внешнего взаимодействия. Значение по умолчанию: external-network
@@ -192,7 +193,7 @@ masterNodeGroup:
     # [<ru>] Возможно, захотите изменить.
     # [<en>] Don't use images provided by Selectel. Upload and use cloud images provided, by distribution maintainers.
     # [<ru>] Не используйте образы, предоставленные Selectel. Загружайте и используйте образы для облачных сред, предоставленные разработчиками дистрибутива.
-    imageName: ubuntu-22.04
+    imageName: ubuntu-24.04
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 40
@@ -221,7 +222,7 @@ spec:
   # [<ru>] Используемый образ виртуальной машины.
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  imageName: ubuntu-22.04
+  imageName: ubuntu-24.04
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup

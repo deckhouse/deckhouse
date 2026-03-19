@@ -274,20 +274,6 @@ spec:
             name: frontend
             port:
               name: http
-      - path: /products/stronghold/documentation/
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
-            port:
-              name: http
-      - path: /products/stronghold/reference/
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
-            port:
-              name: http
       - path: /products/stronghold/gs/
         pathType: Prefix
         backend:

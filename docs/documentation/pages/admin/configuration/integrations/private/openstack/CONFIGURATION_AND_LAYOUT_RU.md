@@ -1,5 +1,5 @@
 ---
-title: Конфигурация и схема размещения
+title: Схемы размещения и настройка OpenStack
 permalink: ru/admin/integrations/private/openstack/configuration-and-layout-scheme.html
 cloud_type: openstack
 lang: ru

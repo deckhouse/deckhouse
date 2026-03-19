@@ -117,7 +117,10 @@ func updateConfig() {
 	defer f.Close()
 
 	var newConfig map[string]map[string]CustomMetricConfig
-	json.NewDecoder(f).Decode(&newConfig)
+	if err := json.NewDecoder(f).Decode(&newConfig); err != nil {
+		errLog.Printf("failed to decode config file %s: %v\n", configPath, err)
+		return
+	}
 
 	defer infLog.Printf("config file %s was reloaded successfully\n", configPath)
 

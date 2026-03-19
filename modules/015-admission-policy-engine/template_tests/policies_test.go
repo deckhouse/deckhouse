@@ -30,6 +30,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: pod security policies ::", func() {
@@ -84,6 +85,38 @@ admissionPolicyEngine:
 				Fail("Gatekeeper policy tests failed:" + err.Error())
 			}
 		})
+	})
+
+	It("All ConstraintTemplates rego sources must use strictly single-line violation messages", func() {
+		// We validate source templates, not Helm-rendered manifests, because Helm rendering may require
+		// additional global.discovery data unrelated to gatekeeper constraint templates.
+		// Requirement: any violation msg must be strictly single-line, so we forbid '\\n' and '\\r' escapes.
+		// inside Rego sources (due kubectl requirements for warning messages).
+		constraintTemplatesDir := filepath.Join("..", "charts", "constraint-templates", "templates")
+		contentByPath := map[string]string{}
+		for _, pattern := range []string{
+			filepath.Join(constraintTemplatesDir, "security", "*.yaml"),
+			filepath.Join(constraintTemplatesDir, "operation", "*.yaml"),
+		} {
+			matches, err := filepath.Glob(pattern)
+			Expect(err).ShouldNot(HaveOccurred())
+			for _, p := range matches {
+				b, err := os.ReadFile(p)
+				Expect(err).ShouldNot(HaveOccurred(), "failed reading %s", p)
+				contentByPath[p] = string(b)
+			}
+		}
+
+		Expect(contentByPath).NotTo(BeEmpty(), "Expected constraint template YAML files")
+
+		for filename, content := range contentByPath {
+			if !strings.Contains(content, "kind: ConstraintTemplate") {
+				continue
+			}
+			if strings.Contains(content, "\\n") || strings.Contains(content, "\\r") {
+				Fail(fmt.Sprintf("Found multiline escape (\\n or \\r) in ConstraintTemplate source: %s", filename))
+			}
+		}
 	})
 
 	// Test helper function to validate constraints for given configuration
@@ -355,7 +388,7 @@ func findTemplatePath(relativePath string) string {
 	// Get the directory where this test file is located
 	_, testFile, _, _ := runtime.Caller(0)
 	testDir := filepath.Dir(testFile)
-	
+
 	// Try different possible paths
 	possiblePaths := []string{
 		// Relative to test file (when running from module root)
@@ -426,4 +459,69 @@ func getOperationConstraintNames() []string {
 	}
 
 	return result
+}
+
+// constraintSelectorExpectation describes expected selector fields rendered by constraint_selector helper.
+type constraintSelectorExpectation struct {
+	namespaces         interface{}
+	excludedNamespaces interface{}
+	namespaceSelector  interface{}
+	labelSelector      interface{}
+}
+
+func mustParseYaml(input string) interface{} {
+	var result interface{}
+	err := yaml.Unmarshal([]byte(input), &result)
+	Expect(err).ShouldNot(HaveOccurred())
+	return result
+}
+
+func getConstraintSpecMap(constraint object_store.KubeObject) map[string]interface{} {
+	var resource map[string]interface{}
+	err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resource)
+	Expect(err).ShouldNot(HaveOccurred())
+	spec, ok := resource["spec"].(map[string]interface{})
+	Expect(ok).To(BeTrue())
+	return spec
+}
+
+func expectConstraintAction(spec map[string]interface{}, expectedAction string) {
+	Expect(spec).To(HaveKeyWithValue("enforcementAction", expectedAction))
+}
+
+func expectConstraintSelector(spec map[string]interface{}, expected constraintSelectorExpectation) {
+	match, ok := spec["match"].(map[string]interface{})
+	Expect(ok).To(BeTrue())
+
+	if expected.namespaces != nil {
+		Expect(match).To(HaveKeyWithValue("namespaces", expected.namespaces))
+	} else {
+		Expect(match).ToNot(HaveKey("namespaces"))
+	}
+
+	if expected.excludedNamespaces != nil {
+		Expect(match).To(HaveKeyWithValue("excludedNamespaces", expected.excludedNamespaces))
+	} else {
+		Expect(match).ToNot(HaveKey("excludedNamespaces"))
+	}
+
+	if expected.namespaceSelector != nil {
+		Expect(match).To(HaveKeyWithValue("namespaceSelector", expected.namespaceSelector))
+	} else {
+		Expect(match).ToNot(HaveKey("namespaceSelector"))
+	}
+
+	if expected.labelSelector != nil {
+		Expect(match).To(HaveKeyWithValue("labelSelector", expected.labelSelector))
+	} else {
+		Expect(match).ToNot(HaveKey("labelSelector"))
+	}
+}
+
+func expectConstraintParameters(spec map[string]interface{}, expected interface{}) {
+	if expected == nil {
+		Expect(spec).ToNot(HaveKey("parameters"))
+		return
+	}
+	Expect(spec).To(HaveKeyWithValue("parameters", expected))
 }

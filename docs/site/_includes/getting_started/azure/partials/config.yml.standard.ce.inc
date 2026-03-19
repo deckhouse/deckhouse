@@ -24,6 +24,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: cluster.local
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -126,7 +127,7 @@ masterNodeGroup:
     # [<ru>] Как найти URN: https://learn.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    urn: Canonical:0001-com-ubuntu-server-jammy:22_04-lts:22.04.202212140
+    urn: Canonical:ubuntu-24_04-lts:server:latest
     enableExternalIP: true
 provider:
   # [<en>] Subscription ID.

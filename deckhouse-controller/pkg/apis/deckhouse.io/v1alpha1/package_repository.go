@@ -57,7 +57,7 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
-// +kubebuilder:printcolumn:name=Sync,type=string,JSONPath=.status.syncTime
+// +kubebuilder:printcolumn:name=Sync,type=date,JSONPath=.status.syncTime
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastOperationScanFinished')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
@@ -77,7 +77,9 @@ type PackageRepository struct {
 }
 
 type PackageRepositorySpec struct {
-	// Interval for registry scan. Minimum is 3 minutes.
+	// Interval for registry scan.
+	//
+	// Defines the frequency of checking the container registry for new packages.
 	// +optional
 	ScanInterval *metav1.Duration `json:"scanInterval,omitempty"`
 	// Configuration for the package registry.

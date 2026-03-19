@@ -25,6 +25,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -44,6 +45,7 @@ type moduleStorage interface {
 
 type packageManager interface {
 	ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error)
+	CheckConstraints(constraints schedule.Constraints) error
 }
 
 type moduleManager interface {
@@ -72,5 +74,5 @@ func RegisterAdmissionHandlers(
 	reg.RegisterHandler("/validate/v1/static-configuration-secret", staticConfigurationHandler(schemaStore))
 	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
 	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts))
-	reg.RegisterHandler("/validate/v1alpha1/applications", applicationValidationHandler(pm))
+	reg.RegisterHandler("/validate/v1alpha1/applications", applicationValidationHandler(cli, pm))
 }

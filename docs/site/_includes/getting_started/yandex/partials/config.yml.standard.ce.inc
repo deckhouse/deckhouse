@@ -24,6 +24,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -137,7 +138,7 @@ masterNodeGroup:
     # [<ru>] Для получения можете воспользоваться командой:
     # [<ru>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2404-lts")] | sort_by(.created_at)[-1].id'
     # [<ru>] Возможно, захотите изменить.
-    imageID: fd85m9q2qspfnsv055rh
+    imageID: fd83ica41cade1mj35sr
     externalIPAddresses:
     - "Auto"
 # [<en>] This subnet will be split into three equal parts; they will serve as a basis for subnets in three Yandex Cloud zones.

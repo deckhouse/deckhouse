@@ -95,6 +95,7 @@ webhooks:
         resources:
           - "applications"
         operations:
+          - CREATE
           - UPDATE
     admissionReviewVersions:
       - v1

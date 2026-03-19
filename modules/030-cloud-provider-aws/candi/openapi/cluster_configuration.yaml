@@ -38,7 +38,7 @@ apiVersions:
             replicas: 2
             instanceClass:
               instanceType: t2.medium
-              ami: ami-0caef02b518350c8b
+              ami: ami-0aad10862ade98f27
             additionalTags:
               backup: srv1
         provider:

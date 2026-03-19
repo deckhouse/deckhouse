@@ -1,5 +1,5 @@
 ---
-title: Обзор
+title: Логирование
 permalink: ru/admin/configuration/logging/
 description: "Настройка логирования в Deckhouse Kubernetes Platform с функциями встроенного сбора, доставки и хранения логов. Централизованное решение для логирования, мониторинга и устранения проблем в кластере."
 lang: ru

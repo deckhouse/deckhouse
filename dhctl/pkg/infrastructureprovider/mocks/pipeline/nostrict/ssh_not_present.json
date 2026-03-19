@@ -1,0 +1,17 @@
+{
+  "version": 4,
+  "terraform_version": "1.9.4",
+  "serial": 12,
+  "lineage": "41d33ee4-139c-e7d7-32e2-32b39e028b71",
+  "outputs": {
+    "kubernetes_data_device_path": {
+      "value": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_f4e372d3da04382b9b4ced77976fa66e",
+      "type": "string"
+    },
+    "node_internal_ip_address": {
+      "value": "10.12.0.112",
+      "type": "string"
+    }
+  },
+  "resources": []
+}

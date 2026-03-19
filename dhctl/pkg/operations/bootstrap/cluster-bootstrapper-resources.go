@@ -81,7 +81,6 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-
 		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, nil)
 		if err != nil {
 			return err

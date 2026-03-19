@@ -1,5 +1,6 @@
 ---
 title: "Configuring request retries with Istio"
+description: "Configuring request retries for HTTP requests using Istio in Deckhouse Kubernetes Platform. VirtualService configuration with retry parameters, attempts, perTryTimeout."
 permalink: en/user/network/retry_istio.html
 ---
 
@@ -34,7 +35,7 @@ spec:
 
 ## VirtualService resource
 
-If necessary, refer to the [VirtualService documentation](https://istio.io/v1.19/docs/reference/config/networking/virtual-service/).
+If necessary, refer to the [VirtualService documentation](https://istio.io/v1.21/docs/reference/config/networking/virtual-service/).
 
 Using VirtualService is optional. Standard Services will continue to work if their functionality is sufficient.
 With this resource, you can configure request routing:

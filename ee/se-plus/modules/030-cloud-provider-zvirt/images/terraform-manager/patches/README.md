@@ -9,3 +9,7 @@ TODO: Add description
 ## 003-go-mod.patch
 
 update go.mod and up go version for cve fix
+
+## 004-initialization_dns.patch
+
+add vm.initialization_dns option

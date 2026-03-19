@@ -32,6 +32,8 @@ type DeckhouseV1alpha1Interface interface {
 	ModulesGetter
 	ModuleConfigsGetter
 	ModuleDocumentationsGetter
+	ModulePackagesGetter
+	ModulePackageVersionsGetter
 	ModulePullOverridesGetter
 	ModuleReleasesGetter
 	ModuleSettingsDefinitionsGetter
@@ -75,6 +77,14 @@ func (c *DeckhouseV1alpha1Client) ModuleDocumentations() ModuleDocumentationInte
 	return newModuleDocumentations(c)
 }
 
+func (c *DeckhouseV1alpha1Client) ModulePackages() ModulePackageInterface {
+	return newModulePackages(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ModulePackageVersions() ModulePackageVersionInterface {
+	return newModulePackageVersions(c)
+}
+
 func (c *DeckhouseV1alpha1Client) ModulePullOverrides() ModulePullOverrideInterface {
 	return newModulePullOverrides(c)
 }
@@ -112,9 +122,7 @@ func (c *DeckhouseV1alpha1Client) PackageRepositoryOperations() PackageRepositor
 // where httpClient was generated with rest.HTTPClientFor(c).
 func NewForConfig(c *rest.Config) (*DeckhouseV1alpha1Client, error) {
 	config := *c
-	if err := setConfigDefaults(&config); err != nil {
-		return nil, err
-	}
+	setConfigDefaults(&config)
 	httpClient, err := rest.HTTPClientFor(&config)
 	if err != nil {
 		return nil, err
@@ -126,9 +134,7 @@ func NewForConfig(c *rest.Config) (*DeckhouseV1alpha1Client, error) {
 // Note the http client provided takes precedence over the configured transport values.
 func NewForConfigAndClient(c *rest.Config, h *http.Client) (*DeckhouseV1alpha1Client, error) {
 	config := *c
-	if err := setConfigDefaults(&config); err != nil {
-		return nil, err
-	}
+	setConfigDefaults(&config)
 	client, err := rest.RESTClientForConfigAndClient(&config, h)
 	if err != nil {
 		return nil, err
@@ -151,7 +157,7 @@ func New(c rest.Interface) *DeckhouseV1alpha1Client {
 	return &DeckhouseV1alpha1Client{c}
 }
 
-func setConfigDefaults(config *rest.Config) error {
+func setConfigDefaults(config *rest.Config) {
 	gv := deckhouseiov1alpha1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
@@ -160,8 +166,6 @@ func setConfigDefaults(config *rest.Config) error {
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()
 	}
-
-	return nil
 }
 
 // RESTClient returns a RESTClient that is used to communicate

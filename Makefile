@@ -278,19 +278,22 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 
 .PHONY: docs
 docs: bin/werf ## Run containers with the documentation.
-	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
-	echo "Open http://localhost to access the documentation..."
+	@echo "Building documentation containers..."
+	@echo -n "werf: "; bin/werf version
+	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
 
 .PHONY: docs-dev
 docs-dev: bin/werf ## Run containers with the documentation in the dev mode (allow uncommited files).
-	export DOC_API_URL=dev
-	export DOC_API_KEY=dev
-	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
-	echo "Open http://localhost to access the documentation..."
+	@echo "Building documentation containers (dev mode)..."
+	@echo -n "werf: "; bin/werf version;
+	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
-	docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
+	echo "Removing documentation related containers..."
+	@docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
 
 .PHONY: tests-doc-links
 docs-linkscheck: ## Build documentation and run checker of html links.
@@ -510,9 +513,9 @@ YQ = $(LOCALBIN)/yq
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
-DECKHOUSE_CLI_VERSION ?= v0.27.1
+DECKHOUSE_CLI_VERSION ?= v0.28.0
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CODE_GENERATOR_VERSION ?= v0.32.10
+CODE_GENERATOR_VERSION ?= v0.33.8
 YQ_VERSION ?= v4.47.2
 
 ## Generate werf

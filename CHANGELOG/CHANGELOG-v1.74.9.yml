@@ -1,0 +1,48 @@
+admission-policy-engine:
+  fixes:
+    - summary: >-
+        Prevent unintended Gatekeeper constraints from being rendered for SecurityPolicy when
+        boolean fields are omitted.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18197
+      impact: >-
+        Workload Pods are no longer denied by unrelated SecurityPolicy checks (e.g.
+        hostNetwork/hostPort) when corresponding policy fields are not explicitly set.
+candi:
+  fixes:
+    - summary: Bashible script fix to handle multiple GPUs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18158
+    - summary: fix if node has bashible-uninitialized taint in race condition.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18133
+ci:
+  fixes:
+    - summary: >-
+        Add ignoring of D8NodeContainerdV2NotSupported and D8NodeCgroupV2NotSupported alerts to
+        release 1.74.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18151
+cloud-provider-dvp:
+  fixes:
+    - summary: added fixes an infinite deletion state of DeckhouseMachine.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18163
+deckhouse:
+  fixes:
+    - summary: Fix yaml validation in settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18165
+docs:
+  fixes:
+    - summary: Changing module descriptions
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18148
+    - summary: Editing FAQ problems applying dexprovider
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18079
+    - summary: Editing flannel to cillium.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18073
+    - summary: Adding information about using images sign policy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17994
+istio:
+  fixes:
+    - summary: Fixing the list of requests from istiod to gateway API
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18056
+registrypackages:
+  fixes:
+    - summary: added usage GOPROXY in systemctl-power-commands-wrapper
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18105
+

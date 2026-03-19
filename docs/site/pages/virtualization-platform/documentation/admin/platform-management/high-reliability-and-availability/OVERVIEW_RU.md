@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Высокая надежность и доступность"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/high-reliability-and-availability/
 description: Высокая надежность и доступность
 lang: ru

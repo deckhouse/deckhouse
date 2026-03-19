@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
+	nodeservices "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
 	registryswitcher "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-switcher"
@@ -52,6 +53,7 @@ const (
 	registrySecretSnapName   = "registry-secret"
 	pkiSnapName              = "pki"
 	usersSnapName            = "users"
+	nodeServicesSnapName     = "node-services"
 	inClusterProxySnapName   = "incluster-proxy"
 	registryServiceSnapName  = "registry-service"
 	bashibleSnapName         = "bashible"
@@ -166,6 +168,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 		registryswitcher.KubernetesConfig(registrySwitcherSnapName),
 	}
 
+	ret = append(ret, nodeservices.KubernetsConfig(nodeServicesSnapName)...)
 	ret = append(ret, bashible.KubernetesConfig(bashibleSnapName)...)
 	return ret
 }
@@ -252,6 +255,11 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("get RegistrySecret snapshot error: %w", err)
 	}
 
+	inputs.IngressClientCA, err = helpers.IngressClientCA(input)
+	if err != nil {
+		return fmt.Errorf("get Ingress client CA value error: %w", err)
+	}
+
 	inputs.PKI, err = pki.InputsFromSnapshot(input, pkiSnapName)
 	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		return fmt.Errorf("get PKI snapshot error: %w", err)
@@ -260,6 +268,11 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	inputs.Users, err = users.InputsFromSnapshot(input, usersSnapName)
 	if err != nil {
 		return fmt.Errorf("get Users snapshot error: %w", err)
+	}
+
+	inputs.NodeServices, err = nodeservices.InputsFromSnapshot(input, nodeServicesSnapName)
+	if err != nil {
+		return fmt.Errorf("get NodeServices snapshots error: %w", err)
 	}
 
 	inputs.InClusterProxy, err = inclusterproxy.InputsFromSnapshot(input, inClusterProxySnapName)
@@ -296,16 +309,31 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	values.State.CheckerParams = checker.GetParams(ctx, input)
 
 	// Process the state with init secret
-	if initSecret.IsExist {
-		if !initSecret.Applied {
-			input.Logger.Info("initializing state from init configuration")
+	if initSecret.IsExist && !initSecret.Applied {
+		input.Logger.Info("initializing state from init configuration")
 
-			err = values.State.initialize(input.Logger, inputs)
-			if err != nil {
-				return fmt.Errorf("cannot initialize state from init secret: %w", err)
-			}
+		err = values.State.initialize(input.Logger, inputs)
+		if err != nil {
+			return fmt.Errorf("cannot initialize state from init secret: %w", err)
 		}
+	}
 
+	// Registry parameters are frozen during two critical phases:
+	//
+	// 1. Initialization: User input changes are locked to ensure the registry
+	//    configuration can complete without being overwritten. This also prevents
+	//    the Commander agent from inadvertently overriding registry settings
+	//    if Commander itself was misconfigured.
+	//
+	// 2. Cluster Bootstrap: To avoid port collisions. During bootstrap, the registry runs in
+	//    Direct mode on the host network so that Deckhouse (which also uses the host network
+	//    at this stage) can access it directly. If the registry mode were changed during
+	//    bootstrap, the new registry Pod would conflict on the same host port that is already
+	//    occupied by the existing Direct-mode registry, preventing it from starting.
+	//
+	// During these phases, parameters are frozen to prevent external modification.
+	// Any external changes are ignored, and the last saved parameters are used.
+	if initSecret.IsExist || !helpers.ClusterIsBootstrapped(input) {
 		// Ensure we have frozen params
 		if values.State.InitParams == nil {
 			state := inputs.Params.toState()

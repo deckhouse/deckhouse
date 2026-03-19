@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка Microsoft Azure
 permalink: ru/admin/integrations/public/azure/layout.html
 lang: ru
 ---

@@ -57,6 +57,11 @@ func (r *SingleShotRunner) Plan(ctx context.Context, destroy, noout bool) error 
 	return err
 }
 
+func (r *SingleShotRunner) DebugPlanTarget(ctx context.Context, destroy bool, step, target string) (string, error) {
+	// always return debug plan
+	return r.Runner.DebugPlanTarget(ctx, destroy, step, target)
+}
+
 func (r *SingleShotRunner) GetInfrastructureOutput(ctx context.Context, output string) ([]byte, error) {
 	return r.Runner.GetInfrastructureOutput(ctx, output)
 }

@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in Google Cloud Platform
 permalink: en/admin/integrations/public/gcp/connection-and-authorization.html
 description: "Configure GCP connection and authorization for Deckhouse Kubernetes Platform. Service Account setup, credentials configuration, and Google Cloud integration requirements for cloud deployment."
 ---

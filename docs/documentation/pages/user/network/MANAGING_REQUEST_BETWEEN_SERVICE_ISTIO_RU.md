@@ -1,5 +1,6 @@
 ---
 title: "Управление балансировкой запросов между эндпоинтами сервиса с Istio"
+description: "Управление балансировкой запросов между эндпоинтами в Deckhouse Kubernetes Platform с использованием Istio. Настройка DestinationRule с лимитами TCP, алгоритмами балансировки и правилами outlier detection."
 permalink: ru/user/network/managing_request_between_service_istio.html
 lang: ru
 ---
@@ -24,7 +25,7 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/istio-cr.html#destinationrule -->
 
-Подробнее ознакомиться с DestinationRule можно в документации [istio](https://istio.io/v1.19/docs/reference/config/networking/destination-rule/).
+Подробнее ознакомиться с DestinationRule можно в документации [istio](https://istio.io/v1.21/docs/reference/config/networking/destination-rule/).
 Используйте этот ресурс, чтобы:
 
 * Определить стратегию балансировки трафика между эндпоинтами сервиса:

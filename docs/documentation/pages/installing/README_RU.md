@@ -4,7 +4,7 @@ permalink: ru/installing/
 description: |
  Установка Deckhouse Kubernetes Platform (DKP), подготовка инфраструктуры установки, запуск установщика.
 lang: ru
-search: deckhouse installation, kubernetes installation, platform setup, infrastructure preparation, installer configuration, установка Deckhouse, установка Kubernetes, настройка платформы, подготовка инфраструктуры, конфигурация инсталлятора, конфигурация установщика, dhctl, dhctl bootstrap
+search: требования, системные требования, installation, platform setup, infrastructure preparation, installer configuration, настройка платформы, подготовка инфраструктуры, конфигурация инсталлятора, конфигурация установщика, dhctl, dhctl bootstrap
 extractedLinksMax: 2
 relatedLinks:
   - title: "Быстрый старт"
@@ -568,7 +568,7 @@ docker run -it --pull=always \
 
 ```shell
 dhctl bootstrap \
-  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
   --config=/config.yml
 ```
 
@@ -577,6 +577,7 @@ dhctl bootstrap \
 - `/config.yml` — файл конфигурации установки;
 - `<SSH_USER>` — имя пользователя для подключения по SSH к серверу;
 - `--ssh-agent-private-keys` — файл приватного SSH-ключа для подключения по SSH.
+- `<SSH_PRIVATE_KEY_FILE>` — имя приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 ### Проверки перед началом установки
 
@@ -637,36 +638,39 @@ dhctl bootstrap \
 
 {% offtopic title="Список флагов пропуска проверок..." %}
 
+Для пропуска отдельной проверки используйте флаг `--preflight-skip-check`, передав в качестве аргумента имя preflight-чека. Флаг можно указывать несколько раз.
+
 - `--preflight-skip-all-checks` — пропуск всех предварительных проверок;
-- `--preflight-skip-ssh-forward-check` — пропуск проверки проброса SSH;
-- `--preflight-skip-availability-ports-check` — пропуск проверки доступности необходимых портов;
-- `--preflight-skip-resolving-localhost-check` — пропуск проверки разрешения `localhost`;
-- `--preflight-skip-deckhouse-version-check` — пропуск проверки версии DKP;
-- `--preflight-skip-registry-through-proxy` — пропуск проверки доступа к хранилищу образов через прокси-сервер;
-- `--preflight-skip-public-domain-template-check` — пропуск проверки шаблона `publicDomain`;
-- `--preflight-skip-ssh-credentials-check` — пропуск проверки учетных данных SSH-пользователя;
-- `--preflight-skip-registry-credential` — пропуск проверки учетных данных для доступа к хранилищу образов;
-- `--preflight-skip-containerd-exist` — пропуск проверки наличия containerd;
-- `--preflight-skip-python-checks` — пропуск проверки наличия Python;
-- `--preflight-skip-sudo-allowed` — пропуск проверки прав доступа для выполнения команды `sudo`;
-- `--preflight-skip-system-requirements-check` — пропуск проверки соответствия системным требованиям;
-- `--preflight-skip-one-ssh-host` — пропуск проверки количества указанных SSH-хостов;
-- `--preflight-cloud-api-accesibility-check` — пропуск проверки доступности Cloud API;
-- `--preflight-time-drift-check` — пропуск проверки отсутствия рассинхронизации времени (time drift);
-- `--preflight-skip-cidr-intersection` — пропуск проверки пересечения CIDR;
-- `--preflight-skip-deckhouse-user-check` — пропуск проверки наличия пользователя `deckhouse`;
-- `--preflight-skip-yandex-with-nat-instance-check` — пропуск проверки конфигурации Yandex Cloud с WithNatInstance;
-- `--preflight-skip-dvp-kubeconfig` — пропуск проверки DVP kubeconfig.
-- `--preflight-skip-staticinstances-with-ssh-credentials` — пропуск проверки доступности StaticInstances с SSHCredentials.
+- `--preflight-skip-check=static-ssh-tunnel` — пропуск проверки проброса SSH;
+- `--preflight-skip-check=ports-availability` — пропуск проверки доступности необходимых портов;
+- `--preflight-skip-check=resolve-localhost` — пропуск проверки разрешения `localhost`;
+- `--preflight-skip-check=dhctl-edition` — пропуск проверки версии DKP;
+- `--preflight-skip-check=registry-access-through-proxy` — пропуск проверки доступа к хранилищу образов через прокси-сервер;
+- `--preflight-skip-check=public-domain-template` — пропуск проверки шаблона `publicDomain`;
+- `--preflight-skip-check=static-ssh-credential` — пропуск проверки учетных данных SSH-пользователя;
+- `--preflight-skip-check=registry-credentials` — пропуск проверки учетных данных для доступа к хранилищу образов;
+- `--preflight-skip-check=python-modules` — пропуск проверки наличия Python;
+- `--preflight-skip-check=sudo-allowed` — пропуск проверки прав доступа для выполнения команды `sudo`;
+- `--preflight-skip-check=static-system-requirements` — пропуск проверки соответствия системным требованиям;
+- `--preflight-skip-check=static-single-ssh-host` — пропуск проверки количества указанных SSH-хостов;
+- `--preflight-skip-check=cloud-api-accessibility` — пропуск проверки доступности Cloud API;
+- `--preflight-skip-check=time-drift` — пропуск проверки отсутствия рассинхронизации времени (time drift);
+- `--preflight-skip-check=cidr-intersection` — пропуск проверки пересечения CIDR;
+- `--preflight-skip-check=deckhouse-user` — пропуск проверки наличия пользователя `deckhouse`;
+- `--preflight-skip-check=yandex-cloud-config` — пропуск проверки конфигурации Yandex Cloud с WithNatInstance;
+- `--preflight-skip-check=dvp-kubeconfig` — пропуск проверки DVP kubeconfig.
+- `--preflight-skip-check=static-instances-ssh-credentials` — пропуск проверки доступности StaticInstances с SSHCredentials.
 
 Пример применения флага пропуска:
 
 ```shell
     dhctl bootstrap \
-    --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+    --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
     --config=/config.yml \
     --preflight-skip-all-checks
 ```
+
+> Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 {% endofftopic %}
 

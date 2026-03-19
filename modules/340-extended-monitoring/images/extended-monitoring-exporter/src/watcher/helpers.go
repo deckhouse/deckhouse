@@ -115,6 +115,14 @@ func (w *Watcher) updateMetrics(
 	met.UpdateLastObserved()
 }
 
+func (w *Watcher) deleteMetrics(labels prometheus.Labels, metrics ...*prometheus.GaugeVec) {
+	for _, metric := range metrics {
+		metric.DeletePartialMatch(labels)
+	}
+
+	met.UpdateLastObserved()
+}
+
 func (w *Watcher) cleanupNamespaceResources(ns string) {
 	w.metrics.PodEnabled.DeletePartialMatch(prometheus.Labels{"namespace": ns})
 	w.metrics.PodThreshold.DeletePartialMatch(prometheus.Labels{"namespace": ns})

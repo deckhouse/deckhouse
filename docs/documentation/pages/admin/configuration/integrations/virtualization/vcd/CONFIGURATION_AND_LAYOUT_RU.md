@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка VMware Cloud Director
 permalink: ru/admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
 lang: ru
 ---
@@ -25,7 +25,7 @@ provider:
   username: '<USERNAME>'
   password: '<PASSWORD>'
   insecure: true
-sshPublicKey: ssh-rsa AAAABBBBB
+sshPublicKey: <SSH_PUBLIC_KEY>
 organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
@@ -91,7 +91,7 @@ provider:
   username: '<USERNAME>'
   password: '<PASSWORD>'
   insecure: true
-sshPublicKey: ssh-rsa AAAABBBBB
+sshPublicKey: <SSH_PUBLIC_KEY>
 organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
@@ -134,7 +134,7 @@ provider:
   username: '<USERNAME>'
   password: '<PASSWORD>'
   insecure: true
-sshPublicKey: ssh-rsa AAAABBBBB
+sshPublicKey: <SSH_PUBLIC_KEY>
 organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse

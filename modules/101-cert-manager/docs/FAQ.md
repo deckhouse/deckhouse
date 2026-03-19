@@ -164,7 +164,7 @@ Follow the steps below to use a custom or interim CA:
 - Generate a certificate (if necessary):
 
   ```shell
-  openssl genrsa -out rootCAKey.pem 2048
+  openssl ecparam -name prime256v1 -genkey -out rootCAKey.pem
   openssl req -x509 -sha256 -new -nodes -key rootCAKey.pem -days 3650 -out rootCACert.pem
   ```
 

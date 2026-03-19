@@ -17,6 +17,7 @@ package entity
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"net"
@@ -30,9 +31,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
+	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
@@ -449,7 +450,7 @@ var (
 )
 
 func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, loopParams retry.Params) ([]NodeIP, error) {
-	selector, err := kubernetes.GetLabelSelector(global.NodeGroupLabel, selection.Equals, []string{global.MasterNodeGroupName})
+	selector, err := kubernetes.GetMasterNodeGroupLabelSelector()
 	if err != nil {
 		return nil, err
 	}
@@ -500,4 +501,20 @@ func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientPr
 	}
 
 	return nodeIPs, nil
+}
+
+func UnstructuredToNodeGroup(o *unstructured.Unstructured) (*v1.NodeGroup, error) {
+	content, err := o.MarshalJSON()
+	if err != nil {
+		return nil, fmt.Errorf("Cannot marshal nodegroup %s: %v", o.GetName(), err)
+	}
+
+	var ng v1.NodeGroup
+
+	err = json.Unmarshal(content, &ng)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot unmarshal nodegroup %s: %v", o.GetName(), err)
+	}
+
+	return &ng, nil
 }

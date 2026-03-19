@@ -86,11 +86,15 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "GPU Utilization"
+                "value": "Compute Utilization"
               },
               {
                 "id": "unit",
                 "value": "percent"
+              },
+              {
+                "id": "noValue",
+                "value": "N/A"
               }
             ]
           },
@@ -103,38 +107,6 @@
               {
                 "id": "displayName",
                 "value": "Requested"
-              },
-              {
-                "id": "unit",
-                "value": "GPUs"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Value #D"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Over-requested"
-              },
-              {
-                "id": "unit",
-                "value": "GPUs"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Value #E"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Under-requested"
               },
               {
                 "id": "unit",
@@ -169,7 +141,7 @@
                 "value": [
                   {
                     "title": "",
-                    "url": "/d/gpu-namespace?${namespace:queryparam}"
+                    "url": "/d/gpu-namespace/gpu-namespace?var-ds_prometheus=${ds_prometheus}&var-namespace=${__value.raw}&${__url_time_range}"
                   }
                 ]
               }
@@ -207,26 +179,11 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (pod) (avg_over_time(kube_controller_pod{namespace=~\"$namespace\"}[$__range]))",
-          "format": "table",
-          "hide": true,
-          "instant": true,
-          "legendFormat": "Pod",
-          "range": false,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "avg(label_replace((DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\"}), \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace)",
+          "expr": "(avg(label_replace(DCGM_FI_DEV_GPU_UTIL{exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace)) or (avg(label_replace(DCGM_FI_PROF_SM_ACTIVE{exported_namespace!=\"\"} * 100, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace)) or (avg(label_replace(DCGM_FI_PROF_GR_ENGINE_ACTIVE{exported_namespace!=\"\"} * 100, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace))",
           "format": "table",
           "hide": false,
           "instant": true,
-          "legendFormat": "GPU Utilization",
+          "legendFormat": "Compute Utilization",
           "range": false,
           "refId": "B"
         },
@@ -237,7 +194,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(kube_pod_container_resource_requests{namespace=~\"$namespace\",resource=\"nvidia_com_gpu\"}) by (namespace)",
+          "expr": "sum(kube_pod_container_resource_requests{namespace!=\"\",resource=~\"nvidia_com_gpu|nvidia_com_mig_.*\"}) by (namespace)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -252,28 +209,13 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(kube_pod_container_resource_requests{namespace=~\"$namespace\", resource=\"nvidia_com_gpu\"}) by (namespace) - sum(label_replace((DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\"}/100), \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace)",
+          "expr": "100 * sum(label_replace(DCGM_FI_DEV_FB_USED{exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace) / clamp_min(sum(label_replace(DCGM_FI_DEV_FB_USED{exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace) + sum(label_replace(DCGM_FI_DEV_FB_FREE{exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace), 1)",
           "format": "table",
           "hide": false,
           "instant": true,
-          "legendFormat": "Over-requested",
+          "legendFormat": "GPU Memory Utilization",
           "range": false,
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "sum(label_replace((DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\"}/100), \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (pod) - sum(kube_pod_container_resource_requests{namespace=~\"$namespace\",  resource=\"nvidia_com_gpu\"}) by (namespace) > 0 or vector(0)",
-          "format": "table",
-          "hide": false,
-          "instant": true,
-          "legendFormat": "Under-requested",
-          "range": false,
-          "refId": "E"
+          "refId": "H"
         }
       ],
       "title": "Summary",
@@ -287,14 +229,25 @@
           "options": {
             "include": {
               "names": [
+                "namespace",
                 "Value #B",
                 "Value #C",
-                "Value #D",
-                "Value #E",
-                "Value #H",
-                "namespace"
+                "Value #H"
               ]
             }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "namespace": 0,
+              "Value #B": 1,
+              "Value #C": 2,
+              "Value #H": 3
+            },
+            "renameByName": {}
           }
         }
       ],
@@ -305,7 +258,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Утилизация вычислительных едениц",
+      "description": "GPU compute utilization (%).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -385,20 +338,33 @@
       "pluginVersion": "8.2.1",
       "targets": [
         {
+          "expr": "(avg(DCGM_FI_DEV_GPU_UTIL{exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID)) or (avg(DCGM_FI_PROF_SM_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID) * 100) or (avg(DCGM_FI_PROF_GR_ENGINE_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID) * 100)",
+          "legendFormat": "{{exported_namespace}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "avg(DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\"}) by (exported_namespace)",
           "interval": "",
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
+          "range": true
+        },
+        {
+          "expr": "(avg(DCGM_FI_DEV_GPU_UTIL{exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu)) or (avg(DCGM_FI_PROF_SM_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu) * 100) or (avg(DCGM_FI_PROF_GR_ENGINE_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu) * 100)",
+          "legendFormat": "{{exported_namespace}} - GPU {{gpu}}",
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "interval": "",
+          "range": true
         }
       ],
-      "title": "GPU Utilization",
+      "title": "Compute Utilization",
       "type": "timeseries"
     },
     {
@@ -463,9 +429,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
+        "w": 24,
+        "x": 0,
+        "y": 16
       },
       "id": 37,
       "options": {
@@ -485,217 +451,20 @@
       },
       "targets": [
         {
+          "expr": "sum(DCGM_FI_DEV_FB_USED{ exported_namespace!=\"\"}) by(exported_namespace)",
+          "legendFormat": "{{exported_namespace}}",
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(DCGM_FI_DEV_FB_USED{ exported_namespace=\"$namespace\"}) by(exported_namespace)",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
+          "exemplar": true,
+          "interval": "",
+          "range": true
         }
       ],
       "title": "GPU Framebuffer Memory Used",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${ds_prometheus}"
-      },
-      "description": "Кол-во вычислительных едениц `nvidia.com/gpu` свыше используемых",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "GPUs"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 16
-      },
-      "id": 28,
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_requests{namespace=~\"$namespace\", resource=\"nvidia_com_gpu\"}) by (namespace) - sum(label_replace((DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\"}/100), \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace)",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Over-requested",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${ds_prometheus}"
-      },
-      "description": "Кол-во используемых едениц `nvidia.com/gpu` свыше запрошеных",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "GPUs"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 16
-      },
-      "id": 29,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "editorMode": "code",
-          "expr": "sum(label_replace((DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\"}/100), \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace) - sum(kube_pod_container_resource_requests{namespace=~\"$namespace\", resource=\"nvidia_com_gpu\"}) by (namespace) > 0",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Under-requested",
       "type": "timeseries"
     },
     {
@@ -792,20 +561,22 @@
       },
       "targets": [
         {
+          "expr": "sum(DCGM_FI_PROF_PCIE_RX_BYTES{exported_namespace!=\"\"}) by(exported_namespace)",
+          "legendFormat": "{{exported_namespace}}",
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(DCGM_FI_PROF_PCIE_RX_BYTES{exported_namespace=\"$namespace\"}) by(exported_namespace)",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
+          "exemplar": true,
+          "interval": "",
+          "range": true
         }
       ],
       "title": "GPU PCIe Receive",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "PCIe throughput (bytes/s)."
     },
     {
       "datasource": {
@@ -888,20 +659,22 @@
       },
       "targets": [
         {
+          "expr": "sum(DCGM_FI_PROF_PCIE_TX_BYTES{exported_namespace!=\"\"}) by(exported_namespace)",
+          "legendFormat": "{{exported_namespace}}",
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(DCGM_FI_PROF_PCIE_TX_BYTES{exported_namespace=\"$namespace\"}) by(exported_namespace )",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
+          "exemplar": true,
+          "interval": "",
+          "range": true
         }
       ],
-      "title": "GPU PCIe Receive",
-      "type": "timeseries"
+      "title": "GPU PCIe Transmit",
+      "type": "timeseries",
+      "description": "PCIe throughput (bytes/s)."
     },
     {
       "collapsed": false,
@@ -996,16 +769,17 @@
       },
       "targets": [
         {
+          "expr": "sum(DCGM_FI_DEV_SM_CLOCK{exported_namespace!=\"\"}) by(exported_namespace) * 1000000",
+          "legendFormat": "{{exported_namespace}}",
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(DCGM_FI_DEV_SM_CLOCK{exported_namespace=\"$namespace\"}) by(exported_namespace) * 1000000",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
+          "exemplar": true,
+          "interval": "",
+          "range": true
         }
       ],
       "title": "GPU SM Clock",
@@ -1091,19 +865,134 @@
       },
       "targets": [
         {
+          "expr": "sum(DCGM_FI_DEV_MEM_CLOCK{exported_namespace!=\"\"}) by(exported_namespace) * 1000000",
+          "legendFormat": "{{exported_namespace}}",
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(DCGM_FI_DEV_MEM_CLOCK{exported_namespace=\"$namespace\"}) by(exported_namespace) * 1000000",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
+          "exemplar": true,
+          "interval": "",
+          "range": true
         }
       ],
       "title": "GPU Memory Clock",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
+      "description": "Tensor Core utilization by namespace (%).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": 60000,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 38,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "expr": "(avg(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID) * 100)",
+          "legendFormat": "{{exported_namespace}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "interval": "",
+          "range": true
+        },
+        {
+          "expr": "(avg(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu) * 100)",
+          "legendFormat": "{{exported_namespace}} - GPU {{gpu}}",
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "interval": "",
+          "range": true
+        }
+      ],
+      "title": "Tensor Utilization",
       "type": "timeseries"
     }
   ],
@@ -1132,37 +1021,6 @@
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": "gpu-examples",
-          "value": "gpu-examples"
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${ds_prometheus}"
-        },
-        "definition": "label_values(DCGM_FI_DEV_POWER_USAGE,exported_namespace)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Namespace",
-        "multi": true,
-        "name": "namespace",
-        "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(DCGM_FI_DEV_POWER_USAGE,exported_namespace)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
       }
     ]
   },
@@ -1186,7 +1044,7 @@
   },
   "timezone": "",
   "title": "GPU Namespaces",
-  "uid": "gpu-namespaces-1",
+  "uid": "gpu-namespaces",
   "version": 2,
   "weekStart": ""
 }

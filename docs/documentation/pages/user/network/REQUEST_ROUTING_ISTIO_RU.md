@@ -1,5 +1,6 @@
 ---
-title: "Маршрутизация запросов с Istio"
+title: "Настройка маршрутизации запросов с Istio"
+description: "Настройка маршрутизации HTTP и TCP запросов в Deckhouse Kubernetes Platform с использованием Istio. Работа с VirtualService для управления трафиком на основе host, uri, weight."
 permalink: ru/user/network/request_routing_istio.html
 lang: ru
 ---
@@ -14,7 +15,7 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/istio-cr.html#virtualservice -->
 
-Подробнее ознакомиться с VirtualService можно в документации [istio](https://istio.io/v1.19/docs/reference/config/networking/virtual-service/).
+Подробнее ознакомиться с VirtualService можно в документации [istio](https://istio.io/v1.21/docs/reference/config/networking/virtual-service/).
 
 Использование VirtualService опционально, классические сервисы продолжают работать, если их функционала достаточно. С помощью этого ресурса можно настроить маршрутизацию запросов:
 

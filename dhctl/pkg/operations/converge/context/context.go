@@ -33,6 +33,13 @@ import (
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
+type MultiMasterClientSwitcher interface {
+	SwitchToFirstMaster(ctx context.Context) error
+	SwitchToNotFirstMaster(ctx context.Context) error
+	SwitchWhenDecreaseMastersIfNeed(ctx context.Context, ngName string, nodesToDeleteInfo []*NodeState) error
+	SwitchClientsToAnotherNodeIfNeed(ctx context.Context, nodeName, ip string) error
+}
+
 type Context struct {
 	kubeClientMu sync.RWMutex
 	kubeClient   *client.KubernetesClient
@@ -47,6 +54,7 @@ type Context struct {
 	changeParams          infrastructure.ChangeActionSettings
 	stateStore            stateStore
 	stateChecker          infrastructure.StateChecker
+	clientSwitcher        MultiMasterClientSwitcher
 
 	providerGetter infrastructure.CloudProviderGetter
 
@@ -59,6 +67,7 @@ type Params struct {
 	ChangeParams   infrastructure.ChangeActionSettings
 	ProviderGetter infrastructure.CloudProviderGetter
 	Logger         log.Logger
+	ClientSwitcher MultiMasterClientSwitcher
 }
 
 func newContext(ctx context.Context, params Params) *Context {
@@ -75,6 +84,7 @@ func newContext(ctx context.Context, params Params) *Context {
 		changeParams:   params.ChangeParams,
 		ctx:            ctx,
 		logger:         logger,
+		clientSwitcher: params.ClientSwitcher,
 
 		stateStore: newInSecretStateStore(),
 	}
@@ -123,6 +133,16 @@ func (c *Context) KubeClient() *client.KubernetesClient {
 
 func (c *Context) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
 	return c.KubeClient(), nil
+}
+
+func (c *Context) ClientSwitcher() MultiMasterClientSwitcher {
+	return c.clientSwitcher
+}
+
+// SetClientSwitcher
+// Warning! do not use in controllers only in initialization!
+func (c *Context) SetClientSwitcher(s MultiMasterClientSwitcher) {
+	c.clientSwitcher = s
 }
 
 func (c *Context) InfrastructureContext(metaConfig *config.MetaConfig) *infrastructure.Context {

@@ -49,15 +49,12 @@ spec:
         namespace: d8-cloud-instance-manager
         name: {{ $template_name }}
   {{- if $ng.nodeDrainTimeoutSecond }}
-      drainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
       nodeDrainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
-      nodeDeletionTimeout: {{$ng.nodeDrainTimeoutSecond}}s
-      nodeVolumeDetachTimeout: {{$ng.nodeDrainTimeoutSecond}}s
   {{- else }}
       nodeDrainTimeout: 10m
+  {{- end }}
       nodeDeletionTimeout: 10m
       nodeVolumeDetachTimeout: 10m
-  {{- end }}
   strategy:
     type: RollingUpdate
     rollingUpdate:

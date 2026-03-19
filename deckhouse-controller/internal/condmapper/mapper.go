@@ -81,6 +81,15 @@ func (r Rule) evaluate(state State) (metav1.Condition, bool) {
 		cond.Message = src.Message
 	}
 
+	// Reason is required by metav1.Condition contract
+	if cond.Reason == "" {
+		if res.Source != "" {
+			cond.Reason = res.Source
+		} else {
+			cond.Reason = r.Type
+		}
+	}
+
 	return cond, true
 }
 

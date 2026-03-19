@@ -1,5 +1,6 @@
 ---
 title: "Managing authorization and access to workload with Istio"
+description: "Managing authorization and access control to workloads in Deckhouse Kubernetes Platform using Istio. Configuring AuthorizationPolicy with ALLOW and DENY policies for traffic control."
 permalink: en/user/network/authorization-workload-istio.html
 ---
 
@@ -29,7 +30,7 @@ You can use the following arguments when writing authorization rules:
 
 ## AuthorizationPolicy resource
 
-For more details on AuthorizationPolicy, refer to the [Istio documentation](https://istio.io/v1.19/docs/reference/config/security/authorization-policy/).
+For more details on AuthorizationPolicy, refer to the [Istio documentation](https://istio.io/v1.21/docs/reference/config/security/authorization-policy/).
 
 The AuthorizationPolicy resource enables and defines access control to workloads.
 It supports both ALLOW and DENY rules described above.
@@ -45,7 +46,7 @@ Arguments for making authorization decisions:
   - `host`
   - `port`
   - URI
-- [`conditions`](https://istio.io/v1.19/docs/reference/config/security/conditions/#supported-conditions):
+- [`conditions`](https://istio.io/v1.21/docs/reference/config/security/conditions/#supported-conditions):
   - HTTP headers
   - `source` arguments
   - `destination` arguments

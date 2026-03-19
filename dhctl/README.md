@@ -50,7 +50,7 @@ cloud:
   prefix: main
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.30"
+kubernetesVersion: "1.31"
 cri: "Containerd"
 clusterDomain: "cluster.local"
 ---
@@ -76,7 +76,7 @@ Example for OpenStack based installation:
 apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa publicsshkeyhere"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 standard:
   internalNetworkCIDR: 192.168.199.0/24
   internalNetworkDNSServers:

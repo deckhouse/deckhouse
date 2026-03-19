@@ -110,7 +110,9 @@ func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
-		templateData, err := config.ParseBashibleConfig(app.ConfigPaths, kubeadmTemplateOpenAPI)
+		templateData := make(map[string]interface{})
+		var err error
+		templateData["clusterConfiguration"], err = config.ParseBashibleConfig(app.ConfigPaths, kubeadmTemplateOpenAPI)
 		if err != nil {
 			return err
 		}
@@ -149,12 +151,23 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 			if err != nil {
 				return fmt.Errorf("read configs from stdin: %v", err)
 			}
-			metaConfig, err = config.ParseConfigFromData(context.TODO(), string(data), preparatorProvider)
+
+			metaConfig, err = config.ParseConfigFromData(
+				context.TODO(),
+				string(data),
+				preparatorProvider,
+				config.ValidateOptionStrictUnmarshal(true),
+			)
 			if err != nil {
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(context.TODO(), []string{app.ParseInputFile}, preparatorProvider)
+			metaConfig, err = config.ParseConfig(
+				context.TODO(),
+				[]string{app.ParseInputFile},
+				preparatorProvider,
+				config.ValidateOptionStrictUnmarshal(true),
+			)
 			if err != nil {
 				return err
 			}

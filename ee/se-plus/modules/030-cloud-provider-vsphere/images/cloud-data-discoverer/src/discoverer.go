@@ -48,48 +48,48 @@ type Discoverer struct {
 func NewDiscoverer(logger *log.Logger) *Discoverer {
 	clusterUUID := os.Getenv("CLUSTER_UUID")
 	if clusterUUID == "" {
-		logger.Fatalf("Cannot get CLUSTER_UUID env")
+		logger.Fatal("Cannot get CLUSTER_UUID env")
 	}
 	csiCompatibilityFlag := os.Getenv("CSI_COMPATIBILITY_FLAG")
 	if csiCompatibilityFlag == "" {
-		logger.Fatalf("Cannot get CSI_COMPATIBILITY_FLAG env")
+		logger.Fatal("Cannot get CSI_COMPATIBILITY_FLAG env")
 	}
 
 	host := os.Getenv("GOVMOMI_HOST")
 	if host == "" {
-		logger.Fatalf("Cannot get GOVMOMI_HOST env")
+		logger.Fatal("Cannot get GOVMOMI_HOST env")
 	}
 	username := os.Getenv("GOVMOMI_USERNAME")
 	if username == "" {
-		logger.Fatalf("Cannot get GOVMOMI_USERNAME env")
+		logger.Fatal("Cannot get GOVMOMI_USERNAME env")
 	}
 	password := os.Getenv("GOVMOMI_PASSWORD")
 	if password == "" {
-		logger.Fatalf("Cannot get GOVMOMI_PASSWORD env")
+		logger.Fatal("Cannot get GOVMOMI_PASSWORD env")
 	}
 
 	insecure := os.Getenv("GOVMOMI_INSECURE")
 	if insecure == "" {
-		logger.Fatalf("Cannot get GOVMOMI_INSECURE env")
+		logger.Fatal("Cannot get GOVMOMI_INSECURE env")
 	}
 	insecureFlag, err := strconv.ParseBool(insecure)
 	if err != nil {
-		logger.Fatalf("Failed to parse GOVMOMI_INSECURE env as bool: %v", err)
+		logger.Fatal("Failed to parse GOVMOMI_INSECURE env as bool", "error", err)
 	}
 
 	parsedURL, err := url.Parse(fmt.Sprintf("https://%s:%s@%s/sdk", url.PathEscape(strings.TrimSpace(username)), url.PathEscape(strings.TrimSpace(password)), url.PathEscape(strings.TrimSpace(host))))
 	if err != nil {
-		logger.Fatalf("Failed to build connection url: %v", err)
+		logger.Fatal("Failed to build connection url", "error", err)
 	}
 
 	soapClient := soap.NewClient(parsedURL, insecureFlag)
 	vimClient, err := vim25.NewClient(context.TODO(), soapClient)
 	if err != nil {
-		logger.Fatalf("Failed to create vimClient client: %v", err)
+		logger.Fatal("Failed to create vimClient client", "error", err)
 	}
 
 	if !vimClient.IsVC() {
-		logger.Fatalf("Created client not connected to vCenter")
+		logger.Fatal("Created client not connected to vCenter")
 	}
 
 	// vSphere connection is timed out after 30 minutes of inactivity.
@@ -101,27 +101,27 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 
 	err = govmomiClient.SessionManager.Login(context.TODO(), parsedURL.User)
 	if err != nil {
-		logger.Fatalf("Failed to login with provided credentials: %v", err)
+		logger.Fatal("Failed to login with provided credentials", "error", err)
 	}
 
 	cnsClient, err := cns.NewClient(context.TODO(), govmomiClient.Client)
 	if err != nil {
-		logger.Fatalf("Failed to create CNS client: %v", err)
+		logger.Fatal("Failed to create CNS client", "error", err)
 	}
 
 	region := os.Getenv("REGION")
 	if region == "" {
-		logger.Fatalf("Cannot get REGION env")
+		logger.Fatal("Cannot get REGION env")
 	}
 
 	regionTagCategory := os.Getenv("REGION_TAG_CATEGORY")
 	if regionTagCategory == "" {
-		logger.Fatalf("Cannot get REGION_TAG_CATEGORY env")
+		logger.Fatal("Cannot get REGION_TAG_CATEGORY env")
 	}
 
 	zoneTagCategory := os.Getenv("ZONE_TAG_CATEGORY")
 	if zoneTagCategory == "" {
-		logger.Fatalf("Cannot get ZONE_TAG_CATEGORY env")
+		logger.Fatal("Cannot get ZONE_TAG_CATEGORY env")
 	}
 
 	vmFolderPath := os.Getenv("VM_FOLDER_PATH")
@@ -143,7 +143,7 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 
 	vc, err := vsphere.NewClient(config)
 	if err != nil {
-		logger.Fatalf("Failed to create vSphere client: %v", err)
+		logger.Fatal("Failed to create vSphere client", "error", err)
 	}
 
 	return &Discoverer{
@@ -243,7 +243,10 @@ func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]types.Cn
 }
 
 func mergeZones(discoveredZones, newZones []string) []string {
-	zones := append(discoveredZones, newZones...)
+	zones := make([]string, 0, len(discoveredZones)+len(discoveredZones))
+	zones = append(zones, discoveredZones...)
+	zones = append(zones, newZones...)
+
 	resMap := make(map[string]struct{}, len(zones))
 	res := make([]string, 0, len(zones))
 
@@ -259,7 +262,10 @@ func mergeZones(discoveredZones, newZones []string) []string {
 }
 
 func mergeDatastores(discoveredZonedDataStores []v1.VsphereDatastore, newZonedDataStores []vsphere.ZonedDataStore) []v1.VsphereDatastore {
-	zonedDataStores := append(discoveredZonedDataStores, vsphereZonedDataStoresToV1(newZonedDataStores)...)
+	zonedDataStores := make([]v1.VsphereDatastore, 0, len(discoveredZonedDataStores)+len(newZonedDataStores))
+	zonedDataStores = append(zonedDataStores, discoveredZonedDataStores...)
+	zonedDataStores = append(zonedDataStores, vsphereZonedDataStoresToV1(newZonedDataStores)...)
+
 	res := make([]v1.VsphereDatastore, 0, len(zonedDataStores))
 	resMap := make(map[string]struct{}, len(zonedDataStores))
 

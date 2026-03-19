@@ -1,5 +1,6 @@
 ---
-title: "Управление секретами"
+title: "Веб-интерфейс управления секретами"
+description: "Веб-интерфейс Stronghold для управления секретами в Deckhouse Kubernetes Platform. Настройка механизмов секретов, управление методами аутентификации, контроль доступа и политики безопасности."
 permalink: ru/user/web/stronghold.html
 lang: ru
 ---
