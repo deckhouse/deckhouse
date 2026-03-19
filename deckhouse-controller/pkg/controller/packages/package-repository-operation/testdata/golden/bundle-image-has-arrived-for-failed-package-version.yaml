@@ -29,12 +29,6 @@ status:
     status: "True"
     type: Completed
   packages:
-    failed:
-    - errors:
-      - error: 'ensure package version: check bundle image exists: failed to check
-          if image exists: image not found'
-        version: v1.0.0
-      name: test-package
     processed:
     - name: test-package
       type: Application
@@ -49,11 +43,11 @@ metadata:
   creationTimestamp: null
   labels:
     heritage: deckhouse
-    packages.deckhouse.io/not-exist-in-registry: "true"
+    packages.deckhouse.io/draft: "true"
     packages.deckhouse.io/package: test-package
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-package-v1.0.0
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   packageName: test-package
   packageRepositoryName: deckhouse
