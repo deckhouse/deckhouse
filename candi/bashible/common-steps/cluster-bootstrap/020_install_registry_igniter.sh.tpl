@@ -19,6 +19,8 @@ pod_kill_and_wait() {
   local sleep_interval=1
   local max_attempts=10
 
+  echo "Removing pod: ${pod_prefix}"
+
   if [ -z "${pod_prefix}" ]; then
     echo "Empty prefix, skip"
     return 0
