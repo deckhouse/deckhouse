@@ -120,10 +120,10 @@ requirements_modules_title: К версиям других модулей
 requirements_modules_any_version: любая версия
 requirements_version_and_above: и выше
 requirements_version_above: выше
-requirements_modules_optional_text_first: Необязательная зависимость от модуля
+requirements_modules_optional_text_first: Условная зависимость от модуля
 requirements_modules_more: подробнее
-requirements_modules_optional_text_second: про необязательные зависимости
-requirements_modules_optional_text_for_link: необязательные-зависимости
+requirements_modules_optional_text_second: про условные зависимости
+requirements_modules_optional_text_for_link: условные-зависимости
 module_lifecycle_stage: "<a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля'>Стадия жизненного цикла</a> модуля"
 conversions_title: Конверсии
 conversion_action_message: Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
