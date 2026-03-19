@@ -7,7 +7,7 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-vcd
     cluster.x-k8s.io/provider: vcd
-    cluster.x-k8s.io/v1beta1: v1beta2
+    cluster.x-k8s.io/v1beta2: v1alpha1
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   name: vcdclusters.infrastructure.cluster.x-k8s.io
@@ -122,6 +122,13 @@ spec:
           status:
             description: VCDClusterStatus defines the observed state of VCDCluster
             properties:
+              initialization:
+                description: Initialization contains cluster initialization status information.
+                properties:
+                  provisioned:
+                    description: Provisioned is true when the cluster infrastructure is fully provisioned.
+                    type: boolean
+                type: object
               conditions:
                 description: Conditions defines current service state of the VCDCluster.
                 items:
