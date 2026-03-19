@@ -260,6 +260,9 @@ spec:
 
               # has_field returns whether an object has a field
               has_field(object, field) if {
-                some key, _ in object
-                key == field
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
               }
