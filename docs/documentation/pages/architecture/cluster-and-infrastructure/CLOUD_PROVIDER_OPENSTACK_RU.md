@@ -28,7 +28,7 @@ description: Архитектура модуля cloud-provider-openstack в Dec
 
 Модуль состоит из следующих компонентов:
 
-1. **Сloud-controller-manager** — реализация [Сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для OpenStack. Обеспечивает взаимодействие с облаком на базе OpenStack и выполняет следующие функции:
+1. **Сloud-controller-manager** — [Kubernetes external cloud provider for OpenStack](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md), реализация [Сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для OpenStack. Обеспечивает взаимодействие с облаком на базе OpenStack и выполняет следующие функции:
 
    * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
 
