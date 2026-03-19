@@ -43,6 +43,15 @@ func (lb *LoadBalancerService) CreateOrUpdateLoadBalancer(
 		return nil, err
 	}
 	if svc != nil {
+		if isOwnedBySWHC(svc) {
+			u, err := lb.getServiceWithHealthchecksByName(ctx, loadBalancer.Name)
+			if err != nil {
+				return nil, err
+			}
+			if u != nil {
+				return lb.updateServiceWithHealthchecks(ctx, u, loadBalancer)
+			}
+		}
 		return lb.updateLoadBalancerService(ctx, svc, loadBalancer)
 	}
 
@@ -57,6 +66,15 @@ func (lb *LoadBalancerService) CreateOrUpdateLoadBalancer(
 	}
 
 	return lb.createLoadBalancerService(ctx, loadBalancer)
+}
+
+func isOwnedBySWHC(svc *corev1.Service) bool {
+	for _, ref := range svc.OwnerReferences {
+		if ref.Kind == "ServiceWithHealthchecks" {
+			return true
+		}
+	}
+	return false
 }
 
 func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, name string) (retErr error) {
@@ -172,14 +190,19 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 	lbKey string,
 ) error {
 	desired := make(map[string]struct{}, len(nodes))
-	cs := &ComputeService{Service: lb.Service}
-
+	hostnames := make([]string, 0, len(nodes))
 	for _, node := range nodes {
 		desired[node.Name] = struct{}{}
-		if err := cs.EnsureVMLabelByHostname(ctx, node.Name, lbKey, "loadbalancer"); err != nil {
-			return fmt.Errorf("ensure VM label for hostname %q: %w", node.Name, err)
+		hostnames = append(hostnames, node.Name)
+	}
+
+	cs := &ComputeService{Service: lb.Service}
+
+	for _, h := range hostnames {
+		if err := cs.EnsureVMLabelByHostname(ctx, h, lbKey, "loadbalancer"); err != nil {
+			return fmt.Errorf("ensure VM label for hostname %q: %w", h, err)
 		}
-		klog.V(2).InfoS("ensureNodeLabels: set VM label", "hostname", node.Name, "lbKey", lbKey)
+		klog.V(2).InfoS("ensureNodeLabels: set VM label", "hostname", h, "lbKey", lbKey)
 	}
 
 	var vml v1alpha2.VirtualMachineList
