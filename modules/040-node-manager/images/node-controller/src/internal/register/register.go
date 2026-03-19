@@ -34,6 +34,10 @@ const (
 	NodeGroupStatus         ControllerName = "nodegroup-status"
 	NodeGroupUpdateApproval ControllerName = "nodegroup-update-approval"
 	NodeTemplate            ControllerName = "node-template"
+	NodeDraining     ControllerName = "node-draining"
+	BashibleCleanup  ControllerName = "bashible-cleanup"
+	Fencing          ControllerName = "node-fencing"
+	StaticProviderID ControllerName = "static-provider-id"
 )
 
 type controllerEntry struct {
