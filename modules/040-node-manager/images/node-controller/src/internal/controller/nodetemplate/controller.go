@@ -53,9 +53,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger := log.FromContext(ctx)
 
 	if req.Name != allRequestName {
+		logger.V(1).Info("reconciling single node template", "node", req.Name)
 		return r.reconcileSingleNode(ctx, req, logger)
 	}
 
+	logger.V(1).Info("reconciling all node templates (NodeGroup changed)")
 	return r.reconcileAllNodes(ctx, logger)
 }
 
@@ -70,12 +72,14 @@ func (r *Reconciler) reconcileSingleNode(ctx context.Context, req ctrl.Request, 
 
 	nodeGroupName := node.Labels[nodeGroupNameLabel]
 	if nodeGroupName == "" {
+		logger.V(1).Info("skipping: node has no nodeGroup label", "node", node.Name)
 		return ctrl.Result{}, nil
 	}
 
 	ng := &v1.NodeGroup{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: nodeGroupName}, ng); err != nil {
 		if errors.IsNotFound(err) {
+			logger.V(1).Info("skipping: NodeGroup not found", "node", node.Name, "nodeGroup", nodeGroupName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -83,10 +87,13 @@ func (r *Reconciler) reconcileSingleNode(ctx context.Context, req ctrl.Request, 
 
 	changed, err := r.reconcileNode(ctx, node, ng)
 	if err != nil {
+		logger.Error(err, "failed to reconcile node template", "node", node.Name, "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
 	}
 	if changed {
-		logger.V(1).Info("node template reconciled", "node", node.Name, "nodeGroup", ng.Name)
+		logger.Info("node template applied", "node", node.Name, "nodeGroup", ng.Name, "nodeType", ng.Spec.NodeType)
+	} else {
+		logger.V(1).Info("node template unchanged", "node", node.Name, "nodeGroup", ng.Name)
 	}
 
 	return ctrl.Result{}, nil
@@ -112,6 +119,7 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 	r.syncUnmanagedNodesMetric(nodes)
 	r.syncMissingMasterTaintMetric(ngList.Items, nodes)
 
+	var changedCount int
 	for i := range nodes {
 		node := &nodes[i]
 		nodeGroupName := node.Labels[nodeGroupNameLabel]
@@ -121,18 +129,22 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 
 		ng, ok := ngByName[nodeGroupName]
 		if !ok {
+			logger.V(1).Info("skipping: NodeGroup not found for node", "node", node.Name, "nodeGroup", nodeGroupName)
 			continue
 		}
 
 		changed, err := r.reconcileNode(ctx, node, &ng)
 		if err != nil {
+			logger.Error(err, "failed to reconcile node template", "node", node.Name, "nodeGroup", ng.Name)
 			return ctrl.Result{}, err
 		}
 		if changed {
-			logger.V(1).Info("node template reconciled", "node", node.Name, "nodeGroup", ng.Name)
+			changedCount++
+			logger.Info("node template applied", "node", node.Name, "nodeGroup", ng.Name, "nodeType", ng.Spec.NodeType)
 		}
 	}
 
+	logger.V(1).Info("reconcile all nodes completed", "totalNodes", len(nodes), "nodeGroups", len(ngByName), "changed", changedCount)
 	return ctrl.Result{}, nil
 }
 

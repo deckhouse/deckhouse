@@ -56,12 +56,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	if _, hasLabel := node.Labels[bashibleFirstRunFinishedLabel]; !hasLabel {
+		logger.V(1).Info("skipping: node does not have bashible-first-run-finished label", "node", node.Name)
 		return ctrl.Result{}, nil
 	}
+
+	logger.Info("bashible first run finished, cleaning up artifacts", "node", node.Name)
 
 	base := node.DeepCopy()
 
 	delete(node.Labels, bashibleFirstRunFinishedLabel)
+	logger.V(1).Info("removing label", "node", node.Name, "label", bashibleFirstRunFinishedLabel)
 
 	hasTaint := false
 	for _, t := range node.Spec.Taints {
@@ -72,6 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	if hasTaint {
+		logger.V(1).Info("removing taint", "node", node.Name, "taint", bashibleUninitializedTaintKey)
 		taints := make([]corev1.Taint, 0, len(node.Spec.Taints))
 		for _, t := range node.Spec.Taints {
 			if t.Key != bashibleUninitializedTaintKey {
@@ -89,7 +94,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	logger.Info("cleaned up bashible artifacts", "node", node.Name, "removedTaint", hasTaint)
+	logger.Info("bashible cleanup completed", "node", node.Name, "removedLabel", true, "removedTaint", hasTaint)
 	return ctrl.Result{}, nil
 }
 

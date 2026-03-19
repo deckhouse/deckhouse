@@ -66,20 +66,30 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	ng := &v1.NodeGroup{}
 	if err := r.Client.Get(ctx, req.NamespacedName, ng); err != nil {
 		if errors.IsNotFound(err) {
+			logger.V(1).Info("NodeGroup not found, skipping", "name", req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
+	logger.V(1).Info("computing node status", "nodeGroup", ng.Name, "nodeType", ng.Spec.NodeType)
 	nodeService := nodestatus.Service{Client: r.Client}
 	nodeResult, err := nodeService.Compute(ctx, ng.Name)
 	if err != nil {
-		logger.Error(err, "failed to get nodes")
+		logger.Error(err, "failed to compute node status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
 	}
 
 	cloudService := cloudstatus.Service{Client: r.Client}
 	cloudResult := cloudService.Compute(ctx, ng)
+	logger.V(1).Info("status computed",
+		"nodeGroup", ng.Name,
+		"nodes", nodeResult.NodesCount,
+		"ready", nodeResult.ReadyCount,
+		"upToDate", nodeResult.UpToDateCount,
+		"desired", cloudResult.Desired,
+		"instances", cloudResult.Instances,
+	)
 
 	var conditionErrors []string
 	if ng.Status.Error != "" {

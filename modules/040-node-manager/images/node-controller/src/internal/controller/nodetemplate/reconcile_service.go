@@ -5,11 +5,14 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
 func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node, ng *v1.NodeGroup) (bool, error) {
+	logger := log.FromContext(ctx)
+
 	base := node.DeepCopy()
 	working := node.DeepCopy()
 
@@ -18,17 +21,22 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node, ng *v
 	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
 		fixCloudNodeTaints(working, ng)
 		if isClusterAPINode {
+			logger.V(1).Info("applying template to ClusterAPI cloud ephemeral node", "node", node.Name, "nodeGroup", ng.Name)
 			if err := applyNodeTemplate(working, ng); err != nil {
 				return false, err
 			}
+		} else {
+			logger.V(1).Info("cloud ephemeral node (non-CAPI): fixing taints only", "node", node.Name, "nodeGroup", ng.Name)
 		}
 	} else {
+		logger.V(1).Info("applying full template to node", "node", node.Name, "nodeGroup", ng.Name, "nodeType", ng.Spec.NodeType)
 		if err := applyNodeTemplate(working, ng); err != nil {
 			return false, err
 		}
 	}
 
 	if ng.Name == "master" {
+		logger.V(1).Info("applying master node role labels and fixing master taints", "node", node.Name)
 		if working.Labels == nil {
 			working.Labels = make(map[string]string)
 		}
@@ -50,6 +58,7 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node, ng *v
 		return false, nil
 	}
 
+	logger.V(1).Info("patching node with template changes", "node", node.Name, "nodeGroup", ng.Name)
 	working.Status = base.Status
 	if err := r.Client.Patch(ctx, working, client.MergeFrom(base)); err != nil {
 		return false, err

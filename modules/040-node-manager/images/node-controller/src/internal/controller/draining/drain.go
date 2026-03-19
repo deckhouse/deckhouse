@@ -28,11 +28,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // drainNodePods evicts all pods from a node, respecting the context timeout.
 // It mirrors the behavior of the drain.RunNodeDrain helper used in the hook.
 func drainNodePods(ctx context.Context, client kubernetes.Interface, nodeName string) error {
+	logger := log.FromContext(ctx)
+
 	podList, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName}).String(),
 	})
@@ -41,9 +44,12 @@ func drainNodePods(ctx context.Context, client kubernetes.Interface, nodeName st
 	}
 
 	var (
-		wg   sync.WaitGroup
-		mu   sync.Mutex
-		errs []error
+		wg          sync.WaitGroup
+		mu          sync.Mutex
+		errs        []error
+		skippedDS   int
+		skippedMirr int
+		toEvict     int
 	)
 
 	for i := range podList.Items {
@@ -51,18 +57,22 @@ func drainNodePods(ctx context.Context, client kubernetes.Interface, nodeName st
 
 		// Skip mirror pods (managed by kubelet)
 		if _, isMirror := pod.Annotations["kubernetes.io/config.mirror"]; isMirror {
+			skippedMirr++
 			continue
 		}
 
 		// Skip DaemonSet-owned pods
 		if isDaemonSetPod(pod) {
+			skippedDS++
 			continue
 		}
 
+		toEvict++
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 
+			logger.V(1).Info("evicting pod", "pod", pod.Name, "namespace", pod.Namespace, "node", nodeName)
 			if err := evictPod(ctx, client, pod.Namespace, pod.Name); err != nil {
 				if !apierrors.IsNotFound(err) {
 					mu.Lock()
@@ -80,6 +90,14 @@ func drainNodePods(ctx context.Context, client kubernetes.Interface, nodeName st
 			}
 		}()
 	}
+
+	logger.Info("draining pods",
+		"node", nodeName,
+		"totalPods", len(podList.Items),
+		"toEvict", toEvict,
+		"skippedDaemonSet", skippedDS,
+		"skippedMirror", skippedMirr,
+	)
 
 	wg.Wait()
 

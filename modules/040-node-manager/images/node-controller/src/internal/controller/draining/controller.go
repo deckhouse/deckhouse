@@ -75,22 +75,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	drainedSource := node.Annotations[drainedAnnotationKey]
 
 	if drainingSource == "" && drainedSource == "" {
+		logger.V(1).Info("skipping: no draining/drained annotations", "node", node.Name)
 		return ctrl.Result{}, nil
 	}
 
 	// If the node became schedulable but 'drained' annotation is still present (user source), remove it
 	if drainingSource == "" && drainedSource == "user" && !node.Spec.Unschedulable {
+		logger.Info("removing stale drained=user annotation from schedulable node", "node", node.Name)
 		return ctrl.Result{}, r.patchAnnotations(ctx, node.Name, map[string]interface{}{
 			drainedAnnotationKey: nil,
 		})
 	}
 
 	if drainingSource == "" {
+		logger.V(1).Info("skipping: no draining annotation", "node", node.Name, "drainedSource", drainedSource)
 		return ctrl.Result{}, nil
 	}
 
+	logger.Info("node drain requested", "node", node.Name, "source", drainingSource, "nodeGroup", node.Labels[nodeGroupLabel])
+
 	// If the node is marked for draining while it has been drained by user, remove 'drained'
 	if drainedSource == "user" {
+		logger.Info("removing existing drained=user annotation before new drain", "node", node.Name)
 		if err := r.patchAnnotations(ctx, node.Name, map[string]interface{}{
 			drainedAnnotationKey: nil,
 		}); err != nil {
@@ -105,15 +111,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Get drain timeout from NodeGroup
 	drainTimeout := r.getDrainTimeout(ctx, node.Labels[nodeGroupLabel])
+	logger.V(1).Info("drain timeout resolved", "node", node.Name, "timeout", drainTimeout)
 
 	// Cordon the node
+	if node.Spec.Unschedulable {
+		logger.V(1).Info("node already cordoned", "node", node.Name)
+	} else {
+		logger.Info("cordoning node", "node", node.Name)
+	}
 	if err := r.cordonNode(ctx, node); err != nil {
 		logger.Error(err, "failed to cordon node", "node", node.Name)
 		return ctrl.Result{}, err
 	}
 
 	// Run drain
-	logger.Info("node draining started", "node", node.Name)
+	logger.Info("draining node pods", "node", node.Name, "timeout", drainTimeout)
 	drainCtx, cancel := context.WithTimeout(ctx, drainTimeout)
 	defer cancel()
 
@@ -124,13 +136,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		// On timeout, still mark as drained (matching original hook behavior)
 		if drainCtx.Err() != nil {
-			logger.Info("node drain timeout, marking as drained anyway", "node", node.Name)
+			logger.Info("drain timed out, marking as drained anyway", "node", node.Name, "timeout", drainTimeout)
 		} else {
 			return ctrl.Result{}, err
 		}
 	}
 
-	logger.Info("node draining finished", "node", node.Name)
+	logger.Info("drain completed, updating annotations",
+		"node", node.Name,
+		"removingAnnotation", drainingAnnotationKey,
+		"settingAnnotation", drainedAnnotationKey,
+		"value", drainingSource,
+	)
 
 	// Remove draining, set drained
 	return ctrl.Result{}, r.patchAnnotations(ctx, node.Name, map[string]interface{}{

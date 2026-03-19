@@ -60,18 +60,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	if node.Labels[nodeTypeLabel] != nodeTypeStatic {
+		logger.V(1).Info("skipping: node is not Static type", "node", node.Name, "type", node.Labels[nodeTypeLabel])
 		return ctrl.Result{}, nil
 	}
 
 	if node.Spec.ProviderID != "" {
+		logger.V(1).Info("skipping: providerID already set", "node", node.Name, "providerID", node.Spec.ProviderID)
 		return ctrl.Result{}, nil
 	}
 
 	for _, taint := range node.Spec.Taints {
 		if taint.Key == uninitializedTaintKey {
+			logger.V(1).Info("skipping: node has uninitialized taint", "node", node.Name)
 			return ctrl.Result{}, nil
 		}
 	}
+
+	logger.Info("patching providerID on static node", "node", node.Name, "providerID", staticProviderIDValue)
 
 	patch, err := json.Marshal(map[string]interface{}{
 		"spec": map[string]string{
@@ -86,7 +91,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	logger.Info("set static provider ID", "node", node.Name)
+	logger.Info("providerID set successfully", "node", node.Name)
 	return ctrl.Result{}, nil
 }
 

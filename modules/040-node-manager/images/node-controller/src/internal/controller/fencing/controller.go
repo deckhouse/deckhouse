@@ -80,11 +80,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	if _, ok := node.Labels[fencingEnabledLabel]; !ok {
+		logger.V(1).Info("skipping: node does not have fencing-enabled label", "node", node.Name)
 		return ctrl.Result{}, nil
 	}
 
 	for _, annotation := range maintenanceAnnotations {
 		if _, exists := node.Annotations[annotation]; exists {
+			logger.V(1).Info("skipping: node has maintenance annotation", "node", node.Name, "annotation", annotation)
 			return ctrl.Result{RequeueAfter: requeueInterval}, nil
 		}
 	}
@@ -95,20 +97,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		Name:      node.Name,
 	}, lease); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("lease not found for node, skipping", "node", node.Name)
+			logger.Info("lease not found for node, skipping fencing", "node", node.Name)
 			return ctrl.Result{RequeueAfter: requeueInterval}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
 	if lease.Spec.RenewTime == nil || time.Since(lease.Spec.RenewTime.Time) <= fencingTimeout {
+		logger.V(1).Info("lease is fresh, no fencing needed", "node", node.Name,
+			"renewTime", lease.Spec.RenewTime,
+			"fencingTimeout", fencingTimeout)
 		return ctrl.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	logger.Info("node lease expired, fencing node",
+	leaseAge := time.Since(lease.Spec.RenewTime.Time)
+	logger.Info("node lease expired, starting fencing",
 		"node", node.Name,
 		"leaseRenewTime", lease.Spec.RenewTime.Time,
-		"now", time.Now(),
+		"leaseAge", leaseAge.Round(time.Second),
+		"fencingTimeout", fencingTimeout,
 	)
 
 	podList := &corev1.PodList{}
@@ -119,26 +126,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: requeueInterval}, nil
 	}
 
+	logger.Info("deleting pods on fenced node", "node", node.Name, "podCount", len(podList.Items))
+
 	gracePeriod := int64(0)
 	for i := range podList.Items {
 		pod := &podList.Items[i]
-		logger.Info("deleting pod", "pod", pod.Name, "namespace", pod.Namespace, "node", node.Name)
+		logger.V(1).Info("deleting pod", "pod", pod.Name, "namespace", pod.Namespace, "node", node.Name)
 		if err := r.Client.Delete(ctx, pod, &client.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
 		}); err != nil && !errors.IsNotFound(err) {
-			logger.Error(err, "failed to delete pod", "pod", pod.Name)
+			logger.Error(err, "failed to delete pod", "pod", pod.Name, "namespace", pod.Namespace)
 		}
 	}
 
 	if shouldDeleteNode(node) {
-		logger.Info("deleting node", "node", node.Name)
+		logger.Info("deleting fenced node", "node", node.Name)
 		if err := r.Client.Delete(ctx, node, &client.DeleteOptions{
 			PropagationPolicy: propagationPtr(metav1.DeletePropagationBackground),
 		}); err != nil && !errors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
+		logger.Info("node deleted successfully", "node", node.Name)
 	} else {
-		logger.Info("node preserved (notify mode or static type)", "node", node.Name)
+		fencingMode := node.Labels[fencingModeLabel]
+		nodeType := node.Labels[nodeTypeLabel]
+		logger.Info("node preserved after fencing (pods deleted only)",
+			"node", node.Name,
+			"fencingMode", fencingMode,
+			"nodeType", nodeType,
+		)
 	}
 
 	return ctrl.Result{}, nil
