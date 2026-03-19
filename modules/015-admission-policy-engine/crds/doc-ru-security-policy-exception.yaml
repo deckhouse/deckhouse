@@ -144,9 +144,6 @@ spec:
                             description: Разрешенный хостовой порт.
                           protocol:
                             description: Протокол для хостового порта.
-                            enum:
-                              - TCP
-                              - UDP
                           metadata:
                             description: Метаданные, связанные с исключением.
                     hostNetwork:
