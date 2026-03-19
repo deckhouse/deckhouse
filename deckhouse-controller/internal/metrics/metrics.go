@@ -91,8 +91,8 @@ const (
 	D8ModuleUpdatingGroup       = "d8_module_updating_group"
 	ModuleReleaseGroup          = "module_release_group"
 
-	// DeckhouseModuleVersionTelemetryGroup is the metrics group
-	DeckhouseModuleVersionTelemetryGroup = "deckhouse_module_version_telemetry"
+	// DeckhouseModuleTelemetryGroup
+	DeckhouseModuleTelemetryGroup = "deckhouse_module_telemetry"
 )
 
 // Group templates for dynamic metric names using fmt.Sprintf
