@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"golang.org/x/mod/semver"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
@@ -291,10 +292,17 @@ monitor-delay = "2s"
 monitor-timeout = "1s"
 subnet-id = "my-subnet-id"
 floating-network-id = "my-floating-network-id"
-enable-ingress-hostname = true
+enable-ingress-hostname = %s
 [BlockStorage]
 ignore-volume-microversion = false
 rescan-on-resize = true`
+
+		// TODO: Remove after support for Kubernetes version 1.32 ends
+		enableIngressHostname := "true"
+		if semver.Compare(k8sVer, "1.32.0") >= 0 {
+			enableIngressHostname = "false"
+		}
+		ccmExpectedConfig = fmt.Sprintf(ccmExpectedConfig, enableIngressHostname)
 
 		ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
 		Expect(err).ShouldNot(HaveOccurred())
