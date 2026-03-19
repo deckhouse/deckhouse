@@ -223,14 +223,14 @@ data:
       {{- end }}
   {{ $key }}: {{ $additionalConfig | quote }}
     {{- end }}
-    {{- if not (hasKey $crd.spec.config "worker-shutdown-timeout") }}
-  # The new lua based upstream reloader should minimize such reloads, alas we've got to take care
-  # of the edge cases. We've ended up with 5 minutes as some bearable balance between two problems.
-  worker-shutdown-timeout: "300"
-    {{- end }}
     {{- if and (not (hasKey $crd.spec.config "hide-headers")) ($context.Values.global.enabledModules | has "istio") }}
   hide-headers: "x-envoy-decorator-operation"
     {{- end }}
+  {{- end }}
+  {{- if or (not $crd.spec.config) (not (hasKey $crd.spec.config "worker-shutdown-timeout")) }}
+  # The new lua based upstream reloader should minimize such reloads, alas we've got to take care
+  # of the edge cases. We've ended up with 5 minutes as some bearable balance between two problems.
+  worker-shutdown-timeout: "300"
   {{- end }}
 {{- end }}
 
