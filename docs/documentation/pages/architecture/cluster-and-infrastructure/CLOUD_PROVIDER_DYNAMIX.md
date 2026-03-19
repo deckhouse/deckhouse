@@ -52,7 +52,7 @@ The module consists of the following components:
 
    * **dynamix-cloud-controller-manager**.
 
-3. **Cloud-data-discoverer**: It is responsible for collecting data from the cloud provider's API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used by other components of the `cloud-provider-dynamix` module. For example, for Basis Dynamix, these are parameters such as a list of availability zones, StorageClass resources, etc.
+3. **Cloud-data-discoverer**: It is responsible for collecting data from the cloud provider's API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used by other components of the `cloud-provider-dynamix` module.
 
    It consists of the following containers:
 

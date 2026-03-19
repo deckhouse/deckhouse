@@ -52,7 +52,7 @@ The module consists of the following components:
 
    * **zvirt-cloud-controller-manager**.
 
-3. **Cloud-data-discoverer**: It is responsible for collecting data from the cloud provider's API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used by other components of the `cloud-provider-zvirt` module. For example, for zVirt, these are parameters such as a list of availability zones, StorageClass resources, etc.
+3. **Cloud-data-discoverer**: It is responsible for collecting data from the cloud provider's API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used by other components of the `cloud-provider-zvirt` module. 
 
    It consists of the following containers:
 

@@ -53,7 +53,7 @@ description: Архитектура модуля cloud-provider-dynamix в Deckh
 
    * **dynamix-cloud-controller-manager**.
 
-3. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-dynamix`. Например, для Basis Dynamix — это такие параметры, как список зон доступности, ресурсов StorageClass и т.д.
+3. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-dynamix`.
 
    Состоит из следующих контейнеров:
 
