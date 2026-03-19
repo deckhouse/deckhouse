@@ -1168,10 +1168,10 @@ index d59274e8da6..f964ae93fe3 100644
  
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/sensitive_data_validation_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/sensitive_data_validation_test.go
 new file mode 100644
-index 00000000000..c86a393c32b
+index 00000000000..52e3e6830f1
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/sensitive_data_validation_test.go
-@@ -0,0 +1,330 @@
+@@ -0,0 +1,446 @@
 +/*
 +Copyright 2024 The Kubernetes Authors.
 +
@@ -1398,6 +1398,122 @@ index 00000000000..c86a393c32b
 +				},
 +			},
 +			expectNoError: true,
++		},
++		// --- anyOf cases ---
++		{
++			name:        "feature gate enabled: XSensitiveData on nested string field with anyOf is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"spec": {
++						Type: "object",
++						Properties: map[string]apiextensions.JSONSchemaProps{
++							"token": {
++								Type:           "string",
++								XSensitiveData: true,
++								AnyOf: []apiextensions.JSONSchemaProps{
++									{MinLength: func() *int64 { v := int64(16); return &v }()},
++								},
++							},
++						},
++					},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate disabled: XSensitiveData on anyOf field is rejected",
++			gateEnabled: false,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"password": {
++						Type:           "string",
++						XSensitiveData: true,
++						AnyOf: []apiextensions.JSONSchemaProps{
++							{MinLength: func() *int64 { v := int64(8); return &v }()},
++						},
++					},
++				},
++			},
++			expectErrors: []validationMatch{
++				forbidden("spec", "validation", "openAPIV3Schema", "properties[password]", "x-kubernetes-sensitive-data"),
++			},
++		},
++		{
++			name:        "feature gate enabled: XSensitiveData inside anyOf branch is rejected",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"password": {
++						Type: "string",
++						AnyOf: []apiextensions.JSONSchemaProps{
++							{XSensitiveData: true},
++						},
++					},
++				},
++			},
++			expectErrors: []validationMatch{
++				forbidden("spec", "validation", "openAPIV3Schema", "properties[password]", "anyOf[0]", "x-kubernetes-sensitive-data"),
++			},
++		},
++		// --- x-kubernetes-int-or-string cases ---
++		{
++			// x-kubernetes-int-or-string is the one structural-schema exception where type IS
++			// allowed inside anyOf. Combined with XSensitiveData the field should be accepted.
++			name:        "feature gate enabled: XSensitiveData on int-or-string field with anyOf pattern is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"portOrName": {
++						XIntOrString:   true,
++						XSensitiveData: true,
++						AnyOf: []apiextensions.JSONSchemaProps{
++							{Type: "integer"},
++							{Type: "string"},
++						},
++					},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			// x-kubernetes-int-or-string without anyOf is also valid structurally.
++			name:        "feature gate enabled: XSensitiveData on int-or-string field without anyOf is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"portOrName": {
++						XIntOrString:   true,
++						XSensitiveData: true,
++					},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate disabled: XSensitiveData on int-or-string field is rejected",
++			gateEnabled: false,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"portOrName": {
++						XIntOrString:   true,
++						XSensitiveData: true,
++						AnyOf: []apiextensions.JSONSchemaProps{
++							{Type: "integer"},
++							{Type: "string"},
++						},
++					},
++				},
++			},
++			expectErrors: []validationMatch{
++				forbidden("spec", "validation", "openAPIV3Schema", "properties[portOrName]", "x-kubernetes-sensitive-data"),
++			},
 +		},
 +	}
 +
@@ -2249,7 +2365,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 55d31fc8eda..7e6ed28577d 100644
+index 55d31fc8eda..167ffcd2492 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -35,6 +35,7 @@ import (
@@ -2344,7 +2460,7 @@ index 55d31fc8eda..7e6ed28577d 100644
  	deprecated := crdInfo.deprecated[requestInfo.APIVersion]
  	for _, w := range crdInfo.warnings[requestInfo.APIVersion] {
  		warning.AddWarning(req.Context(), "", w)
-@@ -367,14 +394,59 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -367,14 +394,65 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  	requestScope := crdInfo.requestScopes[requestInfo.APIVersion]
  	storage := crdInfo.storages[requestInfo.APIVersion].CustomResource
  
@@ -2381,30 +2497,36 @@ index 55d31fc8eda..7e6ed28577d 100644
 +		}
 +	}
 +
++	// allSensitive collects all version schemas so that stripping wrappers can apply each
++	// in sequence. This handles the case where an object of one version (e.g. v2) is served
++	// via a different version's endpoint (e.g. v1): its sensitive fields are unknown to the
++	// request-version schema but are known to their own version's schema.
++	allSensitiveSchemas := make([]*structuralschema.Structural, 0, len(crdInfo.sensitiveSchemas))
++	for _, s := range crdInfo.sensitiveSchemas {
++		allSensitiveSchemas = append(allSensitiveSchemas, s)
++	}
++
  	switch requestInfo.Verb {
  	case "get":
 +		if needsStripping {
-+			schema := crdInfo.sensitiveSchemas[requestInfo.APIVersion]
-+			return handlers.GetResource(&strippingGetter{Getter: storage, schema: schema}, requestScope)
++			return handlers.GetResource(&strippingGetter{Getter: storage, schemas: allSensitiveSchemas}, requestScope)
 +		}
  		return handlers.GetResource(storage, requestScope)
  	case "list":
  		forceWatch := false
 +		if needsStripping {
-+			schema := crdInfo.sensitiveSchemas[requestInfo.APIVersion]
-+			return handlers.ListResource(&strippingLister{Lister: storage, schema: schema}, storage, requestScope, forceWatch, r.minRequestTimeout)
++			return handlers.ListResource(&strippingLister{Lister: storage, schemas: allSensitiveSchemas}, storage, requestScope, forceWatch, r.minRequestTimeout)
 +		}
  		return handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
  	case "watch":
  		forceWatch := true
 +		if needsStripping {
-+			schema := crdInfo.sensitiveSchemas[requestInfo.APIVersion]
-+			return handlers.ListResource(storage, &strippingWatcher{Watcher: storage, schema: schema}, requestScope, forceWatch, r.minRequestTimeout)
++			return handlers.ListResource(storage, &strippingWatcher{Watcher: storage, schemas: allSensitiveSchemas}, requestScope, forceWatch, r.minRequestTimeout)
 +		}
  		return handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
  	case "create":
  		// we want to track recently created CRDs so that in HA environments we don't have server A allow a create and server B
-@@ -514,6 +586,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
+@@ -514,6 +592,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
  func (r *crdHandler) removeStorage_locked(uid types.UID) {
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	if oldInfo, ok := storageMap[uid]; ok {
@@ -2420,7 +2542,7 @@ index 55d31fc8eda..7e6ed28577d 100644
  		// Copy because we cannot write to storageMap without a race
  		// as it is used without locking elsewhere.
  		storageMap2 := storageMap.clone()
-@@ -587,6 +668,14 @@ func (r *crdHandler) destroy() {
+@@ -587,6 +674,14 @@ func (r *crdHandler) destroy() {
  
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	for _, crdInfo := range storageMap {
@@ -2435,7 +2557,7 @@ index 55d31fc8eda..7e6ed28577d 100644
  		for _, storage := range crdInfo.storages {
  			// DestroyFunc have to be implemented in idempotent way,
  			// so the potential race with r.tearDown() (being called
-@@ -679,6 +768,30 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -679,6 +774,30 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		structuralSchemas[v.Name] = s
  	}
  
@@ -2466,7 +2588,7 @@ index 55d31fc8eda..7e6ed28577d 100644
  	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
  	if err != nil {
  		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
-@@ -1036,9 +1149,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1036,9 +1155,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		deprecated:          deprecated,
  		warnings:            warnings,
  		storageVersion:      storageVersion,
@@ -2504,10 +2626,10 @@ index 63919e60e77..5b797aa50e2 100644
  	}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
 new file mode 100644
-index 00000000000..e6b98e41f04
+index 00000000000..d51bfea19f9
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
-@@ -0,0 +1,130 @@
+@@ -0,0 +1,140 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2540,11 +2662,23 @@ index 00000000000..e6b98e41f04
 +	"k8s.io/klog/v2"
 +)
 +
++// stripWithAllSchemas applies StripSensitiveFields and maskLastAppliedConfigAnnotation
++// for every schema in the slice. This ensures that sensitive fields from all CRD versions
++// are stripped even when an object of one version is served via another version's API
++// (e.g. a v2 object accessed through the v1 endpoint, with unknown fields preserved by
++// x-kubernetes-preserve-unknown-fields).
++func stripWithAllSchemas(obj map[string]interface{}, schemas []*structuralschema.Structural) {
++	for _, s := range schemas {
++		sensitive.StripSensitiveFields(obj, s, true)
++		maskLastAppliedConfigAnnotation(obj, s)
++	}
++}
++
 +// strippingGetter embeds a rest.Getter and overrides Get to strip sensitive fields from
 +// results returned to callers that lack the resource/sensitive RBAC subresource permission.
 +type strippingGetter struct {
 +	rest.Getter
-+	schema *structuralschema.Structural
++	schemas []*structuralschema.Structural
 +}
 +
 +func (s *strippingGetter) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
@@ -2556,11 +2690,11 @@ index 00000000000..e6b98e41f04
 +	obj = obj.DeepCopyObject()
 +	if u, ok := obj.(*unstructured.Unstructured); ok {
 +		before := len(u.Object)
-+		sensitive.StripSensitiveFields(u.Object, s.schema, true)
-+		maskLastAppliedConfigAnnotation(u.Object, s.schema)
-+		klog.V(1).Infof("MYTEST-DEBUG-6: strippingGetter.Get stripped sensitive fields from object=%s (fields before=%d after=%d sensitiveFieldPaths=%v)",
-+			name, before, len(u.Object), sensitive.CollectSensitivePaths(s.schema))
++		stripWithAllSchemas(u.Object, s.schemas)
++		klog.V(1).Infof("MYTEST-DEBUG-6: strippingGetter.Get stripped sensitive fields from object=%s (fields before=%d after=%d)",
++			name, before, len(u.Object))
 +	}
++	klog.V(1).Infof("MYTEST-DEBUG-7: strippingGetter.Get returning object=%s", name)
 +	return obj, nil
 +}
 +
@@ -2568,11 +2702,11 @@ index 00000000000..e6b98e41f04
 +// every item in results returned to callers that lack the resource/sensitive RBAC subresource permission.
 +type strippingLister struct {
 +	rest.Lister
-+	schema *structuralschema.Structural
++	schemas []*structuralschema.Structural
 +}
 +
 +func (s *strippingLister) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-+	klog.V(1).Infof("MYTEST-DEBUG-8: strippingLister.List called sensitiveFieldPaths=%v", sensitive.CollectSensitivePaths(s.schema))
++	klog.V(1).Infof("MYTEST-DEBUG-8: strippingLister.List called")
 +	obj, err := s.Lister.List(ctx, options)
 +	if err != nil {
 +		return nil, err
@@ -2581,8 +2715,7 @@ index 00000000000..e6b98e41f04
 +	if list, ok := obj.(*unstructured.UnstructuredList); ok {
 +		klog.V(1).Infof("MYTEST-DEBUG-9: strippingLister.List stripping %d items", len(list.Items))
 +		for i := range list.Items {
-+			sensitive.StripSensitiveFields(list.Items[i].Object, s.schema, true)
-+			maskLastAppliedConfigAnnotation(list.Items[i].Object, s.schema)
++			stripWithAllSchemas(list.Items[i].Object, s.schemas)
 +		}
 +		klog.V(1).Infof("MYTEST-DEBUG-10: strippingLister.List done stripping %d items", len(list.Items))
 +	}
@@ -2594,11 +2727,11 @@ index 00000000000..e6b98e41f04
 +// BOOKMARK and ERROR events pass through unchanged per the watch spec.
 +type strippingWatcher struct {
 +	rest.Watcher
-+	schema *structuralschema.Structural
++	schemas []*structuralschema.Structural
 +}
 +
 +func (s *strippingWatcher) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
-+	klog.V(1).Infof("MYTEST-DEBUG-11: strippingWatcher.Watch started sensitiveFieldPaths=%v", sensitive.CollectSensitivePaths(s.schema))
++	klog.V(1).Infof("MYTEST-DEBUG-11: strippingWatcher.Watch started")
 +	w, err := s.Watcher.Watch(ctx, options)
 +	if err != nil {
 +		return nil, err
@@ -2629,8 +2762,7 @@ index 00000000000..e6b98e41f04
 +		if u, ok := plainObj.(*unstructured.Unstructured); ok {
 +			klog.V(1).Infof("MYTEST-DEBUG-15: strippingWatcher stripping sensitive fields from event type=%s object=%s/%s",
 +				event.Type, u.GetNamespace(), u.GetName())
-+			sensitive.StripSensitiveFields(u.Object, s.schema, true)
-+			maskLastAppliedConfigAnnotation(u.Object, s.schema)
++			stripWithAllSchemas(u.Object, s.schemas)
 +			klog.V(1).Infof("MYTEST-DEBUG-16: strippingWatcher done stripping event type=%s object=%s/%s",
 +				event.Type, u.GetNamespace(), u.GetName())
 +		}
