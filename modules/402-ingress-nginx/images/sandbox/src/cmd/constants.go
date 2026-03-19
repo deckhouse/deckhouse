@@ -27,7 +27,7 @@ const (
 	// Validation with modsecurity + owasp can exceed tiny defaults even on healthy configs.
 	sandboxCPUTimeLimit  = 20 * time.Second
 	sandboxWallTimeLimit = 25 * time.Second
-	sandboxMemoryLimit   = runner.Size(384 << 20) // 384 MiB
+	sandboxMemoryLimit   = runner.Size(1 << 30) // 1 GiB
 )
 
 var sandboxExtraAllowSyscalls = []string{
