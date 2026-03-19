@@ -233,6 +233,106 @@ func TestReconcile_FencingDisableAnnotation_SkipsNode(t *testing.T) {
 	}
 }
 
+func TestReconcile_NotifyMode_DeletesPodsButPreservesNode(t *testing.T) {
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node-1",
+			Labels: map[string]string{
+				fencingEnabledLabel: "",
+				fencingModeLabel:    notifyMode,
+			},
+		},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-1",
+			Namespace: "default",
+		},
+		Spec: corev1.PodSpec{NodeName: "node-1"},
+	}
+	renewTime := metav1.NewMicroTime(time.Now().Add(-2 * time.Minute))
+	lease := &coordinationv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "node-1",
+			Namespace: leaseNamespace,
+		},
+		Spec: coordinationv1.LeaseSpec{
+			RenewTime: &renewTime,
+		},
+	}
+
+	r := newReconciler(t, node, pod, lease)
+	reconcile(t, r, "node-1")
+
+	if !nodeExists(r, "node-1") {
+		t.Fatal("node in Notify mode should NOT be deleted")
+	}
+
+	podObj := &corev1.Pod{}
+	err := r.Client.Get(context.Background(), types.NamespacedName{Name: "pod-1", Namespace: "default"}, podObj)
+	if !errors.IsNotFound(err) {
+		t.Fatal("pod should be deleted even in Notify mode")
+	}
+}
+
+func TestReconcile_StaticNode_DeletesPodsButPreservesNode(t *testing.T) {
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node-1",
+			Labels: map[string]string{
+				fencingEnabledLabel: "",
+				nodeTypeLabel:       nodeTypeStatic,
+			},
+		},
+	}
+	renewTime := metav1.NewMicroTime(time.Now().Add(-2 * time.Minute))
+	lease := &coordinationv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "node-1",
+			Namespace: leaseNamespace,
+		},
+		Spec: coordinationv1.LeaseSpec{
+			RenewTime: &renewTime,
+		},
+	}
+
+	r := newReconciler(t, node, lease)
+	reconcile(t, r, "node-1")
+
+	if !nodeExists(r, "node-1") {
+		t.Fatal("Static node should NOT be deleted")
+	}
+}
+
+func TestReconcile_CloudStaticNode_DeletesPodsButPreservesNode(t *testing.T) {
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node-1",
+			Labels: map[string]string{
+				fencingEnabledLabel: "",
+				nodeTypeLabel:       nodeTypeCloudStatic,
+			},
+		},
+	}
+	renewTime := metav1.NewMicroTime(time.Now().Add(-2 * time.Minute))
+	lease := &coordinationv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "node-1",
+			Namespace: leaseNamespace,
+		},
+		Spec: coordinationv1.LeaseSpec{
+			RenewTime: &renewTime,
+		},
+	}
+
+	r := newReconciler(t, node, lease)
+	reconcile(t, r, "node-1")
+
+	if !nodeExists(r, "node-1") {
+		t.Fatal("CloudStatic node should NOT be deleted")
+	}
+}
+
 func TestReconcile_NodeNotFound_NoError(t *testing.T) {
 	r := newReconciler(t)
 	reconcile(t, r, "nonexistent")

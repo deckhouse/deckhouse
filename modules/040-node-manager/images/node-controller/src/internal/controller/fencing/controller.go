@@ -37,9 +37,14 @@ import (
 
 const (
 	fencingEnabledLabel = "node-manager.deckhouse.io/fencing-enabled"
+	fencingModeLabel    = "node-manager.deckhouse.io/fencing-mode"
+	nodeTypeLabel       = "node.deckhouse.io/type"
 	leaseNamespace      = "kube-node-lease"
 	fencingTimeout      = 60 * time.Second
 	requeueInterval     = 1 * time.Minute
+	notifyMode          = "Notify"
+	nodeTypeStatic      = "Static"
+	nodeTypeCloudStatic = "CloudStatic"
 )
 
 var maintenanceAnnotations = []string{
@@ -125,14 +130,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	logger.Info("deleting node", "node", node.Name)
-	if err := r.Client.Delete(ctx, node, &client.DeleteOptions{
-		PropagationPolicy: propagationPtr(metav1.DeletePropagationBackground),
-	}); err != nil && !errors.IsNotFound(err) {
-		return ctrl.Result{}, err
+	if shouldDeleteNode(node) {
+		logger.Info("deleting node", "node", node.Name)
+		if err := r.Client.Delete(ctx, node, &client.DeleteOptions{
+			PropagationPolicy: propagationPtr(metav1.DeletePropagationBackground),
+		}); err != nil && !errors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
+	} else {
+		logger.Info("node preserved (notify mode or static type)", "node", node.Name)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func shouldDeleteNode(node *corev1.Node) bool {
+	fencingMode := node.Labels[fencingModeLabel]
+	nodeType := node.Labels[nodeTypeLabel]
+	return fencingMode != notifyMode && nodeType != nodeTypeStatic && nodeType != nodeTypeCloudStatic
 }
 
 func propagationPtr(p metav1.DeletionPropagation) *metav1.DeletionPropagation {
