@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -47,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
+	regClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
 // errorInjectingClient wraps a client.Client and returns errors for Create on specific object names
@@ -221,12 +223,14 @@ type segmentAwareMockClient struct {
 	getImageConfigFunc        func(ctx context.Context, tag string) (*crv1.ConfigFile, error)
 	versionGetImageConfigFunc func(ctx context.Context, tag string) (*crv1.ConfigFile, error) // for version segment labels
 	versionExtractFunc        func() io.ReadCloser                                            // tar content for version image Extract()
+	checkImageExistsFunc      func(ctx context.Context, tag string) error                     // for <package> path without /version
 	segments                  []string
 }
 
 func (m *segmentAwareMockClient) WithSegment(segments ...string) registry.Client {
 	newClient := &segmentAwareMockClient{
 		rootListTags:              m.rootListTags,
+		checkImageExistsFunc:      m.checkImageExistsFunc,
 		packageListTags:           m.packageListTags,
 		packageDirectListTags:     m.packageDirectListTags,
 		getImageConfigFunc:        m.getImageConfigFunc,
@@ -272,6 +276,12 @@ func (m *segmentAwareMockClient) GetImageConfig(ctx context.Context, tag string)
 }
 
 func (m *segmentAwareMockClient) CheckImageExists(ctx context.Context, tag string) error {
+	if m.isVersionSegment() {
+		return nil
+	}
+	if m.checkImageExistsFunc != nil {
+		return m.checkImageExistsFunc(ctx, tag)
+	}
 	return nil
 }
 
@@ -519,7 +529,7 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 
 	ctr := &reconciler{
 		client: kubeClient,
-		logger: log.NewNop(),
+		logger: log.NewLogger(log.WithLevel(slog.LevelDebug)), // return nop
 		dc:     dependency.NewMockedContainer(),
 	}
 
@@ -1049,6 +1059,9 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				}, nil
 			},
 			versionExtractFunc: packageYAMLTar(),
+			checkImageExistsFunc: func(ctx context.Context, tag string) error {
+				return regClient.ErrImageNotFound
+			},
 		}
 		psm := createMockPSM(segmentAwareMock)
 
