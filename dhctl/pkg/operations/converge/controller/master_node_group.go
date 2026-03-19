@@ -235,7 +235,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 				metaConfig,
 				index,
 				c.cloudConfig,
-				true, ctx.InfrastructureContext(metaConfig),
+				ctx.InfrastructureContext(metaConfig),
 			)
 			if err != nil {
 				return err

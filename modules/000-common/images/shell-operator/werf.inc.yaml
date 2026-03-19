@@ -69,7 +69,6 @@ import:
   - usr/bin/chroot
   - usr/bin/cksum
   - usr/bin/comm
-  - usr/bin/coreutils
   - usr/bin/cp
   - usr/bin/csplit
   - usr/bin/cut

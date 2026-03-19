@@ -1,5 +1,4 @@
 crds/*
 hooks/*
-images/*
 templates/*
 monitoring/prometheus-rules/*
