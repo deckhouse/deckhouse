@@ -955,18 +955,11 @@ shell:
     ln -s ../../validation-chroot/usr/local/modsecurity /chroot/usr/local/modsecurity
     ln -s ../../validation-chroot/usr/local/nginx /chroot/usr/local/nginx
 
-    touch /chroot/validation-chroot/etc/ingress-controller/lua/cfg.json
-    touch /chroot/validation-chroot/etc/ingress-controller/nginx/nginx.conf
-    touch /chroot/validation-chroot/etc/ingress-controller/resolv/resolv.conf
-    touch /chroot/validation-chroot/etc/ingress-controller/telemetry/opentelemetry.toml
-    touch /chroot/validation-chroot/var/log/modsec_audit.log
-
     chown -R deckhouse:deckhouse \
       /chroot/validation-chroot/etc/ingress-controller \
       /chroot/validation-chroot/opt/modsecurity/var \
       /chroot/validation-chroot/tmp/nginx \
       /chroot/validation-chroot/var/log/audit \
-      /chroot/validation-chroot/var/log/modsec_audit.log \
       /chroot/validation-chroot/var/log/nginx
     '
   - mknod -m 0666 /chroot/validation-chroot/dev/null c 1 3
