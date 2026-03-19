@@ -107,6 +107,8 @@ type Params struct {
 	Logger  log.Logger
 	IsDebug bool
 
+	DirectoryConfig *app.DirConfig
+
 	*client.KubernetesInitParams
 }
 
@@ -232,7 +234,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
-		config.ValidateOptionValidateExtensions(true),
+		b.DirectoryConfig,
 	)
 	if err != nil {
 		return err
@@ -547,7 +549,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath, b.CommanderMode); err != nil {
+	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath, b.CommanderMode, b.DirectoryConfig); err != nil {
 		return err
 	}
 

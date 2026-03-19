@@ -17,16 +17,15 @@ package infrastructure
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 var (
-	dhctlPath                         = "/"
-	deckhouseDir                      = "/deckhouse"
-	deckhouseAlternativeDir           = "/tmp/deckhouse"
-	candiDir                          = deckhouseDir + "/candi"
-	candiAlternativeDir               = deckhouseAlternativeDir + "/candi"
-	infrastructureVersions            = candiDir + "/terraform_versions.yml"
-	infrastructureAlternativeVersions = candiAlternativeDir + "/terraform_versions.yml"
+	dhctlPath              = "/"
+	deckhouseDir           = "/deckhouse"
+	candiDir               = deckhouseDir + "/candi"
+	infrastructureVersions = candiDir + "/terraform_versions.yml"
 )
 
 func InitGlobalVars(pwd string) {
@@ -46,7 +45,7 @@ func GetInfrastructureProviderDir(provider string) string {
 		return filepath.Join(candiDir, "cloud-providers", provider)
 	}
 
-	return filepath.Join(candiAlternativeDir, "cloud-providers", provider)
+	return filepath.Join(app.GetDirConfig().CandiDir, "cloud-providers", provider)
 }
 
 func GetInfrastructureModulesDir(provider string) string {
@@ -63,5 +62,5 @@ func GetInfrastructureVersions() string {
 		return infrastructureVersions
 	}
 
-	return infrastructureAlternativeVersions
+	return filepath.Join(app.GetDirConfig().CandiDir, "terraform_versions.yml")
 }

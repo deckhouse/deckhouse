@@ -80,6 +80,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(s.logger),
 		),
+		nil,
 	)
 	if err != nil {
 		return nil, err

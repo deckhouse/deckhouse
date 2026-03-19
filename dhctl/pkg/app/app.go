@@ -58,6 +58,8 @@ var (
 	DoNotWriteDebugLogFile = false
 	DebugLogFilePath       = ""
 	ProgressFilePath       = ""
+	DownloadDirName        = TmpDirName
+	DownloadCacheDirName   = filepath.Join(DownloadDirName, "cache")
 )
 
 func init() {
@@ -103,6 +105,14 @@ func GlobalFlags(cmd *kingpin.Application) {
 		Envar(configEnvName("PROGRESS_LOG_FILE_PATH")).
 		Default("").
 		StringVar(&ProgressFilePath)
+	cmd.Flag("download-dir", "Set directory for downloaded images and it's content").
+		Envar(configEnvName("DOWNLOAD_DIR")).
+		Default(DownloadDirName).
+		StringVar(&DownloadDirName)
+	cmd.Flag("download-cache-dir", "Set directory for downloaded images layers cache.").
+		Envar(configEnvName("DOWNLOAD_CACHE_DIR")).
+		Default(DownloadCacheDirName).
+		StringVar(&DownloadCacheDirName)
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
@@ -141,4 +151,32 @@ func GetTmpDir() string {
 
 func GetDefaultTmpDir() string {
 	return defaultTmpAndStateDir
+}
+
+type DirConfig struct {
+	DeckhouseDir      string
+	CandiDir          string
+	ModulesDir        string
+	GlobalHooksModule string
+	VersionMap        string
+	VersionFile       string
+	DownloadDir       string
+	DownloadCacheDir  string
+}
+
+func GetDirConfig() *DirConfig {
+	_, err := os.Stat(deckhouseDir)
+	if err != nil {
+		deckhouseDir = filepath.Join(DownloadDirName, "deckhouse")
+	}
+	return &DirConfig{
+		DeckhouseDir:      deckhouseDir,
+		CandiDir:          filepath.Join(deckhouseDir, "candi"),
+		ModulesDir:        filepath.Join(deckhouseDir, "modules"),
+		GlobalHooksModule: filepath.Join(deckhouseDir, "global-hooks"),
+		VersionMap:        filepath.Join(deckhouseDir, "candi", "version_map.yml"),
+		VersionFile:       filepath.Join(deckhouseDir, "version"),
+		DownloadDir:       DownloadDirName,
+		DownloadCacheDir:  DownloadCacheDirName,
+	}
 }

@@ -108,9 +108,9 @@ func BootstrapMaster(ctx context.Context, nodeInterface node.Interface, controll
 	})
 }
 
-func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller, dc *app.DirConfig) error {
 	return log.Process("bootstrap", "Prepare Bashible", func() error {
-		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig)
+		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig, dc)
 	})
 }
 
@@ -262,18 +262,18 @@ func cleanupPreviousBashibleRunIfNeed(ctx context.Context, nodeInterface node.In
 	})
 }
 
-func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient) (node.ReverseTunnel, error) {
+func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient, dc *app.DirConfig) (node.ReverseTunnel, error) {
 	port := "5444"
 	listenAddress := "127.0.0.1"
 
 	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(
-		fmt.Sprintf("https://localhost:%s/healthz", port))
+		fmt.Sprintf("https://localhost:%s/healthz", port), dc)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot render reverse tunnel checking script: %v", err)
 	}
 
 	killScript, err := template.RenderAndSaveKillReverseTunnelScript(
-		listenAddress, port)
+		listenAddress, port, dc)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
 	}
@@ -409,7 +409,7 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool) error {
+func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool, dc *app.DirConfig) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -502,7 +502,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	}
 
 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		cleanUpTunnel, err := setupRPPTunnel(ctx, wrapper.Client())
+		cleanUpTunnel, err := setupRPPTunnel(ctx, wrapper.Client(), dc)
 		if err != nil {
 			return err
 		}
@@ -510,7 +510,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		defer cleanUpTunnel()
 	}
 
-	if err = PrepareBashibleBundle(nodeIP, devicePath, cfg, templateController); err != nil {
+	if err = PrepareBashibleBundle(nodeIP, devicePath, cfg, templateController, dc); err != nil {
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
@@ -542,10 +542,10 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		})
 }
 
-func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient) (func(), error) {
+func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient, dc *app.DirConfig) (func(), error) {
 	var tun node.ReverseTunnel
 	log.DebugLn("Starting reverse tunnel routine")
-	tun, err := SetupSSHTunnelToRegistryPackagesProxy(ctx, sshClient)
+	tun, err := SetupSSHTunnelToRegistryPackagesProxy(ctx, sshClient, dc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
 	}

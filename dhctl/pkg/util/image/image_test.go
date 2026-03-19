@@ -654,7 +654,7 @@ CRl8TSg922cXTLVt8Q==
 					err = c.prepareFunc()
 					require.NoError(t, err)
 				}
-				err := DownloadAndUnpackImage(ctx, c.image, c.directory, c.rc)
+				err := DownloadAndUnpackImage(ctx, c.image, c.directory, filepath.Join(c.directory, "cache"), c.rc)
 				if !c.wantErr {
 					require.NoError(t, err)
 					require.DirExists(t, filepath.Join(c.directory, "cache"))
@@ -677,7 +677,7 @@ func TestRestoreImageFromTarGz(t *testing.T) {
 		os.RemoveAll(testDir)
 	})
 
-	err = DownloadAndUnpackImage(context.Background(), "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e", testDir, RegistryConfig{scheme: "HTTPS", registry: "docker.io"})
+	err = DownloadAndUnpackImage(context.Background(), "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e", testDir, filepath.Join(testDir, "cache"), RegistryConfig{scheme: "HTTPS", registry: "docker.io"})
 	require.NoError(t, err)
 	cachePath := filepath.Join(testDir, "sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e")
 	require.FileExists(t, cachePath)
@@ -797,7 +797,7 @@ func TestPullImage(t *testing.T) {
 				opts, err := getOptsFromRegistryConfig(ref, c.rc)
 				require.NoError(t, err)
 
-				_, err = pullImage(context.Background(), ref, opts, ref.Identifier(), c.destDir)
+				_, err = pullImage(context.Background(), ref, opts, ref.Identifier(), c.destDir, filepath.Join(c.destDir, "cache"))
 				if !c.wantErr {
 					require.NoError(t, err)
 				} else {

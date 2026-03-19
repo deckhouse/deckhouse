@@ -95,13 +95,13 @@ func (p *CloudProviderGetterParams) gtFSDIParams() (*fsprovider.DIParams, error)
 	_, err = os.Stat(diDefaultParams.CloudProviderDir)
 	if err != nil {
 		// fallback to /tmp
-		diDefaultParams.CloudProviderDir = filepath.Join("/tmp", "deckhouse", "candi", "cloud-providers")
+		diDefaultParams.CloudProviderDir = filepath.Join(app.DownloadDirName, "deckhouse", "candi", "cloud-providers")
 	}
 
 	_, err = os.Stat(diDefaultParams.PluginsDir)
 	if err != nil {
 		// fallback to /tmp
-		diDefaultParams.PluginsDir = filepath.Join("/tmp", "plugins")
+		diDefaultParams.PluginsDir = filepath.Join(app.DownloadDirName, "plugins")
 	}
 
 	logger.LogDebugF("Using default FSDIParams: %+v\n", diDefaultParams)

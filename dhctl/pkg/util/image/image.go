@@ -265,8 +265,7 @@ func saveHash(digest, hash, dstPath string) error {
 	return nil
 }
 
-func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, digest, dstPath string) (v1.Image, error) {
-	cacheDir := filepath.Join(dstPath, "cache")
+func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, digest, dstPath, cacheDir string) (v1.Image, error) {
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, fmt.Errorf("could not create cache directory %s: %w\n", cacheDir, err)
 	}
@@ -376,7 +375,7 @@ func getOptsFromRegistryConfig(ref name.Reference, cfg *RegistryConfig) ([]remot
 	return opts, nil
 }
 
-func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir string, regConfig RegistryConfig) error {
+func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir string, regConfig RegistryConfig) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return fmt.Errorf("parsing image reference %q: %w", imageRef, err)
@@ -406,7 +405,7 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir string, regCo
 	}
 	log.DebugF("hash: %s\n", desc.Digest.String())
 
-	img, err = pullImage(ctx, ref, opts, desc.Digest.String(), destDir)
+	img, err = pullImage(ctx, ref, opts, desc.Digest.String(), destDir, cacheDir)
 	if err != nil {
 		return fmt.Errorf("pulling image %s: %w", imageRef, err)
 	}
@@ -424,24 +423,11 @@ func extractImage(img v1.Image, destDir string) error {
 		return fmt.Errorf("getting layers: %w", err)
 	}
 
-	var p *mpb.Progress
-	if input.IsTerminal() {
-		p = mpb.New(mpb.WithWidth(64))
-	}
-
 	for _, layer := range layers {
-		if input.IsTerminal() {
-			err = extractLayerProgress(layer, destDir, p)
-		} else {
-			err = extractLayer(layer, destDir)
-		}
+		err = extractLayer(layer, destDir)
 		if err != nil {
 			return fmt.Errorf("extracting layer: %w", err)
 		}
-	}
-
-	if input.IsTerminal() {
-		p.Wait()
 	}
 
 	return os.RemoveAll(filepath.Join(destDir, ".werf"))
@@ -462,40 +448,6 @@ func extractLayer(layer v1.Layer, destDir string) error {
 	combined := io.MultiReader(bytes.NewReader(peek), rc)
 
 	return processLayer(combined, peek, destDir)
-}
-
-func extractLayerProgress(layer v1.Layer, destDir string, p *mpb.Progress) error {
-	rc, err := layer.Compressed()
-	if err != nil {
-		return fmt.Errorf("opening compressed layer: %w", err)
-	}
-	defer rc.Close()
-
-	digest, _ := layer.Digest()
-
-	peek := make([]byte, 2)
-	if _, err := io.ReadFull(rc, peek); err != nil {
-		return fmt.Errorf("reading layer header: %w", err)
-	}
-
-	total, _ := layer.Size()
-
-	bar := p.AddBar(total,
-		mpb.PrependDecorators(
-			decor.Name(fmt.Sprintf("extracting layer %s", digest), decor.WC{C: decor.DindentRight | decor.DextraSpace}),
-			decor.CountersKibiByte("% .2f / % .2f"),
-			decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), "done"),
-		),
-		mpb.AppendDecorators(
-			decor.EwmaETA(decor.ET_STYLE_GO, 90),
-			decor.Percentage(decor.WCSyncSpace),
-		),
-	)
-
-	combined := io.MultiReader(bytes.NewReader(peek), rc)
-	proxy := bar.ProxyReader(combined)
-
-	return processLayer(proxy, peek, destDir)
 }
 
 func processLayer(r io.Reader, peek []byte, destDir string) error {

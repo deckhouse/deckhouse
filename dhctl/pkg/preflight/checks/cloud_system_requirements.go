@@ -52,6 +52,9 @@ func (CloudSystemRequirementsCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c CloudSystemRequirementsCheck) Run(ctx context.Context) error {
+	_, cancel := context.WithTimeout(ctx, preflight.DefaultPreflightCheckTimeout)
+	defer cancel()
+
 	configObject := make(map[string]any)
 	configKind, err := unmarshalProviderClusterConfiguration(c.InstallConfig.ProviderClusterConfig, configObject)
 	if err != nil {

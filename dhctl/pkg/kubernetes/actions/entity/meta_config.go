@@ -31,6 +31,7 @@ func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, logger 
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(logger),
 		),
+		nil,
 	)
 	if err != nil {
 		return nil, err

@@ -31,9 +31,7 @@ import (
 )
 
 var (
-	terraformManagerDir = "/tmp/terraform-manager"
-	downloadCandiPath   = "/tmp/deckhouse/candi/"
-	versionFile         = "terraform_versions.yml"
+	versionFile = "terraform_versions.yml"
 )
 
 type pluginsProvider struct {
@@ -68,15 +66,19 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	if err = downloadImage(ctx, conf, "terraformManager", sectionName); err != nil {
 		return err
 	}
+	terraformManagerDir := filepath.Join(conf.DownloadRootDir, "terraform-manager")
+
 	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
-	if err = copyTFVersionFile(); err != nil {
+	if err = copyTFVersionFile(conf.DownloadRootDir); err != nil {
 		return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
 	}
 
 	return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 }
 
-func copyTFVersionFile() error {
+func copyTFVersionFile(downloadRootDir string) error {
+	terraformManagerDir := filepath.Join(downloadRootDir, "terraform-manager")
+	downloadCandiPath := filepath.Join(downloadRootDir, "deckhouse", "candi")
 	src := filepath.Join(terraformManagerDir, versionFile)
 	f, err := os.OpenFile(src, os.O_RDONLY, 0644)
 	if err != nil {

@@ -60,6 +60,9 @@ type MetaConfig struct {
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
 	ResourceManagementTimeout string                 `json:"resourceManagementTimeout,omitempty"`
+
+	DownloadRootDir  string `json:"-"`
+	DownloadCacheDir string `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -664,7 +667,7 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
 		// TODO param instead of hardcode path
-		rawFile, err = os.ReadFile("/tmp/deckhouse/version")
+		rawFile, err = os.ReadFile(app.GetDirConfig().VersionFile)
 		if err != nil {
 			return err
 		}

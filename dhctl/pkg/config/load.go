@@ -34,6 +34,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -97,7 +98,8 @@ func NewSchemaStore(paths ...string) *SchemaStore {
 	_, err := os.Stat(candiDir)
 	if err != nil {
 		// fallback to /tmp
-		paths = append(paths, "/tmp/deckhouse/candi")
+		dc := app.GetDirConfig()
+		paths = append(paths, dc.CandiDir)
 	}
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
@@ -120,8 +122,9 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	_, err := os.Stat(deckhouseDir)
 	if err != nil {
 		// fallback to /tmp
-		deckhouseDir = "/tmp/deckhouse"
-		modulesDir = deckhouseDir + "/modules"
+		dc := app.GetDirConfig()
+		deckhouseDir = dc.DeckhouseDir
+		modulesDir = dc.ModulesDir
 	}
 	log.InfoF("deckhouse dir: %s, modulesDir: %s\n", deckhouseDir, modulesDir)
 

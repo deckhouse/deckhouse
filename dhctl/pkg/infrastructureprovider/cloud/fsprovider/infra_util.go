@@ -31,7 +31,6 @@ import (
 var (
 	terraformImageName = "baseTerraform"
 	opentofuImageName  = "baseOpentofu"
-	downloadRootPath   = "/tmp"
 )
 
 type InfrastructureUtilProvider struct {
@@ -60,7 +59,7 @@ func (p *InfrastructureUtilProvider) DownloadTerraform(ctx context.Context, _ cl
 		return err
 	}
 
-	return fsutils.CreateLinkIfNotExists(filepath.Join(downloadRootPath, "terraform"), checkIsExecFile, destination, p.logger)
+	return fsutils.CreateLinkIfNotExists(filepath.Join(conf.DownloadRootDir, "terraform"), checkIsExecFile, destination, p.logger)
 }
 
 func (p *InfrastructureUtilProvider) DownloadOpenTofu(ctx context.Context, _ cloud.InfrastructureUtilProviderParams, destination string, conf *config.MetaConfig) error {
@@ -75,7 +74,7 @@ func (p *InfrastructureUtilProvider) DownloadOpenTofu(ctx context.Context, _ clo
 		return err
 	}
 
-	return fsutils.CreateLinkIfNotExists(filepath.Join(downloadRootPath, "opentofu"), checkIsExecFile, destination, p.logger)
+	return fsutils.CreateLinkIfNotExists(filepath.Join(conf.DownloadRootDir, "opentofu"), checkIsExecFile, destination, p.logger)
 }
 
 func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section string) error {
@@ -88,5 +87,5 @@ func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section s
 		return err
 	}
 
-	return image.DownloadAndUnpackImage(ctx, conf.Registry.Settings.RemoteData.ImagesRepo+"@"+tfImage, downloadRootPath, *regConfig)
+	return image.DownloadAndUnpackImage(ctx, conf.Registry.Settings.RemoteData.ImagesRepo+"@"+tfImage, conf.DownloadRootDir, conf.DownloadCacheDir, *regConfig)
 }

@@ -38,6 +38,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		b.DirectoryConfig,
 	)
 	if err != nil {
 		return err

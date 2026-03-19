@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -54,7 +56,7 @@ var (
 	RppSignCheck             = "false"
 )
 
-func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
+func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, dc *app.DirConfig, opts ...ValidateOption) (*MetaConfig, error) {
 	imagesDigestsJSONFIle, err := digests.ImagesDigestsBytes()
 	if err != nil {
 		return nil, err
@@ -71,20 +73,23 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 		if err != nil {
 			return nil, err
 		}
-		if err = prepareCandiDir(ctx, conf); err != nil {
+		if err = prepareCandiDir(ctx, conf, dc); err != nil {
 			return nil, err
 		}
 		// reinitialize vars and continue config parsing
-		deckhouseDir = "/tmp/deckhouse"
-		candiDir = deckhouseDir + "/candi"
-		modulesDir = deckhouseDir + "/modules"
-		globalHooksModule = deckhouseDir + "/global-hooks"
-		versionMap = candiDir + "/version_map.yml"
+		deckhouseDir = dc.DeckhouseDir
+		candiDir = dc.CandiDir
+		modulesDir = dc.ModulesDir
+		globalHooksModule = dc.GlobalHooksModule
+		versionMap = dc.VersionMap
 	}
 	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, opts...)
 	if err != nil {
 		return nil, err
 	}
+
+	metaConfig.DownloadRootDir = dc.DownloadDir
+	metaConfig.DownloadCacheDir = dc.DownloadCacheDir
 
 	if metaConfig.ClusterConfig == nil {
 		return nil, fmt.Errorf("ClusterConfiguration must be provided")
@@ -141,13 +146,13 @@ func ParseConfig(ctx context.Context, paths []string, preparatorProvider MetaCon
 	return ParseConfigFromData(ctx, content, preparatorProvider, opts...)
 }
 
-func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
+func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *app.DirConfig) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 	err = log.Process("common", "Get Cluster configuration", func() error {
 		return retry.NewLoop("Get Cluster configuration from Kubernetes cluster", 10, 5*time.Second).
 			RunContext(ctx, func() error {
-				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider)
+				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, dc)
 				return err
 			})
 	})
@@ -157,13 +162,13 @@ func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	return metaConfig, nil
 }
 
-func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
+func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *app.DirConfig) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 
 	err = retry.NewSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).
 		RunContext(ctx, func() error {
-			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider)
+			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, dc)
 			return err
 		})
 	if err != nil {
@@ -172,24 +177,32 @@ func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient, 
 	return metaConfig, nil
 }
 
-func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
+func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *app.DirConfig) (*MetaConfig, error) {
 	metaConfig := &MetaConfig{}
 	if err := checkDirs(); err != nil {
 		conf, b64dc, err := GetRegistryData(ctx, kubeCl, log.GetDefaultLogger())
 		if err != nil {
 			return nil, err
 		}
-		if err = prepareCandiDir(ctx, conf); err != nil {
+		if dc == nil {
+			dc = app.GetDirConfig()
+		}
+		if err = prepareCandiDir(ctx, conf, dc); err != nil {
 			return nil, err
 		}
-		deckhouseDir = "/tmp/deckhouse"
-		candiDir = deckhouseDir + "/candi"
-		modulesDir = deckhouseDir + "/modules"
-		globalHooksModule = deckhouseDir + "/global-hooks"
-		versionMap = candiDir + "/version_map.yml"
+		if dc == nil {
+			dc = app.GetDirConfig()
+		}
+		deckhouseDir = dc.DeckhouseDir
+		candiDir = dc.CandiDir
+		modulesDir = dc.ModulesDir
+		globalHooksModule = dc.GlobalHooksModule
+		versionMap = dc.VersionMap
 		metaConfig.DeckhouseConfig.RegistryDockerCfg = b64dc
 		metaConfig.DeckhouseConfig.ImagesRepo = conf.GetRegistry()
 		metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
+		metaConfig.DownloadRootDir = dc.DownloadDir
+		metaConfig.DownloadCacheDir = dc.DownloadCacheDir
 	}
 	schemaStore := NewSchemaStore()
 
@@ -429,6 +442,14 @@ func InitGlobalVars(pwd string) {
 
 // check for existance deckhouse dir
 func checkDirs() error {
+	absDh, err := os.Stat("/deckhouse")
+	if err != nil {
+		return err
+	}
+	if !absDh.IsDir() {
+		return fmt.Errorf("%s is not a directory", deckhouseDir)
+	}
+
 	dh, err := os.Stat(deckhouseDir)
 	if err != nil {
 		return err
@@ -560,14 +581,14 @@ func GetRegistryData(ctx context.Context, kubeCl *client.KubernetesClient, logge
 	return conf, b64dc, err
 }
 
-func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig) error {
+func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dc *app.DirConfig) error {
 	candiImage, err := digests.GetImage("common", "candi")
 	if err != nil {
 		return err
 	}
 	imgName := conf.GetRegistry() + "@" + candiImage
-	if err = image.DownloadAndUnpackImage(ctx, imgName, "/tmp", *conf); err != nil {
+	if err = image.DownloadAndUnpackImage(ctx, imgName, dc.DownloadDir, dc.DownloadCacheDir, *conf); err != nil {
 		return err
 	}
-	return os.MkdirAll("/tmp/plugins", 0o755)
+	return os.MkdirAll(filepath.Join(dc.DownloadDir, "plugins"), 0o755)
 }
