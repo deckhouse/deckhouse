@@ -84,7 +84,6 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 			c.layoutStep,
 			c.name,
 			c.cloudConfig,
-			true,
 			ctx.InfrastructureContext(metaConfig),
 			log.GetDefaultLogger(),
 			false,
