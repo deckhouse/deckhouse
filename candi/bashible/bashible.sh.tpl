@@ -16,32 +16,37 @@
 export LANG=C LC_NUMERIC=C
 set -Eeo pipefail
 
-{{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
-{{- tpl $bbnn . }}
+{{- $candi := "candi/bashible/lib.sh.tpl" -}}
+{{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
+{{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
+{{- $ctx := . -}}
+{{- $clusterMasterKubeAPIEndpoints := list -}}
+{{- $clusterMasterRPPAddresses := list -}}
+{{- if eq .runType "Normal" -}}
+  {{- $clusterMasterEndpoints := .normal.clusterMasterEndpoints | default (list) -}}
+  {{- range $endpoint := $clusterMasterEndpoints -}}
+    {{- $address := get $endpoint "address" -}}
+    {{- if hasKey $endpoint "kubeApiPort" -}}
+      {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $address (get $endpoint "kubeApiPort")) -}}
+    {{- end -}}
+  {{- end -}}
+{{- else -}}
+  {{- $clusterMasterEndpoints := .clusterMasterEndpoints | default (list) -}}
+  {{- range $endpoint := $clusterMasterEndpoints -}}
+    {{- $address := get $endpoint "address" -}}
+    {{- if hasKey $endpoint "rppServerPort" -}}
+      {{- $clusterMasterRPPAddresses = append $clusterMasterRPPAddresses (printf "%s:%v" $address (get $endpoint "rppServerPort")) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- tpl (printf `
+%s
 
-bb-d8-node-name() {
-  echo $(</var/lib/bashible/discovered-node-name)
-}
-
-bb-discover-node-name() {
-  local discovered_name_file="/var/lib/bashible/discovered-node-name"
-  local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
-
-  if [ ! -s "$discovered_name_file" ]; then
-    if [[ -s "$kubelet_crt" ]]; then
-      openssl x509 -in "$kubelet_crt" \
-        -noout -subject -nameopt multiline |
-      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$discovered_name_file"
-    else
-    {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
-      if [[ "$(hostname)" != "$(hostname -s)" ]]; then
-        hostnamectl set-hostname "$(hostname -s)"
-      fi
-    {{- end }}
-      hostname > "$discovered_name_file"
-    fi
-  fi
-}
+{{ template "bb-d8-node-name" $ }}
+{{ template "bb-d8-node-ip" $ }}
+{{ template "bb-discover-node-name" $ }}
+{{ template "bb-minget" $ }}
+` $lib) $ctx }}
 
 bb-kube-apiserver-healthy() {
   local kubeconfig="$1"
@@ -60,7 +65,7 @@ bb-kubectl-exec() {
     if bb-kube-apiserver-healthy "$kubeconfig" "$kube_server"; then
       args="--server=$kube_server"
     else
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+      for server in {{ $clusterMasterKubeAPIEndpoints | join " " }}; do
         # select the first available control plane
         if bb-kube-apiserver-healthy "$kubeconfig" "https://$server"; then
           args="--server=https://$server"
@@ -234,7 +239,7 @@ function get_secret() {
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     token="$(</var/lib/bashible/bootstrap-token)"
     while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+      for server in {{ $clusterMasterKubeAPIEndpoints | join " " }}; do
         url="https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"
         if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
@@ -271,7 +276,7 @@ function get_bundle() {
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     token="$(</var/lib/bashible/bootstrap-token)"
     while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+      for server in {{ $clusterMasterKubeAPIEndpoints | join " " }}; do
         url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
         if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
@@ -302,49 +307,10 @@ function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
 
-# curl request to get list of pods with labelSelector
-# $1 namespace
-# $2 labelSelector
-# $3 token
-function get_pods() {
-  local namespace=$1
-  local labelSelector=$2
-  local token=$3
-
-  while true; do
-    for server in {{ .normal.apiserverEndpoints | join " " }}; do
-      url="https://$server/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"
-      if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
-      then
-      return 0
-      else
-        >&2 echo "failed to get $resource $name with curl https://$server..."
-      fi
-    done
-    sleep 10
-  done
-}
-
-function get_rpp_address() {
-  if [ -f /var/lib/bashible/bootstrap-token ]; then
-    local token="$(</var/lib/bashible/bootstrap-token)"
-    local namespace="d8-cloud-instance-manager"
-    local labelSelector="app%3Dregistry-packages-proxy"
-
-    rpp_ips=$(get_pods $namespace $labelSelector $token | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
-    port=4219
-    ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
-    echo "$ips_csv"
-  fi
-}
-
-function get_rpp_token() {
-  local rpp_token="$(get_secret "registry-packages-proxy-token" | jq -r '.data.token' |base64 -d)"
-  echo "${rpp_token}"
-}
 
 function main() {
   export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
+  export HOME="/var/lib/bashible"
   export BOOTSTRAP_DIR="/var/lib/bashible"
   export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
   export CONFIGURATION_CHECKSUM_FILE="$BOOTSTRAP_DIR/configuration_checksum"
@@ -354,30 +320,28 @@ function main() {
   export BASHIBLE_INITIALIZED_FILE="$BOOTSTRAP_DIR/bashible-fully-initialized"
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
+  export REGISTRY_MODULE_IGNITER_DIR="$TMPDIR/registry_module_igniter"
   export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
   export REGISTRY_MODULE_ADDRESS="registry.d8-system.svc:5001" # Deprecated
-  export REGISTRY_MODULE_IGNITER_DIR="$TMPDIR/registry_module_igniter"
-{{- if .packagesProxy }}
-  export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
-  export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
-{{- end }}
+  export BB_RP_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages" # Deprecated, backward compatibility
+
+  {{ if eq .runType "Normal" }}
+  # autodiscover token and rpp endpoint from kube api
+  export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="{{ $clusterMasterKubeAPIEndpoints | join "," }}"
+  unset PACKAGES_PROXY_ADDRESSES
+  unset PACKAGES_PROXY_TOKEN
+  {{ end }}
+
+  {{ if ne .runType "Normal" }}
+  # static set of rpp endpoint and token
+  export PACKAGES_PROXY_ADDRESSES="{{ $clusterMasterRPPAddresses | join "," }}"
+  export PACKAGES_PROXY_TOKEN="{{ get .packagesProxy "token" | default "passthrough" }}"
+  {{ end }}
+
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
   bb-discover-node-name
   export D8_NODE_HOSTNAME=$(bb-d8-node-name)
-
-{{ if eq .runType "Normal" }}
-  {{- if .packagesProxy }}
-  rpp_addr="$(get_rpp_address)"
-  if [[ -n $rpp_addr ]]; then
-    export PACKAGES_PROXY_ADDRESSES="${rpp_addr}"
-  fi
-  rpp_token="$(get_rpp_token)"
-  if [[ -n $rpp_token ]]; then
-    export PACKAGES_PROXY_TOKEN="${rpp_token}"
-  fi
-  {{- end }}
-{{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     if tmp="$(bb-kubectl-exec get node $(bb-d8-node-name) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then

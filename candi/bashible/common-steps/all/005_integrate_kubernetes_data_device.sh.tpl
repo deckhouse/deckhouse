@@ -15,12 +15,17 @@
 {{- $nodeTypeList := list "CloudEphemeral" "CloudPermanent" "CloudStatic" }}
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
+{{- $clusterMasterKubeAPIEndpoints := list -}}
+{{- range $endpoint := .normal.clusterMasterEndpoints -}}
+  {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) -}}
+{{- end }}
+
 function get_data_device_secret() {
   secret="d8-masters-kubernetes-data-device-path"
 
   if [ -f /var/lib/bashible/bootstrap-token ]; then
     while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+      for server in {{ $clusterMasterKubeAPIEndpoints | join " " }}; do
         if d8-curl -s -f --connect-timeout 10 -X GET "https://$server/api/v1/namespaces/d8-system/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
           return 0

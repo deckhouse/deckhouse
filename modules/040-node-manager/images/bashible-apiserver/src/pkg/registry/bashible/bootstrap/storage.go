@@ -17,6 +17,9 @@ limitations under the License.
 package bootstrap
 
 import (
+	"bashible-apiserver/pkg/apis/bashible"
+	"bashible-apiserver/pkg/template"
+	"bashible-apiserver/pkg/util"
 	"errors"
 	"fmt"
 	"os"
@@ -25,13 +28,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	"bashible-apiserver/pkg/apis/bashible"
-	"bashible-apiserver/pkg/template"
-	"bashible-apiserver/pkg/util"
 )
 
-const templateName = "03-prepare-bashible.sh.tpl"
+const templateName = "02-bootstrap-bashible.sh.tpl"
 
 // NewStorage returns storage object that will work against API services.
 func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, error) {

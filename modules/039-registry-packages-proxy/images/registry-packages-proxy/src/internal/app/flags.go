@@ -29,6 +29,7 @@ type Config struct {
 	ListenAddress      string
 	DisableCache       bool
 	SignCheck          bool
+	ClusterUUID        string
 	CacheDirectory     string
 	CacheRetentionSize resource.Quantity
 	LogLevel           log.Level
@@ -40,6 +41,7 @@ func InitFlags() (*Config, error) {
 	flag.StringVar(&config.ListenAddress, "listen-address", ":5080", "Listen address for HTTP")
 	flag.StringVar(&config.KubeConfig, "kubeconfig", "", "Path to kubeconfig")
 	flag.BoolVar(&config.DisableCache, "disable-cache", false, "Disable cache")
+	flag.StringVar(&config.ClusterUUID, "cluster-uuid", "", "Cluster UUID path prefix for bootstrap binary listener")
 	flag.StringVar(&config.CacheDirectory, "cache-directory", "/cache", "Path to cache directory")
 
 	crs := flag.String("cache-retention-size", "1Gi", "Cache retention size")
