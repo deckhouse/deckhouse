@@ -1,5 +1,5 @@
 diff --git a/api/v1beta2/vcdmachine_types.go b/api/v1beta2/vcdmachine_types.go
-index 490444a4..afaf577e 100644
+index 490444a..e0f7647 100644
 --- a/api/v1beta2/vcdmachine_types.go
 +++ b/api/v1beta2/vcdmachine_types.go
 @@ -19,7 +19,7 @@ package v1beta2
@@ -60,21 +60,14 @@ index 490444a4..afaf577e 100644
  // VCDMachineSpec defines the desired state of VCDMachine
  type VCDMachineSpec struct {
  	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-@@ -46,6 +88,10 @@ type VCDMachineSpec struct {
- 	// +optional
- 	Template string `json:"template,omitempty"`
- 
-+	// TemplateOrg is the organization of the template OVA that is to be used
-+	// +optional
-+	TemplateOrg string `json:"templateOrg,omitempty"`
-+
- 	// SizingPolicy is the sizing policy to be used on this machine.
- 	// If no sizing policy is specified, default sizing policy will be used to create the nodes
- 	// +optional
-@@ -83,6 +129,10 @@ type VCDMachineSpec struct {
+@@ -83,6 +125,14 @@ type VCDMachineSpec struct {
  	// Immutable field. machine.Name is used as VM name when this field is empty.
  	// +optional
  	VmNamingTemplate string `json:"vmNamingTemplate,omitempty"`
++
++	// TemplateOrg is the organization of the template OVA that is to be used
++	// +optional
++	TemplateOrg string `json:"templateOrg,omitempty"`
 +
 +	// Metadata for the VCDMachine
 +	// +optional

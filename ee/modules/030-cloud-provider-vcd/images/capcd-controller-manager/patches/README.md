@@ -58,17 +58,7 @@ Files:
 
 Changes:
 
+- Update CAPI imports from v1beta1 to v1beta2 in vcdmachine_types.go
 - Add TemplateOrg field to VCDMachine spec to specify the organization of the template OVA
-
-### 006-add-metadata.patch
-
-Files:
-
-- api/v1beta2/zz_generated.deepcopy.go
-- config/crd/bases/infrastructure.cluster.x-k8s.io_vcdmachines.yaml
-- config/crd/bases/infrastructure.cluster.x-k8s.io_vcdmachinetemplates.yaml
-
-Changes:
-
-- Add metadata support for VCDMachine (generated deepcopy code and CRD updates)
+- Add metadata support for VCDMachine (metadata types, structure and field in Spec)
 - Allows adding custom metadata to virtual machines for organizing and categorizing inventory
