@@ -1054,13 +1054,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		suite.setupController("no-bundle-image.yaml", withPackageServiceManager(psm))
 
-		// Wrap the client to inject errors for specific ApplicationPackageVersion creates
-		// The names are built as: <repo>-<package>-<version> (e.g., deckhouse-test-package-v1.1.0)
-		errorClient := &errorInjectingClient{
-			Client: suite.kubeClient,
-		}
-		suite.ctr.client = errorClient
-
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

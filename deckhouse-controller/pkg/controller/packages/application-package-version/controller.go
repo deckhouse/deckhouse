@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"path"
 	"time"
 
@@ -253,11 +254,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	// check bundle image exists in registry
 	isBundleImageNotExists := true
 	_, err = bundleRegistryClient.Digest(ctx, apv.Spec.PackageVersion)
-	// TODO: check if not found
-	var transportErr *transport.Error
-	logger.Debug("debug transport error", slog.Bool("is_transport_error", errors.As(err, &transportErr)), slog.String("error_type", fmt.Sprintf("%T", err)))
-	if err != nil {
-		logger.Debug("debug error", slog.String("error", err.Error()))
+	if err != nil && !isRegistryNotFoundError(err) {
+		logger.Warn("failed to get bundle image digest", log.Err(err))
 	}
 	if err == nil {
 		isBundleImageNotExists = false
@@ -269,6 +267,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	delete(apv.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
 
 	if isBundleImageNotExists {
+		logger.Debug("bundle image not found")
 		apv.Labels[v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry] = "true"
 	}
 
@@ -430,4 +429,22 @@ func convertLicensingEditions(editions map[string]PackageEdition) map[string]v1a
 		}
 	}
 	return result
+}
+
+// isRegistryNotFoundError returns true when the given error indicates that
+// the image is missing in the registry (HTTP 404 / MANIFEST_UNKNOWN).
+func isRegistryNotFoundError(err error) bool {
+	var te *transport.Error
+	if errors.As(err, &te) {
+		if te.StatusCode == http.StatusNotFound {
+			return true
+		}
+
+		for _, e := range te.Errors {
+			if e.Code == transport.ManifestUnknownErrorCode {
+				return true
+			}
+		}
+	}
+	return false
 }

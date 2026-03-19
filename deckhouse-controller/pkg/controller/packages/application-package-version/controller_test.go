@@ -29,6 +29,7 @@ import (
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -386,7 +387,7 @@ version: "1.0.0"
 				}}}, nil
 			},
 		}, nil)
-		dc.CRClient.DigestMock.When(ctx, "v1.0.0").Then("", fmt.Errorf("digest error"))
+		dc.CRClient.DigestMock.When(ctx, "v1.0.0").Then("", &transport.Error{StatusCode: http.StatusNotFound})
 
 		suite.setupController("no-bundle-image-in-registry.yaml", withDependencyContainer(dc))
 
@@ -395,6 +396,9 @@ version: "1.0.0"
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
 		require.NoError(suite.T(), err)
+
+		apv = suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
+		require.Equal(suite.T(), "true", apv.Labels[v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry])
 	})
 }
 
