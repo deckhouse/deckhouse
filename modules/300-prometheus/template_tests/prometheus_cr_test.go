@@ -101,12 +101,6 @@ internal:
   - name: test-remote-write-custom-ca
     spec:
       url: https://test-remote-write-custom-ca.domain.com/api/v1/write
-      writeRelabelConfigs:
-        - regex: ^$
-          replacement: deckhouse
-          sourceLabels:
-            - prometheus
-          targetLabel: prometheus
       tlsConfig:
         ca: CRTCRTCRT
   vpa:
