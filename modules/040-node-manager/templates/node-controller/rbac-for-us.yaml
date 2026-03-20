@@ -53,6 +53,28 @@ rules:
   - get
   - list
   - watch
+# Pods - list/get/delete for node draining (pod eviction)
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - pods/eviction
+  verbs:
+  - create
+# DaemonSets - get for drain filter (skip daemonset pods)
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  verbs:
+  - get
 # Events - create for NodeGroup events
 - apiGroups:
   - ""
