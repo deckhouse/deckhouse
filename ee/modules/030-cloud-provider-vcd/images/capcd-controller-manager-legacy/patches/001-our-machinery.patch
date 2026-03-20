@@ -12,18 +12,19 @@ index 8dd9c09..c6113dc 100644
  
  const (
 diff --git a/api/v1beta2/vcdcluster_webhook.go b/api/v1beta2/vcdcluster_webhook.go
-index 9e835bc..1906d86 100644
+index 9e835bc..fdb903c 100644
 --- a/api/v1beta2/vcdcluster_webhook.go
 +++ b/api/v1beta2/vcdcluster_webhook.go
-@@ -21,6 +21,7 @@ import (
+@@ -20,7 +20,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/runtime"
  	ctrl "sigs.k8s.io/controller-runtime"
  	logf "sigs.k8s.io/controller-runtime/pkg/log"
- 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 +	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
  )
  
  // log is for logging in this package.
-@@ -36,9 +37,9 @@ func (r *VCDCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
+@@ -36,9 +36,9 @@ func (r *VCDCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
  
  //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=mutation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
  
@@ -35,7 +36,7 @@ index 9e835bc..1906d86 100644
  func (r *VCDCluster) Default() {
  	vcdclusterlog.Info("default", "name", r.Name)
  
-@@ -48,28 +49,28 @@ func (r *VCDCluster) Default() {
+@@ -48,28 +48,28 @@ func (r *VCDCluster) Default() {
  // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
  //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=validation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
  
@@ -152,18 +153,19 @@ index 490444a..6787b1f 100644
  
  // VCDMachineStatus defines the observed state of VCDMachine
 diff --git a/api/v1beta2/vcdmachine_webhook.go b/api/v1beta2/vcdmachine_webhook.go
-index 3c22546..8b31fe7 100644
+index 3c22546..841d952 100644
 --- a/api/v1beta2/vcdmachine_webhook.go
 +++ b/api/v1beta2/vcdmachine_webhook.go
-@@ -24,6 +24,7 @@ import (
+@@ -23,7 +23,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/util/validation/field"
  	ctrl "sigs.k8s.io/controller-runtime"
  	logf "sigs.k8s.io/controller-runtime/pkg/log"
- 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 +	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
  )
  
  // log is for logging in this package.
-@@ -39,9 +40,9 @@ func (r *VCDMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
+@@ -39,9 +39,9 @@ func (r *VCDMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
  
  //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=mutation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
  
@@ -175,7 +177,7 @@ index 3c22546..8b31fe7 100644
  func (r *VCDMachine) Default() {
  	vcdmachinelog.Info("default", "name", r.Name)
  
-@@ -51,37 +52,37 @@ func (r *VCDMachine) Default() {
+@@ -51,37 +51,37 @@ func (r *VCDMachine) Default() {
  // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
  //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=validation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
  
