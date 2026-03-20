@@ -36,7 +36,7 @@ var (
 	updateApprovalMetricStatuses = []string{
 		"WaitingForApproval", "Approved", "DrainingForDisruption", "Draining", "Drained",
 		"WaitingForDisruptionApproval", "WaitingForManualDisruptionApproval", "DisruptionApproved",
-		"ToBeUpdated", "UpToDate", "UpdateFailedNoConfigChecksum",
+		"RollingUpdate", "ToBeUpdated", "UpToDate", "UpdateFailedNoConfigChecksum",
 	}
 )
 
@@ -79,14 +79,14 @@ func CalculateNodeStatus(node ua.NodeInfo, ng *v1.NodeGroup, desiredChecksum str
 		return "DisruptionApproved"
 	case node.IsApproved:
 		return "Approved"
+	case node.IsRollingUpdate:
+		return "RollingUpdate"
 	case node.ConfigurationChecksum == "":
 		return "UpdateFailedNoConfigChecksum"
 	case node.ConfigurationChecksum != desiredChecksum:
 		return "ToBeUpdated"
 	case node.ConfigurationChecksum == desiredChecksum:
 		return "UpToDate"
-	case node.IsRollingUpdate:
-		return "RollingUpdate"
 	default:
 		return "Unknown"
 	}

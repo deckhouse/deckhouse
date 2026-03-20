@@ -114,59 +114,60 @@ func mergeTaints(actual, template []corev1.Taint) []corev1.Taint {
 	return out
 }
 
+func taintToString(t corev1.Taint) string {
+	return t.Key + "=" + t.Value + ":" + string(t.Effect)
+}
+
 func applyTemplateTaints(actual, template, lastApplied []corev1.Taint) ([]corev1.Taint, bool) {
-	changed := false
-	templateSet := make(map[string]struct{}, len(template))
-	for _, t := range template {
-		templateSet[taintID(t)] = struct{}{}
+	if template == nil && lastApplied == nil {
+		return []corev1.Taint{}, true
 	}
 
-	removeSet := make(map[string]struct{})
+	changed := false
+
+	// Build set of template keys
+	templateKeys := make(map[string]struct{}, len(template))
+	for _, t := range template {
+		templateKeys[t.Key] = struct{}{}
+	}
+
+	// Find keys to remove: in lastApplied but not in template
+	removeKeys := make(map[string]struct{})
 	for _, t := range lastApplied {
-		id := taintID(t)
-		if _, found := templateSet[id]; !found {
-			removeSet[id] = struct{}{}
+		if _, found := templateKeys[t.Key]; !found {
+			removeKeys[t.Key] = struct{}{}
 		}
 	}
 
-	result := make([]corev1.Taint, 0, len(actual)+len(template))
-	index := make(map[string]int, len(actual)+len(template))
-
+	// Build result map keyed by taint.Key (one taint per key, like original)
+	newTaints := make(map[string]corev1.Taint, len(actual)+len(template))
 	for _, t := range actual {
-		id := taintID(t)
-		if _, shouldRemove := removeSet[id]; shouldRemove {
+		if _, shouldRemove := removeKeys[t.Key]; shouldRemove {
 			changed = true
 			continue
 		}
-		result = append(result, t)
-		index[id] = len(result) - 1
+		newTaints[t.Key] = t
 	}
 
 	for _, t := range template {
-		id := taintID(t)
-		if i, ok := index[id]; ok {
-			if result[i].Value != t.Value {
-				changed = true
-			}
-			result[i] = t
-			continue
+		oldTaint, ok := newTaints[t.Key]
+		if !ok || taintToString(oldTaint) != taintToString(t) {
+			changed = true
 		}
-		changed = true
-		result = append(result, t)
-		index[id] = len(result) - 1
+		newTaints[t.Key] = t
 	}
 
-	slices.SortFunc(result, func(a, b corev1.Taint) int {
-		aid := taintID(a)
-		bid := taintID(b)
-		if aid < bid {
-			return -1
-		}
-		if aid > bid {
-			return 1
-		}
-		return 0
-	})
+	// Sort by key and return as slice
+	keys := make([]string, 0, len(newTaints))
+	for k := range newTaints {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+
+	result := make([]corev1.Taint, 0, len(newTaints))
+	for _, k := range keys {
+		result = append(result, newTaints[k])
+	}
 
 	return result, changed
 }

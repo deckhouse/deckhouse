@@ -24,11 +24,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	cloudstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/cloud_status"
@@ -49,6 +52,7 @@ var _ dynctrl.Reconciler = (*Status)(nil)
 
 type Status struct {
 	dynctrl.Base
+	conditionService ngconditions.Service
 }
 
 func (r *Status) SetupWatches(w dynctrl.Watcher) {
@@ -57,6 +61,34 @@ func (r *Status) SetupWatches(w dynctrl.Watcher) {
 	w.Watches(ngcommon.NewUnstructured(ngcommon.MCMMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
 	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
 	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
+	w.Watches(
+		&corev1.Secret{},
+		handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups),
+		builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetNamespace() == ngcommon.MachineNamespace && obj.GetName() == ngcommon.ConfigurationChecksumsSecretName
+		})),
+	)
+	w.Watches(
+		&corev1.Secret{},
+		handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups),
+		builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetNamespace() == "kube-system" && obj.GetName() == ngcommon.CloudProviderSecretName
+		})),
+	)
+}
+
+func (r *Status) secretToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
+	ngList := &v1.NodeGroupList{}
+	if err := r.Client.List(ctx, ngList); err != nil {
+		log.FromContext(ctx).Error(err, "failed to list nodegroups for secret event")
+		return nil
+	}
+
+	requests := make([]reconcile.Request, 0, len(ngList.Items))
+	for _, ng := range ngList.Items {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
+	}
+	return requests
 }
 
 func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -105,10 +137,10 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		eventMsg = eventMsg[:1024]
 	}
 
-	conditionService := ngconditions.Service{Recorder: r.Recorder}
+	r.conditionService.Recorder = r.Recorder
 	var statusMsg string
 	if eventMsg != "" {
-		conditionService.CreateEventIfChanged(ng, eventMsg)
+		r.conditionService.CreateEventIfChanged(ng, eventMsg)
 		statusMsg = "Machine creation failed. Check events for details."
 	}
 

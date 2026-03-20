@@ -48,6 +48,7 @@ func ConvertFromCalcConditions(conds []conditionscalc.NodeGroupCondition) []meta
 	for _, c := range conds {
 		cond := metav1.Condition{
 			Type:               string(c.Type),
+			Reason:             string(c.Type),
 			Message:            c.Message,
 			LastTransitionTime: c.LastTransitionTime,
 		}

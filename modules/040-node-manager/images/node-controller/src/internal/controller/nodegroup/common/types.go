@@ -28,6 +28,8 @@ type MachineFailure struct {
 	OwnerRef    string
 	Message     string
 	Time        time.Time
+	State       string
+	Type        string
 }
 
 type NodeGroupCRDInfo struct {

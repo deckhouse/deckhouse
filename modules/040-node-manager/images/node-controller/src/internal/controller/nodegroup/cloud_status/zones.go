@@ -34,12 +34,12 @@ func (s *Service) getZonesCount(ctx context.Context, ng *v1.NodeGroup) int32 {
 
 	secret := &corev1.Secret{}
 	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: "kube-system", Name: common.CloudProviderSecretName}, secret); err != nil {
-		return 1
+		return 0
 	}
 
 	var zones []string
 	if err := json.Unmarshal(secret.Data["zones"], &zones); err != nil || len(zones) == 0 {
-		return 1
+		return 0
 	}
 	return int32(len(zones))
 }

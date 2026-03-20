@@ -73,6 +73,12 @@ func (s *Service) getMachineDeploymentInfo(ctx context.Context, ngName string) (
 									mf.Time = t
 								}
 							}
+							if state, _, _ := unstructured.NestedString(lastOp, "state"); state != "" {
+								mf.State = state
+							}
+							if opType, _, _ := unstructured.NestedString(lastOp, "type"); opType != "" {
+								mf.Type = opType
+							}
 						}
 						if mf.Message != "" {
 							failures = append(failures, mf)

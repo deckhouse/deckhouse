@@ -35,11 +35,19 @@ func ConvertMachineFailures(failures []common.MachineFailure) []v1.MachineFailur
 			OwnerRef:   f.OwnerRef,
 		}
 		if f.Message != "" {
+			state := f.State
+			if state == "" {
+				state = "Failed"
+			}
+			opType := f.Type
+			if opType == "" {
+				opType = "Create"
+			}
 			mf.LastOperation = &v1.MachineLastOperation{
 				Description:    f.Message,
 				LastUpdateTime: f.Time.Format(time.RFC3339),
-				State:          "Failed",
-				Type:           "Create",
+				State:          state,
+				Type:           opType,
 			}
 		}
 		result = append(result, mf)
