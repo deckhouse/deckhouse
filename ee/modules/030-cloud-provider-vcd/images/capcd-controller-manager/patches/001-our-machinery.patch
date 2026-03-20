@@ -11,6 +11,98 @@ index 8dd9c09..c6113dc 100644
  )
  
  const (
+diff --git a/api/v1beta2/vcdcluster_webhook.go b/api/v1beta2/vcdcluster_webhook.go
+index 585a830..ae440bc 100644
+--- a/api/v1beta2/vcdcluster_webhook.go
++++ b/api/v1beta2/vcdcluster_webhook.go
+@@ -37,9 +37,9 @@ func (r *VCDCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
+ 
+ //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=mutation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Defaulter = &VCDCluster{}
++var _ admission.Defaulter = &VCDCluster{}
+ 
+-// Default implements webhook.Defaulter so a webhook will be registered for the type
++// Default implements admission.Defaulter so a webhook will be registered for the type
+ func (r *VCDCluster) Default() {
+ 	vcdclusterlog.Info("default", "name", r.Name)
+ 
+@@ -49,9 +49,9 @@ func (r *VCDCluster) Default() {
+ // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+ //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=validation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Validator = &VCDCluster{}
++var _ admission.Validator = &VCDCluster{}
+ 
+-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
++// ValidateCreate implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDCluster) ValidateCreate() (admission.Warnings, error) {
+ 	vcdclusterlog.Info("validate create", "name", r.Name)
+ 
+@@ -59,7 +59,7 @@ func (r *VCDCluster) ValidateCreate() (admission.Warnings, error) {
+ 	return nil, nil
+ }
+ 
+-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
++// ValidateUpdate implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDCluster) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+ 	vcdclusterlog.Info("validate update", "name", r.Name)
+ 
+@@ -67,7 +67,7 @@ func (r *VCDCluster) ValidateUpdate(old runtime.Object) (admission.Warnings, err
+ 	return nil, nil
+ }
+ 
+-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
++// ValidateDelete implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDCluster) ValidateDelete() (admission.Warnings, error) {
+ 	vcdclusterlog.Info("validate delete", "name", r.Name)
+ 
+diff --git a/api/v1beta2/vcdmachine_webhook.go b/api/v1beta2/vcdmachine_webhook.go
+index d84b2c0..3087a63 100644
+--- a/api/v1beta2/vcdmachine_webhook.go
++++ b/api/v1beta2/vcdmachine_webhook.go
+@@ -40,9 +40,9 @@ func (r *VCDMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
+ 
+ //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=mutation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Defaulter = &VCDMachine{}
++var _ admission.Defaulter = &VCDMachine{}
+ 
+-// Default implements webhook.Defaulter so a webhook will be registered for the type
++// Default implements admission.Defaulter so a webhook will be registered for the type
+ func (r *VCDMachine) Default() {
+ 	vcdmachinelog.Info("default", "name", r.Name)
+ 
+@@ -52,9 +52,9 @@ func (r *VCDMachine) Default() {
+ // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+ //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=validation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Validator = &VCDMachine{}
++var _ admission.Validator = &VCDMachine{}
+ 
+-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
++// ValidateCreate implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDMachine) ValidateCreate() (admission.Warnings, error) {
+ 	vcdmachinelog.Info("validate create", "name", r.Name)
+ 
+@@ -62,7 +62,7 @@ func (r *VCDMachine) ValidateCreate() (admission.Warnings, error) {
+ 	return nil, nil
+ }
+ 
+-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
++// ValidateUpdate implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings, error) {
+ 	vcdmachinelog.Info("validate update", "name", r.Name)
+ 
+@@ -79,7 +79,7 @@ func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings,
+ 	return nil, nil
+ }
+ 
+-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
++// ValidateDelete implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDMachine) ValidateDelete() (admission.Warnings, error) {
+ 	vcdmachinelog.Info("validate delete", "name", r.Name)
+ 
 diff --git a/api/v1beta2/vcdmachinetemplate_types.go b/api/v1beta2/vcdmachinetemplate_types.go
 index 74707f0..27ae015 100644
 --- a/api/v1beta2/vcdmachinetemplate_types.go
@@ -25,7 +117,7 @@ index 74707f0..27ae015 100644
  
  type VCDMachineTemplateResource struct {
 diff --git a/api/v1beta2/zz_generated.deepcopy.go b/api/v1beta2/zz_generated.deepcopy.go
-index 96b5b9e..aaa6072 100644
+index 96b5b9e..b630958 100644
 --- a/api/v1beta2/zz_generated.deepcopy.go
 +++ b/api/v1beta2/zz_generated.deepcopy.go
 @@ -23,7 +23,7 @@ package v1beta2
@@ -33,10 +125,35 @@ index 96b5b9e..aaa6072 100644
  	"k8s.io/api/core/v1"
  	"k8s.io/apimachinery/pkg/runtime"
 -	"sigs.k8s.io/cluster-api/api/v1beta1"
-+	"sigs.k8s.io/cluster-api/api/core/v1beta2"
++	v1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
  )
  
  // DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+@@ -189,7 +189,7 @@ func (in *VCDClusterStatus) DeepCopyInto(out *VCDClusterStatus) {
+ 	*out = *in
+ 	if in.Conditions != nil {
+ 		in, out := &in.Conditions, &out.Conditions
+-		*out = make(v1beta1.Conditions, len(*in))
++		*out = make(v1beta2.Conditions, len(*in))
+ 		for i := range *in {
+ 			(*in)[i].DeepCopyInto(&(*out)[i])
+ 		}
+@@ -394,13 +394,13 @@ func (in *VCDMachineStatus) DeepCopyInto(out *VCDMachineStatus) {
+ 	}
+ 	if in.Addresses != nil {
+ 		in, out := &in.Addresses, &out.Addresses
+-		*out = make([]v1beta1.MachineAddress, len(*in))
++		*out = make([]v1beta2.MachineAddress, len(*in))
+ 		copy(*out, *in)
+ 	}
+ 	out.DiskSize = in.DiskSize.DeepCopy()
+ 	if in.Conditions != nil {
+ 		in, out := &in.Conditions, &out.Conditions
+-		*out = make(v1beta1.Conditions, len(*in))
++		*out = make(v1beta2.Conditions, len(*in))
+ 		for i := range *in {
+ 			(*in)[i].DeepCopyInto(&(*out)[i])
+ 		}
 diff --git a/controllers/capi_objects_utils.go b/controllers/capi_objects_utils.go
 index f070ef7..de6134c 100644
 --- a/controllers/capi_objects_utils.go

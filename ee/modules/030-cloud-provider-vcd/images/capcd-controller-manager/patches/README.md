@@ -5,12 +5,24 @@ Files:
 - controllers/cluster_scripts/cloud_init.tmpl
 - controllers/vcdcluster_controller.go
 - controllers/vcdmachine_controller.go
+- controllers/condition_consts.go
+- controllers/capi_objects_utils.go
+- api/v1beta2/vcdcluster_types.go
+- api/v1beta2/vcdmachinetemplate_types.go
+- api/v1beta2/vcdmachine_types.go
+- api/v1beta2/zz_generated.deepcopy.go
+- api/v1beta2/vcdcluster_webhook.go
+- api/v1beta2/vcdmachine_webhook.go
 
 Changes:
 
 - This patch is for our usage cases of cluster-api cloud provider.
 - Update klog to klog/v2 in controllers
 - Update CAPI imports from v1beta1 to v1beta2 (api/core/v1beta2, api/bootstrap/kubeadm/v1beta2, etc.)
+- Fix zz_generated.deepcopy.go: import CAPI v1beta2 with alias, replace v1beta1.Conditions and v1beta1.MachineAddress with v1beta2 types
+- Fix webhook files: replace webhook.Defaulter/Validator with admission.Defaulter/Validator (required for controller-runtime v0.22.5)
+- Add TemplateOrg field to VCDMachine spec to specify the organization of the template OVA
+- Add metadata support for VCDMachine (metadata types, structure and field in Spec)
 
 ### 002-patch-webhook-server-port.patch
 
@@ -49,19 +61,6 @@ Files:
 Changes:
 
 - Update klog to klog/v2 in other files
-
-### 005-add-vcdmachine-spec-template-org.patch
-
-Files:
-
-- api/v1beta2/vcdmachine_types.go
-
-Changes:
-
-- Update CAPI imports from v1beta1 to v1beta2 in vcdmachine_types.go
-- Add TemplateOrg field to VCDMachine spec to specify the organization of the template OVA
-- Add metadata support for VCDMachine (metadata types, structure and field in Spec)
-- Allows adding custom metadata to virtual machines for organizing and categorizing inventory
 
 ### 006-update-api-v1beta1-imports.patch
 

@@ -11,6 +11,191 @@ index 8dd9c09..c6113dc 100644
  )
  
  const (
+diff --git a/api/v1beta2/vcdcluster_webhook.go b/api/v1beta2/vcdcluster_webhook.go
+index 9e835bc..e659b1a 100644
+--- a/api/v1beta2/vcdcluster_webhook.go
++++ b/api/v1beta2/vcdcluster_webhook.go
+@@ -21,6 +21,7 @@ import (
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+ 	"sigs.k8s.io/controller-runtime/pkg/webhook"
++	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+ )
+ 
+ // log is for logging in this package.
+@@ -36,9 +37,9 @@ func (r *VCDCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
+ 
+ //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=mutation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Defaulter = &VCDCluster{}
++var _ admission.Defaulter = &VCDCluster{}
+ 
+-// Default implements webhook.Defaulter so a webhook will be registered for the type
++// Default implements admission.Defaulter so a webhook will be registered for the type
+ func (r *VCDCluster) Default() {
+ 	vcdclusterlog.Info("default", "name", r.Name)
+ 
+@@ -48,9 +49,9 @@ func (r *VCDCluster) Default() {
+ // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+ //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=validation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Validator = &VCDCluster{}
++var _ admission.Validator = &VCDCluster{}
+ 
+-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
++// ValidateCreate implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDCluster) ValidateCreate() error {
+ 	vcdclusterlog.Info("validate create", "name", r.Name)
+ 
+@@ -58,7 +59,7 @@ func (r *VCDCluster) ValidateCreate() error {
+ 	return nil
+ }
+ 
+-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
++// ValidateUpdate implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDCluster) ValidateUpdate(old runtime.Object) error {
+ 	vcdclusterlog.Info("validate update", "name", r.Name)
+ 
+@@ -66,7 +67,7 @@ func (r *VCDCluster) ValidateUpdate(old runtime.Object) error {
+ 	return nil
+ }
+ 
+-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
++// ValidateDelete implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDCluster) ValidateDelete() error {
+ 	vcdclusterlog.Info("validate delete", "name", r.Name)
+ 
+diff --git a/api/v1beta2/vcdmachine_types.go b/api/v1beta2/vcdmachine_types.go
+index 490444a..6787b1f 100644
+--- a/api/v1beta2/vcdmachine_types.go
++++ b/api/v1beta2/vcdmachine_types.go
+@@ -19,7 +19,7 @@ package v1beta2
+ import (
+ 	"k8s.io/apimachinery/pkg/api/resource"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ )
+ 
+ const (
+@@ -29,6 +29,48 @@ const (
+ 	VCDProviderID    = "vmware-cloud-director"
+ )
+ 
++const (
++	VCDMachineMetadataTypeString   string = "String"
++	VCDMachineMetadataTypeNumber   string = "Number"
++	VCDMachineMetadataTypeBoolean  string = "Boolean"
++	VCDMachineMetadataTypeDateTime string = "DateTime"
++)
++
++// VCDMachineMetadata defines metadata for the VCDMachine
++// useful for organizing and categorizing your virtualization inventory
++type VCDMachineMetadata struct {
++	// INSERT METADATA FIELDS - metadata for the VCDMachine
++	// Important: Run "make" to regenerate code after modifying this file
++
++	// The key of the metadata item
++	// +kubebuilder:validation:MaxLength=256
++	// +kubebuilder:validation:MinLength=1
++	Key string `json:"key,omitempty"`
++
++	// The value of the metadata item
++	// +kubebuilder:validation:MaxLength=256
++	// +kubebuilder:validation:MinLength=1
++	Value string `json:"value,omitempty"`
++
++	// The type of the metadata. Can be one of `String`, `Number`, `Boolean` or `DateTime`.
++	// Default value is `String`.
++	// +kubebuilder:validation:Enum=String;Number;Boolean;DateTime
++	// +kubebuilder:default=String
++	// +optional
++	Type string `json:"type,omitempty"` // Type can be "string", "int", "bool", etc.
++
++	// The user access level for the metadata. Can be one of `READONLY`, `READWRITE` or `PRIVATE`.
++	// Default value is `READWRITE`.
++	// +kubebuilder:validation:Enum=READONLY;READWRITE;PRIVATE
++	// +kubebuilder:default=READWRITE
++	// +optional
++	UserAccess string `json:"userAccess,omitempty"` // UserAccess can be "read", "write", etc.
++
++	// Whether the metadata is a system metadata or not.
++	// +optional
++	IsSystem bool `json:"isSystem,omitempty"` // IsSystem indicates if the metadata is system-level or user-defined
++}
++
+ // VCDMachineSpec defines the desired state of VCDMachine
+ type VCDMachineSpec struct {
+ 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+@@ -83,6 +125,14 @@ type VCDMachineSpec struct {
+ 	// Immutable field. machine.Name is used as VM name when this field is empty.
+ 	// +optional
+ 	VmNamingTemplate string `json:"vmNamingTemplate,omitempty"`
++
++	// TemplateOrg is the organization of the template OVA that is to be used
++	// +optional
++	TemplateOrg string `json:"templateOrg,omitempty"`
++
++	// Metadata for the VCDMachine
++	// +optional
++	Metadata []VCDMachineMetadata `json:"metadata,omitempty"`
+ }
+ 
+ // VCDMachineStatus defines the observed state of VCDMachine
+diff --git a/api/v1beta2/vcdmachine_webhook.go b/api/v1beta2/vcdmachine_webhook.go
+index 3c22546..b75278a 100644
+--- a/api/v1beta2/vcdmachine_webhook.go
++++ b/api/v1beta2/vcdmachine_webhook.go
+@@ -24,6 +24,7 @@ import (
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+ 	"sigs.k8s.io/controller-runtime/pkg/webhook"
++	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+ )
+ 
+ // log is for logging in this package.
+@@ -39,9 +40,9 @@ func (r *VCDMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
+ 
+ //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=mutation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Defaulter = &VCDMachine{}
++var _ admission.Defaulter = &VCDMachine{}
+ 
+-// Default implements webhook.Defaulter so a webhook will be registered for the type
++// Default implements admission.Defaulter so a webhook will be registered for the type
+ func (r *VCDMachine) Default() {
+ 	vcdmachinelog.Info("default", "name", r.Name)
+ 
+@@ -51,9 +52,9 @@ func (r *VCDMachine) Default() {
+ // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+ //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=validation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Validator = &VCDMachine{}
++var _ admission.Validator = &VCDMachine{}
+ 
+-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
++// ValidateCreate implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDMachine) ValidateCreate() error {
+ 	vcdmachinelog.Info("validate create", "name", r.Name)
+ 
+@@ -61,7 +62,7 @@ func (r *VCDMachine) ValidateCreate() error {
+ 	return nil
+ }
+ 
+-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
++// ValidateUpdate implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) error {
+ 	vcdmachinelog.Info("validate update", "name", r.Name)
+ 
+@@ -78,7 +79,7 @@ func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) error {
+ 	return nil
+ }
+ 
+-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
++// ValidateDelete implements admission.Validator so a webhook will be registered for the type
+ func (r *VCDMachine) ValidateDelete() error {
+ 	vcdmachinelog.Info("validate delete", "name", r.Name)
+ 
 diff --git a/api/v1beta2/vcdmachinetemplate_types.go b/api/v1beta2/vcdmachinetemplate_types.go
 index 74707f0..27ae015 100644
 --- a/api/v1beta2/vcdmachinetemplate_types.go
@@ -25,7 +210,7 @@ index 74707f0..27ae015 100644
  
  type VCDMachineTemplateResource struct {
 diff --git a/api/v1beta2/zz_generated.deepcopy.go b/api/v1beta2/zz_generated.deepcopy.go
-index 262eb35..b0f2bc45 100644
+index 262eb35..5b4b6fb 100644
 --- a/api/v1beta2/zz_generated.deepcopy.go
 +++ b/api/v1beta2/zz_generated.deepcopy.go
 @@ -24,7 +24,7 @@ package v1beta2
@@ -33,10 +218,35 @@ index 262eb35..b0f2bc45 100644
  	"k8s.io/api/core/v1"
  	"k8s.io/apimachinery/pkg/runtime"
 -	"sigs.k8s.io/cluster-api/api/v1beta1"
-+	"sigs.k8s.io/cluster-api/api/core/v1beta2"
++	v1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
  )
  
  // DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+@@ -190,7 +190,7 @@ func (in *VCDClusterStatus) DeepCopyInto(out *VCDClusterStatus) {
+ 	*out = *in
+ 	if in.Conditions != nil {
+ 		in, out := &in.Conditions, &out.Conditions
+-		*out = make(v1beta1.Conditions, len(*in))
++		*out = make(v1beta2.Conditions, len(*in))
+ 		for i := range *in {
+ 			(*in)[i].DeepCopyInto(&(*out)[i])
+ 		}
+@@ -395,13 +395,13 @@ func (in *VCDMachineStatus) DeepCopyInto(out *VCDMachineStatus) {
+ 	}
+ 	if in.Addresses != nil {
+ 		in, out := &in.Addresses, &out.Addresses
+-		*out = make([]v1beta1.MachineAddress, len(*in))
++		*out = make([]v1beta2.MachineAddress, len(*in))
+ 		copy(*out, *in)
+ 	}
+ 	out.DiskSize = in.DiskSize.DeepCopy()
+ 	if in.Conditions != nil {
+ 		in, out := &in.Conditions, &out.Conditions
+-		*out = make(v1beta1.Conditions, len(*in))
++		*out = make(v1beta2.Conditions, len(*in))
+ 		for i := range *in {
+ 			(*in)[i].DeepCopyInto(&(*out)[i])
+ 		}
 diff --git a/controllers/capi_objects_utils.go b/controllers/capi_objects_utils.go
 index f070ef7..de6134c 100644
 --- a/controllers/capi_objects_utils.go
