@@ -984,8 +984,8 @@ function wait_alerts_resolve() {
   "D8IstioPodsWithoutIstioSidecar" # Expected behaviour in clusters that start too quickly, and tests do start quickly
   "LoadAverageHigh" # Pointless, as test servers have minimal resources
   "SecurityEventsDetected" # This is normal for e2e tests
-  "D8NodeContainerdV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
-  "D8NodeCgroupV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
+  "D8NodeContainerdV2NotSupported" # This is normal for e2e tests for <1.36 clusters
+  "D8NodeCgroupV2NotSupported" # This is normal for e2e tests for <1.36 clusters
   )
 
   # Alerts
@@ -1372,6 +1372,7 @@ function run-test() {
     values="{
       \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
       \"defaultCRI\": \"${CRI}\",
+      \"branch\": \"${DEV_BRANCH}\",
       \"sshMaster1Host\": \"${master_ip}\",
       \"sshMaster1User\": \"${ssh_astra_user}\",
       \"sshMaster2Host\": \"${master2_ip}\",
