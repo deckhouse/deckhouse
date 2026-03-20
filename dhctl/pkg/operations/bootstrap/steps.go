@@ -430,7 +430,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
 	err = log.Process("bootstrap", "Preparing bootstrap", func() error {
-		if err := template.PrepareBootstrap(templateController, nodeIP, cfg); err != nil {
+		if err := template.PrepareBootstrap(templateController, nodeIP, cfg, dc); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 

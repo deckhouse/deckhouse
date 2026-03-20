@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -81,7 +82,9 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 
 		downloadDir, ok := dirs[downloadDirKey]
 		if !ok {
-			return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
+			dirs = app.GetDirConfig()
+			downloadDir = dirs[downloadDirKey]
+			// return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
 		}
 
 		deckhouseDir = filepath.Join(downloadDir, "deckhouse")
@@ -204,7 +207,9 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		}
 		downloadDir, ok := dirs[downloadDirKey]
 		if !ok {
-			return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
+			// return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
+			dirs = app.GetDirConfig()
+			downloadDir = dirs[downloadDirKey]
 		}
 
 		deckhouseDir = filepath.Join(downloadDir, "deckhouse")
@@ -605,7 +610,9 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dirs map[s
 	}
 	downloadDir, ok := dirs[downloadDirKey]
 	if !ok {
-		return fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
+		// return fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
+		dirs = app.GetDirConfig()
+		downloadDir = dirs[downloadDirKey]
 	}
 	cacheDir, ok := dirs[cacheDirKey]
 	if !ok {
@@ -615,5 +622,11 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dirs map[s
 	if err = image.DownloadAndUnpackImage(ctx, imgName, downloadDir, cacheDir, *conf); err != nil {
 		return err
 	}
+
+	err = image.PrepareFiles(filepath.Join(downloadDir, "deckhouse"))
+	if err != nil {
+		return err
+	}
+
 	return os.MkdirAll(filepath.Join(downloadDir, "plugins"), 0o755)
 }

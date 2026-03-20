@@ -109,6 +109,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		if !ok {
 			return fmt.Errorf("could not get value of downloadDir from map %-v", dc)
 		}
+		candiDir = filepath.Join(downloadDir, "deckhouse", "candi")
 		candiBashibleDir = filepath.Join(downloadDir, "deckhouse", "candi", "bashible")
 	}
 	saveInfo := make([]saveFromTo, 0)
@@ -168,6 +169,7 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 		if !ok {
 			return fmt.Errorf("could not get value of downloadDir from map %-v", dc)
 		}
+		candiDir = filepath.Join(downloadDir, "deckhouse", "candi")
 		candiBashibleDir = filepath.Join(downloadDir, "deckhouse", "candi", "bashible")
 	}
 	cc := templateData["clusterConfiguration"].(map[string]interface{})

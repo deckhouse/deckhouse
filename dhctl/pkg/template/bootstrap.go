@@ -15,6 +15,8 @@
 package template
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -23,10 +25,19 @@ import (
 
 const bootstrapDir = "/bootstrap"
 
-func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig *config.MetaConfig) error {
+func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig *config.MetaConfig, dc map[string]string) error {
 	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
 	if err != nil {
 		return err
+	}
+	_, err = os.Stat(candiDir)
+	if err != nil {
+		downloadDir, ok := dc["downloadDir"]
+		if !ok {
+			return fmt.Errorf("could not get downloadDir")
+		}
+		candiDir = filepath.Join(downloadDir, "deckhouse", "candi")
+		candiBashibleDir = filepath.Join(candiDir, "bashible")
 	}
 	saveInfo := []saveFromTo{
 		{
