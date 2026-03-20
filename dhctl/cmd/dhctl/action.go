@@ -31,8 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-
-	ext_logger "github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
 type (
@@ -323,13 +321,6 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	defer i.logFileMutex.Unlock()
 
 	i.logFile = logPath
-
-	extLogger, err := ext_logger.NewLogger(ext_logger.Type(i.params.loggerType), app.IsDebug)
-	if err != nil {
-		return nil, err
-	}
-	loggerWrapper := log.GetDefaultLoggerWrapper()
-	loggerWrapper.SetExternal(extLogger)
 
 	return func() {
 		if err := log.FlushAndClose(); err != nil {

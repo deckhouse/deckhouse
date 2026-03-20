@@ -40,8 +40,7 @@ import (
 
 var (
 	defaultLogger Logger
-	emptyLogger   Logger         = &SilentLogger{}
-	loggerWrapper *LoggerWrapper = &LoggerWrapper{InternalLogger: defaultLogger}
+	emptyLogger   Logger = &SilentLogger{}
 )
 
 func init() {
@@ -63,15 +62,6 @@ type klogWriterWrapper struct {
 	logger Logger
 }
 
-type LoggerWrapper struct {
-	InternalLogger Logger
-	ExternalLogger ext_logger.Logger
-}
-
-func (w *LoggerWrapper) SetExternal(l ext_logger.Logger) {
-	w.ExternalLogger = l
-}
-
 func newKlogWriterWrapper(logger Logger) *klogWriterWrapper {
 	return &klogWriterWrapper{logger: logger}
 }
@@ -83,7 +73,15 @@ func (l *klogWriterWrapper) Write(p []byte) (int, error) {
 }
 
 func InitLogger(loggerType string) {
-	InitLoggerWithOptions(loggerType, LoggerOptions{IsDebug: app.IsDebug})
+	InitExternalLogger(loggerType)
+}
+
+func InitExternalLogger(loggerType string) {
+	extLogger, err := ext_logger.NewLogger(ext_logger.Type(loggerType), app.IsDebug)
+	if err != nil {
+		panic(err)
+	}
+	defaultLogger = &ExternalLogger{logger: extLogger}
 }
 
 func WrapLoggerWithTeeLogger(writer io.WriteCloser, bufSize int) error {
@@ -566,6 +564,86 @@ func (d *DummyLogger) Write(content []byte) (int, error) {
 	return len(content), nil
 }
 
+type ExternalLogger struct {
+	logger ext_logger.Logger
+}
+
+func (e *ExternalLogger) GetLogger() ext_logger.Logger {
+	return e.logger
+}
+
+func (e *ExternalLogger) ProcessLogger() ProcessLogger {
+	return newWrappedProcessLogger(e)
+}
+
+func (e *ExternalLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
+}
+
+func (e *ExternalLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return &ExternalLogger{logger: e.logger.BufferLogger(buffer)}
+}
+
+func (e *ExternalLogger) FlushAndClose() error {
+	return e.logger.FlushAndClose()
+}
+
+func (e *ExternalLogger) LogProcess(_, t string, run func() error) error {
+	return e.logger.Process("", t, run)
+}
+
+func (e *ExternalLogger) LogInfoF(format string, a ...interface{}) {
+	e.logger.InfoF(format, a...)
+}
+
+func (e *ExternalLogger) LogInfoLn(a ...interface{}) {
+	e.logger.InfoLn(a)
+}
+
+func (e *ExternalLogger) LogErrorF(format string, a ...interface{}) {
+	e.logger.ErrorF(format, a...)
+}
+
+func (e *ExternalLogger) LogErrorLn(a ...interface{}) {
+	e.logger.ErrorLn(a...)
+}
+
+func (e *ExternalLogger) LogDebugF(format string, a ...interface{}) {
+	e.logger.DebugF(format, a...)
+}
+
+func (e *ExternalLogger) LogDebugLn(a ...interface{}) {
+	e.logger.DebugLn(a...)
+}
+
+func (e *ExternalLogger) LogSuccess(l string) {
+	e.logger.Success(l)
+}
+
+func (e *ExternalLogger) LogFail(l string) {
+	e.logger.Fail(l)
+}
+
+func (e *ExternalLogger) LogFailRetry(l string) {
+	e.logger.FailRetry(l)
+}
+
+func (e *ExternalLogger) LogWarnLn(a ...interface{}) {
+	e.logger.WarnLn(a...)
+}
+
+func (e *ExternalLogger) LogWarnF(format string, a ...interface{}) {
+	e.logger.WarnF(format, a...)
+}
+
+func (e *ExternalLogger) LogJSON(content []byte) {
+	e.logger.JSON(content)
+}
+
+func (e *ExternalLogger) Write(content []byte) (int, error) {
+	return e.logger.Write(content)
+}
+
 func FlushAndClose() error {
 	return defaultLogger.FlushAndClose()
 }
@@ -628,10 +706,6 @@ func GetProcessLogger() ProcessLogger {
 
 func GetDefaultLogger() Logger {
 	return defaultLogger
-}
-
-func GetDefaultLoggerWrapper() *LoggerWrapper {
-	return loggerWrapper
 }
 
 func GetSilentLogger() Logger {
