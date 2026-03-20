@@ -16,6 +16,15 @@ control-plane-manager:
         ru: Удалите `etcd.externalMembersNames`
       conversions:
         - del(.etcd.externalMembersNames) | if .etcd == {} then del(.etcd) end
+    - version: 3
+      description:
+        en: Replace `.apiserver.loadBalancer` with `.publishAPI.apiserver.loadBalancer`.
+        ru: Замените `.apiserver.loadBalancer` на `.publishAPI.apiserver.loadBalancer`.
+      conversions:
+        - if .apiserver.loadBalancer.port != null then .apiserver.publishAPI.loadBalancer.port = .apiserver.loadBalancer.port | .apiserver.publishAPI.loadBalancer.enabled = true | del(.apiserver.loadBalancer.port) end
+        - if .apiserver.loadBalancer.sourceRanges != null then .apiserver.publishAPI.loadBalancer.sourceRanges = .apiserver.loadBalancer.sourceRanges | del(.apiserver.loadBalancer.sourcesRanges) end
+        - if .apiserver.loadBalancer.annotations != null then .apiserver.publishAPI.loadBalancer.annotations = .apiserver.loadBalancer.annotations | del(.apiserver.loadBalancer.annotations) end
+        - del(.apiserver.loadBalancer)
 descheduler:
     - version: 2
       description:
