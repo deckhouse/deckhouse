@@ -4,7 +4,7 @@
 {{- $ciliumProxyCacheRev := "v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c-alt-p11-llvm17-gcc11-v2" }}
 {{- $ciliumProxyDepsRev := "v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c-alt-p11-llvm17-gcc11-lfs-v2" }}
 #  to force manual creation of fresh build cache
-{{- $buildWithPreparedCacheAndDeps := true }}
+{{- $buildWithPreparedCacheAndDeps := false }}
 #
 {{- $source := "https://github.com" }}
 {{- if $.DistroPackagesProxy }}
