@@ -29,10 +29,10 @@ index 9e835bc..fdb903c 100644
  //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=mutation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
  
 -var _ webhook.Defaulter = &VCDCluster{}
-+var _ admission.Defaulter = &VCDCluster{}
++var _ admission.CustomDefaulter = &VCDCluster{}
  
 -// Default implements webhook.Defaulter so a webhook will be registered for the type
-+// Default implements admission.Defaulter so a webhook will be registered for the type
++// Default implements admission.CustomDefaulter so a webhook will be registered for the type
  func (r *VCDCluster) Default() {
  	vcdclusterlog.Info("default", "name", r.Name)
  
@@ -41,11 +41,11 @@ index 9e835bc..fdb903c 100644
  //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=validation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
  
 -var _ webhook.Validator = &VCDCluster{}
-+var _ admission.Validator = &VCDCluster{}
++var _ admission.CustomValidator = &VCDCluster{}
  
 -// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 -func (r *VCDCluster) ValidateCreate() error {
-+// ValidateCreate implements admission.Validator so a webhook will be registered for the type
++// ValidateCreate implements admission.CustomValidator so a webhook will be registered for the type
 +func (r *VCDCluster) ValidateCreate() (admission.Warnings, error) {
  	vcdclusterlog.Info("validate create", "name", r.Name)
  
@@ -56,7 +56,7 @@ index 9e835bc..fdb903c 100644
  
 -// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 -func (r *VCDCluster) ValidateUpdate(old runtime.Object) error {
-+// ValidateUpdate implements admission.Validator so a webhook will be registered for the type
++// ValidateUpdate implements admission.CustomValidator so a webhook will be registered for the type
 +func (r *VCDCluster) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
  	vcdclusterlog.Info("validate update", "name", r.Name)
  
@@ -67,7 +67,7 @@ index 9e835bc..fdb903c 100644
  
 -// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 -func (r *VCDCluster) ValidateDelete() error {
-+// ValidateDelete implements admission.Validator so a webhook will be registered for the type
++// ValidateDelete implements admission.CustomValidator so a webhook will be registered for the type
 +func (r *VCDCluster) ValidateDelete() (admission.Warnings, error) {
  	vcdclusterlog.Info("validate delete", "name", r.Name)
  
@@ -170,10 +170,10 @@ index 3c22546..841d952 100644
  //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=mutation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
  
 -var _ webhook.Defaulter = &VCDMachine{}
-+var _ admission.Defaulter = &VCDMachine{}
++var _ admission.CustomDefaulter = &VCDMachine{}
  
 -// Default implements webhook.Defaulter so a webhook will be registered for the type
-+// Default implements admission.Defaulter so a webhook will be registered for the type
++// Default implements admission.CustomDefaulter so a webhook will be registered for the type
  func (r *VCDMachine) Default() {
  	vcdmachinelog.Info("default", "name", r.Name)
  
@@ -182,11 +182,11 @@ index 3c22546..841d952 100644
  //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=validation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
  
 -var _ webhook.Validator = &VCDMachine{}
-+var _ admission.Validator = &VCDMachine{}
++var _ admission.CustomValidator = &VCDMachine{}
  
 -// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 -func (r *VCDMachine) ValidateCreate() error {
-+// ValidateCreate implements admission.Validator so a webhook will be registered for the type
++// ValidateCreate implements admission.CustomValidator so a webhook will be registered for the type
 +func (r *VCDMachine) ValidateCreate() (admission.Warnings, error) {
  	vcdmachinelog.Info("validate create", "name", r.Name)
  
@@ -197,7 +197,7 @@ index 3c22546..841d952 100644
  
 -// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 -func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) error {
-+// ValidateUpdate implements admission.Validator so a webhook will be registered for the type
++// ValidateUpdate implements admission.CustomValidator so a webhook will be registered for the type
 +func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings, error) {
  	vcdmachinelog.Info("validate update", "name", r.Name)
  
@@ -219,7 +219,7 @@ index 3c22546..841d952 100644
  
 -// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 -func (r *VCDMachine) ValidateDelete() error {
-+// ValidateDelete implements admission.Validator so a webhook will be registered for the type
++// ValidateDelete implements admission.CustomValidator so a webhook will be registered for the type
 +func (r *VCDMachine) ValidateDelete() (admission.Warnings, error) {
  	vcdmachinelog.Info("validate delete", "name", r.Name)
  
