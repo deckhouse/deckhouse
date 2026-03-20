@@ -1270,6 +1270,10 @@ entries:
                     en: Cloud-provider-dvp module
                     ru: Модуль cloud-provider-dvp
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dvp.html
+                - title:
+                    en: Cloud-provider-vcd module
+                    ru: Модуль cloud-provider-vcd
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vcd.html
             - title:
                 en: Infrastructure components
                 ru: Инфраструктурные компоненты
