@@ -628,6 +628,7 @@ shell:
   - |
     bash -eu -c '
     writeDirs=(
+      /chroot/tmp/nginx
       /chroot/etc/nginx
       /chroot/usr/local
       /chroot/etc/ingress-controller
@@ -646,7 +647,6 @@ shell:
       /chroot/var/lib/nginx/proxy
       /chroot/var/lib/nginx/scgi
       /chroot/var/lib/nginx/uwsgi
-      /chroot/tmp/nginx
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
@@ -909,7 +909,7 @@ import:
   - modules_mount
   - var/log
   - etc/nginx
-  - tmp/nginx
+  - tmp
   - etc/ingress-controller
   - var/log/nginx
   - sbin/nginx
@@ -991,22 +991,18 @@ import:
   - usr/bin/cp
   - usr/bin/tail
   before: install
-- image: tools/libcap
-  add: /usr/sbin/setcap
-  to: /apps/setcap
-  before: install
 git:
 {{- include "image mount points" $ }}
 shell:
   install:
+  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
   - /apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
   - /apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
 imageSpec:
   config:
     workingDir: /chroot/etc/nginx
