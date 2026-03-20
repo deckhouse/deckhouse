@@ -232,6 +232,7 @@ shell:
   - |
     bash -eu -c '
     writeDirs=(
+      /chroot/tmp/nginx
       /chroot/etc/nginx
       /chroot/usr/local/nginx
       /chroot/usr/share
@@ -254,7 +255,6 @@ shell:
       /chroot/var/lib/nginx/proxy
       /chroot/var/lib/nginx/scgi
       /chroot/var/lib/nginx/uwsgi
-      /chroot/tmp/nginx
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
@@ -370,8 +370,8 @@ shell:
   - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/nginx
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/curl
+  - mkdir -p /chroot/var/log/valgrind /chroot/tmp/nginx
   - chmod 1777 /tmp /chroot/tmp /chroot/tmp/nginx
-  - mkdir -p /chroot/var/log/valgrind
   - setcap cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - setcap cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
   - setcap cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
