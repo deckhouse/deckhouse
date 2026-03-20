@@ -72,9 +72,10 @@ type Params struct {
 
 	InfrastructureContext *infrastructure.Context
 
-	TmpDir         string
-	LoggerProvider log.LoggerProvider
-	IsDebug        bool
+	TmpDir          string
+	LoggerProvider  log.LoggerProvider
+	IsDebug         bool
+	DirectoryConfig map[string]string
 }
 
 func (p *Params) getExecutionContext() phases.DefaultPhasedExecutionContext {

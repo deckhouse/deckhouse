@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -49,6 +48,8 @@ var (
 	modulesDir        = deckhouseDir + "/modules"
 	globalHooksModule = deckhouseDir + "/global-hooks"
 	versionMap        = candiDir + "/version_map.yml"
+	downloadDirKey    = "downloadDir"
+	cacheDirKey       = "cacheDir"
 
 	// This value is set on the dhctl build in the dhctl/Makefile script.
 	// Do not touch it !!!
@@ -56,7 +57,7 @@ var (
 	RppSignCheck             = "false"
 )
 
-func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, dc *app.DirConfig, opts ...ValidateOption) (*MetaConfig, error) {
+func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, dirs map[string]string, opts ...ValidateOption) (*MetaConfig, error) {
 	imagesDigestsJSONFIle, err := digests.ImagesDigestsBytes()
 	if err != nil {
 		return nil, err
@@ -73,27 +74,36 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 		if err != nil {
 			return nil, err
 		}
-		if err = prepareCandiDir(ctx, conf, dc); err != nil {
+		if err = prepareCandiDir(ctx, conf, dirs); err != nil {
 			return nil, err
 		}
 		// reinitialize vars and continue config parsing
-		deckhouseDir = dc.DeckhouseDir
-		candiDir = dc.CandiDir
-		modulesDir = dc.ModulesDir
-		globalHooksModule = dc.GlobalHooksModule
-		versionMap = dc.VersionMap
+
+		downloadDir, ok := dirs[downloadDirKey]
+		if !ok {
+			return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
+		}
+
+		deckhouseDir = filepath.Join(downloadDir, "deckhouse")
+		candiDir = filepath.Join(deckhouseDir, "candi")
+		modulesDir = filepath.Join(deckhouseDir, "modules")
+		globalHooksModule = filepath.Join(deckhouseDir, "global-hooks")
+		versionMap = filepath.Join(candiDir, "version_map.yml")
 	}
 	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	if dc == nil {
-		dc = app.GetDirConfig()
+	var ok bool
+	metaConfig.DownloadRootDir, ok = dirs[downloadDirKey]
+	if !ok {
+		return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
 	}
-
-	metaConfig.DownloadRootDir = dc.DownloadDir
-	metaConfig.DownloadCacheDir = dc.DownloadCacheDir
+	metaConfig.DownloadCacheDir, ok = dirs[cacheDirKey]
+	if !ok {
+		return nil, fmt.Errorf("could not get cache directory from variable dirs %-v\n", dirs)
+	}
 
 	if metaConfig.ClusterConfig == nil {
 		return nil, fmt.Errorf("ClusterConfiguration must be provided")
@@ -150,13 +160,13 @@ func ParseConfig(ctx context.Context, paths []string, preparatorProvider MetaCon
 	return ParseConfigFromData(ctx, content, preparatorProvider, opts...)
 }
 
-func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *app.DirConfig) (*MetaConfig, error) {
+func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dirs map[string]string) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 	err = log.Process("common", "Get Cluster configuration", func() error {
 		return retry.NewLoop("Get Cluster configuration from Kubernetes cluster", 10, 5*time.Second).
 			RunContext(ctx, func() error {
-				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, dc)
+				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, dirs)
 				return err
 			})
 	})
@@ -166,13 +176,13 @@ func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	return metaConfig, nil
 }
 
-func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *app.DirConfig) (*MetaConfig, error) {
+func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dirs map[string]string) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 
 	err = retry.NewSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).
 		RunContext(ctx, func() error {
-			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, dc)
+			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, dirs)
 			return err
 		})
 	if err != nil {
@@ -181,32 +191,35 @@ func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient, 
 	return metaConfig, nil
 }
 
-func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *app.DirConfig) (*MetaConfig, error) {
+func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dirs map[string]string) (*MetaConfig, error) {
 	metaConfig := &MetaConfig{}
 	if err := checkDirs(); err != nil {
 		conf, b64dc, err := GetRegistryData(ctx, kubeCl, log.GetDefaultLogger())
 		if err != nil {
 			return nil, err
 		}
-		if dc == nil {
-			dc = app.GetDirConfig()
-		}
-		if err = prepareCandiDir(ctx, conf, dc); err != nil {
+
+		if err = prepareCandiDir(ctx, conf, dirs); err != nil {
 			return nil, err
 		}
-		if dc == nil {
-			dc = app.GetDirConfig()
+		downloadDir, ok := dirs[downloadDirKey]
+		if !ok {
+			return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
 		}
-		deckhouseDir = dc.DeckhouseDir
-		candiDir = dc.CandiDir
-		modulesDir = dc.ModulesDir
-		globalHooksModule = dc.GlobalHooksModule
-		versionMap = dc.VersionMap
+
+		deckhouseDir = filepath.Join(downloadDir, "deckhouse")
+		candiDir = filepath.Join(deckhouseDir, "candi")
+		modulesDir = filepath.Join(deckhouseDir, "modules")
+		globalHooksModule = filepath.Join(deckhouseDir, "global-hooks")
+		versionMap = filepath.Join(candiDir, "version_map.yml")
 		metaConfig.DeckhouseConfig.RegistryDockerCfg = b64dc
 		metaConfig.DeckhouseConfig.ImagesRepo = conf.GetRegistry()
 		metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
-		metaConfig.DownloadRootDir = dc.DownloadDir
-		metaConfig.DownloadCacheDir = dc.DownloadCacheDir
+		metaConfig.DownloadRootDir = downloadDir
+		metaConfig.DownloadCacheDir, ok = dirs[cacheDirKey]
+		if !ok {
+			return nil, fmt.Errorf("could not get cache directory from variable dirs %-v\n", dirs)
+		}
 	}
 	schemaStore := NewSchemaStore()
 
@@ -585,14 +598,22 @@ func GetRegistryData(ctx context.Context, kubeCl *client.KubernetesClient, logge
 	return conf, b64dc, err
 }
 
-func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dc *app.DirConfig) error {
+func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dirs map[string]string) error {
 	candiImage, err := digests.GetImage("common", "candi")
 	if err != nil {
 		return err
 	}
+	downloadDir, ok := dirs[downloadDirKey]
+	if !ok {
+		return fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
+	}
+	cacheDir, ok := dirs[cacheDirKey]
+	if !ok {
+		return fmt.Errorf("could not get cache directory from variable dirs %-v\n", dirs)
+	}
 	imgName := conf.GetRegistry() + "@" + candiImage
-	if err = image.DownloadAndUnpackImage(ctx, imgName, dc.DownloadDir, dc.DownloadCacheDir, *conf); err != nil {
+	if err = image.DownloadAndUnpackImage(ctx, imgName, downloadDir, cacheDir, *conf); err != nil {
 		return err
 	}
-	return os.MkdirAll(filepath.Join(dc.DownloadDir, "plugins"), 0o755)
+	return os.MkdirAll(filepath.Join(downloadDir, "plugins"), 0o755)
 }

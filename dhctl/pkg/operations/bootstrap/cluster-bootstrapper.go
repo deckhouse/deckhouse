@@ -107,7 +107,7 @@ type Params struct {
 	Logger  log.Logger
 	IsDebug bool
 
-	DirectoryConfig *app.DirConfig
+	DirectoryConfig map[string]string
 
 	*client.KubernetesInitParams
 }

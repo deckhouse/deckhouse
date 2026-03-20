@@ -99,7 +99,7 @@ func NewSchemaStore(paths ...string) *SchemaStore {
 	if err != nil {
 		// fallback to /tmp
 		dc := app.GetDirConfig()
-		paths = append(paths, dc.CandiDir)
+		paths = append(paths, filepath.Join(dc[downloadDirKey], "deckhouse", "candi"))
 	}
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
@@ -123,8 +123,8 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	if err != nil {
 		// fallback to /tmp
 		dc := app.GetDirConfig()
-		deckhouseDir = dc.DeckhouseDir
-		modulesDir = dc.ModulesDir
+		deckhouseDir = filepath.Join(dc[downloadDirKey], "deckhouse")
+		modulesDir = filepath.Join(deckhouseDir, "modules")
 	}
 	log.InfoF("deckhouse dir: %s, modulesDir: %s\n", deckhouseDir, modulesDir)
 

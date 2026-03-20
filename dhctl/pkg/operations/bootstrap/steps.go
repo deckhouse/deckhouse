@@ -108,7 +108,7 @@ func BootstrapMaster(ctx context.Context, nodeInterface node.Interface, controll
 	})
 }
 
-func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller, dc *app.DirConfig) error {
+func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller, dc map[string]string) error {
 	return log.Process("bootstrap", "Prepare Bashible", func() error {
 		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig, dc)
 	})
@@ -262,7 +262,7 @@ func cleanupPreviousBashibleRunIfNeed(ctx context.Context, nodeInterface node.In
 	})
 }
 
-func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient, dc *app.DirConfig) (node.ReverseTunnel, error) {
+func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient, dc map[string]string) (node.ReverseTunnel, error) {
 	port := "5444"
 	listenAddress := "127.0.0.1"
 
@@ -409,7 +409,7 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool, dc *app.DirConfig) error {
+func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool, dc map[string]string) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -542,7 +542,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		})
 }
 
-func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient, dc *app.DirConfig) (func(), error) {
+func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient, dc map[string]string) (func(), error) {
 	var tun node.ReverseTunnel
 	log.DebugLn("Starting reverse tunnel routine")
 	tun, err := SetupSSHTunnelToRegistryPackagesProxy(ctx, sshClient, dc)

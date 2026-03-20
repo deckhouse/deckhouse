@@ -153,30 +153,10 @@ func GetDefaultTmpDir() string {
 	return defaultTmpAndStateDir
 }
 
-type DirConfig struct {
-	DeckhouseDir      string
-	CandiDir          string
-	ModulesDir        string
-	GlobalHooksModule string
-	VersionMap        string
-	VersionFile       string
-	DownloadDir       string
-	DownloadCacheDir  string
-}
+func GetDirConfig() map[string]string {
+	dirs := make(map[string]string)
+	dirs["downloadDir"] = DownloadDirName
+	dirs["cacheDir"] = DownloadCacheDirName
 
-func GetDirConfig() *DirConfig {
-	_, err := os.Stat(deckhouseDir)
-	if err != nil {
-		deckhouseDir = filepath.Join(DownloadDirName, "deckhouse")
-	}
-	return &DirConfig{
-		DeckhouseDir:      deckhouseDir,
-		CandiDir:          filepath.Join(deckhouseDir, "candi"),
-		ModulesDir:        filepath.Join(deckhouseDir, "modules"),
-		GlobalHooksModule: filepath.Join(deckhouseDir, "global-hooks"),
-		VersionMap:        filepath.Join(deckhouseDir, "candi", "version_map.yml"),
-		VersionFile:       filepath.Join(deckhouseDir, "version"),
-		DownloadDir:       DownloadDirName,
-		DownloadCacheDir:  DownloadCacheDirName,
-	}
+	return dirs
 }

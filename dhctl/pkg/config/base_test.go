@@ -435,7 +435,7 @@ spec:
 func TestParseConfigFromFiles(t *testing.T) {
 	app.VersionFile = "./mocks/version"
 	t.Run("parse wildcard", func(t *testing.T) {
-		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider(), app.GetDirConfig())
+		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider(), make(map[string]string))
 		require.NoError(t, err)
 		require.Equal(t, "Static", metaConfig.ClusterType)
 
@@ -454,7 +454,7 @@ func TestParseConfigFromFiles(t *testing.T) {
 
 func TestParseConfigFromCluster(t *testing.T) {
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
-		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider, app.GetDirConfig())
+		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider, make(map[string]string))
 
 		require.NoError(t, err)
 		require.NotNil(t, metaConfig)
@@ -469,7 +469,7 @@ func TestParseConfigFromCluster(t *testing.T) {
 	}
 
 	doParseFromClusterWithError := func(t *testing.T, tst *testParseConfigFromCluster) {
-		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider, app.GetDirConfig())
+		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider, make(map[string]string))
 
 		require.Error(t, err)
 		require.Nil(t, metaConfig)

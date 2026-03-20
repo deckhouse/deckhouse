@@ -45,7 +45,7 @@ func GetInfrastructureProviderDir(provider string) string {
 		return filepath.Join(candiDir, "cloud-providers", provider)
 	}
 
-	return filepath.Join(app.GetDirConfig().CandiDir, "cloud-providers", provider)
+	return filepath.Join(app.DownloadDirName, "deckhouse", "candi", "cloud-providers", provider)
 }
 
 func GetInfrastructureModulesDir(provider string) string {
@@ -62,5 +62,5 @@ func GetInfrastructureVersions() string {
 		return infrastructureVersions
 	}
 
-	return filepath.Join(app.GetDirConfig().CandiDir, "terraform_versions.yml")
+	return filepath.Join(app.DownloadDirName, "deckhouse", "candi", "terraform_versions.yml")
 }
