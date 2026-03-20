@@ -1,5 +1,4 @@
-{{- if hasKey .Values.controlPlaneManager.apiserver "publishAPI" }}
-  {{- if .Values.controlPlaneManager.publishAPI.apiserver.loadBalancer.enabled }}
+{{- if ((.Values.controlPlaneManager.apiserver).publishAPI).loadBalancer.enabled }}
 ---
 apiVersion: v1
 kind: Service
@@ -30,5 +29,4 @@ spec:
   selector:
     tier: control-plane
     component: kube-apiserver
-  {{- end }}
 {{- end }}
