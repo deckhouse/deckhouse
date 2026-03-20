@@ -1,0 +1,374 @@
+diff --git a/pkg/kubelet/kubelet_container_log_paths.go b/pkg/kubelet/kubelet_container_log_paths.go
+new file mode 100644
+index 00000000000..2f9478000ee
+--- /dev/null
++++ b/pkg/kubelet/kubelet_container_log_paths.go
+@@ -0,0 +1,60 @@
++/*
++Copyright 2024 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package kubelet
++
++import (
++	"context"
++	"fmt"
++
++	"k8s.io/apimachinery/pkg/types"
++	"k8s.io/kubernetes/pkg/kubelet/kuberuntime"
++)
++
++// GetContainerLogPaths returns a map of container names to their log directory
++// paths for all containers (init, regular, and ephemeral) in the given pod.
++func (kl *Kubelet) GetContainerLogPaths(_ context.Context, podNamespace, podName string) (map[string]string, error) {
++	pod, ok := kl.GetPodByName(podNamespace, podName)
++	if !ok {
++		return nil, fmt.Errorf("pod %q in namespace %q not found", podName, podNamespace)
++	}
++
++	var podUID types.UID
++	pod, mirrorPod, wasMirror := kl.podManager.GetPodAndMirrorPod(pod)
++	if wasMirror {
++		if pod == nil {
++			return nil, fmt.Errorf("mirror pod %q does not have a corresponding pod", podName)
++		}
++		podUID = mirrorPod.UID
++	} else {
++		podUID = pod.UID
++	}
++
++	result := make(map[string]string)
++	podLogsDir := kl.getPodLogsDir()
++
++	for _, c := range pod.Spec.InitContainers {
++		result[c.Name] = kuberuntime.BuildContainerLogsDirectory(podLogsDir, podNamespace, podName, podUID, c.Name)
++	}
++	for _, c := range pod.Spec.Containers {
++		result[c.Name] = kuberuntime.BuildContainerLogsDirectory(podLogsDir, podNamespace, podName, podUID, c.Name)
++	}
++	for _, c := range pod.Spec.EphemeralContainers {
++		result[c.Name] = kuberuntime.BuildContainerLogsDirectory(podLogsDir, podNamespace, podName, podUID, c.Name)
++	}
++
++	return result, nil
++}
+diff --git a/pkg/kubelet/server/auth_test.go b/pkg/kubelet/server/auth_test.go
+index 27f001f99fa..ad353db76b3 100644
+--- a/pkg/kubelet/server/auth_test.go
++++ b/pkg/kubelet/server/auth_test.go
+@@ -129,6 +129,7 @@ func AuthzTestCases(fineGrained bool) []AuthzTestCase {
+ 		"/configz": {"proxy"},
+ 		"/flagz":   {"configz"},
+ 		"/statusz": {"statusz"},
++		"/containerLogPaths/{podNamespace}/{podID}":              {"proxy"},
+ 		"/containerLogs/{podNamespace}/{podID}/{containerName}": {"proxy"},
+ 		"/debug/flags/v":                                     {"proxy"},
+ 		"/debug/pprof/{subpath:*}":                           {"proxy"},
+diff --git a/pkg/kubelet/server/server.go b/pkg/kubelet/server/server.go
+index 31ecfe65672..2cbdad602a4 100644
+--- a/pkg/kubelet/server/server.go
++++ b/pkg/kubelet/server/server.go
+@@ -279,6 +279,7 @@ type HostInterface interface {
+ 	RunInContainer(ctx context.Context, name string, uid types.UID, container string, cmd []string) ([]byte, error)
+ 	CheckpointContainer(ctx context.Context, podUID types.UID, podFullName, containerName string, options *runtimeapi.CheckpointContainerRequest) error
+ 	GetKubeletContainerLogs(ctx context.Context, podFullName, containerName string, logOptions *v1.PodLogOptions, stdout, stderr io.Writer) error
++	GetContainerLogPaths(ctx context.Context, podNamespace, podName string) (map[string]string, error)
+ 	ServeLogs(w http.ResponseWriter, req *http.Request)
+ 	SyncLoopHealthCheck(req *http.Request) error
+ 	GetExec(ctx context.Context, podFullName string, podUID types.UID, containerName string, cmd []string, streamOpts remotecommandserver.Options) (*url.URL, error)
+@@ -596,6 +597,18 @@ func (s *Server) InstallAuthRequiredHandlers(ctx context.Context) {
+ 		Operation("getContainerLogs"))
+ 	s.restfulCont.Add(ws)
+ 
++	s.addMetricsBucketMatcher("containerLogPaths")
++	ws = new(restful.WebService)
++	ws.
++		Path("/containerLogPaths").
++		Produces(restful.MIME_JSON)
++	ws.Route(ws.GET("/{podNamespace}/{podID}").
++		To(func(request *restful.Request, response *restful.Response) {
++			s.getContainerLogPaths(logger, request, response)
++		}).
++		Operation("getContainerLogPaths"))
++	s.restfulCont.Add(ws)
++
+ 	s.addMetricsBucketMatcher("configz")
+ 	configz.InstallHandler(s.restfulCont)
+ 
+@@ -640,11 +653,12 @@ func (s *Server) InstallDebuggingDisabledHandlers() {
+ 	s.addMetricsBucketMatcher("attach")
+ 	s.addMetricsBucketMatcher("portForward")
+ 	s.addMetricsBucketMatcher("containerLogs")
++	s.addMetricsBucketMatcher("containerLogPaths")
+ 	s.addMetricsBucketMatcher("runningpods")
+ 	s.addMetricsBucketMatcher("pprof")
+ 	s.addMetricsBucketMatcher("logs")
+ 	paths := []string{
+-		"/run/", "/exec/", "/attach/", "/portForward/", "/containerLogs/",
++		"/run/", "/exec/", "/attach/", "/portForward/", "/containerLogs/", "/containerLogPaths/",
+ 		runningPodsPath, pprofBasePath, logsPath}
+ 	for _, p := range paths {
+ 		s.restfulCont.Handle(p, h)
+diff --git a/pkg/kubelet/server/server_container_log_paths.go b/pkg/kubelet/server/server_container_log_paths.go
+new file mode 100644
+index 00000000000..9a49db44064
+--- /dev/null
++++ b/pkg/kubelet/server/server_container_log_paths.go
+@@ -0,0 +1,61 @@
++/*
++Copyright 2024 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package server
++
++import (
++	"encoding/json"
++	"fmt"
++	"net/http"
++
++	"github.com/emicklei/go-restful/v3"
++	"k8s.io/klog/v2"
++)
++
++// getContainerLogPaths returns the log directory paths for all containers in the specified pod.
++func (s *Server) getContainerLogPaths(logger klog.Logger, request *restful.Request, response *restful.Response) {
++	podNamespace := request.PathParameter("podNamespace")
++	podID := request.PathParameter("podID")
++	ctx := request.Request.Context()
++
++	if len(podID) == 0 {
++		response.WriteError(http.StatusBadRequest, fmt.Errorf(`{"message": "Missing podID."}`))
++		return
++	}
++	if len(podNamespace) == 0 {
++		response.WriteError(http.StatusBadRequest, fmt.Errorf(`{"message": "Missing podNamespace."}`))
++		return
++	}
++
++	pod, ok := s.host.GetPodByName(podNamespace, podID)
++	if !ok {
++		response.WriteError(http.StatusNotFound, fmt.Errorf("pod %q does not exist", podID))
++		return
++	}
++
++	logPaths, err := s.host.GetContainerLogPaths(ctx, pod.Namespace, pod.Name)
++	if err != nil {
++		response.WriteError(http.StatusInternalServerError, err)
++		return
++	}
++
++	data, err := json.Marshal(logPaths)
++	if err != nil {
++		response.WriteError(http.StatusInternalServerError, err)
++		return
++	}
++	writeJSONResponse(logger, response, data)
++}
+diff --git a/pkg/kubelet/server/server_container_log_paths_test.go b/pkg/kubelet/server/server_container_log_paths_test.go
+new file mode 100644
+index 00000000000..00a79acea32
+--- /dev/null
++++ b/pkg/kubelet/server/server_container_log_paths_test.go
+@@ -0,0 +1,141 @@
++/*
++Copyright 2024 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package server
++
++import (
++	"encoding/json"
++	"fmt"
++	"io"
++	"net/http"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/types"
++	"k8s.io/kubernetes/test/utils/ktesting"
++)
++
++func TestContainerLogPaths(t *testing.T) {
++	tCtx := ktesting.Init(t)
++	fw := newServerTest(tCtx)
++	defer fw.testHTTPServer.Close()
++
++	podNamespace := "other"
++	podName := "foo"
++	podUID := types.UID("test-uid-123")
++
++	fw.fakeKubelet.podByNameFunc = func(namespace, name string) (*v1.Pod, bool) {
++		if namespace == podNamespace && name == podName {
++			return &v1.Pod{
++				ObjectMeta: metav1.ObjectMeta{
++					Namespace: podNamespace,
++					Name:      podName,
++					UID:       podUID,
++				},
++				Spec: v1.PodSpec{
++					InitContainers: []v1.Container{
++						{Name: "init-container"},
++					},
++					Containers: []v1.Container{
++						{Name: "main-app"},
++						{Name: "sidecar"},
++					},
++					EphemeralContainers: []v1.EphemeralContainer{
++						{EphemeralContainerCommon: v1.EphemeralContainerCommon{Name: "debug"}},
++					},
++				},
++			}, true
++		}
++		return nil, false
++	}
++
++	resp, err := http.Get(fw.testHTTPServer.URL + "/containerLogPaths/" + podNamespace + "/" + podName)
++	require.NoError(t, err)
++	defer resp.Body.Close()
++
++	assert.Equal(t, http.StatusOK, resp.StatusCode)
++
++	body, err := io.ReadAll(resp.Body)
++	require.NoError(t, err)
++
++	var result map[string]string
++	err = json.Unmarshal(body, &result)
++	require.NoError(t, err)
++
++	expected := map[string]string{
++		"init-container": fmt.Sprintf("/var/log/pods/%s_%s_%s/init-container", podNamespace, podName, podUID),
++		"main-app":       fmt.Sprintf("/var/log/pods/%s_%s_%s/main-app", podNamespace, podName, podUID),
++		"sidecar":        fmt.Sprintf("/var/log/pods/%s_%s_%s/sidecar", podNamespace, podName, podUID),
++		"debug":          fmt.Sprintf("/var/log/pods/%s_%s_%s/debug", podNamespace, podName, podUID),
++	}
++	assert.Equal(t, expected, result)
++}
++
++func TestContainerLogPathsPodNotFound(t *testing.T) {
++	tCtx := ktesting.Init(t)
++	fw := newServerTest(tCtx)
++	defer fw.testHTTPServer.Close()
++
++	fw.fakeKubelet.podByNameFunc = func(namespace, name string) (*v1.Pod, bool) {
++		return nil, false
++	}
++
++	resp, err := http.Get(fw.testHTTPServer.URL + "/containerLogPaths/default/nonexistent")
++	require.NoError(t, err)
++	defer resp.Body.Close()
++
++	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
++}
++
++func TestContainerLogPathsNoContainers(t *testing.T) {
++	tCtx := ktesting.Init(t)
++	fw := newServerTest(tCtx)
++	defer fw.testHTTPServer.Close()
++
++	podNamespace := "default"
++	podName := "empty-pod"
++	podUID := types.UID("empty-uid")
++
++	fw.fakeKubelet.podByNameFunc = func(namespace, name string) (*v1.Pod, bool) {
++		return &v1.Pod{
++			ObjectMeta: metav1.ObjectMeta{
++				Namespace: podNamespace,
++				Name:      podName,
++				UID:       podUID,
++			},
++			Spec: v1.PodSpec{},
++		}, true
++	}
++
++	resp, err := http.Get(fw.testHTTPServer.URL + "/containerLogPaths/" + podNamespace + "/" + podName)
++	require.NoError(t, err)
++	defer resp.Body.Close()
++
++	assert.Equal(t, http.StatusOK, resp.StatusCode)
++
++	body, err := io.ReadAll(resp.Body)
++	require.NoError(t, err)
++
++	var result map[string]string
++	err = json.Unmarshal(body, &result)
++	require.NoError(t, err)
++
++	assert.Empty(t, result)
++}
+diff --git a/pkg/kubelet/server/server_test.go b/pkg/kubelet/server/server_test.go
+index 97091722ef5..6b17f18fac3 100644
+--- a/pkg/kubelet/server/server_test.go
++++ b/pkg/kubelet/server/server_test.go
+@@ -133,6 +133,24 @@ func (fk *fakeKubelet) GetKubeletContainerLogs(ctx context.Context, podFullName,
+ 	return fk.containerLogsFunc(ctx, podFullName, containerName, logOptions, stdout, stderr)
+ }
+ 
++func (fk *fakeKubelet) GetContainerLogPaths(_ context.Context, podNamespace, podName string) (map[string]string, error) {
++	pod, ok := fk.podByNameFunc(podNamespace, podName)
++	if !ok {
++		return nil, fmt.Errorf("pod %q not found", podName)
++	}
++	result := make(map[string]string)
++	for _, c := range pod.Spec.InitContainers {
++		result[c.Name] = fmt.Sprintf("/var/log/pods/%s_%s_%s/%s", podNamespace, podName, pod.UID, c.Name)
++	}
++	for _, c := range pod.Spec.Containers {
++		result[c.Name] = fmt.Sprintf("/var/log/pods/%s_%s_%s/%s", podNamespace, podName, pod.UID, c.Name)
++	}
++	for _, c := range pod.Spec.EphemeralContainers {
++		result[c.Name] = fmt.Sprintf("/var/log/pods/%s_%s_%s/%s", podNamespace, podName, pod.UID, c.Name)
++	}
++	return result, nil
++}
++
+ func (fk *fakeKubelet) RunInContainer(_ context.Context, podFullName string, uid types.UID, containerName string, cmd []string) ([]byte, error) {
+ 	return fk.runFunc(podFullName, uid, containerName, cmd)
+ }
+@@ -632,6 +650,7 @@ func TestInstallAuthNotRequiredHandlers(t *testing.T) {
+ 		"/attach/",
+ 		"/portForward/",
+ 		"/containerLogs/",
++		"/containerLogPaths/",
+ 		"/runningpods/",
+ 		"/debug/pprof/",
+ 		"/logs/",
