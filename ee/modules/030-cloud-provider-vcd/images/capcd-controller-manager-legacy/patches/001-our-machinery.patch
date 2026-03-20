@@ -12,7 +12,7 @@ index 8dd9c09..c6113dc 100644
  
  const (
 diff --git a/api/v1beta2/vcdcluster_webhook.go b/api/v1beta2/vcdcluster_webhook.go
-index 9e835bc..e659b1a 100644
+index 9e835bc..1906d86 100644
 --- a/api/v1beta2/vcdcluster_webhook.go
 +++ b/api/v1beta2/vcdcluster_webhook.go
 @@ -21,6 +21,7 @@ import (
@@ -35,7 +35,7 @@ index 9e835bc..e659b1a 100644
  func (r *VCDCluster) Default() {
  	vcdclusterlog.Info("default", "name", r.Name)
  
-@@ -48,9 +49,9 @@ func (r *VCDCluster) Default() {
+@@ -48,28 +49,28 @@ func (r *VCDCluster) Default() {
  // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
  //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=validation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
  
@@ -43,28 +43,37 @@ index 9e835bc..e659b1a 100644
 +var _ admission.Validator = &VCDCluster{}
  
 -// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDCluster) ValidateCreate() error {
 +// ValidateCreate implements admission.Validator so a webhook will be registered for the type
- func (r *VCDCluster) ValidateCreate() error {
++func (r *VCDCluster) ValidateCreate() (admission.Warnings, error) {
  	vcdclusterlog.Info("validate create", "name", r.Name)
  
-@@ -58,7 +59,7 @@ func (r *VCDCluster) ValidateCreate() error {
- 	return nil
+ 	// TODO(user): fill in your validation logic upon object creation.
+-	return nil
++	return nil, nil
  }
  
 -// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDCluster) ValidateUpdate(old runtime.Object) error {
 +// ValidateUpdate implements admission.Validator so a webhook will be registered for the type
- func (r *VCDCluster) ValidateUpdate(old runtime.Object) error {
++func (r *VCDCluster) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
  	vcdclusterlog.Info("validate update", "name", r.Name)
  
-@@ -66,7 +67,7 @@ func (r *VCDCluster) ValidateUpdate(old runtime.Object) error {
- 	return nil
+ 	// TODO(user): fill in your validation logic upon object update.
+-	return nil
++	return nil, nil
  }
  
 -// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDCluster) ValidateDelete() error {
 +// ValidateDelete implements admission.Validator so a webhook will be registered for the type
- func (r *VCDCluster) ValidateDelete() error {
++func (r *VCDCluster) ValidateDelete() (admission.Warnings, error) {
  	vcdclusterlog.Info("validate delete", "name", r.Name)
  
+ 	// TODO(user): fill in your validation logic upon object deletion.
+-	return nil
++	return nil, nil
+ }
 diff --git a/api/v1beta2/vcdmachine_types.go b/api/v1beta2/vcdmachine_types.go
 index 490444a..6787b1f 100644
 --- a/api/v1beta2/vcdmachine_types.go
@@ -143,7 +152,7 @@ index 490444a..6787b1f 100644
  
  // VCDMachineStatus defines the observed state of VCDMachine
 diff --git a/api/v1beta2/vcdmachine_webhook.go b/api/v1beta2/vcdmachine_webhook.go
-index 3c22546..b75278a 100644
+index 3c22546..8b31fe7 100644
 --- a/api/v1beta2/vcdmachine_webhook.go
 +++ b/api/v1beta2/vcdmachine_webhook.go
 @@ -24,6 +24,7 @@ import (
@@ -166,7 +175,7 @@ index 3c22546..b75278a 100644
  func (r *VCDMachine) Default() {
  	vcdmachinelog.Info("default", "name", r.Name)
  
-@@ -51,9 +52,9 @@ func (r *VCDMachine) Default() {
+@@ -51,37 +52,37 @@ func (r *VCDMachine) Default() {
  // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
  //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=validation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
  
@@ -174,28 +183,48 @@ index 3c22546..b75278a 100644
 +var _ admission.Validator = &VCDMachine{}
  
 -// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDMachine) ValidateCreate() error {
 +// ValidateCreate implements admission.Validator so a webhook will be registered for the type
- func (r *VCDMachine) ValidateCreate() error {
++func (r *VCDMachine) ValidateCreate() (admission.Warnings, error) {
  	vcdmachinelog.Info("validate create", "name", r.Name)
  
-@@ -61,7 +62,7 @@ func (r *VCDMachine) ValidateCreate() error {
- 	return nil
+ 	// TODO(user): fill in your validation logic upon object creation.
+-	return nil
++	return nil, nil
  }
  
 -// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) error {
 +// ValidateUpdate implements admission.Validator so a webhook will be registered for the type
- func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) error {
++func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings, error) {
  	vcdmachinelog.Info("validate update", "name", r.Name)
  
-@@ -78,7 +79,7 @@ func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) error {
- 	return nil
+ 	old, ok := oldRaw.(*VCDMachine)
+ 	if !ok {
+-		return apierrors.NewBadRequest(fmt.Sprintf("expected an VCDMachine but got a %T", oldRaw))
++		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an VCDMachine but got a %T", oldRaw))
+ 	}
+ 
+ 	// the relation between CR->VM_NAME have to be consistent therefore VmNamingTemplate is immutable
+ 	if r.Spec.VmNamingTemplate != old.Spec.VmNamingTemplate {
+-		return field.Forbidden(field.NewPath("spec.vmNamingTemplate"), "cannot be modified")
++		return nil, field.Forbidden(field.NewPath("spec.vmNamingTemplate"), "cannot be modified")
+ 	}
+ 
+-	return nil
++	return nil, nil
  }
  
 -// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDMachine) ValidateDelete() error {
 +// ValidateDelete implements admission.Validator so a webhook will be registered for the type
- func (r *VCDMachine) ValidateDelete() error {
++func (r *VCDMachine) ValidateDelete() (admission.Warnings, error) {
  	vcdmachinelog.Info("validate delete", "name", r.Name)
  
+ 	// TODO(user): fill in your validation logic upon object deletion.
+-	return nil
++	return nil, nil
+ }
 diff --git a/api/v1beta2/vcdmachinetemplate_types.go b/api/v1beta2/vcdmachinetemplate_types.go
 index 74707f0..27ae015 100644
 --- a/api/v1beta2/vcdmachinetemplate_types.go
