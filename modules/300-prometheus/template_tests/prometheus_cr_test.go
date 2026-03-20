@@ -87,20 +87,44 @@ internal:
       tlsConfig:
         insecureSkipVerify: true
       url: https://test-remote-write-custom-auth.domain.com/api/v1/write
+      writeRelabelConfigs:
+        - regex: ^$
+          replacement: deckhouse
+          sourceLabels:
+            - prometheus
+          targetLabel: prometheus
       customAuthToken: Test
   - name: test-remote-write-basic-auth
     spec:
       url: https://test-remote-write-basic-auth.domain.com/api/v1/write
+      writeRelabelConfigs:
+        - regex: ^$
+          replacement: deckhouse
+          sourceLabels:
+            - prometheus
+          targetLabel: prometheus
       basicAuth:
         password: pass
         username: user
   - name: test-remote-write-bearer-token
     spec:
       url: https://test-remote-write-bearer-token.domain.com/api/v1/write
+      writeRelabelConfigs:
+        - regex: ^$
+          replacement: deckhouse
+          sourceLabels:
+            - prometheus
+          targetLabel: prometheus
       bearerToken: xxx
   - name: test-remote-write-custom-ca
     spec:
       url: https://test-remote-write-custom-ca.domain.com/api/v1/write
+      writeRelabelConfigs:
+        - regex: ^$
+          replacement: deckhouse
+          sourceLabels:
+            - prometheus
+          targetLabel: prometheus
       tlsConfig:
         ca: CRTCRTCRT
   vpa:
