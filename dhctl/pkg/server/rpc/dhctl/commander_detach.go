@@ -50,7 +50,21 @@ import (
 type detachParams struct {
 	request      *pb.CommanderDetachStart
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.CommanderDetachResponse
+}
+
+func (p *detachParams) commanderClusterUUID() string {
+	return p.request.Options.CommanderUuid
+}
+
+func (p *detachParams) loggerOptions(ctx context.Context) logger.Options {
+	return newLoggerProvider(&loggerProviderParams[*pb.CommanderDetachResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.CommanderDetachResponse {
+			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})(ctx)
 }
 
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
@@ -70,21 +84,6 @@ func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 		dataFunc: func(progress phases.Progress) *pb.CommanderDetachResponse {
 			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.CommanderDetachResponse {
-			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, receiveCh, doneCh, internalErrCh)
@@ -118,7 +117,7 @@ connectionProcessor:
 					result := s.commanderDetachSafe(ctx, detachParams{
 						request:      message.Start,
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}}
 				}()
@@ -155,10 +154,12 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
+	logOptions := p.loggerOptions(ctx)
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
+		OutStream:   logOptions.DefaultWriter,
 		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
+		DebugStream: logOptions.DebugWriter,
 	})
 
 	loggerFor := log.GetDefaultLogger()

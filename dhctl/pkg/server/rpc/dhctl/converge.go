@@ -50,7 +50,21 @@ type convergeParams struct {
 	request      *pb.ConvergeStart
 	switchPhase  phases.DefaultOnPhaseFunc
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.ConvergeResponse
+}
+
+func (p *convergeParams) commanderClusterUUID() string {
+	return p.request.Options.CommanderUuid
+}
+
+func (p *convergeParams) loggerOptions(ctx context.Context) logger.Options {
+	return newLoggerProvider(&loggerProviderParams[*pb.ConvergeResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.ConvergeResponse {
+			return &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})(ctx)
 }
 
 func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
@@ -73,21 +87,6 @@ func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 		dataFunc: func(progress phases.Progress) *pb.ConvergeResponse {
 			return &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.ConvergeResponse {
-			return &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.ConvergeRequest, *pb.ConvergeResponse](server, receiveCh, doneCh, internalErrCh)
@@ -122,7 +121,7 @@ connectionProcessor:
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}}
 				}()
@@ -177,10 +176,12 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
+	logOptions := p.loggerOptions(ctx)
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
+		OutStream:   logOptions.DefaultWriter,
 		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
+		DebugStream: logOptions.DebugWriter,
 	})
 
 	loggerFor := log.GetDefaultLogger()

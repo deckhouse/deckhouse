@@ -47,7 +47,21 @@ type bootstrapParams struct {
 	request      *pb.BootstrapStart
 	switchPhase  phases.DefaultOnPhaseFunc
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.BootstrapResponse
+}
+
+func (p *bootstrapParams) commanderClusterUUID() string {
+	return p.request.Options.CommanderUuid
+}
+
+func (p *bootstrapParams) loggerOptions(ctx context.Context) logger.Options {
+	return newLoggerProvider(&loggerProviderParams[*pb.BootstrapResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.BootstrapResponse {
+			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})(ctx)
 }
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
@@ -70,21 +84,6 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 		dataFunc: func(progress phases.Progress) *pb.BootstrapResponse {
 			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.BootstrapResponse {
-			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.BootstrapRequest, *pb.BootstrapResponse](server, receiveCh, doneCh, internalErrCh)
@@ -119,7 +118,7 @@ connectionProcessor:
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}}
 				}()
@@ -174,10 +173,12 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
+	logOptions := p.loggerOptions(ctx)
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
+		OutStream:   logOptions.DefaultWriter,
 		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
+		DebugStream: logOptions.DebugWriter,
 	})
 
 	loggerFor := log.GetDefaultLogger()

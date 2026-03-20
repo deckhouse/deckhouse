@@ -48,7 +48,21 @@ import (
 type checkParams struct {
 	request      *pb.CheckStart
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.CheckResponse
+}
+
+func (p *checkParams) commanderClusterUUID() string {
+	return p.request.Options.CommanderUuid
+}
+
+func (p *checkParams) loggerOptions(ctx context.Context) logger.Options {
+	return newLoggerProvider(&loggerProviderParams[*pb.CheckResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.CheckResponse {
+			return &pb.CheckResponse{Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})(ctx)
 }
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
@@ -68,21 +82,6 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 		dataFunc: func(progress phases.Progress) *pb.CheckResponse {
 			return &pb.CheckResponse{Message: &pb.CheckResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.CheckResponse {
-			return &pb.CheckResponse{Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.CheckRequest, *pb.CheckResponse](server, receiveCh, doneCh, internalErrCh)
@@ -116,7 +115,7 @@ connectionProcessor:
 					result := s.checkSafe(ctx, checkParams{
 						request:      message.Start,
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
@@ -152,10 +151,12 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
+	logOptions := p.loggerOptions(ctx)
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
+		OutStream:   logOptions.DefaultWriter,
 		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
+		DebugStream: logOptions.DebugWriter,
 	})
 
 	loggerFor := log.GetDefaultLogger()

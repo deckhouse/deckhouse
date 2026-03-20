@@ -44,7 +44,21 @@ type attachParams struct {
 	request      *pb.CommanderAttachStart
 	switchPhase  phases.OnPhaseFunc[attach.PhaseData]
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.CommanderAttachResponse
+}
+
+func (p *attachParams) commanderClusterUUID() string {
+	return p.request.Options.CommanderUuid
+}
+
+func (p *attachParams) loggerOptions(ctx context.Context) logger.Options {
+	return newLoggerProvider(&loggerProviderParams[*pb.CommanderAttachResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.CommanderAttachResponse {
+			return &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})(ctx)
 }
 
 func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
@@ -67,21 +81,6 @@ func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
 		dataFunc: func(progress phases.Progress) *pb.CommanderAttachResponse {
 			return &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.CommanderAttachResponse {
-			return &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.CommanderAttachRequest, *pb.CommanderAttachResponse](server, receiveCh, doneCh, internalErrCh)
@@ -116,7 +115,7 @@ connectionProcessor:
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}}
 				}()
@@ -171,10 +170,12 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
+	logOptions := p.loggerOptions(ctx)
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
+		OutStream:   logOptions.DefaultWriter,
 		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
+		DebugStream: logOptions.DebugWriter,
 	})
 
 	loggerFor := log.GetDefaultLogger()
