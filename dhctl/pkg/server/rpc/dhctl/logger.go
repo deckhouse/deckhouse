@@ -28,6 +28,7 @@ type logAttributesProvider interface {
 }
 
 type actionForInitLogger interface {
+	logAttributesProvider
 	loggerOptions(ctx context.Context) logger.Options
 }
 
@@ -68,5 +69,11 @@ func initDhctlLogger(ctx context.Context, action actionForInitLogger) log.Logger
 		DebugStream: logOptions.DebugWriter,
 	})
 
-	return log.GetDefaultLogger()
+	logger := log.GetDefaultLogger()
+
+	// unfortunately commander has different uuid for storing in db (and show in url)
+    // and uuid passed to actions. For better observability, output this id to info log
+	logger.LogInfoF("Got commander cluster uuid: %s\n", action.commanderClusterUUID())
+
+	return logger
 }
