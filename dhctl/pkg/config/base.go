@@ -88,6 +88,10 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 		return nil, err
 	}
 
+	if dc == nil {
+		dc = app.GetDirConfig()
+	}
+
 	metaConfig.DownloadRootDir = dc.DownloadDir
 	metaConfig.DownloadCacheDir = dc.DownloadCacheDir
 
