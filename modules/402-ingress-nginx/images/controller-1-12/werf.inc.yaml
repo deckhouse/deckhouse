@@ -32,7 +32,7 @@
 {{ $yajlVersion := "2.1.0" }}
 {{ $gccVersion := "releases/gcc-14.2.0" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-patches-artifact
 fromImage: builder/src
 final: false
 git:
@@ -40,7 +40,46 @@ git:
   to: /patches
   stageDependencies:
     install:
-      - '**/*'
+      - 001-lua-info.patch
+      - 002-makefile.patch
+      - 003-healthcheck.patch
+      - 004-util.patch
+      - 005-add-http3.patch
+      - 006-new-metrics.patch
+      - 007-default-backend-fix.patch
+      - 011-restore-validation.patch
+      - 012-validation-mode.patch
+      - 013-verbose-maxmind-logs.patch
+      - 014-go-mod.patch
+      - 015-fix-success-reload-metric.patch
+      - 016-disable-error-logs.patch
+      - 017-fix-sorting.patch
+      - 018-geoip-ver-metric.patch
+      - 019-skip-tls-verification-maxmind.patch
+      - 020-ingress-update-status.patch
+      - 021-use-proxy-real-ip-cidr-v2.patch
+      - 022-cve-03022026.patch
+      - 024-fix-rewrite-target-cve.patch
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-patches-artifact
+fromImage: builder/src
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - 008-balancer-lua.patch
+      - 009-nginx-tmpl.patch
+      - 010-auth-cookie-always.patch
+      - 021-use-proxy-real-ip-cidr-v2.patch
+      - 022-cve-03022026.patch
+      - 023-lua_ingress-use-request-host-for-https-redirect.patch
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-local-files-artifact
+fromImage: builder/src
+final: false
+git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
   to: /src/rootfs
   stageDependencies:
@@ -56,6 +95,15 @@ git:
   stageDependencies:
     install:
       - '**/*'
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: builder/src
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-patches-artifact
+  add: /patches
+  to: /patches
+  before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -65,11 +113,72 @@ shell:
   - cd /src
   - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
-  - git apply /patches/*.patch --verbose
+  - |
+    for PATCH in \
+      001-lua-info.patch \
+      002-makefile.patch \
+      003-healthcheck.patch \
+      004-util.patch \
+      005-add-http3.patch \
+      006-new-metrics.patch \
+      007-default-backend-fix.patch \
+      011-restore-validation.patch \
+      012-validation-mode.patch \
+      013-verbose-maxmind-logs.patch \
+      014-go-mod.patch \
+      015-fix-success-reload-metric.patch \
+      016-disable-error-logs.patch \
+      017-fix-sorting.patch \
+      018-geoip-ver-metric.patch \
+      019-skip-tls-verification-maxmind.patch \
+      020-ingress-update-status.patch \
+      021-use-proxy-real-ip-cidr-v2.patch \
+      022-cve-03022026.patch \
+      024-fix-rewrite-target-cve.patch; do
+      git apply "/patches/${PATCH}" --verbose
+    done
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
-  #
+  - rm -rf /src/ingress-nginx/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-src-artifact
+fromImage: builder/src
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-patches-artifact
+  add: /patches
+  to: /patches
+  before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - mkdir -p /src
+  - cd /src
+  - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
+  - cd /src/ingress-nginx
+  - |
+    for PATCH in \
+      008-balancer-lua.patch \
+      009-nginx-tmpl.patch \
+      010-auth-cookie-always.patch \
+      021-use-proxy-real-ip-cidr-v2.patch \
+      022-cve-03022026.patch \
+      023-lua_ingress-use-request-host-for-https-redirect.patch; do
+      git apply "/patches/${PATCH}" --verbose
+    done
+  - rm -rf /src/ingress-nginx/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-deps-artifact
+fromImage: builder/src
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
   - mkdir -p /src/nginx-deps
   - git clone -b {{ $nginxDepsBranch }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-deps.git /src/nginx-deps
     # Dependency for opentelemetry-cpp (source: opentelemetry-cpp/cmake/nlohmann-json.cmakee)
@@ -117,20 +226,19 @@ shell:
   - git clone -b {{ $coreRulesetBranch }} $(cat /run/secrets/SOURCE_REPO)/coreruleset/coreruleset
   - mv coreruleset owasp-modsecurity-crs
   #
-  - rm -rf /src/ingress-nginx/.git
   - rm -rf /src/nginx-deps/.git
   - rm -rf /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json/.git
-  - rm -rf /src/ngx_brotli/.git
-  - rm -rf /src/ngx_brotli/deps/brotli/.git
-  - rm -rf /src/ssdeep/.git
-  - rm -rf /src/ModSecurity/.git
-  - rm -rf /src/ModSecurity/test/test-cases/secrules-language-tests/.git
-  - rm -rf /src/ModSecurity/others/libinjection/.git
-  - rm -rf /src/ModSecurity/bindings/python/.git
-  - rm -rf /src/ModSecurity/others/mbedtls/.git
-  - rm -rf /src/ModSecurity/others/mbedtls/framework/.git
+  - rm -rf /src/nginx-deps/ngx_brotli/.git
+  - rm -rf /src/nginx-deps/ngx_brotli/deps/brotli/.git
+  - rm -rf /src/nginx-deps/ssdeep/.git
+  - rm -rf /src/nginx-deps/ModSecurity/.git
+  - rm -rf /src/nginx-deps/ModSecurity/test/test-cases/secrules-language-tests/.git
+  - rm -rf /src/nginx-deps/ModSecurity/others/libinjection/.git
+  - rm -rf /src/nginx-deps/ModSecurity/bindings/python/.git
+  - rm -rf /src/nginx-deps/ModSecurity/others/mbedtls/.git
+  - rm -rf /src/nginx-deps/ModSecurity/others/mbedtls/framework/.git
   - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/.git
-  - rm -rf /src/owasp-modsecurity-crs/.git
+  - rm -rf /src/nginx-deps/owasp-modsecurity-crs/.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
@@ -163,15 +271,15 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: builder/alpine-3.21
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-src-artifact
   add: /src/ingress-nginx/images/nginx/rootfs/
   to: /
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-local-files-artifact
   add: /src/rootfs/etc
   to: /src/etc
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-deps-artifact
   add: /src/nginx-deps
   to: /src/nginx-deps
   before: install
@@ -713,8 +821,8 @@ import:
   - lib/lua/5.1/pb.so
   - share/lua/5.1/protoc.lua
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/etc
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-src-artifact
+  add: /src/ingress-nginx/rootfs/etc
   to: /src/rootfs/etc
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -934,13 +1042,13 @@ import:
   owner: "64535"
   group: "64535"
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-local-files-artifact
   add: /src/curl-chroot-wrapper.sh
   to: /usr/bin/curl
   owner: "64535"
   group: "64535"
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-local-files-artifact
   add: /src/nginx-chroot-wrapper.sh
   to: /usr/bin/nginx
   owner: "64535"
