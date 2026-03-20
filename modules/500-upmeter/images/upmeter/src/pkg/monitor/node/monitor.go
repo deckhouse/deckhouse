@@ -73,10 +73,6 @@ func (m *Monitor) Stop() {
 	close(m.stopCh)
 }
 
-func (m *Monitor) getLogger() *log.Entry {
-	return m.logger
-}
-
 func (m *Monitor) List() ([]*corev1.Node, error) {
 	list := make([]*corev1.Node, 0)
 	for _, obj := range m.informer.GetStore().List() {
