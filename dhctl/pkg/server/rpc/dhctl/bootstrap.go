@@ -49,10 +49,6 @@ type bootstrapParams struct {
 	sendCh       chan *pb.BootstrapResponse
 }
 
-func (p *bootstrapParams) commanderClusterUUID() string {
-	return p.request.Options.CommanderUuid
-}
-
 func (p *bootstrapParams) loggerWidth() int {
 	return int(p.request.Options.LogWidth)
 }

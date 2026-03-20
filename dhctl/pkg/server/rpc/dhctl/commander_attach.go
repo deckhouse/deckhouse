@@ -46,10 +46,6 @@ type attachParams struct {
 	sendCh       chan *pb.CommanderAttachResponse
 }
 
-func (p *attachParams) commanderClusterUUID() string {
-	return p.request.Options.CommanderUuid
-}
-
 func (p *attachParams) loggerWidth() int {
 	return int(p.request.Options.LogWidth)
 }

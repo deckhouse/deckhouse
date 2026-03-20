@@ -23,7 +23,6 @@ import (
 )
 
 type logAttributesProvider interface {
-	commanderClusterUUID() string
 	loggerWidth() int
 }
 
@@ -45,9 +44,8 @@ type initLoggerOptionsParams[T any] struct {
 // That's why we call initLoggerOptions inside every implementations of actionForInitLogger
 func initLoggerOptions[T any](ctx context.Context, params *initLoggerOptionsParams[T]) logger.Options {
 	logTypeDHCTL := slog.String("type", "dhctl")
-	logCommanderID := slog.String("commander_cluster_uuid", params.attributesProvider.commanderClusterUUID())
 
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL, logCommanderID)
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
 
 	logWriter := logger.NewLogWriter(loggerDefault, params.sendCh, params.consumer)
 
@@ -69,11 +67,5 @@ func initDhctlLogger(ctx context.Context, action actionForInitLogger) log.Logger
 		DebugStream: logOptions.DebugWriter,
 	})
 
-	logger := log.GetDefaultLogger()
-
-	// unfortunately commander has different uuid for storing in db (and show in url)
-    // and uuid passed to actions. For better observability, output this id to info log
-	logger.LogInfoF("Got commander cluster uuid: %s\n", action.commanderClusterUUID())
-
-	return logger
+	return log.GetDefaultLogger()
 }

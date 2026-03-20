@@ -50,10 +50,6 @@ type checkParams struct {
 	sendCh       chan *pb.CheckResponse
 }
 
-func (p *checkParams) commanderClusterUUID() string {
-	return p.request.Options.CommanderUuid
-}
-
 func (p *checkParams) loggerWidth() int {
 	return int(p.request.Options.LogWidth)
 }

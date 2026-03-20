@@ -52,10 +52,6 @@ type detachParams struct {
 	sendCh       chan *pb.CommanderDetachResponse
 }
 
-func (p *detachParams) commanderClusterUUID() string {
-	return p.request.Options.CommanderUuid
-}
-
 func (p *detachParams) loggerWidth() int {
 	return int(p.request.Options.LogWidth)
 }

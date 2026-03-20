@@ -47,10 +47,6 @@ type abortParams struct {
 	sendCh       chan *pb.AbortResponse
 }
 
-func (p *abortParams) commanderClusterUUID() string {
-	return p.request.Options.CommanderUuid
-}
-
 func (p *abortParams) loggerWidth() int {
 	return int(p.request.Options.LogWidth)
 }

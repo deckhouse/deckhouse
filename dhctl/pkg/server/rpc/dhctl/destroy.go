@@ -51,10 +51,6 @@ type destroyParams struct {
 	sendCh       chan *pb.DestroyResponse
 }
 
-func (p *destroyParams) commanderClusterUUID() string {
-	return p.request.Options.CommanderUuid
-}
-
 func (p *destroyParams) loggerWidth() int {
 	return int(p.request.Options.LogWidth)
 }

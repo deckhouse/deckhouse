@@ -52,10 +52,6 @@ type convergeParams struct {
 	sendCh       chan *pb.ConvergeResponse
 }
 
-func (p *convergeParams) commanderClusterUUID() string {
-	return p.request.Options.CommanderUuid
-}
-
 func (p *convergeParams) loggerWidth() int {
 	return int(p.request.Options.LogWidth)
 }
