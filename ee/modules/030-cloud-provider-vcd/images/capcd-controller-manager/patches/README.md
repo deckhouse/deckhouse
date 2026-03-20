@@ -62,30 +62,19 @@ Changes:
 - Add TemplateOrg field to VCDMachine spec to specify the organization of the template OVA
 - Add metadata support for VCDMachine (metadata types, structure and field in Spec)
 
-
-### 006-update-api-v1beta1-imports.patch
-
-Files:
-
-- api/v1beta1/vcdcluster_types.go
-- api/v1beta1/vcdmachine_types.go
-- api/v1beta1/zz_generated.conversion.go
-- api/v1beta1/zz_generated.deepcopy.go
-
-Changes:
-
-- Update CAPI imports in api/v1beta1 files from v1beta1 to v1beta2 paths
-- Required for backward compatibility API conversion to work with CAPI v1.12.3
-
-### 007-update-test-imports.patch
+### 006-capi-v1beta2-compat.patch
 
 Files:
 
-- tests/e2e/utils/cluster_upgrade_utils.go
-- tests/e2e/utils/node_pool_scaling_utils.go
-- tests/e2e/workload_cluster_upgrade_test.go
-- tests/e2e/workload_cluster_resize_test.go
+- controllers/capi_objects_utils.go
 
 Changes:
 
-- Update CAPI imports in test files from v1beta1 to v1beta2 paths
+- Fix CAPI v1.12.3 API compatibility issues in controller code
+- Update `kcp.Spec.MachineTemplate.InfrastructureRef` to `kcp.Spec.MachineTemplate.Spec.InfrastructureRef` (InfrastructureRef moved to Spec)
+- Replace `vcdMachineTemplateRef.Namespace` with `kcp.Namespace` or `md.Namespace` (ContractVersionedObjectReference no longer has Namespace field)
+- Add explicit v1.ObjectReference conversion from ContractVersionedObjectReference with Kind, Name, and Namespace fields
+- Fix ReadyReplicas pointer dereference: `md.Status.ReadyReplicas` is now `*int32` instead of `int32`, add nil check
+- Fix machine.Spec.Version comparison: now `string` instead of `*string`, change checks from `!= nil && *Version` to `!= ""`
+- Add `kubeadmbootstrapv1` alias for `sigs.k8s.io/cluster-api/api/bootstrap/kubeadm/v1beta2` import
+- Replace all `v1beta1.KubeadmConfigTemplate` with `kubeadmbootstrapv1.KubeadmConfigTemplate`
