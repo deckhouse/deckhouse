@@ -549,7 +549,6 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
 After completing these steps, you will have a golden image that can be used to quickly create new virtual machines with pre-installed software and configurations.
 
-
 ## Configuring virtual machines
 
 ### How to use cloud-init to configure virtual machines?
