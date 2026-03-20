@@ -162,18 +162,18 @@ scrapeInterval: 30s
         - prometheus
       targetLabel: prometheus
   bearerToken: xxx
-- url: https://test-remote-write-custom-ca.domain.com/api/v1/write
+- tlsConfig:
+    ca:
+      configMap:
+        key: ca.crt
+        name: d8-prometheus-remote-write-ca-test-remote-write-custom-ca
+  url: https://test-remote-write-custom-ca.domain.com/api/v1/write
   writeRelabelConfigs:
     - regex: ^$
       replacement: deckhouse
       sourceLabels:
         - prometheus
       targetLabel: prometheus
-  tlsConfig:
-    ca:
-      configMap:
-        key: ca.crt
-        name: d8-prometheus-remote-write-ca-test-remote-write-custom-ca
 `))
 			rwSecret := f.KubernetesResource("Secret", "d8-monitoring", "d8-prometheus-remote-write-test-remote-write-basic-auth")
 			Expect(rwSecret.Exists()).To(BeTrue())
