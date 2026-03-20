@@ -79,7 +79,7 @@ properties:
         type: array
         default: []
         x-examples:
-        - [{"name": "aaa", "clusterUUID": "uuid-aaa", "spiffeEndpoint": "ccc", "rootCA": "---ROOT CA---", "metadataCA": "---METADATA CA---", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
+        - [{"name": "aaa", "clusterUUID": "uuid-aaa", "spiffeEndpoint": "ccc", "rootCA": "---ROOT CA---", "metadataExporterCA": "---METADATA CA---", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
       remotePublicMetadata:
         type: object
         default: {}

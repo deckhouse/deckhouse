@@ -51,7 +51,7 @@ type IstioMulticlusterMergeCrdInfo struct {
 	EnableIngressGateway     bool                                 `json:"enableIngressGateway"`
 	EnableInsecureConnection bool                                 `json:"insecureSkipVerify"`
 	IngressGateways          *[]eeCrd.MulticlusterIngressGateways `json:"ingressGateways"`
-	MetadataCA               string                               `json:"metadataCA"`
+	MetadataExporterCA       string                               `json:"metadataExporterCA"`
 	Name                     string                               `json:"name"`
 	NetworkName              string                               `json:"networkName"`
 	Public                   *eeCrd.AlliancePublicMetadata        `json:"public,omitempty"`
@@ -182,7 +182,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		EnableIngressGateway:     multicluster.Spec.EnableIngressGateway,
 		EnableInsecureConnection: multicluster.Spec.Metadata.EnableInsecureConnection,
 		IngressGateways:          igs,
-		MetadataCA:               multicluster.Spec.Metadata.CA,
+		MetadataExporterCA:       multicluster.Spec.Metadata.CA,
 		Name:                     multicluster.GetName(),
 		NetworkName:              networkName,
 		Public:                   p,

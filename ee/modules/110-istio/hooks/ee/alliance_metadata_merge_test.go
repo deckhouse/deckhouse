@@ -373,7 +373,7 @@ status:
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.spiffeEndpoint").String()).To(Equal("https://some-proper-host/public/spiffe-bundle-endpoint"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.apiHost").String()).To(Equal("istio-api-0.example.com"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.networkName").String()).To(Equal("network-qqq-123"))
-			Expect(f.ValuesGet("istio.internal.multiclusters.0.metadataCA").String()).To(Equal("custom-metadata-ca-m0"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.0.metadataExporterCA").String()).To(Equal("custom-metadata-ca-m0"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.clusterUUID").String()).To(Equal("aaa-bbb-m0"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.rootCA").String()).To(Equal("abc-m0"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.ingressGateways").String()).To(MatchJSON(`
@@ -388,7 +388,7 @@ status:
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.spiffeEndpoint").String()).To(Equal("https://some-proper-host/public/spiffe-bundle-endpoint"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.apiHost").String()).To(Equal("istio-api-1.example.com"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.networkName").String()).To(Equal("network-xxx-123"))
-			Expect(f.ValuesGet("istio.internal.multiclusters.1.metadataCA").String()).To(Equal(""))
+			Expect(f.ValuesGet("istio.internal.multiclusters.1.metadataExporterCA").String()).To(Equal(""))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.clusterUUID").String()).To(Equal("aaa-bbb-m1"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.rootCA").String()).To(Equal("abc-m1"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.ingressGateways").Exists()).To(BeTrue())
