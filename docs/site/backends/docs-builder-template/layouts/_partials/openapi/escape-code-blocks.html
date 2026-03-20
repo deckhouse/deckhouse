@@ -1,0 +1,15 @@
+{{/*
+  Escapes HTML special chars inside <code>...</code> blocks only
+  (content between the tags): < → &lt;, > → &gt;, ' → &#39;, " → &#34.
+  & is not escaped here so existing entities (e.g. &lt; from markdown) are not double-escaped.
+  Pass the output of markdownify (HTML string).
+*/}}
+{{- $html := default "" . }}
+{{- $codeBlocks := findRE `(?s)<code>.*?</code>` $html }}
+{{- range $codeBlocks }}
+  {{- $inner := replaceRE `(?s)<code>(.*?)</code>` "$1" . }}
+  {{- $escaped := $inner | replaceRE "<" "&lt;" | replaceRE ">" "&gt;" | replaceRE "'" "&#39;" | replaceRE `"` "&#34;" }}
+  {{- $fixed := printf "<code>%s</code>" $escaped }}
+  {{- $html = replace $html . $fixed }}
+{{- end }}
+{{- $html | safeHTML }}

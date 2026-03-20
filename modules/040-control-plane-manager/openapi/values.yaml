@@ -91,6 +91,10 @@ properties:
             caData:
               type: string
         default: []
+      disableAdmissionPlugins:
+        type: string
+        pattern: '^[a-zA-Z,]+$'
+        description: "Comma-separated list of admission plugins to disable on kube-apiserver"
       allowedFeatureGates:
         type: object
         default: {}

@@ -1,6 +1,6 @@
 ---
 title: "Управление узлами"
-permalink: ru/architecture/cluster-and-infrastructure/node.html
+permalink: ru/architecture/cluster-and-infrastructure/node-management/overview.html
 lang: ru
 search: архитектура управления узлами, жизненный цикл узлов
 description: Архитектура управления узлами в Deckhouse Kubernetes Platform — типы узлов, механика добавления, автоматическое развертывание.

@@ -39,7 +39,7 @@ func newStorage(ctx *dbcontext.DbContext, originsCount int) *storage {
 }
 
 func (s *storage) Add(syncID SyncIdentifier, origin string, episodes []*check.Episode) error {
-	var entities []dao.ExportEntity
+	entities := make([]dao.ExportEntity, 0, len(episodes))
 	for _, ep := range episodes {
 		entity := dao.ExportEntity{
 			Episode: *ep,
