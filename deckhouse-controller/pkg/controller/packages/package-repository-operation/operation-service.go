@@ -537,34 +537,33 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 	}
 	// Version already exists
 	if err == nil {
-		// Version marked as not exist in registry
 		isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry]
-		if ok && isBundleExistInRegistry == "false" {
-			logger.Debug("version marked as not exist in registry, checking if bundle image exists")
-
-			err := s.svc.Package(packageName).CheckImageExists(ctx, version)
-			if err != nil && !errors.Is(err, regClient.ErrImageNotFound) {
-				logger.Debug("bundle image not found", log.Err(err))
-				return nil
-			}
-			if err != nil {
-				logger.Warn("check bundle image exists", log.Err(err))
-				return fmt.Errorf("check bundle image exists: %w", err)
-			}
-
-			logger.Debug("bundle image exists, marking package version as draft")
-
-			original := pkgVersion.DeepCopy()
-
-			pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "true"
-			pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelDraft] = "true"
-
-			err = s.client.Patch(ctx, pkgVersion, client.MergeFrom(original))
-			if err != nil {
-				return fmt.Errorf("update application package version: %w", err)
-			}
-
+		if !ok || isBundleExistInRegistry != "false" {
 			return nil
+		}
+		// Version marked as not exist in registry
+		logger.Debug("version marked as not exist in registry, checking if bundle image exists")
+
+		err := s.svc.Package(packageName).CheckImageExists(ctx, version)
+		if err != nil && !errors.Is(err, regClient.ErrImageNotFound) {
+			logger.Debug("bundle image not found", log.Err(err))
+			return nil
+		}
+		if err != nil {
+			logger.Warn("check bundle image exists", log.Err(err))
+			return fmt.Errorf("check bundle image exists: %w", err)
+		}
+
+		logger.Debug("bundle image exists, marking package version as draft")
+
+		original := pkgVersion.DeepCopy()
+
+		pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "true"
+		pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelDraft] = "true"
+
+		err = s.client.Patch(ctx, pkgVersion, client.MergeFrom(original))
+		if err != nil {
+			return fmt.Errorf("update application package version: %w", err)
 		}
 
 		return nil
