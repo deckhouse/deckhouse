@@ -629,6 +629,7 @@ shell:
   - |
     bash -eu -c '
     writeDirs=(
+      /chroot/tmp/nginx
       /chroot/etc/nginx
       /chroot/usr/local
       /chroot/etc/ingress-controller
@@ -647,7 +648,6 @@ shell:
       /chroot/var/lib/nginx/proxy
       /chroot/var/lib/nginx/scgi
       /chroot/var/lib/nginx/uwsgi
-      /chroot/tmp/nginx
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
