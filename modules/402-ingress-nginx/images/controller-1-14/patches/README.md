@@ -156,7 +156,7 @@ The fix is to use registration when checking if informer has been synced.
 
 This patch adds validating `X-Forwarded-Port` and `X-Forwarded-Proto` when redirecting from/to www.
 
-### 026-added-sandbox-for-validation.patch
+### 026-add-sandbox-for-validation.patch
 
 This patch switches `nginx -t` execution according to `spec.validationSandboxMode` for ingress-nginx `1.14`:
 

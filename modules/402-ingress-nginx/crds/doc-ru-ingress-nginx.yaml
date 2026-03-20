@@ -719,19 +719,20 @@ spec:
                 validationEnabled:
                   description: |
                     Включает валидацию Ingress-правил.
-                    > **Внимание.** Включение валидации увеличивает нагрузку на master-узлы кластера.
-                annotationValidationEnabled:
+
+                    > **Внимание.** Для валидирования запускается отдельный pod контроллера, что влечет за собой увеличение нагрузки на master-узлы кластера.
+                validationIsolationMode:
                   description: |
-                    Включает валидацию аннотаций Ingress-правил.
-                validationSandboxMode:
-                  description: |
-                    Выбирает режим изоляции валидации для версии контроллера `1.14`.
+                    Выбирает режим изоляции процесса валидации конфигурации NGINX для версии контроллера `1.14`.
 
                     Поддерживаемые режимы:
                                          
-                    * `Disabled` — использует обычный путь валидации через `nginx -t` без дополнительной изоляции.
-                    * `Standard` — запускает валидацию через `/usr/bin/unshare -S 64535 -R /validation-chroot`, используя отдельный минимальный `/validation-chroot` и отдельный временный каталог для validation-конфигов. Этот режим лучше совместим с hardened-hosts, но не даёт ptrace-based runtime-проверок доступа к файлам и seccomp-фильтрации из `/usr/bin/sandbox`.
+                    * `None` — в данном режиме запуск валидации конфигурации NGINX производится без использования механизмов изоляции. Во избежание возможной компромитации чувствительных данных, валидация осуществляется без учета уже сконфигурированных Ingress-объектов в кластере.
+                    * `Chroot` — запускает валидацию через `/usr/bin/unshare -S 64535 -R /validation-chroot`, используя отдельный минимальный `/validation-chroot` и отдельный временный каталог для validation-конфигов. Этот режим лучше совместим с hardened-hosts, но не даёт ptrace-based runtime-проверок доступа к файлам и seccomp-фильтрации из `/usr/bin/sandbox`.
                     * `Full` — запускает валидацию через `/usr/bin/sandbox` с ptrace-based sandbox runner. Это самый строгий режим: он сохраняет seccomp-фильтрацию и runtime-проверки путей, но требует поддержки ptrace-based sandboxing со стороны хоста.
+                annotationValidationEnabled:
+                  description: |
+                    Включает валидацию аннотаций Ingress-правил.
                 nodeSelector:
                   description: |
                     Аналогично параметру `spec.nodeSelector` у подов.

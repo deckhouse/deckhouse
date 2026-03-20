@@ -626,29 +626,29 @@ shell:
   # remove .a files
   - find /usr/local -name "*.a" -print | xargs /bin/rm
   setup:
-  # Source: rootfs/chroot.sh
+  # Source: rootfs/chroot.sh — physical rootfs lives under /chroot/validation-chroot; /chroot/* are symlinks (see chroot-artifact).
   - |
     bash -eu -c '
     writeDirs=(
-      /chroot/tmp/nginx
-      /chroot/etc/nginx
-      /chroot/usr/local
-      /chroot/etc/ingress-controller
-      /chroot/etc/ingress-controller/ssl
-      /chroot/etc/ingress-controller/auth
-      /chroot/etc/ingress-controller/telemetry
-      /chroot/etc/ingress-controller/geoip
-      /chroot/opt/modsecurity/var/log
-      /chroot/opt/modsecurity/var/upload
-      /chroot/opt/modsecurity/var/audit
-      /chroot/var/log/audit
-      /chroot/var/lib/nginx
-      /chroot/var/log/nginx
-      /chroot/var/lib/nginx/body
-      /chroot/var/lib/nginx/fastcgi
-      /chroot/var/lib/nginx/proxy
-      /chroot/var/lib/nginx/scgi
-      /chroot/var/lib/nginx/uwsgi
+      /chroot/validation-chroot/tmp/nginx
+      /chroot/validation-chroot/etc/nginx
+      /chroot/validation-chroot/usr/local
+      /chroot/validation-chroot/etc/ingress-controller
+      /chroot/validation-chroot/etc/ingress-controller/ssl
+      /chroot/validation-chroot/etc/ingress-controller/auth
+      /chroot/validation-chroot/etc/ingress-controller/telemetry
+      /chroot/validation-chroot/etc/ingress-controller/geoip
+      /chroot/validation-chroot/opt/modsecurity/var/log
+      /chroot/validation-chroot/opt/modsecurity/var/upload
+      /chroot/validation-chroot/opt/modsecurity/var/audit
+      /chroot/validation-chroot/var/log/audit
+      /chroot/validation-chroot/var/log/nginx
+      /chroot/validation-chroot/var/lib/nginx
+      /chroot/validation-chroot/var/lib/nginx/body
+      /chroot/validation-chroot/var/lib/nginx/fastcgi
+      /chroot/validation-chroot/var/lib/nginx/proxy
+      /chroot/validation-chroot/var/lib/nginx/scgi
+      /chroot/validation-chroot/var/lib/nginx/uwsgi
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
@@ -659,10 +659,10 @@ shell:
   - mkdir -p /etc/ingress-controller/telemetry && touch /etc/ingress-controller/telemetry/opentelemetry.toml
   - chown -R deckhouse:deckhouse /etc/nginx/opentelemetry.toml /etc/ingress-controller/telemetry/opentelemetry.toml
   #
-  - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
-  - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
-  - cp -a /etc/nginx/* /chroot/etc/nginx/
-  - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
+  - mkdir -p /chroot/validation-chroot/lib /chroot/validation-chroot/proc /chroot/validation-chroot/usr /chroot/validation-chroot/bin /chroot/validation-chroot/dev /chroot/validation-chroot/run
+  - cp /etc/passwd /etc/group /etc/hosts /chroot/validation-chroot/etc/
+  - cp -a /etc/nginx/* /chroot/validation-chroot/etc/nginx/
+  - cp -a /etc/ingress-controller/* /chroot/validation-chroot/etc/ingress-controller/
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
@@ -678,14 +678,14 @@ import:
 #/bin/sh is required for modsecurity lib to work
 - from: {{ index $.Images "tools/bash" }}
   add: /usr
-  to: /chroot
+  to: /chroot/validation-chroot
   includePaths:
   - bin/bash
   - bin/sh
   before: install
 - from: {{ index $.Images "tools/curl" }}
   add: /usr/bin/curl-static
-  to: /chroot/usr/bin/curl
+  to: /chroot/validation-chroot/usr/bin/curl
   owner: "64535"
   group: "64535"
   before: install
@@ -697,7 +697,7 @@ import:
   before: install
 - from: {{ index $.Images (printf "libs/lua-iconv-%s" $luaIconvVersion) }}
   add: /
-  to: /chroot/usr/local
+  to: /chroot/validation-chroot/usr/local
   owner: "0"
   group: "0"
   includePaths:
@@ -705,7 +705,7 @@ import:
   before: install
 - from: {{ index $.Images (printf "libs/lua-protobuf-%s" $luaProtobufVersion) }}
   add: /
-  to: /chroot/usr/local
+  to: /chroot/validation-chroot/usr/local
   owner: "0"
   group: "0"
   includePaths:
@@ -718,7 +718,7 @@ import:
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
-  to: /chroot
+  to: /chroot/validation-chroot
   owner: "0"
   group: "0"
   includePaths:
@@ -734,7 +734,7 @@ import:
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
-  to: /chroot
+  to: /chroot/validation-chroot
   owner: "0"
   group: "0"
   includePaths:
@@ -854,10 +854,10 @@ shell:
   - echo "deckhouse:x:64535:" >> /etc/group
   - echo "deckhouse:!::0:::::" >> /etc/shadow
 
-  # Source: rootfs/Dockerfile-chroot
-  - cp -a /src/rootfs/etc/* /chroot/etc
-  - chown -R deckhouse:deckhouse /chroot/etc
-  - chown root:root /chroot/etc/passwd /chroot/etc/group
+  # Source: rootfs/Dockerfile-chroot — files live under /chroot/validation-chroot; then /chroot/<name> -> validation-chroot/<name>
+  - cp -a /src/rootfs/etc/* /chroot/validation-chroot/etc
+  - chown -R deckhouse:deckhouse /chroot/validation-chroot/etc
+  - chown root:root /chroot/validation-chroot/etc/passwd /chroot/validation-chroot/etc/group
 
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
 
@@ -867,101 +867,8 @@ shell:
   # LD_LIBRARY_PATH does not work so below is needed for  opentelemetry/other modules
   # Put libs of newer modules under `/modules_mount/<other>/lib` and add that path below
   # Could get complicated arch specific paths become a need
-  - echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path
-  #
-  - ln -sf /chroot/etc/nginx /etc/nginx
-  - rm -rf /tmp
-  - ln -sf /chroot/tmp /tmp
-  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
-  # a hack to let the controller update files via symlinks on a read-only file system
-  - mkdir /etc/ingress-controller/lua/ -p && touch /etc/ingress-controller/lua/cfg.json
-  - ln -sf /etc/ingress-controller/lua/cfg.json /chroot/etc/nginx/lua/cfg.json
-  - mkdir /etc/ingress-controller/resolv/ -p && touch /etc/ingress-controller/resolv/resolv.conf
-  - ln -sf /etc/ingress-controller/resolv/resolv.conf /chroot/etc/resolv.conf
-  - mkdir /etc/ingress-controller/nginx/ -p && touch /etc/ingress-controller/nginx/nginx.conf
-  - ln -sf /etc/ingress-controller/nginx/nginx.conf /chroot/etc/nginx/nginx.conf
-  - ln -sf /chroot/var/log/nginx /var/log/nginx
-  - chown -R deckhouse:deckhouse /chroot/var/log/nginx
-  - mknod -m 0666 /chroot/dev/null c 1 3
-  - mknod -m 0666 /chroot/dev/random c 1 8
-  - mknod -m 0666 /chroot/dev/urandom c 1 9
-  - mknod -m 0666 /chroot/dev/full c 1 7
-  - mknod -m 0666 /chroot/dev/ptmx c 5 2
-  - mknod -m 0666 /chroot/dev/zero c 1 5
-  - mknod -m 0666 /chroot/dev/tty c 5 0
+  - echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/validation-chroot/etc/ld-musl-x86_64.path
 
-  - mkdir -p /chroot/modules_mount
-  - ln -s /chroot/modules_mount /modules_mount
-
-  # Minimal root for Standard validation mode on hosts where ptrace/userns-based sandboxing is unavailable.
-  - |
-    bash -eu -c '
-    validationDirs=(
-      /chroot/validation-chroot/bin
-      /chroot/validation-chroot/dev
-      /chroot/validation-chroot/etc
-      /chroot/validation-chroot/etc/nginx
-      /chroot/validation-chroot/etc/ingress-controller
-      /chroot/validation-chroot/etc/ingress-controller/auth
-      /chroot/validation-chroot/etc/ingress-controller/geoip
-      /chroot/validation-chroot/etc/ingress-controller/lua
-      /chroot/validation-chroot/etc/ingress-controller/nginx
-      /chroot/validation-chroot/etc/ingress-controller/resolv
-      /chroot/validation-chroot/etc/ingress-controller/ssl
-      /chroot/validation-chroot/etc/ingress-controller/telemetry
-      /chroot/validation-chroot/lib
-      /chroot/validation-chroot/modules_mount/etc/nginx/modules/otel
-      /chroot/validation-chroot/opt/modsecurity/var/audit
-      /chroot/validation-chroot/opt/modsecurity/var/log
-      /chroot/validation-chroot/opt/modsecurity/var/upload
-      /chroot/validation-chroot/proc
-      /chroot/validation-chroot/run
-      /chroot/validation-chroot/tmp/nginx
-      /chroot/validation-chroot/usr/lib
-      /chroot/validation-chroot/usr/local
-      /chroot/validation-chroot/usr/ssl
-      /chroot/validation-chroot/var/log/audit
-      /chroot/validation-chroot/var/log/nginx
-    );
-    for dir in "${validationDirs[@]}"; do
-      mkdir -p "${dir}";
-    done
-
-    cp -a /chroot/etc/nginx/. /chroot/validation-chroot/etc/nginx/
-    cp -a /chroot/etc/ingress-controller/. /chroot/validation-chroot/etc/ingress-controller/
-    cp -a /chroot/etc/passwd /chroot/etc/group /chroot/etc/hosts /chroot/validation-chroot/etc/
-    cp -a /chroot/etc/ld-musl-x86_64.path /chroot/validation-chroot/etc/
-
-    cp -al /chroot/bin/bash /chroot/bin/sh /chroot/validation-chroot/bin/
-    cp -al /chroot/lib/. /chroot/validation-chroot/lib/
-    cp -al /chroot/usr/lib/. /chroot/validation-chroot/usr/lib/
-    cp -al /chroot/usr/local/lib /chroot/validation-chroot/usr/local/
-    cp -al /chroot/usr/local/modsecurity /chroot/validation-chroot/usr/local/
-    cp -al /chroot/usr/local/nginx /chroot/validation-chroot/usr/local/
-
-    if [ -d /chroot/modules_mount/etc/nginx/modules/otel ]; then
-      cp -al /chroot/modules_mount/etc/nginx/modules/otel/. /chroot/validation-chroot/modules_mount/etc/nginx/modules/otel/
-    fi
-    if [ -f /chroot/usr/ssl/openssl.cnf ]; then
-      cp -al /chroot/usr/ssl/openssl.cnf /chroot/validation-chroot/usr/ssl/
-    fi
-
-    find /chroot -mindepth 1 -maxdepth 1 -type f -exec cp -al {} /chroot/validation-chroot/ \;
-
-    rm -rf /chroot/lib /chroot/usr/lib /chroot/usr/local/lib /chroot/usr/local/modsecurity /chroot/usr/local/nginx
-    ln -s validation-chroot/lib /chroot/lib
-    ln -s ../validation-chroot/usr/lib /chroot/usr/lib
-    ln -s ../../validation-chroot/usr/local/lib /chroot/usr/local/lib
-    ln -s ../../validation-chroot/usr/local/modsecurity /chroot/usr/local/modsecurity
-    ln -s ../../validation-chroot/usr/local/nginx /chroot/usr/local/nginx
-
-    chown -R deckhouse:deckhouse \
-      /chroot/validation-chroot/etc/ingress-controller \
-      /chroot/validation-chroot/opt/modsecurity/var \
-      /chroot/validation-chroot/tmp/nginx \
-      /chroot/validation-chroot/var/log/audit \
-      /chroot/validation-chroot/var/log/nginx
-    '
   - mknod -m 0666 /chroot/validation-chroot/dev/null c 1 3
   - mknod -m 0666 /chroot/validation-chroot/dev/random c 1 8
   - mknod -m 0666 /chroot/validation-chroot/dev/urandom c 1 9
@@ -969,6 +876,35 @@ shell:
   - mknod -m 0666 /chroot/validation-chroot/dev/ptmx c 5 2
   - mknod -m 0666 /chroot/validation-chroot/dev/zero c 1 5
   - mknod -m 0666 /chroot/validation-chroot/dev/tty c 5 0
+
+  - mkdir -p /chroot/validation-chroot/modules_mount
+
+  - |
+    cd /chroot
+    for item in validation-chroot/*; do
+      [ ! -e "$item" ] && continue
+      base=$(basename "$item")
+      ln -sfn "validation-chroot/${base}" "${base}"
+    done
+  # Dedicated real dir for K8s emptyDir. Drop any symlink tmp -> validation-chroot/tmp (mkdir -p would follow it); then create a fresh directory.
+  - rm -rf /chroot/tmp /chroot/var
+  - mkdir -p /chroot/tmp/nginx
+  - chown -R deckhouse:deckhouse /chroot/tmp
+
+  - ln -sf /chroot/etc/nginx /etc/nginx
+  - rm -rf /tmp
+  - ln -sf /chroot/tmp /tmp
+  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
+  # a hack to let the controller update files via symlinks on a read-only file system
+  - mkdir /etc/ingress-controller/lua/ -p && touch /etc/ingress-controller/lua/cfg.json
+  - ln -sf /etc/ingress-controller/lua/cfg.json /chroot/validation-chroot/etc/nginx/lua/cfg.json
+  - mkdir /etc/ingress-controller/resolv/ -p && touch /etc/ingress-controller/resolv/resolv.conf
+  - ln -sf /etc/ingress-controller/resolv/resolv.conf /chroot/validation-chroot/etc/resolv.conf
+  - mkdir /etc/ingress-controller/nginx/ -p && touch /etc/ingress-controller/nginx/nginx.conf
+  - ln -sf /etc/ingress-controller/nginx/nginx.conf /chroot/validation-chroot/etc/nginx/nginx.conf
+  - ln -sf /chroot/var/log/nginx /var/log/nginx
+  - chown -R deckhouse:deckhouse /chroot/validation-chroot/var/log/nginx
+  - ln -s /chroot/modules_mount /modules_mount
 
   # Utils for final image
   - cp -a /tools/setcap /apps
@@ -1082,8 +1018,6 @@ shell:
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - /apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - /apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
   - /apps/setcap    cap_net_bind_service=+ep /chroot/validation-chroot/usr/local/nginx/sbin/nginx
   - /apps/setcap -v cap_net_bind_service=+ep /chroot/validation-chroot/usr/local/nginx/sbin/nginx
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
@@ -1094,4 +1028,4 @@ imageSpec:
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]
-    env: { "PATH": "/bin:/usr/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin:/usr/local/luajit/bin", "LUA_PATH": "/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;", "LUA_CPATH": "/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;" }
+    env: { "PATH": "$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin", "LUA_PATH": "/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;", "LUA_CPATH": "/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;" }
