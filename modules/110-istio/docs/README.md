@@ -261,8 +261,8 @@ Below are their fundamental differences:
   > [source](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)
 * There are no requirements for unique subnets of modules and services in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) when clusters are operating in a [federation](#federation).
 
-   - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
-   - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
+   - When analyzing HTTP and HTTPS traffic *(in Istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
+   - At the same time, when analyzing TCP traffic *(in Istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
   >
   > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the istio's rules.
   > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.
@@ -311,8 +311,8 @@ In the `.spec.ports` section of `services`, each port must have the `name` field
 - Cluster domains in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) must be the same for all multicluster members. The default value is `cluster.local`.
 - Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) must be unique for each multicluster member.
 
-   - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
-   - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
+   - When analyzing HTTP and HTTPS traffic *(in Istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
+   - At the same time, when analyzing TCP traffic *(in Istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
   >
   > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the istio's rules.
   > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.
