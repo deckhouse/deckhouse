@@ -49,7 +49,7 @@ var _ = Describe("Istio hooks :: alliance_metadata_merge ::", func() {
 			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`[]`))
-			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[]`))
+			Expect(f.ValuesGet("istio.internal.federationServiceEntries").String()).To(MatchJSON(`[]`))
 			Expect(f.ValuesGet("istio.internal.multiclusters").String()).To(MatchJSON(`[]`))
 			Expect(f.ValuesGet("istio.internal.remotePublicMetadata").String()).To(MatchJSON(`{}`))
 			Expect(f.ValuesGet("istio.internal.multiclustersNeedIngressGateway").Bool()).To(BeFalse())
@@ -438,7 +438,7 @@ status:
 			// federation-only-full-1 has hostnames ccc, ddd, eee, fff, ggg, hhh all with endpoints [ccc:222]
 			//   → 6 entries, each with 1 port (different hostnames).
 			// Total: 7 entries, sorted by hostname then first port number.
-			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
+			Expect(f.ValuesGet("istio.internal.federationServiceEntries").String()).To(MatchJSON(`[
 				{
 					"name": "bbb-687b4cd97",
 					"hostname": "bbb",
@@ -574,7 +574,7 @@ status:
 			]`))
 
 			// serviceEntries should have ONE entry with endpoints from BOTH federations
-			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
+			Expect(f.ValuesGet("istio.internal.federationServiceEntries").String()).To(MatchJSON(`[
 				{
 					"name": "my-svc-my-ns-svc-cluster-local-9c8cbb5bc",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
@@ -623,7 +623,7 @@ status:
 			// gets grouped into one ServiceEntry with multiple ports.
 			// - dup-svc.ns.svc.cluster.local → ports 8080, 9090 (grouped)
 			// - unique-svc.ns.svc.cluster.local → port 80
-			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
+			Expect(f.ValuesGet("istio.internal.federationServiceEntries").String()).To(MatchJSON(`[
 				{
 					"name": "dup-svc-ns-svc-cluster-local-6475d67dcb",
 					"hostname": "dup-svc.ns.svc.cluster.local",
@@ -698,7 +698,7 @@ status:
 			// Each federation has different endpoints, so each (hostname, endpoint-set) is unique.
 			// cluster-x: svc.ns.svc.cluster.local:8080 → endpoints [10.0.0.1:15443]
 			// cluster-y: svc.ns.svc.cluster.local:9090 → endpoints [10.0.0.2:15443]
-			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
+			Expect(f.ValuesGet("istio.internal.federationServiceEntries").String()).To(MatchJSON(`[
 				{
 					"name": "svc-ns-svc-cluster-local-64465b95f6",
 					"hostname": "svc.ns.svc.cluster.local",
@@ -877,7 +877,7 @@ status:
 				}
 			]`))
 
-			Expect(f.ValuesGet("istio.internal.serviceEntries").String()).To(MatchJSON(`[
+			Expect(f.ValuesGet("istio.internal.federationServiceEntries").String()).To(MatchJSON(`[
 				{
 					"name": "my-svc-my-ns-svc-cluster-local-55b5c6469d",
 					"hostname": "my-svc.my-ns.svc.cluster.local",

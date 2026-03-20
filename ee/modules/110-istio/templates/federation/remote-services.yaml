@@ -1,5 +1,5 @@
 {{- if .Values.istio.federation.enabled }}
-{{- range $svc := .Values.istio.internal.serviceEntries }}
+{{- range $svc := .Values.istio.internal.federationServiceEntries }}
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
