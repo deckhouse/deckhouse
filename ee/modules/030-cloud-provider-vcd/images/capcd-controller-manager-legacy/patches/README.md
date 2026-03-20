@@ -1,4 +1,29 @@
-### 001-our-machinery.patch
+### 002-go-mod.patch
+
+Files:
+
+- go.mod
+- go.sum
+
+Changes:
+
+- Update dependencies
+- Update cluster-api from v1.4.0 to v1.12.3 (v1beta2 contract)
+- Update kubernetes dependencies to v0.34.3
+- Update controller-runtime to v0.22.5
+- Add google.golang.org/genproto excludes to resolve dependency conflicts
+
+### 003-klog.patch
+
+Files:
+
+- pkg/capisdk/defined_entity.go
+
+Changes:
+
+- Update klog to klog/v2 in other files
+
+### 005-our-machinery.patch
 
 Files:
 
@@ -24,31 +49,6 @@ Changes:
 - Fix webhook files: remove webhook import, add admission import, replace webhook.Defaulter/Validator with admission.Defaulter/Validator, update ValidateCreate/ValidateUpdate/ValidateDelete signatures to return (admission.Warnings, error) instead of just error (required for controller-runtime v0.22.5)
 - Add TemplateOrg field to VCDMachine spec to specify the organization of the template OVA
 - Add metadata support for VCDMachine (metadata types, structure and field in Spec)
-
-### 002-go-mod.patch
-
-Files:
-
-- go.mod
-- go.sum
-
-Changes:
-
-- Update dependencies
-- Update cluster-api from v1.4.0 to v1.12.3 (v1beta2 contract)
-- Update kubernetes dependencies to v0.34.3
-- Update controller-runtime to v0.22.5
-- Add google.golang.org/genproto excludes to resolve dependency conflicts
-
-### 003-klog.patch
-
-Files:
-
-- pkg/capisdk/defined_entity.go
-
-Changes:
-
-- Update klog to klog/v2 in other files
 
 ### 006-update-api-imports.patch
 
