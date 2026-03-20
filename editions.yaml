@@ -101,7 +101,6 @@ editions:
   - node-local-dns
   - node-manager
   - operator-prometheus
-  - operator-trivy
   - priority-class
   - prometheus
   - prometheus-metrics-adapter

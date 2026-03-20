@@ -81,11 +81,11 @@ func main() {
 	initFlags()
 
 	workDir := cwd()
-	config := parseConfig(configPath)
-
-	if len(config.ExcludeNamespaces) > 0 && config.ExcludeNamespaces[0] == "all" {
-		logToStdErr("WARNING: All namespaces are excluded from integrity check.\n")
+	configDir, err := filepath.Abs(configPath)
+	if err != nil {
+		panic(err)
 	}
+	validateConfigDir(configDir)
 
 	isEditionsYaml := enabledModulesConfigPath != "" && strings.HasSuffix(filepath.Clean(enabledModulesConfigPath), "editions.yaml")
 	if !isEditionsYaml {
@@ -95,12 +95,15 @@ func main() {
 
 	if editionName == "all" {
 		for _, ed := range editions.Editions {
+			cfgFile := resolveConfigFile(configDir, ed.Name)
+			config := parseConfig(cfgFile)
 			render(editions, workDir, config, ed.Name)
 		}
 	} else {
+		cfgFile := resolveConfigFile(configDir, editionName)
+		config := parseConfig(cfgFile)
 		render(editions, workDir, config, editionName)
 	}
-
 }
 
 func logToStdErr(f string, args ...any) {
@@ -118,7 +121,7 @@ func writeNamespaces(writer io.Writer, nss namespacesForIntegrity) {
 }
 
 func initFlags() {
-	flag.StringVar(&configPath, "config", "", "Path to config for generator. Required")
+	flag.StringVar(&configPath, "config", "", "Directory with default.yaml and optional <edition>.yaml configs. Required")
 	flag.StringVar(&rootDir, "root-dir", "", "Root directory for finding modules. If do not pass calculate from run")
 	flag.StringVar(&enabledModulesConfigPath, "enabled-modules-config", "", "Path to yaml config map[string]bool for filter modules")
 	flag.StringVar(&editionName, "edition", "", "Edition name (from editions.yaml) or 'all' to generate a file per edition")
@@ -128,6 +131,29 @@ func initFlags() {
 	if configPath == "" {
 		panic("-config flag is required")
 	}
+}
+
+func validateConfigDir(dir string) {
+	fi, err := os.Stat(dir)
+	if err != nil {
+		panic(fmt.Errorf("-config must be an existing directory: %w", err))
+	}
+	if !fi.IsDir() {
+		panic(fmt.Errorf("-config must be a directory: %s", dir))
+	}
+	defaultFile := filepath.Join(dir, "default.yaml")
+	if _, err := os.Stat(defaultFile); err != nil {
+		panic(fmt.Errorf("config directory must contain default.yaml: %v", err))
+	}
+}
+
+// resolveConfigFile returns <edition>.yaml in configDir if present, otherwise default.yaml.
+func resolveConfigFile(configDir, edition string) string {
+	editionFile := filepath.Join(configDir, edition+".yaml")
+	if _, err := os.Stat(editionFile); err == nil {
+		return editionFile
+	}
+	return filepath.Join(configDir, "default.yaml")
 }
 
 func parseEnabledModulesConfig(editions editionsFile, edition string) enabledModules {
@@ -142,11 +168,11 @@ func parseEnabledModulesConfig(editions editionsFile, edition string) enabledMod
 	return res
 }
 
-// editionsFile is used to read availableModules from editions.yaml.
+// editionsFile is used to read AvailableModules from editions.yaml (key matches the file).
 type editionsFile struct {
 	Editions []struct {
 		Name             string   `yaml:"name,omitempty"`
-		AvailableModules []string `yaml:"availableModules,omitempty"`
+		AvailableModules []string `yaml:"AvailableModules,omitempty"`
 	} `yaml:"editions,omitempty"`
 }
 
