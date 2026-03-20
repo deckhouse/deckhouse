@@ -51,12 +51,17 @@ Files:
 - api/v1beta2/zz_generated.deepcopy.go
 - api/v1beta2/vcdcluster_webhook.go
 - api/v1beta2/vcdmachine_webhook.go
+- api/v1beta1/vcdcluster_types.go
+- api/v1beta1/vcdmachine_types.go
+- api/v1beta1/zz_generated.conversion.go
+- api/v1beta1/zz_generated.deepcopy.go
 
 Changes:
 
 - This patch is for our usage cases of cluster-api cloud provider.
 - Update klog to klog/v2 in controllers
-- Update CAPI imports from v1beta1 to v1beta2 (api/core/v1beta2, api/bootstrap/kubeadm/v1beta2, etc.)
+- Update CAPI imports from v1beta1 to v1beta2 (api/core/v1beta2, api/bootstrap/kubeadm/v1beta2, etc.) in api/v1beta2
+- Update CAPI imports in api/v1beta1 files: change `sigs.k8s.io/cluster-api/api/v1beta1` to `sigs.k8s.io/cluster-api/api/core/v1beta2` (v1beta1 path no longer exists in CAPI v1.12.3)
 - Fix zz_generated.deepcopy.go: import CAPI v1beta2 with alias, replace v1beta1.Conditions and v1beta1.MachineAddress with v1beta2 types
 - Fix webhook files: remove webhook import, replace webhook.Defaulter/Validator with admission.CustomDefaulter/CustomValidator (required for controller-runtime v0.22.5)
 - Add TemplateOrg field to VCDMachine spec to specify the organization of the template OVA
