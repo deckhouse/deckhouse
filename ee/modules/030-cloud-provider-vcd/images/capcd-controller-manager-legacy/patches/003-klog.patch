@@ -1,5 +1,5 @@
 diff --git a/pkg/capisdk/defined_entity.go b/pkg/capisdk/defined_entity.go
-index e6e1c05..07df7b5 100644
+index e6e1c05b..07df7b56 100644
 --- a/pkg/capisdk/defined_entity.go
 +++ b/pkg/capisdk/defined_entity.go
 @@ -13,7 +13,7 @@ import (
