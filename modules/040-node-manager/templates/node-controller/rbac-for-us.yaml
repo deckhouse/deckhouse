@@ -7,14 +7,12 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 automountServiceAccountToken: false
 ---
-# ClusterRole for node-controller
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:node-manager:node-controller
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 rules:
-# NodeGroups - full access for status updates
 - apiGroups:
   - deckhouse.io
   resources:
@@ -33,7 +31,6 @@ rules:
   - get
   - update
   - patch
-# Nodes - read and update for labels/taints
 - apiGroups:
   - ""
   resources:
@@ -44,7 +41,6 @@ rules:
   - watch
   - update
   - patch
-# Secrets - read for configuration checksums and cloud provider data
 - apiGroups:
   - ""
   resources:
@@ -53,7 +49,6 @@ rules:
   - get
   - list
   - watch
-# Pods - list/get/delete for node draining (pod eviction)
 - apiGroups:
   - ""
   resources:
@@ -68,14 +63,12 @@ rules:
   - pods/eviction
   verbs:
   - create
-# DaemonSets - get for drain filter (skip daemonset pods)
 - apiGroups:
   - apps
   resources:
   - daemonsets
   verbs:
   - get
-# Events - create for NodeGroup events
 - apiGroups:
   - ""
   - events.k8s.io
@@ -84,7 +77,6 @@ rules:
   verbs:
   - create
   - patch
-# MCM Machine and MachineDeployment - read for status calculation
 - apiGroups:
   - machine.sapcloud.io
   resources:
@@ -94,7 +86,6 @@ rules:
   - get
   - list
   - watch
-# CAPI Machine and MachineDeployment - read for status calculation
 - apiGroups:
   - cluster.x-k8s.io
   resources:
@@ -104,7 +95,6 @@ rules:
   - get
   - list
   - watch
-# ModuleConfig - read for validation (customTolerationKeys)
 - apiGroups:
   - deckhouse.io
   resources:
@@ -113,7 +103,6 @@ rules:
   - get
   - list
   - watch
-# ConfigMaps - read for cluster configuration
 - apiGroups:
   - ""
   resources:
@@ -122,7 +111,6 @@ rules:
   - get
   - list
   - watch
-# Endpoints - read for master node count validation
 - apiGroups:
   - ""
   resources:
