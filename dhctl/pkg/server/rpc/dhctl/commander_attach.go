@@ -28,7 +28,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -51,14 +50,18 @@ func (p *attachParams) commanderClusterUUID() string {
 	return p.request.Options.CommanderUuid
 }
 
+func (p *attachParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
 func (p *attachParams) loggerOptions(ctx context.Context) logger.Options {
-	return newLoggerProvider(&loggerProviderParams[*pb.CommanderAttachResponse]{
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.CommanderAttachResponse]{
 		sendCh: p.sendCh,
 		consumer: func(lines []string) *pb.CommanderAttachResponse {
 			return &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 		attributesProvider: p,
-	})(ctx)
+	})
 }
 
 func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
@@ -111,7 +114,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderAttachSafe(ctx, attachParams{
+					result := s.commanderAttachSafe(ctx, &attachParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
@@ -153,7 +156,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) (result *pb.CommanderAttachResult) {
+func (s *Service) commanderAttachSafe(ctx context.Context, p *attachParams) (result *pb.CommanderAttachResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -164,21 +167,13 @@ func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) (resu
 	return s.commanderAttach(ctx, p)
 }
 
-func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.CommanderAttachResult {
+func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.CommanderAttachResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	logOptions := p.loggerOptions(ctx)
-
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes

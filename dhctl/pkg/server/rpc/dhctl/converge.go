@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
@@ -57,14 +56,18 @@ func (p *convergeParams) commanderClusterUUID() string {
 	return p.request.Options.CommanderUuid
 }
 
+func (p *convergeParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
 func (p *convergeParams) loggerOptions(ctx context.Context) logger.Options {
-	return newLoggerProvider(&loggerProviderParams[*pb.ConvergeResponse]{
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.ConvergeResponse]{
 		sendCh: p.sendCh,
 		consumer: func(lines []string) *pb.ConvergeResponse {
 			return &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 		attributesProvider: p,
-	})(ctx)
+	})
 }
 
 func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
@@ -117,7 +120,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.convergeSafe(ctx, convergeParams{
+					result := s.convergeSafe(ctx, &convergeParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
@@ -159,7 +162,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) convergeSafe(ctx context.Context, p convergeParams) (result *pb.ConvergeResult) {
+func (s *Service) convergeSafe(ctx context.Context, p *convergeParams) (result *pb.ConvergeResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -170,21 +173,13 @@ func (s *Service) convergeSafe(ctx context.Context, p convergeParams) (result *p
 	return s.converge(ctx, p)
 }
 
-func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeResult {
+func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	logOptions := p.loggerOptions(ctx)
-
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes

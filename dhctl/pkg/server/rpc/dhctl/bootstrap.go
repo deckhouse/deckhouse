@@ -30,7 +30,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -54,14 +53,18 @@ func (p *bootstrapParams) commanderClusterUUID() string {
 	return p.request.Options.CommanderUuid
 }
 
+func (p *bootstrapParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
 func (p *bootstrapParams) loggerOptions(ctx context.Context) logger.Options {
-	return newLoggerProvider(&loggerProviderParams[*pb.BootstrapResponse]{
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.BootstrapResponse]{
 		sendCh: p.sendCh,
 		consumer: func(lines []string) *pb.BootstrapResponse {
 			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 		attributesProvider: p,
-	})(ctx)
+	})
 }
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
@@ -114,7 +117,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.bootstrapSafe(ctx, bootstrapParams{
+					result := s.bootstrapSafe(ctx, &bootstrapParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
@@ -156,7 +159,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) bootstrapSafe(ctx context.Context, p bootstrapParams) (result *pb.BootstrapResult) {
+func (s *Service) bootstrapSafe(ctx context.Context, p *bootstrapParams) (result *pb.BootstrapResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -167,21 +170,13 @@ func (s *Service) bootstrapSafe(ctx context.Context, p bootstrapParams) (result 
 	return s.bootstrap(ctx, p)
 }
 
-func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.BootstrapResult {
+func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.BootstrapResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	logOptions := p.loggerOptions(ctx)
-
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes

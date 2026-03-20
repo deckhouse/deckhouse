@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -55,14 +54,18 @@ func (p *checkParams) commanderClusterUUID() string {
 	return p.request.Options.CommanderUuid
 }
 
+func (p *checkParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
 func (p *checkParams) loggerOptions(ctx context.Context) logger.Options {
-	return newLoggerProvider(&loggerProviderParams[*pb.CheckResponse]{
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.CheckResponse]{
 		sendCh: p.sendCh,
 		consumer: func(lines []string) *pb.CheckResponse {
 			return &pb.CheckResponse{Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 		attributesProvider: p,
-	})(ctx)
+	})
 }
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
@@ -112,7 +115,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.checkSafe(ctx, checkParams{
+					result := s.checkSafe(ctx, &checkParams{
 						request:      message.Start,
 						sendProgress: pt.sendProgress(),
 						sendCh:       sendCh,
@@ -135,7 +138,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) checkSafe(ctx context.Context, p checkParams) (result *pb.CheckResult) {
+func (s *Service) checkSafe(ctx context.Context, p *checkParams) (result *pb.CheckResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -145,21 +148,13 @@ func (s *Service) checkSafe(ctx context.Context, p checkParams) (result *pb.Chec
 	return s.check(ctx, p)
 }
 
-func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
+func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	logOptions := p.loggerOptions(ctx)
-
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes

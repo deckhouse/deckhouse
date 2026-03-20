@@ -18,35 +18,55 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 )
 
-type loggerProvider[T any] func(ctx context.Context) logger.Options
-
 type logAttributesProvider interface {
 	commanderClusterUUID() string
+	loggerWidth() int
 }
 
-type loggerProviderParams[T any] struct {
+type actionForInitLogger interface {
+	loggerOptions(ctx context.Context) logger.Options
+}
+
+type initLoggerOptionsParams[T any] struct {
 	sendCh             chan T
 	consumer           logger.LogConsumer[T]
 	attributesProvider logAttributesProvider
 }
 
-func newLoggerProvider[T any](params *loggerProviderParams[T]) loggerProvider[T] {
-	return func(ctx context.Context) logger.Options {
-		logTypeDHCTL := slog.String("type", "dhctl")
-		logCommanderID := slog.String("commander_cluster_uuid", params.attributesProvider.commanderClusterUUID())
+// initLoggerOptions
+// we could be to use actionForInitLogger to provide initLoggerOptionsParams
+// and call initLoggerOptions inside initDhctlLogger func
+// but all operations struct should be generic it is not good
+// That's why we call initLoggerOptions inside every implementations of actionForInitLogger
+func initLoggerOptions[T any](ctx context.Context, params *initLoggerOptionsParams[T]) logger.Options {
+	logTypeDHCTL := slog.String("type", "dhctl")
+	logCommanderID := slog.String("commander_cluster_uuid", params.attributesProvider.commanderClusterUUID())
 
-		loggerDefault := logger.L(ctx).With(logTypeDHCTL, logCommanderID)
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL, logCommanderID)
 
-		logWriter := logger.NewLogWriter(loggerDefault, params.sendCh, params.consumer)
+	logWriter := logger.NewLogWriter(loggerDefault, params.sendCh, params.consumer)
 
-		debugWriter := logger.NewDebugLogWriter(loggerDefault)
+	debugWriter := logger.NewDebugLogWriter(loggerDefault)
 
-		return logger.Options{
-			DebugWriter:   debugWriter,
-			DefaultWriter: logWriter,
-		}
+	return logger.Options{
+		DebugWriter:   debugWriter,
+		DefaultWriter: logWriter,
+		Width:         params.attributesProvider.loggerWidth(),
 	}
+}
+
+func initDhctlLogger(ctx context.Context, action actionForInitLogger) log.Logger {
+	logOptions := action.loggerOptions(ctx)
+
+	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
+		OutStream:   logOptions.DefaultWriter,
+		Width:       logOptions.Width,
+		DebugStream: logOptions.DebugWriter,
+	})
+
+	return log.GetDefaultLogger()
 }

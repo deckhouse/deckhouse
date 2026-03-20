@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/detach"
@@ -57,14 +56,18 @@ func (p *detachParams) commanderClusterUUID() string {
 	return p.request.Options.CommanderUuid
 }
 
+func (p *detachParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
 func (p *detachParams) loggerOptions(ctx context.Context) logger.Options {
-	return newLoggerProvider(&loggerProviderParams[*pb.CommanderDetachResponse]{
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.CommanderDetachResponse]{
 		sendCh: p.sendCh,
 		consumer: func(lines []string) *pb.CommanderDetachResponse {
 			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 		attributesProvider: p,
-	})(ctx)
+	})
 }
 
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
@@ -114,7 +117,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderDetachSafe(ctx, detachParams{
+					result := s.commanderDetachSafe(ctx, &detachParams{
 						request:      message.Start,
 						sendProgress: pt.sendProgress(),
 						sendCh:       sendCh,
@@ -137,7 +140,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (result *pb.CommanderDetachResult) {
+func (s *Service) commanderDetachSafe(ctx context.Context, p *detachParams) (result *pb.CommanderDetachResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -148,21 +151,13 @@ func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (resu
 	return s.commanderDetach(ctx, p)
 }
 
-func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.CommanderDetachResult {
+func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.CommanderDetachResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	logOptions := p.loggerOptions(ctx)
-
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes

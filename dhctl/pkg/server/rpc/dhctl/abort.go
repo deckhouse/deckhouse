@@ -28,7 +28,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -52,14 +51,18 @@ func (p *abortParams) commanderClusterUUID() string {
 	return p.request.Options.CommanderUuid
 }
 
+func (p *abortParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
 func (p *abortParams) loggerOptions(ctx context.Context) logger.Options {
-	return newLoggerProvider(&loggerProviderParams[*pb.AbortResponse]{
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.AbortResponse]{
 		sendCh: p.sendCh,
 		consumer: func(lines []string) *pb.AbortResponse {
 			return &pb.AbortResponse{Message: &pb.AbortResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 		attributesProvider: p,
-	})(ctx)
+	})
 }
 
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
@@ -112,7 +115,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abortSafe(ctx, abortParams{
+					result := s.abortSafe(ctx, &abortParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
@@ -154,7 +157,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.AbortResult) {
+func (s *Service) abortSafe(ctx context.Context, p *abortParams) (result *pb.AbortResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -165,21 +168,13 @@ func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.Abor
 	return s.abort(ctx, p)
 }
 
-func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
+func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	logOptions := p.loggerOptions(ctx)
-
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes

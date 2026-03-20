@@ -55,14 +55,18 @@ func (p *destroyParams) commanderClusterUUID() string {
 	return p.request.Options.CommanderUuid
 }
 
+func (p *destroyParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
 func (p *destroyParams) loggerOptions(ctx context.Context) logger.Options {
-	return newLoggerProvider(&loggerProviderParams[*pb.DestroyResponse]{
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.DestroyResponse]{
 		sendCh: p.sendCh,
 		consumer: func(lines []string) *pb.DestroyResponse {
 			return &pb.DestroyResponse{Message: &pb.DestroyResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 		attributesProvider: p,
-	})(ctx)
+	})
 }
 
 func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
@@ -115,7 +119,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.destroySafe(ctx, destroyParams{
+					result := s.destroySafe(ctx, &destroyParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
@@ -157,7 +161,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.DestroyResult) {
+func (s *Service) destroySafe(ctx context.Context, p *destroyParams) (result *pb.DestroyResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -168,21 +172,13 @@ func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.
 	return s.destroy(ctx, p)
 }
 
-func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResult {
+func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	logOptions := p.loggerOptions(ctx)
-
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
