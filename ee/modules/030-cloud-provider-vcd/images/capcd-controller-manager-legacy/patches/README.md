@@ -21,7 +21,7 @@ Changes:
 - Update klog to klog/v2 in controllers and main.go
 - Update CAPI imports from v1beta1 to v1beta2 (api/core/v1beta2, api/bootstrap/kubeadm/v1beta2, etc.) in all files
 - Fix zz_generated.deepcopy.go: import CAPI v1beta2 with alias, replace v1beta1.Conditions and v1beta1.MachineAddress with v1beta2 types
-- Fix webhook files: add admission import, replace webhook.Defaulter/Validator with admission.Defaulter/Validator (required for controller-runtime v0.22.5)
+- Fix webhook files: add admission import, replace webhook.Defaulter/Validator with admission.Defaulter/Validator, update ValidateCreate/ValidateUpdate/ValidateDelete signatures to return (admission.Warnings, error) instead of just error (required for controller-runtime v0.22.5)
 - Add TemplateOrg field to VCDMachine spec to specify the organization of the template OVA
 - Add metadata support for VCDMachine (metadata types, structure and field in Spec)
 
