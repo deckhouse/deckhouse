@@ -84,7 +84,7 @@ const istioValues = `
       operatorVersionsToInstall: []
       versionsToInstall: []
       federations: []
-      serviceEntries: []
+      federationServiceEntries: []
       multiclusters: []
       remoteAuthnKeypair:
         priv: aaa
@@ -342,7 +342,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
     - name: aaa
       port: 456
 `)
-			f.ValuesSetFromYaml("istio.internal.serviceEntries", `
+			f.ValuesSetFromYaml("istio.internal.federationServiceEntries", `
 - name: xxx-yyy-6bff7489f5
   hostname: xxx.yyy
   ports:
@@ -444,7 +444,7 @@ neighbour-0:
       port: 8080
       protocol: HTTP
 `)
-			f.ValuesSetFromYaml("istio.internal.serviceEntries", `
+			f.ValuesSetFromYaml("istio.internal.federationServiceEntries", `
 - name: my-svc-my-ns-svc-cluster-local-9c8cbb5bc
   hostname: my-svc.my-ns.svc.cluster.local
   ports:
@@ -537,7 +537,7 @@ cluster-b:
       port: 9090
       protocol: HTTP2
 `)
-			f.ValuesSetFromYaml("istio.internal.serviceEntries", `
+			f.ValuesSetFromYaml("istio.internal.federationServiceEntries", `
 - name: svc-a-ns-a-svc-a-local-766f584864
   hostname: svc-a.ns-a.svc.a.local
   ports:

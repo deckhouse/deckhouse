@@ -589,7 +589,7 @@ multiclustersLoop:
 	}
 
 	input.Values.Set("istio.internal.federations", properFederations)
-	input.Values.Set("istio.internal.serviceEntries", serviceEntries)
+	input.Values.Set("istio.internal.federationServiceEntries", serviceEntries)
 	input.Values.Set("istio.internal.multiclusters", properMulticlusters)
 	input.Values.Set("istio.internal.multiclustersNeedIngressGateway", multiclustersNeedIngressGateway)
 	input.Values.Set("istio.internal.remotePublicMetadata", remotePublicMetadata)
