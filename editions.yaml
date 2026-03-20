@@ -67,3 +67,6 @@ editions:
 
 - name: FE
   modulesDir: "ee/fe/modules"
+
+- name: CSE
+  modulesDir: "ee/cse/modules"
