@@ -319,9 +319,9 @@ metadata:
 			_, err = f.KubeClient().CoreV1().ConfigMaps(otherNs1.Name).Get(context.TODO(), "istio-ca-root-cert", metav1.GetOptions{})
 			Expect(err).To(HaveOccurred())
 
-			// Verify logs contain expected messages
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Finalizers from Istio/v1x16 in namespace d8-istio removed"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Istio/v1x16 deleted from namespace d8-istio"))
+			// Verify logs contain expected messages (structured slog JSON)
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Finalizers from Istio removed\",\"name\":\"v1x16\",\"namespace\":\"d8-istio\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Istio deleted\",\"name\":\"v1x16\",\"namespace\":\"d8-istio\""))
 		})
 	})
 })
