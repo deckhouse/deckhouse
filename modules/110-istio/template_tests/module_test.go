@@ -449,7 +449,7 @@ neighbour-0:
   ingressGateways:
   - address: 1.1.1.1
     port: 123
-  metadataCA: |
+  metadataExporterCA: |
     -----BEGIN CERTIFICATE-----
     MIIFDTCCAvWgAwIBAgIURb+L4dH5qv53ZSD/tBRSdq37Go4wDQYJKoZIhvcNAQEL
     BQAwFjEUMBIGA1UEAwwLY3VzdG9tLXJvb3QwHhcNMjQxMTI1MTUyNzMwWhcNMzQx
