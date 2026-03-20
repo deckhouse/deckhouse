@@ -3636,17 +3636,11 @@ jobs:
       - build_fe
 
       - build_CE
-
       - build_EE
-
       - build_BE
-
       - build_SE
-
       - build_SE-plus
-
       - build_CSE
-
     if: ${{ always() && needs.build_fe.result == 'success' }}
     runs-on: regular
     steps:

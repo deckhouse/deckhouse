@@ -198,8 +198,7 @@ jobs:
       - pull_request_info
       - build_fe
 {!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
-      - build_{!{$werfEnv}!}
-{!{ end }!}
+      - build_{!{$werfEnv}!}{!{ end }!}
       - validators
       - openapi_test_cases
       - golangci_lint

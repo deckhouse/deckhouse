@@ -246,8 +246,7 @@ jobs:
     needs:
       - build_fe
 {!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
-      - build_{!{$werfEnv}!}
-{!{ end }!}
+      - build_{!{$werfEnv}!}{!{ end }!}
     if: ${{ always() && needs.build_fe.result == 'success' }}
     runs-on: regular
     steps:
