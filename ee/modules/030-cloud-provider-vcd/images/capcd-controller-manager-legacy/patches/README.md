@@ -32,6 +32,31 @@ Changes:
 
 - Update klog to klog/v2 in other files
 
+### 004-capi-v1.12.3-compatibility.patch
+
+Files:
+
+- api/v1alpha4/vcdcluster_types.go
+- api/v1alpha4/vcdmachine_types.go
+- api/v1alpha4/zz_generated.conversion.go
+- api/v1alpha4/zz_generated.deepcopy.go
+- api/v1beta1/vcdcluster_types.go
+- api/v1beta1/vcdmachine_types.go
+- api/v1beta1/zz_generated.conversion.go
+- api/v1beta1/zz_generated.deepcopy.go
+- api/v1beta2/vcdcluster_webhook.go
+- api/v1beta2/vcdmachine_webhook.go
+- controllers/capi_objects_utils.go
+
+Changes:
+
+- Update CAPI imports from api/v1alpha4 and api/v1beta1 to api/core/v1beta2 for CAPI v1.12.3 compatibility
+- Update webhook interfaces from webhook.Defaulter/Validator to admission.CustomDefaulter/CustomValidator
+- Add context.Context parameter to all webhook methods and return (admission.Warnings, error)
+- Fix InfrastructureRef path: kcp.Spec.MachineTemplate.InfrastructureRef -> kcp.Spec.MachineTemplate.Spec.InfrastructureRef
+- Handle ReadyReplicas as pointer type (*int32)
+- Handle machine.Spec.Version as string instead of *string
+
 ### 005-add-vcdmachine-spec-template-org.patch
 
 Files:
