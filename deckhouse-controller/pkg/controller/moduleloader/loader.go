@@ -457,7 +457,7 @@ func (l *Loader) refreshModuleTelemetry(modules []v1alpha1.Module) {
 		return
 	}
 	l.metricStorage.Grouped().ExpireGroupMetrics(metrics.DeckhouseModuleTelemetryGroup)
-	metricName := telemetry.WrapName(metrics.DeckhouseModuleVersionMetricName)
+	metricName := telemetry.WrapName(metrics.DeckhouseModuleTelemetryMetricName)
 	for i := range modules {
 		m := &modules[i]
 		if m.IsEmbedded() {
