@@ -44,6 +44,7 @@ metadata:
   labels:
     heritage: deckhouse
     packages.deckhouse.io/draft: "true"
+    packages.deckhouse.io/exist-in-registry: "true"
     packages.deckhouse.io/package: test-package
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-package-v1.0.0

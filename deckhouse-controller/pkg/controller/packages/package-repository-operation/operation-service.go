@@ -538,8 +538,8 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 	// Version already exists
 	if err == nil {
 		// Version marked as not exist in registry
-		_, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry]
-		if ok {
+		isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry]
+		if ok && isBundleExistInRegistry == "false" {
 			logger.Debug("version marked as not exist in registry, checking if bundle image exists")
 
 			err := s.svc.Package(packageName).CheckImageExists(ctx, version)
@@ -556,7 +556,7 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 
 			original := pkgVersion.DeepCopy()
 
-			delete(pkgVersion.Labels, v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry)
+			pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "true"
 			pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelDraft] = "true"
 
 			err = s.client.Patch(ctx, pkgVersion, client.MergeFrom(original))

@@ -398,7 +398,7 @@ version: "1.0.0"
 		require.NoError(suite.T(), err)
 
 		apv = suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
-		require.Equal(suite.T(), "true", apv.Labels[v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry])
+		require.Equal(suite.T(), "false", apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry])
 	})
 }
 

@@ -6,7 +6,7 @@ metadata:
   finalizers:
   - applicationpackageversion.deckhouse.io/used-by-application
   labels:
-    packages.deckhouse.io/not-exist-in-registry: "true"
+    packages.deckhouse.io/exist-in-registry: "false"
   name: deckhouse-test-v1.0.0
   resourceVersion: "4"
 spec:

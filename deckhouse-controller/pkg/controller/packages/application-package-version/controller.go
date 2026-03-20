@@ -252,13 +252,13 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	// check bundle image exists in registry
-	isBundleImageNotExists := true
+	isBundleImageExists := false
 	_, err = bundleRegistryClient.Digest(ctx, apv.Spec.PackageVersion)
 	if err != nil && !isRegistryNotFoundError(err) {
 		logger.Warn("failed to get bundle image digest", log.Err(err))
 	}
 	if err == nil {
-		isBundleImageNotExists = false
+		isBundleImageExists = true
 	}
 
 	// Delete label "draft" and patch the main object
@@ -266,9 +266,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 
 	delete(apv.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
 
-	if isBundleImageNotExists {
+	if !isBundleImageExists {
 		logger.Debug("bundle image not found")
-		apv.Labels[v1alpha1.ApplicationPackageVersionLabelNotExistInRegistry] = "true"
+		apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "false"
 	}
 
 	err = r.client.Patch(ctx, apv, client.MergeFrom(original))
