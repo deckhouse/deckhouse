@@ -150,16 +150,16 @@ spec:
           seccompProfile:
             type: Unconfined
         volumeMounts:
+        - mountPath: /chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+        - mountPath: /chroot/tmp
+          name: tmp
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
           name: var-log-nginx
-        - mountPath: /chroot/etc/nginx/ssl/
-          name: secret-nginx-auth-tls
-        - mountPath: /chroot/tmp
-          name: tmp
-        - mountPath: /chroot/etc/ingress-controller
-          name: etc-ingress-controller
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
@@ -296,6 +296,8 @@ spec:
       volumes:
       - emptyDir: {}
         name: tmp
+      - emptyDir: {}
+        name: validation-tmp
       - emptyDir: {}
         name: etc-ingress-controller
       - emptyDir: {}
