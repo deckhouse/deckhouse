@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/deckhouse/node-controller/internal/register"
 	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
 
@@ -33,10 +32,6 @@ const (
 	bashibleFirstRunFinishedLabel = "node.deckhouse.io/bashible-first-run-finished"
 	bashibleUninitializedTaintKey = "node.deckhouse.io/bashible-uninitialized"
 )
-
-func init() {
-	register.RegisterController(register.BashibleCleanup, &corev1.Node{}, &Reconciler{})
-}
 
 type Reconciler struct {
 	dynctrl.Base

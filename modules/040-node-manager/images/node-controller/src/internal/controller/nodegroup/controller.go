@@ -40,13 +40,8 @@ import (
 	calcconditions "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditionscalc"
 	nodestatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/node_status"
 	processedstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/processed_status"
-	"github.com/deckhouse/node-controller/internal/register"
 	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
-
-func init() {
-	register.RegisterController(register.NodeGroupStatus, &v1.NodeGroup{}, &Status{})
-}
 
 var _ dynctrl.Reconciler = (*Status)(nil)
 

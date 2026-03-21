@@ -29,9 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/deckhouse/node-controller/internal/register"
 	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
 
@@ -53,20 +51,11 @@ var maintenanceAnnotations = []string{
 	"node-manager.deckhouse.io/fencing-disable",
 }
 
-func init() {
-	register.RegisterController(register.Fencing, &corev1.Node{}, &Reconciler{})
-}
-
 type Reconciler struct {
 	dynctrl.Base
 }
 
-func (r *Reconciler) SetupWatches(w dynctrl.Watcher) {
-	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		_, ok := obj.GetLabels()[fencingEnabledLabel]
-		return ok
-	}))
-}
+func (r *Reconciler) SetupWatches(_ dynctrl.Watcher) {}
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)

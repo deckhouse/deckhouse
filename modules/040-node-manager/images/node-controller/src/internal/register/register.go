@@ -31,13 +31,8 @@ type ControllerName string
 func (cn ControllerName) String() string { return string(cn) }
 
 const (
-	NodeGroupStatus         ControllerName = "nodegroup-status"
-	NodeGroupUpdateApproval ControllerName = "nodegroup-update-approval"
-	NodeTemplate            ControllerName = "node-template"
-	NodeDraining     ControllerName = "node-draining"
-	BashibleCleanup  ControllerName = "bashible-cleanup"
-	Fencing          ControllerName = "node-fencing"
-	StaticProviderID ControllerName = "static-provider-id"
+	NodeControllers      ControllerName = "node"
+	NodeGroupControllers ControllerName = "nodegroup"
 )
 
 type controllerEntry struct {
@@ -66,7 +61,7 @@ func RegisterGroup(name ControllerName, obj client.Object, reconcilers ...dynctr
 	registry = append(registry, controllerEntry{name: name, obj: obj, reconcilers: reconcilers, isGroup: true})
 }
 
-func SetupAll(mgr ctrl.Manager, disabledControllers string) error {
+func SetupAll(mgr ctrl.Manager, disabledControllers string, maxConcurrentReconciles int) error {
 	setupLog := ctrl.Log.WithName("setup")
 
 	disabled := make(map[string]bool)
@@ -88,11 +83,11 @@ func SetupAll(mgr ctrl.Manager, disabledControllers string) error {
 			continue
 		}
 
-		if err := dynctrl.SetupController(mgr, entry.name.String(), entry.obj, entry.reconcilers, entry.isGroup); err != nil {
+		if err := dynctrl.SetupController(mgr, entry.name.String(), entry.obj, entry.reconcilers, entry.isGroup, maxConcurrentReconciles); err != nil {
 			return fmt.Errorf("setting up controller %s: %w", entry.name, err)
 		}
 
-		setupLog.Info("controller enabled", "controller", entry.name)
+		setupLog.Info("controller enabled", "controller", entry.name, "maxConcurrentReconciles", maxConcurrentReconciles)
 	}
 
 	return nil

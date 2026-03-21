@@ -58,11 +58,13 @@ func main() {
 	var metricsAddr string
 	var probeAddr string
 	var disabledControllers string
+	var maxConcurrentReconciles int
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
 	flag.StringVar(&disabledControllers, "disable-controllers", "", "Comma-separated list of controllers to disable")
+	flag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", 1, "Maximum number of concurrent reconciles per controller")
 
 	logs.AddGoFlags(flag.CommandLine)
 
@@ -91,7 +93,7 @@ func main() {
 	}
 
 	// Controllers
-	if err = register.SetupAll(mgr, disabledControllers); err != nil {
+	if err = register.SetupAll(mgr, disabledControllers, maxConcurrentReconciles); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}

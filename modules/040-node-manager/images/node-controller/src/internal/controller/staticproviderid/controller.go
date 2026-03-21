@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/deckhouse/node-controller/internal/register"
 	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
 
@@ -37,10 +36,6 @@ const (
 	uninitializedTaintKey    = "node.cloudprovider.kubernetes.io/uninitialized"
 	staticProviderIDValue    = "static://"
 )
-
-func init() {
-	register.RegisterController(register.StaticProviderID, &corev1.Node{}, &Reconciler{})
-}
 
 type Reconciler struct {
 	dynctrl.Base

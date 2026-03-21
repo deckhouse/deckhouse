@@ -37,13 +37,11 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/updateapproval/engine"
 	"github.com/deckhouse/node-controller/internal/controller/updateapproval/kubeclient"
 	uametrics "github.com/deckhouse/node-controller/internal/controller/updateapproval/metrics"
-	"github.com/deckhouse/node-controller/internal/register"
 	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
 
 func init() {
 	uametrics.Register()
-	register.RegisterController(register.NodeGroupUpdateApproval, &v1.NodeGroup{}, New())
 }
 
 type Reconciler struct {

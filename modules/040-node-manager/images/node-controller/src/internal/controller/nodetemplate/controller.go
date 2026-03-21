@@ -30,13 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/register"
 	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
-
-func init() {
-	register.RegisterController(register.NodeTemplate, &corev1.Node{}, &Reconciler{})
-}
 
 type Reconciler struct {
 	dynctrl.Base

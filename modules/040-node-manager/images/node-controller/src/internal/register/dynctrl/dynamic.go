@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,14 +36,15 @@ import (
 var _ reconcile.Reconciler = (*dynamicController)(nil)
 
 type dynamicController struct {
-	name        string
-	obj         client.Object
-	reconcilers []Reconciler
-	isGroup     bool
-	client      client.Client
-	cache       cache.Cache
-	scheme      *runtime.Scheme
-	recorder    record.EventRecorder
+	name                    string
+	obj                     client.Object
+	reconcilers             []Reconciler
+	isGroup                 bool
+	maxConcurrentReconciles int
+	client                  client.Client
+	cache                   cache.Cache
+	scheme                  *runtime.Scheme
+	recorder                record.EventRecorder
 }
 
 func (dc *dynamicController) setupWithManager(mgr ctrl.Manager) error {
@@ -57,7 +59,10 @@ func (dc *dynamicController) setupWithManager(mgr ctrl.Manager) error {
 
 	b := ctrl.NewControllerManagedBy(mgr).
 		Named(dc.name).
-		For(dc.obj)
+		For(dc.obj).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: dc.maxConcurrentReconciles,
+		})
 
 	w := &builderWatcher{b: b}
 	for _, r := range dc.reconcilers {
@@ -71,12 +76,16 @@ func (dc *dynamicController) setupWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-func SetupController(mgr ctrl.Manager, name string, obj client.Object, reconcilers []Reconciler, isGroup bool) error {
+func SetupController(mgr ctrl.Manager, name string, obj client.Object, reconcilers []Reconciler, isGroup bool, maxConcurrentReconciles int) error {
+	if maxConcurrentReconciles < 1 {
+		maxConcurrentReconciles = 1
+	}
 	dc := &dynamicController{
-		name:        name,
-		obj:         obj,
-		reconcilers: reconcilers,
-		isGroup:     isGroup,
+		name:                    name,
+		obj:                     obj,
+		reconcilers:             reconcilers,
+		isGroup:                 isGroup,
+		maxConcurrentReconciles: maxConcurrentReconciles,
 	}
 	return dc.setupWithManager(mgr)
 }

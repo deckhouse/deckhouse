@@ -30,10 +30,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/register"
 	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
 
@@ -44,21 +42,12 @@ const (
 	defaultDrainTimeout   = 10 * time.Minute
 )
 
-func init() {
-	register.RegisterController(register.NodeDraining, &corev1.Node{}, &Reconciler{})
-}
-
 type Reconciler struct {
 	dynctrl.Base
 	kubeClient kubernetes.Interface
 }
 
-func (r *Reconciler) SetupWatches(w dynctrl.Watcher) {
-	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		_, hasGroup := obj.GetLabels()[nodeGroupLabel]
-		return hasGroup
-	}))
-}
+func (r *Reconciler) SetupWatches(_ dynctrl.Watcher) {}
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
