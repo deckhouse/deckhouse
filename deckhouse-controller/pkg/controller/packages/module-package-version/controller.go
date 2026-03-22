@@ -362,35 +362,23 @@ func convertLicensingEditions(editions map[string]PackageEdition) map[string]v1a
 }
 
 func (r *reconciler) markEnriched(mpv *v1alpha1.ModulePackageVersion) {
-	condType := v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded
-	now := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range mpv.Status.Conditions {
-		if cond.Type == condType {
-			mpv.Status.Conditions[idx].LastTransitionTime = now
-			mpv.Status.Conditions[idx].Status = metav1.ConditionTrue
-			mpv.Status.Conditions[idx].Reason = "MetadataLoaded"
-			mpv.Status.Conditions[idx].Message = ""
-			return
-		}
-	}
-
-	mpv.Status.Conditions = append(mpv.Status.Conditions, metav1.Condition{
-		Type:               condType,
-		Status:             metav1.ConditionTrue,
-		Reason:             "MetadataLoaded",
-		LastTransitionTime: now,
-	})
+	r.setCondition(mpv, metav1.ConditionTrue, "MetadataLoaded", "")
 }
 
 func (r *reconciler) markEnrichmentFailed(mpv *v1alpha1.ModulePackageVersion, reason, message string) {
+	r.setCondition(mpv, metav1.ConditionFalse, reason, message)
+}
+
+func (r *reconciler) setCondition(mpv *v1alpha1.ModulePackageVersion, status metav1.ConditionStatus, reason, message string) {
 	condType := v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded
 	now := metav1.NewTime(r.dc.GetClock().Now())
 
 	for idx, cond := range mpv.Status.Conditions {
 		if cond.Type == condType {
-			mpv.Status.Conditions[idx].LastTransitionTime = now
-			mpv.Status.Conditions[idx].Status = metav1.ConditionFalse
+			if cond.Status != status {
+				mpv.Status.Conditions[idx].LastTransitionTime = now
+				mpv.Status.Conditions[idx].Status = status
+			}
 			mpv.Status.Conditions[idx].Reason = reason
 			mpv.Status.Conditions[idx].Message = message
 			return
@@ -399,7 +387,7 @@ func (r *reconciler) markEnrichmentFailed(mpv *v1alpha1.ModulePackageVersion, re
 
 	mpv.Status.Conditions = append(mpv.Status.Conditions, metav1.Condition{
 		Type:               condType,
-		Status:             metav1.ConditionFalse,
+		Status:             status,
 		Reason:             reason,
 		Message:            message,
 		LastTransitionTime: now,
