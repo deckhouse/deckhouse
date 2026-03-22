@@ -32,6 +32,7 @@ status:
     processed:
     - name: v1.0.0
       type: Application
+      versionsFound: 1
     processedOverall: 1
     total: 1
   phase: Completed

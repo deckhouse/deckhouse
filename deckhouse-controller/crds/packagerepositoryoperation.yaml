@@ -162,6 +162,9 @@ spec:
                         type:
                           description: Type of the package.
                           type: string
+                        versionsFound:
+                          description: Number of versions found in the registry for this package.
+                          type: integer
                       required:
                       - name
                       type: object

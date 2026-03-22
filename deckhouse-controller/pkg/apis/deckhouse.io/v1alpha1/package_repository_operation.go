@@ -187,6 +187,10 @@ type PackageRepositoryOperationStatusPackage struct {
 	// Type of the package.
 	// +optional
 	Type string `json:"type,omitempty"`
+
+	// Number of versions found in the registry for this package.
+	// +optional
+	VersionsFound int `json:"versionsFound,omitempty"`
 }
 
 type PackageRepositoryOperationStatusCondition struct {

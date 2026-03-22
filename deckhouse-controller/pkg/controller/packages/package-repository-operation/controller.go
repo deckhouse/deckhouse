@@ -534,8 +534,9 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, operation *v1
 	}
 
 	operation.Status.Packages.Processed = append(operation.Status.Packages.Processed, v1alpha1.PackageRepositoryOperationStatusPackage{
-		Name: packageName,
-		Type: string(result.PackageType),
+		Name:          packageName,
+		Type:          string(result.PackageType),
+		VersionsFound: len(result.Done),
 	})
 
 	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(result.Failed))

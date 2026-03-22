@@ -41,6 +41,7 @@ status:
     processed:
     - name: test-package
       type: Module
+      versionsFound: 3
     processedOverall: 1
     total: 1
   phase: Completed
