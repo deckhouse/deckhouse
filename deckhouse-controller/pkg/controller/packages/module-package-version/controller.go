@@ -369,7 +369,7 @@ func (r *reconciler) markEnriched(mpv *v1alpha1.ModulePackageVersion) {
 		if cond.Type == condType {
 			mpv.Status.Conditions[idx].LastTransitionTime = now
 			mpv.Status.Conditions[idx].Status = metav1.ConditionTrue
-			mpv.Status.Conditions[idx].Reason = ""
+			mpv.Status.Conditions[idx].Reason = "MetadataLoaded"
 			mpv.Status.Conditions[idx].Message = ""
 			return
 		}
@@ -378,6 +378,7 @@ func (r *reconciler) markEnriched(mpv *v1alpha1.ModulePackageVersion) {
 	mpv.Status.Conditions = append(mpv.Status.Conditions, metav1.Condition{
 		Type:               condType,
 		Status:             metav1.ConditionTrue,
+		Reason:             "MetadataLoaded",
 		LastTransitionTime: now,
 	})
 }
