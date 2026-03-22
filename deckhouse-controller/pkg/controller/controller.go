@@ -63,7 +63,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
-	modulev2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
 	modulepackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package"
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
@@ -214,7 +213,6 @@ func NewDeckhouseController(
 	if os.Getenv(envEnableModulePackages) == "true" {
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
 	}
 
 	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
@@ -400,10 +398,6 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register module package version controller: %w", err)
 		}
 
-		err = modulev2.RegisterController(runtimeManager, dc, logger.Named("module-v2-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register module v2 controller: %w", err)
-		}
 	}
 
 	validation.RegisterAdmissionHandlers(
