@@ -21,10 +21,10 @@ layout: sidebar-guides
 * параметры прокси-сервера, задаваемые [в конфигурации кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) при установке, транслируются в переменные окружения `HTTP_PROXY`, `HTTPS_PROXY` и `NO_PROXY` для **узлов кластера и компонентов Deckhouse** — пользовательские приложения (поды) эти переменные из конфигурации кластера не получают, для выхода в Интернет через прокси им нужно отдельно задавать переменные окружения (`HTTP_PROXY`, `HTTPS_PROXY` и при необходимости `NO_PROXY`) в манифестах. Доступ для приложений может обеспечиваться и другими способами — например, открытием доступа для узлов — в зависимости от политик компании;
 * container registry с образами контейнеров DKP разворачивается отдельно с доступом изнутри контура, а в кластере настраивается его использование и необходимые права доступа.
 
-Взаимодействие с внешними ресурсами выполняется через отдельный физический сервер или виртуальную машину Bastion (bastion-хост). На bastion-хосте разворачиваются container registry и при необходимости прокси-сервер, а также выполняются все операции по управлению кластером.
+Взаимодействие с узлами кластера, как правило, выполняется через отдельный физический сервер или виртуальную машину Bastion (bastion-хост). Прокси для доступа к внешним ресурсам из контура, если он нужен, разворачивают там, где это задано сетевой политикой и схемой — возможно как на бастионе, так и на отдельной машине. Приватный container registry размещается на отдельной ВМ или сервере во внутренней сети, совмещать registry с бастионом в продуктивных контурах не рекомендуется (исключение — учебные или урезанные стенды для ограниченных задач).
 
 {% alert level="info" %}
-В зависимости от политик безопасности в компании доступа к внешним ресурсам может не быть вообще. В таком случае прокси-сервер на bastion-хосте не разворачивается, а все необходимые внешние зависимости, такие как архив с образами контейнеров DKP, могут быть доставлены на машину любым разрешённым в компании способом (например, на флеш-накопителе).
+В зависимости от политик безопасности в компании доступа к внешним ресурсам может не быть вообще. В таком случае прокси-сервер для выхода во внешние сети не используется, а все необходимые внешние зависимости, такие как архив с образами контейнеров DKP, могут быть доставлены на нужную ВМ в контуре любым разрешённым в компании способом (например, на флеш-накопителе).
 {% endalert %}
 
 Общая схема закрытого окружения:
@@ -42,12 +42,14 @@ layout: sidebar-guides
 Для выполнения работ потребуются:
 
 - персональный компьютер, с которого будут выполняться операции;
-- отдельный физический сервер или виртуальная машина Bastion (bastion-хост), где будут развёрнуты container registry и сопутствующие компоненты;
+- отдельный физический сервер или виртуальная машина Bastion (bastion-хост);
+- отдельный физический сервер или виртуальная машина под container registry;
 - два физических сервера или две виртуальные машины под узлы кластера.
 
 Требования к серверам:
 
-* **Bastion** — не менее 4 ядер CPU, 8 ГБ ОЗУ, 150 ГБ на быстром диске. Такой объём требуется, поскольку на bastion-хосте будут храниться все образы DKP, необходимые для установки. Перед загрузкой в приватный registry образы скачиваются с публичного registry DKP на bastion-хост.
+* **Bastion** — не менее 4 ядер CPU, 8 ГБ ОЗУ, 150 ГБ на быстром диске. Такой объём требуется, поскольку на bastion-хосте будут временно храниться все образы DKP, необходимые для установки. Перед загрузкой в приватный registry образы скачиваются с публичного registry DKP на bastion-хост и упаковываются в архивы, соответственно требуется довольно много места для успешного выполнения всех этих операций.
+* **ВМ под приватный registry** — не менее 4 ядер CPU, 8 ГБ ОЗУ, 100 ГБ на быстром диске.
 * **Узлы кластера** — [ресурсы под будущие узлы кластера](./hardware-requirements.html#выбор-ресурсов-для-узлов) выбираются исходя из требований к планируемой нагрузке. Для примера подойдёт минимально рекомендуемая конфигурация — 4 ядра CPU, 8 ГБ ОЗУ и 60 ГБ на быстром диске (400+ IOPS) на каждый узел.
 
 ## Подготовка приватного container registry
@@ -58,11 +60,9 @@ DKP поддерживает только Bearer token-схему авториз
 
 В качестве приватного container registry можно использовать любой из поддерживаемых. Протестирована и гарантируется работа со следующими container registry — [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), [Quay](https://quay.io/).
 
-В рамках этого руководства будет для примера использован Harbor.
+В рамках этого руководства будет для примера использован [Harbor](https://goharbor.io/). Он поддерживает настройку политик и управление доступом на основе ролей (RBAC), выполняет проверку образов на уязвимости и позволяет помечать доверенные артефакты. Harbor входит в состав проектов CNCF.
 
 ### Установка Harbor
-
-В качестве приватного registry используется [Harbor](https://goharbor.io/). Он поддерживает настройку политик и управление доступом на основе ролей (RBAC), выполняет проверку образов на уязвимости и позволяет помечать доверенные артефакты. Harbor входит в состав проектов CNCF.
 
 Установите последнюю версию Harbor [из GitHub-репозитория](https://github.com/goharbor/harbor/releases) проекта. Для этого скачайте архив с установщиком из нужного релиза, выбрав вариант с `harbor-offline-installer` в названии.
 
@@ -72,7 +72,7 @@ DKP поддерживает только Bearer token-схему авториз
 
 Скопируйте адрес ссылки. Например, для версии `harbor-offline-installer-v2.14.1.tgz` ссылка будет выглядеть следующим образом: `https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz`.
 
-Подключитесь к серверу Bastion по SSH и скачайте архив любым удобным способом.
+Подключитесь по SSH к **ВМ, на которой будет развёрнут Harbor**, и скачайте архив любым удобным способом (если прямого доступа в интернет с этой ВМ нет — скачайте архив на рабочей машине или на бастионе и перенесите файл на ВМ с Harbor).
 
 {% offtopic title="Как скачать архив с помощью wget..." %}
 Выполните команду (укажите актуальную ссылку):
@@ -100,7 +100,7 @@ tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 
 В полученной директории `harbor` расположены файлы, необходимые для установки.
 
-Установите на сервер Bastion [Docker](https://docs.docker.com/engine/install/) и плагин [Docker Compose](https://docs.docker.com/compose/install/#plugin-linux-only). Они понадобятся для настройки доступа к registry по TLS и для запуска установщика Harbor.
+Установите на **эту же ВМ** [Docker](https://docs.docker.com/engine/install/) и плагин [Docker Compose](https://docs.docker.com/compose/install/#plugin-linux-only). Они понадобятся для настройки доступа к registry по TLS и для запуска установщика Harbor.
 
 Перед развёртыванием хранилища сгенерируйте самоподписанный (self-signed) TLS-сертификат.
 
@@ -127,10 +127,10 @@ openssl genrsa -out ca.key 4096
 openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST=Moscow/L=Moscow/O=example/OU=Personal/CN=myca.local" -key ca.key -out ca.crt
 ```
 
-Сгенерируйте сертификаты для внутреннего доменного имени `harbor.example`, чтобы внутри приватной сети обращаться к серверу Bastion по защищённому соединению.
+Сгенерируйте сертификаты для внутреннего доменного имени `harbor.example`, чтобы внутри приватной сети обращаться к ВМ с Harbor по защищённому соединению.
 
 {% alert level="warning" %}
-В приведённых ниже командах замените `<INTERNAL_IP_ADDRESS>` на внутренний IP-адрес сервера Bastion. По этому адресу из закрытого контура выполняется обращение к container registry, с ним же связано доменное имя `harbor.example`.
+В приведённых ниже командах замените `<INTERNAL_IP_ADDRESS>` на внутренний IP-адрес ВМ с Harbor. По этому адресу из закрытого контура узлы кластера и другие сервисы обращаются к container registry.
 {% endalert %}
 
 ```bash
@@ -607,7 +607,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 {% endofftopic %}
 
-Добавьте в файл `/etc/hosts` ассоциацию доменного имени `harbor.example` с localhost сервера Bastion, чтобы можно было обращаться к Harbor по этому имени с этого же сервера:
+Добавьте в файл `/etc/hosts` на ВМ с Harbor ассоциацию доменного имени `harbor.example` с `localhost`, чтобы можно было обращаться к Harbor по этому имени с этой же машины:
 
 ```bash
 127.0.0.1 localhost harbor.example
@@ -634,14 +634,14 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 Создайте проект и пользователя, от имени которого будет выполняться работа с этим проектом.
 
-Откройте веб-интерфейс Harbor по адресу `harbor.example`:
+Откройте веб-интерфейс Harbor по адресу `harbor.example` (обратите внимание, что доступа к этому веб-интерфейсу снаружи закрытого контура нет, обращаться к нему нужно с машины, имеющий доступ к внутренним ресурсам):
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_main_page_ru.png" alt="Главная страница Harbor...">
 </div>
 
 {% alert level="info" %}
-Чтобы открыть Harbor по доменному имени `harbor.example` с рабочего компьютера, добавьте соответствующую запись в файл `/etc/hosts`, указав IP-адрес сервера Bastion.
+Чтобы открыть Harbor по доменному имени `harbor.example` с рабочего компьютера, добавьте соответствующую запись в файл `/etc/hosts`, указав внутренний IP-адрес ВМ с Harbor.
 {% endalert %}
 
 Для входа в интерфейс воспользуйтесь логином и паролем, указанными в конфигурационном файле `harbor.yml`.
@@ -697,7 +697,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 Следующим шагом необходимо скопировать образы компонентов DKP из публичного registry Deckhouse Kubernetes Platform в Harbor.
 
 {% alert level="info" %}
-Для дальнейших действий в этом разделе потребуется утилита Deckhouse CLI. Установите её на сервер Bastion согласно [документации](../documentation/v1/cli/d8/#как-установить-deckhouse-cli).
+Для дальнейших действий в этом разделе потребуется утилита Deckhouse CLI. Установите её на тот хост, с которого будут выполняться работы по переносу образов DKP в приватный registry. Для примера из этого руководства это bastion-хост. Инструкция по установке CLI — [в документации](../documentation/v1/cli/d8/#как-установить-deckhouse-cli).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -738,7 +738,6 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 Скачайте образы DKP в выделенную директорию, используя команду `d8 mirror pull`.
 
 По умолчанию `d8 mirror pull` скачивает только актуальные версии DKP, базы данных сканера уязвимостей (если они входят в редакцию DKP) и официально поставляемых модулей.
-Например, для Deckhouse Kubernetes Platform 1.74 будет скачана только версия 1.74.8, т. к. этого достаточно для обновления платформы с 1.73 до 1.74.
 
 Выполните следующую команду, чтобы скачать образы актуальных версий. Перед запуском подставьте вместо плейсхолдеров свои данные: `<EDITION>`, `<LICENSE_KEY>` и при необходимости путь к директории:
 
@@ -911,6 +910,8 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 
 ## Вход в registry для запуска установщика
 
+Выполните вход с того хоста, на котором будет запускаться установщик (в примере — bastion-хост). Имя `harbor.example` на этой машине должно указывать на ВМ с Harbor (запись в `/etc/hosts` или DNS). На этом же хосте настройте для Docker доверие к TLS registry по тому же принципу, что в разделе про Harbor: каталог `/etc/docker/certs.d/harbor.example/` с файлами сертификатов (скопируйте их с ВМ с Harbor или подготовьте заново).
+
 Войдите в registry Harbor, чтобы Docker смог загрузить из него образ установщика [dhctl](../documentation/v1/installing/):
 
 ```bash
@@ -970,9 +971,9 @@ Login Succeeded
 Для правильного выбора ресурсов серверов ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/guides/production.html) и [инструкцией](/products/kubernetes-platform/guides/hardware-requirements.html) по выбору типов и количества узлов кластера, а также ресурсов для них, в зависимости от ваших требований к эксплуатации будущего кластера.
 {% endalert %}
 
-### Настройка доступа к серверу Bastion
+### Сопоставление `harbor.example` с адресом ВМ с Harbor
 
-Чтобы серверы, на которых будут разворачиваться master и worker-узлы, могли получить доступ к созданному приватному registry, настройте на них соответствие доменного имени `harbor.example` внутреннему IP-адресу сервера Bastion в приватной сети.
+Чтобы серверы, на которых будут разворачиваться master и worker-узлы, могли получить доступ к приватному registry, настройте на них соответствие доменного имени `harbor.example` внутреннему IP-адресу ВМ с Harbor в приватной сети.
 
 Для этого по очереди подключитесь к каждому серверу и добавьте запись в `/etc/hosts` (а при необходимости также в облачный шаблон, если провайдер управляет этим файлом).
 
@@ -1008,7 +1009,7 @@ Login Succeeded
 <INTERNAL-IP-ADDRESS> harbor.example proxy.local
 ```
 
-> Не забудьте заменить `<INTERNAL-IP-ADDRESS>` на реальный внутренний IP-адрес сервера Bastion.
+> Не забудьте заменить `<INTERNAL-IP-ADDRESS>` на реальный внутренний IP-адрес ВМ с Harbor.
 
 ### Создание пользователя для master-узла
 
@@ -1046,6 +1047,10 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 Если вход выполнен успешно, пользователь создан корректно.
 
 ### Создание пользователя для worker-узла
+
+{% alert level="info" %}
+Ниже описана подготовка узла для подключения через CAPS. Если вы предпочитаете добавлять статические узлы вручную с использованием bootstrap-скрипта, этот подраздел и последующие шаги с CAPS можно пропустить: создайте `NodeGroup` с типом `Static`, получите скрипт из Secret и выполните его на сервере, как описано в [документации (ручной способ)](../documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html#добавление-узлов-в-bare-metal-кластере).
+{% endalert %}
 
 Сгенерируйте **на master-узле** SSH-ключ с пустой парольной фразой. Для этого выполните на master-узле следующую команду:
 
@@ -1160,7 +1165,6 @@ Status: Downloaded newer image for ubuntu/squid:latest
     # Адрес Docker registry с образами Deckhouse (укажите редакцию DKP).
     imagesRepo: harbor.example/deckhouse/<РЕДАКЦИЯ_DKP>
     # Строка с ключом для доступа к Docker registry в формате Base64.
-    # Получить её можно командой `cat .docker/config.json | base64`.
     registryDockerCfg: <DOCKER_CFG_BASE64>
     # Протокол доступа к registry (HTTP или HTTPS).
     registryScheme: HTTPS
@@ -1171,6 +1175,10 @@ Status: Downloaded newer image for ubuntu/squid:latest
       ...
       -----END CERTIFICATE-----
   ```
+
+  Здесь `<DOCKER_CFG_BASE64>` — строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
+
+  Например, для доступа к container registry `harbor.example` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (строка `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` в Base64).
 
 * В параметре [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) ModuleConfig `deckhouse` измените на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html).
 * В ModuleConfig [global](../documentation/v1/reference/api/global.html) укажите использование самоподписанных сертификатов для компонентов кластера и укажите шаблон доменного имени для системных приложений в параметре `publicDomainTemplate`:
@@ -1186,9 +1194,10 @@ Status: Downloaded newer image for ubuntu/squid:latest
     # Способ реализации протокола HTTPS, используемый модулями Deckhouse.
     https:
       certManager:
-        # Использовать самоподписанные сертификаты для модулей Deckhouse.
         clusterIssuerName: selfsigned
   ```
+
+  Параметр `settings.modules.https` в `ModuleConfig/global` поддерживает несколько [режимов](../documentation/v1/reference/api/global.html): `CertManager` — заказ сертификата у указанного `ClusterIssuer` (не обязательно `selfsigned`, можно задать свой издатель — корпоративный CA, HashiCorp Vault, Venafi и т. д., см. [обзор в документации по сертификатам](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` — готовая пара «сертификат + ключ» в Secret формата `kubernetes.io/tls` в пространстве имён `d8-system`, при внешнем TLS-терминаторе возможен режим `OnlyInURI`. Сочетание `selfsigned` и отключение Let's Encrypt в блоке выше показывает простой пример использования HTTPS в изолированном контуре без ACME/Let's Encrypt.
 
 * В ModuleConfig `user-authn` измените значение параметра [dexCAMode](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) на `FromIngressSecret`:
 
@@ -1360,7 +1369,7 @@ internalNetworkCIDRs:
 
 ## Установка DKP
 
-Перенесите подготовленный конфигурационный файл на сервер Bastion (например, в директорию `~/deckhouse`). Перейдите в директорию и запустите установщик командой:
+Перенесите подготовленный конфигурационный файл на хост, с которого выполняется установка, например в директорию `~/deckhouse`. Перейдите в директорию и запустите установщик командой:
 
 ```bash
 docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.example/deckhouse/<РЕДАКЦИЯ_DKP>/install:stable bash
@@ -1371,7 +1380,7 @@ docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/t
 {% endofftopic %}
 
 {% alert level="info" %}
-Если во внутренней сети нет локального DNS-сервера, и доменные имена прописаны в `/etc/hosts` сервера Bastion, то обязательно укажите параметр `--network=host`, чтобы Docker смог ими воспользоваться.
+Если во внутренней сети нет локального DNS-сервера, и доменные имена прописаны в `/etc/hosts` на хосте, где запускается установщик, то обязательно укажите параметр `--network=host`, чтобы Docker смог ими воспользоваться.
 {% endalert %}
 
 После успешной загрузки и запуска контейнера вы увидите приглашение командной строки внутри контейнера:
@@ -1408,7 +1417,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 ## Добавление узлов в кластер
 
-Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте [в документации](../modules/node-manager/examples.html#добавление-статического-узла-в-кластер)).
+Добавьте узел в кластер.
 
 Для этого выполните следующие шаги:
 
@@ -1641,7 +1650,7 @@ EOF
 
 ### Деплой первого приложения
 
-* **Настройка CI/CD** — создайте ServiceAccount для деплоя в кластер и выдайте ему права. В результате получите `kubeconfig` для использования в системах деплоя в Kubernetes. Адрес: **kubeconfig.test.local**.
+* **Настройка CI/CD** — создайте ServiceAccount для деплоя в кластер и выдайте ему права. В результате получите `kubeconfig` для использования в системах деплоя в Kubernetes. Подробнее о [настройке доступа для CI/CD](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/ci_cd.html). Адрес: **kubeconfig.test.local**.
 * **Направление трафика на приложение** — создайте `Service` и `Ingress` для приложения. Подробнее о возможностях [сетевого взаимодействия](/products/kubernetes-platform/documentation/v1/user/network/ingress/).
 * **Мониторинг приложения** — добавьте к созданному Service аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"`. Подробнее о [настройке мониторинга приложений](/products/kubernetes-platform/documentation/v1/user/monitoring/).
 
