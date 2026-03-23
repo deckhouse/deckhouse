@@ -348,18 +348,6 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 		return fmt.Errorf("failed to register %s: %w", D8ModuleUpdatingBrokenSequence, err)
 	}
 
-	// DOP telemetry: deployed module versions (d8_telemetry_deckhouse_module_version).
-	// One series per (module_name, module_version) with value 1. Used by flant-integration for DOP.
-	deckhouseModuleVersionLabels := []string{LabelModuleName, LabelModuleVersion}
-	_, err = metricStorage.RegisterGauge(
-		WrapTelemetryMetric(DeckhouseModuleTelemetryMetricName),
-		deckhouseModuleVersionLabels,
-		options.WithHelp("Gauge indicating deployed Deckhouse module version per module (1 = present). For DOP telemetry; labels: module_name, module_version."),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to register %s: %w", DeckhouseModuleTelemetryMetricName, err)
-	}
-
 	return nil
 }
 

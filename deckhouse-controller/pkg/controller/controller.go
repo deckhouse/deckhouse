@@ -105,6 +105,8 @@ type DeckhouseController struct {
 
 	defaultReleaseChannel string
 
+	refreshModuleTelemetry func()
+
 	log *log.Logger
 }
 
@@ -307,7 +309,7 @@ func NewDeckhouseController(
 	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
 
-	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, exts, embeddedPolicy, conversionsStore, operator.MetricStorage, logger.Named("module-loader"))
+	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, exts, embeddedPolicy, conversionsStore, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
 	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, exts, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, version, logger.Named("deckhouse-release-controller"))
@@ -433,6 +435,8 @@ func NewDeckhouseController(
 
 		defaultReleaseChannel: defaultReleaseChannel,
 
+		refreshModuleTelemetry: operator.ModuleManager.RefreshModuleTelemetry,
+
 		log: logger,
 	}, nil
 }
@@ -460,6 +464,8 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	if err := c.moduleLoader.LoadModulesFromFS(ctx); err != nil {
 		return fmt.Errorf("load modules from fs: %w", err)
 	}
+
+	c.refreshModuleTelemetry()
 
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
 	go c.syncDeckhouseSettings()

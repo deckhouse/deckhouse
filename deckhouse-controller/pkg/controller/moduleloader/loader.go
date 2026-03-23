@@ -40,7 +40,6 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -51,9 +50,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
-	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -102,10 +99,10 @@ type Loader struct {
 	symlinksDir          string
 	conversionsStore     *conversion.ConversionsStore
 
-	metricStorage metricsstorage.Storage
+	moduleTelemetry []loader.ModuleVersion
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, ms metricsstorage.Storage, logger *log.Logger) *Loader {
+func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		logger:               logger,
@@ -121,7 +118,6 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		dependencyContainer:  dc,
 		exts:                 exts,
 		conversionsStore:     conversionsStore,
-		metricStorage:        ms,
 	}
 }
 
@@ -451,13 +447,10 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 	return nil
 }
 
-// refreshModuleTelemetry sets d8_telemetry_deckhouse_module_version.
+// refreshModuleTelemetry collects deployed module version data for later
+// consumption by addon-operator's ModuleManager.RefreshModuleTelemetry.
 func (l *Loader) refreshModuleTelemetry(modules []v1alpha1.Module) {
-	if l.metricStorage == nil {
-		return
-	}
-	l.metricStorage.Grouped().ExpireGroupMetrics(metrics.DeckhouseModuleTelemetryGroup)
-	metricName := telemetry.WrapName(metrics.DeckhouseModuleTelemetryMetricName)
+	versions := make([]loader.ModuleVersion, 0, len(modules))
 	for i := range modules {
 		m := &modules[i]
 		if m.IsEmbedded() {
@@ -466,11 +459,18 @@ func (l *Loader) refreshModuleTelemetry(modules []v1alpha1.Module) {
 		if m.Properties.Version == "" {
 			continue
 		}
-		l.metricStorage.Grouped().GaugeSet(metrics.DeckhouseModuleTelemetryGroup, metricName, 1, map[string]string{
-			metrics.LabelModuleName:    m.Name,
-			metrics.LabelModuleVersion: m.Properties.Version,
+		versions = append(versions, loader.ModuleVersion{
+			Name:    m.Name,
+			Version: m.Properties.Version,
 		})
 	}
+	l.moduleTelemetry = versions
+}
+
+// ModuleTelemetry returns collected module version data.
+// Implements loader.ModuleTelemetryProvider.
+func (l *Loader) ModuleTelemetry() []loader.ModuleVersion {
+	return l.moduleTelemetry
 }
 
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {
