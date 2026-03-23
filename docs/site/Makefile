@@ -7,6 +7,9 @@ endif
 
 ROOT_DIR := ../..
 WERF_BIN := $(ROOT_DIR)/bin/werf
+MODULE_PATH ?=
+CHANNEL ?= alpha
+MODULE_VERSION ?= v0.1.0
 
 WERF_REPO ?= :local
 ifeq ($(USE_LOCALHOST_REPO),1)
@@ -49,6 +52,19 @@ dev: werf-bin ## Start documentation containers in a werf watch mode (rebuilding
 		@echo -n "\nwerf: "; $(WERF_BIN) version
 		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
 
+external-module: werf-bin ## Build external module docs and run the local portal
+		##~ Options: MODULE_PATH=/path/to/module [CHANNEL=alpha] [MODULE_VERSION=v0.1.0]
+		@if [ "$(USE_LOCALHOST_REPO)" = "1" ]; then \
+			$(MAKE) registry; \
+			echo "\nStarting external module documentation using $(WERF_REPO) registry..."; \
+		else \
+			echo "\nStarting external module documentation using local docker images store..."; \
+		fi
+		MODULE_PATH="$(MODULE_PATH)" CHANNEL="$(CHANNEL)" MODULE_VERSION="$(MODULE_VERSION)" $(ROOT_DIR)/tools/docs/external-module-docs.sh
+		@echo -n "\nwerf: "; $(WERF_BIN) version
+		@$(WERF_BIN) compose up --docker-compose-command-options='-d' --env local --repo $(WERF_REPO) --skip-image-spec-stage=true
+		@echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+
 clean: werf-bin ## Clean up werf artifacts (set USE_LOCALHOST_REPO=1)
 		@if [ "$(USE_LOCALHOST_REPO)" = "1" ]; then \
 			$(MAKE) registry; \
@@ -90,7 +106,11 @@ help: ## Show this help message
 	@echo '                         Also starts local Docker registry in targets that need it'
 	@echo ''
 	@echo 'Available targets:'
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {\
+		FS = ":.*?## "; \
+	} \
+	/^[a-zA-Z0-9_-]+:.*?## / { printf "  %-20s %s\n", $$1, $$2 } \
+	/^.?.?##~/              { printf "  %-20s %s\n", "", substr($$1, 6) }' $(MAKEFILE_LIST)
 
 .PHONY: help up dev regenerate-menu
-.PHONY: werf-bin clean down regenerate-metadata registry registry-down
+.PHONY: werf-bin clean down regenerate-metadata registry registry-down external-module
