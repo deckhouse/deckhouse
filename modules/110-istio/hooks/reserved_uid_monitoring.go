@@ -33,10 +33,11 @@ import (
 )
 
 const (
-	istioReservedUID        int64 = 1337
 	istioProxyContainerName       = "istio-proxy"
 	reservedUIDMetricsGroup       = "d8_istio_reserved_uid"
 )
+
+var istioReservedUIDs = []int64{1337, 64535}
 
 type podReservedUIDInfo struct {
 	Namespace  string
@@ -81,7 +82,7 @@ func applyReservedUIDFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 			effectiveRunAsUser = podRunAsUser
 		}
 
-		if effectiveRunAsUser != nil && *effectiveRunAsUser == istioReservedUID {
+		if effectiveRunAsUser != nil && isReservedUID(*effectiveRunAsUser) {
 			matchingContainers = append(matchingContainers, container.Name)
 		}
 	}
@@ -117,6 +118,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, handleReservedUIDMonitoring)
+
+func isReservedUID(uid int64) bool {
+	for _, reserved := range istioReservedUIDs {
+		if uid == reserved {
+			return true
+		}
+	}
+	return false
+}
 
 func handleReservedUIDMonitoring(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(reservedUIDMetricsGroup)

@@ -1772,13 +1772,13 @@ alerts:
       module: istio
       edition: ce
       description: |
-        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` is running as UID `1337`.
+        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` is running as a UID reserved by Istio (`1337` or `64535`).
 
-        UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
+        These UIDs are reserved for the `istio-proxy` sidecar container. When application containers run with one of these UIDs, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
 
         To fix the issue, change the `runAsUser` in the container's or pod's `securityContext` to a different UID.
       summary: |
-        Application container is running as UID 1337 (reserved by Istio).
+        Application container is running as a reserved Istio UID (1337 or 64535).
       severity: "4"
       markupFormat: markdown
     - name: D8IstioVersionIsIncompatibleWithK8sVersion

@@ -129,6 +129,44 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 			Expect(m[2].Name).To(Equal("d8_istio_pod_container_reserved_uid"))
 		})
 	})
+
+	Context("Pod with app container running as UID 64535 and istio-proxy present", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(podAppUser64535WithProxy))
+			f.RunHook()
+		})
+
+		It("Should emit metric for the app container", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[1].Name).To(Equal("d8_istio_pod_container_reserved_uid"))
+			Expect(m[1].Labels).To(BeEquivalentTo(map[string]string{
+				"namespace": "default",
+				"pod":       "app-pod-64535",
+				"container": "app",
+			}))
+		})
+	})
+
+	Context("Pod with pod-level runAsUser 64535 and istio-proxy present", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(podPodLevelUser64535WithProxy))
+			f.RunHook()
+		})
+
+		It("Should emit metric for app container inheriting pod-level UID", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[1].Name).To(Equal("d8_istio_pod_container_reserved_uid"))
+			Expect(m[1].Labels).To(BeEquivalentTo(map[string]string{
+				"namespace": "default",
+				"pod":       "pod-level-uid-64535",
+				"container": "app",
+			}))
+		})
+	})
 })
 
 const (
@@ -242,5 +280,41 @@ spec:
     image: istio/proxyv2:latest
     securityContext:
       runAsUser: 1337
+`
+
+	podAppUser64535WithProxy = `
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-pod-64535
+  namespace: default
+spec:
+  containers:
+  - name: app
+    image: app:latest
+    securityContext:
+      runAsUser: 64535
+  - name: istio-proxy
+    image: istio/proxyv2:latest
+    securityContext:
+      runAsUser: 64535
+`
+
+	podPodLevelUser64535WithProxy = `
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-level-uid-64535
+  namespace: default
+spec:
+  securityContext:
+    runAsUser: 64535
+  containers:
+  - name: app
+    image: app:latest
+  - name: istio-proxy
+    image: istio/proxyv2:latest
 `
 )
