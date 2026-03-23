@@ -1,0 +1,390 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-proc-mount
+spec:
+  suiteName: d8-allowed-proc-mount
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+  - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+          - image: nginx
+            name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+  - name: pss-baseline
+    gatorBlock: pss-baseline
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: 006-allowed-default-procmount
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.procMount
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-default-procmount
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Default
+    - name: 007-allowed-no-procmount
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.procMount
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-no-procmount
+    - name: 004-disallowed-multiple-containers-one-unmasked
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.procMount
+        scenario: multiContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-multiple-containers-one-unmasked
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Unmasked
+            - command:
+              - /bin/sh
+              - -c
+              - sleep 3600
+              image: busybox
+              name: sidecar
+              securityContext:
+                procMount: Default
+    - name: 005-disallowed-unmasked-procmount-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.procMount
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-unmasked-procmount-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Unmasked
+    - name: 008-disallowed-initcontainer-unmasked-procmount
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.procMount
+        scenario: initContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-initcontainer-unmasked-procmount
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Default
+            initContainers:
+            - command:
+              - /bin/sh
+              - -c
+              - echo init
+              image: busybox
+              name: init
+              securityContext:
+                procMount: Unmasked
+    - name: 009-disallowed-ephemeralcontainer-unmasked-procmount
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.procMount
+        scenario: ephemeralContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-ephemeralcontainer-unmasked-procmount
+          spec:
+            ephemeralContainers:
+            - name: debugger
+              image: busybox
+              securityContext:
+                procMount: Unmasked
+  - name: security-policy
+    gatorBlock: security-policy
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: 011-disallowed-unmasked-procmount-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.procMount
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-unmasked-procmount-container-security-policy
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Unmasked
+  - name: pss-baseline-with-exception
+    gatorBlock: pss-baseline-with-exception
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: 025-allowed-by-exception-procmount-unmasked
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.procMount.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-unmasked
+          spec:
+            securityContext:
+              procMount:
+                allowedValues:
+                - Unmasked
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-unmasked
+            name: allowed-by-exception-procmount-unmasked
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Unmasked
+    - name: 014-021-disallowed-by-exception-procmount-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.procMount.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-default
+          spec:
+            securityContext:
+              procMount:
+                allowedValues:
+                - Default
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-default
+            name: disallowed-by-exception-procmount-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Unmasked
+    - name: 022-disallowed-no-exception-label
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.procMount.allowedValues
+        scenario: speAbsent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-no-exception-label
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Unmasked
+    - name: 014-020-disallowed-by-exception-multiple-containers-one-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.procMount.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-default
+          spec:
+            securityContext:
+              procMount:
+                allowedValues:
+                - Default
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-default
+            name: disallowed-by-exception-multiple-containers-one-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Default
+            - command:
+              - /bin/sh
+              - -c
+              - sleep 3600
+              image: busybox
+              name: sidecar
+              securityContext:
+                procMount: Unmasked
+  - name: security-policy-with-exception
+    gatorBlock: security-policy-with-exception
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: 016-023-disallowed-by-exception-empty-spec
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.procMount.allowedValues
+        scenario: speAbsent
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: empty-spec
+          spec:
+            test: test
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: empty-spec
+            name: disallowed-by-exception-empty-spec
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Unmasked
+  - name: security-policy-spe-container
+    gatorBlock: security-policy-spe-container
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: 024-025-allowed-by-container-exception-unmasked
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.procMount.allowedValues
+        scenario: speContainerSpecific
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-unmasked-container
+          spec:
+            securityContext:
+              procMount:
+                allowedValues:
+                - Unmasked
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception/nginx: allow-unmasked-container
+            name: allowed-by-container-exception-unmasked
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                procMount: Unmasked
+            - command:
+              - /bin/sh
+              - -c
+              - sleep 3600
+              image: busybox
+              name: sidecar
+              securityContext:
+                procMount: Default

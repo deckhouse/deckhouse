@@ -1,0 +1,14 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: verify-image-signature
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].image
+      level: container
+
+      description: Image reference to verify
+      requiredScenarios: [positive, negative, initContainer, multiContainer, ephemeralContainer]
+  applicableTracks:
+    functional: true

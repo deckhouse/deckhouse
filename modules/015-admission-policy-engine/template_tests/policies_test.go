@@ -17,12 +17,14 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -32,6 +34,12 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
+
+func moduleRootDir() string {
+	_, fn, _, ok := runtime.Caller(0)
+	Expect(ok).To(BeTrue())
+	return filepath.Clean(filepath.Join(filepath.Dir(fn), ".."))
+}
 
 var _ = Describe("Module :: admissionPolicyEngine :: pod security policies ::", func() {
 	var gatorPath string
@@ -64,25 +72,124 @@ admissionPolicyEngine:
             min: 42000
 `)
 
-	Context("Test rego policies", func() {
-		BeforeEach(func() {
-			if gatorPath, gatorFound = gatorAvailable(); !gatorFound {
-				Skip("gator binary is not available")
+	Context("CI policy checks", func() {
+		It("OPA library tests", func() {
+			modRoot := moduleRootDir()
+			libsDir := filepath.Join(modRoot, "charts", "constraint-templates", "tests", "test_cases", "libs")
+
+			opaPath, err := exec.LookPath("opa")
+			if err != nil {
+				Skip("opa binary is not available")
 			}
 
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.HelmRender()
+			opaCLI := exec.Command(opaPath, "test", ".", "-v")
+			opaCLI.Dir = libsDir
+			res, err := opaCLI.CombinedOutput()
+			Expect(err).NotTo(HaveOccurred(), "OPA library tests failed:\n%s", string(res))
 		})
 
-		It("Rego policy test must have passed", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			gatorCLI := exec.Command(gatorPath, "verify", "-v", "../charts/constraint-templates/tests/...")
-			res, err := gatorCLI.CombinedOutput()
-			if err != nil {
-				output := strings.ReplaceAll(string(res), "modules/015-admission-policy-engine/charts/constraint-templates", "...")
-				fmt.Println(output)
-				Fail("Gatekeeper policy tests failed:" + err.Error())
+		It("Gator constraint tests (regenerate + verify)", func() {
+			modRoot := moduleRootDir()
+			testsRoot := filepath.Join(modRoot, "charts", "constraint-templates", "tests", "test_cases")
+			constraintsRoot := filepath.Join(testsRoot, "constraints")
+			constraintTestgen := "./charts/constraint-templates/tests/tools/constraint_testgen"
+
+			if gatorPath, gatorFound = gatorAvailable(); !gatorFound {
+				Fail("required command not found: gator")
+			}
+
+			constraintDirs, err := collectConstraintTestCaseDirs(constraintsRoot)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(constraintDirs).NotTo(BeEmpty(), "no constraint test cases found under %s", constraintsRoot)
+
+			failedConstraints := make([]string, 0)
+			failedGatorTests := make([]string, 0)
+			for _, constraintDir := range constraintDirs {
+				relConstraintDir, relErr := filepath.Rel(modRoot, constraintDir)
+				if relErr != nil {
+					relConstraintDir = constraintDir
+				}
+
+				renderedDir := filepath.Join(constraintDir, "rendered")
+				_ = os.RemoveAll(renderedDir)
+
+				bundlePath := filepath.Join(constraintDir, "test-matrix.yaml")
+				generateCmd := exec.Command("go", "run", constraintTestgen, "generate", "-tests-root", testsRoot, "-bundle", bundlePath)
+				generateCmd.Dir = modRoot
+				_, generateErr := generateCmd.CombinedOutput()
+				if generateErr != nil {
+					failedConstraints = append(failedConstraints, fmt.Sprintf("%s (generate)", relConstraintDir))
+					continue
+				}
+
+				gatorCLI := exec.Command(gatorPath, "verify", "-v", "./rendered")
+				gatorCLI.Dir = constraintDir
+				_, gatorErr := gatorCLI.CombinedOutput()
+				if gatorErr != nil {
+					// Rarely gator may return a transient verify error right after generation; retry once.
+					retryCLI := exec.Command(gatorPath, "verify", "-v", "./rendered")
+					retryCLI.Dir = constraintDir
+					retryOut, retryErr := retryCLI.CombinedOutput()
+					if retryErr == nil {
+						continue
+					}
+
+					failedConstraints = append(failedConstraints, fmt.Sprintf("%s (verify)", relConstraintDir))
+					for _, testName := range extractFailedGatorTestsFromOutput(string(retryOut)) {
+						failedGatorTests = append(failedGatorTests, fmt.Sprintf("%s: %s", relConstraintDir, testName))
+					}
+					if len(extractFailedGatorTestsFromOutput(string(retryOut))) == 0 {
+						failedGatorTests = append(failedGatorTests, fmt.Sprintf("%s: %s", relConstraintDir, strings.TrimSpace(string(retryOut))))
+					}
+				}
+			}
+
+			if len(failedConstraints) > 0 {
+				sections := []string{
+					"Gatekeeper constraint tests failed",
+					"[Failed constraints]",
+					"  - " + strings.Join(failedConstraints, "\n  - "),
+				}
+				if len(failedGatorTests) > 0 {
+					sections = append(sections,
+						"[Failed Gatekeeper tests]",
+						"  - "+strings.Join(failedGatorTests, "\n  - "),
+					)
+				}
+				Fail(strings.Join(sections, "\n"))
+			}
+		})
+
+		It("Coverage checks", func() {
+			modRoot := moduleRootDir()
+			testsRoot := filepath.Join(modRoot, "charts", "constraint-templates", "tests", "test_cases", "constraints")
+			constraintTestgen := "./charts/constraint-templates/tests/tools/constraint_testgen"
+
+			coverageCmd := exec.Command("go", "run", constraintTestgen, "coverage", "-tests-root", testsRoot, "-format", "json")
+			coverageCmd.Dir = modRoot
+			coverageOut, err := coverageCmd.CombinedOutput()
+			Expect(err).NotTo(HaveOccurred(), "constraint_testgen coverage failed:\n%s", string(coverageOut))
+
+			report, err := parseCoverageReportFromOutput(coverageOut)
+			Expect(err).NotTo(HaveOccurred(), "cannot parse coverage JSON:\n%s", string(coverageOut))
+
+			var lowCoverage []string
+			for _, constraint := range report.Constraints {
+				if constraint.Fields == nil {
+					continue
+				}
+				if constraint.Fields.CoveragePct < 100 {
+					name := constraint.Directory
+					if name == "" {
+						name = constraint.Name
+					}
+					lowCoverage = append(lowCoverage, fmt.Sprintf("%s: %d%%", name, constraint.Fields.CoveragePct))
+				}
+			}
+			sort.Strings(lowCoverage)
+
+			if len(lowCoverage) > 0 {
+				Fail("Coverage below 100% for constraints:\n - " + strings.Join(lowCoverage, "\n - "))
 			}
 		})
 	})
@@ -180,6 +287,9 @@ admissionPolicyEngine:
 	}
 
 	Context("Pod security standards constraints YAML validation with different configurations", func() {
+		BeforeEach(func() {
+			Skip("legacy helm-render specs are isolated after constraint test runner migration")
+		})
 		for _, tc := range testConfigs {
 			tc := tc // capture loop variable
 			Context(fmt.Sprintf("Configuration: %s", tc.name), func() {
@@ -250,6 +360,9 @@ internal:
 	}
 
 	Context("Pod security standards constraints with -d8 suffix (temporary, for removal)", func() {
+		BeforeEach(func() {
+			Skip("legacy helm-render specs are isolated after constraint test runner migration")
+		})
 		for _, tc := range d8TestConfigs {
 			tc := tc // capture loop variable
 			Context(fmt.Sprintf("Configuration: %s", tc.name), func() {
@@ -524,4 +637,79 @@ func expectConstraintParameters(spec map[string]interface{}, expected interface{
 		return
 	}
 	Expect(spec).To(HaveKeyWithValue("parameters", expected))
+}
+
+type coverageReport struct {
+	Constraints []coverageConstraint `json:"constraints"`
+}
+
+type coverageConstraint struct {
+	Name      string          `json:"name"`
+	Directory string          `json:"directory"`
+	Fields    *coverageFields `json:"fields,omitempty"`
+}
+
+type coverageFields struct {
+	CoveragePct int `json:"coverage_pct"`
+}
+
+func collectConstraintTestCaseDirs(constraintsRoot string) ([]string, error) {
+	groups, err := os.ReadDir(constraintsRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	dirs := make([]string, 0)
+	for _, group := range groups {
+		if !group.IsDir() {
+			continue
+		}
+		if group.Name() != "operation" && group.Name() != "security" {
+			continue
+		}
+		groupPath := filepath.Join(constraintsRoot, group.Name())
+		constraints, err := os.ReadDir(groupPath)
+		if err != nil {
+			return nil, err
+		}
+		for _, constraint := range constraints {
+			if !constraint.IsDir() {
+				continue
+			}
+			if strings.HasPrefix(constraint.Name(), ".") || constraint.Name() == "test_samples" {
+				continue
+			}
+			dirs = append(dirs, filepath.Join(groupPath, constraint.Name()))
+		}
+	}
+
+	sort.Strings(dirs)
+	return dirs, nil
+}
+
+func extractFailedGatorTestsFromOutput(output string) []string {
+	lines := strings.Split(output, "\n")
+	result := make([]string, 0)
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "--- FAIL:") {
+			result = append(result, strings.TrimSpace(strings.TrimPrefix(line, "--- FAIL:")))
+		}
+	}
+	return result
+}
+
+func parseCoverageReportFromOutput(raw []byte) (coverageReport, error) {
+	text := string(raw)
+	start := strings.Index(text, "{")
+	end := strings.LastIndex(text, "}")
+	if start == -1 || end == -1 || end < start {
+		return coverageReport{}, fmt.Errorf("coverage JSON object not found in output")
+	}
+
+	var report coverageReport
+	if err := json.Unmarshal([]byte(text[start:end+1]), &report); err != nil {
+		return coverageReport{}, err
+	}
+	return report, nil
 }

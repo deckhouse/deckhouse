@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allow-host-network
+spec:
+  testDirectory: allow-host-network
+  suite:
+    expectedTestBlockNames:
+      - pss-baseline-functional
+      - security-policy-functional
+      - security-policy-spe-pod

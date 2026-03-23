@@ -33,165 +33,62 @@ spec:
               type: array
               items:
                 type: string
+            allowedLocalhostFiles:
+              type: array
+              items:
+                type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
       code:
         - engine: Rego
           source:
             version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.check_set" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.match" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.resolve_value" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.expand_synonyms" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
             rego: |
               package d8.security_policies
+
+              import data.lib.check_set.check_value_with_glob
+              import data.lib.common.input_containers
+              import data.lib.exception.allowed_values_or_empty
+              import data.lib.exception.resolve_spe_for_container
+              import data.lib.expand_synonyms.expand
+              import data.lib.expand_synonyms.normalize
+              import data.lib.resolve_value.resolve_from_sources
+
+              apparmor_translation := {
+                "RuntimeDefault": ["runtime/default"],
+                "Unconfined": ["unconfined"],
+                "Localhost": ["localhost", "localhost/*"],
+              }
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 container := input_containers[_]
-                not allowed_by_any(input.review.object, container)
-                allowed_by_policy := sprintf("Allowed profiles: %v", [input.parameters.allowedProfiles])
-                actual_value := get_actual_apparmor_profile(input.review.object, container)
-                exception_allowed := get_exception_allowed_apparmor(input.review.object, container)
-                msg := build_apparmor_message(input.review.object.metadata.name, container.name, allowed_by_policy, actual_value, exception_allowed)
-              }
-
-              get_actual_apparmor_profile(pod, container) := out if {
-                profile := get_apparmor_profile(pod, container)
-                out := sprintf("Actual AppArmor profile: %v", [profile])
-              }
-
-              get_exception_allowed_apparmor(pod, container) := out if {
-                label := pod.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := pod.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "appArmorProfile")
-                has_field(exception.spec.securityContext.appArmorProfile, "allowedValues")
-                allowed_profiles := exception.spec.securityContext.appArmorProfile.allowedValues
-                out := sprintf("SecurityPolicyException allowed profiles: %v", [allowed_profiles])
-              }
-
-              get_exception_allowed_apparmor(_, _) := "" if {
-                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-              }
-
-              get_exception_allowed_apparmor(_, _) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-              }
-
-              get_exception_allowed_apparmor(_, _) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                not has_field(exception.spec, "securityContext")
-              }
-
-              get_exception_allowed_apparmor(_, _) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                not has_field(exception.spec.securityContext, "appArmorProfile")
-              }
-
-              get_exception_allowed_apparmor(_, _) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "appArmorProfile")
-                not has_field(exception.spec.securityContext.appArmorProfile, "allowedValues")
-              }
-
-              build_apparmor_message(pod_name, container_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
-                exception_allowed != ""
-                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v. | %v | %v | %v", [pod_name, container_name, actual_value, allowed_by_policy, exception_allowed])
-              }
-
-              build_apparmor_message(pod_name, container_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
-                exception_allowed == ""
-                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v. | %v | %v", [pod_name, container_name, actual_value, allowed_by_policy])
-              }
-
-              allowed_by_any(pod, container) if {
-                allowed_by_securitypolicyexception(pod, container)
-              }
-
-              allowed_by_any(pod, container) if {
-                allowed_by_securitypolicy(pod, container)
-              }
-
-              allowed_by_securitypolicyexception(pod, container) if {
-                label := pod.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := pod.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "appArmorProfile")
-                has_field(exception.spec.securityContext.appArmorProfile, "allowedValues")
-                profile := canonicalize_apparmor_profile(container.securityContext.appArmorProfile)
-                profile in exception.spec.securityContext.appArmorProfile.allowedValues
-              }
-
-              allowed_by_securitypolicy(pod, container) if {
-                apparmor_profile := get_apparmor_profile(pod, container)
-                glob.match(input.parameters.allowedProfiles[_], [], apparmor_profile)
-              }
-
-              input_containers contains c if {
-                c := input.review.object.spec.containers[_]
-              }
-
-              input_containers contains c if {
-                c := input.review.object.spec.initContainers[_]
-              }
-
-              input_containers contains c if {
-                c := input.review.object.spec.ephemeralContainers[_]
-              }
-
-              get_apparmor_profile(_, container) := out if {
-                profile := object.get(container, ["securityContext", "appArmorProfile"], null)
-                profile != null
-                out := canonicalize_apparmor_profile(profile)
-              }
-
-              get_apparmor_profile(pod, container) := out if {
-                profile := object.get(container, ["securityContext", "appArmorProfile"], null)
-                profile == null
-                out := pod.metadata.annotations[sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])]
-              }
-
-              get_apparmor_profile(pod, container) := out if {
-                profile := object.get(container, ["securityContext", "appArmorProfile"], null)
-                profile == null
-                not pod.metadata.annotations[sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])]
-                out := canonicalize_apparmor_profile(object.get(pod, ["spec", "securityContext", "appArmorProfile"], null))
-              }
-
-              canonicalize_apparmor_profile(profile) := out if {
-                profile.type == "RuntimeDefault"
-                out := "runtime/default"
-              }
-
-              canonicalize_apparmor_profile(profile) := out if {
-                profile.type == "Unconfined"
-                out := "unconfined"
-              }
-
-              canonicalize_apparmor_profile(profile) := out if {
-                profile.type = "Localhost"
-                out := sprintf("localhost/%s", [profile.localhostProfile])
-              }
-
-              canonicalize_apparmor_profile(profile) := out if {
-                profile == null
-                out := "runtime/default"
-              }
-
-              # has_field returns whether an object has a field
-              has_field(object, field) if {
-                object[field]
-              }
-
-              has_field(object, field) := false if {
-                not object[field]
+                sources := [
+                  {"type": "container_field", "path": ["securityContext", "appArmorProfile", "type"]},
+                  {"type": "annotation", "key": sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])},
+                  {"type": "pod_field", "path": ["spec", "securityContext", "appArmorProfile", "type"]}
+                ]
+                raw_profile := resolve_from_sources(input.review.object, container, sources)
+                profile := normalize(raw_profile, apparmor_translation)
+                labels := object.get(input.review.object.metadata, "labels", {})
+                exception := resolve_spe_for_container(container, labels, input.review.object.metadata.namespace)
+                spe_allowed := allowed_values_or_empty(exception, ["spec", "securityContext", "appArmorProfile", "allowedValues"])
+                allowed := expand(input.parameters.allowedProfiles, apparmor_translation)
+                spe_allowed_expanded := expand(spe_allowed, apparmor_translation)
+                result := check_value_with_glob(profile, allowed, spe_allowed_expanded)
+                not result.allowed
+                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v. | %v", [input.review.object.metadata.name, container.name, result.msg])
               }

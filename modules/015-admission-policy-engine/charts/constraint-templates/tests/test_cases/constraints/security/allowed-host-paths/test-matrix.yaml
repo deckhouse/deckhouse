@@ -1,0 +1,669 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-host-paths
+spec:
+  suiteName: d8-allowed-host-paths
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+  - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+          - image: nginx
+            name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+  - name: pss-baseline
+    gatorBlock: pss-baseline
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: 001-allowed-no-hostpath-volumes
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: absent
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-no-hostpath-volumes
+    - name: 004-disallowed-hostpath-proc
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: negative
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-hostpath-proc
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+            volumes:
+            - hostPath:
+                path: /proc
+              name: proc-volume
+    - name: 003-disallowed-hostpath-proc-ro
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: negative
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-hostpath-proc-ro
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: true
+            volumes:
+            - hostPath:
+                path: /proc/ro
+              name: proc-volume
+    - name: 002-disallowed-hostpath-etc
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: negative
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-hostpath-etc
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-etc
+                name: etc-volume
+            volumes:
+            - hostPath:
+                path: /etc
+              name: etc-volume
+    - name: 005-disallowed-multiple-volumes-one-hostpath
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: negative
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-multiple-volumes-one-hostpath
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /config
+                name: config-volume
+              - mountPath: /host-proc
+                name: proc-volume
+            volumes:
+            - configMap:
+                name: my-config
+              name: config-volume
+            - hostPath:
+                path: /proc
+              name: proc-volume
+  - name: security-policy
+    gatorBlock: security-policy
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: 006-allowed-no-hostpath-volumes
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: absent
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-no-hostpath-volumes
+    - name: 007-allowed-proc-ro-readonly
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: positive
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-proc-ro-readonly
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: true
+            volumes:
+            - hostPath:
+                path: /proc/ro
+              name: proc-volume
+    - name: 008-allowed-proc-rw-readonly
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: positive
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-proc-rw-readonly
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: true
+            volumes:
+            - hostPath:
+                path: /proc/rw
+              name: proc-volume
+    - name: 009-allowed-proc-rw-readwrite
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: positive
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-proc-rw-readwrite
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /proc/rw
+              name: proc-volume
+    - name: 010-allowed-proc-rw-subpath-readwrite
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: positive
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-proc-rw-subpath-readwrite
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /proc/rw/subdir
+              name: proc-volume
+    - name: 013-disallowed-proc-ro-readwrite
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: positive
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-proc-ro-readwrite
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /proc/ro
+              name: proc-volume
+    - name: 012-disallowed-proc-not-allowed-prefix
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: negative
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-proc-not-allowed-prefix
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+            volumes:
+            - hostPath:
+                path: /proc/other
+              name: proc-volume
+    - name: 011-disallowed-etc-path
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].hostPath.path
+        scenario: negative
+      - path: spec.volumes[].hostPath.readOnly
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-etc-path
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-etc
+                name: etc-volume
+            volumes:
+            - hostPath:
+                path: /etc
+              name: etc-volume
+  - name: security-policy-with-exception
+    gatorBlock: security-policy-with-exception
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: 015-018-allowed-by-exception-mismatch-but-constraint-allows
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-multiple-paths
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /proc/etc
+                  readOnly: false
+                - path: /etc/passwd
+                  readOnly: true
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-proc-etc
+            name: allowed-by-exception-mismatch-but-constraint-allows
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /proc/rw
+              name: proc-volume
+    - name: 015-019-allowed-by-exception-multiple-paths
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-multiple-paths
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /proc/etc
+                  readOnly: false
+                - path: /etc/passwd
+                  readOnly: true
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-multiple-paths
+            name: allowed-by-exception-multiple-paths
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: false
+              - mountPath: /host-passwd
+                name: passwd-volume
+                readOnly: true
+            volumes:
+            - hostPath:
+                path: /proc/etc
+              name: proc-volume
+            - hostPath:
+                path: /etc/passwd
+              name: passwd-volume
+    - name: 016-020-allowed-by-exception-proc-etc-readwrite
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-proc-etc
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /proc/etc
+                  readOnly: false
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-proc-etc
+            name: allowed-by-exception-proc-etc-readwrite
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /proc/etc
+              name: proc-volume
+    - name: 016-022-disallowed-by-exception-path-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-proc-etc
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /proc/etc
+                  readOnly: false
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-proc-etc
+            name: disallowed-by-exception-path-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /proc/other
+              name: proc-volume
+    - name: 016-023-disallowed-by-exception-readonly-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-proc-etc
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /proc/etc
+                  readOnly: false
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-proc-etc
+            name: disallowed-by-exception-readonly-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: true
+            volumes:
+            - hostPath:
+                path: /proc/etc
+              name: proc-volume
+    - name: 024-disallowed-no-exception-label
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speAbsent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-no-exception-label
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+            volumes:
+            - hostPath:
+                path: /proc/etc
+              name: proc-volume
+    - name: 016-021-disallowed-by-exception-multiple-volumes-one-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-proc-etc
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /proc/etc
+                  readOnly: false
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-proc-etc
+            name: disallowed-by-exception-multiple-volumes-one-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: false
+              - mountPath: /host-other
+                name: other-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /proc/etc
+              name: proc-volume
+            - hostPath:
+                path: /proc/other
+              name: other-volume
+    - name: 017-025-disallowed-by-exception-empty-spec
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speAbsent
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: empty-spec
+          spec:
+            test: test
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: empty-spec
+            name: disallowed-by-exception-empty-spec
+          spec:
+            volumes:
+            - hostPath:
+                path: /proc
+              name: proc-volume

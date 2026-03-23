@@ -1,0 +1,116 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-service-types
+spec:
+  suiteName: d8-allowed-volume-types
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 001-allowed_clusterip
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.type
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              kind: Service
+              metadata:
+                name: my-service
+              spec:
+                ports:
+                  - port: 80
+                    protocol: TCP
+                    targetPort: 9376
+                selector:
+                  app: MyApp
+                type: ClusterIP
+        - name: 002-disallowed_loadbalancer
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.type
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              kind: Service
+              metadata:
+                name: my-service
+              spec:
+                ports:
+                  - port: 80
+                    protocol: TCP
+                    targetPort: 9376
+                selector:
+                  app: MyApp
+                type: LoadBalancer
+        - name: 003-disallowed_nodeport
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.type
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              kind: Service
+              metadata:
+                name: my-service
+              spec:
+                ports:
+                  - port: 80
+                    protocol: TCP
+                    targetPort: 9376
+                selector:
+                  app: MyApp
+                type: NodePort
+        - name: 004-allowed_default_clusterip
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.type
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              kind: Service
+              metadata:
+                name: my-service-default
+              spec:
+                ports:
+                  - port: 80
+                    protocol: TCP
+                    targetPort: 9376
+                selector:
+                  app: MyApp

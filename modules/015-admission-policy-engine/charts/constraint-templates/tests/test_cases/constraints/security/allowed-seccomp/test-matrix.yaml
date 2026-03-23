@@ -1,0 +1,874 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-seccomp
+spec:
+  suiteName: d8-allowed-seccomp-profiles
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+  - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+          - image: nginx
+            name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+  - name: pss-baseline
+    gatorBlock: pss-baseline
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: 001-allowed-daemonset-runtime-default-securityContext-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          apiVersion: apps/v1
+          kind: DaemonSet
+          metadata:
+            name: allowed-daemonset-runtime-default-securityContext-container
+          spec:
+            selector:
+              matchLabels:
+                app: nginx
+            template:
+              metadata:
+                labels:
+                  app: nginx
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    seccompProfile:
+                      type: RuntimeDefault
+    - name: 002-allowed-deployment-runtime-default-securityContext-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: allowed-deployment-runtime-default-securityContext-container
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: nginx
+            template:
+              metadata:
+                labels:
+                  app: nginx
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    seccompProfile:
+                      type: RuntimeDefault
+    - name: 003-allowed-localhost-profile-annotation
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: metadata.annotations["container.seccomp.security.alpha.kubernetes.io/*"]
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            annotations:
+              container.seccomp.security.alpha.kubernetes.io/nginx: localhost/my-profile.json
+            name: allowed-localhost-profile-annotation
+    - name: 004-allowed-localhost-profile-securityContext
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-localhost-profile-securityContext
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  localhostProfile: my-profile.json
+                  type: Localhost
+    - name: 005-allowed-no-seccomp-profile
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: absent
+      - path: metadata.annotations["container.seccomp.security.alpha.kubernetes.io/*"]
+        scenario: absent
+      - path: spec.securityContext.seccompProfile.type
+        scenario: absent
+      - path: metadata.annotations["seccomp.security.alpha.kubernetes.io/pod"]
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-no-seccomp-profile
+    - name: 006-allowed-runtime-default-annotation
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: metadata.annotations["seccomp.security.alpha.kubernetes.io/pod"]
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            annotations:
+              seccomp.security.alpha.kubernetes.io/pod: runtime/default
+            name: allowed-runtime-default-annotation
+    - name: 007-allowed-runtime-default-securityContext-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-runtime-default-securityContext-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+    - name: 008-allowed-runtime-default-securityContext-pod
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.type
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-runtime-default-securityContext-pod
+          spec:
+            securityContext:
+              seccompProfile:
+                type: RuntimeDefault
+    - name: 009-disallowed-daemonset-unconfined-securityContext
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          apiVersion: apps/v1
+          kind: DaemonSet
+          metadata:
+            name: disallowed-daemonset-unconfined-securityContext
+          spec:
+            selector:
+              matchLabels:
+                app: nginx
+            template:
+              metadata:
+                labels:
+                  app: nginx
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    seccompProfile:
+                      type: Unconfined
+    - name: 010-disallowed-deployment-unconfined-securityContext
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: disallowed-deployment-unconfined-securityContext
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: nginx
+            template:
+              metadata:
+                labels:
+                  app: nginx
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    seccompProfile:
+                      type: Unconfined
+    - name: 011-disallowed-multiple-containers-one-unconfined
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: multiContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-multiple-containers-one-unconfined
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+            - image: redis
+              name: redis
+              securityContext:
+                seccompProfile:
+                  type: Unconfined
+    - name: 012-disallowed-unconfined-annotation
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: metadata.annotations["seccomp.security.alpha.kubernetes.io/pod"]
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            annotations:
+              seccomp.security.alpha.kubernetes.io/pod: unconfined
+            name: disallowed-unconfined-annotation
+    - name: 013-disallowed-unconfined-securityContext
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-unconfined-securityContext
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: Unconfined
+    - name: 014-disallowed-unconfined-securityContext-pod
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.type
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-unconfined-securityContext-pod
+          spec:
+            securityContext:
+              seccompProfile:
+                type: Unconfined
+    - name: 015-disallowed-initcontainer-unconfined-securityContext
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: initContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-initcontainer-unconfined-securityContext
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+            initContainers:
+            - command:
+              - /bin/sh
+              - -c
+              - echo init
+              image: busybox
+              name: init
+              securityContext:
+                seccompProfile:
+                  type: Unconfined
+    - name: 016-disallowed-initcontainer-unconfined-annotation
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: metadata.annotations["container.seccomp.security.alpha.kubernetes.io/*"]
+        scenario: initContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            annotations:
+              container.seccomp.security.alpha.kubernetes.io/init: unconfined
+            name: disallowed-initcontainer-unconfined-annotation
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+            initContainers:
+            - command:
+              - /bin/sh
+              - -c
+              - echo init
+              image: busybox
+              name: init
+    - name: 017-disallowed-multiple-containers-one-unconfined-annotation
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: metadata.annotations["container.seccomp.security.alpha.kubernetes.io/*"]
+        scenario: multiContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            annotations:
+              container.seccomp.security.alpha.kubernetes.io/redis: unconfined
+            name: disallowed-multiple-containers-one-unconfined-annotation
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+            - image: redis
+              name: redis
+    - name: 018-disallowed-unconfined-container-annotation
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: metadata.annotations["container.seccomp.security.alpha.kubernetes.io/*"]
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            annotations:
+              container.seccomp.security.alpha.kubernetes.io/redis: unconfined
+            name: disallowed-multiple-containers-one-unconfined-annotation
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+            - image: redis
+              name: redis
+    - name: 019-allowed-ephemeralcontainer-runtime-default-securityContext-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: ephemeralContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-ephemeralcontainer-runtime-default-securityContext-container
+          spec:
+            ephemeralContainers:
+            - name: debugger
+              image: busybox
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+    - name: 020-disallowed-ephemeralcontainer-unconfined-annotation
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: metadata.annotations["container.seccomp.security.alpha.kubernetes.io/*"]
+        scenario: ephemeralContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-ephemeralcontainer-unconfined-annotation
+            annotations:
+              container.seccomp.security.alpha.kubernetes.io/debugger: unconfined
+          spec:
+            ephemeralContainers:
+            - name: debugger
+              image: busybox
+  - name: pss-restricted
+    gatorBlock: pss-restricted
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_restricted.yaml
+    cases:
+    - name: 014-allowed-localhost-profile-annotation
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: metadata.annotations["container.seccomp.security.alpha.kubernetes.io/*"]
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            annotations:
+              container.seccomp.security.alpha.kubernetes.io/nginx: localhost/any-profile.json
+            name: allowed-localhost-profile-annotation
+    - name: 015-allowed-localhost-profile-securityContext
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-localhost-profile-securityContext
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  localhostProfile: any-profile.json
+                  type: Localhost
+    - name: 016-allowed-runtime-default-securityContext
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-runtime-default-securityContext
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+    - name: 017-disallowed-no-seccomp-profile
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-no-seccomp-profile
+    - name: 018-disallowed-unconfined-securityContext
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-unconfined-securityContext
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: Unconfined
+  - name: security-policy
+    gatorBlock: security-policy
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: 021-allowed-localhost-verySpecialFile-annotation
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: metadata.annotations["container.seccomp.security.alpha.kubernetes.io/*"]
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            annotations:
+              container.seccomp.security.alpha.kubernetes.io/nginx: localhost/verySpecialFile
+            name: allowed-localhost-verySpecialFile-annotation
+    - name: 025-disallowed-localhost-wrong-file-securityContext
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-localhost-wrong-file-securityContext
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  localhostProfile: wrong-file.json
+                  type: Localhost
+    - name: 026-disallowed-multiple-containers-one-disallowed
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: multiContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-multiple-containers-one-disallowed
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  localhostProfile: verySpecialFile
+                  type: Localhost
+            - image: redis
+              name: redis
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+    - name: 027-disallowed-no-seccomp-profile
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.type
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-no-seccomp-profile
+    - name: 029-disallowed-unconfined-securityContext
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seccompProfile.type
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-unconfined-securityContext
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: Unconfined
+  - name: pss-baseline-with-exception
+    gatorBlock: pss-baseline-with-exception
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: 031-033-allowed-by-exception-localhost-profile
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-localhost-profile
+          spec:
+            securityContext:
+              seccompProfile:
+                allowedLocalhostFiles:
+                - my-custom-profile.json
+                allowedValues:
+                - Localhost
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-localhost-profile
+            name: allowed-by-exception-localhost-profile
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  localhostProfile: my-custom-profile.json
+                  type: Localhost
+    - name: 031-035-allowed-by-exception-unconfined
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-unconfined
+          spec:
+            securityContext:
+              seccompProfile:
+                allowedValues:
+                - Unconfined
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-unconfined
+            name: allowed-by-exception-unconfined
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: Unconfined
+    - name: 033-039-allowed-by-container-exception-unconfined
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.allowedValues
+        scenario: speContainerSpecific
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-unconfined-container
+          spec:
+            securityContext:
+              seccompProfile:
+                allowedValues:
+                - Unconfined
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception/nginx: allow-unconfined-container
+            name: allowed-by-container-exception-unconfined
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: Unconfined
+            - command:
+              - /bin/sh
+              - -c
+              - sleep 3600
+              image: busybox
+              name: sidecar
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+    - name: 030-037-disallowed-by-exception-profile-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-localhost-profile
+          spec:
+            securityContext:
+              seccompProfile:
+                allowedLocalhostFiles:
+                - my-custom-profile.json
+                allowedValues:
+                - Localhost
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-localhost-profile
+            name: disallowed-by-exception-profile-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: Unconfined
+    - name: 036-disallowed-no-exception-label
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.allowedValues
+        scenario: speAbsent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-no-exception-label
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: Unconfined
+    - name: 032-038-disallowed-by-exception-empty-spec
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.allowedValues
+        scenario: speAbsent
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: empty-spec
+          spec:
+            test: test
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: empty-spec
+            name: disallowed-by-exception-empty-spec
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  type: Unconfined

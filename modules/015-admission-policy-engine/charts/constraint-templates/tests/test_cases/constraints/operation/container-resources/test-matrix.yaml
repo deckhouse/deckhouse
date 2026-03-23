@@ -1,0 +1,174 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: container-resources
+spec:
+  suiteName: d8-container-resources
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: operation-policy
+      gatorBlock: operation-policy
+      defaultObjectBase: ""
+      template: ../../templates/operation/container-resources.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: example-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+                namespace: default
+              spec:
+                containers:
+                  - name: foo
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        cpu: 1
+                        memory: 128Mi
+                      requests:
+                        cpu: 1
+                        memory: 128Mi
+        - name: example-disallowed
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                containers:
+                  - name: foo
+                    image: gcr.io/app:latest
+                    resources:
+                      limits:
+                        memory: 128Mi
+                      requests:
+                        cpu: 1
+                        memory: 128Mi
+        - name: example-disallowed-2
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                containers:
+                  - name: foo
+                    image: gcr.io/app:latest
+                    resources:
+                      limits:
+                        cpu: 1
+                      requests:
+                        cpu: 1
+                        memory: 128Mi
+        - name: example-disallowed-3
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                containers:
+                  - name: foo
+                    image: gcr.io/app:latest
+                    resources:
+                      limits:
+                        cpu: 1
+                        memory: 128Mi
+                      requests:
+                        cpu: 1
+                        memory: 128Mi
+                initContainers:
+                  - name: init
+                    image: gcr.io/init:latest
+                    resources:
+                      limits:
+                        cpu: 1
+                        memory: 128Mi
+                      requests:
+                        memory: 128Mi
+        - name: example-disallowed-4
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                containers:
+                  - name: foo
+                    image: gcr.io/app:latest
+                    resources:
+                      limits:
+                        cpu: 1
+                        memory: 128Mi
+                      requests:
+                        cpu: 1
+                        memory: 128Mi
+                ephemeralContainers:
+                  - name: eph
+                    image: gcr.io/eph:latest
+                    resources:
+                      limits:
+                        cpu: 1
+                        memory: 128Mi
+                      requests:
+                        cpu: 1

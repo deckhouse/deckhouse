@@ -1,0 +1,542 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-sysctls
+spec:
+  suiteName: d8-allowed-sysctls
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+    - name: pss-baseline
+      gatorBlock: pss-baseline
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: 001-allowed-daemonset-no-sysctls
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: allowed-daemonset-no-sysctls
+              spec:
+                selector:
+                  matchLabels:
+                    app: nginx
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+        - name: 003-allowed-kernel-shm-rmid-forced
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-kernel-shm-rmid-forced
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: kernel.shm_rmid_forced
+                      value: "1"
+        - name: 004-allowed-multiple-sysctls
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-multiple-sysctls
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: kernel.shm_rmid_forced
+                      value: "1"
+                    - name: net.ipv4.tcp_syncookies
+                      value: "1"
+                    - name: net.ipv4.ip_local_port_range
+                      value: 1024 65535
+        - name: 006-allowed-no-sysctls
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-sysctls
+        - name: 011-disallowed-net-core-rmem-max
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-net-core-rmem-max
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: net.core.rmem_max
+                      value: "16777216"
+        - name: 009-disallowed-kernel-msgmax
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-kernel-msgmax
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: kernel.msgmax
+                      value: "65536"
+        - name: 010-disallowed-multiple-sysctls-one-disallowed
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multiple-sysctls-one-disallowed
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: kernel.shm_rmid_forced
+                      value: "1"
+                    - name: net.core.rmem_max
+                      value: "16777216"
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 012-allowed-daemonset-no-sysctls
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: allowed-daemonset-no-sysctls
+              spec:
+                selector:
+                  matchLabels:
+                    app: nginx
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+        - name: 015-allowed-net-core-rmem-max
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-net-core-rmem-max
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: net.core.rmem_max
+                      value: "16777216"
+        - name: 016-allowed-no-sysctls
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-sysctls
+        - name: 020-disallowed-net-fake-sysctl
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-net-fake-sysctl
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: net.fake.sysctl
+                      value: "1"
+        - name: 019-disallowed-multiple-sysctls-one-forbidden
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls[].name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multiple-sysctls-one-forbidden
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: kernel.shm_rmid_forced
+                      value: "1"
+                    - name: net.fake.sysctl
+                      value: "1"
+    - name: pss-baseline-with-exception
+      gatorBlock: pss-baseline-with-exception
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: 023-029-allowed-by-exception-net-core-rmem-max
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-core-rmem-max
+                spec:
+                  securityContext:
+                    sysctls:
+                      allowedValues:
+                        - net.core.rmem_max
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-core-rmem-max
+                name: allowed-by-exception-net-core-rmem-max
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: net.core.rmem_max
+                      value: "16777216"
+        - name: 024-026-allowed-by-exception-forbidden-sysctl
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-fake-sysctl
+                spec:
+                  securityContext:
+                    sysctls:
+                      allowedValues:
+                        - net.fake.sysctl
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-fake-sysctl
+                name: allowed-by-exception-forbidden-sysctl
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: net.fake.sysctl
+                      value: "1"
+        - name: 023-027-allowed-by-exception-mismatch-but-constraint-allows
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-core-rmem-max
+                spec:
+                  securityContext:
+                    sysctls:
+                      allowedValues:
+                        - net.core.rmem_max
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-core-rmem-max
+                name: allowed-by-exception-mismatch-but-constraint-allows
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: kernel.shm_rmid_forced
+                      value: "1"
+        - name: 023-031-disallowed-by-exception-sysctl-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-core-rmem-max
+                spec:
+                  securityContext:
+                    sysctls:
+                      allowedValues:
+                        - net.core.rmem_max
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-core-rmem-max
+                name: disallowed-by-exception-sysctl-mismatch
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: kernel.msgmax
+                      value: "65536"
+        - name: 032-disallowed-no-exception-label
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls.allowedValues
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-label
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: net.core.rmem_max
+                      value: "16777216"
+        - name: 023-030-disallowed-by-exception-multiple-sysctls-one-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-core-rmem-max
+                spec:
+                  securityContext:
+                    sysctls:
+                      allowedValues:
+                        - net.core.rmem_max
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-core-rmem-max
+                name: disallowed-by-exception-multiple-sysctls-one-mismatch
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: net.core.rmem_max
+                      value: "16777216"
+                    - name: kernel.msgmax
+                      value: "65536"
+    - name: security-policy-with-exception
+      gatorBlock: security-policy-with-exception
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 022-028-allowed-by-exception-multiple-sysctls
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-multiple-sysctls
+                spec:
+                  securityContext:
+                    sysctls:
+                      allowedValues:
+                        - net.core.rmem_max
+                        - kernel.msgmax
+                        - net.core.wmem_max
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-multiple-sysctls
+                name: allowed-by-exception-multiple-sysctls
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: net.core.rmem_max
+                      value: "16777216"
+                    - name: kernel.msgmax
+                      value: "65536"
+        - name: 023-029-allowed-by-exception-net-core-rmem-max
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-core-rmem-max
+                spec:
+                  securityContext:
+                    sysctls:
+                      allowedValues:
+                        - net.core.rmem_max
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-core-rmem-max
+                name: allowed-by-exception-net-core-rmem-max
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: net.core.rmem_max
+                      value: "16777216"
+        - name: 025-033-disallowed-by-exception-empty-spec
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.sysctls.allowedValues
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: empty-spec
+                spec:
+                  test: test
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: empty-spec
+                name: disallowed-by-exception-empty-spec
+              spec:
+                securityContext:
+                  sysctls:
+                    - name: net.core.somaxconn
+                      value: "1024"

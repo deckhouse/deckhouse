@@ -1,0 +1,233 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-ingresses
+spec:
+  suiteName: d8-allowed-ingresses
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: pss-deny-all
+      gatorBlock: pss-deny-all
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_2.yaml
+      cases:
+        - name: 001-allowed-no-wildcard
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.rules[].host
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: allowed-no-wildcard
+              spec:
+                rules:
+                  - host: example.com
+                    http:
+                      paths:
+                        - backend:
+                            service:
+                              name: test
+                              port:
+                                number: 80
+                          path: /
+                          pathType: Prefix
+        - name: 003-disallowed-wildcard-in-host
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.rules[].host
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: disallowed-wildcard-in-host
+              spec:
+                rules:
+                  - host: '*.example.com'
+                    http:
+                      paths:
+                        - backend:
+                            service:
+                              name: test
+                              port:
+                                number: 80
+                          path: /
+                          pathType: Prefix
+        - name: 004-disallowed-wildcard-only
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.rules[].host
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: disallowed-wildcard-only
+              spec:
+                rules:
+                  - host: '*'
+                    http:
+                      paths:
+                        - backend:
+                            service:
+                              name: test
+                              port:
+                                number: 80
+                          path: /
+                          pathType: Prefix
+        - name: 002-disallowed-multiple-rules-one-wildcard
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.rules[].host
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: disallowed-multiple-rules-one-wildcard
+              spec:
+                rules:
+                  - host: example.com
+                    http:
+                      paths:
+                        - backend:
+                            service:
+                              name: test
+                              port:
+                                number: 80
+                          path: /
+                          pathType: Prefix
+                  - host: '*.example.com'
+                    http:
+                      paths:
+                        - backend:
+                            service:
+                              name: test
+                              port:
+                                number: 80
+                          path: /
+                          pathType: Prefix
+        - name: 007-allowed-no-host-field
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.rules[].host
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: allowed-no-host-field
+              spec:
+                rules:
+                  - http:
+                      paths:
+                        - backend:
+                            service:
+                              name: test
+                              port:
+                                number: 80
+                          path: /
+                          pathType: Prefix
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 005-allowed-no-wildcard-when-disabled
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.rules[].host
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: allowed-no-wildcard-when-disabled
+              spec:
+                rules:
+                  - host: example.com
+                    http:
+                      paths:
+                        - backend:
+                            service:
+                              name: test
+                              port:
+                                number: 80
+                          path: /
+                          pathType: Prefix
+        - name: 006-allowed-wildcard-when-disabled
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.rules[].host
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: allowed-wildcard-when-disabled
+              spec:
+                rules:
+                  - host: '*.example.com'
+                    http:
+                      paths:
+                        - backend:
+                            service:
+                              name: test
+                              port:
+                                number: 80
+                          path: /
+                          pathType: Prefix

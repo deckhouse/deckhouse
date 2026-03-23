@@ -1,0 +1,149 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allow-rbac-wildcards
+spec:
+  suiteName: allow-rbac-wildcards
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: pss-baseline
+      gatorBlock: custom-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: Role without wildcards (allowed)
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: rules[].apiGroups[]
+              scenario: positive
+            - path: rules[].resources[]
+              scenario: positive
+            - path: rules[].verbs[]
+              scenario: positive
+            - path: roleRef.name
+              scenario: absent
+            - path: subjects[].name
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: Role
+              metadata:
+                name: role-valid
+              rules:
+                - apiGroups: [""]
+                  resources: ["pods"]
+                  verbs: ["get", "list"]
+        - name: Role with wildcard in rules (denied)
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: rules[].apiGroups[]
+              scenario: negative
+            - path: rules[].resources[]
+              scenario: negative
+            - path: rules[].verbs[]
+              scenario: negative
+            - path: roleRef.name
+              scenario: absent
+            - path: subjects[].name
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: Role
+              metadata:
+                name: role-invalid-rules
+              rules:
+                - apiGroups: ["*"]
+                  resources: ["*"]
+                  verbs: ["*"]
+        - name: RoleBinding without wildcards (allowed)
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: rules[].apiGroups[]
+              scenario: absent
+            - path: rules[].resources[]
+              scenario: absent
+            - path: rules[].verbs[]
+              scenario: absent
+            - path: roleRef.name
+              scenario: positive
+            - path: subjects[].name
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: rolebinding-valid
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: role-valid
+              subjects:
+                - kind: ServiceAccount
+                  name: sa-valid
+                  namespace: testns
+        - name: RoleBinding with wildcard in roleRef (denied)
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: rules[].apiGroups[]
+              scenario: absent
+            - path: rules[].resources[]
+              scenario: absent
+            - path: rules[].verbs[]
+              scenario: absent
+            - path: roleRef.name
+              scenario: negative
+            - path: subjects[].name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: rolebinding-invalid-roleref
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: role-*
+              subjects:
+                - kind: ServiceAccount
+                  name: sa-*
+                  namespace: testns

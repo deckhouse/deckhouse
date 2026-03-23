@@ -1,0 +1,149 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: vulnerable-images
+spec:
+  suiteName: vulnerable-images
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  externalData:
+    providers:
+      - name: trivy-provider
+        errors: []
+        system_error: ""
+        responses:
+          "nginx:latest":
+            vulnerabilities: []
+          "busybox:latest":
+            vulnerabilities: []
+          "registry.invalid.local/vulnerable/nginx:latest":
+            vulnerabilities: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx:latest
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].image
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+              spec:
+                containers:
+                  - command:
+                      - ls
+                    image: nginx:latest
+                    name: nginx
+        - name: negative-image-reference
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].image
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          externalData:
+            providers:
+              - name: trivy-provider
+                errors:
+                  - "registry.invalid.local/vulnerable/nginx:latest contains high vulnerabilities"
+                system_error: ""
+                responses:
+                  "nginx:latest":
+                    vulnerabilities: []
+                  "busybox:latest":
+                    vulnerabilities: []
+                  "registry.invalid.local/vulnerable/nginx:latest":
+                    vulnerabilities:
+                      - severity: HIGH
+                        id: CVE-TEST-0001
+          object:
+            base: admissionPod
+            merge:
+              spec:
+                containers:
+                  - image: registry.invalid.local/vulnerable/nginx:latest
+                    name: nginx
+        - name: init-container-image
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].image
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              spec:
+                initContainers:
+                  - image: nginx:latest
+                    name: init-nginx
+        - name: multi-container-images
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].image
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          externalData:
+            providers:
+              - name: trivy-provider
+                errors: []
+                system_error: "trivy-provider timeout"
+                responses:
+                  "nginx:latest":
+                    vulnerabilities: []
+                  "busybox:latest":
+                    vulnerabilities: []
+                  "registry.invalid.local/vulnerable/nginx:latest":
+                    vulnerabilities: []
+          object:
+            base: admissionPod
+            merge:
+              spec:
+                containers:
+                  - image: nginx:latest
+                    name: nginx
+                  - image: busybox:latest
+                    name: sidecar
+        - name: ephemeral-container-image
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].image
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              spec:
+                ephemeralContainers:
+                  - image: busybox:latest
+                    name: debugger

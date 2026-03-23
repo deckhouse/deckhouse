@@ -1,0 +1,608 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-selinux
+spec:
+  suiteName: d8-allowed-selinux
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+  - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+          - image: nginx
+            name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+  - name: pss-baseline
+    gatorBlock: pss-baseline
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: 008-allowed-no-selinux-options
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: absent
+      - path: spec.securityContext.seLinuxOptions
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-no-selinux-options
+    - name: 002-allowed-container-init-t-securityContext-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: initContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-container-init-t-securityContext-container
+          spec:
+            initContainers:
+            - image: busybox
+              name: init
+              securityContext:
+                seLinuxOptions:
+                  type: container_init_t
+    - name: 004-allowed-container-t-securityContext-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-container-t-securityContext-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  type: container_t
+    - name: 007-allowed-empty-type-securityContext-pod
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-empty-type-securityContext-pod
+          spec:
+            securityContext:
+              seLinuxOptions:
+                type: container_t
+    - name: 012-disallowed-wrong-type-securityContext-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-wrong-type-securityContext-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  type: spc_t
+    - name: 013-disallowed-wrong-type-securityContext-pod
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-wrong-type-securityContext-pod
+          spec:
+            securityContext:
+              seLinuxOptions:
+                type: spc_t
+    - name: 011-disallowed-multiple-containers-one-wrong-type
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: multiContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-multiple-containers-one-wrong-type
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  type: container_t
+            - image: redis
+              name: redis
+              securityContext:
+                seLinuxOptions:
+                  type: spc_t
+    - name: 014-disallowed-ephemeralcontainer-wrong-type-securityContext-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: ephemeralContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-ephemeralcontainer-wrong-type-securityContext-container
+          spec:
+            ephemeralContainers:
+            - name: debugger
+              image: busybox
+              securityContext:
+                seLinuxOptions:
+                  type: spc_t
+  - name: security-policy
+    gatorBlock: security-policy
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: 017-allowed-exact-match-securityContext-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-exact-match-securityContext-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  level: somelevel
+                  role: somerole
+                  type: sometype
+                  user: someuser
+    - name: 018-allowed-exact-match-securityContext-pod
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-exact-match-securityContext-pod
+          spec:
+            securityContext:
+              seLinuxOptions:
+                level: somelevel
+                role: somerole
+                type: sometype
+                user: someuser
+    - name: 019-allowed-no-selinux-options
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: absent
+      - path: spec.securityContext.seLinuxOptions
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-no-selinux-options
+    - name: 025-disallowed-wrong-type-securityContext-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-wrong-type-securityContext-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  level: somelevel
+                  role: somerole
+                  type: wrongtype
+                  user: someuser
+    - name: 023-disallowed-wrong-level-securityContext-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-wrong-level-securityContext-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  level: wronglevel
+                  role: somerole
+                  type: sometype
+                  user: someuser
+    - name: 024-disallowed-wrong-role-securityContext-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-wrong-role-securityContext-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  level: somelevel
+                  role: wrongrole
+                  type: sometype
+                  user: someuser
+    - name: 026-disallowed-wrong-user-securityContext-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-wrong-user-securityContext-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  level: somelevel
+                  role: somerole
+                  type: sometype
+                  user: wronguser
+    - name: 022-disallowed-multiple-containers-one-wrong
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: multiContainer
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-multiple-containers-one-wrong
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  level: somelevel
+                  role: somerole
+                  type: sometype
+                  user: someuser
+            - image: redis
+              name: redis
+              securityContext:
+                seLinuxOptions:
+                  level: somelevel
+                  role: somerole
+                  type: sometype
+                  user: wronguser
+  - name: pss-baseline-with-exception
+    gatorBlock: pss-baseline-with-exception
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: 029-033-allowed-by-exception-spc-t-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-spc-t
+          spec:
+            securityContext:
+              seLinuxOptions:
+                allowedValues:
+                - type: spc_t
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-spc-t
+            name: allowed-by-exception-spc-t-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  type: spc_t
+    - name: 028-031-allowed-by-exception-custom-selinux-options-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions.allowedValues
+        scenario: speContainerSpecific
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-custom-selinux-options
+          spec:
+            securityContext:
+              seLinuxOptions:
+                allowedValues:
+                - level: customlevel
+                  role: customrole
+                  type: customtype
+                  user: customuser
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception/nginx: allow-custom-selinux-options
+            name: allowed-by-exception-custom-selinux-options-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  level: customlevel
+                  role: customrole
+                  type: customtype
+                  user: customuser
+    - name: 029-036-disallowed-by-exception-type-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-spc-t
+          spec:
+            securityContext:
+              seLinuxOptions:
+                allowedValues:
+                - type: spc_t
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-spc-t
+            name: disallowed-by-exception-type-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  type: wrongtype
+    - name: 028-034-disallowed-by-exception-level-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-custom-selinux-options
+          spec:
+            securityContext:
+              seLinuxOptions:
+                allowedValues:
+                - level: customlevel
+                  role: customrole
+                  type: customtype
+                  user: customuser
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-custom-selinux-options
+            name: disallowed-by-exception-level-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  level: wronglevel
+                  role: customrole
+                  type: customtype
+                  user: customuser
+    - name: 037-disallowed-no-exception-label
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions.allowedValues
+        scenario: speAbsent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-no-exception-label
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  type: spc_t
+    - name: 029-035-disallowed-by-exception-multiple-containers-one-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions.allowedValues
+        scenario: speContainerSpecific
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-spc-t
+          spec:
+            securityContext:
+              seLinuxOptions:
+                allowedValues:
+                - type: spc_t
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception/nginx: allow-spc-t
+            name: disallowed-by-exception-multiple-containers-one-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  type: spc_t
+            - image: redis
+              name: redis
+              securityContext:
+                seLinuxOptions:
+                  type: wrongtype
+    - name: 030-038-disallowed-by-exception-empty-spec
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions.allowedValues
+        scenario: speAbsent
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: empty-spec
+          spec:
+            test: test
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: empty-spec
+            name: disallowed-by-exception-empty-spec
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  type: spc_t

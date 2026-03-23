@@ -1,0 +1,159 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: deny-exec-heritage
+spec:
+  suiteName: d8-deny-exec-heritage
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 001-allowed-sudouser
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: metadata.labels.heritage
+              scenario: positive
+            - path: operation
+              scenario: positive
+            - path: requestSubResource
+              scenario: positive
+            - path: userInfo.username
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  heritage: deckhouse
+                name: test-pod
+                namespace: default
+              spec:
+                containers:
+                  - image: debian:stable-slim
+                    name: test
+        - name: 002-allowed-d8-sa
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: metadata.labels.heritage
+              scenario: positive
+            - path: operation
+              scenario: positive
+            - path: requestSubResource
+              scenario: positive
+            - path: userInfo.username
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  heritage: deckhouse
+                name: test-pod
+                namespace: d8-system
+              spec:
+                containers:
+                  - image: debian:stable-slim
+                    name: test
+        - name: 003-allowed-kube-sa
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: metadata.labels.heritage
+              scenario: positive
+            - path: operation
+              scenario: positive
+            - path: requestSubResource
+              scenario: positive
+            - path: userInfo.username
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  heritage: deckhouse
+                name: test-pod
+                namespace: kube-system
+              spec:
+                containers:
+                  - image: debian:stable-slim
+                    name: test
+        - name: 004-allowed-non-heritage-pod
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: metadata.labels.heritage
+              scenario: negative
+            - path: operation
+              scenario: positive
+            - path: requestSubResource
+              scenario: positive
+            - path: userInfo.username
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  heritage: none
+                name: test-pod-no-heritage
+                namespace: default
+              spec:
+                containers:
+                  - image: debian:stable-slim
+                    name: test
+        - name: 005-disallowed-heritage-pod-unauthorized
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: metadata.labels.heritage
+              scenario: positive
+            - path: operation
+              scenario: positive
+            - path: requestSubResource
+              scenario: positive
+            - path: userInfo.username
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  heritage: deckhouse
+                name: test-pod-heritage
+                namespace: default
+              spec:
+                containers:
+                  - image: debian:stable-slim
+                    name: test

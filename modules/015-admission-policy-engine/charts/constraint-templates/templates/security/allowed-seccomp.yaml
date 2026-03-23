@@ -65,19 +65,35 @@ spec:
         - engine: Rego
           source:
             version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.check_set" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.resolve_value" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.expand_synonyms" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.match" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
-              container_annotation_key_prefix := "container.seccomp.security.alpha.kubernetes.io/"
+              import data.lib.check_set.check_value_in_set_with_wildcards
+              import data.lib.exception.allowed_values_or_empty
+              import data.lib.exception.resolve_spe_for_container
+              import data.lib.expand_synonyms.expand
+              import data.lib.resolve_value.resolve_from_sources
 
+              container_annotation_key_prefix := "container.seccomp.security.alpha.kubernetes.io/"
               pod_annotation_key := "seccomp.security.alpha.kubernetes.io/pod"
 
               naming_translation := {
-                # securityContext -> annotation
                 "RuntimeDefault": ["runtime/default", "docker/default"],
                 "Unconfined": ["unconfined"],
                 "Localhost": ["localhost"],
-                # annotation -> securityContext
                 "runtime/default": ["RuntimeDefault"],
                 "docker/default": ["RuntimeDefault"],
                 "unconfined": ["Unconfined"],
@@ -87,289 +103,96 @@ spec:
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 not input_wildcard_allowed_profiles
-                allowed_profiles := get_allowed_profiles
-                container := input_containers[name]
-                result := get_profile(container)
-                not allowed_by_any(result.profile, result.file, allowed_profiles)
-                msg := get_message(result.profile, result.file, name, result.location, allowed_profiles)
-              }
-
-              allowed_by_any(profile, file, _) if {
-                allowed_by_securitypolicyexception(profile, file)
-              }
-
-              allowed_by_any(profile, file, allowed_profiles) if {
-                allowed_by_securitypolicy(profile, file, allowed_profiles)
-              }
-
-              allowed_by_securitypolicy(profile, file, allowed_profiles) if {
-                is_exception := false
-                allowed_profile(profile, file, allowed_profiles, is_exception)
-              }
-
-              allowed_by_securitypolicyexception(profile, file) if {
-                exception_allowed_profiles := get_allowed_profiles_exception
-                is_exception := true
-                allowed_profile(profile, file, exception_allowed_profiles, is_exception)
-              } 
-
-              get_allowed_profiles_exception contains allowed if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "seccompProfile")
-                has_field(exception.spec.securityContext.seccompProfile, "allowedValues")
-                exception_allowed_profiles := exception.spec.securityContext.seccompProfile.allowedValues[_]
-                allowed := exception_allowed_profiles
-              }
-
-              get_allowed_profiles_exception contains allowed if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "seccompProfile")
-                has_field(exception.spec.securityContext.seccompProfile, "allowedValues")
-                exception_allowed_profiles := exception.spec.securityContext.seccompProfile.allowedValues[_]
-                startswith(exception_allowed_profiles, "localhost")
-                allowed := naming_translation.localhost[_]
-              }
-
-              get_message(profile, file, name, location, allowed_profiles) := message if {
-                not profile == "Localhost"
-                actual_value := sprintf("Actual profile: '%v' (found at: %v)", [profile, location])
-                allowed_by_policy := sprintf("Allowed profiles: %v", [allowed_profiles])
-                exception_allowed := exception_allowed_seccomp_value
-                message := build_seccomp_message(name, actual_value, allowed_by_policy, exception_allowed)
-              }
-
-              get_message(profile, file, name, location, allowed_profiles) := message if {
-                profile == "Localhost"
-                actual_value := sprintf("Actual profile: '%v' with file '%v' (found at: %v)", [profile, file, location])
-                allowed_by_policy := sprintf("Allowed profiles: %v", [allowed_profiles])
-                exception_allowed := exception_allowed_seccomp_value
-                message := build_seccomp_message(name, actual_value, allowed_by_policy, exception_allowed)
-              }
-
-              exception_allowed_seccomp_value := out if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "seccompProfile")
-                has_field(exception.spec.securityContext.seccompProfile, "allowedValues")
-                allowed_profiles := exception.spec.securityContext.seccompProfile.allowedValues
-                out := sprintf("SecurityPolicyException allowed profiles: %v", [allowed_profiles])
-              }
-
-              exception_allowed_seccomp_value := "" if {
-                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-              }
-
-              exception_allowed_seccomp_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-              }
-
-              exception_allowed_seccomp_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                not has_field(exception.spec, "securityContext")
-              }
-
-              exception_allowed_seccomp_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                not has_field(exception.spec.securityContext, "seccompProfile")
-              }
-
-              exception_allowed_seccomp_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "seccompProfile")
-                not has_field(exception.spec.securityContext.seccompProfile, "allowedValues")
-              }
-
-              build_seccomp_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
-                exception_allowed != ""
-                msg := sprintf("Seccomp profile is not allowed for container '%v'. | %v | %v | %v", [name, actual_value, allowed_by_policy, exception_allowed])
-              }
-
-              build_seccomp_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
-                exception_allowed == ""
-                msg := sprintf("Seccomp profile is not allowed for container '%v'. | %v | %v", [name, actual_value, allowed_by_policy])
+                container := review_containers[_]
+                sources := [
+                  {"type": "container_field", "path": ["securityContext", "seccompProfile", "type"]},
+                  {"type": "pod_field", "path": ["spec", "securityContext", "seccompProfile", "type"]},
+                  {"type": "annotation", "key": sprintf("%v%v", [container_annotation_key_prefix, container.name])},
+                  {"type": "annotation", "key": pod_annotation_key}
+                ]
+                profile_raw := resolve_from_sources(input.review.object, container, sources)
+                profile := normalize_seccomp_profile(profile_raw, container, input.review.object)
+                allowed_base := expand(input.parameters.allowedProfiles, naming_translation)
+                allowed := allowed_with_localhost_files(
+                  allowed_base,
+                  object.get(input.parameters, "allowedLocalhostFiles", [])
+                )
+                labels := object.get(input.review.object.metadata, "labels", {})
+                exception := resolve_spe_for_container(container, labels, input.review.object.metadata.namespace)
+                spe_allowed := allowed_values_or_empty(exception, ["spec", "securityContext", "seccompProfile", "allowedValues"])
+                result := check_value_in_set_with_wildcards(
+                  profile,
+                  allowed,
+                  spe_allowed,
+                  {"prefix_wildcard": true, "wildcard": "*"}
+                )
+                not result.allowed
+                msg := sprintf("Seccomp profile is not allowed for container '%v'. | %v", [container.name, result.msg])
               }
 
               input_wildcard_allowed_profiles if {
                 input.parameters.allowedProfiles[_] == "*"
               }
 
-              input_wildcard_allowed_files if {
-                input.parameters.allowedLocalhostFiles[_] == "*"
+              review_containers contains c if {
+                c := input.review.object.spec.containers[_]
               }
 
-              input_wildcard_allowed_files if {
-                "localhost/*" == input.parameters.allowedProfiles[_]
+              review_containers contains c if {
+                c := input.review.object.spec.initContainers[_]
               }
 
-              # Simple allowed Profiles
-              allowed_profile(profile, file, allowed, exception) if {
-                not exception
-                not startswith(lower(profile), "localhost")
-                profile == allowed[_]
+              review_containers contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
               }
 
-              # Simple allowed Profiles from SecurityPolicyException
-              allowed_profile(profile, file, allowed, exception) if {
-                exception
-                profile == allowed[_]
+              review_containers contains c if {
+                c := input.review.object.spec.template.spec.containers[_]
               }
 
-              # seccomp Localhost without wildcard
-              allowed_profile(profile, file, allowed, _) if {
-                profile == "Localhost"
-                not input_wildcard_allowed_files
-                profile == allowed[_]
-                allowed_files := {x | x := object.get(input.parameters, "allowedLocalhostFiles", [])[_]} | get_annotation_localhost_files
-                file == allowed_files[_]
+              review_containers contains c if {
+                c := input.review.object.spec.template.spec.initContainers[_]
               }
 
-              # seccomp Localhost with wildcard
-              allowed_profile(profile, file, allowed, _) if {
-                profile == "Localhost"
-                input_wildcard_allowed_files
-                profile == allowed[_]
+              review_containers contains c if {
+                c := input.review.object.spec.template.spec.ephemeralContainers[_]
               }
 
-              # annotation localhost with wildcard
-              allowed_profile(profile, file, allowed, _) if {
-                "localhost/*" == allowed[_]
-                startswith(profile, "localhost/")
+              allowed_with_localhost_files(allowed, files) := out if {
+                allows_localhost(allowed)
+                extra := {"localhost/*" | files[_] == "*"} | {sprintf("localhost/%v", [f]) | f := files[_]; f != "*"}
+                out := {v | v := allowed[_]} | extra
+              } else := out if {
+                not allows_localhost(allowed)
+                out := {v | v := allowed[_]}
               }
 
-              # annotation localhost without wildcard
-              allowed_profile(profile, file, allowed, _) if {
-                startswith(profile, "localhost/")
-                profile == allowed[_]
+              allows_localhost(allowed) if {
+                allowed[_] == "localhost"
               }
 
-              # Localhost files from annotation scheme
-              get_annotation_localhost_files contains file if {
-                profile := input.parameters.allowedProfiles[_]
-                startswith(profile, "localhost/")
-                file := replace(profile, "localhost/", "")
+              normalize_seccomp_profile(profile_raw, container, obj) := profile if {
+                profile_raw == null
+                profile := "undefined"
+              } else := profile if {
+                profile_raw == "Localhost"
+                profile := resolve_localhost_profile(container, obj)
+              } else := profile if {
+                profile := profile_raw
               }
 
-              # The profiles explicitly in the list
-              get_allowed_profiles contains allowed if {
-                allowed := input.parameters.allowedProfiles[_]
-              }
-
-              # The simply translated profiles
-              get_allowed_profiles contains allowed if {
-                profile := input.parameters.allowedProfiles[_]
-                not startswith(lower(profile), "localhost")
-                allowed := naming_translation[profile][_]
-              }
-
-              # Seccomp Localhost to annotation translation
-              get_allowed_profiles contains allowed if {
-                profile := input.parameters.allowedProfiles[_]
-                profile == "Localhost"
-                file := object.get(input.parameters, "allowedLocalhostFiles", [])[_]
-                allowed := sprintf("%v/%v", [naming_translation[profile][_], file])
-              }
-
-              # Annotation localhost to Seccomp translation
-              get_allowed_profiles contains allowed if {
-                profile := input.parameters.allowedProfiles[_]
-                startswith(profile, "localhost")
-                allowed := naming_translation.localhost[_]
-              }
-
-              # Container profile as defined in pod annotation
-              get_profile(container) := {"profile": profile, "file": "", "location": location} if {
-                not has_securitycontext_container(container)
-                not has_annotation(get_container_annotation_key(container.name))
-                not has_securitycontext_pod
-                profile := input.review.object.metadata.annotations[pod_annotation_key]
-                location := sprintf("annotation %v", [pod_annotation_key])
-              }
-
-              # Container profile as defined in container annotation
-              get_profile(container) := {"profile": profile, "file": "", "location": location} if {
-                not has_securitycontext_container(container)
-                not has_securitycontext_pod
-                container_annotation := get_container_annotation_key(container.name)
-                has_annotation(container_annotation)
-                profile := input.review.object.metadata.annotations[container_annotation]
-                location := sprintf("annotation %v", [container_annotation])
-              }
-
-              # Container profile as defined in pods securityContext
-              get_profile(container) := {"profile": profile, "file": file, "location": location} if {
-                not has_securitycontext_container(container)
-                profile := input.review.object.spec.securityContext.seccompProfile.type
-                file := object.get(input.review.object.spec.securityContext.seccompProfile, "localhostProfile", "")
-                location := "pod securityContext"
-              }
-
-              # Container profile as defined in containers securityContext
-              get_profile(container) := {"profile": profile, "file": file, "location": location} if {
-                has_securitycontext_container(container)
-                profile := container.securityContext.seccompProfile.type
-                file := object.get(container.securityContext.seccompProfile, "localhostProfile", "")
-                location := "container securityContext"
-              }
-
-              # Container profile missing
-              get_profile(container) := {"profile": "undefined", "file": "", "location": "no explicit profile found"} if {
-                not has_annotation(get_container_annotation_key(container.name))
-                not has_annotation(pod_annotation_key)
-                not has_securitycontext_pod
-                not has_securitycontext_container(container)
-              }
-
-              has_annotation(annotation) if {
-                input.review.object.metadata.annotations[annotation]
-              }
-
-              has_securitycontext_pod if {
-                input.review.object.spec.securityContext.seccompProfile
-              }
-
-              has_securitycontext_container(container) if {
-                container.securityContext.seccompProfile
-              }
-
-              get_container_annotation_key(name) := annotation if {
-                annotation := concat("", [container_annotation_key_prefix, name])
-              }
-
-              input_containers[container.name] := container if {
-                container := input.review.object.spec.containers[_]
-              }
-
-              input_containers[container.name] := container if {
-                container := input.review.object.spec.initContainers[_]
-              }
-
-              input_containers[container.name] := container if {
-                container := input.review.object.spec.ephemeralContainers[_]
-              }
-
-              # has_field returns whether an object has a field
-              has_field(object, field) if {
-                object[field]
-              }
-
-              has_field(object, field) := false if {
-                not object[field]
+              resolve_localhost_profile(container, obj) := out if {
+                lp := object.get(container, ["securityContext", "seccompProfile", "localhostProfile"], null)
+                lp != null
+                out := sprintf("localhost/%v", [lp])
+              } else := out if {
+                lp := object.get(obj, ["spec", "securityContext", "seccompProfile", "localhostProfile"], null)
+                lp != null
+                out := sprintf("localhost/%v", [lp])
+              } else := out if {
+                lp := object.get(obj, ["spec", "template", "spec", "securityContext", "seccompProfile", "localhostProfile"], null)
+                lp != null
+                out := sprintf("localhost/%v", [lp])
+              } else := "localhost" if {
+                true
               }

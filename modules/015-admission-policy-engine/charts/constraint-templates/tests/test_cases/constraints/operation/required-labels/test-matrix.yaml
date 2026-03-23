@@ -1,0 +1,152 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: required-labels
+spec:
+  suiteName: d8requiredlabels
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: d8requiredlabels
+      gatorBlock: d8requiredlabels
+      defaultObjectBase: ""
+      template: ../../templates/operation/required-labels.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: pod-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: metadata.labels.foo
+              scenario: positive
+            - path: metadata.labels.bar
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-pod
+                labels:
+                  foo: ok
+                  bar: app.example.com
+        - name: dep-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: metadata.labels.foo
+              scenario: positive
+            - path: metadata.labels.bar
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: allowed-dep
+                labels:
+                  foo: ok
+                  bar: app.example.com
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - name: nginx
+                        image: nginx
+        - name: pod-disallowed
+          violations: "yes"
+          assertionMessage: 'you must provide labels: {"foo"}'
+          fields:
+            - path: metadata.labels.foo
+              scenario: negative
+            - path: metadata.labels.bar
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-pod
+                labels:
+                  bar: app.example.com
+        - name: dep-disallowed
+          violations: "yes"
+          assertionMessage: 'you must provide labels: {"foo"}'
+          fields:
+            - path: metadata.labels.foo
+              scenario: negative
+            - path: metadata.labels.bar
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: disallowed-dep
+                labels:
+                  bar: app.example.com
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - name: nginx
+                        image: nginx
+        - name: pod-disallowed-bar-regex
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: metadata.labels.foo
+              scenario: positive
+            - path: metadata.labels.bar
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-pod-bar-regex
+                labels:
+                  foo: ok
+                  bar: bad.local

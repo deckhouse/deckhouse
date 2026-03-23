@@ -1,0 +1,1456 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-users
+spec:
+  suiteName: d8-allowed-users
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+    - name: pss-restricted
+      gatorBlock: pss-restricted
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_restricted.yaml
+      cases:
+        - name: 003-allowed-runAsNonRoot-true-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-runAsNonRoot-true-container
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsNonRoot: true
+        - name: 004-allowed-runAsNonRoot-true-pod
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-runAsNonRoot-true-pod
+              spec:
+                securityContext:
+                  runAsNonRoot: true
+        - name: 005-allowed-runAsUser-non-zero-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: positive
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-runAsUser-non-zero-container
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsUser: 1000
+                initContainers:
+                  - image: nginx
+                    name: init
+                    securityContext:
+                      runAsUser: 1000
+        - name: 006-allowed-runAsUser-non-zero-pod
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-runAsUser-non-zero-pod
+              spec:
+                securityContext:
+                  runAsUser: 1000
+        - name: 002-allowed-deployment-runAsNonRoot-true-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: allowed-deployment-runAsNonRoot-true-container
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          runAsNonRoot: true
+        - name: 001-allowed-daemonset-runAsNonRoot-true-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: allowed-daemonset-runAsNonRoot-true-container
+              spec:
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          runAsNonRoot: true
+        - name: 010-disallowed-no-securityContext
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: absent
+            - path: spec.securityContext.runAsUser
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-securityContext
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      supplementalGroups:
+                        - 50
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  supplementalGroups:
+                    - 50
+        - name: 012-disallowed-runAsUser-zero-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-runAsUser-zero-container
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 0
+                      supplementalGroups:
+                        - 50
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  supplementalGroups:
+                    - 50
+        - name: 013-disallowed-runAsUser-zero-pod
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-runAsUser-zero-pod
+              spec:
+                securityContext:
+                  runAsUser: 0
+        - name: 011-disallowed-runAsNonRoot-false-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-runAsNonRoot-false-container
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsNonRoot: false
+                      supplementalGroups:
+                        - 50
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  supplementalGroups:
+                    - 50
+        - name: 009-disallowed-multiple-containers-one-root
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multiple-containers-one-root
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 1000
+                      supplementalGroups:
+                        - 50
+                  - image: redis
+                    name: redis
+                    securityContext:
+                      fsGroup: 5
+                      runAsGroup: 5
+                      runAsUser: 0
+                      supplementalGroups:
+                        - 5
+        - name: 008-disallowed-deployment-runAsUser-zero-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: disallowed-deployment-runAsUser-zero-container
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          runAsUser: 0
+        - name: 007-disallowed-daemonset-runAsUser-zero-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: disallowed-daemonset-runAsUser-zero-container
+              spec:
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          runAsUser: 0
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 020-allowed-runAsUser-in-range-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: positive
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-runAsUser-in-range-container
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsUser: 5
+                initContainers:
+                  - image: nginx
+                    name: init
+                    securityContext:
+                      runAsUser: 5
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  runAsUser: 5
+                  supplementalGroups:
+                    - 50
+        - name: 021-allowed-runAsUser-in-range-pod
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-runAsUser-in-range-pod
+              spec:
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  runAsUser: 5
+                  supplementalGroups:
+                    - 50
+        - name: 023-allowed-runAsUser-on-edge-min-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-runAsUser-on-edge-min-container
+              spec:
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  runAsUser: 1
+                  supplementalGroups:
+                    - 50
+        - name: 022-allowed-runAsUser-on-edge-max-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-runAsUser-on-edge-max-container
+              spec:
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  runAsUser: 10
+                  supplementalGroups:
+                    - 50
+        - name: 019-allowed-runAsGroup-in-range-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsGroup
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-custom-user-range
+                name: allowed-runAsGroup-in-range-container
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsGroup: 50
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  runAsUser: 5
+                  supplementalGroups:
+                    - 50
+        - name: 018-allowed-fsGroup-in-range-pod
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.fsGroup
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-custom-user-range
+                name: allowed-fsGroup-in-range-pod
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  runAsUser: 5
+                  supplementalGroups:
+                    - 50
+        - name: 024-allowed-supplementalGroups-in-range-pod
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.supplementalGroups
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-custom-user-range
+                name: allowed-supplementalGroups-in-range-pod
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      supplementalGroups:
+                        - 50
+                        - 75
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  runAsUser: 5
+                  supplementalGroups:
+                    - 50
+                    - 75
+        - name: 015-allowed-all-fields-in-range
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: positive
+            - path: spec.securityContext.runAsUser
+              scenario: positive
+            - path: spec.containers[].securityContext.runAsGroup
+              scenario: positive
+            - path: spec.securityContext.runAsGroup
+              scenario: positive
+            - path: spec.containers[].securityContext.supplementalGroups
+              scenario: positive
+            - path: spec.securityContext.supplementalGroups
+              scenario: positive
+            - path: spec.containers[].securityContext.fsGroup
+              scenario: positive
+            - path: spec.securityContext.fsGroup
+              scenario: positive
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: initContainer
+            - path: spec.containers[].securityContext.runAsGroup
+              scenario: initContainer
+            - path: spec.containers[].securityContext.supplementalGroups
+              scenario: initContainer
+            - path: spec.containers[].securityContext.fsGroup
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-custom-user-range
+                name: allowed-all-fields-in-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 5
+                      supplementalGroups:
+                        - 50
+                initContainers:
+                  - image: nginx
+                    name: init
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 5
+                      supplementalGroups:
+                        - 50
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  runAsUser: 5
+                  supplementalGroups:
+                    - 50
+        - name: 014-allowed-all-fields-in-range-with-pod-level
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser
+              scenario: positive
+            - path: spec.securityContext.runAsGroup
+              scenario: positive
+            - path: spec.securityContext.supplementalGroups
+              scenario: positive
+            - path: spec.securityContext.fsGroup
+              scenario: positive
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: initContainer
+            - path: spec.containers[].securityContext.runAsGroup
+              scenario: initContainer
+            - path: spec.containers[].securityContext.supplementalGroups
+              scenario: initContainer
+            - path: spec.containers[].securityContext.fsGroup
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-root-user
+                name: allowed-all-fields-in-range-with-pod-level
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 5
+                      supplementalGroups:
+                        - 50
+                initContainers:
+                  - image: nginx
+                    name: init
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 5
+                      supplementalGroups:
+                        - 50
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  runAsUser: 5
+                  supplementalGroups:
+                    - 50
+        - name: 017-allowed-deployment-runAsUser-in-range-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: allowed-deployment-runAsUser-in-range-container
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 5
+                      supplementalGroups:
+                        - 50
+        - name: 016-allowed-daemonset-runAsUser-in-range-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: allowed-daemonset-runAsUser-in-range-container
+              spec:
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 5
+                      supplementalGroups:
+                        - 50
+        - name: 029-disallowed-no-securityContext
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: absent
+            - path: spec.securityContext.runAsUser
+              scenario: absent
+            - path: spec.containers[].securityContext.runAsGroup
+              scenario: absent
+            - path: spec.securityContext.runAsGroup
+              scenario: absent
+            - path: spec.containers[].securityContext.supplementalGroups
+              scenario: absent
+            - path: spec.securityContext.supplementalGroups
+              scenario: absent
+            - path: spec.containers[].securityContext.fsGroup
+              scenario: absent
+            - path: spec.securityContext.fsGroup
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-securityContext
+        - name: 032-disallowed-runAsUser-out-of-range-low-container
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-runAsUser-out-of-range-low-container
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 0
+                      supplementalGroups:
+                        - 50
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  supplementalGroups:
+                    - 50
+        - name: 031-disallowed-runAsUser-out-of-range-high-container
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-runAsUser-out-of-range-high-container
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 11
+                      supplementalGroups:
+                        - 50
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  supplementalGroups:
+                    - 50
+        - name: 030-disallowed-runAsGroup-out-of-range-container
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsGroup
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-runAsGroup-out-of-range-container
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 5
+                      runAsGroup: 10
+                      supplementalGroups:
+                        - 5
+        - name: 027-disallowed-fsGroup-out-of-range-pod
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsGroup
+              scenario: negative
+            - path: spec.securityContext.fsGroup
+              scenario: negative
+            - path: spec.containers[].securityContext.fsGroup
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-fsGroup-out-of-range-pod
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 5
+                      runAsGroup: 50
+                      supplementalGroups:
+                        - 5
+                securityContext:
+                  fsGroup: 5
+                  runAsGroup: 50
+                  supplementalGroups:
+                    - 5
+        - name: 033-disallowed-supplementalGroups-out-of-range-pod
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.supplementalGroups
+              scenario: negative
+            - path: spec.containers[].securityContext.supplementalGroups
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-supplementalGroups-out-of-range-pod
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      supplementalGroups:
+                        - 5
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  supplementalGroups:
+                    - 50
+                    - 5
+        - name: 028-disallowed-multiple-containers-one-out-of-range
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: multiContainer
+            - path: spec.containers[].securityContext.runAsGroup
+              scenario: multiContainer
+            - path: spec.containers[].securityContext.supplementalGroups
+              scenario: multiContainer
+            - path: spec.containers[].securityContext.fsGroup
+              scenario: multiContainer
+            - path: spec.containers[].securityContext.fsGroup
+              scenario: negative
+            - path: spec.containers[].securityContext.supplementalGroups
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multiple-containers-one-out-of-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 5
+                      supplementalGroups:
+                        - 50
+                  - image: redis
+                    name: redis
+                    securityContext:
+                      fsGroup: 5
+                      runAsGroup: 5
+                      runAsUser: 11
+                      supplementalGroups:
+                        - 5
+        - name: 026-disallowed-deployment-runAsUser-out-of-range-low-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: disallowed-deployment-runAsUser-out-of-range-low-container
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          fsGroup: 50
+                          runAsGroup: 50
+                          runAsUser: 0
+                          supplementalGroups:
+                            - 50
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      supplementalGroups:
+                        - 50
+        - name: 025-disallowed-daemonset-runAsUser-out-of-range-low-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: disallowed-daemonset-runAsUser-out-of-range-low-container
+              spec:
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          fsGroup: 50
+                          runAsGroup: 50
+                          runAsUser: 0
+                          supplementalGroups:
+                            - 50
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      supplementalGroups:
+                        - 50
+        - name: 046-allowed-ephemeral-containers-in-range
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.runAsUser
+              scenario: ephemeralContainer
+            - path: spec.containers[].securityContext.runAsGroup
+              scenario: ephemeralContainer
+            - path: spec.containers[].securityContext.supplementalGroups
+              scenario: ephemeralContainer
+            - path: spec.containers[].securityContext.fsGroup
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-ephemeral-containers-in-range
+              spec:
+                ephemeralContainers:
+                  - image: nginx
+                    name: eph
+                    securityContext:
+                      fsGroup: 50
+                      runAsGroup: 50
+                      runAsUser: 5
+                      supplementalGroups:
+                        - 50
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  runAsUser: 5
+                  supplementalGroups:
+                    - 50
+    - name: pss-restricted-with-exception
+      gatorBlock: pss-restricted-with-exception
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_restricted.yaml
+      cases:
+        - name: 036-041-allowed-by-exception-root-user
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speMatch
+            - path: spec.securityContext.runAsGroup.allowedValues
+              scenario: speMatch
+            - path: spec.securityContext.supplementalGroups.allowedValues
+              scenario: speMatch
+            - path: spec.securityContext.fsGroup.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-root-user
+                spec:
+                  securityContext:
+                    fsGroup:
+                      allowedValues:
+                        - 10
+                    runAsGroup:
+                      allowedValues:
+                        - 10
+                    runAsNonRoot:
+                      allowedValue: false
+                    runAsUser:
+                      allowedValues:
+                        - 0
+                    supplementalGroups:
+                      allowedValues:
+                        - 10
+                        - 11
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-root-user
+                name: allowed-by-exception-root-user
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsNonRoot: false
+                      runAsUser: 0
+                securityContext:
+                  fsGroup: 10
+                  runAsGroup: 10
+                  supplementalGroups:
+                    - 10
+        - name: 035-038-allowed-by-exception-custom-user-range
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speMatch
+            - path: spec.securityContext.runAsGroup.allowedValues
+              scenario: speMatch
+            - path: spec.securityContext.supplementalGroups.allowedValues
+              scenario: speMatch
+            - path: spec.securityContext.fsGroup.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-custom-user-range
+                spec:
+                  securityContext:
+                    fsGroup:
+                      allowedValues:
+                        - 50
+                    runAsGroup:
+                      allowedValues:
+                        - 50
+                    runAsUser:
+                      allowedValues:
+                        - 1000
+                        - 2000
+                    supplementalGroups:
+                      allowedValues:
+                        - 50
+                        - 75
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-custom-user-range
+                name: allowed-by-exception-custom-user-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsUser: 1000
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  supplementalGroups:
+                    - 50
+                    - 75
+        - name: 036-042-allowed-by-exception-user-mismatch-but-constraint-allows
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speMismatch
+            - path: spec.securityContext.runAsGroup.allowedValues
+              scenario: speMismatch
+            - path: spec.securityContext.supplementalGroups.allowedValues
+              scenario: speMismatch
+            - path: spec.securityContext.fsGroup.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-root-user
+                spec:
+                  securityContext:
+                    fsGroup:
+                      allowedValues:
+                        - 10
+                    runAsGroup:
+                      allowedValues:
+                        - 10
+                    runAsNonRoot:
+                      allowedValue: false
+                    runAsUser:
+                      allowedValues:
+                        - 0
+                    supplementalGroups:
+                      allowedValues:
+                        - 10
+                        - 11
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-root-user
+                name: allowed-by-exception-user-mismatch-but-constraint-allows
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsUser: 1000
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  supplementalGroups:
+                    - 50
+        - name: 036-039-allowed-by-exception-mismatch-but-constraint-allows
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speMismatch
+            - path: spec.securityContext.runAsGroup.allowedValues
+              scenario: speMismatch
+            - path: spec.securityContext.supplementalGroups.allowedValues
+              scenario: speMismatch
+            - path: spec.securityContext.fsGroup.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-root-user
+                spec:
+                  securityContext:
+                    fsGroup:
+                      allowedValues:
+                        - 10
+                    runAsGroup:
+                      allowedValues:
+                        - 10
+                    runAsNonRoot:
+                      allowedValue: false
+                    runAsUser:
+                      allowedValues:
+                        - 0
+                    supplementalGroups:
+                      allowedValues:
+                        - 10
+                        - 11
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-root-user
+                name: allowed-by-exception-mismatch-but-constraint-allows
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsUser: 1000
+                securityContext:
+                  fsGroup: 50
+                  runAsGroup: 50
+                  supplementalGroups:
+                    - 50
+        - name: 036-040-allowed-by-exception-multiple-containers-all-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speContainerSpecific
+            - path: spec.securityContext.runAsGroup.allowedValues
+              scenario: speContainerSpecific
+            - path: spec.securityContext.supplementalGroups.allowedValues
+              scenario: speContainerSpecific
+            - path: spec.securityContext.fsGroup.allowedValues
+              scenario: speContainerSpecific
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-root-user
+                spec:
+                  securityContext:
+                    fsGroup:
+                      allowedValues:
+                        - 10
+                    runAsGroup:
+                      allowedValues:
+                        - 10
+                    runAsNonRoot:
+                      allowedValue: false
+                    runAsUser:
+                      allowedValues:
+                        - 0
+                    supplementalGroups:
+                      allowedValues:
+                        - 10
+                        - 11
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception/nginx: allow-root-user
+                name: allowed-by-exception-multiple-containers-all-allowed
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      fsGroup: 10
+                      runAsGroup: 10
+                      runAsNonRoot: false
+                      runAsUser: 0
+                      supplementalGroups:
+                        - 10
+                        - 11
+                  - image: redis
+                    name: redis
+                    securityContext:
+                      fsGroup: 10
+                      runAsGroup: 10
+                      runAsUser: 1000
+                      supplementalGroups:
+                        - 10
+        - name: 036-043-disallowed-by-exception-runAsNonRoot-mismatch
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speMismatch
+            - path: spec.securityContext.runAsGroup.allowedValues
+              scenario: speMatch
+            - path: spec.securityContext.supplementalGroups.allowedValues
+              scenario: speMatch
+            - path: spec.securityContext.fsGroup.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-root-user
+                spec:
+                  securityContext:
+                    fsGroup:
+                      allowedValues:
+                        - 10
+                    runAsGroup:
+                      allowedValues:
+                        - 10
+                    runAsNonRoot:
+                      allowedValue: false
+                    runAsUser:
+                      allowedValues:
+                        - 0
+                    supplementalGroups:
+                      allowedValues:
+                        - 10
+                        - 11
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-root-user
+                name: disallowed-by-exception-runAsNonRoot-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsNonRoot: true
+                      runAsUser: 0
+                securityContext:
+                  fsGroup: 10
+                  runAsGroup: 10
+                  supplementalGroups:
+                    - 10
+        - name: 044-disallowed-no-exception-label
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speAbsent
+            - path: spec.securityContext.runAsGroup.allowedValues
+              scenario: speAbsent
+            - path: spec.securityContext.supplementalGroups.allowedValues
+              scenario: speAbsent
+            - path: spec.securityContext.fsGroup.allowedValues
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-label
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsUser: 0
+                securityContext:
+                  fsGroup: 5
+                  runAsGroup: 5
+                  supplementalGroups:
+                    - 5
+        - name: 037-045-disallowed-by-exception-empty-spec
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speAbsent
+            - path: spec.securityContext.runAsGroup.allowedValues
+              scenario: speAbsent
+            - path: spec.securityContext.supplementalGroups.allowedValues
+              scenario: speAbsent
+            - path: spec.securityContext.fsGroup.allowedValues
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: empty-spec
+                spec:
+                  test: test
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: empty-spec
+                name: disallowed-by-exception-empty-spec
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsUser: 0
+                securityContext:
+                  fsGroup: 5
+                  runAsGroup: 5
+                  supplementalGroups:
+                    - 5

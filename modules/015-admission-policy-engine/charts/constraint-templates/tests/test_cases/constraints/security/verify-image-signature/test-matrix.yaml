@@ -1,0 +1,141 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: verify-image-signature
+spec:
+  suiteName: verify-image-signature
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  externalData:
+    providers:
+      - name: ratify-provider
+        errors: []
+        system_error: ""
+        responses:
+          "nginx:latest":
+            isSuccess: true
+          "busybox:latest":
+            isSuccess: true
+          "registry.invalid.local/unsigned/nginx:latest":
+            isSuccess: true
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx:latest
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].image
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: example
+        - name: negative-image-reference
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].image
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          externalData:
+            providers:
+              - name: ratify-provider
+                errors: []
+                system_error: ""
+                responses:
+                  "nginx:latest":
+                    isSuccess: true
+                  "busybox:latest":
+                    isSuccess: true
+                  "registry.invalid.local/unsigned/nginx:latest":
+                    isSuccess: false
+          object:
+            base: admissionPod
+            merge:
+              spec:
+                containers:
+                  - image: registry.invalid.local/unsigned/nginx:latest
+                    name: nginx
+        - name: init-container-image
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].image
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              spec:
+                initContainers:
+                  - image: nginx:latest
+                    name: init-nginx
+        - name: multi-container-images
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].image
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              spec:
+                containers:
+                  - image: nginx:latest
+                    name: nginx
+                  - image: busybox:latest
+                    name: sidecar
+        - name: ephemeral-container-image
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].image
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          externalData:
+            providers:
+              - name: ratify-provider
+                errors:
+                  - "ratify provider cannot validate busybox:latest"
+                system_error: ""
+                responses:
+                  "nginx:latest":
+                    isSuccess: true
+                  "busybox:latest":
+                    isSuccess: true
+                  "registry.invalid.local/unsigned/nginx:latest":
+                    isSuccess: true
+          object:
+            base: admissionPod
+            merge:
+              spec:
+                ephemeralContainers:
+                  - image: busybox:latest
+                    name: debugger

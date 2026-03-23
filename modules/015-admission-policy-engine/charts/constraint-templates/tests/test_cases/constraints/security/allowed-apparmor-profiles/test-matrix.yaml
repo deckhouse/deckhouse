@@ -1,0 +1,589 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-apparmor-profiles
+spec:
+  suiteName: d8-apparmor-profiles
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+    - name: pss-baseline
+      gatorBlock: pss-baseline
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: 006-allowed-runtime-default-annotation
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: metadata.annotations["container.apparmor.security.beta.kubernetes.io/*"]
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                annotations:
+                  container.apparmor.security.beta.kubernetes.io/nginx: runtime/default
+                name: allowed-runtime-default-annotation
+        - name: 007-allowed-localhost-profile-securityContext
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.appArmorProfile
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-localhost-profile-securityContext
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        localhostProfile: localhost/my-profile
+                        type: Localhost
+        - name: 008-disallowed-initContainer-unconfined
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.appArmorProfile
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-initContainer-unconfined
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: RuntimeDefault
+                initContainers:
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - echo init
+                    image: busybox
+                    name: init
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined
+        - name: 009-disallowed-multiple-containers-one-unconfined
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.appArmorProfile
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multiple-containers-one-unconfined
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                    securityContext:
+                      appArmorProfile:
+                        type: RuntimeDefault
+        - name: 010-disallowed-unconfined-annotation
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: metadata.annotations["container.apparmor.security.beta.kubernetes.io/*"]
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                annotations:
+                  container.apparmor.security.beta.kubernetes.io/nginx: unconfined
+                name: disallowed-unconfined-annotation
+        - name: 011-disallowed-unconfined-securityContext
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.appArmorProfile
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-unconfined-securityContext
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined
+        - name: 012-allowed-no-apparmor-profile
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.appArmorProfile
+              scenario: absent
+            - path: metadata.annotations["container.apparmor.security.beta.kubernetes.io/*"]
+              scenario: absent
+            - path: spec.securityContext.appArmorProfile
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-apparmor-profile
+        - name: 013-allowed-pod-securitycontext-runtime-default
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.appArmorProfile
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-pod-securitycontext-runtime-default
+              spec:
+                securityContext:
+                  appArmorProfile:
+                    type: RuntimeDefault
+        - name: 014-disallowed-pod-securitycontext-unconfined
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.appArmorProfile
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-pod-securitycontext-unconfined
+              spec:
+                securityContext:
+                  appArmorProfile:
+                    type: Unconfined
+        - name: 015-disallowed-initcontainer-unconfined-annotation
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: metadata.annotations["container.apparmor.security.beta.kubernetes.io/*"]
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                annotations:
+                  container.apparmor.security.beta.kubernetes.io/init: unconfined
+                name: disallowed-initcontainer-unconfined-annotation
+              spec:
+                initContainers:
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - echo init
+                    image: busybox
+                    name: init
+        - name: 016-disallowed-multiple-containers-one-unconfined-annotation
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: metadata.annotations["container.apparmor.security.beta.kubernetes.io/*"]
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                annotations:
+                  container.apparmor.security.beta.kubernetes.io/nginx: unconfined
+                name: disallowed-multiple-containers-one-unconfined-annotation
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+        - name: 030-disallowed-ephemeralcontainer-unconfined
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.appArmorProfile
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-ephemeralcontainer-unconfined
+              spec:
+                ephemeralContainers:
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: eph
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined
+        - name: 031-disallowed-ephemeralcontainer-unconfined-annotation
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: metadata.annotations["container.apparmor.security.beta.kubernetes.io/*"]
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                annotations:
+                  container.apparmor.security.beta.kubernetes.io/eph: unconfined
+                name: disallowed-ephemeralcontainer-unconfined-annotation
+              spec:
+                ephemeralContainers:
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: eph
+    - name: pss-baseline-with-exception
+      gatorBlock: pss-baseline-with-exception
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: 015-025-disallowed-by-exception-profile-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.appArmorProfile.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-runtime-default
+                spec:
+                  securityContext:
+                    appArmorProfile:
+                      allowedValues:
+                        - runtime/default
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-runtime-default
+                name: disallowed-by-exception-profile-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined
+        - name: 029-allowed-by-exception-unconfined
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.appArmorProfile.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-runtime-default
+                spec:
+                  securityContext:
+                    appArmorProfile:
+                      allowedValues:
+                        - runtime/default
+                        - unconfined
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-runtime-default
+                name: allowed-by-exception-unconfined
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined
+    - name: pss-baseline-spe-container
+      gatorBlock: pss-baseline-spe-container
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: 018-028-allowed-by-container-specific-exception-unconfined
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.appArmorProfile.allowedValues
+              scenario: speContainerSpecific
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-unconfined-container
+                spec:
+                  securityContext:
+                    appArmorProfile:
+                      allowedValues:
+                        - unconfined
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception/nginx: allow-unconfined-container
+                name: allowed-by-container-exception-unconfined
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                    securityContext:
+                      appArmorProfile:
+                        type: RuntimeDefault
+    - name: pss-baseline-restrictive-with-exception
+      gatorBlock: pss-baseline-restrictive-with-exception
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_deny_all.yaml
+      cases:
+        - name: 013-023-disallowed-by-exception-localhost-profile-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.appArmorProfile.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-localhost-profile
+                spec:
+                  securityContext:
+                    appArmorProfile:
+                      allowedValues:
+                        - localhost/my-profile
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-localhost-profile
+                name: disallowed-by-exception-localhost-profile-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: RuntimeDefault
+        - name: 015-025-disallowed-by-exception-profile-mismatch-restrictive
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.appArmorProfile.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-runtime-default
+                spec:
+                  securityContext:
+                    appArmorProfile:
+                      allowedValues:
+                        - runtime/default
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-runtime-default
+                name: disallowed-by-exception-profile-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined
+        - name: 015-024-disallowed-by-exception-multiple-containers-one-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.appArmorProfile.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-runtime-default
+                spec:
+                  securityContext:
+                    appArmorProfile:
+                      allowedValues:
+                        - runtime/default
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-runtime-default
+                name: disallowed-by-exception-multiple-containers-one-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: RuntimeDefault
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined
+        - name: 026-disallowed-no-exception-label
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.appArmorProfile.allowedValues
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-label
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined
+        - name: 017-027-disallowed-by-exception-empty-spec
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.appArmorProfile.allowedValues
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: empty-spec
+                spec:
+                  test: test
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: empty-spec
+                name: disallowed-by-exception-empty-spec
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: Unconfined

@@ -30,18 +30,29 @@ spec:
 
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.set" . | nindent 16 }}
+            rego: |
+              package d8.security_policies
 
-        violation [{"msg": msg, "details": {}}] {
-          not input.review.operation == "DELETE"
-          allowed_types := input.parameters.allowedServiceTypes
-          actual_type := input.review.object.spec.type        
-          service_name := input.review.object.metadata.name
-          not contains(allowed_types, actual_type)
-          msg := sprintf("Service \"%v\" has invalid type: \"%v\", allowed: %v", [service_name, actual_type, allowed_types])
-        }
+              import data.lib.set.check_fields_in_list
 
-        contains(list, elem) {
-          list[_] = elem
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                obj := input.review.object
+                service_name := obj.metadata.name
+                fields := [
+                  {"path": ["spec", "type"], "name": sprintf("Service %v type", [service_name]), "required": true}
+                ]
+                allowed_types := input.parameters.allowedServiceTypes
+                result := check_fields_in_list(obj, fields, allowed_types, {})
+                not result.allowed
+                msg := result.msg
+              }

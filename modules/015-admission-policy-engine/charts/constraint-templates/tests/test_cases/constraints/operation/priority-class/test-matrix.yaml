@@ -1,0 +1,72 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: priority-class
+spec:
+  suiteName: d8priorityclass
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: d8priorityclass
+      gatorBlock: d8priorityclass
+      defaultObjectBase: ""
+      template: ../../templates/operation/priority-class.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: example-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.priorityClassName
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: allowed
+                namespace: default
+              spec:
+                priorityClassName: foo
+                containers:
+                  - name: nginx
+                    image: nginx
+        - name: example-disallowed
+          violations: "yes"
+          assertionMessage: 'Pod <disallowed> has invalid priority class: bar'
+          fields:
+            - path: spec.priorityClassName
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                priorityClassName: bar
+                containers:
+                  - name: nginx
+                    image: nginx

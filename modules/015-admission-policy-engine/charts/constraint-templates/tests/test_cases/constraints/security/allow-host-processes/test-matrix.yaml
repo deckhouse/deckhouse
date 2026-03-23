@@ -1,0 +1,417 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allow-host-processes
+spec:
+  suiteName: d8-host-processes
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: ../../../_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+    - name: pss-baseline
+      gatorBlock: pss-baseline
+      defaultObjectBase: ""
+      template: ../../../../templates/security/allow-host-processes.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: allowed-no-hostpid-no-hostipc
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostPID
+              scenario: absent
+            - path: spec.hostIPC
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-hostpid-no-hostipc
+        - name: allowed-multiple-containers-no-hostpid-no-hostipc
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostPID
+              scenario: absent
+            - path: spec.hostIPC
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-multiple-containers-no-hostpid-no-hostipc
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                  - image: redis
+                    name: redis
+        - name: disallowed-hostpid-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostPID
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostpid-true
+              spec:
+                hostPID: true
+        - name: disallowed-hostipc-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostIPC
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostipc-true
+              spec:
+                hostIPC: true
+        - name: disallowed-hostpid-true-hostipc-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostPID
+              scenario: negative
+            - path: spec.hostIPC
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostpid-true-hostipc-true
+              spec:
+                hostIPC: true
+                hostPID: true
+        - name: disallowed-no-exception-label-hostpid-true-hostipc-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPID.allowedValue
+              scenario: speAbsent
+            - path: spec.network.hostIPC.allowedValue
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-label-hostpid-true-hostipc-true
+              spec:
+                hostIPC: true
+                hostPID: true
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../../../../templates/security/allow-host-processes.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: allowed-hostpid-true
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostPID
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-hostpid-true
+              spec:
+                hostPID: true
+        - name: allowed-hostipc-true
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostIPC
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-hostipc-true
+              spec:
+                hostIPC: true
+        - name: allowed-hostpid-true-hostipc-true
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostPID
+              scenario: positive
+            - path: spec.hostIPC
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-hostpid-true-hostipc-true
+              spec:
+                hostIPC: true
+                hostPID: true
+        - name: allowed-no-hostpid-no-hostipc
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostPID
+              scenario: absent
+            - path: spec.hostIPC
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-hostpid-no-hostipc
+    - name: security-policy-with-exception
+      gatorBlock: security-policy-with-exception
+      defaultObjectBase: ""
+      template: ../../../../templates/security/allow-host-processes.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: allowed-by-exception-hostpid-true
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPID.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostpid-true
+                spec:
+                  network:
+                    hostIPC:
+                      allowedValue: false
+                    hostPID:
+                      allowedValue: true
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostpid-true
+                name: allowed-by-exception-hostpid-true
+              spec:
+                hostPID: true
+        - name: allowed-by-exception-hostipc-true
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostIPC.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostipc-true
+                spec:
+                  network:
+                    hostIPC:
+                      allowedValue: true
+                    hostPID:
+                      allowedValue: false
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostipc-true
+                name: allowed-by-exception-hostipc-true
+              spec:
+                hostIPC: true
+        - name: allowed-by-exception-hostpid-true-hostipc-true
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPID.allowedValue
+              scenario: speMatch
+            - path: spec.network.hostIPC.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostpid-true-hostipc-true
+                spec:
+                  network:
+                    hostIPC:
+                      allowedValue: true
+                    hostPID:
+                      allowedValue: true
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostpid-true-hostipc-true
+                name: allowed-by-exception-hostpid-true-hostipc-true
+              spec:
+                hostIPC: true
+                hostPID: true
+        - name: allowed-by-exception-hostpid-false-hostipc-false
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostPID
+              scenario: positive
+            - path: spec.hostIPC
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostpid-false-hostipc-false
+                spec:
+                  network:
+                    hostIPC:
+                      allowedValue: false
+                    hostPID:
+                      allowedValue: false
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostpid-false-hostipc-false
+                name: allowed-by-exception-hostpid-false-hostipc-false
+              spec:
+                hostIPC: false
+                hostPID: false
+        - name: disallowed-by-exception-hostpid-mismatch
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostIPC.allowedValue
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostpid-true
+                spec:
+                  network:
+                    hostIPC:
+                      allowedValue: false
+                    hostPID:
+                      allowedValue: true
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostpid-true
+                name: disallowed-by-exception-hostpid-mismatch
+              spec:
+                hostIPC: true
+                hostPID: false
+        - name: disallowed-by-exception-hostipc-mismatch
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPID.allowedValue
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostipc-true
+                spec:
+                  network:
+                    hostIPC:
+                      allowedValue: true
+                    hostPID:
+                      allowedValue: false
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostipc-true
+                name: disallowed-by-exception-hostipc-mismatch
+              spec:
+                hostIPC: false
+                hostPID: true
+        - name: disallowed-exception-allows-false-constraint-allows-true
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPID.allowedValue
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostpid-false-hostipc-false
+                spec:
+                  network:
+                    hostIPC:
+                      allowedValue: false
+                    hostPID:
+                      allowedValue: false
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostpid-false-hostipc-false
+                name: disallowed-exception-allows-false-constraint-allows-true
+              spec:
+                hostPID: true
+ 
