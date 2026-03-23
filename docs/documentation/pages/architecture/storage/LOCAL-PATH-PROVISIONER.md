@@ -5,7 +5,7 @@ search: local-path-provisioner, hostpath
 description: Architecture of the local-path-provisioner module in Deckhouse Kubernetes Platform.
 ---
 
-The `local-path-provisioner` module provides the local storage on Kubernetes nodes using HostPath volumes. Creates StorageClass resources to manage the allocation of local storage.
+The `local-path-provisioner` module provides the local storage on Kubernetes nodes using `HostPath` volumes and creates StorageClass resources to manage the allocation of local storage.
 
 For more details about module, refer to the [corresponding documentation section](/modules/local-path-provisioner/).
 
@@ -20,17 +20,17 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`local-path-provisioner`](/modules/local-path-provisioner/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagrams:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![local-path-provisioner module architecture](../../../images/architecture/storage/c4-l2-local-path-provisioner.png)
 
 ## Module components
 
 The module consists of the following components:
 
-1. **Local-path-provisioner**: It performs the following actions when a Pod orders a disk:
+1. **Local-path-provisioner**: It performs the following actions when a pod orders a disk:
 
-   * creates a HostPath PersistentVolume;
-   * creates a local disk folder on the desired node along the path consisting of the path parameter of [LocalPathProvisioner custom resource](https://deckhouse.ru/modules/local-path-provisioner/cr.html#localpathprovisioner-v1alpha1-spec-path), the PersistentVolume name and the PersistentVolumeClaim name.
+   * Creates a PersistentVolume of the `HostPath` volume type.
+   * Creates a local disk directory for the volume on the target node. The directory path is based on the [`path`](/modules/local-path-provisioner/cr.html#localpathprovisioner-v1alpha1-spec-path) parameter of the LocalPathProvisioner custom resource, as well as the PersistentVolume and PersistentVolumeClaim names.
 
    It consists of a single container:
 
