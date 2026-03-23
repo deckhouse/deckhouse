@@ -50,7 +50,7 @@ func publishAPIConfigMigration(_ context.Context, input *go_hook.HookInput, dc d
 
 	mcGVR := schema.ParseGroupResource("moduleconfigs.deckhouse.io").WithVersion("v1alpha1")
 
-	_, err = kubeCl.CoreV1().ConfigMaps(migrationNS).Get(context.TODO(), temporaryConfigCM, metav1.GetOptions{})
+	_, err = kubeCl.CoreV1().ConfigMaps(targetNS).Get(context.TODO(), temporaryConfigCM, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("get: %w", err)
 	}
@@ -61,7 +61,7 @@ func publishAPIConfigMigration(_ context.Context, input *go_hook.HookInput, dc d
 
 	moduleConfig, err := kubeCl.Dynamic().Resource(mcGVR).Get(context.TODO(), "user-authn", metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		input.Logger.Info("ModuleConfig for user-authn does not exists, migrating with default config")
+		input.Logger.Info("ModuleConfig for user-authn does not exists")
 	} else if err != nil {
 		return fmt.Errorf("get: %w", err)
 	}
@@ -78,6 +78,7 @@ func publishAPIConfigMigration(_ context.Context, input *go_hook.HookInput, dc d
 			return fmt.Errorf("marshal: %w", err)
 		}
 	} else {
+		input.Logger.Info("Looks like publish API ingress settings are not set in ModuleConfig user-authn, skipping")
 		return nil
 	}
 
@@ -94,6 +95,7 @@ func publishAPIConfigMigration(_ context.Context, input *go_hook.HookInput, dc d
 	}
 
 	input.PatchCollector.CreateOrUpdate(cm)
+	input.Logger.Info("Written exported publish API ingress settings from ModuleConfig user-authn to temporary ConfigMap", slog.String("configmap", temporaryConfigCM), slog.String("namespace", targetNS))
 
 	return nil
 }
@@ -103,17 +105,11 @@ func extractPublishAPISettingsFromMC(mc *unstructured.Unstructured) (map[string]
 		return nil, false, nil
 	}
 
-	// publishEnabled, exists, err := unstructured.NestedBool(mc.UnstructuredContent(), "spec", "settings", "publishAPI", "enabled")
-	// if err != nil {
-	// 	return nil, false, fmt.Errorf("nested bool: %w", err)
-	// }
-	// if exists && !publishEnabled {
-	// 	return nil, false, nil
-	// }
-
-	publishAPISettings, _, err := unstructured.NestedMap(mc.UnstructuredContent(), "spec", "settings", "publishAPI")
+	publishAPISettings, exists, err := unstructured.NestedMap(mc.UnstructuredContent(), "spec", "settings", "publishAPI")
 	if err != nil {
 		return publishAPISettings, false, fmt.Errorf("nested map: %w", err)
+	} else if !exists {
+		return nil, false, nil
 	}
 
 	return publishAPISettings, true, nil
