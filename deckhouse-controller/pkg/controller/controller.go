@@ -397,7 +397,6 @@ func NewDeckhouseController(
 		if err != nil {
 			return nil, fmt.Errorf("register module package version controller: %w", err)
 		}
-
 	}
 
 	validation.RegisterAdmissionHandlers(
