@@ -1766,6 +1766,21 @@ alerts:
         Istio remote cluster {{$labels.cluster_id}} is not synchronized.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioReservedUIDConflict
+      sourceFile: modules/110-istio/monitoring/prometheus-rules/reserved-uid.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ce
+      description: |
+        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` is running as UID `1337`.
+
+        UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
+
+        To fix the issue, change the `runAsUser` in the container's or pod's `securityContext` to a different UID.
+      summary: |
+        Application container is running as UID 1337 (reserved by Istio).
+      severity: "4"
+      markupFormat: markdown
     - name: D8IstioVersionIsIncompatibleWithK8sVersion
       sourceFile: modules/110-istio/monitoring/prometheus-rules/versions.tpl
       moduleUrl: 110-istio
@@ -4369,21 +4384,6 @@ alerts:
         URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} has more than {{ printf &quot;extended_monitoring_ingress_threshold{threshold=&quot;5xx-warning&quot;, namespace=&quot;%s&quot;, ingress=&quot;%s&quot;}&quot; $labels.namespace $labels.ingress | query | first | value }}% of 5xx responses from the backend.
       severity: "5"
       markupFormat: default
-    - name: IstioApplicationContainerUsesReservedUID
-      sourceFile: modules/110-istio/monitoring/prometheus-rules/reserved-uid.yaml
-      moduleUrl: 110-istio
-      module: istio
-      edition: ce
-      description: |
-        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` is running as UID `1337`.
-
-        UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
-
-        To fix the issue, change the `runAsUser` in the container's or pod's `securityContext` to a different UID.
-      summary: |
-        Application container is running as UID 1337 (reserved by Istio).
-      severity: "4"
-      markupFormat: markdown
     - name: IstioIrrelevantExternalServiceFound
       sourceFile: modules/110-istio/monitoring/prometheus-rules/propagated-services.yaml
       moduleUrl: 110-istio

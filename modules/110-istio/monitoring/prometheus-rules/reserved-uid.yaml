@@ -1,6 +1,6 @@
 - name: d8.istio.reserved-uid
   rules:
-  - alert: IstioApplicationContainerUsesReservedUID
+  - alert: D8IstioReservedUIDConflict
     expr: max by (namespace, pod, container) (d8_istio_pod_container_reserved_uid == 1)
     for: 10m
     labels:
