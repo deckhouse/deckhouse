@@ -4,7 +4,8 @@ title: "The istio module: examples"
 
 ## Circuit Breaker
 
-The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) custom resource help to determine whether some endpoints do not behave as expected. Refer to the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier) for more details on the Outlier Detection algorithm.
+The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) custom resource help to determine whether some endpoints do not behave as expected. 
+Refer to the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier) for more details on the Outlier Detection algorithm.
 
 Example:
 
@@ -81,7 +82,7 @@ spec:
   trafficPolicy:
     loadBalancer:
       localityLbSetting:
-        enabled: true # LF is enabled
+        enabled: true # Locality Failover is enabled
     outlierDetection: # outlierDetection must be enabled
       consecutive5xxErrors: 1
       interval: 1s

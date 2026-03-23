@@ -5,7 +5,7 @@ title: "Модуль istio: примеры"
 ## Circuit Breaker
 
 Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в кастомном ресурсе [DestinationRule](istio-cr.html#destinationrule).
-Более подробно алгоритм Outlier Detection описан в [документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
+Более подробно алгоритм Outlier Detection описан [в документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
 
 Пример:
 
@@ -19,9 +19,9 @@ spec:
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 100 # Максимальное число коннектов в сторону host, суммарно для всех эндпоинтов.
+        maxConnections: 100 # Максимальное число содинений в сторону host, суммарно для всех эндпоинтов.
       http:
-        maxRequestsPerConnection: 10 # Каждые 10 запросов коннект будет пересоздаваться.
+        maxRequestsPerConnection: 10 # Каждые 10 запросов соединение будет пересоздаваться.
     outlierDetection:
       consecutive5xxErrors: 7 # Допустимо 7 ошибок (включая пятисотые, TCP-таймауты и HTTP-таймауты)
       interval: 5m            # в течение пяти минут,
@@ -82,7 +82,7 @@ spec:
   trafficPolicy:
     loadBalancer:
       localityLbSetting:
-        enabled: true # Включили LF.
+        enabled: true # Включили Locality Failover.
     outlierDetection: # outlierDetection включить обязательно.
       consecutive5xxErrors: 1
       interval: 1s
