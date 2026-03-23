@@ -118,6 +118,23 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-03-04T14:17:12.341089Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.59.0"
+        },
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.65.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость представляет собой обход авторизации на стороне gRPC-сервера через отсутствие ведущего слеша в псевдозаголовке :path. Для эксплуатации требуется, чтобы приложение запускало gRPC-сервер с перехватчиками авторизации на основе путей (grpc/authz) и имело политику с deny-правилами и fallback allow-правилом. Cluster-autoscaler использует google.golang.org/grpc исключительно как клиентскую библиотеку для подключения к API облачных провайдеров и Kubernetes API server. Он не запускает gRPC-сервер и не использует серверную авторизацию на основе путей, поэтому уязвимый код не исполняется.",
+      "timestamp": "2026-03-23T14:17:46.322000Z"
     }
   ],
   "timestamp": "2026-03-10T11:10:46Z"
