@@ -83,7 +83,7 @@ shell:
   - cd /src/cri-tools
   - go mod vendor
   - export VERSION={{ $full_version }}
-  - make install crictl
+  - make GO_LDFLAGS="-s -w" install crictl
   - mv /usr/local/bin/crictl /crictl
   - mv /src/scripts/* /
   - chmod +x /crictl /install /uninstall

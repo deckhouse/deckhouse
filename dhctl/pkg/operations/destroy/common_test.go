@@ -95,7 +95,7 @@ masterNodeGroup:
     imageID: imageId
     externalIPAddresses:
       - Auto
-sshPublicKey: ssh-rsa AAAAB3NzaC
+sshPublicKey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCsCkOVy6z7SPO+NYZyz15XTFSRGYqhaw3QVAoRuUkG6J1xCK7yCXtZoDYJM5uSdk58cQhd3/+Dto7saNa3NNEm+WW3vnZ6ArLl4U/YHmpHu0pUgDaoQsaRvNHW5jG/YsBter0G88ZqChRP4adhaMHK4x7JM+Yml+dTEecAROzcl9cIjMTPjUK/3ZJdbckpTQXiqX7re+Mzer2wdAT0YtwX2Ai++nrP/GIFzO+HMTd6lLdtP+uGWL+zNnHq2KTbP1v9BumZQXJNGLVXrI8V63TW7cKICr+8ASdF+hw9DDqyIJBeRE/LNm1tj2VIfnwPaGs9G5gdP0k5FUsvq8qwS6GDd6Ro/iGfhMhOhnLBSzlobGPO0I+kb7r250eyhwpJEGPvTR3koA/5KyFKtYctgbYkaBEJzCMhtgU9CzbFHimS7Y2/XIPLcLbuWYaknCqnny++kmvxzc4G7Qj6mf8gsr1NH273Qf/dlkkwPhGxIA+OJDK9OOjEu2ZjZyM+lJOgJQ0= root@11605a4d8b81
 nodeNetworkCIDR: 10.100.0.0/21
 provider:
   cloudID: cloudId

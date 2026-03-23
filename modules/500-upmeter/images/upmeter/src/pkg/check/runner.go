@@ -63,7 +63,7 @@ func (r *Runner) Run(start time.Time) Result {
 	err := r.checker.Check()
 	if err != nil {
 		status = err.Status()
-		r.logger.WithField("status", status).Errorf(err.Error())
+		r.logger.WithField("status", status).Error(err.Error())
 	}
 
 	return NewResult(*r.ref, r.checkName, status)

@@ -6,7 +6,7 @@ search: local-path-provisioner, hostpath
 description: Архитектура модуля local-path-provisioner в Deckhouse Kubernetes Platform.
 ---
 
-Модуль `local-path-provisioner` предоставляет локальное хранилище на узлах Kubernetes с использованием томов HostPath. Создает ресурсы StorageClass для управления выделением локального хранилища.
+Модуль `local-path-provisioner` предоставляет локальное хранилище на узлах Kubernetes с использованием томов `HostPath` и создает ресурсы StorageClass для управления выделением локального хранилища.
 
 Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/local-path-provisioner/).
 
@@ -30,18 +30,18 @@ description: Архитектура модуля local-path-provisioner в Deckh
 
 1. **Local-path-provisioner** — выполняет следующие действия, когда под заказывает диск:
 
-   * создает HostPath PersistentVolume;
-   * создает на нужном узле локальный каталог по пути, состоящем из параметра path [кастомного ресурса LocalPathProvisioner](https://deckhouse.ru/modules/local-path-provisioner/cr.html#localpathprovisioner-v1alpha1-spec-path), имени PersistentVolume и имени PersistentVolumeClaim.
+   * создает PersistentVolume с типом тома `HostPath`;
+   * создает на нужном узле локальный каталог для тома. Путь к каталогу формируется на основе [параметра `path`](/modules/local-path-provisioner/cr.html#localpathprovisioner-v1alpha1-spec-path) кастомного ресурса LocalPathProvisioner, а также имени PersistentVolume и PersistentVolumeClaim.
 
    Состоит из одного контейнера:
 
-   * **local-path-provisioner** - является [Open Source-проектом](https://github.com/rancher/local-path-provisioner).
+   * **local-path-provisioner** — является [Open Source-проектом](https://github.com/rancher/local-path-provisioner).
 
-2. **helper-pod** — запускает на узле скрипт установки (`SETUP`) перед созданием тома, чтобы подготовить каталог тома на узле, и скрипт очистки (`TEARDOWN`) после удаления тома, чтобы очистить каталог тома на узле.
+2. **Helper-pod** — запускает на узле скрипт установки (`SETUP`) перед созданием тома, чтобы подготовить каталог тома на узле, и скрипт очистки (`TEARDOWN`) после удаления тома, чтобы очистить каталог тома на узле.
 
    Состоит из одного контейнера:
 
-   * **helper-pod**
+   * **helper-pod**.
 
 ## Взаимодействия модуля
 

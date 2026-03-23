@@ -232,6 +232,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		config.ValidateOptionValidateExtensions(true),
 	)
 	if err != nil {
 		return err
@@ -379,6 +380,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 		cloudPreflightSuite := suites.NewCloudSuite(suites.CloudDeps{
 			InstallConfig: deckhouseInstallConfig,
+			MetaConfig:    metaConfig,
 		})
 		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
 			MetaConfig: metaConfig,
@@ -731,9 +733,7 @@ func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
 	bootstrapAdditionalTerraNodeGroups := BootstrapTerraNodes
-	if operations.IsSequentialNodesBootstrap() || metaConfig.ProviderName == "vcd" {
-		// vcd doesn't support parallel creating nodes in same vapp
-		// https://github.com/vmware/terraform-provider-vcd/issues/530
+	if operations.IsSequentialNodesBootstrap(metaConfig) {
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 

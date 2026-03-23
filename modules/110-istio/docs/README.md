@@ -264,11 +264,7 @@ Below are their fundamental differences:
    - When analyzing HTTP and HTTPS traffic *(in Istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
    - At the same time, when analyzing TCP traffic *(in Istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
   >
-  > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the istio's rules.
-  > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.
-  > [source](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network )
-  > - In the single-network mode, pods from different clusters can communicate with each other directly.
-  > - In the multi-networks mode, pods from different clusters can only communicate with each other if they use the Istio-gateway.
+  > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
 
 #### General principles of federation
 
@@ -314,12 +310,10 @@ In the `.spec.ports` section of `services`, each port must have the `name` field
    - When analyzing HTTP and HTTPS traffic *(in Istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
    - At the same time, when analyzing TCP traffic *(in Istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
   >
-  > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the istio's rules.
-  > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.
-  > [source](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network )
+  > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the Istio's rules.
+  > The intersection of subnets of services and pods is not recommended ([source](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
   >
-  - In the single-network mode, pods from different clusters can communicate with each other directly.
-  - In the multi-networks mode, pods from different clusters can only communicate with each other if they use the Istio-gateway.
+  > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
 
 #### General principles
 

@@ -116,7 +116,7 @@ Deckhouse Virtualization Platform поддерживает несколько в
 Если на узлах control plane нужно запускать рабочую нагрузку (виртуальные машины), что характерно для конфигураций **Одноузловой кластер (Single Node / Edge)** и **Трёхузловой кластер (High Availability)**, необходимо настроить допуски (tolerations) в конфигурации виртуальных машин или в классе виртуальных машин, чтобы разрешить размещение ВМ на master-узлах.
 {% endalert %}
 
-Дополнительная информация о настройке статических узлов приведена в разделе [Работа со статическими узлами](/products/kubernetes-platform/documentation/v1/architecture/node.html#работа-со-статическими-узлами).
+Дополнительная информация о настройке статических узлов приведена в разделе [Работа со статическими узлами](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/node-management/overview.html#работа-со-статическими-узлами).
 
 ### Frontend-узлы
 

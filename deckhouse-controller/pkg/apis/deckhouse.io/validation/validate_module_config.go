@@ -274,21 +274,24 @@ func moduleConfigValidationHandler(
 		if err != nil {
 			return allowResult(warnings)
 		}
-		exclusiveGroup := module.GetModuleExclusiveGroup()
-		if exclusiveGroup != nil {
-			modules := moduleStorage.GetModulesByExclusiveGroup(*exclusiveGroup)
 
-			for _, moduleName := range modules {
-				// if any module with same unique key enabled, return error
-				if moduleManager.IsModuleEnabled(moduleName) && moduleName != cfg.Name {
-					return rejectResult(
-						fmt.Sprintf(
-							"can't enable module %q because different module %q with same exclusiveGroup %s enabled",
-							cfg.Name,
-							moduleName,
-							*exclusiveGroup,
-						),
-					)
+		if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+			exclusiveGroup := module.GetModuleExclusiveGroup()
+			if exclusiveGroup != nil {
+				modules := moduleStorage.GetModulesByExclusiveGroup(*exclusiveGroup)
+
+				for _, moduleName := range modules {
+					// if any module with same unique key enabled, return error
+					if moduleManager.IsModuleEnabled(moduleName) && moduleName != cfg.Name {
+						return rejectResult(
+							fmt.Sprintf(
+								"can't enable module %q because different module %q with same exclusiveGroup %s enabled",
+								cfg.Name,
+								moduleName,
+								*exclusiveGroup,
+							),
+						)
+					}
 				}
 			}
 		}

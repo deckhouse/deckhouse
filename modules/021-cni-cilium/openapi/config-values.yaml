@@ -17,7 +17,7 @@ properties:
   debugLogging:
     type: boolean
     default: false
-    description: Enabled debug logging for Cilium components.
+    description: Enables debug logging for Cilium components.
   labelsRegex:
     type: array
     description: |
@@ -51,7 +51,7 @@ properties:
         In this mode, masquerade will not be used if the destination IP address is within the `podSubnetCIDR` or `InternalIP`/`ExternalIP` of any of the cluster nodes.
 
       > In `BPF` mode, if `ExternalIP` other than `InternalIP` is specified for a cluster node, and that IP address is not currently assigned to any interface on the node, it will not be reachable from neighboring nodes from pods network.
-      > The `Netfilter` mode allows you to bypass this limitation, but some other features stop working, such as `EgressGateway``.
+      > The `Netfilter` mode allows you to bypass this limitation, but some other features stop working, such as `EgressGateway`.
   tunnelMode:
     type: string
     enum: ["Disabled", "VXLAN"]
@@ -66,7 +66,7 @@ properties:
     type: boolean
     default: false
     description: |
-      For services of the `loadBalancer` type, enables checking the source IP for compliance with [loadBalancer.sourceRanges](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
+      For services of the `loadBalancer` type, enables checking the source IP for compliance with [loadBalancer.sourceRanges](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
       The check is not performed if access is made from within the cluster or the `sourceRanges` parameter is empty/not specified.
       Some cloud providers support filtering of incoming traffic based on the `sourceRanges` parameter in their loadBalancer implementations. In such cases, the [cilium documentation](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
       recommends disabling the `svcSourceRangeCheck` option.
@@ -88,7 +88,7 @@ properties:
     type: boolean
     default: true
     description: |
-      Prevents additional CNI plugins from being enabled on cluster nodes. If the Istio module's [`dataPlane.trafficRedirectionSetupMode` setting](../istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) is set to `CNIPlugin`, the option will be automatically set to `false`.
+      Prevents additional CNI plugins from being enabled on cluster nodes. If the Istio module's [`dataPlane.trafficRedirectionSetupMode` setting](/modules/istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) is set to `CNIPlugin`, the option will be automatically set to `false`.
 
       Explicitly disabling this option is recommended only when using an additional CNI or a specific CNI plugin in the cluster. An example of such a use case could be the Linkerd CNI plugin.
   bpfLBMode:
@@ -100,6 +100,13 @@ properties:
       - `SNAT` — traffic from the client to the pod (and back) passes through NAT, and accordingly the sender's address is lost.
       - `DSR` — traffic from the client to the pod passes with the sender's address preserved, and back - according to the routing rules (bypassing the balancer). This mode saves network traffic and reduces delays, but only works for TCP traffic.
       - `Hybrid` — TCP traffic is processed in DSR mode, and UDP traffic is processed in SNAT mode.
+  loadBalancerICMPReplyEnabled:
+    type: boolean
+    default: false
+    description: |
+      Enable ICMP Echo Reply generation for LoadBalancer service IPs.
+
+      When enabled, nodes respond to ICMP Echo Requests (ping) addressed to LoadBalancer external IPs.
   activeL2NeighborDiscoveryEnabled:
     type: boolean
     default: true
