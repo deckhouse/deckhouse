@@ -61,7 +61,7 @@
 
   if (!currentUrl.match(/\/modules\/[^\/]+\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)\//)
       && currentUrl.includes('/modules/')) {
-    document.querySelectorAll('#doc-versions-menu a.submenu-item-link, #doc-versions-menu a.submenu-embedded-link').forEach(link => {
+    document.querySelectorAll('#doc-versions-menu a.submenu-item-link').forEach(link => {
         link.href = link.href.replace(/.*\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)\//, `$1/`);
     });
   }
