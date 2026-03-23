@@ -39,8 +39,8 @@ status:
         version: v1.2.0
       name: test-package
     processed:
-    - name: test-package
-      totalVersions: 3
+    - foundVersions: 3
+      name: test-package
       type: Module
     processedOverall: 1
     total: 1

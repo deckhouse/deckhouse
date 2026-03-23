@@ -156,16 +156,15 @@ spec:
                     description: List of packages successfully processed.
                     items:
                       properties:
+                        foundVersions:
+                          description: Number of versions found during this operation.
+                          type: integer
                         name:
                           description: Name of the processed package.
                           type: string
                         type:
                           description: Type of the package.
                           type: string
-                        totalVersions:
-                          description: Total number of versions available in the
-                            registry for this package.
-                          type: integer
                       required:
                       - name
                       type: object
