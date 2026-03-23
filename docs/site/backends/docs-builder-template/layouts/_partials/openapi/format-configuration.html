@@ -50,11 +50,11 @@ Context:
             {{- if reflect.IsMap $conversion.description -}}
               {{- $description := index $conversion.description $currentLang | default $conversion.description.en -}}
               {{- if $description -}}
-                <p>{{ $description | markdownify }}</p>
+                <p>{{ partial "openapi/format-description" $description }}</p>
                 {{- $hasDescription = true -}}
               {{- end -}}
             {{- else -}}
-              <p>{{ $conversion.description | markdownify }}</p>
+              <p>{{ partial "openapi/format-description" $conversion.description }}</p>
               {{- $hasDescription = true -}}
             {{- end -}}
           {{- end -}}

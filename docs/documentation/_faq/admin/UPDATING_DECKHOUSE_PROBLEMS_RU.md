@@ -50,7 +50,7 @@ lang: ru
    Warning  Unhealthy  4m44s (x1918 over 154m)  kubelet  Readiness probe failed: HTTP probe failed with statuscode: 500
    ```
 
-#### Обновление DKP висит в статусе Release is suspended
+#### Обновление DKP находится в статусе Release is suspended
 
 Состояние релиза `Release is suspended` говорит о том, что он был отложен, и на данный момент недоступен (не рекомендуется) для установки. В таком случае предлагается оставаться на последнем доступном релизе, либо на установленном в данный момент (он будет иметь статус `Deployed`).
 

@@ -119,8 +119,7 @@ func (r *ConversionWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if !webhook.DeletionTimestamp.IsZero() {
 		r.logger.Debug("conversion webhook deletion", slog.String("deletion_timestamp", webhook.DeletionTimestamp.String()))
 
-		res, err := r.handleDeleteConversionWebhook(ctx, webhook)
-		if err != nil {
+		if err := r.handleDeleteConversionWebhook(ctx, webhook); err != nil {
 			r.logger.Warn("delete conversion webhook", log.Err(err))
 
 			return res, err
@@ -128,8 +127,7 @@ func (r *ConversionWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return res, nil
 	}
 
-	res, err = r.handleProcessConversionWebhook(ctx, webhook)
-	if err != nil {
+	if err = r.handleProcessConversionWebhook(ctx, webhook); err != nil {
 		r.logger.Warn("process conversion webhook", log.Err(err))
 
 		return res, err
@@ -138,20 +136,18 @@ func (r *ConversionWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return res, nil
 }
 
-func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context.Context, cwh *deckhouseiov1alpha1.ConversionWebhook) (ctrl.Result, error) {
-	var res ctrl.Result
-
+func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context.Context, cwh *deckhouseiov1alpha1.ConversionWebhook) error {
 	logger := r.logger.With(slog.String("webhook", cwh.Name))
 
 	webhookDir := r.webhookDir(cwh.Name)
 	if err := os.MkdirAll(webhookDir, directoryPermissions); err != nil {
 		logger.Error("failed to create directory", slog.String("path", webhookDir), log.Err(err))
-		return res, fmt.Errorf("create dir %s: %w", webhookDir, err)
+		return fmt.Errorf("create dir %s: %w", webhookDir, err)
 	}
 
 	buf, err := templater.RenderConversionTemplate(r.pythonTemplate, cwh)
 	if err != nil {
-		return res, fmt.Errorf("render template: %w", err)
+		return fmt.Errorf("render template: %w", err)
 	}
 
 	webhookFile := r.webhookFilePath(cwh.Name)
@@ -159,12 +155,12 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 	isChanged := r.isWebhookFileChanged(webhookFile, buf.Bytes())
 	if !isChanged {
 		logger.Debug("webhook file not changed, skipping webhook file update")
-		return res, nil
+		return nil
 	}
 
 	if err := os.WriteFile(webhookFile, buf.Bytes(), filePermissions); err != nil {
 		logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
-		return res, fmt.Errorf("write file %s: %w", webhookFile, err)
+		return fmt.Errorf("write file %s: %w", webhookFile, err)
 	}
 
 	r.isReloadShellNeed.Store(true)
@@ -186,37 +182,35 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 			if removeErr := os.Remove(webhookFile); removeErr != nil {
 				logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
 			}
-			return res, fmt.Errorf("add finalizers: %w", err)
+			return fmt.Errorf("add finalizers: %w", err)
 		}
 	}
 
-	return res, nil
+	return nil
 }
 
-func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.Context, cwh *deckhouseiov1alpha1.ConversionWebhook) (ctrl.Result, error) {
-	var res ctrl.Result
-
+func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.Context, cwh *deckhouseiov1alpha1.ConversionWebhook) error {
 	// Clean up the target CRD's conversion config before removing FS files.
 	// So it won't try to route conversion requests to a non-existent webhook.
 	if controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookCRDCleanupFinalizer) {
 		if err := r.cleanupCRDConversion(ctx, cwh.Name); err != nil {
-			return res, fmt.Errorf("cleanup CRD conversion for %s: %w", cwh.Name, err)
+			return fmt.Errorf("cleanup CRD conversion for %s: %w", cwh.Name, err)
 		}
 
 		r.logger.Debug("remove crd-cleanup finalizer")
 		controllerutil.RemoveFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookCRDCleanupFinalizer)
 		if err := r.client.Update(ctx, cwh); err != nil {
-			return res, fmt.Errorf("remove crd-cleanup finalizer for %s: %w", cwh.Name, err)
+			return fmt.Errorf("remove crd-cleanup finalizer for %s: %w", cwh.Name, err)
 		}
 
 		// Return so the next reconcile handles FS cleanup
-		return res, nil
+		return nil
 	}
 
 	// Clean up the filesystem.
 	webhookFile := r.webhookFilePath(cwh.Name)
 	if err := os.Remove(webhookFile); err != nil && !os.IsNotExist(err) {
-		return res, fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
+		return fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
 	}
 
 	r.isReloadShellNeed.Store(true)
@@ -227,11 +221,11 @@ func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.
 		controllerutil.RemoveFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer)
 
 		if err := r.client.Update(ctx, cwh); err != nil {
-			return res, fmt.Errorf("remove finalizer for %s: %w", cwh.Name, err)
+			return fmt.Errorf("remove finalizer for %s: %w", cwh.Name, err)
 		}
 	}
 
-	return res, nil
+	return nil
 }
 
 // cleanupCRDConversion resets the target CRD's conversion strategy to None,

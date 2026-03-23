@@ -7,7 +7,6 @@ import:
   to: /
   before: setup
   includePaths:
-  - usr/bin/coreutils
   - usr/bin/mkdir
   - usr/bin/touch
   - usr/bin/ln

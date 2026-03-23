@@ -61,40 +61,37 @@ fi
 # Bash does not expand aliases during completion, so we
 # rewrite "kubectl" to "d8 k" and call d8 __complete directly
 cat <<'EOF' > /etc/bash_completion.d/d8_kubectl_completion
-_kubectl_complete() {
+__start_kubectl() {
     local cur prev words cword
     _init_completion -n =: || return
-
     local args=("k" "${words[@]:1}")
     local requestComp="/opt/deckhouse/bin/d8 __complete ${args[*]}"
-
     local lastParam="${words[$((${#words[@]}-1))]}"
     local lastChar="${lastParam:$((${#lastParam}-1)):1}"
-
     if [[ -z "$cur" && "$lastChar" != "=" ]]; then
         requestComp="${requestComp} \"\""
     fi
-
     local out
     out=$(eval "${requestComp}" 2>/dev/null)
-
     local completions=()
     while IFS='' read -r line; do
         [[ "$line" =~ ^:[0-9]+$ ]] && continue
         [[ "$line" =~ ^Completion ]] && continue
         [[ -z "$line" ]] && continue
-        # Remove description after tab character
         completions+=("${line%%$'\t'*}")
     done <<< "$out"
-
     COMPREPLY=()
     if [[ ${#completions[@]} -gt 0 ]]; then
         local IFS=$'\n'
         COMPREPLY=($(compgen -W "${completions[*]}" -- "$cur"))
     fi
 }
-complete -o default -F _kubectl_complete kubectl
+complete -o default -F __start_kubectl kubectl
 EOF
+
+if [ -f /etc/bash_completion.d/kubectl ]; then
+  rm -f /etc/bash_completion.d/kubectl
+fi
 
 if ! type kubectl >/dev/null 2>&1; then
   cat <<'EOF' > /opt/deckhouse/bin/kubectl
@@ -110,4 +107,3 @@ if command -v d8 >/dev/null 2>&1; then
     echo "$alias_line" >> /root/.bashrc
   fi
 fi
-

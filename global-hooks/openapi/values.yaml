@@ -9,6 +9,14 @@ properties:
     type: object
     default: {}
     properties:
+      cniMigrationEnabled:
+        type: boolean
+        default: false
+      cniMigrationName:
+        type: string
+      cniMigrationWebhooksDisable:
+        type: boolean
+        default: false
       modules:
         default: {}
         additionalProperties: false

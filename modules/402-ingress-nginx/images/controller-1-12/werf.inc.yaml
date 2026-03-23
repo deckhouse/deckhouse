@@ -612,7 +612,7 @@ shell:
       mkdir -p ${dir};
       chown -R deckhouse:deckhouse ${dir};
     done
- 
+
   #remove owasp-modsecurity-crs unnecessary files and folders
   - rm -rf /etc/nginx/owasp-modsecurity-crs/*.md
   - rm -rf /etc/nginx/owasp-modsecurity-crs/docs
@@ -631,6 +631,7 @@ shell:
   - |
     bash -eu -c '
     writeDirs=(
+      /chroot/tmp/nginx
       /chroot/etc/nginx
       /chroot/usr/local
       /chroot/etc/ingress-controller
@@ -642,14 +643,13 @@ shell:
       /chroot/opt/modsecurity/var/upload
       /chroot/opt/modsecurity/var/audit
       /chroot/var/log/audit
-      /chroot/var/lib/nginx
       /chroot/var/log/nginx
+      /chroot/var/lib/nginx
       /chroot/var/lib/nginx/body
       /chroot/var/lib/nginx/fastcgi
       /chroot/var/lib/nginx/proxy
       /chroot/var/lib/nginx/scgi
       /chroot/var/lib/nginx/uwsgi
-      /chroot/tmp/nginx
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
@@ -892,8 +892,7 @@ shell:
   - mknod -m 0666 /chroot/dev/tty c 5 0
 
   - mkdir -p /chroot/modules_mount
-  - mkdir -p modules_mount
-  - ln -s /modules_mount /chroot/modules_mount
+  - ln -s /chroot/modules_mount /modules_mount
 
   # Utils for final image
   - cp -a /tools/setcap /apps
@@ -912,7 +911,7 @@ import:
   - modules_mount
   - var/log
   - etc/nginx
-  - tmp/nginx
+  - tmp
   - etc/ingress-controller
   - var/log/nginx
   - sbin/nginx
@@ -987,16 +986,11 @@ import:
   owner: "0"
   group: "0"
   includePaths:
-  - usr/bin/coreutils
   - usr/bin/test
   - usr/bin/chroot
   - usr/bin/cat
   - usr/bin/cp
   - usr/bin/tail
-  before: install
-- image: tools/libcap
-  add: /usr/sbin/setcap
-  to: /apps/setcap
   before: install
 git:
 {{- include "image mount points" $ }}

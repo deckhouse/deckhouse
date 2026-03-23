@@ -31,13 +31,16 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	nodesSnapshot            = "nodes"
 	fencingControllerTimeout = time.Duration(60) * time.Second
+	notifyMode               = "Notify"
+	watchdogMode             = "Watchdog"
+	nodeTypeStatic           = "Static"
+	nodeTypeCloudStatic      = "CloudStatic"
 )
 
 var maintenanceAnnotations = []string{
@@ -73,8 +76,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(fencingControllerHandler))
 
 type fencingControllerNodeResult struct {
-	Name          string
-	NodeGroupName string
+	Name        string
+	FencingMode string
+	Type        string
 }
 
 func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -88,6 +92,11 @@ func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}
 
 	res.Name = obj.GetName()
+
+	labels := obj.GetLabels()
+	res.FencingMode = labels["node-manager.deckhouse.io/fencing-mode"]
+	res.Type = labels["node.deckhouse.io/type"]
+
 	return res, nil
 }
 
@@ -104,8 +113,8 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 		return err
 	}
 
-	// make map with nodes to kill
-	nodesToKill := set.New()
+	// key - node name, where pods have to be deleted, value - if value is false - node should not be deleted, if true - node should be deleted
+	operationNodes := make(map[string]bool)
 	for node, err := range sdkobjectpatch.SnapshotIter[fencingControllerNodeResult](input.Snapshots.Get(nodesSnapshot)) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
@@ -124,25 +133,24 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 				slog.String("current time", time.Now().String()),
 				slog.String("node lease time", nodeLease.Spec.RenewTime.Time.String()),
 			)
-			nodesToKill.Add(node.Name)
+			operationNodes[node.Name] = shouldDeleteNode(node)
 		}
 	}
 
-	nodeToKillCount := nodesToKill.Size()
-	if nodeToKillCount == 0 {
-		// nothing to kill -> skip
+	if len(operationNodes) == 0 {
+		// nothing to delete and kill -> skip
 		return nil
 	}
 
-	input.Logger.Warn("Going to kill nodes", slog.Int("count", nodeToKillCount))
+	input.Logger.Warn("Going to process nodes", slog.Int("count", len(operationNodes)))
 
-	// kill nodes
-	for _, node := range nodesToKill.Slice() {
-		input.Logger.Warn("Delete all pods from node", slog.String("name", node))
+	// process nodes
+	for nodeName, deleteNode := range operationNodes {
+		input.Logger.Warn("Delete all pods from node", slog.String("name", nodeName))
 		podsToDelete, err := kubeClient.CoreV1().Pods("").List(
 			context.TODO(),
 			metav1.ListOptions{
-				FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": node}).String(),
+				FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName}).String(),
 			},
 		)
 		if err != nil {
@@ -150,20 +158,27 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 			continue
 		}
 
-		GracePeriodSeconds := int64(0)
+		gracePeriodSeconds := int64(0)
 		for _, pod := range podsToDelete.Items {
 			input.Logger.Warn("Delete pod in namespace on node", slog.String("name", pod.Name), slog.String("namespace", pod.Namespace), slog.String("node", pod.Spec.NodeName))
 			err = kubeClient.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{
-				GracePeriodSeconds: &GracePeriodSeconds,
+				GracePeriodSeconds: &gracePeriodSeconds,
 			})
 			if err != nil {
 				input.Logger.Error("Can't delete pod", slog.String("name", pod.Name), log.Err(err))
 			}
 		}
 
-		input.Logger.Warn("Delete node", slog.String("name", node))
-		input.PatchCollector.DeleteInBackground("v1", "Node", "", node)
+		// delete node
+		if deleteNode {
+			input.Logger.Warn("Delete node", slog.String("name", nodeName))
+			input.PatchCollector.DeleteInBackground("v1", "Node", "", nodeName)
+		}
 	}
 
 	return nil
+}
+
+func shouldDeleteNode(node fencingControllerNodeResult) bool {
+	return node.FencingMode != notifyMode && node.Type != nodeTypeStatic && node.Type != nodeTypeCloudStatic
 }
