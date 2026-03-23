@@ -318,6 +318,23 @@ func latestVersionString(versions []*semver.Version) string {
 	return "v" + versions[len(versions)-1].String()
 }
 
+// countAllVersions queries the registry for all semver tags of a package
+// and returns the total count. Used during incremental scan to get
+// the accurate total without relying on cluster state.
+func (s *OperationService) countAllVersions(ctx context.Context, packageName string) int {
+	rawTags, err := s.svc.Package(packageName).Versions().ListTags(ctx)
+	if err != nil {
+		s.logger.Warn(
+			"failed to count all versions",
+			slog.String("package", packageName),
+			log.Err(err),
+		)
+		return 0
+	}
+
+	return len(extractOnlySemverTags(rawTags))
+}
+
 // ProcessPackageVersions processes a single package: lists version tags from <package>/version,
 // detects type (Application/Module) via detectPackageType, creates APV/MPV resources.
 // Delegates to handleMissingVersionPath when /version path doesn't exist (NAME_UNKNOWN).
@@ -403,10 +420,16 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		}
 	}
 
+	totalVersions := len(foundTags)
+	if operation.Spec.Update != nil && !operation.Spec.Update.FullScan {
+		totalVersions = s.countAllVersions(ctx, packageName)
+	}
+
 	return &PackageProcessResult{
-		PackageType: pkgType,
-		Done:        foundTags,
-		Failed:      failedVersions,
+		PackageType:   pkgType,
+		Done:          foundTags,
+		Failed:        failedVersions,
+		TotalVersions: totalVersions,
 	}, nil
 }
 
@@ -480,9 +503,10 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 	}
 
 	return &PackageProcessResult{
-		PackageType: packageTypeModule,
-		Done:        foundTags,
-		Failed:      failedVersions,
+		PackageType:   packageTypeModule,
+		Done:          foundTags,
+		Failed:        failedVersions,
+		TotalVersions: len(foundTags),
 	}, nil
 }
 
@@ -554,9 +578,10 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 }
 
 type PackageProcessResult struct {
-	PackageType packageType
-	Done        []*semver.Version
-	Failed      []failedVersion
+	PackageType   packageType
+	Done          []*semver.Version
+	Failed        []failedVersion
+	TotalVersions int
 }
 
 type failedVersion struct {

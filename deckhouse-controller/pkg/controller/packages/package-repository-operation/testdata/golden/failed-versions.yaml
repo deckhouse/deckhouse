@@ -40,8 +40,8 @@ status:
       name: test-package
     processed:
     - name: test-package
+      totalVersions: 3
       type: Application
-      versionsFound: 3
     processedOverall: 1
     total: 1
   phase: Completed

@@ -30,8 +30,8 @@ status:
   packages:
     processed:
     - name: test-package
+      totalVersions: 2
       type: Module
-      versionsFound: 1
     processedOverall: 1
     total: 1
   phase: Completed
