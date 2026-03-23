@@ -151,7 +151,11 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		DeckhouseSettings.
 		ToMap()
 
-	schemasStore := NewSchemaStore()
+	dirConfig := make(map[string]string)
+	dirConfig[downloadDirKey] = metaConfig.DownloadRootDir
+	dirConfig[app.DownloadCacheDirName] = metaConfig.DownloadCacheDir
+
+	schemasStore := NewSchemaStore(dirConfig)
 
 	var deckhouseCm *ModuleConfig
 	// find deckhouse module config for extract release

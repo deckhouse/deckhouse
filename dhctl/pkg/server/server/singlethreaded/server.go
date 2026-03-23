@@ -110,7 +110,7 @@ func Serve(params settings.ServerSingleshotParams) error {
 		PodName:           podName,
 		PodNamespace:      podNamespace,
 		CacheDir:          cacheDir,
-		SchemaStore:       config.NewSchemaStore(),
+		SchemaStore:       config.NewSchemaStore(params.DownloadDirConfig),
 		TmpDir:            params.TmpDir,
 		IsDebug:           false,
 		DownloadDirConfig: params.DownloadDirConfig,

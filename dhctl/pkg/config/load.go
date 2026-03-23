@@ -34,7 +34,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -93,13 +92,14 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	}
 }
 
-func NewSchemaStore(paths ...string) *SchemaStore {
+func NewSchemaStore(dc map[string]string, paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
 	_, err := os.Stat(candiDir)
 	if err != nil {
-		// fallback to /tmp
-		dc := app.GetDirConfig()
-		paths = append(paths, filepath.Join(dc[downloadDirKey], "deckhouse", "candi"))
+		downloadDir, ok := dc[downloadDirKey]
+		if ok {
+			paths = append(paths, filepath.Join(downloadDir, "deckhouse", "candi"))
+		}
 	}
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
@@ -110,10 +110,10 @@ func NewSchemaStore(paths ...string) *SchemaStore {
 		}
 	}
 
-	return newOnceSchemaStore(paths)
+	return newOnceSchemaStore(dc, paths)
 }
 
-func newSchemaStore(schemasDir []string) *SchemaStore {
+func newSchemaStore(dc map[string]string, schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
@@ -121,10 +121,11 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	}
 	_, err := os.Stat(deckhouseDir)
 	if err != nil {
-		// fallback to /tmp
-		dc := app.GetDirConfig()
-		deckhouseDir = filepath.Join(dc[downloadDirKey], "deckhouse")
-		modulesDir = filepath.Join(deckhouseDir, "modules")
+		downloadDir, ok := dc[downloadDirKey]
+		if ok {
+			deckhouseDir = filepath.Join(downloadDir, "deckhouse")
+			modulesDir = filepath.Join(deckhouseDir, "modules")
+		}
 	}
 	log.InfoF("deckhouse dir: %s, modulesDir: %s\n", deckhouseDir, modulesDir)
 
@@ -236,9 +237,9 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	return st
 }
 
-func newOnceSchemaStore(schemasDir []string) *SchemaStore {
+func newOnceSchemaStore(dc map[string]string, schemasDir []string) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(schemasDir)
+		store = newSchemaStore(dc, schemasDir)
 	})
 	return store
 }
@@ -453,7 +454,7 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptio
 }
 
 func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOption) (bool, error) {
-	schemaStore := NewSchemaStore(paths...)
+	schemaStore := NewSchemaStore(nil, paths...)
 
 	_, err := schemaStore.Validate(config, opts...)
 	if err != nil {

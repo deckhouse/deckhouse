@@ -71,25 +71,27 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 		if err != nil {
 			return nil, err
 		}
-		conf, err := image.NewRegistryConfig(string(regSettings.Scheme), regSettings.ImagesRepo, regSettings.Username, regSettings.Password, regSettings.CA)
-		if err != nil {
-			return nil, err
-		}
-		if err = prepareCandiDir(ctx, conf, dirs); err != nil {
-			return nil, err
-		}
-		// reinitialize vars and continue config parsing
+		if regSettings != nil {
+			conf, err := image.NewRegistryConfig(string(regSettings.Scheme), regSettings.ImagesRepo, regSettings.Username, regSettings.Password, regSettings.CA)
+			if err != nil {
+				return nil, err
+			}
+			if err = prepareCandiDir(ctx, conf, dirs); err != nil {
+				return nil, err
+			}
+			// reinitialize vars and continue config parsing
 
-		downloadDir, ok := dirs[downloadDirKey]
-		if !ok {
-			return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
-		}
+			downloadDir, ok := dirs[downloadDirKey]
+			if !ok {
+				return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
+			}
 
-		deckhouseDir = filepath.Join(downloadDir, "deckhouse")
-		candiDir = filepath.Join(deckhouseDir, "candi")
-		modulesDir = filepath.Join(deckhouseDir, "modules")
-		globalHooksModule = filepath.Join(deckhouseDir, "global-hooks")
-		versionMap = filepath.Join(candiDir, "version_map.yml")
+			deckhouseDir = filepath.Join(downloadDir, "deckhouse")
+			candiDir = filepath.Join(deckhouseDir, "candi")
+			modulesDir = filepath.Join(deckhouseDir, "modules")
+			globalHooksModule = filepath.Join(deckhouseDir, "global-hooks")
+			versionMap = filepath.Join(candiDir, "version_map.yml")
+		}
 	}
 	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, opts...)
 	if err != nil {
@@ -222,7 +224,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 			return nil, fmt.Errorf("could not get cache directory from variable dirs %-v\n", dirs)
 		}
 	}
-	schemaStore := NewSchemaStore()
+	schemaStore := NewSchemaStore(dirs)
 
 	clusterConfig, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
 	if err != nil {
@@ -399,7 +401,7 @@ func detectMergedDocuments(doc string) error {
 }
 
 func ParseConfigFromData(ctx context.Context, configData string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
-	schemaStore := NewSchemaStore()
+	schemaStore := NewSchemaStore(make(map[string]string))
 
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
@@ -531,25 +533,27 @@ func fetchRegistrySettings(paths []string) (*module_config.RegistrySettings, err
 			}
 		}
 		if parsed["kind"].(string) == ModuleConfigKind {
-			if parsed["name"].(string) == "deckhouse" {
-				settings, ok := parsed["settings"]
-				if !ok {
-					return nil, fmt.Errorf("could not find any of InitConfig or ModuleConfig deckhouse settings")
-				}
-				var dhSettings moduleconfig.DeckhouseSettings
-				data, err := yaml.Marshal(settings)
-				if err != nil {
-					return nil, err
-				}
-				if err := yaml.Unmarshal(data, &dhSettings); err != nil {
-					return nil, err
-				}
-				if dhSettings.Direct != nil {
-					return dhSettings.Direct, nil
-				} else if dhSettings.Unmanaged != nil {
-					return dhSettings.Unmanaged, nil
-				} else {
-					return nil, fmt.Errorf("ModuleConfig deckhouse doesn't contain any registry settings")
+			if parsed["name"] != nil {
+				if parsed["name"].(string) == "deckhouse" {
+					settings, ok := parsed["settings"]
+					if !ok {
+						return nil, fmt.Errorf("could not find any of InitConfig or ModuleConfig deckhouse settings")
+					}
+					var dhSettings moduleconfig.DeckhouseSettings
+					data, err := yaml.Marshal(settings)
+					if err != nil {
+						return nil, err
+					}
+					if err := yaml.Unmarshal(data, &dhSettings); err != nil {
+						return nil, err
+					}
+					if dhSettings.Direct != nil {
+						return dhSettings.Direct, nil
+					} else if dhSettings.Unmanaged != nil {
+						return dhSettings.Unmanaged, nil
+					} else {
+						return nil, fmt.Errorf("ModuleConfig deckhouse doesn't contain any registry settings")
+					}
 				}
 			}
 		}

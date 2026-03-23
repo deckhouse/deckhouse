@@ -26,7 +26,7 @@ import (
 )
 
 func Edit(data []byte) ([]byte, error) {
-	schemaStore := config.NewSchemaStore()
+	schemaStore := config.NewSchemaStore(make(map[string]string))
 
 	editor := app.Editor
 	if editor == "" {
