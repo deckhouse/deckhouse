@@ -11,14 +11,14 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/out/istio-cni
   to: /opt/cni/bin/istio-cni
-  owner: 1337
-  group: 1337
+  owner: 64535
+  group: 64535
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/out/install-cni
   to: /usr/local/bin/install-cni
-  owner: 1337
-  group: 1337
+  owner: 64535
+  group: 64535
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
@@ -39,9 +39,10 @@ git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    env: {"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"}
+    env:
+      PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"
     workingDir: "/opt/cni/bin"
-    user: "1337:1337"
+    user: "64535:64535"
     entrypoint: ["/usr/local/bin/install-cni"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
@@ -72,7 +73,7 @@ shell:
   - strip /src/istio/out/install-cni
   - strip /src/istio/out/istio-cni
   - chmod 0700 /src/istio/out/install-cni /src/istio/out/istio-cni
-  - chown 1337:1337 /src/istio/out/istio-cni
+  - chown 64535:64535 /src/istio/out/istio-cni
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
