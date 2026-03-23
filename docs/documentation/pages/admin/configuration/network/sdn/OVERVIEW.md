@@ -6,7 +6,7 @@ description: |
 search: additional networks, DPDK
 ---
 
-The Deckhouse Kubernetes Platform supports adding additional software-defined networks (SDN) to the cluster. The functions of additional software-defined networking (hereinafter referred to as additional networks) within DKP are implemented using the [`sdn`](/modules/sdn/) module.
+Deckhouse Kubernetes Platform (DKP) supports adding additional software-defined networks (SDN) to the cluster. The functions of additional software-defined networking (hereinafter referred to as additional networks) within DKP are implemented using the [`sdn`](/modules/sdn/) module.
 
 Software-defined networking in DKP allow declarative management of additional network segments for application workloads (pods, virtual machines). Instead of manually configuring network interfaces on each cluster node, the administrator describes the desired network state through custom Kubernetes resources, and the [`sdn`](/modules/sdn/) module automatically configures the necessary network equipment.
 

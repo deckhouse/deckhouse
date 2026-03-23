@@ -709,30 +709,30 @@ d8 k label namespace mydpdk direct-nic-access.network.deckhouse.io/enabled=""
 
 ## Настройка и подключение системных сетей (сервисных сетей)
 
-Системные сети (сервисные сети) предназначены для служебного трафика на уровне узлов (например, для нужд хранилища, управления и т.д), и не используются как дополнительные сети подов.
+Системные сети (сервисные сети) предназначены для служебного трафика на уровне узлов (например, для нужд хранилища, управления и т. д.) и не используются как дополнительные сети подов.
 
-Дополнительные сервисные сети создаются на узлах кластера поверх существующей underlay-сетей. Для этого используется кастомный ресурс [SystemNetwork](/modules/sdn/cr.html#systemnetwork). Системные сети получают IP-адреса из [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) при настройке IPAM.
+Дополнительные сервисные сети создаются на узлах кластера поверх существующих underlay-сетей. Для этого используется кастомный ресурс [SystemNetwork](/modules/sdn/cr.html#systemnetwork). Системные сети получают IP-адреса из [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) при настройке IPAM.
 
 Принципы и особенности работы системных сетей:
 
 * **Работа поверх underlay-сетей**. Системная сеть подключается к underlay-сети ([UnderlayNetwork](/modules/sdn/cr.html#underlaynetwork)). Для подключения в параметре [`spec.underlayNetworkName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-underlaynetworkname) ресурса SystemNetwork указывается имя underlay-сети, к которой должна быть подключена системная сеть. Набор интерфейсов узла (PF или VF), которые будет использовать системная сеть, определяется в параметре [`memberNodeNetworkInterfaces`](/modules/sdn/cr.html#underlaynetwork-v1alpha1-spec-membernodenetworkinterfaces) объекта UnderlayNetwork.
-* **Поддержка разных типов подключения системной сети к underlay-сети**. Можно создавать VLAN-интерфейсы для подов (`type: VLAN`), использовать прямой доступ к интерфейсам на узлах, подключенным к underlay-сети (`type: Access`), или подключиться через SR-IOV виртуальную функцию (`type: SRIOVVirtualFunction`) с опциональной настройкой (MTU, MAC, spoof checking и т.д.).
+* **Поддержка разных типов подключения системной сети к underlay-сети**. Можно создавать VLAN-интерфейсы для подов (`type: VLAN`), использовать прямой доступ к интерфейсам на узлах, подключенным к underlay-сети (`type: Access`) или подключиться через SR-IOV виртуальную функцию (`type: SRIOVVirtualFunction`) с опциональной настройкой (MTU, MAC, spoof checking и т. д.).
 * **Поддержка механизма IPAM**. Опциональный параметр [`spec.ipam`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-ipam) ссылается на [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool). Контроллер и агент выделяют адреса из этого пула и назначают их сетевым интерфейсам узла для данной системной сети.
 * **Отслеживание статусов системных сетей**. Агент отчитывается об адресах узла (включая IP-адреса системных сетей) в ресурсах [NodeNetworkStatus](/modules/sdn/cr.html#nodenetworkstatus). Внутренние ресурсы [SystemNetworkNodeNetworkInterfaceAttachment](/modules/sdn/cr.html#systemnetworknodenetworkinterfaceattachment) отслеживают привязку каждой системной сети к родительскому интерфейсу на каждом узле.
 
 ### Предварительные требования для создания и использования системных сетей
 
-Для создания использования системных сетей в кластере необходимо выполнение следующих требований:
+Для создания и использования системных сетей в кластере необходимо выполнение следующих требований:
 
-1. Должна существовать [underlay-сеть](#настройка-и-подключение-underlay-сетей-для-проброса-аппаратных-устройств). Системная сеть подключается к ней с помощью параметра [`spec.underlayNetworkName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-underlaynetworkname). Селекторы, указанные в параметре [`memberNodeNetworkInterfaces`](/modules/sdn/cr.html#underlaynetwork-v1alpha1-spec-membernodenetworkinterfaces) объекта UnderlayNetwork определяют, какие интерфейсы узлов используются системной сетью.
+1. Должна существовать [underlay-сеть](#настройка-и-подключение-underlay-сетей-для-проброса-аппаратных-устройств). Системная сеть подключается к ней с помощью параметра [`spec.underlayNetworkName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-underlaynetworkname). Селекторы, указанные в параметре [`memberNodeNetworkInterfaces`](/modules/sdn/cr.html#underlaynetwork-v1alpha1-spec-membernodenetworkinterfaces) объекта UnderlayNetwork, определяют, какие интерфейсы узлов используются системной сетью.
 1. **Опционально**. Для автоматической выдачи IP-адресов на интерфейсах, принадлежащих системной сети, [создайте пул адресов для системной сети](#создание-пула-ip-адресов-для-настройки-ipam-системной-сети). Его необходимо указать в параметре [`spec.ipam.clusterIPAddressPoolName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-ipam-clusteripaddresspoolname) ресурса SystemNetwork при создании сети.
 
 ### Создание системной сети
 
 Для создания системной сети используйте ресурс [SystemNetwork](/modules/sdn/cr.html#systemnetwork). Поддерживается создание системных сетей со следующими типами подключения к underlay-сетям, поверх которых они будут работать:
 
-* [`VLAN`](#тип-vlan) — на интерфейсах, подключенных к underlay-сети (underlay-интерфейсах) создаются VLAN-интерфейсы.
-* [`Access`](#тип-access) — прямой доступ (без VLAN) к интерфейсам на узлах, подключенным к underlay-сети.
+* [`VLAN`](#тип-vlan) — на интерфейсах, подключенных к underlay-сети (underlay-интерфейсах) создаются VLAN-интерфейсы;
+* [`Access`](#тип-access) — прямой доступ (без VLAN) к интерфейсам на узлах, подключенным к underlay-сети;
 * [`SRIOVVirtualFunction`](#тип-sriovvirtualfunction) — подключение к физическому интерфейсу через SR-IOV.
 
 #### Тип VLAN
@@ -836,8 +836,8 @@ d8 k get systemnetwork storage-network -o yaml
 
 В `status` отображаются:
 
-* `nodeAttachementsCount` — общее число привязок (по одной на совпавший интерфейс узла).
-* `readyNodeAttachementsCount` — привязки в состоянии готовности (настроены и работают).
+* `nodeAttachementsCount` — общее число привязок (по одной на совпавший интерфейс узла);
+* `readyNodeAttachementsCount` — привязки в состоянии готовности (настроены и работают);
 * `conditions` — например, `Ready`, когда все привязки готовы.
 
 Для просмотра внутренних привязок (по одной на пару «системная сеть + родительский интерфейс») используйте команду:
