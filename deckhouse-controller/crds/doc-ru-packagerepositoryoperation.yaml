@@ -98,6 +98,9 @@ spec:
                           type:
                             description: |
                               Тип пакета.
+                          totalVersions:
+                            description: |
+                              Общее количество версий пакета в реестре.
                     processedOverall:
                       description: |
                         Общее количество обработанных пакетов.
