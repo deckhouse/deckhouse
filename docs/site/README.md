@@ -50,6 +50,55 @@ make down
 
 This also stops and removes the local Docker registry if it was started.
 
+### Running the documentation site with an external module
+
+Use this mode when you want to preview documentation from an external module repository together with the local portal.
+
+1. Run the following command from `docs/site`:
+
+   ```bash
+   make external-module MODULE_PATH=/path/to/module
+   ```
+
+1. Optional arguments:
+
+   - `CHANNEL` — defaults to `alpha`;
+   - `MODULE_VERSION` — defaults to `v0.1.0`.
+
+   Example:
+
+   ```bash
+   make external-module \
+     MODULE_PATH=/home/kar/fox/platform-security/operator-trivy \
+     CHANNEL=stable \
+     MODULE_VERSION=v1.2.3
+   ```
+
+1. Open the DKP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
+
+The external module pages are available under `/modules/<module-name>/<channel>/`.
+
+If you edit files in the external module repository, Hugo rebuilds the generated files automatically and the portal picks up the changes.
+
+The workflow watches:
+
+- `docs/`;
+- `module.yaml`;
+- `oss.yaml`;
+- `openapi/config-values.yaml`;
+- `openapi/doc-ru-config-values.yaml`;
+- root-level files in `crds/`.
+
+YAML files from subdirectories inside `crds/` are ignored.
+
+#### Stopping the external module workflow
+
+To stop the workflow, cancel the running process and then run:
+
+```bash
+make down
+```
+
 ### Running the documentation site (option 2: just run containers)
 
 Just runs documentation containers.
