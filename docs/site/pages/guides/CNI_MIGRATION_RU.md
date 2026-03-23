@@ -32,16 +32,16 @@ layout: sidebar-guides
 
 Переключение CNI в кластере DKP можно выполнить несколькими способами.
 
-## Способ 1: Использование группы команд d8 cni-migration утилиты d8 (автоматизированное переключение)
+## Способ 1: Использование группы команд d8 network cni-migration утилиты d8 (автоматизированное переключение)
 
-Утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/reference/) предоставляет группу команд `d8 cni-migration` для управления процессом миграции.
+Утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/reference/) предоставляет группу команд `d8 network cni-migration` для управления процессом миграции.
 
 ### Запуск миграции
 
 Для начала процесса выполните команду `switch`, указав целевой CNI (например, `cilium`, `flannel` или `simple-bridge`):
 
 ```bash
-d8 cni-migration switch --to-cni cilium
+d8 network cni-migration switch --to-cni cilium
 ```
 
 Эта команда создаст необходимый ресурс в кластере и запустит контроллер миграции. DKP автоматически развернет необходимые компоненты: Менеджер (Manager) и Агенты (Agents) в неймспейсе `d8-system`.
@@ -51,7 +51,7 @@ d8 cni-migration switch --to-cni cilium
 Чтобы следить за ходом выполнения в реальном времени, используйте команду:
 
 ```bash
-d8 cni-migration watch
+d8 network cni-migration watch
 ```
 
 Вы увидите динамический интерфейс со следующей информацией:
@@ -76,7 +76,7 @@ d8 cni-migration watch
 После того как статус миграции перейдет в `Succeeded`, удалите ресурсы миграции (контроллеры и агенты), чтобы они не потребляли ресурсы кластера. Для этого используйте команду:
 
 ```bash
-d8 cni-migration cleanup
+d8 network cni-migration cleanup
 ```
 
 ## Способ 2: Использование команд d8 k (ручное переключение)

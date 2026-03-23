@@ -1489,6 +1489,46 @@ Use stable identifiers instead of `/dev/sdX`:
 
 In configuration files and scripts, use partition UUIDs or symlinks from `/dev/disk/by-*` instead of `/dev/sdX` names.
 
+#### Network interface naming in guest OS
+
+In systems without predictable network interface naming support, network interface names (`eth0`, `eth1`, `eth2`, etc.) are assigned by the Linux kernel in the order devices are discovered during boot. When adding new network interfaces or changing the order of networks in `.spec.networks`, the interface order may change, which can cause IP addresses to be assigned to the wrong interfaces.
+
+Using `ethX` in configuration files (for example, `/etc/network/interfaces`, `netplan`, `systemd-networkd`) or scripts may lead to unexpected network behavior or connection to the wrong network when adding new interfaces or changing the network order.
+
+Modern distributions with systemd (Ubuntu 16.04+, Debian 9+, CentOS 7+, RHEL 7+) use predictable interface names (`enpXsY`, `ensX`, `enoX`) by default, which are based on the physical characteristics of the device (PCI coordinates) and remain stable between reboots and when adding new interfaces.
+
+However, even when using predictable names, it is recommended to bind network configuration to interface MAC addresses for guaranteed stability, especially when changing the order of networks in `.spec.networks` or adding new interfaces.
+
+**Example for systems without predictable naming:**
+
+Initially, the VM has two interfaces:
+
+```console
+$ ip link show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500
+```
+
+After adding a new interface at the beginning of the `.spec.networks` list and rebooting the VM:
+
+```console
+$ ip link show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500  # New interface
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500  # Old eth0
+4: eth2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500  # Old eth1
+```
+
+MAC addresses remain unchanged, but interface names (`eth0`, `eth1`) shift, which can lead to IP addresses being assigned to the wrong interfaces.
+
+Use stable identifiers instead of `ethX`:
+
+- **`enpXsY`** — predictable names based on physical location (systemd networkd naming scheme, enabled by default in modern systems)
+- **MAC address binding** — in `netplan`, `systemd-networkd`, or `/etc/network/interfaces` configuration (preferred for guaranteed stability)
+
+In configuration files and scripts, use stable interface names (`enpXsY`) or MAC address binding instead of `ethX` names.
+
 ### Organizing interaction with virtual machines
 
 Virtual machines can be accessed directly via their fixed IP addresses. However, this approach has limitations: direct use of IP addresses requires manual management, complicates scaling, and makes the infrastructure less flexible. An alternative is services—a mechanism that abstracts access to VMs by providing logical entry points instead of binding to physical addresses.
@@ -2142,6 +2182,10 @@ Important considerations when working with additional network interfaces:
 - To preserve the order of network interfaces inside the guest operating system, it is recommended to add new networks to the end of the `.spec.networks` list (do not change the order of existing ones).
 - Network security policies (NetworkPolicy) do not apply to additional network interfaces.
 - Network parameters (IP addresses, gateways, DNS, etc.) for additional networks are configured manually from within the guest OS (for example, using Cloud-Init).
+
+{% alert level="info" %}
+When configuring network interfaces in the guest OS, use stable identifiers (predictable names `enpXsY` or MAC address binding) instead of `ethX` names. For more details, see the [Network interface naming in guest OS](#network-interface-naming-in-guest-os) section.
+{% endalert %}
 
 Example of connecting a VM to the main cluster network and the project network `user-net`:
 

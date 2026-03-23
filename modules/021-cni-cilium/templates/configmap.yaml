@@ -124,6 +124,9 @@ data:
   {{- if .Values.cniCilium.extraLoadBalancerAlgorithmsEnabled }}
   bpf-lb-algorithm-annotation: "true"
   {{- end }}
+  {{- if .Values.cniCilium.loadBalancerICMPReplyEnabled }}
+  enable-loadbalancer-icmp-reply: "true"
+  {{- end }}
 
   enable-session-affinity: "true"
   {{- if .Values.cniCilium.svcSourceRangeCheck }}
