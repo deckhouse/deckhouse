@@ -194,3 +194,200 @@ spec:
           jsonPath: .status.conditions[?(@.type=='IsReady')].status
           description: Module`s ready status.
           type: string
+    - name: v1alpha2
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Module represents a module instance managed via the package system.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              description: Spec defines the behavior of a Module.
+              required:
+                - packageName
+                - packageVersion
+              properties:
+                packageName:
+                  type: string
+                  description: Name of the module package to install.
+                packageRepositoryName:
+                  type: string
+                  description: |
+                    Name of the repository where the package is located.
+                    If not specified, the default repository is used.
+                packageVersion:
+                  type: string
+                  description: Version of the module package to install.
+                releaseChannel:
+                  type: string
+                  description: Release channel for the module package.
+                settings:
+                  type: object
+                  description: Configuration settings for the module.
+                  x-kubernetes-preserve-unknown-fields: true
+            status:
+              type: object
+              properties:
+                currentVersion:
+                  type: object
+                  description: Information about the currently installed version.
+                  properties:
+                    version:
+                      type: string
+                      description: Semantic version of the installed module.
+                    channel:
+                      type: string
+                      description: Release channel from which the version was installed.
+                conditions:
+                  x-kubernetes-patch-strategy: merge
+                  x-kubernetes-patch-merge-key: type
+                  type: array
+                  description: Conditions represent the latest available observations of the module's state.
+                  items:
+                    type: object
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      message:
+                        type: string
+                        maxLength: 32768
+                      reason:
+                        type: string
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        minimum: 0
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                internalConditions:
+                  x-kubernetes-patch-strategy: merge
+                  x-kubernetes-patch-merge-key: type
+                  type: array
+                  description: InternalConditions represent internal conditions of the module.
+                  items:
+                    type: object
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      message:
+                        type: string
+                        maxLength: 32768
+                      reason:
+                        type: string
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        minimum: 0
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                resourceConditions:
+                  x-kubernetes-patch-strategy: merge
+                  x-kubernetes-patch-merge-key: type
+                  type: array
+                  description: ResourceConditions represent conditions related to module resources.
+                  items:
+                    type: object
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      message:
+                        type: string
+                        maxLength: 32768
+                      reason:
+                        type: string
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        minimum: 0
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Package
+          jsonPath: .spec.packageName
+          type: string
+          description: Module package name.
+        - name: Version
+          jsonPath: .spec.packageVersion
+          type: string
+          description: Module package version.
+        - name: Repository
+          jsonPath: .spec.packageRepositoryName
+          type: string
+          description: Package repository name.
+          priority: 1
+        - name: Installed
+          jsonPath: .status.conditions[?(@.type=='Installed')].status
+          type: string
+          description: Module installed status.
+        - name: Ready
+          jsonPath: .status.conditions[?(@.type=='Ready')].status
+          type: string
+          description: Module ready status.
+        - name: Message
+          jsonPath: .status.conditions[?(@.type=='Ready')].message
+          type: string
+          description: Ready condition message.
+        - name: Age
+          jsonPath: .metadata.creationTimestamp
+          type: date
