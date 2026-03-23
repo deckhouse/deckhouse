@@ -544,13 +544,11 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 		// Version marked as not exist in registry
 		logger.Debug("version marked as not exist in registry, checking if bundle image exists")
 
-		err := s.svc.Package(packageName).CheckImageExists(ctx, version)
-		if err != nil && !errors.Is(err, regClient.ErrImageNotFound) {
-			logger.Debug("bundle image not found", log.Err(err))
-			return nil
-		}
-		if err != nil {
-			logger.Warn("check bundle image exists", log.Err(err))
+		if err := s.svc.Package(packageName).CheckImageExists(ctx, version); err != nil {
+			if errors.Is(err, regClient.ErrImageNotFound) {
+				logger.Debug("bundle image not found")
+				return nil
+			}
 			return fmt.Errorf("check bundle image exists: %w", err)
 		}
 
