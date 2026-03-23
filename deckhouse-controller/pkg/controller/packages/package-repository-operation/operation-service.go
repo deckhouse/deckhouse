@@ -367,7 +367,8 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		}
 
 		totalVersions := 0
-		// For incremental scan - check total count of tags from registry to make the total
+
+		// For incremental scan - check total count of tags from registry to make the totalVersions count accurate 
 		if !isFullScan {
 			totalVersions = s.countAllVersions(ctx, packageName)
 		}
