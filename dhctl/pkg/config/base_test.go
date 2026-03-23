@@ -434,8 +434,11 @@ spec:
 
 func TestParseConfigFromFiles(t *testing.T) {
 	app.VersionFile = "./mocks/version"
+	dc := make(map[string]string)
+	dc[downloadDirKey] = "/tmp"
+	dc[cacheDirKey] = "/tmp/cache"
 	t.Run("parse wildcard", func(t *testing.T) {
-		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider(), make(map[string]string))
+		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider(), dc)
 		require.NoError(t, err)
 		require.Equal(t, "Static", metaConfig.ClusterType)
 
