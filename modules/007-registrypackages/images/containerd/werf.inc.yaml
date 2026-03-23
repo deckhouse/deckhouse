@@ -74,7 +74,7 @@ shell:
   - |
   {{- $buildContext := deepCopy $ -}}
   {{- $parted_version := split "." $runc_version -}}
-  {{- $_ := set $buildContext "BuildCommand" `make COMMIT="$(cat COMMIT)" static` -}}
+  {{- $_ := set $buildContext "BuildCommand" `make COMMIT="$(cat COMMIT)" EXTRA_LDFLAGS="-s -w" static` -}}
   {{- $_ := set $buildContext "ProjectName" (printf "%s/runc-%s.%s" $.ModuleName $parted_version._0 $parted_version._1) -}}
   {{- include "image-build.build" $buildContext | indent 6 }}
   - mv runc /out/runc
