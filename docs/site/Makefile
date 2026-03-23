@@ -16,23 +16,10 @@ ifeq ($(USE_LOCALHOST_REPO),1)
 WERF_REPO := localhost:4999/docs
 endif
 
-werf-bin: ## Install/update werf binary from root Makefile
-		$(MAKE) -C $(ROOT_DIR) bin/werf
-
-registry: ## Start local Docker registry (set USE_LOCALHOST_REPO=1)
-		@if [ -z "$$(docker ps --filter name=registry --format '{{.Names}}')" ]; then \
-			docker rm -f registry 2>/dev/null 1>/dev/null; \
-			docker run -d -p 4999:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true --restart=always --name registry registry:2; \
-			echo "✅ Local Docker registry started on port 4999"; \
-		else \
-			echo "ℹ️ Local Docker registry is already running"; \
-		fi;
-
-.PHONY:
-registry-down: ## Stop and remove local Docker registry
-		docker rm -f registry; docker volume prune -fa
+##@ Main
 
 up: werf-bin ## Start documentation containers in a werf watch mode (rebuilding on a commit)
+		##~ Options: [USE_LOCALHOST_REPO=1]
 		@if [ "$(USE_LOCALHOST_REPO)" = "1" ]; then \
 			$(MAKE) registry; \
 			echo "\nStarting documentation in a watch mode using $(WERF_REPO) registry..."; \
@@ -43,6 +30,7 @@ up: werf-bin ## Start documentation containers in a werf watch mode (rebuilding 
 		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --env local --repo $(WERF_REPO) --skip-image-spec-stage=true
 
 dev: werf-bin ## Start documentation containers in a werf watch mode (rebuilding on any documentation changes)
+		##~ Options: [USE_LOCALHOST_REPO=1]
 		@if [ "$(USE_LOCALHOST_REPO)" = "1" ]; then \
 			$(MAKE) registry; \
 			echo "\nStarting documentation in a DEV watch mode using $(WERF_REPO) registry..."; \
@@ -53,7 +41,7 @@ dev: werf-bin ## Start documentation containers in a werf watch mode (rebuilding
 		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
 
 external-module: werf-bin ## Watch external module docs and run the local portal
-		##~ Options: MODULE_PATH=/path/to/module [CHANNEL=alpha] [MODULE_VERSION=v0.1.0]
+		##~ Options: MODULE_PATH=/path/to/module [CHANNEL=alpha] [MODULE_VERSION=v0.1.0] [USE_LOCALHOST_REPO=1]
 		@set -e; \
 		if [ "$(USE_LOCALHOST_REPO)" = "1" ]; then \
 			$(MAKE) registry; \
@@ -70,7 +58,26 @@ external-module: werf-bin ## Watch external module docs and run the local portal
 		echo -n "\nwerf: "; $(WERF_BIN) version; \
 		$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
 
-clean: werf-bin ## Clean up werf artifacts (set USE_LOCALHOST_REPO=1)
+##@ Helpers
+
+werf-bin: ## Install/update werf binary from root Makefile
+		$(MAKE) -C $(ROOT_DIR) bin/werf
+
+registry: ## Start local Docker registry on localhost:4999
+		@if [ -z "$$(docker ps --filter name=registry --format '{{.Names}}')" ]; then \
+			docker rm -f registry 2>/dev/null 1>/dev/null; \
+			docker run -d -p 4999:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true --restart=always --name registry registry:2; \
+			echo "✅ Local Docker registry started on port 4999"; \
+		else \
+			echo "ℹ️ Local Docker registry is already running"; \
+		fi;
+
+.PHONY:
+registry-down: ## Stop and remove local Docker registry
+		docker rm -f registry; docker volume prune -fa
+
+clean: werf-bin ## Clean up werf artifacts in localhost repo mode
+		##~ Options: USE_LOCALHOST_REPO=1
 		@if [ "$(USE_LOCALHOST_REPO)" = "1" ]; then \
 			$(MAKE) registry; \
 			$(WERF_BIN) cleanup --env local --repo $(WERF_REPO) --without-kube; \
@@ -83,7 +90,8 @@ down: ## Stop and remove all site containers and networks
 		$(MAKE) registry-down
 		@echo "❌ Local Docker registry has been stopped"
 
-regenerate-menu: ## Regenerate navigation menu from API (requires DOC_API_URL and DOC_API_KEY)
+regenerate-menu: ## Regenerate navigation menu from API
+		##~ Options: DOC_API_URL=https://example/api DOC_API_KEY=token [DOC_API_REFERER=https://deckhouse.io]
 		curl --fail --retry-delay 5 -H "Referer: $${DOC_API_REFERER:-https://deckhouse.io}" --retry 5 $${DOC_API_URL:?"Please set URL for API"}?api-key=$${DOC_API_KEY:?"Please set KEY for API"}  -o /tmp/menus.json
 
 		@jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > _data/topnav.json
@@ -106,14 +114,11 @@ regenerate-metadata: werf-bin ## Regenerate embedded modules metadata file
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
-	@echo 'Variables:'
-	@echo '  USE_LOCALHOST_REPO=1  Use --repo localhost:4999/docs instead of default --repo :local'
-	@echo '                         Also starts local Docker registry in targets that need it'
-	@echo ''
 	@echo 'Available targets:'
 	@awk 'BEGIN {\
 		FS = ":.*?## "; \
 	} \
+	/^##@/                    { printf "\n%s\n", substr($$0, 5) } \
 	/^[a-zA-Z0-9_-]+:.*?## / { printf "  %-20s %s\n", $$1, $$2 } \
 	/^.?.?##~/              { printf "  %-20s %s\n", "", substr($$1, 6) }' $(MAKEFILE_LIST)
 
