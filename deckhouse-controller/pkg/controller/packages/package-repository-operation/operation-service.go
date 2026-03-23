@@ -355,17 +355,25 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		slog.Int("versions", len(foundTags)),
 	)
 
-	// /version path exists but has no release (semver) tags
+	// /version path exists but no new semver tags to process
 	if len(foundTags) == 0 {
-		s.logger.Warn(
-			"no release images found for package",
-			slog.String("package", packageName),
-		)
+		isFullScan := operation.Spec.Update != nil && operation.Spec.Update.FullScan
+
+		if isFullScan {
+			s.logger.Warn(
+				"no release images found for package",
+				slog.String("package", packageName),
+			)
+		}
+
+		totalVersions := 0
+		// For incremental scan - check total count of tags from registry to make the total
+		if !isFullScan {
+			totalVersions = s.countAllVersions(ctx, packageName)
+		}
+
 		return &PackageProcessResult{
-			Failed: []failedVersion{{
-				Name:  "unknown",
-				Error: fmt.Sprintf("no release images found for package %q in /version path", packageName),
-			}},
+			TotalVersions: totalVersions,
 		}, nil
 	}
 
