@@ -343,7 +343,7 @@
     if (localePrefix === '/en') {
       return {
         title: 'Document not found',
-        description: 'The selected module page was not found.',
+        description: 'The selected page was not found.',
         suggestionPrefix: 'Try opening documentation version',
         linkLabel: 'Open documentation version',
         closeLabel: 'Close',
@@ -352,7 +352,7 @@
 
     return {
       title: 'Документ не найден',
-      description: 'Не удалось найти страницу документации для выбранной версии модуля.',
+      description: 'Не удалось найти страницу документации для выбранной версии.',
       suggestionPrefix: 'Попробуйте перейти на версию документации',
       linkLabel: 'Открыть версию документации',
       closeLabel: 'Закрыть',
