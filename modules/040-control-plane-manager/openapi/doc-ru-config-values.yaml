@@ -126,6 +126,8 @@ properties:
                 description: 'Ingress-класс, который будет использован для публикации API Kubernetes через Ingress.'
               whitelistSourceRanges:
                 description: 'Список адресов в формате CIDR, которым разрешено подключение к API-серверу.'
+              addKubeconfigGeneratorEntry:
+                description: 'Если указать `false`, будет удалена запись в kubeconfig-generator.'
               https:
                 description: 'Режим работы HTTPS для Ingress API-сервера.'
                 properties:
