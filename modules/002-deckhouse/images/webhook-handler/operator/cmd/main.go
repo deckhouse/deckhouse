@@ -108,20 +108,20 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	soapp.ValidatingWebhookSettings.ConfigurationName = ReturnNotEmpty(
-		soapp.ValidatingWebhookSettings.ConfigurationName,
+	soapp.ValidatingWebhookConfigurationName = ReturnNotEmpty(
+		soapp.ValidatingConfigurationNameDefault,
 		os.Getenv("VALIDATING_WEBHOOK_CONFIGURATION_NAME"))
 	// TODO: use env var instead of hardcoded value
 	// os.Getenv("VALIDATING_WEBHOOK_SERVICE_NAME")
-	soapp.ValidatingWebhookSettings.ServiceName = ReturnNotEmpty("test", "test")
-	soapp.ValidatingWebhookSettings.ServerCertPath = ReturnNotEmpty(
-		soapp.ValidatingWebhookSettings.ServerCertPath,
+	soapp.ValidatingWebhookServiceName = ReturnNotEmpty("test", "test")
+	soapp.ValidatingWebhookServerCert = ReturnNotEmpty(
+		soapp.ValidatingServerCertPathDefault,
 		os.Getenv("VALIDATING_WEBHOOK_SERVER_CERT"))
-	soapp.ValidatingWebhookSettings.ServerKeyPath = ReturnNotEmpty(
-		soapp.ValidatingWebhookSettings.ServerKeyPath,
+	soapp.ValidatingWebhookServerKey = ReturnNotEmpty(
+		soapp.ValidatingServerKeyPathDefault,
 		os.Getenv("VALIDATING_WEBHOOK_SERVER_KEY"))
-	soapp.ValidatingWebhookSettings.CAPath = ReturnNotEmpty(
-		soapp.ValidatingWebhookSettings.CAPath,
+	soapp.ValidatingWebhookCA = ReturnNotEmpty(
+		soapp.ValidatingCAPathDefault,
 		os.Getenv("VALIDATING_WEBHOOK_CA"))
 	soapp.Namespace = ReturnNotEmpty("default", os.Getenv("SHELL_OPERATOR_NAMESPACE"))
 
