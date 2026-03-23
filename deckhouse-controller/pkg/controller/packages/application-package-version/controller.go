@@ -252,13 +252,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	// check bundle image exists in registry
-	isBundleImageExists := false
-	_, err = bundleRegistryClient.Digest(ctx, apv.Spec.PackageVersion)
-	if err != nil && !isRegistryNotFoundError(err) {
-		logger.Warn("failed to get bundle image digest", log.Err(err))
-	}
-	if err == nil {
-		isBundleImageExists = true
+	isBundleImageExists := true
+	if _, err := bundleRegistryClient.Digest(ctx, apv.Spec.PackageVersion); err != nil {
+		isBundleImageExists = false
+		if !isRegistryNotFoundError(err) {
+			logger.Warn("failed to get bundle image digest", log.Err(err))
+		}
 	}
 
 	// Delete label "draft" and patch the main object
