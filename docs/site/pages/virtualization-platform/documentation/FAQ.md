@@ -11,7 +11,7 @@ permalink: en/virtualization-platform/documentation/faq.html
 
 Below is a typical Windows guest OS installation scenario from an ISO image. Before you begin, host the ISO on an HTTP endpoint reachable from the cluster.
 
-1. Create an empty [VirtualDisk](/modules/virtualization/stable/cr.html#virtualdisk) for OS installation:
+1. Create an empty [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) for OS installation:
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -25,7 +25,7 @@ Below is a typical Windows guest OS installation scenario from an ISO image. Bef
        storageClassName: local-path
    ```
 
-1. Create [ClusterVirtualImage](/modules/virtualization/stable/cr.html#clustervirtualimage) resources for the Windows OS ISO and the VirtIO driver ISO:
+1. Create [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resources for the Windows OS ISO and the VirtIO driver ISO:
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -110,11 +110,11 @@ Unattended Windows installation uses an answer file (`unattend.xml` or `autounat
 The example answer file below:
 
 - Sets the English UI language and keyboard layout.
-- Connects the `VirtIO` drivers for the setup stage (the order of devices in `blockDeviceRefs` on the [VirtualMachine](/modules/virtualization/stable/cr.html#virtualmachine) resource must match the paths in the file).
+- Connects the `VirtIO` drivers for the setup stage (the order of devices in `blockDeviceRefs` on the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource must match the paths in the file).
 - Creates disk layout for installation with EFI.
 - Creates a user `cloud` (administrator, password `cloud`) and a user `user` (password `user`).
 
-<details><summary><b>autounattend.xml</b></summary>
+{% offtopic title="Example of the contents of the autounattend.xml file..." %}
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -303,7 +303,7 @@ The example answer file below:
 </unattend>
 ```
 
-</details>
+{% endofftopic %}
 
 1. Save the answer file as `autounattend.xml` (use the example above or adjust it to your needs).
 
@@ -376,7 +376,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
    systemctl start qemu-guest-agent
    ```
 
-1. Set the VM run policy to [runPolicy: AlwaysOnUnlessStoppedManually](/modules/virtualization/stable/cr.html#virtualmachine-v1alpha2-spec-runpolicy) — this is required so you can shut down the VM.
+1. Set the VM run policy to [runPolicy: AlwaysOnUnlessStoppedManually](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) — this is required so you can shut down the VM.
 
 1. Prepare the image. Clean unused filesystem blocks:
 
@@ -493,7 +493,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
    poweroff
    ```
 
-1. Create a [VirtualImage](/modules/virtualization/stable/cr.html#virtualimage) resource that references the prepared VM’s [VirtualDisk](/modules/virtualization/stable/cr.html#virtualdisk):
+1. Create a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource that references the prepared VM’s [VirtualDisk](/modules/virtualization/cr.html#virtualdisk):
 
    ```bash
    d8 k apply -f -<<EOF
@@ -511,7 +511,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
    EOF
    ```
 
-   Or create a [ClusterVirtualImage](/modules/virtualization/stable/cr.html#clustervirtualimage) resource so the image is available cluster-wide for all projects:
+   Or create a [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource so the image is available cluster-wide for all projects:
 
    ```bash
    d8 k apply -f -<<EOF
@@ -529,7 +529,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
    EOF
    ```
 
-1. Create a new [VirtualDisk](/modules/virtualization/stable/cr.html#virtualdisk) from the resulting image:
+1. Create a new [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) from the resulting image:
 
    ```bash
    d8 k apply -f -<<EOF
@@ -832,7 +832,7 @@ The `<(...)` construct is necessary because Ansible expects a file or script as 
 
 The virtual machine runs in a Kubernetes cluster, so directing network traffic to it works like routing traffic to pods. To route traffic to a virtual machine, use the standard Kubernetes mechanism — the Service resource, which selects targets using a label selector.
 
-1. Create a Service with the required settings.
+1. Create a service with the required settings.
 
    For example, consider a virtual machine with the label `vm: frontend-0`, an HTTP service exposed on ports 80 and 443, and SSH access on port 22:
 
@@ -849,7 +849,9 @@ The virtual machine runs in a Kubernetes cluster, so directing network traffic t
 
 1. To route network traffic to the virtual machine's ports, create the following Service:
 
-   This Service listens on ports 80 and 443 and forwards traffic to the target virtual machine’s ports 80 and 443. SSH access from outside the cluster is provided on port 2211.
+1. To route network traffic to the virtual machine's ports, create the following service:
+
+This service listens on ports 80 and 443 and forwards traffic to the target virtual machine’s ports 80 and 443. SSH access from outside the cluster is provided on port 2211.
 
    ```yaml
    apiVersion: v1
@@ -880,7 +882,7 @@ The virtual machine runs in a Kubernetes cluster, so directing network traffic t
 
 ### How to increase the DVCR size?
 
-The DVCR volume size is set in the `virtualization` module `ModuleConfig` (`spec.settings.dvcr.storage.persistentVolumeClaim.size`). The new value must be greater than the current one.
+The DVCR volume size is set in the `virtualization` module ModuleConfig (`spec.settings.dvcr.storage.persistentVolumeClaim.size`). The new value must be greater than the current one.
 
 1. Check the current DVCR size:
 
@@ -907,7 +909,7 @@ The DVCR volume size is set in the `virtualization` module `ModuleConfig` (`spec
    moduleconfig.deckhouse.io/virtualization patched
    ```
 
-1. Verify that `ModuleConfig` shows the new size:
+1. Verify that ModuleConfig shows the new size:
 
    ```shell
    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
@@ -988,7 +990,7 @@ Applying a NodeGroupConfiguration (NGC) manifest removes the file on the nodes. 
        type: Ready
    ```
 
-1. Delete the one-time `NodeGroupConfiguration` manifest:
+1. Delete the one-time NodeGroupConfiguration manifest:
 
    ```bash
    d8 k delete -f containerd-dvcr-remove-old-config.yaml

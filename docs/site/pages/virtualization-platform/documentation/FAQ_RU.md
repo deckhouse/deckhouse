@@ -10,9 +10,9 @@ lang: ru
 
 #### Как установить ОС в виртуальной машине из ISO-образа?
 
-Ниже приведён типовой сценарий установки гостевой ОС Windows с ISO-образа. Перед началом разместите ISO на HTTP-ресурсе, доступном из кластера.
+Ниже приведён типовой сценарий установки гостевой ОС Windows из ISO-образа. Перед началом разместите ISO-образ на HTTP-ресурсе, доступном из кластера.
 
-1. Создайте пустой [VirtualDisk](/modules/virtualization/stable/cr.html#virtualdisk) для установки ОС:
+1. Создайте пустой [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) для установки ОС:
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -26,7 +26,7 @@ lang: ru
        storageClassName: local-path
    ```
 
-1. Создайте ресурсы [ClusterVirtualImage](/modules/virtualization/stable/cr.html#clustervirtualimage) для ISO-образа ОС Windows и дистрибутива драйверов `VirtIO`:
+1. Создайте ресурсы [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) для ISO-образа ОС Windows и дистрибутива драйверов `VirtIO`:
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -90,7 +90,7 @@ lang: ru
 
 1. Подключитесь к консоли ВМ и завершите установку ОС и драйверов `VirtIO` при помощи графического установщика.
 
-   Подключение к VNC:
+   Подключение по VNC:
 
    ```bash
    d8 v vnc -n default win-vm
@@ -111,11 +111,11 @@ lang: ru
 В примере ниже файл ответов:
 
 - задаёт русский язык интерфейса и раскладку;
-- подключает драйверы `VirtIO` для этапа установки (порядок устройств в `blockDeviceRefs` у ресурса [VirtualMachine](/modules/virtualization/stable/cr.html#virtualmachine) должен совпадать с путями в файле);
+- подключает драйверы `VirtIO` для этапа установки (порядок устройств в `blockDeviceRefs` у ресурса [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) должен совпадать с путями в файле);
 - создаёт разметку диска для установки с EFI;
 - создаёт пользователя `cloud` (администратор, пароль `cloud`) и пользователя `user` (пароль `user`).
 
-<details><summary><b>autounattend.xml</b></summary>
+{% offtopic title="Пример содержимого файла autounattend.xml..." %}
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -304,17 +304,17 @@ lang: ru
 </unattend>
 ```
 
-</details>
+{% endofftopic %}
 
 1. Сохраните файл ответов в `autounattend.xml` (воспользуйтесь примером из блока выше или измените его под свои требования).
 
-1. Создайте Secret с типом `provisioning.virtualization.deckhouse.io/sysprep`:
+1. Создайте секрет с типом `provisioning.virtualization.deckhouse.io/sysprep`:
 
    ```bash
    d8 k create secret generic sysprep-config --type="provisioning.virtualization.deckhouse.io/sysprep" --from-file=./autounattend.xml
    ```
 
-1. Создайте виртуальную машину, которая в процессе установки будет использовать файл ответов. Укажите в спецификации `provisioning` с типом `SysprepRef`. При необходимости добавьте в спецификацию другие файлы в формате Base64, необходимые для успешного выполнения скриптов внутри файла ответов.
+1. Создайте виртуальную машину, которая в процессе установки будет использовать файл ответов. Укажите в спецификации `provisioning` с типом `SysprepRef`. При необходимости добавьте в спецификацию другие файлы в формате Base64, необходимые для успешного выполнения скриптов внутри файла ответов:
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -377,7 +377,7 @@ Golden image — это предварительно настроенный об
    systemctl start qemu-guest-agent
    ```
 
-1. Установите политику запуска ВМ [runPolicy: AlwaysOnUnlessStoppedManually](/modules/virtualization/stable/cr.html#virtualmachine-v1alpha2-spec-runpolicy) — это потребуется, чтобы ВМ можно было выключить.
+1. Установите политику запуска ВМ [runPolicy: AlwaysOnUnlessStoppedManually](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) — это потребуется, чтобы ВМ можно было выключить.
 
 1. Подготовьте образ. Очистите неиспользуемые блоки файловой системы:
 
@@ -494,7 +494,7 @@ Golden image — это предварительно настроенный об
    poweroff
    ```
 
-1. Создайте ресурс [VirtualImage](/modules/virtualization/stable/cr.html#virtualimage), указав исходный ресурс [VirtualDisk](/modules/virtualization/stable/cr.html#virtualdisk) подготовленной ВМ:
+1. Создайте ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage), указав исходный ресурс [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) подготовленной ВМ:
 
    ```bash
    d8 k apply -f -<<EOF
@@ -512,7 +512,7 @@ Golden image — это предварительно настроенный об
    EOF
    ```
 
-   Либо создайте ресурс [ClusterVirtualImage](/modules/virtualization/stable/cr.html#clustervirtualimage), чтобы образ был доступен на уровне кластера для всех проектов:
+   Либо создайте ресурс [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage), чтобы образ был доступен на уровне кластера для всех проектов:
 
    ```bash
    d8 k apply -f -<<EOF
@@ -530,7 +530,7 @@ Golden image — это предварительно настроенный об
    EOF
    ```
 
-1. Создайте новый ресурс [VirtualDisk](/modules/virtualization/stable/cr.html#virtualdisk) из полученного образа:
+1. Создайте новый ресурс [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) из полученного образа:
 
    ```bash
    d8 k apply -f -<<EOF
@@ -749,12 +749,12 @@ runcmd:
 
 ### Как использовать Ansible для конфигурирования виртуальных машин?
 
-[Ansible](https://docs.ansible.com/ansible/latest/index.html) — это инструмент автоматизации, который позволяет выполнять задачи на удаленных серверах с использованием протокола SSH. В данном примере мы рассмотрим, как использовать Ansible для управления виртуальными машинами расположенных в проекте `demo-app`.
+[Ansible](https://docs.ansible.com/ansible/latest/index.html) — это инструмент автоматизации, который позволяет выполнять задачи на удаленных серверах с использованием протокола SSH. В данном примере мы рассмотрим, как использовать Ansible для управления виртуальными машинами расположенными в проекте `demo-app`.
 
 В рамках примера предполагается, что:
 
-- в неймспейсе `demo-app` есть ВМ `frontend`.
-- в ВМ есть пользователь `cloud` с доступом по SSH.
+- в неймспейсе `demo-app` есть ВМ `frontend`;
+- в ВМ есть пользователь `cloud` с доступом по SSH;
 - на машине, где запускается Ansible, приватный SSH-ключ хранится в файле `/home/user/.ssh/id_rsa`.
 
 1. Создайте файл `inventory.yaml`:
@@ -831,7 +831,7 @@ ansible -m shell -a "uptime" \
 
 ### Как перенаправить трафик на виртуальную машину?
 
-Виртуальная машина функционирует в кластере Kubernetes, поэтому направление сетевого трафика к ней осуществляется аналогично направлению трафика к подам. Для маршрутизации сетевого трафика на виртуальную машину применяется стандартный механизм Kubernetes — ресурс Service, который выбирает целевые объекты по лейблам (label selector).
+Виртуальная машина функционирует в кластере Kubernetes, поэтому сетевой трафик направляется к ней по аналогии с направлением трафика к подам. Для маршрутизации сетевого трафика на виртуальную машину применяется стандартный механизм Kubernetes — ресурс Service, который выбирает целевые объекты по лейблам (label selector).
 
 1. Создайте сервис с требуемыми настройками.
 
@@ -848,9 +848,9 @@ ansible -m shell -a "uptime" \
    spec: ...
    ```
 
-1. Чтобы направить сетевой трафик на порты виртуальной машины, создайте Service:
+1. Чтобы направить сетевой трафик на порты виртуальной машины, создайте сервис:
 
-   Следующий Service обеспечивает доступ к виртуальной машине: он слушает порты 80 и 443 и перенаправляет трафик на соответствующие порты целевой виртуальной машины. SSH-доступ извне предоставляется по порту 2211:
+   Следующий сервис обеспечивает доступ к виртуальной машине: он слушает порты 80 и 443 и перенаправляет трафик на соответствующие порты целевой виртуальной машины. SSH-доступ извне предоставляется по порту 2211:
 
    ```yaml
    apiVersion: v1
@@ -881,7 +881,7 @@ ansible -m shell -a "uptime" \
 
 ### Как увеличить размер DVCR?
 
-Размер тома DVCR задаётся в `ModuleConfig` модуля `virtualization` (`spec.settings.dvcr.storage.persistentVolumeClaim.size`). Новое значение должно быть больше текущего.
+Размер тома DVCR задаётся в ModuleConfig модуля `virtualization` (`spec.settings.dvcr.storage.persistentVolumeClaim.size`). Новое значение должно быть больше текущего.
 
 1. Проверьте текущий размер DVCR:
 
@@ -908,7 +908,7 @@ ansible -m shell -a "uptime" \
    moduleconfig.deckhouse.io/virtualization patched
    ```
 
-1. Убедитесь, что в `ModuleConfig` отображается новый размер:
+1. Убедитесь, что в ModuleConfig отображается новый размер:
 
    ```shell
    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
@@ -989,7 +989,7 @@ ansible -m shell -a "uptime" \
        type: Ready
    ```
 
-1. Удалите разовый манифест `NodeGroupConfiguration`:
+1. Удалите разовый манифест NodeGroupConfiguration:
 
    ```bash
    d8 k delete -f containerd-dvcr-remove-old-config.yaml
