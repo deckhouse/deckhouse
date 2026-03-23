@@ -33,6 +33,7 @@ extractedLinksMax: 0
 В подразделе на данный момент описаны модули:
 
 * [`local-path-provisioner`](local-path-provisioner.html);
-* [`snapshot-controller`](snapshot-controller.html).
+* [`snapshot-controller`](snapshot-controller.html);
+* [`sds-local-volume`](sds-local-volume.html).
 
 Материалы по остальным модулям подсистемы Storage будут добавляться по мере готовности.
