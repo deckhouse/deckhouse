@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-merged-exception-container-overrides-global
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-runtime-default
+    security.deckhouse.io/security-policy-exception/nginx: allow-unconfined-container
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        appArmorProfile:
+          type: Unconfined

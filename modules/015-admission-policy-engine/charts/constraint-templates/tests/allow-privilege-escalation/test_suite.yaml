@@ -95,6 +95,21 @@ tests:
     object: test_samples/security_policy_exceptions/pods/019-disallowed-no-exception-label.yaml
     assertions:
     - violations: yes
+  - name: 013-022-allowed-by-container-specific-exception-allowPrivilegeEscalation-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/013-allow-privilege-escalation-true-container.yaml
+    object: test_samples/security_policy_exceptions/pods/022-allowed-by-container-exception-allowPrivilegeEscalation-true.yaml
+    assertions:
+    - violations: no
+  - name: 009-010-013-023-allowed-by-merged-exception-container-overrides-global
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/009-allow-privilege-escalation-false.yaml
+    - test_samples/security_policy_exceptions/exceptions/013-allow-privilege-escalation-true-container.yaml
+    object: test_samples/security_policy_exceptions/pods/023-allowed-by-merged-exception-container-overrides-global.yaml
+    assertions:
+    - violations: no
   - name: 011-020-disallowed-by-exception-empty-spec
     inventory:
     - ../common/test_samples/ns.yaml

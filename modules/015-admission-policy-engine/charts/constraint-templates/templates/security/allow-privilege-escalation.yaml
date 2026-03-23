@@ -59,42 +59,48 @@ spec:
               }
 
               get_exception_allowed(c) := out if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label(c)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 has_field(exception.spec.securityContext, "allowPrivilegeEscalation")
                 has_field(exception.spec.securityContext.allowPrivilegeEscalation, "allowedValue")
-                out := sprintf("SecurityPolicyException allowed: allowPrivilegeEscalation: %v", [exception.spec.securityContext.allowPrivilegeEscalation.allowedValue])
+                out := sprintf("SecurityPolicyException allowed: allowPrivilegeEscalation: %v (source: %v)", [exception.spec.securityContext.allowPrivilegeEscalation.allowedValue, label])
               }
 
-              get_exception_allowed(_) := "" if {
-                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed(c) := "" if {
+                label := get_exception_label(c)
+                label == ""
               }
 
-              get_exception_allowed(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed(c) := "" if {
+                label := get_exception_label(c)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
               }
 
-              get_exception_allowed(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed(c) := "" if {
+                label := get_exception_label(c)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 not has_field(exception.spec, "securityContext")
               }
 
-              get_exception_allowed(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed(c) := "" if {
+                label := get_exception_label(c)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 not has_field(exception.spec.securityContext, "allowPrivilegeEscalation")
               }
 
-              get_exception_allowed(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed(c) := "" if {
+                label := get_exception_label(c)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
@@ -120,8 +126,27 @@ spec:
                 allowed_by_securitypolicy(c)
               }
 
-              allowed_by_securitypolicyexception(c) if {
+              # Get exception label - container-specific takes precedence over global
+              get_exception_label(c) := label if {
+                key := sprintf("security.deckhouse.io/security-policy-exception/%v", [c.name])
+                label := input.review.object.metadata.labels[key]
+                label != ""
+              }
+
+              get_exception_label(c) := label if {
+                not input.review.object.metadata.labels[sprintf("security.deckhouse.io/security-policy-exception/%v", [c.name])]
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label != ""
+              }
+
+              get_exception_label(c) := "" if {
+                not input.review.object.metadata.labels[sprintf("security.deckhouse.io/security-policy-exception/%v", [c.name])]
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              allowed_by_securitypolicyexception(c) if {
+                label := get_exception_label(c)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
@@ -150,8 +175,4 @@ spec:
               # has_field returns whether an object has a field
               has_field(object, field) if {
                 object[field]
-              }
-
-              has_field(object, field) := false if {
-                not object[field]
               }

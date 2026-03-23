@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-merged-exception-container-overrides-global
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-privilege-escalation-false
+    security.deckhouse.io/security-policy-exception/nginx: allow-privilege-escalation-true-container
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        allowPrivilegeEscalation: true

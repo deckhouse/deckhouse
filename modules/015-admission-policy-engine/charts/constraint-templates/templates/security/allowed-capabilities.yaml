@@ -81,7 +81,7 @@ spec:
               }
 
               get_exception_allowed_capabilities(container) := out if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label(container)
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
@@ -89,11 +89,11 @@ spec:
                 has_field(exception.spec.securityContext.capabilities, "allowedValues")
                 allowed_add := exception.spec.securityContext.capabilities.allowedValues.add
                 allowed_drop := exception.spec.securityContext.capabilities.allowedValues.drop
-                out := sprintf("SecurityPolicyException allowed: capabilities.add: %v, capabilities.drop: %v", [allowed_add, allowed_drop])
+                out := sprintf("SecurityPolicyException allowed: capabilities.add: %v, capabilities.drop: %v (source: %v)", [allowed_add, allowed_drop, label])
               }
 
               get_exception_allowed_capabilities(container) := out if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label(container)
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
@@ -101,36 +101,41 @@ spec:
                 has_field(exception.spec.securityContext.capabilities, "allowedValues")
                 allowed_add := exception.spec.securityContext.capabilities.allowedValues.add
                 not exception.spec.securityContext.capabilities.allowedValues.drop
-                out := sprintf("SecurityPolicyException allowed: capabilities.add: %v, capabilities.drop: []", [allowed_add])
+                out := sprintf("SecurityPolicyException allowed: capabilities.add: %v, capabilities.drop: [] (source: %v)", [allowed_add, label])
               }
 
-              get_exception_allowed_capabilities(_) := "" if {
-                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_capabilities(container) := "" if {
+                label := get_exception_label(container)
+                label == ""
               }
 
-              get_exception_allowed_capabilities(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_capabilities(container) := "" if {
+                label := get_exception_label(container)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
               }
 
-              get_exception_allowed_capabilities(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_capabilities(container) := "" if {
+                label := get_exception_label(container)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 not has_field(exception.spec, "securityContext")
               }
 
-              get_exception_allowed_capabilities(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_capabilities(container) := "" if {
+                label := get_exception_label(container)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 not has_field(exception.spec.securityContext, "capabilities")
               }
 
-              get_exception_allowed_capabilities(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_capabilities(container) := "" if {
+                label := get_exception_label(container)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
@@ -164,8 +169,24 @@ spec:
                 allowed_by_securitypolicy(container)
               }
 
+              # Get exception label - container-specific takes precedence over global
+              get_exception_label(container) := label if {
+                key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                label := input.review.object.metadata.labels[key]
+                label != ""
+              }
+
+              get_exception_label(container) := label if {
+                not input.review.object.metadata.labels[sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])]
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              get_exception_label(container) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
               allowed_by_securitypolicyexception(container) if {
-                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  label := get_exception_label(container)
                   namespace := input.review.object.metadata.namespace
                   exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                   has_field(exception.spec, "securityContext")
@@ -246,43 +267,48 @@ spec:
               }
 
               get_exception_allowed_drop_capabilities(container) := out if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label(container)
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 has_field(exception.spec.securityContext, "capabilities")
                 has_field(exception.spec.securityContext.capabilities, "allowedValues")
                 allowed_drop := exception.spec.securityContext.capabilities.allowedValues.drop
-                out := sprintf("SecurityPolicyException allowed: capabilities.drop: %v", [allowed_drop])
+                out := sprintf("SecurityPolicyException allowed: capabilities.drop: %v (source: %v)", [allowed_drop, label])
               }
 
-              get_exception_allowed_drop_capabilities(_) := "" if {
-                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_drop_capabilities(container) := "" if {
+                label := get_exception_label(container)
+                label == ""
               }
 
-              get_exception_allowed_drop_capabilities(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_drop_capabilities(container) := "" if {
+                label := get_exception_label(container)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
               }
 
-              get_exception_allowed_drop_capabilities(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_drop_capabilities(container) := "" if {
+                label := get_exception_label(container)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 not has_field(exception.spec, "securityContext")
               }
 
-              get_exception_allowed_drop_capabilities(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_drop_capabilities(container) := "" if {
+                label := get_exception_label(container)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 not has_field(exception.spec.securityContext, "capabilities")
               }
 
-              get_exception_allowed_drop_capabilities(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_drop_capabilities(container) := "" if {
+                label := get_exception_label(container)
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
@@ -309,7 +335,8 @@ spec:
               }
 
               drops_required_capabilities_by_securitypolicyexception(container) if {
-                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  label := get_exception_label(container)
+                  label != ""
                   namespace := input.review.object.metadata.namespace
                   exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                   has_field(exception.spec, "securityContext")

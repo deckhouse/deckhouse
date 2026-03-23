@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  namespace: testns
+  name: allow-privileged-false-container
+spec:
+  securityContext:
+    privileged:
+      allowedValue: false
