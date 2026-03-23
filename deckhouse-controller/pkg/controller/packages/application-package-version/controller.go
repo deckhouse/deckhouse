@@ -16,14 +16,11 @@ package applicationpackageversion
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"path"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -251,24 +248,16 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, err)
 	}
 
+	original = apv.DeepCopy()
+
 	// check bundle image exists in registry
-	isBundleImageExists := true
 	if _, err := bundleRegistryClient.Digest(ctx, apv.Spec.PackageVersion); err != nil {
-		isBundleImageExists = false
-		if !isRegistryNotFoundError(err) {
-			logger.Warn("failed to get bundle image digest", log.Err(err))
-		}
+		logger.Warn("failed to get bundle image digest", log.Err(err))
+		apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "false"
 	}
 
 	// Delete label "draft" and patch the main object
-	original = apv.DeepCopy()
-
 	delete(apv.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
-
-	if !isBundleImageExists {
-		logger.Debug("bundle image not found")
-		apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "false"
-	}
 
 	err = r.client.Patch(ctx, apv, client.MergeFrom(original))
 	if err != nil {
@@ -428,22 +417,4 @@ func convertLicensingEditions(editions map[string]PackageEdition) map[string]v1a
 		}
 	}
 	return result
-}
-
-// isRegistryNotFoundError returns true when the given error indicates that
-// the image is missing in the registry (HTTP 404 / MANIFEST_UNKNOWN).
-func isRegistryNotFoundError(err error) bool {
-	var te *transport.Error
-	if errors.As(err, &te) {
-		if te.StatusCode == http.StatusNotFound {
-			return true
-		}
-
-		for _, e := range te.Errors {
-			if e.Code == transport.ManifestUnknownErrorCode {
-				return true
-			}
-		}
-	}
-	return false
 }
