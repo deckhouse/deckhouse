@@ -305,7 +305,7 @@ func NewDeckhouseController(
 	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
 
-	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, exts, embeddedPolicy, conversionsStore, logger.Named("module-loader"))
+	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, exts, embeddedPolicy, conversionsStore, operator.MetricStorage, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
 	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, exts, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, version, logger.Named("deckhouse-release-controller"))

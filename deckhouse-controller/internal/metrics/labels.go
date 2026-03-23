@@ -36,6 +36,12 @@ const (
 	// LabelName is the label key for a generic resource name.
 	LabelName = "name"
 
+	// LabelModuleName is the label key for the module name (DOP telemetry: module_name).
+	LabelModuleName = "module_name"
+
+	// LabelModuleVersion is the label key for the module version (DOP telemetry: module_version).
+	LabelModuleVersion = "module_version"
+
 	// ============================================================================
 	// Module Controller Label Keys
 	// ============================================================================
