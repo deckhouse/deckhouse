@@ -231,10 +231,12 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 
 	logger.Info("deleting PackageRepository")
 
-	// Delete all PackageRepositoryOperations associated with this repository
+	// Delete only auto-created PackageRepositoryOperations associated with this repository.
+	// Manually created operations (trigger=manual) are intentionally preserved.
 	operationList := &v1alpha1.PackageRepositoryOperationList{}
 	err := r.client.List(ctx, operationList, client.MatchingLabels{
-		v1alpha1.PackagesRepositoryOperationLabelRepository: packageRepository.Name,
+		v1alpha1.PackagesRepositoryOperationLabelRepository:       packageRepository.Name,
+		v1alpha1.PackagesRepositoryOperationLabelOperationTrigger: v1alpha1.PackagesRepositoryTriggerAuto,
 	})
 	if err != nil {
 		return fmt.Errorf("list operations: %w", err)
