@@ -11,6 +11,8 @@ spec:
     kind: PackageRepositoryOperation
     listKind: PackageRepositoryOperationList
     plural: packagerepositoryoperations
+    shortNames:
+    - pro
     singular: packagerepositoryoperation
   scope: Cluster
   versions:
