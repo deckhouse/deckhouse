@@ -310,7 +310,7 @@
 
     if (targetType === 'historical') {
       if (isHistoricalVersionBeforeThreshold(token)) {
-        basePath = `${localePrefix}/products/kubernetes-platform/documentation/modules/${currentPage.moduleName}/${token}`;
+        basePath = `${localePrefix}/products/kubernetes-platform/documentation/${token}/modules/${currentPage.moduleName}`;
       } else {
         basePath = `${localePrefix}/modules/${currentPage.moduleName}/${token}`;
       }
