@@ -49,7 +49,7 @@ func (s *KubeTerraStateLoader) WithForceFromCache(f bool) *KubeTerraStateLoader 
 	return s
 }
 
-func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error) {
+func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, dc map[string]string) (*config.MetaConfig, error) {
 	var metaConfig *config.MetaConfig
 	var err error
 
@@ -80,7 +80,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(s.logger),
 		),
-		nil,
+		dc,
 	)
 	if err != nil {
 		return nil, err

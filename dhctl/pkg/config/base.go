@@ -82,9 +82,7 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 
 		downloadDir, ok := dirs[downloadDirKey]
 		if !ok {
-			dirs = app.GetDirConfig()
-			downloadDir = dirs[downloadDirKey]
-			// return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
+			return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
 		}
 
 		deckhouseDir = filepath.Join(downloadDir, "deckhouse")
@@ -207,9 +205,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		}
 		downloadDir, ok := dirs[downloadDirKey]
 		if !ok {
-			// return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
-			dirs = app.GetDirConfig()
-			downloadDir = dirs[downloadDirKey]
+			return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
 		}
 
 		deckhouseDir = filepath.Join(downloadDir, "deckhouse")

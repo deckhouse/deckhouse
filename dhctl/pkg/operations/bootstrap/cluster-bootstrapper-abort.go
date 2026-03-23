@@ -228,6 +228,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			PhasedExecutionContext: b.PhasedExecutionContext,
 			SkipResources:          app.SkipResources,
 			InfrastructureContext:  b.InfrastructureContext,
+			DirectoryConfig:        b.DirectoryConfig,
 		}
 
 		if b.CommanderMode {

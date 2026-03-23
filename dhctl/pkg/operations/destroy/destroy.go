@@ -52,7 +52,7 @@ type infraDestroyer interface {
 }
 
 type metaConfigPopulator interface {
-	PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error)
+	PopulateMetaConfig(ctx context.Context, dc map[string]string) (*config.MetaConfig, error)
 }
 
 type Params struct {
@@ -98,7 +98,8 @@ func (p *Params) getStateLoaderParams() *stateLoaderParams {
 
 		skipResources: p.SkipResources,
 		// from passed params always ask about load
-		forceFromCache: false,
+		forceFromCache:  false,
+		directoryConfig: p.DirectoryConfig,
 	}
 }
 
@@ -111,6 +112,8 @@ type stateLoaderParams struct {
 
 	skipResources  bool
 	forceFromCache bool
+
+	directoryConfig map[string]string
 }
 
 func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvider kube.ClientProviderWithCleanup) (controller.StateLoader, kube.ClientProviderWithCleanup, error) {
@@ -143,8 +146,9 @@ type ClusterDestroyer struct {
 
 	pipeline phases.DefaultPipeline
 
-	d8Destroyer   *deckhouse.Destroyer
-	infraProvider *infraDestroyerProvider
+	d8Destroyer     *deckhouse.Destroyer
+	infraProvider   *infraDestroyerProvider
+	DirectoryConfig map[string]string
 }
 
 // NewClusterDestroyer
@@ -238,8 +242,9 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 		pipeline: pipeline,
 
-		d8Destroyer:   d8Destroyer,
-		infraProvider: infraProvider,
+		d8Destroyer:     d8Destroyer,
+		infraProvider:   infraProvider,
+		DirectoryConfig: params.DirectoryConfig,
 	}, nil
 }
 
@@ -255,7 +260,7 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 	}
 
 	// populate cluster state in cache
-	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx)
+	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.DirectoryConfig)
 	if err != nil {
 		return err
 	}
