@@ -122,6 +122,25 @@ apiserver:
 			currentVersion:  2,
 			expectedVersion: 3,
 		},
+		{
+			name: "should convert from 2 to 3 version: only publishAPI.loadbalancer",
+			settings: `
+apiserver:
+  auditPolicyEnabled: true
+  basicAuditPolicyEnabled: true
+  loadBalancer: {}
+`,
+			expected: `
+apiserver:
+  auditPolicyEnabled: true
+  basicAuditPolicyEnabled: true
+  publishAPI:
+    loadBalancer:
+      enabled: true
+`,
+			currentVersion:  2,
+			expectedVersion: 3,
+		},
 	}
 
 	for _, c := range cases {
