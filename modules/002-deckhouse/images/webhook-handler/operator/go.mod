@@ -6,7 +6,7 @@ toolchain go1.24.3
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
-	github.com/flant/shell-operator v1.14.3-0.20260323114001-87f1c7b4b15a
+	github.com/flant/shell-operator v1.14.3-0.20260323130024-74646f81d161
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.33.8
 	k8s.io/apiextensions-apiserver v0.33.8
@@ -75,7 +75,7 @@ require (
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/flant/addon-operator v1.19.8-0.20260323114029-71ade05e6cd4 // indirect
+	github.com/flant/addon-operator v1.19.8-0.20260323130051-378b525351e1 // indirect
 	github.com/flant/kube-client v1.6.0 // indirect
 	github.com/flopp/go-findfont v0.1.0 // indirect
 	github.com/fluxcd/flagger v1.36.1 // indirect

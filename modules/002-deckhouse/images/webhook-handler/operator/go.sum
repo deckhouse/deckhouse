@@ -130,12 +130,16 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.19.8-0.20260323114029-71ade05e6cd4 h1:OS+MFq7VBflJuaCIuvwT1oQnr5EW6sxHZlHxoDGCNKw=
 github.com/flant/addon-operator v1.19.8-0.20260323114029-71ade05e6cd4/go.mod h1:hjZnJ2F7DCrcyW1DiITjUxXo69MVNmQ7oURo1652caY=
+github.com/flant/addon-operator v1.19.8-0.20260323130051-378b525351e1 h1:1Nna42gwQ8eQ5s9akneaXbchkLe8d422eFphmLVJ4nE=
+github.com/flant/addon-operator v1.19.8-0.20260323130051-378b525351e1/go.mod h1:Lld9J5rqDCtA7eGcF+HPOovBHMKkFdKixtK7smqk1JQ=
 github.com/flant/kube-client v1.6.0 h1:g6ksfIgTlrvLgp/Iu1a9c5aC4yPClLplq3w9e/qtYbk=
 github.com/flant/kube-client v1.6.0/go.mod h1:dYJyx7aMldXR/F8hlhRxlcEhSkxKcMZV2Oz8d+o/Up4=
 github.com/flant/shell-operator v1.14.3-0.20260323085429-8c4f478190f0 h1:ksRRihq9vfDqnRALfyqIoZcm3a+RXg7Wd6Oodqku/qY=
 github.com/flant/shell-operator v1.14.3-0.20260323085429-8c4f478190f0/go.mod h1:9tUfaWsJ8lzT04L/nUEvpqjOtOrzFgK4RPylSkZPMmo=
 github.com/flant/shell-operator v1.14.3-0.20260323114001-87f1c7b4b15a h1:A2T0e9eP06g7KNP1XTmgSTN2sfj72BGpZorgbofVPnE=
 github.com/flant/shell-operator v1.14.3-0.20260323114001-87f1c7b4b15a/go.mod h1:9tUfaWsJ8lzT04L/nUEvpqjOtOrzFgK4RPylSkZPMmo=
+github.com/flant/shell-operator v1.14.3-0.20260323130024-74646f81d161 h1:Ba8eW9Ui38AYNVGPjddauVAllAA9+mzv1TIeHCwJ8CQ=
+github.com/flant/shell-operator v1.14.3-0.20260323130024-74646f81d161/go.mod h1:9tUfaWsJ8lzT04L/nUEvpqjOtOrzFgK4RPylSkZPMmo=
 github.com/flopp/go-findfont v0.1.0 h1:lPn0BymDUtJo+ZkV01VS3661HL6F4qFlkhcJN55u6mU=
 github.com/flopp/go-findfont v0.1.0/go.mod h1:wKKxRDjD024Rh7VMwoU90i6ikQRCr+JTHB5n4Ejkqvw=
 github.com/fluxcd/flagger v1.36.1 h1:X2PumtNwZz9YSGaOtZLFm2zAKLgHhFkbNv8beg7ifyc=
