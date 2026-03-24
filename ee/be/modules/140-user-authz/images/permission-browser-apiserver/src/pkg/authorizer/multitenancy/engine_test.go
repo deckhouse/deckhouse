@@ -532,10 +532,34 @@ func TestEngine_IsNamespaceAllowed(t *testing.T) {
 			expected:  true,
 		},
 		{
-			name:      "unknown user - no restrictions",
+			name:      "unknown user without CAR - denied (deny-by-default)",
 			userInfo:  &mockUserInfo{name: "unknown-user"},
 			namespace: "any-ns",
+			expected:  false,
+		},
+		{
+			name:      "system:masters user without CAR - allowed (privileged bypass)",
+			userInfo:  &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
+			namespace: "any-ns",
 			expected:  true,
+		},
+		{
+			name:      "system:masters user without CAR - system namespace allowed",
+			userInfo:  &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
+			namespace: "kube-system",
+			expected:  true,
+		},
+		{
+			name:      "kubeadm:cluster-admins user without CAR - allowed (privileged bypass)",
+			userInfo:  &mockUserInfo{name: "kubeadm-admin", groups: []string{"kubeadm:cluster-admins"}},
+			namespace: "any-ns",
+			expected:  true,
+		},
+		{
+			name:      "regular authenticated user without CAR - denied",
+			userInfo:  &mockUserInfo{name: "random-user", groups: []string{"system:authenticated"}},
+			namespace: "any-ns",
+			expected:  false,
 		},
 		{
 			name:      "group member - allowed namespace",
@@ -565,6 +589,134 @@ func TestEngine_IsNamespaceAllowed(t *testing.T) {
 			}
 			result := e.IsNamespaceAllowed(userInfo, tt.namespace)
 			assert.Equal(t, tt.expected, result, "unexpected result for %s", tt.name)
+		})
+	}
+}
+
+func TestIsPrivilegedUser(t *testing.T) {
+	tests := []struct {
+		name     string
+		groups   []string
+		expected bool
+	}{
+		{
+			name:     "system:masters is privileged",
+			groups:   []string{"system:masters"},
+			expected: true,
+		},
+		{
+			name:     "kubeadm:cluster-admins is privileged",
+			groups:   []string{"kubeadm:cluster-admins"},
+			expected: true,
+		},
+		{
+			name:     "system:authenticated is not privileged",
+			groups:   []string{"system:authenticated"},
+			expected: false,
+		},
+		{
+			name:     "random group is not privileged",
+			groups:   []string{"developers", "viewers"},
+			expected: false,
+		},
+		{
+			name:     "mixed groups with one privileged",
+			groups:   []string{"system:authenticated", "system:masters", "developers"},
+			expected: true,
+		},
+		{
+			name:     "empty groups",
+			groups:   []string{},
+			expected: false,
+		},
+		{
+			name:     "nil groups",
+			groups:   nil,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isPrivilegedUser(tt.groups)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestEngine_GetAllowedNamespaces(t *testing.T) {
+	e := &Engine{
+		directory: map[string]map[string]DirectoryEntry{
+			"User": {
+				"restricted-user": {
+					LimitNamespaces: []*regexp.Regexp{
+						regexp.MustCompile("^allowed-ns$"),
+					},
+					NamespaceFiltersAbsent: false,
+				},
+				"unrestricted-user": {
+					AllowAccessToSystemNamespaces: true,
+					NamespaceFiltersAbsent:        true,
+				},
+			},
+			"Group":          {},
+			"ServiceAccount": {},
+		},
+	}
+
+	tests := []struct {
+		name               string
+		userInfo           *mockUserInfo
+		expectedNamespaces []string
+		expectedHasRestrictions bool
+	}{
+		{
+			name:               "nil user - all allowed",
+			userInfo:           nil,
+			expectedNamespaces: nil,
+			expectedHasRestrictions: false,
+		},
+		{
+			name:               "system:masters without CAR - all allowed (privileged bypass)",
+			userInfo:           &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
+			expectedNamespaces: nil,
+			expectedHasRestrictions: false,
+		},
+		{
+			name:               "kubeadm:cluster-admins without CAR - all allowed (privileged bypass)",
+			userInfo:           &mockUserInfo{name: "kubeadm-admin", groups: []string{"kubeadm:cluster-admins"}},
+			expectedNamespaces: nil,
+			expectedHasRestrictions: false,
+		},
+		{
+			name:               "unknown user without CAR - empty list (deny-by-default)",
+			userInfo:           &mockUserInfo{name: "unknown-user", groups: []string{"system:authenticated"}},
+			expectedNamespaces: []string{},
+			expectedHasRestrictions: true,
+		},
+		{
+			name:               "restricted user with CAR - has restrictions",
+			userInfo:           &mockUserInfo{name: "restricted-user"},
+			expectedNamespaces: nil,
+			expectedHasRestrictions: true,
+		},
+		{
+			name:               "unrestricted user with CAR (no filters) - all allowed",
+			userInfo:           &mockUserInfo{name: "unrestricted-user"},
+			expectedNamespaces: nil,
+			expectedHasRestrictions: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var userInfo user.Info
+			if tt.userInfo != nil {
+				userInfo = tt.userInfo
+			}
+			namespaces, hasRestrictions := e.GetAllowedNamespaces(userInfo)
+			assert.Equal(t, tt.expectedNamespaces, namespaces, "unexpected namespaces for %s", tt.name)
+			assert.Equal(t, tt.expectedHasRestrictions, hasRestrictions, "unexpected hasRestrictions for %s", tt.name)
 		})
 	}
 }

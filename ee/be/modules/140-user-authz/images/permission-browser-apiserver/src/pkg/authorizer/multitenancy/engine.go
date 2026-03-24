@@ -31,6 +31,25 @@ const (
 	namespaceLimitedAccessReason = "making cluster-scoped requests for namespaced resources is not allowed"
 )
 
+// privilegedGroups contains groups that bypass multi-tenancy restrictions.
+// Users in these groups are allowed full access even without ClusterAuthorizationRules.
+var privilegedGroups = map[string]struct{}{
+	"system:masters":         {},
+	"kubeadm:cluster-admins": {},
+	"superadmins":            {},
+}
+
+// isPrivilegedUser checks if the user belongs to any privileged group
+// that should bypass multi-tenancy restrictions.
+func isPrivilegedUser(groups []string) bool {
+	for _, group := range groups {
+		if _, ok := privilegedGroups[group]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 // Engine implements the multi-tenancy authorization logic from user-authz webhook
 type Engine struct {
 	configPath      string
@@ -466,8 +485,10 @@ func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
 
 	dirEntriesAffected := e.affectedDirs(userInfo.GetName(), userInfo.GetGroups())
 	if len(dirEntriesAffected) == 0 {
-		// No ClusterAuthorizationRules apply to this user, no MT restrictions
-		return true
+		// No ClusterAuthorizationRules apply to this user.
+		// Privileged users (system:masters, etc.) bypass MT restrictions.
+		// Non-privileged users without CAR get no access (deny-by-default).
+		return isPrivilegedUser(userInfo.GetGroups())
 	}
 
 	combinedDir := e.combineDirEntries(dirEntriesAffected)
@@ -516,6 +537,11 @@ func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
 // according to multi-tenancy rules. If mtEngine has no restrictions for the user,
 // returns nil (meaning all namespaces are allowed from MT perspective).
 // This is used by the namespace resolver for optimization.
+//
+// Return values:
+//   - (nil, false): all namespaces allowed (privileged user or no filters)
+//   - (nil, true): user has restrictions, caller must filter using IsNamespaceAllowed
+//   - ([]string{}, true): no namespaces allowed (non-privileged user without CAR)
 func (e *Engine) GetAllowedNamespaces(userInfo user.Info) ([]string, bool) {
 	if userInfo == nil {
 		return nil, false
@@ -523,8 +549,13 @@ func (e *Engine) GetAllowedNamespaces(userInfo user.Info) ([]string, bool) {
 
 	dirEntriesAffected := e.affectedDirs(userInfo.GetName(), userInfo.GetGroups())
 	if len(dirEntriesAffected) == 0 {
-		// No restrictions, return nil to indicate "all allowed"
-		return nil, false
+		// No ClusterAuthorizationRules apply to this user.
+		// Privileged users (system:masters, etc.) bypass MT restrictions.
+		if isPrivilegedUser(userInfo.GetGroups()) {
+			return nil, false // All namespaces allowed
+		}
+		// Non-privileged users without CAR get no access (deny-by-default).
+		return []string{}, true // Empty list, has restrictions
 	}
 
 	combinedDir := e.combineDirEntries(dirEntriesAffected)
