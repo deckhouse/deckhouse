@@ -29,7 +29,7 @@ The module consists of the following components:
 
 1. **Capd-controller-manager**: Kubernetes Cluster API Provider for Basis Dynamix. [Cluster API](https://github.com/kubernetes-sigs/cluster-api) is an extension for Kubernetes that allows you to manage Kubernetes clusters as custom resources inside another Kubernetes cluster. Cluster API Provider allows clusters running the Cluster API to order virtual machines in the cloud provider's infrastructure, Basis Dynamix in this case.  Capd-controller-manager works with the following custom resources:
 
-   * DynamixCluster: Description of a Basis Dynamix based cluster.
+   * DynamixCluster: Description of a Basis Dynamix-based cluster.
    * DynamixMachineTemplate: Template describing the characteristics of the machines created in the cloud.
    * DynamixMachine: Description of the characteristics of a machine created based on DynamixMachineTemplate.
 
@@ -46,7 +46,7 @@ The module consists of the following components:
 
    * When creating a LoadBalancer Service resource in Kubernetes, it creates a load balancer in the cloud that routes traffic from outside into the cluster nodes.
 
-   For more details about cloud-controller-manager, refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/architecture/cloud-controller/)
+   For more details about cloud-controller-manager, refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/architecture/cloud-controller/).
 
    It consists of a single container:
 
