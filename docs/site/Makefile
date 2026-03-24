@@ -26,6 +26,7 @@ up: werf-bin ## Start documentation containers in a werf watch mode (rebuilding 
 		else \
 			echo "\nStarting documentation in a watch mode using local docker images store..."; \
 		fi
+		@$(MAKE) free-port-80
 		@echo -n "\nwerf: "; $(WERF_BIN) version
 		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --env local --repo $(WERF_REPO) --skip-image-spec-stage=true
 
@@ -37,6 +38,7 @@ dev: werf-bin ## Start documentation containers in a werf watch mode (rebuilding
 		else \
 			echo "\nStarting documentation in a DEV watch mode using local docker images store..."; \
 		fi
+		@$(MAKE) free-port-80
 		@echo -n "\nwerf: "; $(WERF_BIN) version
 		@$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
 
@@ -55,6 +57,7 @@ external-module: werf-bin ## Watch external module docs and run the local portal
 		trap cleanup EXIT INT TERM; \
 		sleep 2; \
 		kill -0 $$HUGO_PID; \
+		$(MAKE) free-port-80; \
 		echo -n "\nwerf: "; $(WERF_BIN) version; \
 		$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
 
@@ -75,6 +78,27 @@ registry: ## Start local Docker registry on localhost:4999
 .PHONY:
 registry-down: ## Stop and remove local Docker registry
 		docker rm -f registry; docker volume prune -fa
+
+free-port-80: ## Stop Docker containers that publish host port 80
+		@containers="$$(docker ps --filter publish=80 --format '{{.ID}} {{.Names}}')"; \
+		if [ -n "$$containers" ]; then \
+			echo "Stopping Docker containers that use host port 80:"; \
+			printf '%s\n' "$$containers" | while IFS= read -r line; do \
+				id="$${line%% *}"; \
+				name="$${line#* }"; \
+				echo "  - $$name ($$id)"; \
+				docker stop "$$id" >/dev/null; \
+			done; \
+		else \
+			echo "No Docker containers use host port 80."; \
+		fi; \
+		if command -v python3 >/dev/null 2>&1; then \
+			if ! python3 -c 'import socket; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); s.bind(("0.0.0.0", 80)); s.close()' >/dev/null 2>&1; then \
+				echo "Port 80 is still busy. It is likely occupied by a non-Docker process on the host."; \
+			fi; \
+		else \
+			echo "python3 is not available, skipping host-level port 80 check."; \
+		fi
 
 clean: werf-bin ## Clean up werf artifacts in localhost repo mode
 		##~ Options: USE_LOCALHOST_REPO=1
@@ -123,4 +147,4 @@ help: ## Show this help message
 	/^.?.?##~/              { printf "  %-20s %s\n", "", substr($$1, 6) }' $(MAKEFILE_LIST)
 
 .PHONY: help up dev regenerate-menu
-.PHONY: werf-bin clean down regenerate-metadata registry registry-down external-module
+.PHONY: werf-bin clean down regenerate-metadata registry registry-down free-port-80 external-module

@@ -284,6 +284,7 @@ MODULE_VERSION ?= v0.1.0
 docs: bin/werf ## Run containers with the documentation.
 	@echo "Building documentation containers..."
 	@echo -n "werf: "; bin/werf version
+	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
 
@@ -293,6 +294,7 @@ docs-external-module: yq bin/werf ## Build an external module docs and run the l
 	MODULE_PATH="$(MODULE_PATH)" CHANNEL="$(CHANNEL)" MODULE_VERSION="$(MODULE_VERSION)" ./tools/docs/external-module-docs.sh
 	@echo "Building documentation containers..."
 	@echo -n "werf: "; bin/werf version
+	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
 
@@ -305,6 +307,7 @@ docs-external-module-clean: ## Remove generated external module documentation ou
 docs-dev: bin/werf ## Run containers with the documentation in the dev mode (allow uncommited files).
 	@echo "Building documentation containers (dev mode)..."
 	@echo -n "werf: "; bin/werf version;
+	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
 
