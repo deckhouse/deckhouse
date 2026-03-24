@@ -36,7 +36,6 @@ import (
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/utils/ptr"
 	clusterv1b2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	capiutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -326,7 +325,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 			err = fmt.Errorf("VM state %q indicates failure, likely due to resource constraints or configuration error", vm.Status.Phase)
 
 			// choose one; UpdateMachineError is ok, CreateMachineError might be even more accurate if available in your capierrors version
-			dvpMachine.Status.FailureReason = ptr.To(string(capierrors.UpdateMachineError))
+			dvpMachine.Status.FailureReason = ptr.To("UpdateError")
 			dvpMachine.Status.FailureMessage = ptr.To(fmt.Sprintf(
 				"VM failed to start (vmClass: %s, memory: %s, CPU: %d cores). Check parent DVP cluster for detailed error: %s",
 				dvpMachine.Spec.VMClassName,

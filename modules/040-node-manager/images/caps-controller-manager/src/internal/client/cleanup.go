@@ -21,12 +21,11 @@ import (
 
 	"github.com/pkg/errors"
 
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
 	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
-
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
 // Cleanup runs the cleanup script on StaticInstance.
