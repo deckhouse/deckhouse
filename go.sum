@@ -230,6 +230,8 @@ github.com/flant/shell-operator v1.14.3-0.20260323114001-87f1c7b4b15a h1:A2T0e9e
 github.com/flant/shell-operator v1.14.3-0.20260323114001-87f1c7b4b15a/go.mod h1:9tUfaWsJ8lzT04L/nUEvpqjOtOrzFgK4RPylSkZPMmo=
 github.com/flant/shell-operator v1.14.3-0.20260323130024-74646f81d161 h1:Ba8eW9Ui38AYNVGPjddauVAllAA9+mzv1TIeHCwJ8CQ=
 github.com/flant/shell-operator v1.14.3-0.20260323130024-74646f81d161/go.mod h1:9tUfaWsJ8lzT04L/nUEvpqjOtOrzFgK4RPylSkZPMmo=
+github.com/flant/shell-operator v1.14.3 h1:P88uPvWZsWYAt6gUS14C1brYpCKvYIHYahgdo/UQKRo=
+github.com/flant/shell-operator v1.14.3/go.mod h1:9tUfaWsJ8lzT04L/nUEvpqjOtOrzFgK4RPylSkZPMmo=
 github.com/flopp/go-findfont v0.1.0 h1:lPn0BymDUtJo+ZkV01VS3661HL6F4qFlkhcJN55u6mU=
 github.com/flopp/go-findfont v0.1.0/go.mod h1:wKKxRDjD024Rh7VMwoU90i6ikQRCr+JTHB5n4Ejkqvw=
 github.com/fluxcd/flagger v1.36.1 h1:X2PumtNwZz9YSGaOtZLFm2zAKLgHhFkbNv8beg7ifyc=
