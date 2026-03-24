@@ -6,21 +6,18 @@ lang: ru
 layout: sidebar-guides
 ---
 
-Документ описывает процедуру смены сетевого плагина (CNI) в кластере Deckhouse Kubernetes Platform. **Данная инструкция применима для DKP версии 1.76 и выше.** Используемый в DKP инструмент позволяет выполнить автоматизированную миграцию (например, с Flannel на Cilium) с минимальным простоем приложений и без полной перезагрузки узлов кластера.
+Документ описывает процедуру смены сетевого плагина (CNI) в кластере Deckhouse Kubernetes Platform. Используемый в DKP инструмент позволяет выполнить автоматизированную миграцию (например, с Flannel на Cilium) с минимальным простоем приложений и без полной перезагрузки узлов кластера.
 
 {% alert level="danger" %}
-
+* Данная инструкция применима для DKP версии 1.76 и выше. Для DKP версии 1.75 и ниже используйте инструкцию [«Переключение CNI с Flannel или Simple bridge на Cilium»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/internal/flannel-simple-to-cilium.html).
 * Инструмент не предназначен для переключения на любой (сторонний) CNI.
-* В процессе миграции автоматически будет включен модуль целевого CNI (`ModuleConfig.spec.enabled: true`), который предварительно должен быть настроен администратором.
-
+* В процессе миграции автоматически будет включен модуль целевого CNI (`ModuleConfig.spec.enabled: true`), который предварительно должен быть настроен администратором кластера.
 {% endalert %}
 
 {% alert level="warning" %}
-
 * В процессе миграции произойдет перезапуск всех подов в кластере, использующих сеть (в PodNetwork), созданную текущим CNI. Это вызовет перерыв в доступности сервисов. С целью минимизации рисков потери критичных данных рекомендуется перед проведением работ остановить работу наиболее критичных прикладных сервисов самостоятельно.
 * Рекомендуется проводить работы в согласованное технологическое окно.
 * Перед проведением работ необходимо отключить внешние системы управления кластером (CI/CD, GitOps, ArgoCD и т.д.), которые могут конфликтовать с процессом (например, пытаться восстановить удаленные поды раньше времени или откатывать настройки). Также, необходимо убедиться, что система управления кластером не включит старый модуль CNI.
-
 {% endalert %}
 
 Поддерживаемые режимы переключения CNI:
@@ -35,16 +32,16 @@ layout: sidebar-guides
 
 Переключение CNI в кластере DKP можно выполнить несколькими способами.
 
-## Способ 1: Использование группы команд d8 cni-migration утилиты d8 (автоматизированное переключение)
+## Способ 1: Использование группы команд d8 network cni-migration утилиты d8 (автоматизированное переключение)
 
-Утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/reference/) предоставляет группу команд `d8 cni-migration` для управления процессом миграции.
+Утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/reference/) предоставляет группу команд `d8 network cni-migration` для управления процессом миграции.
 
 ### Запуск миграции
 
 Для начала процесса выполните команду `switch`, указав целевой CNI (например, `cilium`, `flannel` или `simple-bridge`):
 
 ```bash
-d8 cni-migration switch --to-cni cilium
+d8 network cni-migration switch --to-cni cilium
 ```
 
 Эта команда создаст необходимый ресурс в кластере и запустит контроллер миграции. DKP автоматически развернет необходимые компоненты: Менеджер (Manager) и Агенты (Agents) в неймспейсе `d8-system`.
@@ -54,7 +51,7 @@ d8 cni-migration switch --to-cni cilium
 Чтобы следить за ходом выполнения в реальном времени, используйте команду:
 
 ```bash
-d8 cni-migration watch
+d8 network cni-migration watch
 ```
 
 Вы увидите динамический интерфейс со следующей информацией:
@@ -79,7 +76,7 @@ d8 cni-migration watch
 После того как статус миграции перейдет в `Succeeded`, удалите ресурсы миграции (контроллеры и агенты), чтобы они не потребляли ресурсы кластера. Для этого используйте команду:
 
 ```bash
-d8 cni-migration cleanup
+d8 network cni-migration cleanup
 ```
 
 ## Способ 2: Использование команд d8 k (ручное переключение)
@@ -146,149 +143,6 @@ d8 k delete cnimigration migration-to-cilium
 ```
 
 Это действие даст DKP сигнал удалить все ранее созданные ресурсы в кластере.
-
-{% offtopic title="Устаревший способ переключения CNI c Flannel на Cilium..." %}
-
-1. Выключите [модуль `kube-proxy`](/modules/kube-proxy/):
-
-   ```shell
-   d8 k apply -f - << EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: kube-proxy
-   spec:
-     enabled: false
-   EOF
-   ```
-
-1. Включите [модуль `cni-cilium`](/modules/cni-cilium/):
-
-   ```shell
-   d8 k create -f - << EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: cni-cilium
-   spec:
-     version: 1
-     enabled: true
-     settings:
-     tunnelMode: VXLAN
-   EOF
-   ```
-
-1. Убедитесь, что все агенты Cilium перешли в статус `Running`:
-
-   ```shell
-   d8 k get po -n d8-cni-cilium
-   ```
-
-   Пример вывода:
-
-   ```console
-   NAME                      READY STATUS  RESTARTS    AGE
-   agent-5zzfv               2/2   Running 5 (23m ago) 26m
-   agent-gqb2b               2/2   Running 5 (23m ago) 26m
-   agent-wtv4p               2/2   Running 5 (23m ago) 26m
-   operator-856d69fd49-mlglv 2/2   Running 0           26m
-   safe-agent-updater-26qpk  3/3   Running 0           26m
-   safe-agent-updater-qlbrh  3/3   Running 0           26m
-   safe-agent-updater-wjjr5  3/3   Running 0           26m
-   ```
-
-1. Перезагрузите master-узлы.
-
-1. Перезагрузите остальные узлы кластера.
-
-   > Если агенты Cilium не переходят в статус `Running`, перезагрузите проблемные узлы.
-
-1. Выключите [модуль `cni-flannel`](/modules/cni-flannel/):
-
-   ```shell
-   d8 k apply -f - << EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: cni-flannel
-   spec:
-     enabled: false
-   EOF
-   ```
-
-1. Включите [модуль `node-local-dns`](/modules/node-local-dns/):
-
-   ```shell
-   d8 k apply -f - << EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: node-local-dns
-   spec:
-     enabled: true
-   EOF
-   ```
-
-   После включения модуля дождитесь перехода всех агентов Cilium в состояние `Running`.
-
-1. Убедитесь, что переключение CNI с Flannel на Cilium прошло успешно.
-
-Чтобы убедиться в том, что переключение CNI с Flannel на Cilium прошло успешно:
-
-1. Проверьте очередь Deckhouse.
-
-   * В случае одного master-узла:
-
-     ```shell
-     d8 system queue list
-     ```
-
-   * В случае мультимастерной инсталляции:
-
-     ```shell
-     d8 system queue list
-     ```
-
-1. Проверьте агенты Cilium. Они должны быть в статусе `Running`:
-
-   ```shell
-   d8 k get po -n d8-cni-cilium
-   ```
-
-   Пример вывода:
-
-   ```console
-   NAME        READY STATUS  RESTARTS    AGE
-   agent-5zzfv 2/2   Running 5 (23m ago) 26m
-   agent-gqb2b 2/2   Running 5 (23m ago) 26m
-   agent-wtv4p 2/2   Running 5 (23m ago) 26m
-   ```
-
-1. Проверьте, что модуль `cni-flannel` выключен:
-
-   ```shell
-   d8 k get modules | grep flannel
-   ```
-
-   Пример вывода:
-
-   ```console
-   cni-flannel                         35     Disabled    Embedded
-   ```
-
-1. Проверьте, что модуль `node-local-dns` включен:
-
-   ```shell
-   d8 k get modules | grep node-local-dns
-   ```
-
-   Пример вывода:
-
-   ```console
-   node-local-dns                      350    Enabled     Embedded     Ready
-   ```
-
-{% endofftopic %}
 
 ## Устранение неполадок
 

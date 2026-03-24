@@ -1,4 +1,4 @@
-{{ $ratifyVersion := "v1.3.1" }}
+{{ $ratifyVersion := "v1.4.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
