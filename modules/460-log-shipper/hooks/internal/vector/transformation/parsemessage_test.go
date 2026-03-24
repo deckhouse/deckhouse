@@ -41,7 +41,7 @@ func TestGenerateParseMessageVRL(t *testing.T) {
   if parsed != null {
 
     if is_object(parsed) {
-      . = merge(., parsed, deep: true)
+      . = merge!(., parsed, deep: true)
     }
 
   }

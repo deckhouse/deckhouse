@@ -151,7 +151,7 @@ if is_string(.message) {
   if parsed != null {
 {{if .mergeRoot}}
     if is_object(parsed) {
-      . = merge(., parsed, deep: true)
+      . = merge!(., parsed, deep: true)
     }
 {{else}}
     . = set!(., {{.pathArray}}, parsed)
@@ -165,7 +165,7 @@ const ParseMessageString Rule = `
 if is_string(.message) {
   wrapped = {"{{.targetField}}": .message}
 {{if .mergeRoot}}
-  . = merge(., wrapped, deep: true)
+  . = merge!(., wrapped, deep: true)
 {{else}}
   . = set!(., {{.pathArray}}, wrapped)
 {{end}}
@@ -180,7 +180,7 @@ if is_string(.message) {
     out = {}
 {{.outLines}}
 {{if .mergeRoot}}
-    . = merge(., out, deep: true)
+    . = merge!(., out, deep: true)
 {{else}}
     . = set!(., {{.pathArray}}, out)
 {{end}}
