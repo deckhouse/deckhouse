@@ -37,7 +37,7 @@ description: Архитектура модуля sds-node-configurator в Deckho
 
    Состоит из следующих контейнеров:
 
-   * **sds-utils-installer** — init-контейнер, устанавливающий набор утилит, необходимых для управления блочными устрйствами и LVM-томами;
+   * **sds-utils-installer** — init-контейнер, устанавливающий набор утилит, необходимых для управления блочными устройствами и LVM-томами;
    * **thin-volumes-enabler** — init-контейнер, включающий поддержку thin томов;
    * **sds-node-configurator-agent** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
