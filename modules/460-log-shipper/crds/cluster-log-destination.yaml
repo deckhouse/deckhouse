@@ -1142,7 +1142,7 @@ spec:
                             type: array
                             items:
                               type: string
-                              pattern: '^[a-zA-Z0-9_.\s''"=~!<>:\-/#,@()+]+$'
+                              pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
                             description: "Optional list of comparisons combined with logical AND. Each item: `path ==|!=|=~|!=~ value` (regex for =~/!=~ is Rust regex)."
                           labels:
                             type: object
