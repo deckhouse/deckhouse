@@ -100,11 +100,19 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	}
 	publishAPIConfig := publishAPIConfigSnaps[0]
 
-	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
+	configMap := map[string]interface{}{
+		"enabled":                     publishAPIConfig.Enabled,
+		"ingressClass":                publishAPIConfig.IngressClass,
+		"whitelistSourceRanges":       publishAPIConfig.WhitelistSourceRanges,
+		"addKubeconfigGeneratorEntry": publishAPIConfig.AddKubeconfigGeneratorEntry,
+		"https": map[string]interface{}{
+			"mode":   publishAPIConfig.HTTPS.Mode,
+			"global": publishAPIConfig.HTTPS.Global,
+		},
+	}
 
-	strippedConfig := make(map[string]interface{})
-
-	mapIfNotEmpty(strippedConfig, "enabled", publishAPIConfig.Enabled)
+	// Clean nil values
+	strippedConfig := stripNilValues(configMap)
 
 	// strippedConfig["enabled"] = publishAPIConfig.Enabled
 
@@ -129,14 +137,31 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 
 	// ingressConfig["https"] = httpsConfig
 	// ingressConfig["addKubeconfigGeneratorEntry"] = publishAPIConfig.AddKubeconfigGeneratorEntry
-
+	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
 	input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", strippedConfig)
 
 	return nil
 }
 
-func mapIfNotEmpty(config map[string]interface{}, key string, value any) {
-	if value != nil {
-		config[key] = value
+func stripNilValues(data interface{}) interface{} {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for key, value := range v {
+			if value != nil {
+				result[key] = stripNilValues(value)
+			}
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, 0, len(v))
+		for _, item := range v {
+			if item != nil {
+				result = append(result, stripNilValues(item))
+			}
+		}
+		return result
+	default:
+		return data
 	}
 }
