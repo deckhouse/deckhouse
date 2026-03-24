@@ -1270,6 +1270,18 @@ entries:
                     en: Cloud-provider-dvp module
                     ru: Модуль cloud-provider-dvp
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dvp.html
+                - title:
+                    en: Cloud-provider-dynamix module
+                    ru: Модуль cloud-provider-dynamix
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dynamix.html
+                - title:
+                    en: Cloud-provider-huaweicloud module
+                    ru: Модуль cloud-provider-huaweicloud
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-huaweicloud.html
+                - title:
+                    en: Cloud-provider-zvirt module
+                    ru: Модуль cloud-provider-zvirt
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-zvirt.html
             - title:
                 en: Infrastructure components
                 ru: Инфраструктурные компоненты

@@ -278,7 +278,7 @@ func (c *MasterNodeGroupController) beforeUpdateNodes(ctx *context.Context) erro
 	noScaleToMultiMaster := c.convergeState.Phase != phases.ScaleToMultiMasterPhase
 
 	log.DebugF("Master ng. beforeUpdateNodes: has phase %s; noScaleToMultiMaster %v\n", c.convergeState.Phase, noScaleToMultiMaster)
-	
+
 	if noScaleToMultiMaster {
 		return nil
 	}
