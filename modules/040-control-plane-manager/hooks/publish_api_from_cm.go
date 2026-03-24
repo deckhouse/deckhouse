@@ -81,11 +81,12 @@ func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook
 }
 
 func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
+
 	if input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Exists() {
 		input.Logger.Info("Publish API ingress settings are set in moduleconfig control-plane-manager, skipping")
 		return nil
 	}
-
+	input.Logger.Info("Unmarshalling")
 	publishAPIConfigSnaps, err := sdkobjectpatch.UnmarshalToStruct[Config](input.Snapshots, "cm_publishapi_config_migration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cm_publishapi_config_migration snapshot: %w", err)
