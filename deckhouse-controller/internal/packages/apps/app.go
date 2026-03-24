@@ -193,6 +193,12 @@ type RuntimeValues struct {
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
 func (a *Application) GetRuntimeValues() RuntimeValues {
+	images := make(map[string]string, len(a.digests))
+	for name, tag := range a.digests {
+		image := fmt.Sprintf("%s/%s@%s", a.repository.Repository, a.definition.Name, tag)
+		images[name] = image
+	}
+
 	return RuntimeValues{
 		Instance: addonutils.Values{
 			"Name":      a.instance,
@@ -200,7 +206,7 @@ func (a *Application) GetRuntimeValues() RuntimeValues {
 		},
 		Package: addonutils.Values{
 			"Name":     a.definition.Name,
-			"Digests":  a.digests,
+			"Images":   images,
 			"Registry": a.repository,
 			"Version":  a.definition.Version,
 		},
