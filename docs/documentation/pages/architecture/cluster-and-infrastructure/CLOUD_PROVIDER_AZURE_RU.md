@@ -50,7 +50,7 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-3. **CSI-драйвер (Azure)** — реализация CSI-драйвера для Microsoft Azure. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-driver.html).
+3. **CSI-драйвер (azure)** — реализация CSI-драйвера для Microsoft Azure. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-driver.html).
 
 ## Взаимодействия модуля
 

@@ -49,7 +49,7 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-3. **CSI driver (GCP)**: It is an implementation of the CSI driver for GCP. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../infrastructure/csi-driver.html).
+3. **CSI driver (gcp)**: It is an implementation of the CSI driver for GCP. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../infrastructure/csi-driver.html).
 
 ## Module interactions
 
