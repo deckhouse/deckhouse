@@ -1094,7 +1094,7 @@ spec:
                             properties:
                               targetField:
                                 type: string
-                                deprecated: true
+                                x-doc-deprecated: true
                                 pattern: '^[a-zA-Z0-9_\\\.\-]+$'
                                 description: "Deprecated. If set, legacy behavior: wrap `.message` string into a one-key object under this field. When `targetField` is set, `regex` and `labels` are ignored."
                               regex:
