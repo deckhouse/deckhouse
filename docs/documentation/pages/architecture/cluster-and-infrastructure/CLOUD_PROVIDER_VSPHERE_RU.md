@@ -38,7 +38,7 @@ description: Архитектура модуля cloud-provider-vsphere в Deckh
    * при создании ресурса Service типа LoadBalancer в Kubernetes создаёт балансировщик в облаке, который направляет трафик извне к узлам кластера;
    * создает сетевые маршруты для сети `PodNetwork` на стороне vSphere.
 
-   Подробнее о cloud-controller-manager можно почитать в [документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/)
+   Подробнее о cloud-controller-manager можно почитать в [документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/).
 
    Состоит из одного контейнера:
 
