@@ -157,6 +157,7 @@ if [[ "${MODE}" == "serve" ]]; then
     --entrypoint hugo
     "${HUGO_IMAGE}"
     server
+    --noBuildLock
     --source /src
     --destination /out
     --environment production
@@ -225,6 +226,7 @@ else
     --workdir /src \
     --entrypoint hugo \
     "${HUGO_IMAGE}" \
+    --noBuildLock \
     --source /src \
     --destination /out \
     --environment production
