@@ -26,11 +26,11 @@ spec:
           - -c
           - |
             mkdir -p /data
-            common_list_path="/data/embedded-modules-list.json"
+            common_list_path="/data/embedded_modules_list.json"
             common_list_changes_path="${common_list_path}-changes.json"
-            common_list_s3_path="s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/embedded-modules-list.json"
+            common_list_s3_path="s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/embedded_modules_list.json"
             version="{{ .VersionURLNormalized }}"
-            version_list_path="/embedded-modules/embedded-modules-list.json"
+            version_list_path="/embedded-modules/embedded_modules_list.json"
 
             download_error=""
             if ! download_error="$(aws s3 cp "$common_list_s3_path" "$common_list_path" --ca-bundle /.aws/s3-root.crt --endpoint-url https://{{ .Values.global.doc_s3_ep }} --region {{ .Values.global.doc_s3_region }} 2>&1)"; then

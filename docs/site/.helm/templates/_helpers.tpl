@@ -53,11 +53,11 @@ set -eu
 BOOTSTRAP_MODE="${BOOTSTRAP_MODE:-false}"
 CONFIGMAP="embedded-modules-history-data"
 CONFIGMAP_KEY="embedded_modules_list.json"
-SOURCE_FILE="/data/embedded-modules-list.json"
+SOURCE_FILE="/data/embedded_modules_list.json"
 DOWNLOAD_STATUS_FILE="/data/download.status"
 DOWNLOAD_ERROR_FILE="/data/download.error"
-CURRENT_FILE="/tmp/current-embedded-modules-list.json"
-EMPTY_FILE="/tmp/empty-embedded-modules-list.json"
+CURRENT_FILE="/tmp/current-embedded_modules_list.json"
+EMPTY_FILE="/tmp/empty-embedded_modules_list.json"
 MANIFEST_FILE="/tmp/embedded-modules-history-data.yaml"
 MAX_CONFIGMAP_FILE_SIZE=900000
 MAX_CONFIGMAP_MANIFEST_SIZE=1048576

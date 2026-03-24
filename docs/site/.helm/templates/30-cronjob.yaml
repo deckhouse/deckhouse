@@ -80,8 +80,8 @@ spec:
             - |
               set -eu
 
-              SOURCE_PATH="s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/embedded-modules-list.json"
-              TARGET_PATH="/data/embedded-modules-list.json"
+              SOURCE_PATH="s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/embedded_modules_list.json"
+              TARGET_PATH="/data/embedded_modules_list.json"
 
               if download_error="$(aws s3 cp "${SOURCE_PATH}" "${TARGET_PATH}" --ca-bundle /.aws/s3-root.crt --endpoint-url https://{{ .Values.global.doc_s3_ep }} --region {{ .Values.global.doc_s3_region }} 2>&1)"; then
                 if [ -s "${TARGET_PATH}" ]; then
@@ -179,8 +179,8 @@ spec:
                 - |
                   set -eu
 
-                  SOURCE_PATH="s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/embedded-modules-list.json"
-                  TARGET_PATH="/data/embedded-modules-list.json"
+                  SOURCE_PATH="s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/embedded_modules_list.json"
+                  TARGET_PATH="/data/embedded_modules_list.json"
 
                   if download_error="$(aws s3 cp "${SOURCE_PATH}" "${TARGET_PATH}" --ca-bundle /.aws/s3-root.crt --endpoint-url https://{{ .Values.global.doc_s3_ep }} --region {{ .Values.global.doc_s3_region }} 2>&1)"; then
                     if [ -s "${TARGET_PATH}" ]; then
