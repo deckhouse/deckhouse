@@ -61,7 +61,30 @@ if [[ -z "${MODULE_NAME}" || "${MODULE_NAME}" == "null" ]]; then
   exit 1
 fi
 
-TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/external-module-docs.XXXXXX")"
+create_temp_dir() {
+  local base_dir="${TMPDIR:-/tmp}"
+  local temp_dir=""
+
+  if temp_dir="$(mktemp -d "${base_dir%/}/external-module-docs.XXXXXX" 2>/dev/null)"; then
+    printf '%s\n' "${temp_dir}"
+    return 0
+  fi
+
+  if temp_dir="$(TMPDIR="${base_dir%/}" mktemp -d -t external-module-docs.XXXXXX 2>/dev/null)"; then
+    printf '%s\n' "${temp_dir}"
+    return 0
+  fi
+
+  if temp_dir="$(TMPDIR="${base_dir%/}" mktemp -d -t external-module-docs 2>/dev/null)"; then
+    printf '%s\n' "${temp_dir}"
+    return 0
+  fi
+
+  echo "Failed to create a temporary directory." >&2
+  exit 1
+}
+
+TMP_DIR="$(create_temp_dir)"
 
 cleanup() {
   rm -rf "${TMP_DIR}"
@@ -69,70 +92,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-mkdir -p \
-  "${TMP_DIR}/content/modules/${MODULE_NAME}" \
-  "${TMP_DIR}/content/search" \
-  "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}" \
-  "${OUTPUT_DIR}"
-
-cp -R "${TEMPLATE_DIR}/config" "${TMP_DIR}/config"
-cp -R "${TEMPLATE_DIR}/i18n" "${TMP_DIR}/i18n"
-cp -R "${TEMPLATE_DIR}/layouts" "${TMP_DIR}/layouts"
-cp "${TEMPLATE_DIR}/data/channels.yaml" "${TMP_DIR}/data/channels.yaml"
-cp "${TEMPLATE_DIR}/data/helpers.yaml" "${TMP_DIR}/data/helpers.yaml"
-cp "${TEMPLATE_DIR}/data/modules_all.json" "${TMP_DIR}/data/modules_all.json"
-cp -R "${TEMPLATE_DIR}/data/dkp" "${TMP_DIR}/data/dkp"
-cp "${TEMPLATE_DIR}/content/modules/_index.md" "${TMP_DIR}/content/modules/_index.md"
-cp "${TEMPLATE_DIR}/content/modules/_index.ru.md" "${TMP_DIR}/content/modules/_index.ru.md"
-cp "${TEMPLATE_DIR}/content/search/search.md" "${TMP_DIR}/content/search/search.md"
-cp "${TEMPLATE_DIR}/content/search/search.ru.md" "${TMP_DIR}/content/search/search.ru.md"
-
-MODULE_CHANNEL_CONTENT_DIR="${TMP_DIR}/content/modules/${MODULE_NAME}/${CHANNEL}"
-MODULE_CHANNEL_DATA_DIR="${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}"
-MODULE_CHANNEL_OPENAPI_DIR="${MODULE_CHANNEL_DATA_DIR}/openapi"
-MODULE_CHANNEL_CRDS_DIR="${MODULE_CHANNEL_DATA_DIR}/crds"
-
-sync_module_sources() {
-  rm -rf "${MODULE_CHANNEL_CONTENT_DIR}" "${MODULE_CHANNEL_DATA_DIR}"
-
-  mkdir -p "${MODULE_CHANNEL_CONTENT_DIR}"
-  mkdir -p "${MODULE_CHANNEL_DATA_DIR}"
-  cp -R "${MODULE_PATH}/docs/." "${TMP_DIR}/content/modules/${MODULE_NAME}/${CHANNEL}/"
-  cp "${MODULE_PATH}/module.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/module.yaml"
-
-  if [[ -f "${MODULE_PATH}/oss.yaml" ]]; then
-    cp "${MODULE_PATH}/oss.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/oss.yaml"
-  fi
-
-  if [[ -f "${MODULE_PATH}/openapi/config-values.yaml" || -f "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" ]]; then
-    mkdir -p "${MODULE_CHANNEL_OPENAPI_DIR}"
-  fi
-
-  if [[ -f "${MODULE_PATH}/openapi/config-values.yaml" ]]; then
-    cp "${MODULE_PATH}/openapi/config-values.yaml" "${MODULE_CHANNEL_OPENAPI_DIR}/config-values.yaml"
-  fi
-
-  if [[ -f "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" ]]; then
-    cp "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" "${MODULE_CHANNEL_OPENAPI_DIR}/doc-ru-config-values.yaml"
-  fi
-
-  if [[ -d "${MODULE_PATH}/crds" ]]; then
-    shopt -s nullglob
-    root_crds=("${MODULE_PATH}"/crds/*.yaml "${MODULE_PATH}"/crds/*.yml)
-    shopt -u nullglob
-
-    if (( ${#root_crds[@]} > 0 )); then
-      mkdir -p "${MODULE_CHANNEL_CRDS_DIR}"
-      cp "${root_crds[@]}" "${MODULE_CHANNEL_CRDS_DIR}/"
-    fi
-  fi
-}
-
-prepare_serve_mountpoints() {
-  mkdir -p "${MODULE_CHANNEL_CONTENT_DIR}"
-  mkdir -p "${MODULE_CHANNEL_OPENAPI_DIR}"
-  mkdir -p "${MODULE_CHANNEL_CRDS_DIR}"
-}
+mkdir -p "${TMP_DIR}/data/modules" "${OUTPUT_DIR}"
 
 cat > "${TMP_DIR}/data/modules/channels.yaml" <<EOF
 ${MODULE_NAME}:
@@ -151,14 +111,22 @@ echo "  image:   ${HUGO_IMAGE}"
 echo "  mode:    ${MODE}"
 
 if [[ "${MODE}" == "serve" ]]; then
-  prepare_serve_mountpoints
-
   docker_args=(
     run --rm
-    --user "$(id -u):$(id -g)" \
-    --volume "${TMP_DIR}:/src" \
-    --volume "${OUTPUT_DIR}:/out" \
-    --volume "${MODULE_PATH}/docs:/src/content/modules/${MODULE_NAME}/${CHANNEL}:ro" \
+    --user "$(id -u):$(id -g)"
+    --volume "${OUTPUT_DIR}:/out"
+    --volume "${TEMPLATE_DIR}/config:/src/config:ro"
+    --volume "${TEMPLATE_DIR}/i18n:/src/i18n:ro"
+    --volume "${TEMPLATE_DIR}/layouts:/src/layouts:ro"
+    --volume "${TEMPLATE_DIR}/data/dkp:/src/data/dkp:ro"
+    --volume "${TEMPLATE_DIR}/data/channels.yaml:/src/data/channels.yaml:ro"
+    --volume "${TEMPLATE_DIR}/data/helpers.yaml:/src/data/helpers.yaml:ro"
+    --volume "${TEMPLATE_DIR}/data/modules_all.json:/src/data/modules_all.json:ro"
+    --volume "${TMP_DIR}/data/modules/channels.yaml:/src/data/modules/channels.yaml:ro"
+    --volume "${TEMPLATE_DIR}/content/modules/_index.md:/src/content/modules/_index.md:ro"
+    --volume "${TEMPLATE_DIR}/content/modules/_index.ru.md:/src/content/modules/_index.ru.md:ro"
+    --volume "${TEMPLATE_DIR}/content/search:/src/content/search:ro"
+    --volume "${MODULE_PATH}/docs:/src/content/modules/${MODULE_NAME}/${CHANNEL}:ro"
     --volume "${MODULE_PATH}/module.yaml:/src/data/modules/${MODULE_NAME}/${CHANNEL}/module.yaml:ro"
   )
 
@@ -203,7 +171,52 @@ if [[ "${MODE}" == "serve" ]]; then
 
   docker "${docker_args[@]}"
 else
-  sync_module_sources
+  mkdir -p \
+    "${TMP_DIR}/content/modules/${MODULE_NAME}/${CHANNEL}" \
+    "${TMP_DIR}/content/search" \
+    "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}"
+
+  cp -R "${TEMPLATE_DIR}/config" "${TMP_DIR}/config"
+  cp -R "${TEMPLATE_DIR}/i18n" "${TMP_DIR}/i18n"
+  cp -R "${TEMPLATE_DIR}/layouts" "${TMP_DIR}/layouts"
+  cp "${TEMPLATE_DIR}/data/channels.yaml" "${TMP_DIR}/data/channels.yaml"
+  cp "${TEMPLATE_DIR}/data/helpers.yaml" "${TMP_DIR}/data/helpers.yaml"
+  cp "${TEMPLATE_DIR}/data/modules_all.json" "${TMP_DIR}/data/modules_all.json"
+  cp -R "${TEMPLATE_DIR}/data/dkp" "${TMP_DIR}/data/dkp"
+  cp "${TEMPLATE_DIR}/content/modules/_index.md" "${TMP_DIR}/content/modules/_index.md"
+  cp "${TEMPLATE_DIR}/content/modules/_index.ru.md" "${TMP_DIR}/content/modules/_index.ru.md"
+  cp "${TEMPLATE_DIR}/content/search/search.md" "${TMP_DIR}/content/search/search.md"
+  cp "${TEMPLATE_DIR}/content/search/search.ru.md" "${TMP_DIR}/content/search/search.ru.md"
+
+  cp -R "${MODULE_PATH}/docs/." "${TMP_DIR}/content/modules/${MODULE_NAME}/${CHANNEL}/"
+  cp "${MODULE_PATH}/module.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/module.yaml"
+
+  if [[ -f "${MODULE_PATH}/oss.yaml" ]]; then
+    cp "${MODULE_PATH}/oss.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/oss.yaml"
+  fi
+
+  if [[ -f "${MODULE_PATH}/openapi/config-values.yaml" || -f "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" ]]; then
+    mkdir -p "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/openapi"
+  fi
+
+  if [[ -f "${MODULE_PATH}/openapi/config-values.yaml" ]]; then
+    cp "${MODULE_PATH}/openapi/config-values.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/openapi/config-values.yaml"
+  fi
+
+  if [[ -f "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" ]]; then
+    cp "${MODULE_PATH}/openapi/doc-ru-config-values.yaml" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/openapi/doc-ru-config-values.yaml"
+  fi
+
+  if [[ -d "${MODULE_PATH}/crds" ]]; then
+    shopt -s nullglob
+    root_crds=("${MODULE_PATH}"/crds/*.yaml "${MODULE_PATH}"/crds/*.yml)
+    shopt -u nullglob
+
+    if (( ${#root_crds[@]} > 0 )); then
+      mkdir -p "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/crds"
+      cp "${root_crds[@]}" "${TMP_DIR}/data/modules/${MODULE_NAME}/${CHANNEL}/crds/"
+    fi
+  fi
 
   docker run --rm \
     --user "$(id -u):$(id -g)" \
