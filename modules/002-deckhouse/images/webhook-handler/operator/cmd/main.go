@@ -108,21 +108,6 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	soapp.ValidatingWebhookConfigurationName = ReturnNotEmpty(
-		soapp.ValidatingConfigurationNameDefault,
-		os.Getenv("VALIDATING_WEBHOOK_CONFIGURATION_NAME"))
-	soapp.ValidatingWebhookServiceName = ReturnNotEmpty(
-		soapp.ValidatingServiceNameDefault,
-		os.Getenv("VALIDATING_WEBHOOK_SERVICE_NAME"))
-	soapp.ValidatingWebhookServerCert = ReturnNotEmpty(
-		soapp.ValidatingServerCertPathDefault,
-		os.Getenv("VALIDATING_WEBHOOK_SERVER_CERT"))
-	soapp.ValidatingWebhookServerKey = ReturnNotEmpty(
-		soapp.ValidatingServerKeyPathDefault,
-		os.Getenv("VALIDATING_WEBHOOK_SERVER_KEY"))
-	soapp.ValidatingWebhookCA = ReturnNotEmpty(
-		soapp.ValidatingCAPathDefault,
-		os.Getenv("VALIDATING_WEBHOOK_CA"))
 	soapp.Namespace = ReturnNotEmpty(
 		"default",
 		os.Getenv("SHELL_OPERATOR_NAMESPACE"))
