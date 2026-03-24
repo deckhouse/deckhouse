@@ -18,6 +18,7 @@ package composer
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/destination"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/source"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transform"
@@ -150,14 +152,17 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 			continue
 		}
 
-		dest := newLogDest(destSpec.Spec.Type, destSpec.Name, destSpec.Spec, sourceType)
-		if dest == nil {
-			continue
-		}
-
-		transforms, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec, sourceType)
+		transforms, addLabelSinkKeys, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec, sourceType)
 		if err != nil {
 			return nil, err
+		}
+
+		spec := destSpec.Spec
+		spec.ExtraLabels = mergeExtraLabelsKeys(destSpec.Spec.ExtraLabels, addLabelSinkKeys)
+
+		dest := newLogDest(destSpec.Spec.Type, destSpec.Name, spec, sourceType)
+		if dest == nil {
+			continue
 		}
 
 		destinations = append(destinations, PipelineDestination{
@@ -167,6 +172,15 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 	}
 
 	return destinations, nil
+}
+
+func mergeExtraLabelsKeys(extra map[string]string, keys []string) map[string]string {
+	result := make(map[string]string, len(extra)+len(keys))
+	maps.Copy(result, extra)
+	for _, k := range keys {
+		result[k] = loglabels.FieldRefTemplate(k)
+	}
+	return result
 }
 
 // newLogDest creates a log destination instance based on the destination type.

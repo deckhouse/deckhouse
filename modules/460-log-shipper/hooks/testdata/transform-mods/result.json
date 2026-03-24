@@ -13,7 +13,7 @@
       "inputs": [
         "transform/File/source/test-source/02_clean_up_file"
       ],
-      "source": "if is_string(.message) {\n  .message = parse_json(\n    .message, max_depth: 1\n  ) ?? .message\n}",
+      "source": "if is_string(.message) {\n  parsed = parse_json(.message, max_depth: 1) ?? null\n  if parsed != null {\n\n    . = set!(., [\"message\"], parsed)\n\n  }\n}",
       "type": "remap"
     },
     "transform/File/destination/test-kafka-dest/01_tf_parseMessage_Klog": {
@@ -21,7 +21,7 @@
       "inputs": [
         "transform/File/destination/test-kafka-dest/00_tf_parseMessage_JSON"
       ],
-      "source": "if is_string(.message) {\n  .message = parse_klog(.message) ?? .message\n}",
+      "source": "if is_string(.message) {\n  parsed = parse_klog(.message) ?? null\n  if parsed != null {\n\n    . = set!(., [\"message\"], parsed)\n\n  }\n}",
       "type": "remap"
     },
     "transform/File/destination/test-kafka-dest/02_tf_parseMessage_String": {
@@ -29,7 +29,7 @@
       "inputs": [
         "transform/File/destination/test-kafka-dest/01_tf_parseMessage_Klog"
       ],
-      "source": "if is_string(.message) {\n  .message = {\"text\": .message}\n}",
+      "source": "if is_string(.message) {\n  wrapped = {\"text\": .message}\n\n  . = set!(., [\"message\"], wrapped)\n\n}",
       "type": "remap"
     },
     "transform/File/destination/test-kafka-dest/03_tf_replaceKeys": {

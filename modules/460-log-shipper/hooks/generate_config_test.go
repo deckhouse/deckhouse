@@ -144,5 +144,6 @@ spec:
 		Entry("Two sources to single destination", "many-to-one"),
 		Entry("Throttle Transform with filter", "throttle-with-filter"),
 		Entry("Transform mods to kafka", "transform-mods"),
+		Entry("Extended transformations", "extended-transformations"),
 	)
 })

@@ -79,6 +79,11 @@ func SortedMapKeys(m map[string]string) []string {
 	return keys
 }
 
+// FieldRefTemplate is the Vector mustache-style reference for a top-level field name (extra labels / sinks).
+func FieldRefTemplate(key string) string {
+	return fmt.Sprintf("{{ %s }}", key)
+}
+
 // GetLokiLabels returns labels for Loki: source labels (with pod_labels for K8s) + extraLabels.
 func GetLokiLabels(sourceType string, extraLabels map[string]string) map[string]string {
 	return mergeLabels(sourceLabels(sourceType, true), extraLabels)
@@ -136,7 +141,7 @@ func mergeLabels(sourceLabels map[string]string, extraLabels map[string]string) 
 	result := make(map[string]string, len(sourceLabels)+len(extraLabels))
 	maps.Copy(result, sourceLabels)
 	for _, k := range SortedMapKeys(extraLabels) {
-		result[k] = fmt.Sprintf("{{ %s }}", k)
+		result[k] = FieldRefTemplate(k)
 	}
 	return result
 }

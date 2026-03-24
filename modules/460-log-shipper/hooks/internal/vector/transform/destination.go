@@ -23,25 +23,26 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
-// CreateLogDestinationTransforms creates a list of transforms for a log destination
-func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination, sourceType string) ([]apis.LogTransform, error) {
+func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination, sourceType string) ([]apis.LogTransform, []string, error) {
 	var transforms []apis.LogTransform
+	var addLabelsSinkKeys []string
 	if dest.Spec.RateLimit.LinesPerMinute != nil {
 		throttleTransform, err := ThrottleTransform(dest.Spec.RateLimit)
 		if err != nil {
-			return nil, fmt.Errorf("failed to build throttle transform: %w", err)
+			return nil, nil, fmt.Errorf("failed to build throttle transform: %w", err)
 		}
 		transforms = append(transforms, throttleTransform)
 	}
-	if len(dest.Spec.Transformations) > 0 {
-		customTransforms, err := BuildModes(dest.Spec.Transformations)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build custom transformations: %w", err)
-		}
-		transforms = append(transforms, customTransforms...)
-	}
 	if len(dest.Spec.ExtraLabels) > 0 {
 		transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))
+	}
+	if len(dest.Spec.Transformations) > 0 {
+		customTransforms, keys, err := BuildTransformations(dest.Spec.Transformations)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build custom transformations: %w", err)
+		}
+		addLabelsSinkKeys = keys
+		transforms = append(transforms, customTransforms...)
 	}
 	switch dest.Spec.Type {
 	case v1alpha1.DestElasticsearch:
@@ -72,7 +73,7 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	transforms = append(transforms, CleanUpParsedDataTransform())
 	dTransforms, err := BuildFromMapSlice("destination", name, sourceType, transforms)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build destination transforms: %w", err)
+		return nil, nil, fmt.Errorf("failed to build destination transforms: %w", err)
 	}
-	return dTransforms, nil
+	return dTransforms, addLabelsSinkKeys, nil
 }

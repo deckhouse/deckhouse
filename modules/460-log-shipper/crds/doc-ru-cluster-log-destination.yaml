@@ -432,13 +432,11 @@ spec:
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
                 transformations:
                   description: |
-                    Список трансформаций, которые могут применяться к логам перед отправкой.
+                    Список трансформаций, которые могут применяться к логам перед отправкой. Трансформации выполняются **в том порядке**, в котором перечислены в манифесте.
 
-                    Возможные варианты:
+                    Доступные действия:
 
-                      - `ReplaceKeys` — заменяет `source` на `target` в заданных ключах лейблов.
-
-                        Пример:
+                      - `ReplaceKeys` — рекурсивно заменяет вхождения шаблона `source` на `target` в указанных путях (`labels`).
 
                         ```yaml
                         transformations:
@@ -450,10 +448,9 @@ spec:
                               - .pod_labels
                         ```
 
-                      - `ParseMessage` — преобразует поле `message` из формата, заданного в `sourceFormat`, в объект.
-                         Если это невозможно, поле `message` остается без изменений.
+                      - `ParseMessage` — разбирает строку из поля `message` (формат задаётся в `sourceFormat`) и записывает результат в путь `targetLabel` (по умолчанию `.message`; значение `.` — слияние распарсенного объекта с корнем события). Если разбор невозможен, исходное поле `message` не меняется.
 
-                        Примеры:
+                        Для `sourceFormat: String`: если задан `targetField` — **старая** логика (обёртка строки в один ключ; поля `regex` и `labels` не используются). Если `targetField` не задан — **новая** логика: обязательны `regex` и `labels` (именованные группы → поля объекта).
 
                         ```yaml
                         transformations:
@@ -462,6 +459,20 @@ spec:
                             sourceFormat: String
                             string:
                               targetField: msg
+                        ```
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            targetLabel: "."
+                            sourceFormat: String
+                            string:
+                              regex: "^(?P<ts>\\S+)\\s+(?P<level>\\w+)\\s+(?P<msg>.*)$"
+                              labels:
+                                timestamp: "{{ ts }}"
+                                level: "{{ level }}"
+                                msg: "{{ msg }}"
                         ```
 
                         ```yaml
@@ -474,24 +485,46 @@ spec:
                             sourceFormat: JSON
                             json:
                               depth: 1
-                        - action: ParseMessage
-                          parseMessage:
-                            sourceFormat: String
-                            string:
-                              targetField: msg
                         ```
 
-                      - `DropLabels` — удаляет указанные лейблы.
-
-                        Пример:
+                      - `DropLabels` — удаляет указанные пути (`labels`) или, если задано `keepOnly`, оставляет в объекте по каждому пути из `labels` только перечисленные **имена ключей** (не полные пути).
 
                         ```yaml
                         transformations:
                         - action: DropLabels
                           dropLabels:
                             labels:
-                              - .first
-                              - .second
+                              - .pod_labels
+                            keepOnly:
+                              - app
+                              - group
+                        ```
+
+                      - `AddLabels` — добавляет метки (статически, из шаблонов путей `{{ .path }}` или по условию `when`). Выполняется после `extraLabels`; при совпадении имён меток приоритет у `AddLabels`. Поле `when` — список выражений вида `путь ==|!=|=~|!=~ значение`; все элементы объединяются логическим **И** (regex — синтаксис Rust/RE2, как в Vector).
+
+                        ```yaml
+                        transformations:
+                        - action: AddLabels
+                          addLabels:
+                            - when:
+                                - ".message =~ 'Adding user'"
+                              labels:
+                                ".event": "user_created"
+                            - labels:
+                                ".static": "value"
+                                ".from_path": '{{ .message.user_id }}'
+                        ```
+
+                      - `ReplaceValue` — заменяет подстроки в **скалярных** строковых полях по regex (`source`); в `target` можно ссылаться на именованные группы как `{{ group_name }}`. Поле `labels` — список путей к полям, где выполнять замену.
+
+                        ```yaml
+                        transformations:
+                        - action: ReplaceValue
+                          replaceValue:
+                            source: "key\\d+"
+                            target: "[REDACTED]"
+                            labels:
+                              - .message.secret
                         ```
 
                   items:
@@ -508,25 +541,57 @@ spec:
                           target:
                             description: Значение, на которое будут заменены все совпадения шаблона.
                           labels:
-                            description: Список лейблов, в которых будет выполняться рекурсивная замена.
+                            description: Список путей к полям, в которых выполняется рекурсивная замена.
                       parseMessage:
-                        description: Преобразует поле `message` в объект.
+                        description: |
+                          Разбирает содержимое поля `message` и записывает результат в путь `targetLabel` (по умолчанию `.message`). Для `targetLabel: "."` результат сливается в корень события.
                         properties:
                           sourceFormat:
-                            description: Формат сообщения для преобразования в объект.
+                            description: Формат исходной строки в `message` (String, JSON, Klog, SysLog, CLF, Logfmt).
+                          targetLabel:
+                            default: ".message"
+                            description: |
+                              Путь назначения для распарсенного значения. По умолчанию `.message`. Значение `.` — слияние с корнем события.
                           string:
+                            description: |
+                              Параметры для `sourceFormat: String`. При непустом `targetField` — устаревшее поведение (обёртка); иначе нужны `regex` и `labels`.
                             properties:
                               targetField:
-                                description: Имя поля, в которое помещается структурированное сообщение.
+                                description: Устарело. Если задано — только обёртка строки в объект с одним ключом; `regex` и `labels` игнорируются.
+                              regex:
+                                description: Используется, только если `targetField` пустой; Rust regex с именованными группами.
+                              labels:
+                                description: Вместе с `regex`, когда `targetField` пустой — соответствие ключей результата литералам или `{{ имя_группы }}`.
                           json:
                             properties:
                               depth:
-                                description: Глубина парсинга JSON.
+                                description: Ограничение глубины при разборе JSON (`max_depth` в Vector).
                       dropLabels:
-                        description: Удаление заданных лейблов.
+                        description: Удаление указанных путей или сужение объектов до перечисленных ключей.
                         properties:
                           labels:
-                            description: Список лейблов, которые необходимо удалить.
+                            description: Список путей — удалить поле целиком или (при наличии `keepOnly`) объект, в котором оставить только перечисленные ключи.
+                          keepOnly:
+                            description: Имена ключей, которые нужно сохранить внутри каждого объекта по путям из `labels`.
+                      addLabels:
+                        description: Правила добавления меток; при использовании вместе с `extraLabels` применяются после них.
+                        items:
+                          properties:
+                            when:
+                              description: |
+                                Необязательный список условий; все должны выполняться (логическое И). Каждый элемент — сравнение вида `путь ==|!=|=~|!=~ 'значение'`. Для `=~` и `!=~` используется regex (RE2/Rust).
+                            labels:
+                              description: |
+                                Имена меток (пути Vector, с ведущей `.`) и значения — литерал или шаблон `{{ .путь }}`. В пути допускаются сегменты в кавычках для ключей со спецсимволами, например `{{ .parsed_data.extra.\"kubernetes.io/node\" }}`.
+                      replaceValue:
+                        description: Замена подстрок в строковых скалярных полях по регулярному выражению.
+                        properties:
+                          source:
+                            description: Regex (Rust), что искать в значении поля.
+                          target:
+                            description: На что заменять; допускаются подстановки `{{ имя_группы }}` из именованных групп regex.
+                          labels:
+                            description: Пути к полям (скалярам), в которых выполнять замену, например `.message` или `.message.token`.
                 buffer:
                   description: Параметры буфера.
                   properties:

@@ -941,7 +941,11 @@ spec:
                               targetField: msg
                         ```
 
-                      - `DropLabels`: Removes the specified labels.
+                      - `DropLabels`: Removes the specified labels (optionally keeping only selected keys inside objects).
+
+                      - `AddLabels`: Adds labels; runs after `extraLabels` when both are set. Optional `when` filter.
+
+                      - `ReplaceValue`: Replaces substrings in scalar fields by regex.
 
                         Example:
 
@@ -981,10 +985,26 @@ spec:
                         required:
                           - dropLabels
                           - action
+                      - properties:
+                          addLabels: {}
+                          action:
+                            enum:
+                              - AddLabels
+                        required:
+                          - addLabels
+                          - action
+                      - properties:
+                          replaceValue: {}
+                          action:
+                            enum:
+                              - ReplaceValue
+                        required:
+                          - replaceValue
+                          - action
                     properties:
                       action:
                         type: string
-                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels"]
+                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels", "AddLabels", "ReplaceValue"]
                         description: Type of a transformation.
                       replaceKeys:
                         type: object
@@ -1007,10 +1027,10 @@ spec:
                             description: "List of labels in which the recursive replacement will be performed."
                             items:
                               type: string
-                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
                       parseMessage:
                         type: object
-                        description: "Converts the `message` field into an object."
+                        description: "Parses the log line from `.message` and writes the result to `targetLabel` (default `.message`)."
                         required:
                           - sourceFormat
                         oneOf:
@@ -1058,15 +1078,34 @@ spec:
                             type: string
                             enum: ["String", "JSON", "Klog", "SysLog", "CLF", "Logfmt"]
                             description: "Message format for converting into an object."
+                          targetLabel:
+                            type: string
+                            default: ".message"
+                            pattern: '^(\.|\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+)$'
+                            description: "Destination path for parsed value (default `.message`). Use `.` for merge into the root."
                           string:
                             type: object
-                            required:
-                              - targetField
+                            oneOf:
+                              - required:
+                                  - targetField
+                              - required:
+                                  - regex
+                                  - labels
                             properties:
                               targetField:
                                 type: string
+                                deprecated: true
                                 pattern: '^[a-zA-Z0-9_\\\.\-]+$'
-                                description: "Target field where the structured message is placed."
+                                description: "Deprecated. If set, legacy behavior: wrap `.message` string into a one-key object under this field. When `targetField` is set, `regex` and `labels` are ignored."
+                              regex:
+                                type: string
+                                pattern: '^[a-zA-Z0-9\s\\\[\](){}?*+.^$\-=!:,''"|]+$'
+                                description: "Used only when `targetField` is empty: Rust-compatible regex with named capture groups; requires `labels`."
+                              labels:
+                                type: object
+                                description: "Used with `regex` when `targetField` is empty: maps output keys to literals or `{{ group_name }}`."
+                                additionalProperties:
+                                  type: string
                           json:
                             type: object
                             properties:
@@ -1077,16 +1116,63 @@ spec:
                                 description: "Depth for JSON parsing."
                       dropLabels:
                         type: object
-                        description: "Removes the specified labels."
+                        description: "Removes the specified labels or keeps only keys inside objects."
                         required:
                           - labels
                         properties:
                           labels:
                             type: array
-                            description: "List of labels to remove."
+                            description: "List of labels to remove or object paths for keepOnly."
                             items:
                               type: string
-                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
+                          keepOnly:
+                            type: array
+                            description: "If set, only these keys are kept inside each object referenced by `labels`."
+                            items:
+                              type: string
+                              pattern: '^[a-zA-Z0-9_.\-/]+$'
+                      addLabels:
+                        type: array
+                        description: "Rules applied after extraLabels when both are configured."
+                        items:
+                          type: object
+                          required:
+                            - labels
+                          properties:
+                            when:
+                              type: array
+                              items:
+                                type: string
+                                pattern: '^[a-zA-Z0-9_.\s''"=~!<>:\-/#,@()+]+$'
+                              description: "Optional list of comparisons combined with logical AND. Each item: `path ==|!=|=~|!=~ value` (regex for =~/!=~ is Rust regex)."
+                            labels:
+                              type: object
+                              description: "Label keys and literal values or `{{ .path }}` templates. Keys are Vector label paths (must start with `.`)."
+                              propertyNames:
+                                pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
+                              additionalProperties:
+                                type: string
+                      replaceValue:
+                        type: object
+                        required:
+                          - source
+                          - target
+                          - labels
+                        properties:
+                          source:
+                            type: string
+                            pattern: '^[a-zA-Z0-9\s\\\[\](){}?*+.^$\-=!:,''"|]+$'
+                            description: "Regex to search in each scalar field (Rust regex)."
+                          target:
+                            type: string
+                            description: "Replacement string; may use `{{name}}` for named capture groups."
+                          labels:
+                            type: array
+                            description: "Paths to scalar fields."
+                            items:
+                              type: string
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
                 buffer:
                   type: object
                   oneOf:
