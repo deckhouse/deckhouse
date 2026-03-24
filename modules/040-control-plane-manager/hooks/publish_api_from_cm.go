@@ -37,6 +37,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "cm_publishapi_config_migration",
 			ApiVersion: "v1",
 			Kind:       "ConfigMap",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-publishapi-config-migration"},
 			},
@@ -76,20 +81,18 @@ func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook
 }
 
 func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
-
 	if input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Exists() {
 		input.Logger.Info("Publish API ingress settings are set in moduleconfig control-plane-manager, skipping")
 		return nil
 	}
 
-	publishAPIConfigSlice, err := sdkobjectpatch.UnmarshalToStruct[Config](input.Snapshots, "cm_publishapi_config_migration")
+	publishAPIConfigSnaps, err := sdkobjectpatch.UnmarshalToStruct[Config](input.Snapshots, "cm_publishapi_config_migration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cm_publishapi_config_migration snapshot: %w", err)
 	}
-	publishAPIConfig := publishAPIConfigSlice[0]
 
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
-	input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", publishAPIConfig)
+	input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", publishAPIConfigSnaps[0])
 	// input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress.ingressClass", publishAPIConfig.IngressClass)
 	// input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
 	// input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress.https", publishAPIConfig.HTTPS)
