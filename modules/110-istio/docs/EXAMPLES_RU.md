@@ -21,7 +21,7 @@ spec:
       tcp:
         maxConnections: 100 # Максимальное число содинений в сторону host, суммарно для всех эндпоинтов.
       http:
-        maxRequestsPerConnection: 10 # Каждые 10 запросов соединение будет пересоздаваться.
+        maxRequestsPerConnection: 10 # Каждые 10 запросов, соединение будет пересоздаваться.
     outlierDetection:
       consecutive5xxErrors: 7 # Допустимо 7 ошибок (включая пятисотые, TCP-таймауты и HTTP-таймауты)
       interval: 5m            # в течение пяти минут,
