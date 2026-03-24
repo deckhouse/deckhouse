@@ -172,35 +172,6 @@ if err == null {
 .ok = "1"
 }`,
 			},
-			{
-				"nested path == mustache path",
-				`.msg.test == "{{ .test }}"`,
-				map[string]string{".tag": "x", ".lbl": "{{ .label }}"},
-				`val_0, err_0 = get(., ["msg", "test"])
-ref_0, err_ref_0 = get(., ["test"])
-b_0 = false
-if err_0 == null && err_ref_0 == null {
-  if is_array(val_0) {
-    hit_0 = filter(array!(val_0)) -> |_idx_0, el_0| {
-      s_el_0, err_el_0 = to_string(el_0)
-      s_ref_el_0, err_ref_el_0 = to_string(ref_0)
-      err_el_0 == null && err_ref_el_0 == null && s_el_0 == s_ref_el_0
-    }
-    b_0 = length(hit_0) > 0
-  } else {
-    s_0, err_str_0 = to_string(val_0)
-    s_ref_0, err_ref_str_0 = to_string(ref_0)
-    b_0 = err_str_0 == null && err_ref_str_0 == null && s_0 == s_ref_0
-  }
-}
-if b_0 {
-v, err = get(., ["label"])
-if err == null {
-  .lbl = v
-}
-.tag = "x"
-}`,
-			},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				got, _, err := AddLabelsVRL(v1alpha1.AddLabelsRule{
@@ -221,6 +192,10 @@ if err == null {
 			{
 				When:   []string{`.msg =~ 'x'`},
 				Labels: map[string]string{".ok": "{{ lvl }}"},
+			},
+			{
+				When:   []string{`.a == "{{ .b }}"`},
+				Labels: map[string]string{".x": "1"},
 			},
 		} {
 			_, _, err := AddLabelsVRL(spec)

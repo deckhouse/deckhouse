@@ -76,18 +76,11 @@ if err == null && value != null && is_string(value) {
 `
 
 // AddLabelsWhenLeaf is one addLabels when clause: compare or regex on a path; arrays use any-hit / no-hit (arrayWantAny).
-// kind: literal (quoted rhs), rightPath (compare pathArray to rightPathArray), regex (pattern literal only).
+// kind: literal (quoted rhs), regex (pattern literal only).
 const AddLabelsWhenLeaf Rule = `
 val_{{.i}}, err_{{.i}} = get(., {{.pathArray}})
-{{- if eq .kind "rightPath" }}
-ref_{{.i}}, err_ref_{{.i}} = get(., {{.rightPathArray}})
-{{- end }}
 b_{{.i}} = false
-{{- if eq .kind "rightPath" }}
-if err_{{.i}} == null && err_ref_{{.i}} == null {
-{{- else }}
 if err_{{.i}} == null {
-{{- end }}
   if is_array(val_{{.i}}) {
     hit_{{.i}} = filter(array!(val_{{.i}})) -> |_idx_{{.i}}, el_{{.i}}| {
 {{- if eq .kind "regex" }}
@@ -98,10 +91,6 @@ if err_{{.i}} == null {
         _, perr_{{.i}} = parse_regex(s_el_{{.i}}, r'{{.regex}}')
         perr_{{.i}} == null
       }
-{{- else if eq .kind "rightPath" }}
-      s_el_{{.i}}, err_el_{{.i}} = to_string(el_{{.i}})
-      s_ref_el_{{.i}}, err_ref_el_{{.i}} = to_string(ref_{{.i}})
-      err_el_{{.i}} == null && err_ref_el_{{.i}} == null && s_el_{{.i}} == s_ref_el_{{.i}}
 {{- else }}
       s_el_{{.i}}, err_el_{{.i}} = to_string(el_{{.i}})
       err_el_{{.i}} == null && s_el_{{.i}} == {{.quotedValue}}
@@ -115,10 +104,6 @@ if err_{{.i}} == null {
       _, perr_{{.i}} = parse_regex(s_{{.i}}, r'{{.regex}}')
       b_{{.i}} = perr_{{.i}} {{.regexFindOp}} null
     }
-{{- else if eq .kind "rightPath" }}
-    s_{{.i}}, err_str_{{.i}} = to_string(val_{{.i}})
-    s_ref_{{.i}}, err_ref_str_{{.i}} = to_string(ref_{{.i}})
-    b_{{.i}} = err_str_{{.i}} == null && err_ref_str_{{.i}} == null && s_{{.i}} {{.cmpOp}} s_ref_{{.i}}
 {{- else }}
     s_{{.i}}, err_str_{{.i}} = to_string(val_{{.i}})
     b_{{.i}} = err_str_{{.i}} == null && s_{{.i}} {{.cmpOp}} {{.quotedValue}}

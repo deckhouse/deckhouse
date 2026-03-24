@@ -37,11 +37,10 @@ const (
 var whenOpsParseOrder = []WhenOp{WhenNRe, WhenRe, WhenNE, WhenEQ}
 
 type WhenExpr struct {
-	LeftPath      string
-	LeftPathSegs  []string
-	Op            WhenOp
-	Value         string
-	RightPathSegs []string
+	LeftPath     string
+	LeftPathSegs []string
+	Op           WhenOp
+	Value        string
 }
 
 func ParseWhen(s string) (*WhenExpr, error) {
@@ -68,12 +67,8 @@ func ParseWhen(s string) (*WhenExpr, error) {
 		}
 		expr := &WhenExpr{LeftPath: left, LeftPathSegs: segs, Op: op, Value: val}
 		if op == WhenEQ || op == WhenNE {
-			if inner, ok := MatchMustachePath(strings.TrimSpace(val)); ok {
-				rsegs, err := ParseLabelPath(inner)
-				if err != nil {
-					return nil, fmt.Errorf("when right path: %w", err)
-				}
-				expr.RightPathSegs = rsegs
+			if _, ok := MatchMustachePath(strings.TrimSpace(val)); ok {
+				return nil, fmt.Errorf("when: mustache path templates are not allowed")
 			}
 		}
 		return expr, nil

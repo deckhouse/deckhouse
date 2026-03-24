@@ -1015,13 +1015,14 @@ spec:
                         properties:
                           source:
                             type: string
+                            pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
                             description: |
                               Pattern used to find matches.
-                              Can be a static string or a regular expression.
+                              Can be a static string or a regular expression (Rust regex; same character set as other regex fields in transformations).
                           target:
                             type: string
                             default: ""
-                            description: "Value that replaces all matches of the pattern."
+                            description: "Literal replacement string for matched substrings (not a regex)."
                           labels:
                             type: array
                             description: "List of labels in which the recursive replacement will be performed."
@@ -1099,7 +1100,7 @@ spec:
                                 description: "Deprecated. If set, legacy behavior: wrap `.message` string into a one-key object under this field. When `targetField` is set, `regex` and `labels` are ignored."
                               regex:
                                 type: string
-                                pattern: '^[a-zA-Z0-9\s\\\[\](){}?*+.^$\-=!:,''"|<>]+$'
+                                pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
                                 description: "Used only when `targetField` is empty: Rust-compatible regex with named capture groups; requires `labels`."
                               labels:
                                 type: object
@@ -1143,7 +1144,7 @@ spec:
                             items:
                               type: string
                               pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
-                            description: "Optional list of comparisons combined with logical AND. Each item: `path ==|!=|=~|!=~ value` (regex for =~/!=~ is Rust regex)."
+                            description: "Optional list of comparisons combined with logical AND. Each item: `path ==|!=|=~|!=~ value` (regex for =~/!=~ is Rust regex). The value must be a literal or quoted string; mustache path templates `{{ .path }}` are not allowed."
                           labels:
                             type: object
                             description: "Label keys and literal values or `{{ .path }}` templates. Keys are Vector label paths (must start with `.`)."
@@ -1160,7 +1161,7 @@ spec:
                         properties:
                           source:
                             type: string
-                            pattern: '^[a-zA-Z0-9\s\\\[\](){}?*+.^$\-=!:,''"|<>]+$'
+                            pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
                             description: "Regex to search in each scalar field (Rust regex)."
                           target:
                             type: string

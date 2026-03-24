@@ -89,11 +89,6 @@ func renderWhenLeaf(i int, we *parserlabels.WhenExpr) (string, error) {
 	}
 	switch we.Op {
 	case parserlabels.WhenEQ, parserlabels.WhenNE:
-		if len(we.RightPathSegs) > 0 {
-			args["kind"] = "rightPath"
-			args["rightPathArray"] = parserlabels.PathSegmentsToVRLArray(we.RightPathSegs)
-			return vrl.AddLabelsWhenLeaf.Render(args)
-		}
 		args["kind"] = "literal"
 		args["quotedValue"] = strconv.Quote(we.Value)
 		return vrl.AddLabelsWhenLeaf.Render(args)
