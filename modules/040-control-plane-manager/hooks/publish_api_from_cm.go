@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -51,20 +52,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handlePublishAPIConfig)
 
 type Config struct {
-	Enabled                     bool        `json:"enabled"`
-	IngressClass                string      `json:"ingressClass"`
-	WhitelistSourceRanges       []string    `json:"whitelistSourceRanges"`
-	HTTPS                       HTTPSConfig `json:"https"`
-	AddKubeconfigGeneratorEntry bool        `json:"addKubeconfigGeneratorEntry"`
+	Enabled                     *bool        `json:"enabled,omitempty"`
+	IngressClass                *string      `json:"ingressClass,omitempty"`
+	WhitelistSourceRanges       []string     `json:"whitelistSourceRanges,omitempty"`
+	HTTPS                       *HTTPSConfig `json:"https,omitempty"`
+	AddKubeconfigGeneratorEntry *bool        `json:"addKubeconfigGeneratorEntry,omitempty"`
 }
 
 type HTTPSConfig struct {
-	Mode   string       `json:"mode"`
-	Global *GlobalHTTPS `json:"global"`
+	Mode   string       `json:"mode,omitempty"`
+	Global *GlobalHTTPS `json:"global,omitempty"`
 }
 
 type GlobalHTTPS struct {
-	KubeconfigGeneratorMasterCA string `json:"kubeconfigGeneratorMasterCA"`
+	KubeconfigGeneratorMasterCA string `json:"kubeconfigGeneratorMasterCA,omitempty"`
 }
 
 func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -75,18 +76,24 @@ func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook
 		return nil, err
 	}
 
-	data := cm.Data["config"]
+	var dataStruct Config
+	if data, ok := cm.Data["basicAuditPolicy"]; ok {
+		err = json.Unmarshal([]byte(data), &dataStruct)
+		if err != nil {
+			return nil, fmt.Errorf("invalid basicAuditPolicy format - yaml expected: %s", err)
+		}
+	}
 
-	return data, nil
+	return dataStruct, nil
 }
 
 func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
-
 	if input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Exists() {
 		input.Logger.Info("Publish API ingress settings are set in moduleconfig control-plane-manager, skipping")
 		return nil
 	}
 	input.Logger.Info("Unmarshalling")
+
 	publishAPIConfigSnaps, err := sdkobjectpatch.UnmarshalToStruct[Config](input.Snapshots, "cm_publishapi_config_migration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cm_publishapi_config_migration snapshot: %w", err)
@@ -102,10 +109,5 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 		"addKubeconfigGeneratorEntry": publishAPIConfig.AddKubeconfigGeneratorEntry,
 	})
 
-	//input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", publishAPIConfigSnaps[0])
-	// input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress.ingressClass", publishAPIConfig.IngressClass)
-	// input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
-	// input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress.https", publishAPIConfig.HTTPS)
-	// input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress.addKubeconfigGeneratorEntry", publishAPIConfig.AddKubeconfigGeneratorEntry)
 	return nil
 }
