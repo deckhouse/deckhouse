@@ -103,7 +103,54 @@
     return PRODUCT_VERSION_RE.test(value || '');
   }
 
+  function getPathLocalePrefix(pathname) {
+    const match = (pathname || '').match(/^\/(ru|en)(?=\/|$)/);
+    return match ? `/${match[1]}` : '';
+  }
+
+  function getDocumentLanguage() {
+    const htmlLang = document.documentElement && document.documentElement.lang
+      ? document.documentElement.lang.toLowerCase()
+      : '';
+
+    if (htmlLang === 'ru' || htmlLang === 'en') {
+      return htmlLang;
+    }
+
+    return '';
+  }
+
+  function getLanguageFromPath(pathname) {
+    const match = (pathname || '').match(/^\/(ru|en)(?=\/|$)/);
+    return match ? match[1] : '';
+  }
+
+  function getLanguageFromDomain() {
+    return window.location.hostname.endsWith('.ru') ? 'ru' : 'en';
+  }
+
+  function getLocaleInfo(pathname) {
+    const language =
+      getDocumentLanguage() ||
+      getLanguageFromPath(pathname) ||
+      getLanguageFromDomain();
+
+    const localeInfo = {
+      lang: language,
+      localePrefix: getPathLocalePrefix(pathname),
+    };
+
+    debugLog('Resolved locale info.', {
+      pathname,
+      htmlLang: getDocumentLanguage(),
+      localeInfo,
+    });
+
+    return localeInfo;
+  }
+
   function parseCurrentModulePage(pathname) {
+    const localeInfo = getLocaleInfo(pathname);
     let match = pathname.match(/^\/(?:(ru|en)\/)?modules\/([^/]+)(?:\/([^/]+)(?:\/(.*))?)?\/?$/);
 
     if (match) {
@@ -116,7 +163,8 @@
         : normalizeTail([possibleToken, match[4] || ''].filter(Boolean).join('/'));
 
       return {
-        localePrefix: match[1] ? `/${match[1]}` : '',
+        localePrefix: localeInfo.localePrefix,
+        lang: localeInfo.lang,
         moduleName: match[2],
         currentToken,
         tail: currentTail,
@@ -129,7 +177,8 @@
     if (match) {
       debugLog('Parsed current page as historical module page.', pathname);
       return {
-        localePrefix: match[1] ? `/${match[1]}` : '',
+        localePrefix: localeInfo.localePrefix,
+        lang: localeInfo.lang,
         moduleName: match[3],
         currentToken: match[2],
         tail: normalizeTail(match[4] || ''),
@@ -142,7 +191,8 @@
     if (match) {
       debugLog('Parsed current page as legacy historical module page.', pathname);
       return {
-        localePrefix: match[1] ? `/${match[1]}` : '',
+        localePrefix: localeInfo.localePrefix,
+        lang: localeInfo.lang,
         moduleName: match[2],
         currentToken: match[3],
         tail: normalizeTail(match[4] || ''),
@@ -154,12 +204,14 @@
   }
 
   function parseCurrentDocumentationPage(pathname) {
+    const localeInfo = getLocaleInfo(pathname);
     let match = pathname.match(/^\/(?:(ru|en)\/)?products\/kubernetes-platform\/documentation\/([^/]+)\/(.*)$/);
 
     if (match && !match[3].startsWith('modules/')) {
       debugLog('Parsed current page as regular documentation page.', pathname);
       return {
-        localePrefix: match[1] ? `/${match[1]}` : '',
+        localePrefix: localeInfo.localePrefix,
+        lang: localeInfo.lang,
         currentToken: match[2],
         tail: normalizeTail(match[3] || ''),
         pageType: 'docs',
@@ -171,7 +223,8 @@
     if (match && !match[3].startsWith('modules/')) {
       debugLog('Parsed current page as legacy regular documentation page.', pathname);
       return {
-        localePrefix: match[1] ? `/${match[1]}` : '',
+        localePrefix: localeInfo.localePrefix,
+        lang: localeInfo.lang,
         currentToken: match[2],
         tail: normalizeTail(match[3] || ''),
         pageType: 'docs',
@@ -339,8 +392,8 @@
     return new URL(targetPath, window.location.origin).toString();
   }
 
-  function getModalTexts(localePrefix) {
-    if (localePrefix === '/en') {
+  function getModalTexts(lang) {
+    if (lang === 'en') {
       return {
         title: 'Document not found',
         description: 'The selected page was not found.',
@@ -468,7 +521,7 @@
 
   function showDocumentNotFoundModal(currentPage, linkIntent) {
     const suggestedVersion = resolveSuggestedDocumentationVersion(currentPage, linkIntent);
-    const texts = getModalTexts(currentPage.localePrefix);
+    const texts = getModalTexts(currentPage.lang);
     const modal = ensureNotFoundModal();
     const title = modal.querySelector('.doc-version-link-resolver-modal__title');
     const description = modal.querySelector('.doc-version-link-resolver-modal__description');
