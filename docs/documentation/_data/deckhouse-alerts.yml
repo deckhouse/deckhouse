@@ -70,6 +70,105 @@ alerts:
         Certificate is expiring soon.
       severity: "8"
       markupFormat: markdown
+    - name: CertmanagerCertificateChallengePending
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
+      moduleUrl: 101-cert-manager
+      module: cert-manager
+      edition: ce
+      description: |-
+        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` has been in `pending` state for more than 1 hour and requires investigation.
+
+        **Common causes:**
+        * DNS misconfiguration (for DNS-01 challenges).
+        * Ingress or firewall issues blocking HTTP-01 validation.
+        * ACME provider rate limiting.
+        * Network connectivity issues.
+
+        **Resolution steps:**
+
+        1. Check the Challenge status and reason:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
+           ```
+
+        2. Check `cert-manager` logs for errors:
+           ```bash
+           d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
+           ```
+
+        3. If the challenge is stuck, delete the Order to trigger a retry:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} get orders
+           d8 k -n {{ $labels.exported_namespace }} delete order <ORDER_NAME>
+           ```
+      summary: |
+        ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is pending for more than 1 hour.
+      severity: "4"
+      markupFormat: markdown
+    - name: CertmanagerCertificateChallengePending
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
+      moduleUrl: 101-cert-manager
+      module: cert-manager
+      edition: ce
+      description: |-
+        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` has been in `pending` state for more than 10 minutes.
+
+        This may indicate issues with the ACME challenge validation process.
+
+        **Common causes:**
+        * DNS propagation delays (for DNS-01 challenges).
+        * Ingress or firewall issues blocking HTTP-01 validation.
+        * ACME provider rate limiting or temporary unavailability.
+
+        **Diagnostic steps:**
+
+        1. Check the Challenge status:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
+           ```
+
+        2. Check `cert-manager` logs for errors:
+           ```bash
+           d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
+           ```
+      summary: |
+        ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is pending for more than 10 minutes.
+      severity: "6"
+      markupFormat: markdown
+    - name: CertmanagerCertificateChallengeStuck
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
+      moduleUrl: 101-cert-manager
+      module: cert-manager
+      edition: ce
+      description: |-
+        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` is in `{{ $labels.status }}` state and requires manual intervention.
+
+        **Reason:** {{ $labels.reason }}
+
+        The certificate will not be issued or renewed until the issue is resolved.
+
+        **Common causes:**
+        * DNS misconfiguration (for DNS-01 challenges).
+        * Ingress or firewall issues (for HTTP-01 challenges).
+        * Rate limiting by the ACME provider.
+        * Authorization expired before challenge completion.
+
+        **Resolution steps:**
+
+        1. Check the Challenge status and reason:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
+           ```
+
+        2. Delete the failed Order to trigger a new certificate request:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} get orders
+           d8 k -n {{ $labels.exported_namespace }} delete order <ORDER_NAME>
+           ```
+      summary: |
+        ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is stuck in &quot;{{ $labels.status }}&quot; state.
+      severity: "4"
+      markupFormat: markdown
     - name: CertmanagerCertificateExpired
       sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
       moduleUrl: 101-cert-manager
