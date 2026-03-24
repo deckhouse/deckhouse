@@ -99,7 +99,7 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal cm_publishapi_config_migration snapshot: %w", err)
 	}
 	publishAPIConfig := publishAPIConfigSnaps[0]
-	path := "controlPlaneManager.apiserver.publishAPI."
+	path := "controlPlaneManager.apiserver.publishAPI.ingress."
 
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
 
