@@ -576,7 +576,7 @@ spec:
                           keepOnly:
                             description: Имена ключей, которые нужно сохранить внутри каждого объекта по путям из `labels`.
                       addLabels:
-                        description: Правило добавления меток; при использовании вместе с `extraLabels` применяется после них. Несколько правил — несколько элементов `transformations` с `action: AddLabels`.
+                        description: "Правило добавления меток; при использовании вместе с `extraLabels` применяется после них. Несколько правил — несколько элементов `transformations` с `action: AddLabels`."
                         properties:
                           when:
                             description: |
