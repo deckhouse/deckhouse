@@ -34,6 +34,7 @@
     The minimum supported version of Kubernetes is now 1.31. All control plane components will restart.
  - **[candi]** Implementing SecurityPolicyExceptions in modules cert-manager, user-authz, user-authn, multitenancy-manager, admission-policy-engine, basic-auth. [#16738](https://github.com/deckhouse/deckhouse/pull/16738)
  - **[candi]** Added annotation for node by creating converger user. [#16734](https://github.com/deckhouse/deckhouse/pull/16734)
+ - **[cert-manager]** Add alerts for ACME Challenges stuck in pending or error states [#18439](https://github.com/deckhouse/deckhouse/pull/18439)
  - **[cert-manager]** Bumped version up to v1.19.2. [#17486](https://github.com/deckhouse/deckhouse/pull/17486)
     Breaking changes:
     - The default value of `Certificate.Spec.PrivateKey.RotationPolicy` is now `Always`.
@@ -44,6 +45,8 @@
  - **[cloud-provider-dvp]** Created of NP automatic. [#17286](https://github.com/deckhouse/deckhouse/pull/17286)
  - **[cloud-provider-dvp]** Added managed-by, cluster-uuid, vm_name labels to all cluster's infra objects. [#17267](https://github.com/deckhouse/deckhouse/pull/17267)
  - **[cloud-provider-dvp]** Clarified CSI errors. [#16434](https://github.com/deckhouse/deckhouse/pull/16434)
+ - **[cloud-provider-zvirt]** add customNetworkConfig [#18227](https://github.com/deckhouse/deckhouse/pull/18227)
+ - **[cloud-provider-zvirt]** add customNetworkConfig [#17879](https://github.com/deckhouse/deckhouse/pull/17879)
  - **[cni-cilium]** Allowed configuring the InPlaceOrRecreate VPA updated mode for Cilium components. [#17252](https://github.com/deckhouse/deckhouse/pull/17252)
     Users can explicitly select the InPlaceOrRecreate VPA mode for Cilium pods via ModuleConfig.
     Default behavior remains unchanged.
@@ -80,6 +83,7 @@
     Default VPA mode for Istio has been updated to InPlaceOrRecreate.
  - **[istio]** Improved federation discovery observability by logging published services count. [#17146](https://github.com/deckhouse/deckhouse/pull/17146)
  - **[log-shipper]** Added metric and alert for not valid logshipper config. [#17010](https://github.com/deckhouse/deckhouse/pull/17010)
+ - **[loki]** Added generation and usage of a dedicated TLS server certificate for Loki kube-rbac-proxy [#18268](https://github.com/deckhouse/deckhouse/pull/18268)
  - **[loki]** Changed the default VPA update mode for Loki from Auto to InPlaceOrRecreate. [#17254](https://github.com/deckhouse/deckhouse/pull/17254)
     The default VPA mode for Loki components is changed from Auto to InPlaceOrRecreate.
     Loki pods will now prefer in-place resource updates when supported by the cluster,
@@ -111,6 +115,7 @@
 ## Fixes
 
 
+ - **[admission-policy-engine]** Fix SecurityPolicyException handling for hostPorts-only exceptions [#18535](https://github.com/deckhouse/deckhouse/pull/18535)
  - **[admission-policy-engine]** Prevent unintended Gatekeeper constraints from being rendered for SecurityPolicy when boolean fields are omitted. [#18007](https://github.com/deckhouse/deckhouse/pull/18007)
     Workload Pods are no longer denied by unrelated SecurityPolicy checks (e.g. hostNetwork/hostPort) when corresponding policy fields are not explicitly set.
  - **[admission-policy-engine]** Fixed a bootstrap deadlock by excluding Gatekeeper webhook pods from constraints. [#17791](https://github.com/deckhouse/deckhouse/pull/17791)
@@ -126,14 +131,27 @@
  - **[candi]** Added bashible events generateName. [#16768](https://github.com/deckhouse/deckhouse/pull/16768)
  - **[candi]** Moved the default values for registry in initConfiguration to dhctl. [#16103](https://github.com/deckhouse/deckhouse/pull/16103)
  - **[chrony]** Mitigated CVE-2025-58181. [#17959](https://github.com/deckhouse/deckhouse/pull/17959)
+ - **[cilium-hubble]** Fixed CVE-2026-33186 in the hubble-ui image. [#18657](https://github.com/deckhouse/deckhouse/pull/18657)
+ - **[cloud-provider-aws]** fix CVE in cloud-provider-aws [#18057](https://github.com/deckhouse/deckhouse/pull/18057)
  - **[cloud-provider-aws]** fix getInstancesByIDs to comply with the describeInstanceBatcher. [#18267](https://github.com/deckhouse/deckhouse/pull/18267)
+ - **[cloud-provider-azure]** fix CVEs in cloud-provider-azure [#18240](https://github.com/deckhouse/deckhouse/pull/18240)
+ - **[cloud-provider-dvp]** fix CVEs in cloud-provider-dvp [#18446](https://github.com/deckhouse/deckhouse/pull/18446)
+ - **[cloud-provider-dvp]** fix CVEs in cloud-provider-dvp [#18258](https://github.com/deckhouse/deckhouse/pull/18258)
+ - **[cloud-provider-dvp]** refactored CreateVolume to improve idempotency when disk.status.capacity is not yet reported and standardized gRPC error handling [#17826](https://github.com/deckhouse/deckhouse/pull/17826)
  - **[cloud-provider-dvp]** Prevents orphaned VMBDA objects. [#17682](https://github.com/deckhouse/deckhouse/pull/17682)
  - **[cloud-provider-dvp]** Prevented the CCM from recreating external LoadBalancers during Service deletion. [#17446](https://github.com/deckhouse/deckhouse/pull/17446)
  - **[cloud-provider-dynamix]** Fixed a queue hang caused by the module components failing to start. [#16796](https://github.com/deckhouse/deckhouse/pull/16796)
+ - **[cloud-provider-huaweicloud]** fix CVEs in cloud-provider-huaweicloud [#18465](https://github.com/deckhouse/deckhouse/pull/18465)
+ - **[cloud-provider-huaweicloud]** fix CVEs in cloud-provider-huaweicloud [#18289](https://github.com/deckhouse/deckhouse/pull/18289)
  - **[cloud-provider-huaweicloud]** Fixed a queue hang caused by the module components failing to start. [#16796](https://github.com/deckhouse/deckhouse/pull/16796)
+ - **[cloud-provider-openstack]** fix CVE in cloud-provider-openstack module [#18253](https://github.com/deckhouse/deckhouse/pull/18253)
  - **[cloud-provider-vcd]** Fixed a queue hang caused by the module components failing to start. [#16796](https://github.com/deckhouse/deckhouse/pull/16796)
+ - **[cloud-provider-yandex]** fix CVEs in cloud-provider-yandex [#18291](https://github.com/deckhouse/deckhouse/pull/18291)
  - **[cloud-provider-yandex]** Added fallback to `nat_instance_internal_address_calculated`. [#17341](https://github.com/deckhouse/deckhouse/pull/17341)
+ - **[cloud-provider-zvirt]** fix CVEs in cloud-provider-zvirt [#18257](https://github.com/deckhouse/deckhouse/pull/18257)
  - **[cloud-provider-zvirt]** Fixed a queue hang caused by the module components failing to start. [#16796](https://github.com/deckhouse/deckhouse/pull/16796)
+ - **[cni-cilium]** Fixed CVE-2026-33186, CVE-2026-27142, and CVE-2026-27139 by updating grpc dependency and Go version, and resolved build compatibility issues. [#18553](https://github.com/deckhouse/deckhouse/pull/18553)
+ - **[common]** Fixed CVE-2026-24051 in the CoreDNS image. [#18545](https://github.com/deckhouse/deckhouse/pull/18545)
  - **[common]** Restricted kubelet static pod manifest processing to .yaml and .yml files. [#17842](https://github.com/deckhouse/deckhouse/pull/17842)
  - **[common]** Disabled kernel.panic parameter check in kubelet. [#17296](https://github.com/deckhouse/deckhouse/pull/17296)
  - **[control-plane-manager]** Fix order of converge components in control-plane-manager. [#18195](https://github.com/deckhouse/deckhouse/pull/18195)
@@ -148,6 +166,7 @@
     etcd will restart.
  - **[control-plane-manager]** Switched kube-apiserver to structured authorization config with fail-closed webhook. [#17183](https://github.com/deckhouse/deckhouse/pull/17183)
     Authorization webhook now works in fail-closed mode. If the webhook is unavailable, authorization requests are denied instead of falling back to RBAC.
+ - **[deckhouse]** Bump nelm version with deadlock fix. [#18586](https://github.com/deckhouse/deckhouse/pull/18586)
  - **[deckhouse]** Added exception to system-ns.deckhouse.io policy. [#17754](https://github.com/deckhouse/deckhouse/pull/17754)
  - **[deckhouse]** Fixed missing module stage in the Module CR, restoring experimental module warnings. [#17244](https://github.com/deckhouse/deckhouse/pull/17244)
  - **[deckhouse]** Fixed deckhouse-registry secret validation. [#17122](https://github.com/deckhouse/deckhouse/pull/17122)
@@ -166,6 +185,10 @@
  - **[descheduler]** Removed implicit default thresholds from Descheduler CRD and align behavior with upstream. [#17488](https://github.com/deckhouse/deckhouse/pull/17488)
     Thresholds and targetThresholds are no longer implicitly defaulted.
     If a resource is not specified in the Descheduler CR, it is treated as 100% and does not participate in eviction logic.
+ - **[dhctl]** mitigate CVE-2026-33186 [#18625](https://github.com/deckhouse/deckhouse/pull/18625)
+ - **[dhctl]** Fix restart bootstrap during creating additional nodes in cloud permanent node groups. [#18525](https://github.com/deckhouse/deckhouse/pull/18525)
+ - **[dhctl]** Аix non-strict unmarshalling for metaconfigs. [#18359](https://github.com/deckhouse/deckhouse/pull/18359)
+ - **[dhctl]** Fix deadlock in converge. [#18335](https://github.com/deckhouse/deckhouse/pull/18335)
  - **[dhctl]** Fixed to allow skip dhctl preflight check-staticinstance-by-ssh-credentials. [#18077](https://github.com/deckhouse/deckhouse/pull/18077)
  - **[dhctl]** Made control-plane node SSH IP lookup non-strict in converge infrastructure hooks. [#18063](https://github.com/deckhouse/deckhouse/pull/18063)
  - **[dhctl]** Fixed dhctl server startup order and interrupt child process on backend connection failure. [#17966](https://github.com/deckhouse/deckhouse/pull/17966)
@@ -191,6 +214,9 @@
  - **[dhctl]** Fixed kube token handling. [#16735](https://github.com/deckhouse/deckhouse/pull/16735)
  - **[docs]** Added docs about how NGC execution works. [#17870](https://github.com/deckhouse/deckhouse/pull/17870)
  - **[docs]** Fixed registry-modules-watcher deleting all documentation when registry returns an error. [#16771](https://github.com/deckhouse/deckhouse/pull/16771)
+ - **[extended-monitoring]** fix typo in image-availability-exporter template [#18595](https://github.com/deckhouse/deckhouse/pull/18595)
+ - **[ingress-nginx]** Nelm fixes are backported. [#18632](https://github.com/deckhouse/deckhouse/pull/18632)
+    All Ingress-NGINX controller pods will be restarted.
  - **[ingress-nginx]** Latest fixes are backported to 1.75.1. [#18497](https://github.com/deckhouse/deckhouse/pull/18497)
     All Ingress-NGINX controller pods will be restated.
  - **[ingress-nginx]** The annotation validation is fixed in 1.12. [#18078](https://github.com/deckhouse/deckhouse/pull/18078)
@@ -236,8 +262,11 @@
  - **[node-manager]** Reduced CAPS log noise and duplicate messages. [#16805](https://github.com/deckhouse/deckhouse/pull/16805)
  - **[node-manager]** Updated go dependencies in the bashible-api-server. [#16103](https://github.com/deckhouse/deckhouse/pull/16103)
  - **[prometheus]** Fixed rebuild of trickster. [#17115](https://github.com/deckhouse/deckhouse/pull/17115)
+ - **[registry]** Updated auth image Go dependencies to fix Go CVEs. [#18233](https://github.com/deckhouse/deckhouse/pull/18233)
+    Registry pods will be restarted.
  - **[registry]** Fixed validation of input image list changes in the registry checker. [#17472](https://github.com/deckhouse/deckhouse/pull/17472)
  - **[registry]** Omitted the auth field in DockerConfig when credentials (username and password) are empty. [#17310](https://github.com/deckhouse/deckhouse/pull/17310)
+ - **[registry-packages-proxy]** fix possible deadlock in cache retention policy [#18505](https://github.com/deckhouse/deckhouse/pull/18505)
  - **[registrypackages]** Upgraded containerd to 1.7.30 and 2.1.6. [#17510](https://github.com/deckhouse/deckhouse/pull/17510)
     Containerd will restart.
  - **[terraform-manager]** Fixed terraform CVE. [#17862](https://github.com/deckhouse/deckhouse/pull/17862)
@@ -264,6 +293,10 @@
 ## Chore
 
 
+ - **[candi]** Bump patch versions of Kubernetes images. [#18560](https://github.com/deckhouse/deckhouse/pull/18560)
+    Kubernetes control-plane components will restart, kubelet will restart
+ - **[candi]** Bump patch versions of Kubernetes images. [#18175](https://github.com/deckhouse/deckhouse/pull/18175)
+    Kubernetes control-plane components will restart, kubelet will restart
  - **[candi]** Removed patches for kubernetes 1.30, which is not supported since Deckhouse v1.75.0. [#17998](https://github.com/deckhouse/deckhouse/pull/17998)
  - **[candi]** Bump patch versions of Kubernetes images. [#17930](https://github.com/deckhouse/deckhouse/pull/17930)
     Kubernetes control-plane components will restart, kubelet will restart
@@ -284,9 +317,11 @@
  - **[cloud-provider-dvp]** Added module directory localization. [#17544](https://github.com/deckhouse/deckhouse/pull/17544)
  - **[cloud-provider-dvp]** Added ownerReferences to VM-related objects (managed by CAPDVP and CSI). [#17268](https://github.com/deckhouse/deckhouse/pull/17268)
  - **[cloud-provider-dvp]** Updated module internals for Nelm compatibility. [#17150](https://github.com/deckhouse/deckhouse/pull/17150)
+ - **[cloud-provider-dynamix]** Fixed linter warnings in Dynamix and HuaweiCloud cloud providers [#18202](https://github.com/deckhouse/deckhouse/pull/18202)
  - **[cloud-provider-dynamix]** Added module directory localization. [#17544](https://github.com/deckhouse/deckhouse/pull/17544)
  - **[cloud-provider-gcp]** Added module directory localization. [#17544](https://github.com/deckhouse/deckhouse/pull/17544)
  - **[cloud-provider-gcp]** Updated module internals for Nelm compatibility. [#17150](https://github.com/deckhouse/deckhouse/pull/17150)
+ - **[cloud-provider-huaweicloud]** Fixed linter warnings in Dynamix and HuaweiCloud cloud providers [#18202](https://github.com/deckhouse/deckhouse/pull/18202)
  - **[cloud-provider-huaweicloud]** Added module directory localization. [#17544](https://github.com/deckhouse/deckhouse/pull/17544)
  - **[cloud-provider-openstack]** Fixed cloud providers linter warnings. [#17992](https://github.com/deckhouse/deckhouse/pull/17992)
  - **[cloud-provider-openstack]** Added module directory localization. [#17544](https://github.com/deckhouse/deckhouse/pull/17544)
@@ -352,6 +387,7 @@
  - **[openvpn]** Fixed code in easyrsa-migrator and openvpn images with linter recommendations. [#17763](https://github.com/deckhouse/deckhouse/pull/17763)
  - **[openvpn]** Restarted openvpn instances, all vpn connections disrupted. [#17532](https://github.com/deckhouse/deckhouse/pull/17532)
  - **[prometheus]** Added new rules for grafana dashboards. [#15865](https://github.com/deckhouse/deckhouse/pull/15865)
+ - **[registry]** Update dependencies to fix CVEs [#18619](https://github.com/deckhouse/deckhouse/pull/18619)
  - **[service-with-healthchecks]** Changed GO target version to 1.25. [#17981](https://github.com/deckhouse/deckhouse/pull/17981)
  - **[service-with-healthchecks]** Fixed code in artifact image with linter recommendations. [#17763](https://github.com/deckhouse/deckhouse/pull/17763)
  - **[service-with-healthchecks]** Added SVACE analyze for modules. [#17514](https://github.com/deckhouse/deckhouse/pull/17514)
