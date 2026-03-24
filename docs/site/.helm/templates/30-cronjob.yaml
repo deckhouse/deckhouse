@@ -68,9 +68,6 @@ spec:
             - name: AWS_SECRET_ACCESS_KEY
               value: {{ .Values.global.doc_s3_secret_access_key }}
           volumeMounts:
-            - name: s3-ca-bundle
-              mountPath: /.aws/s3-root.crt
-              subPath: ca.yaml
             - name: embedded-modules-history-data-tmp
               mountPath: /data
           command:
@@ -82,8 +79,13 @@ spec:
 
               SOURCE_PATH="s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/embedded_modules_list.json"
               TARGET_PATH="/data/embedded_modules_list.json"
+              CA_BUNDLE_PATH="/data/s3-root.crt"
 
-              if download_error="$(aws s3 cp "${SOURCE_PATH}" "${TARGET_PATH}" --ca-bundle /.aws/s3-root.crt --endpoint-url https://{{ .Values.global.doc_s3_ep }} --region {{ .Values.global.doc_s3_region }} 2>&1)"; then
+              cat <<'EOF' > "${CA_BUNDLE_PATH}"
+{{ pluck .Values.werf.env .Values.s3.ca_bundle | first | default .Values.s3.ca_bundle._default | nindent 14 }}
+              EOF
+
+              if download_error="$(aws s3 cp "${SOURCE_PATH}" "${TARGET_PATH}" --ca-bundle "${CA_BUNDLE_PATH}" --endpoint-url https://{{ .Values.global.doc_s3_ep }} --region {{ .Values.global.doc_s3_region }} 2>&1)"; then
                 if [ -s "${TARGET_PATH}" ]; then
                   echo "ok" > /data/download.status
                   echo "Downloaded '${SOURCE_PATH}' successfully."
@@ -102,16 +104,6 @@ spec:
               echo "error" > /data/download.status
               exit 0
       volumes:
-        - name: scripts
-          configMap:
-            name: embedded-modules-history-bootstrap-sync-script
-            defaultMode: 0755
-            items:
-              - key: sync.sh
-                path: sync.sh
-        - name: s3-ca-bundle
-          configMap:
-            name: embedded-modules-history-bootstrap-s3-ca-bundle
         - name: embedded-modules-history-data-tmp
           emptyDir: {}
       containers:
@@ -125,9 +117,6 @@ spec:
             - name: BOOTSTRAP_MODE
               value: "true"
           volumeMounts:
-            - name: scripts
-              mountPath: /scripts
-              readOnly: true
             - name: embedded-modules-history-data-tmp
               mountPath: /data
           command:
@@ -136,7 +125,11 @@ spec:
             - -c
             - |
               echo "=== Embedded modules history bootstrap started at $(date) ==="
-              /scripts/sync.sh
+              cat <<'EOF' > /tmp/sync.sh
+{{ include "embedded_modules_history_sync_script" . | nindent 14 }}
+              EOF
+              chmod 0755 /tmp/sync.sh
+              /tmp/sync.sh
               echo "=== Completed at $(date) ==="
 ---
 apiVersion: batch/v1
