@@ -47,7 +47,10 @@ deckhouse:
 `
 
 func TestRenderBashBooster(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider())
+	dc := make(map[string]string)
+	dc["downloadDir"] = "/tmp"
+	dc["cacheDir"] = "/tmp/cache"
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), dc)
 	if err != nil {
 		t.Errorf("ParseConfigFromData error: %v", err)
 	}

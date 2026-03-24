@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -93,7 +92,7 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 			versionMap = filepath.Join(candiDir, "version_map.yml")
 		}
 	}
-	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, opts...)
+	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, dirs, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +144,7 @@ func numerateManifestLines(manifest []byte) string {
 	return builder.String()
 }
 
-func ParseConfig(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
+func ParseConfig(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, dc map[string]string, opts ...ValidateOption) (*MetaConfig, error) {
 	content := ""
 	for _, path := range paths {
 		if strings.Contains(path, "*") {
@@ -160,7 +159,7 @@ func ParseConfig(ctx context.Context, paths []string, preparatorProvider MetaCon
 		content = content + "\n\n---\n\n" + string(fileContent)
 	}
 
-	return ParseConfigFromData(ctx, content, preparatorProvider, opts...)
+	return ParseConfigFromData(ctx, content, preparatorProvider, dc, opts...)
 }
 
 func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dirs map[string]string) (*MetaConfig, error) {
@@ -207,7 +206,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		}
 		downloadDir, ok := dirs[downloadDirKey]
 		if !ok {
-			return nil, fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
+			return nil, fmt.Errorf("parseConfigFromCluster: could not get download directory from variable dirs %-v\n", dirs)
 		}
 
 		deckhouseDir = filepath.Join(downloadDir, "deckhouse")
@@ -400,8 +399,8 @@ func detectMergedDocuments(doc string) error {
 	return nil
 }
 
-func ParseConfigFromData(ctx context.Context, configData string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
-	schemaStore := NewSchemaStore(make(map[string]string))
+func ParseConfigFromData(ctx context.Context, configData string, preparatorProvider MetaConfigPreparatorProvider, dc map[string]string, opts ...ValidateOption) (*MetaConfig, error) {
+	schemaStore := NewSchemaStore(dc)
 
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
@@ -610,9 +609,7 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dirs map[s
 	}
 	downloadDir, ok := dirs[downloadDirKey]
 	if !ok {
-		// return fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
-		dirs = app.GetDirConfig()
-		downloadDir = dirs[downloadDirKey]
+		return fmt.Errorf("could not get download directory from variable dirs %-v\n", dirs)
 	}
 	cacheDir, ok := dirs[cacheDirKey]
 	if !ok {
@@ -629,4 +626,18 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dirs map[s
 	}
 
 	return os.MkdirAll(filepath.Join(downloadDir, "plugins"), 0o755)
+}
+
+// prepare CandiDir if not exists
+func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, logger log.Logger, dirs map[string]string) error {
+	if err := checkDirs(); err != nil {
+		conf, _, err := GetRegistryData(ctx, kubeCl, logger)
+		if err != nil {
+			return err
+		}
+
+		return prepareCandiDir(ctx, conf, dirs)
+	}
+
+	return nil
 }

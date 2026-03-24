@@ -160,6 +160,7 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 				context.TODO(),
 				string(data),
 				preparatorProvider,
+				app.GetDirConfig(),
 				config.ValidateOptionStrictUnmarshal(true),
 			)
 			if err != nil {

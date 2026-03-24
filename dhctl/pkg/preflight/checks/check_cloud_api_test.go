@@ -77,7 +77,10 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
 `
-			metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfigYAML, config.DummyPreparatorProvider())
+			dc := make(map[string]string)
+			dc["downloadDir"] = "/tmp"
+			dc["cacheDir"] = "/tmp/cache"
+			metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfigYAML, config.DummyPreparatorProvider(), dc)
 			s.NoError(err)
 			metaConfig.ProviderName = tt.providerName
 			metaConfig.ProviderClusterConfig = map[string]json.RawMessage{

@@ -1592,10 +1592,13 @@ func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *co
 	stat, err := os.Stat(configPath)
 	require.NoError(t, err)
 	require.False(t, stat.IsDir())
+	dc := make(map[string]string)
+	dc["downloadDir"] = "/tmp"
+	dc["cacheDir"] = "/tmp/cache"
 
 	cfg, err := config.ParseConfig(context.TODO(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{
 		logger: params.logger,
-	}))
+	}), dc)
 
 	require.NoError(t, err)
 	require.Equal(t, params.layout, cfg.Layout, "layout should be", params.layout)

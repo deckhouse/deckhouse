@@ -217,8 +217,11 @@ func generateOldDockerCfg(host string, username, password *string) string {
 
 func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
+	dc := make(map[string]string)
+	dc[downloadDirKey] = "/tmp"
+	dc[cacheDirKey] = "/tmp/cache"
 
-	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider())
+	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), dc)
 	f := require.NoError
 	if hasErr {
 		f = require.Error

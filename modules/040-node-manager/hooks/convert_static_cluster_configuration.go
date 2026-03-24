@@ -91,6 +91,7 @@ func internalNetworkFromStaticConfiguration(ctx context.Context, data []byte) (i
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParamsWithoutLogger(),
 		),
+		make(map[string]string),
 	)
 	if err != nil {
 		return nil, err

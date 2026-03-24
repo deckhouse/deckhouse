@@ -25,8 +25,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func Edit(data []byte) ([]byte, error) {
-	schemaStore := config.NewSchemaStore(make(map[string]string))
+func Edit(data []byte, dc map[string]string) ([]byte, error) {
+	schemaStore := config.NewSchemaStore(dc)
 
 	editor := app.Editor
 	if editor == "" {

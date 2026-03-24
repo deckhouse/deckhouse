@@ -43,7 +43,7 @@ data:
 `
 )
 
-func EditMock(data []byte) ([]byte, error) {
+func EditMock(data []byte, _ map[string]string) ([]byte, error) {
 	newData := string(data) + "test: \"25\"\n"
 	return []byte(newData), nil
 }
@@ -63,6 +63,7 @@ func TestSecretEdit(t *testing.T) {
 		err := SecretEdit(
 			f, "test", secretTest.Namespace, secretTest.Name, "cluster-configuration.yaml",
 			map[string]string{"name": "test"},
+			make(map[string]string),
 		)
 		require.NoError(t, err)
 

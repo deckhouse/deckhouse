@@ -523,10 +523,14 @@ func testCreateConvergeManifestTest(t *testing.T, p testConvergeManifestsParams)
 
 func testCreateMetaConfigForConvergeManifests(t *testing.T, ctx context.Context, params commander.CommanderModeParams, clusterUUID string) *config.MetaConfig {
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
+	dc := make(map[string]string)
+	dc["downloadDir"] = "/tmp"
+	dc["cacheDir"] = "/tmp/cache"
 	metaConfig, err := config.ParseConfigFromData(
 		ctx,
 		configData,
 		config.DummyPreparatorProvider(),
+		dc,
 	)
 
 	require.NoError(t, err)

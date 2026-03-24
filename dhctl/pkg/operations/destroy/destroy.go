@@ -98,8 +98,7 @@ func (p *Params) getStateLoaderParams() *stateLoaderParams {
 
 		skipResources: p.SkipResources,
 		// from passed params always ask about load
-		forceFromCache:  false,
-		directoryConfig: p.DirectoryConfig,
+		forceFromCache: false,
 	}
 }
 
@@ -112,8 +111,6 @@ type stateLoaderParams struct {
 
 	skipResources  bool
 	forceFromCache bool
-
-	directoryConfig map[string]string
 }
 
 func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvider kube.ClientProviderWithCleanup) (controller.StateLoader, kube.ClientProviderWithCleanup, error) {

@@ -130,7 +130,10 @@ func (ts *testAbortStaticTest) getStateCache() dhctlstate.Cache {
 func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestParams) *testAbortStaticTest {
 	require.NotEmpty(t, params.host.Host)
 
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider())
+	dc := make(map[string]string)
+	dc["downloadDir"] = "/tmp"
+	dc["cacheDir"] = "/tmp/cache"
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), dc)
 	require.NoError(t, err, "parsing config from data")
 	metaConfig.UUID = uuid.Must(uuid.NewRandom()).String()
 
