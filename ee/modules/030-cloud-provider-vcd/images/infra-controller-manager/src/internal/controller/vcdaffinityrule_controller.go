@@ -269,7 +269,7 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *VCDAffinityRuleReconciler) buildVMAffinityRule(resource *v1alpha1.VCDAffinityRule, vapp *govcd.VApp) (*types.VmAffinityRule, error) {
 	nodeStatus := resource.Status.Nodes
 
-	vmReference := make([]*types.Reference, len(nodeStatus))
+	vmReference := make([]*types.Reference, 0, len(nodeStatus))
 
 	for _, node := range nodeStatus {
 		r.Logger.With(slog.String("node", node.Name), slog.String("ID", node.ID))
