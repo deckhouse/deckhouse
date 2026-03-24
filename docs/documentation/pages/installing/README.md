@@ -52,7 +52,7 @@ Before installation, ensure the following:
 
 - For supported clouds: the required resource quotas are available and access credentials to the cloud infrastructure are prepared (provider-specific).
 
-- If there are infrastructure-level restrictions on network communication, ensure that the requirements described in the [Platform component network interaction](../reference/network_interaction.html) section are met.
+- If there are infrastructure-level restrictions on network communication, ensure that the requirements described in the [Network interaction of the platform components](../reference/network_interaction.html) section are met.
   
 - There is access to the Deckhouse container registry (official `registry.deckhouse.io`, or a mirror).
 
