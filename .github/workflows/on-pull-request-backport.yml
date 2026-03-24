@@ -29,6 +29,11 @@ on:
     types:
       - created
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
   detect_pr_by_label:
     concurrency: source_pr
@@ -128,7 +133,7 @@ jobs:
           COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
           SOURCE_PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
         with:
-          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
           branch: ${{ env.RELEASE_BRANCH }}
           commit: ${{ env.COMMIT_SHA }}
@@ -139,14 +144,14 @@ jobs:
         if: always()
         uses: actions-ecosystem/action-remove-labels@v1
         with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           number: ${{ steps.prepare.outputs.pr_number }}
           labels: "status/backport"
       - name: Add success label
         if: steps.cherry_pick_pr.conclusion == 'success'
         uses: actions-ecosystem/action-add-labels@v1
         with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           number: ${{ steps.prepare.outputs.pr_number }}
           labels: "status/backport/success"
       - name: Add successful comment
@@ -157,7 +162,7 @@ jobs:
           cherry_pr_url: ${{ steps.cherry_pick_pr.outputs.cherry_pr_url }}
         uses: peter-evans/create-or-update-comment@v2
         with:
-          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ steps.prepare.outputs.pr_number }}
           reactions: hooray
           body: "Cherry pick PR [${{ env.cherry_pr_number }}](${{ env.cherry_pr_url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) successful!"
@@ -165,7 +170,7 @@ jobs:
         if: ${{ failure() && (steps.cherry_pick_pr.conclusion == 'failure' || steps.check_target_branch.conclusion == 'failure') }}
         uses: actions-ecosystem/action-add-labels@v1
         with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           number: ${{ steps.prepare.outputs.pr_number }}
           labels: "status/backport/failed"
       - name: Add error comment
@@ -175,7 +180,7 @@ jobs:
           error_message: ${{ steps.cherry_pick_pr.outputs.error_message }}
           common_error: "Backport failed. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details."
         with:
-          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ steps.prepare.outputs.pr_number }}
           reactions: "confused"
           body: ${{ env.error_message || env.common_error }}
