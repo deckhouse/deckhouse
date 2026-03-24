@@ -325,15 +325,5 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 80);
       });
     });
-
-    const parent = img.parentElement;
-    if (!parent) return;
-    
-    if (parent.classList.contains('zoom-image-wrap')) return;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'zoom-image-wrap';
-    parent.insertBefore(wrapper, img);
-    wrapper.appendChild(img);
   });
 });
