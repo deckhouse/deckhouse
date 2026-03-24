@@ -59,7 +59,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	filter, err := parseFilter(r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
+		fmt.Fprintf(w, "%d %s\n", http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp, err := getStatusSummary(dao.NewEpisodeDao5m(daoCtx), h.DowntimeMonitor, filter, true /*with total*/)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
+		fmt.Fprintf(w, "%d %s\n", http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -100,7 +100,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	w.Write(respJSON)
+	_, _ = w.Write(respJSON)
 }
 
 type statusFilter struct {

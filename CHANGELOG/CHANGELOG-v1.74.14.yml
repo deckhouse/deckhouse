@@ -1,0 +1,24 @@
+cloud-provider-zvirt:
+  fixes:
+    - summary: fix CSI token refresh patch apply
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18449
+docs:
+  features:
+    - summary: Add cloud-provider-dvp module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18513
+    - summary: Add local-path-provisioner module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18488
+    - summary: Update architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17528
+  fixes:
+    - summary: Added the display of the d8 utility version on the command reference page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18512
+istio:
+  fixes:
+    - summary: Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18569
+tools:
+  fixes:
+    - summary: Added HTTP client proxy support
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18582
+

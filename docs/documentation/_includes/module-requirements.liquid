@@ -30,17 +30,26 @@ Show module requirements.
     <ul>
       {%- for moduleReq in moduleRequirements.modules %}
         {%- assign moduleName = moduleReq[0] %}
-        {%- assign moduleVersion = moduleReq[1] %}
-        {%- if moduleVersion == ">= 0.0.0" %}
+        {%- assign valueRaw = moduleReq[1] | strip %}
+        {%- assign isOptional = false %}
+        {%- assign versionOnly = valueRaw %}
+        {%- if valueRaw contains "!optional" %}
+          {%- assign isOptional = true %}
+          {%- assign versionOnly = valueRaw | replace: " !optional", "" | replace: "!optional", "" | strip %}
+        {%- endif %}
+        {%- if versionOnly == ">= 0.0.0" %}
           {%- assign formattedValue = site.data.i18n.common.requirements_modules_any_version[page.lang] | append: "." %}
         {%- else %}
           {%- capture formattedValue -%}
-            {%- include format-version-requirement.liquid version=moduleVersion -%}
+            {%- include format-version-requirement.liquid version=versionOnly -%}
           {%- endcapture -%}
           {%- assign formattedValue = formattedValue | strip | append: "." %}
         {%- endif %}
         <li class="module-requirements__item">
           <code>{{ moduleName }}</code>: {{ formattedValue }}
+          {%- if isOptional %}
+          <span> {{ site.data.i18n.common.requirements_modules_optional_text_first[page.lang] }} <a href="/modules/{{ moduleName }}/">{{ moduleName }}</a> (<a href="/products/kubernetes-platform/documentation/v1/architecture/module-development/dependencies/#{{ site.data.i18n.common.requirements_modules_optional_text_for_link[page.lang] }}">{{ site.data.i18n.common.requirements_modules_more[page.lang] }}</a> {{ site.data.i18n.common.requirements_modules_optional_text_second[page.lang] }}).</span>
+          {%- endif %}
         </li>
       {%- endfor %}
     </ul>
