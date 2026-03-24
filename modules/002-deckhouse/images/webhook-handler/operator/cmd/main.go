@@ -111,9 +111,9 @@ func main() {
 	soapp.ValidatingWebhookConfigurationName = ReturnNotEmpty(
 		soapp.ValidatingConfigurationNameDefault,
 		os.Getenv("VALIDATING_WEBHOOK_CONFIGURATION_NAME"))
-	// TODO: use env var instead of hardcoded value
-	// os.Getenv("VALIDATING_WEBHOOK_SERVICE_NAME")
-	soapp.ValidatingWebhookServiceName = ReturnNotEmpty("test", "test")
+	soapp.ValidatingWebhookServiceName = ReturnNotEmpty(
+		soapp.ValidatingServiceNameDefault,
+		os.Getenv("VALIDATING_WEBHOOK_SERVICE_NAME"))
 	soapp.ValidatingWebhookServerCert = ReturnNotEmpty(
 		soapp.ValidatingServerCertPathDefault,
 		os.Getenv("VALIDATING_WEBHOOK_SERVER_CERT"))
@@ -123,7 +123,9 @@ func main() {
 	soapp.ValidatingWebhookCA = ReturnNotEmpty(
 		soapp.ValidatingCAPathDefault,
 		os.Getenv("VALIDATING_WEBHOOK_CA"))
-	soapp.Namespace = ReturnNotEmpty("default", os.Getenv("SHELL_OPERATOR_NAMESPACE"))
+	soapp.Namespace = ReturnNotEmpty(
+		"default",
+		os.Getenv("SHELL_OPERATOR_NAMESPACE"))
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
