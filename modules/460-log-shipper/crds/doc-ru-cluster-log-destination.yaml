@@ -506,13 +506,15 @@ spec:
                         transformations:
                         - action: AddLabels
                           addLabels:
-                            - when:
-                                - ".message =~ 'Adding user'"
-                              labels:
-                                ".event": "user_created"
-                            - labels:
-                                ".static": "value"
-                                ".from_path": '{{ .message.user_id }}'
+                            when:
+                              - ".message =~ 'Adding user'"
+                            labels:
+                              ".event": "user_created"
+                        - action: AddLabels
+                          addLabels:
+                            labels:
+                              ".static": "value"
+                              ".from_path": '{{ .message.user_id }}'
                         ```
 
                       - `ReplaceValue` — заменяет подстроки в **скалярных** строковых полях по regex (`source`); в `target` можно ссылаться на именованные группы как `{{ group_name }}`. Поле `labels` — список путей к полям, где выполнять замену.
@@ -574,15 +576,14 @@ spec:
                           keepOnly:
                             description: Имена ключей, которые нужно сохранить внутри каждого объекта по путям из `labels`.
                       addLabels:
-                        description: Правила добавления меток; при использовании вместе с `extraLabels` применяются после них.
-                        items:
-                          properties:
-                            when:
-                              description: |
-                                Необязательный список условий; все должны выполняться (логическое И). Каждый элемент — сравнение вида `путь ==|!=|=~|!=~ 'значение'`. Для `=~` и `!=~` используется regex (RE2/Rust).
-                            labels:
-                              description: |
-                                Имена меток (пути Vector, с ведущей `.`) и значения — литерал или шаблон `{{ .путь }}`. В пути допускаются сегменты в кавычках для ключей со спецсимволами, например `{{ .parsed_data.extra.\"kubernetes.io/node\" }}`.
+                        description: Правило добавления меток; при использовании вместе с `extraLabels` применяется после них. Несколько правил — несколько элементов `transformations` с `action: AddLabels`.
+                        properties:
+                          when:
+                            description: |
+                              Необязательный список условий; все должны выполняться (логическое И). Каждый элемент — сравнение вида `путь ==|!=|=~|!=~ 'значение'`. Для `=~` и `!=~` используется regex (RE2/Rust).
+                          labels:
+                            description: |
+                              Имена меток (пути Vector, с ведущей `.`) и значения — литерал или шаблон `{{ .путь }}`. В пути допускаются сегменты в кавычках для ключей со спецсимволами, например `{{ .parsed_data.extra.\"kubernetes.io/node\" }}`.
                       replaceValue:
                         description: Замена подстрок в строковых скалярных полях по регулярному выражению.
                         properties:

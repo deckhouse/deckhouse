@@ -1099,7 +1099,7 @@ spec:
                                 description: "Deprecated. If set, legacy behavior: wrap `.message` string into a one-key object under this field. When `targetField` is set, `regex` and `labels` are ignored."
                               regex:
                                 type: string
-                                pattern: '^[a-zA-Z0-9\s\\\[\](){}?*+.^$\-=!:,''"|]+$'
+                                pattern: '^[a-zA-Z0-9\s\\\[\](){}?*+.^$\-=!:,''"|<>]+$'
                                 description: "Used only when `targetField` is empty: Rust-compatible regex with named capture groups; requires `labels`."
                               labels:
                                 type: object
@@ -1133,26 +1133,24 @@ spec:
                               type: string
                               pattern: '^[a-zA-Z0-9_.\-/]+$'
                       addLabels:
-                        type: array
-                        description: "Rules applied after extraLabels when both are configured."
-                        items:
-                          type: object
-                          required:
-                            - labels
-                          properties:
-                            when:
-                              type: array
-                              items:
-                                type: string
-                                pattern: '^[a-zA-Z0-9_.\s''"=~!<>:\-/#,@()+]+$'
-                              description: "Optional list of comparisons combined with logical AND. Each item: `path ==|!=|=~|!=~ value` (regex for =~/!=~ is Rust regex)."
-                            labels:
-                              type: object
-                              description: "Label keys and literal values or `{{ .path }}` templates. Keys are Vector label paths (must start with `.`)."
-                              propertyNames:
-                                pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
-                              additionalProperties:
-                                type: string
+                        type: object
+                        description: "Rule applied after extraLabels when both are configured. Optional `when` filter."
+                        required:
+                          - labels
+                        properties:
+                          when:
+                            type: array
+                            items:
+                              type: string
+                              pattern: '^[a-zA-Z0-9_.\s''"=~!<>:\-/#,@()+]+$'
+                            description: "Optional list of comparisons combined with logical AND. Each item: `path ==|!=|=~|!=~ value` (regex for =~/!=~ is Rust regex)."
+                          labels:
+                            type: object
+                            description: "Label keys and literal values or `{{ .path }}` templates. Keys are Vector label paths (must start with `.`)."
+                            propertyNames:
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
+                            additionalProperties:
+                              type: string
                       replaceValue:
                         type: object
                         required:
@@ -1162,7 +1160,7 @@ spec:
                         properties:
                           source:
                             type: string
-                            pattern: '^[a-zA-Z0-9\s\\\[\](){}?*+.^$\-=!:,''"|]+$'
+                            pattern: '^[a-zA-Z0-9\s\\\[\](){}?*+.^$\-=!:,''"|<>]+$'
                             description: "Regex to search in each scalar field (Rust regex)."
                           target:
                             type: string
