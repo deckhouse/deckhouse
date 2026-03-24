@@ -77,10 +77,10 @@ func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook
 	}
 
 	var dataStruct Config
-	if data, ok := cm.Data["basicAuditPolicy"]; ok {
+	if data, ok := cm.Data["config"]; ok {
 		err = json.Unmarshal([]byte(data), &dataStruct)
 		if err != nil {
-			return nil, fmt.Errorf("invalid basicAuditPolicy format - yaml expected: %s", err)
+			return nil, fmt.Errorf("invalid PublishAPI config format - json expected: %s", err)
 		}
 	}
 
