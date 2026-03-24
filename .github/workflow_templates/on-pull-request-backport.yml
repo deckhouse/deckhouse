@@ -25,6 +25,10 @@ on:
     types:
       - created
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   detect_pr_by_label:
     concurrency: source_pr
@@ -124,7 +128,7 @@ jobs:
           COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
           SOURCE_PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
         with:
-          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
           branch: ${{ env.RELEASE_BRANCH }}
           commit: ${{ env.COMMIT_SHA }}
