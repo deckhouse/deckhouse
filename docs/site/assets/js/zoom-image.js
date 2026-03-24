@@ -307,9 +307,7 @@ document.addEventListener('DOMContentLoaded', function () {
     img.addEventListener('pointermove', pointerMove, true);
     img.addEventListener('pointerup', pointerUp, true);
     img.addEventListener('pointercancel', pointerUp, true);
-    if (window.innerWidth > 1024) {
-      img.addEventListener('click', clickZoom, true);
-    }
+    img.addEventListener('click', clickZoom, true);
     img.addEventListener('wheel', wheelZoom, { passive: false });
 
     applyTransform(container);
@@ -333,12 +331,13 @@ document.addEventListener('DOMContentLoaded', function () {
     img.addEventListener('click', function (e) {
       e.preventDefault();
       const url = img.currentSrc || img.src;
+      const isDesktop = window.innerWidth > 1024;
       const lb = GLightbox({
         elements: [{ href: url, type: 'image' }],
-        touchNavigation: false,
+        touchNavigation: !isDesktop,
         loop: false,
-        zoomable: false,
-        draggable: false,
+        zoomable: !isDesktop,
+        draggable: !isDesktop,
         closeButton: true,
         openEffect: 'zoom',
         closeEffect: 'fade'
@@ -353,6 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
           fitSvgToViewport(container, img, url);
           addAltOverlay(container, img);
           addToolbar(container);
+          if (!isDesktop) return;
           enablePanAndWheelZoom(container);
           applyTransform(container);
         }, 80);
