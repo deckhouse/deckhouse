@@ -33,15 +33,16 @@ import (
 )
 
 const (
-	istioReservedUID        int64 = 1337
-	istioProxyContainerName       = "istio-proxy"
-	reservedUIDMetricsGroup       = "d8_istio_reserved_uid"
+	istioReservedUID          int64 = 1337
+	istioProxyContainerName         = "istio-proxy"
+	istioCanonicalNameLabel         = "service.istio.io/canonical-name"
+	reservedUIDMetricsGroup         = "d8_istio_reserved_uid"
 )
 
 type podReservedUIDInfo struct {
 	Namespace  string
 	Pod        string
-	Containers []string
+	ImproperContainerNames []string
 }
 
 func applyReservedUIDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -50,17 +51,6 @@ func applyReservedUIDFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	err := sdk.FromUnstructured(obj, &pod)
 	if err != nil {
 		return nil, err
-	}
-
-	hasIstioProxy := false
-	for _, c := range pod.Spec.Containers {
-		if c.Name == istioProxyContainerName {
-			hasIstioProxy = true
-			break
-		}
-	}
-	if !hasIstioProxy {
-		return nil, nil
 	}
 
 	var podRunAsUser *int64
@@ -93,7 +83,7 @@ func applyReservedUIDFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	return podReservedUIDInfo{
 		Namespace:  pod.Namespace,
 		Pod:        pod.Name,
-		Containers: matchingContainers,
+		ImproperContainerNames: matchingContainers,
 	}, nil
 }
 
@@ -107,6 +97,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyReservedUIDFilter,
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      istioCanonicalNameLabel,
+						Operator: metav1.LabelSelectorOpExists,
+					},
 					{
 						Key:      "heritage",
 						Operator: metav1.LabelSelectorOpNotIn,
@@ -126,7 +120,7 @@ func handleReservedUIDMonitoring(_ context.Context, input *go_hook.HookInput) er
 			return fmt.Errorf("failed to iterate over pod snapshots: %w", err)
 		}
 
-		for _, containerName := range info.Containers {
+		for _, containerName := range info.ImproperContainerNames {
 			input.MetricsCollector.Set(
 				"d8_istio_pod_container_reserved_uid",
 				1,

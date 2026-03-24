@@ -70,13 +70,13 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 		})
 	})
 
-	Context("Pod without istio-proxy container, app running as UID 1337", func() {
+	Context("Pod without istio canonical-name label, app running as UID 1337", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(podUser1337NoProxy))
 			f.RunHook()
 		})
 
-		It("Should not emit any metrics since there is no istio-proxy to bypass", func() {
+		It("Should not emit any metrics since pod is not managed by Istio", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
@@ -140,6 +140,8 @@ kind: Pod
 metadata:
   name: app-pod
   namespace: default
+  labels:
+    service.istio.io/canonical-name: app
 spec:
   containers:
   - name: app
@@ -159,6 +161,8 @@ kind: Pod
 metadata:
   name: proxy-only
   namespace: default
+  labels:
+    service.istio.io/canonical-name: proxy-only
 spec:
   containers:
   - name: app
@@ -193,6 +197,8 @@ kind: Pod
 metadata:
   name: pod-level-uid
   namespace: default
+  labels:
+    service.istio.io/canonical-name: pod-level-uid
 spec:
   securityContext:
     runAsUser: 1337
@@ -210,6 +216,8 @@ kind: Pod
 metadata:
   name: overridden-pod
   namespace: default
+  labels:
+    service.istio.io/canonical-name: overridden-pod
 spec:
   securityContext:
     runAsUser: 1337
@@ -229,6 +237,8 @@ kind: Pod
 metadata:
   name: multi-container-pod
   namespace: default
+  labels:
+    service.istio.io/canonical-name: multi-container-pod
 spec:
   containers:
   - name: app
