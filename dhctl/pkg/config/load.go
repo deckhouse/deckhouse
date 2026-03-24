@@ -127,7 +127,7 @@ func newSchemaStore(dc map[string]string, schemasDir []string) *SchemaStore {
 			modulesDir = filepath.Join(deckhouseDir, "modules")
 		}
 	}
-	log.InfoF("deckhouse dir: %s, modulesDir: %s\n", deckhouseDir, modulesDir)
+	log.DebugF("deckhouse dir: %s, modulesDir: %s\n", deckhouseDir, modulesDir)
 
 	st.conversionsStore = conversion.NewConversionsStore()
 
