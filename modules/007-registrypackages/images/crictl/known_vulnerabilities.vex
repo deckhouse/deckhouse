@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -31,7 +31,50 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "В CVE-2025-5187 описана уязвимость в NodeRestriction admission controller, позволяющая через патч объекта с OwnerReference удалить объект Node. В crictl не используется код admission controller-а",
       "timestamp": "2025-10-09T10:21:53.069107Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.59.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: crictl является gRPC-клиентом, а не сервером. Уязвимость затрагивает исключительно серверную часть gRPC-Go, которая не используется в crictl. Кроме того, эксплуатация требует наличия path-based авторизационных интерцепторов с deny-правилами и fallback allow на стороне сервера, что не является частью архитектуры crictl.",
+      "timestamp": "2026-03-24T10:50:25.872245Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.63.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: crictl является gRPC-клиентом, а не сервером. Уязвимость затрагивает исключительно серверную часть gRPC-Go, которая не используется в crictl. Кроме того, эксплуатация требует наличия path-based авторизационных интерцепторов с deny-правилами и fallback allow на стороне сервера, что не является частью архитектуры crictl.",
+      "timestamp": "2026-03-24T10:50:29.424249Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.65.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: crictl является gRPC-клиентом, а не сервером. Уязвимость затрагивает исключительно серверную часть gRPC-Go, которая не используется в crictl. Кроме того, эксплуатация требует наличия path-based авторизационных интерцепторов с deny-правилами и fallback allow на стороне сервера, что не является частью архитектуры crictl.",
+      "timestamp": "2026-03-24T10:50:34.05154Z"
     }
   ],
-  "timestamp": "2025-10-09T10:25:02Z"
+  "timestamp": "2025-10-09T10:25:02Z",
+  "last_updated": "2026-03-24T10:50:34Z"
 }
