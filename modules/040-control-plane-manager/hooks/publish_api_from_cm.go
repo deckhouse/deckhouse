@@ -113,8 +113,8 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 
 	// Clean nil values
 	strippedConfig := stripNilValues(configMap)
-
-	// strippedConfig["enabled"] = publishAPIConfig.Enabled
+	fmt.Println(strippedConfig)
+	// strippedConfig["enabled"] =//  publishAPIConfig.Enabled
 
 	// if publishAPIConfig.IngressClass != "" {
 	// 	ingressConfig["ingressClass"] = publishAPIConfig.IngressClass
