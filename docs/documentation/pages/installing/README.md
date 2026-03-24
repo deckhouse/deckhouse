@@ -51,6 +51,8 @@ Before installation, ensure the following:
 - For bare-metal clusters (including hybrid clusters) and installations in unsupported clouds: the server runs an OS from the [supported OS list](../reference/supported_versions.html) (or a compatible version) and is accessible via SSH with a key.
 
 - For supported clouds: the required resource quotas are available and access credentials to the cloud infrastructure are prepared (provider-specific).
+
+- If there are infrastructure-level restrictions on network communication, ensure that the requirements described in the [Network interaction of the platform components](../reference/network_interaction.html) section are met.
   
 - There is access to the Deckhouse container registry (official `registry.deckhouse.io`, or a mirror).
 
