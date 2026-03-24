@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-8672d6eafe61e4f890bf57dfe22d2a4475b99af4354ceed6f3f9ae9a9ff2f1ed",
-  "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 4,
+  "author": "Deckhouse Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -59,8 +59,50 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-03-04T12:05:27.335793Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.71.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: компонент controller (controlPlaneManager) не поднимает gRPC-сервер с path-based авторизационными интерцепторами. grpc-go присутствует как транзитивная зависимость, однако серверный путь исполнения с deny-правилами и fallback allow в данном компоненте не задействован.",
+      "timestamp": "2026-03-24T14:30:35.270953Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.59.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: kubeadm является CLI-инструментом для инициализации кластера и не поднимает долгоживущий gRPC-сервер с path-based авторизационными интерцепторами. grpc-go присутствует как транзитивная зависимость, однако серверный путь исполнения с deny-правилами и fallback allow в данном компоненте не задействован.",
+      "timestamp": "2026-03-24T14:30:39.477885Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.65.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: kubeadm является CLI-инструментом для инициализации кластера и не поднимает долгоживущий gRPC-сервер с path-based авторизационными интерцепторами. grpc-go присутствует как транзитивная зависимость, однако серверный путь исполнения с deny-правилами и fallback allow в данном компоненте не задействован.",
+      "timestamp": "2026-03-24T14:30:42.406256Z"
     }
   ],
   "timestamp": "2025-10-28T18:45:30Z",
-  "last_updated": "2026-03-04T12:05:27Z"
+  "last_updated": "2026-03-24T14:30:42Z"
 }
