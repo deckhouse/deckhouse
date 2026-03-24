@@ -59,7 +59,6 @@ var (
 
 func main() {
 	log.Info("Start")
-	defer log.Info("Stop")
 	log.Info("This is a workaround for issue https://github.com/cilium/cilium/issues/31012.")
 	log.Info("When both the cni-cilium and node-local-dns modules are enabled, and the node-local-dns pod has been restarted, stale DNS connections may occur.")
 	log.Info("This is due to the UDP socket remaining active in the application pods with the destination IP address of the old node-local-dns pod, which has already been deleted.")
