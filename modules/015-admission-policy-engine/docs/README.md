@@ -162,7 +162,9 @@ spec:
 
 To apply the policy, it will be sufficient to set the label `enforce: "mypolicy"` on the desired namespace.
 
-> **Warning**. The `allowPrivilegeEscalation` and `allowPrivileged` parameters default to `false` — even if not explicitly set. This means containers cannot run in privileged mode or escalate privileges by default. To allow this behavior, set the corresponding parameter to `true`.
+{% alert level="warning" %}
+The `allowPrivilegeEscalation` and `allowPrivileged` parameters default to `false` — even if not explicitly set. This means containers cannot run in privileged mode or escalate privileges by default. To allow this behavior, set the corresponding parameter to `true`.
+{% endalert %}
 
 ## Modifying Kubernetes resources
 

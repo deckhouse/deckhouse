@@ -117,6 +117,7 @@
     To migrate, you must perform a `converge`, which causes the master server to be recreated. If you are using only one master server with the manual address assignment via the `mainNetworkIPAddresses` parameter, add two more IP addresses for the migration process.
  - **[cloud-provider-vsphere]** fix cve [#17106](https://github.com/deckhouse/deckhouse/pull/17106)
  - **[cloud-provider-yandex]** fix cve [#17469](https://github.com/deckhouse/deckhouse/pull/17469)
+ - **[cloud-provider-zvirt]** fix CSI token refresh patch apply [#18449](https://github.com/deckhouse/deckhouse/pull/18449)
  - **[cloud-provider-zvirt]** fix cve [#17093](https://github.com/deckhouse/deckhouse/pull/17093)
  - **[cni-cilium]** Fix issue in generating CiliumEgressGatewayPolicy CR. [#17949](https://github.com/deckhouse/deckhouse/pull/17949)
     All current connections powered by EgressGateways will be terminated.
@@ -165,6 +166,7 @@
  - **[ingress-nginx]** Latest CVEs are fixed. [#17222](https://github.com/deckhouse/deckhouse/pull/17222)
     All pods running kube-rbac-proxy will be restarted.
  - **[ingress-nginx]** Improved stability of geoproxy service startup. [#17140](https://github.com/deckhouse/deckhouse/pull/17140)
+ - **[istio]** Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway [#18569](https://github.com/deckhouse/deckhouse/pull/18569)
  - **[istio]** Fixing the list of requests from istiod to gateway API [#18056](https://github.com/deckhouse/deckhouse/pull/18056)
  - **[istio]** Correction of an useless error in the Istio CNI workflow [#17787](https://github.com/deckhouse/deckhouse/pull/17787)
  - **[istio]** Correction  in Kiali of an insignificant error [#16880](https://github.com/deckhouse/deckhouse/pull/16880)
@@ -210,6 +212,8 @@
  - **[ingress-nginx]** removed deprecated alert GeoIPDownloadErrorDetected. [#17711](https://github.com/deckhouse/deckhouse/pull/17711)
     All instances will be restarted.
  - **[ingress-nginx]** Improved documentation for the ModSecurity (WAF). [#16268](https://github.com/deckhouse/deckhouse/pull/16268)
+ - **[istio]** Warning about the inability to use user 1337 for user applications [#18592](https://github.com/deckhouse/deckhouse/pull/18592)
+ - **[istio]** Changing the multi-network Istio documentation [#18591](https://github.com/deckhouse/deckhouse/pull/18591)
  - **[loki]** Added alerts and graphs for discarded log samples. [#16137](https://github.com/deckhouse/deckhouse/pull/16137)
  - **[node-local-dns]** Added logging of slow upstream queries and a new coredns_kubeforward_slow_requests_total metric for tracking them. [#16808](https://github.com/deckhouse/deckhouse/pull/16808)
  - **[node-local-dns]** Removed `stale-dns-connections-cleaner`, since the related issue was fixed in `cni-cilium` upstream. [#16447](https://github.com/deckhouse/deckhouse/pull/16447)
