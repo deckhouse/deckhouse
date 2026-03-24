@@ -53,7 +53,7 @@ The module consists of the following components:
 
    * **vcd-cloud-controller-manager**.
 
-3. **Cloud-data-discoverer**: It is responsible for collecting data from the cloud provider's API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used by other components of the `cloud-provider-vcd` module. For example, for DVP, these are parameters such as a list of availability zones, StorageClass resources, etc.
+3. **Cloud-data-discoverer**: It is responsible for collecting data from the cloud provider's API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used by other components of the `cloud-provider-vcd` module.
 
    It consists of the following containers:
 
@@ -68,7 +68,7 @@ The module consists of the following components:
 
 5. **CSI driver (VCD)**: It is an implementation of the CSI driver for VMware Cloud Director. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../infrastructure/csi-driver.html). Cloud-provider-vcd module uses [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
 
-   CSI driver (DVP) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter )) sidecar container.
+   CSI driver (VCD) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter )) sidecar container.
 
 ## Module interactions
 

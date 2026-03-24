@@ -48,13 +48,13 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
    * при создании ресурса Service типа LoadBalancer в Kubernetes создаёт балансировщик в облаке, который направляет трафик извне к узлам кластера.
 
-   Подробнее о cloud-controller-manager можно почитать в [документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/)
+   Подробнее о cloud-controller-manager можно почитать в [документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/).
 
    Состоит из одного контейнера:
 
    * **vcd-cloud-controller-manager**.
 
-3. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-vcd`. Например, для VMware Cloud Director — это такие параметры, как StorageProfiles, InternalNetworks, версия VCD и т.д.
+3. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-vcd`.
 
    Состоит из следующих контейнеров:
 
