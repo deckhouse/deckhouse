@@ -17,6 +17,7 @@ shell:
         echo '[] Creating modules list...'
         export MODULES_DIR=/src/modules-metadata
         _tools/modules_list.sh > _data/modules/internal.json
+        jq 'keys' _data/modules/internal.json > _data/modules/embedded_modules_list.json
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
