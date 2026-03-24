@@ -1,0 +1,181 @@
+diff --git a/pkg/kernelversion/kernel_linux.go b/pkg/kernelversion/kernel_linux.go
+index a8cec6481..103ea51a9 100644
+--- a/pkg/kernelversion/kernel_linux.go
++++ b/pkg/kernelversion/kernel_linux.go
+@@ -23,7 +23,11 @@ package kernelversion
+ 
+ import (
+ 	"bytes"
++	"compress/gzip"
+ 	"fmt"
++	"io"
++	"os"
++	"strings"
+ 	"sync"
+ 
+ 	"golang.org/x/sys/unix"
+@@ -92,3 +96,87 @@ func GreaterEqualThan(minVersion KernelVersion) (bool, error) {
+ 	}
+ 	return false, nil
+ }
++
++var (
++	erofsFileBacked     bool
++	erofsFileBackedOnce sync.Once
++)
++
++// DetectErofsBackedByFile reports whether the running kernel supports mounting
++// EROFS directly from a regular file (CONFIG_EROFS_FS_BACKED_BY_FILE).
++//
++// When false, callers should supply the "loop" mount option for .erofs blobs
++// to avoid emitting a misleading "Can't open blockdev" line in dmesg.
++func DetectErofsBackedByFile() bool {
++	erofsFileBackedOnce.Do(func() {
++		erofsFileBacked = probeErofsFileBacked()
++	})
++	return erofsFileBacked
++}
++
++func probeErofsFileBacked() bool {
++	// CONFIG_EROFS_FS_BACKED_BY_FILE was introduced in Linux 6.12.
++	// Kernels older than that never have it regardless of config.
++	ok, err := GreaterEqualThan(KernelVersion{Kernel: 6, Major: 12})
++	if err != nil || !ok {
++		return false
++	}
++	// Kernel is >= 6.12; try to confirm the option is compiled in.
++	enabled, err := readKernelConfigOption("CONFIG_EROFS_FS_BACKED_BY_FILE")
++	if err != nil {
++		return true
++	}
++	return enabled
++}
++
++// readKernelConfigOption searches the running kernel's config files for the
++// given option and reports whether it is set to "y" or "m". Returns an error when no config file is readable.
++func readKernelConfigOption(option string) (bool, error) {
++	var release string
++	var uts unix.Utsname
++	if err := unix.Uname(&uts); err == nil {
++		release = string(uts.Release[:bytes.IndexByte(uts.Release[:], 0)])
++	}
++
++	paths := []string{
++		"/proc/config.gz",
++		fmt.Sprintf("/boot/config-%s", release),
++		"/boot/config",
++	}
++
++	for _, path := range paths {
++		data, err := readConfigFile(path)
++		if err != nil {
++			continue
++		}
++		needle := option + "="
++		for _, line := range strings.Split(string(data), "\n") {
++			if strings.HasPrefix(line, needle) {
++				val := strings.TrimPrefix(line, needle)
++				return val == "y" || val == "m", nil
++			}
++		}
++		// Config was readable but the option is absent - explicitly disabled.
++		return false, nil
++	}
++	return false, fmt.Errorf("no readable kernel config found in %v", paths)
++}
++
++// readConfigFile reads a plain-text or gzip-compressed kernel config file.
++func readConfigFile(path string) ([]byte, error) {
++	f, err := os.Open(path)
++	if err != nil {
++		return nil, err
++	}
++	defer f.Close()
++
++	if strings.HasSuffix(path, ".gz") {
++		gz, err := gzip.NewReader(f)
++		if err != nil {
++			return nil, err
++		}
++		defer gz.Close()
++		return io.ReadAll(gz)
++	}
++	return io.ReadAll(f)
++}
+diff --git a/plugins/snapshots/erofs/erofs_linux.go b/plugins/snapshots/erofs/erofs_linux.go
+index 621731af1..9c1ff9b3b 100644
+--- a/plugins/snapshots/erofs/erofs_linux.go
++++ b/plugins/snapshots/erofs/erofs_linux.go
+@@ -36,6 +36,7 @@ import (
+ 	"github.com/containerd/containerd/v2/core/snapshots/storage"
+ 	"github.com/containerd/containerd/v2/internal/erofsutils"
+ 	"github.com/containerd/containerd/v2/internal/fsverity"
++	"github.com/containerd/containerd/v2/pkg/kernelversion"
+ )
+ 
+ // SnapshotterConfig is used to configure the erofs snapshotter instance
+@@ -184,10 +185,16 @@ func (s *snapshotter) lowerPath(id string) (mount.Mount, string, error) {
+ 		return mount.Mount{}, "", fmt.Errorf("failed to find valid erofs layer blob: %w", err)
+ 	}
+ 
++	// On kernels without CONFIG_EROFS_FS_BACKED_BY_FILE (< 6.12) we set up a loop device
++	// to avoid emitting a misleading "Can't open blockdev" message in dmesg.
++	opts := []string{"ro"}
++	if !kernelversion.DetectErofsBackedByFile() {
++		opts = append(opts, "loop")
++	}
+ 	return mount.Mount{
+ 		Source:  layerBlob,
+ 		Type:    "erofs",
+-		Options: []string{"ro"},
++		Options: opts,
+ 	}, s.upperPath(id), nil
+ }
+ 
+@@ -228,8 +235,7 @@ func (s *snapshotter) mounts(snap storage.Snapshot, info snapshots.Info) ([]moun
+ 					return nil, err
+ 				}
+ 			}
+-			// We have to force a loop device here since mount[] is static.
+-			m.Options = append(m.Options, "loop")
++			// lowerPath already injects "loop" when the kernel requires it.
+ 			return []mount.Mount{m}, nil
+ 		}
+ 		// if we only have one layer/no parents then just return a bind mount as overlay
+@@ -260,8 +266,7 @@ func (s *snapshotter) mounts(snap storage.Snapshot, info snapshots.Info) ([]moun
+ 		if err != nil {
+ 			return nil, err
+ 		}
+-		// We have to force a loop device here too since mount[] is static.
+-		m.Options = append(m.Options, "loop")
++		// lowerPath already injects "loop" when the kernel requires it.
+ 		return []mount.Mount{m}, nil
+ 	}
+ 
+@@ -275,14 +280,18 @@ func (s *snapshotter) mounts(snap storage.Snapshot, info snapshots.Info) ([]moun
+ 		// If the lowerdir is actually an EROFS committed layer but
+ 		// doesn't have an EROFS mount.  Let's recover now.
+ 		if mntpoint != m.Source && !isErofs(mntpoint) {
+-			err := m.Mount(mntpoint)
+-			// Use loop if the current kernel (6.12+) doesn't support file-backed mount
+-			if errors.Is(err, unix.ENOTBLK) {
+-				m.Options = append(m.Options, "loop")
+-				err = m.Mount(mntpoint)
+-			}
+-			if err != nil {
+-				return nil, err
++			// lowerPath already injects "loop" when the kernel requires it,
++			// so m.Mount should succeed on the first try.
++			// The ENOTBLK retry below is a defensive fallback for cases where DetectErofsBackedByFile returned a false positive.
++			if err := m.Mount(mntpoint); err != nil {
++				if errors.Is(err, unix.ENOTBLK) {
++					m.Options = append(m.Options, "loop")
++					if err = m.Mount(mntpoint); err != nil {
++						return nil, err
++					}
++				} else {
++					return nil, err
++				}
+ 			}
+ 		}
+ 		lowerdirs = append(lowerdirs, mntpoint)
