@@ -609,9 +609,9 @@ List of checks performed by the installer before starting Deckhouse Kubernetes P
         - Support for `CgroupsV2`.
         - Systemd version `244`.
         - Support for the `erofs` kernel module.
-   - Python is installed on the master node server (VM).
+   - Python (`python3`, `python2`, or `python`) must be available on the server (VM) intended for the master node. The standard Python modules used by the installer must also be available: `urllib.request` or `urllib2`, `urllib.error` or `urllib2`, `configparser` or `ConfigParser`, `http.server` or `SimpleHTTPServer`, `http.server` or `SocketServer`.
    - The container registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
-   - Required installation ports are free on the master node server (VM) and on the host running the installer.
+   - Required installation ports are free on the master node server (VM) and on the host running the installer. The network communication requirements and the list of ports in use are described in [the Configuring network policies for Deckhouse](../reference/network_interaction.html) section.
    - DNS must resolve `localhost` to IP address `127.0.0.1`.
    - The user has `sudo` privileges on the server (VM).
    - Required ports for the installation must be open:
