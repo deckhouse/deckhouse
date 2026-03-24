@@ -542,6 +542,7 @@ html {
             width: 100%;
             height: 2px;
             display: block;
+            pointer-events: none;
             border-radius: 8px;
             position: absolute;
             background: #141f2e;
@@ -768,11 +769,19 @@ html {
                 color: #222A5D;
 
                 a {
+                    font-size: 13px;
+
                     &::before {
                         top: 9px;
                         width: 7px;
                         height: 5px;
                         right: 0;
+                    }
+                }
+
+                .sidebar__submenu-item_parent > a {
+                    &::before {
+                        top: 16px;
                     }
                 }
 

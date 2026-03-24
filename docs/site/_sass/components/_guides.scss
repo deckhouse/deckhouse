@@ -41,10 +41,14 @@ div.alert__wrap {
     width: 24px;
     height: 24px;
     margin-right: 24px;
-    padding: 16px 0;
+    padding: 14px 0;
 
     @include breakpoints.max-w(xl) {
       margin-right: 16px;
+    }
+
+    @include breakpoints.max-w(s) {
+      padding: 10px 0;
     }
 
     @include breakpoints.max-w(xs) {

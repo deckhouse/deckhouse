@@ -72,6 +72,75 @@ document.addEventListener('DOMContentLoaded', function () {
         headerNavList.style.webkitOverflowScrolling = 'touch';
     }
 
+    function getLastPathname() {
+        const pathname = window.location.pathname;
+        const lastSlash = pathname.lastIndexOf('/');
+
+        if (lastSlash === pathname.length - 1) {
+            const penultimateSlash = pathname.substring(0, lastSlash).lastIndexOf('/');
+            return pathname.substring(penultimateSlash + 1, lastSlash) + '/';
+        }
+
+        const partsPathname = pathname.split('/');
+        return partsPathname.slice(-3).join('/');
+    }
+
+    function getActiveSidebarLink() {
+        if (!cloneSidebar) return null;
+
+        let lastPathname = getLastPathname();
+        if (lastPathname.lastIndexOf('v1') !== 1) {
+            lastPathname = lastPathname.replace(/v1/g, '.');
+        }
+
+        const activeLinkByPath = cloneSidebar.querySelector(`li.sidebar__submenu-item.active a[href$="${lastPathname}"]`);
+        if (activeLinkByPath) return activeLinkByPath;
+
+        const activeLink = Array.from(
+            cloneSidebar.querySelectorAll('.sidebar__submenu-item.active a')
+        ).pop();
+        if (activeLink) return activeLink;
+
+        return cloneSidebar.querySelector(`a[href$="${lastPathname}"]`);
+    }
+
+    function getTopActiveLink(element, sidebar) {
+        let top = 0;
+
+        while (element && element !== sidebar) {
+            top += element.offsetTop;
+            element = element.offsetParent;
+        }
+
+        return top;
+    }
+
+    function scrollContainerToActiveLink(container, activeLink) {
+        if (!container || !activeLink) return;
+
+        const activeLinkTop = getTopActiveLink(activeLink, container);
+        const activeLinkTopForScroll = activeLinkTop;
+
+        if (
+            activeLinkTopForScroll < container.scrollTop ||
+            (activeLinkTopForScroll + activeLink.offsetHeight) > (container.scrollTop + container.clientHeight)
+        ) {
+            container.scrollTo({
+                top: activeLinkTop,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    function scrollMobileSidebarToActive() {
+        const activeLink = getActiveSidebarLink();
+        if (!activeLink) return;
+
+        if (headerNavList && headerNavList.classList.contains('header__nav--doc-modal')) {
+            scrollContainerToActiveLink(headerNavList, activeLink);
+        }
+    }
+
     function openBurgerSidebar() {
         if (!headerSidebar) return;
         hamburgerCollapse.classList.add('show');
@@ -203,6 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     headerNavList.classList.add('header__nav--doc-modal');
                     body.classList.add('sidebar-opened');
                     ensureOverlay();
+                    window.requestAnimationFrame(scrollMobileSidebarToActive);
                 } else {
                     activeNavMobile.classList.remove('header__navigation-item--open');
                     headerNavList.classList.remove('header__nav--doc-modal');

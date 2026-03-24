@@ -307,7 +307,9 @@ document.addEventListener('DOMContentLoaded', function () {
     img.addEventListener('pointermove', pointerMove, true);
     img.addEventListener('pointerup', pointerUp, true);
     img.addEventListener('pointercancel', pointerUp, true);
-    img.addEventListener('click', clickZoom, true);
+    if (window.innerWidth > 1024) {
+      img.addEventListener('click', clickZoom, true);
+    }
     img.addEventListener('wheel', wheelZoom, { passive: false });
 
     applyTransform(container);
