@@ -1,16 +1,13 @@
-{{- $crds_external := .Files.Glob "crds/**.yaml" -}}
+{{- $providerID := "vcd" -}}
 {{- $capi := .Files.Glob "capi/**" -}}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-node-manager-cloud-provider-vcd-capi
+  name: {{ printf "d8-cloud-provider-%s-capi" $providerID }}
   namespace: kube-system
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-data:
-{{- range $path, $_ :=  $crds_external }}
-  {{ $path }}: {{ $crds_external.Get $path | b64enc }}
-{{- end }}
-{{- range $path, $_ :=  $capi }}
-  {{ $path }}: {{ $capi.Get $path | b64enc }}
-{{- end }}
+  {{- include "helm_lib_module_labels" (list . (dict
+    "cloud-provider.deckhouse.io/ephemeral-nodes-templates" "capi"
+    "cloud-provider.deckhouse.io/name" $providerID
+    )) | nindent 2 }}
+data: {{ $capi.AsSecrets | nindent 2 }}
