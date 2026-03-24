@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"flag"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vishvananda/netlink"
 )
