@@ -99,15 +99,22 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal cm_publishapi_config_migration snapshot: %w", err)
 	}
 	publishAPIConfig := publishAPIConfigSnaps[0]
+	path := "controlPlaneManager.apiserver.publishAPI."
 
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
-	input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", map[string]interface{}{
-		"enabled":                     publishAPIConfig.Enabled,
-		"ingressClass":                publishAPIConfig.IngressClass,
-		"whitelistSourceRanges":       publishAPIConfig.WhitelistSourceRanges,
-		"https":                       publishAPIConfig.HTTPS,
-		"addKubeconfigGeneratorEntry": publishAPIConfig.AddKubeconfigGeneratorEntry,
-	})
 
+	setValueIfNotNull(input, path, "enabled", publishAPIConfig.Enabled)
+	setValueIfNotNull(input, path, "ingressClass", publishAPIConfig.IngressClass)
+	setValueIfNotNull(input, path, "whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
+	setValueIfNotNull(input, path, "https", publishAPIConfig.HTTPS)
+	setValueIfNotNull(input, path, "addKubeconfigGeneratorEntry", publishAPIConfig.AddKubeconfigGeneratorEntry)
+
+	return nil
+}
+
+func setValueIfNotNull(input *go_hook.HookInput, path string, key string, value any) error {
+	if value != nil {
+		input.Values.Set(path+key, value)
+	}
 	return nil
 }
