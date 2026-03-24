@@ -5,7 +5,7 @@ go 1.25
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.1.0
 	github.com/vishvananda/netlink v1.3.1
-	golang.org/x/sys v0.37.0
+	golang.org/x/sys v0.42.0
 	k8s.io/api v0.34.1
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v0.34.1
