@@ -153,6 +153,8 @@ Deckhouse Code supports the following attributes to determine group membership (
 - `memberuid`
 - `submember`
 
+> **Note:** LDAP Sync does not support transitivity for nested groups. See [FAQ: Nested groups and transitivity](#nested-groups-and-transitivity) for details and workarounds.
+
 ### User synchronization
 
 During synchronization, usernames, email addresses, and account lock status are updated.
@@ -202,3 +204,33 @@ To view the full synchronization logs:
    `kubectl -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`
 
 > Old logs are removed by rotation over time, so they may become unavailable. If needed, rerun the synchronization and collect the latest logs.
+
+## LDAP Sync FAQ
+
+### How does the sync algorithm work? {#sync-algorithm}
+
+LDAP synchronization uses a flat, non-recursive algorithm:
+
+1. **Group discovery**: A single LDAP query retrieves all groups matching the configured `base`, `filter`, and `scope`.
+2. **Member extraction**: For each group, member attributes are read (`member`, `uniquemember`, `memberof`, `memberuid`, `submember`).
+3. **User matching**: Each DN from the attributes is matched against `Identity.extern_uid` in the database.
+4. **Unknown DNs are skipped**: If a DN does not correspond to a known user (e.g., it is a nested group DN), it is silently ignored.
+
+
+
+### Are there issues with cycles in group hierarchy? {#cycles}
+
+No. Since LDAP Sync reads groups in a flat manner using a filter query, it does not attempt to replicate the LDAP tree structure. There is no recursive traversal of group hierarchies, so cyclic group memberships do not cause any problems.
+
+### Nested groups and transitivity {#nested-groups-and-transitivity}
+
+**LDAP Sync does not support transitivity.**
+
+If `Group1` contains `Group2` as a member, the members of `Group2` will **not** be automatically added to `Group1`. The sync process does not recursively expand nested group memberships.
+
+**Why?** The Ruby synchronization code reads member attributes directly without traversing nested groups. It expects all relevant user DNs to be present in the group's member attributes.
+
+**Workaround:** Use external scripts or LDAP server-side mechanisms to flatten nested memberships. For example:
+- Populate the `submember` attribute with all transitive members (including members of nested groups).
+
+This approach keeps the synchronization logic simple and avoids recursion-related issues while giving you full control over how nested groups are resolved on the LDAP side.
