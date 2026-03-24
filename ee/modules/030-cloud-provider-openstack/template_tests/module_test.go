@@ -31,6 +31,12 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
+const providerID = "openstack"
+const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
+const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
+const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
+const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
+
 const globalValues = `
   clusterIsBootstrapped: true
   enabledModules: ["vertical-pod-autoscaler"]
@@ -219,9 +225,13 @@ func openstackCheck(f *Config, k8sVer string) {
 		// user story #1
 		providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 		Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+		Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+		Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
 
-		providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-openstack")
+		providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-node-manager-cloud-provider-%s", providerID))
 		Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+		Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+		Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
 
 		expectedProviderRegistrationJSON := `{
           "connection": {
@@ -255,18 +265,25 @@ func openstackCheck(f *Config, k8sVer string) {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(string(providerSpecificRegistrationSecretData)).To(MatchJSON(expectedProviderRegistrationJSON))
 
-		providerSpecificBashibleSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-openstack-bashible")
-		Expect(providerSpecificBashibleSecret.Exists()).To(BeTrue())
-		providerSpecificBashibleSecretData := providerSpecificBashibleSecret.Field("data").Map()
-		Expect(len(providerSpecificBashibleSecretData) >= 1).To(BeTrue())
-		Expect(len(providerSpecificBashibleSecretData["bootstrap-networks.sh.tpl"].String()) > 0 ).To(BeTrue())
-
-		providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider-openstack-mcm")
+		providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-mcm", providerID))
 		Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
+		Expect(providerSpecificMCMSecret.Field(fmt.Sprintf("metadata.labels.%s", ephemeralNodesTemplatesLabelKey)).String()).To(Equal("mcm"))
+		Expect(providerSpecificMCMSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
 		providerSpecificMCMSecretData := providerSpecificMCMSecret.Field("data").Map()
 		Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
-		Expect(len(providerSpecificMCMSecretData) >= 1 ).To(BeTrue())
-		Expect(len(providerSpecificMCMSecretData["cloud-instance-manager/config-for-machine-controller-manager.yaml"].String()) > 0 ).To(BeTrue())
+		Expect(len(providerSpecificMCMSecretData) >= 1).To(BeTrue())
+		Expect(len(providerSpecificMCMSecretData["config-for-machine-controller-manager.yaml"].String()) > 0).To(BeTrue())
+
+		providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
+		Expect(providerSpecificBashibleStepsSecret.Exists()).ToNot(BeTrue())
+
+		providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
+		Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeTrue())
+		Expect(providerSpecificBashibleBootstrapSecret.Field(fmt.Sprintf("metadata.labels.%s", bashibleLabelKey)).String()).To(Equal("bootstrap"))
+		Expect(providerSpecificBashibleBootstrapSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+		providerSpecificBashibleBootstrapSecretData := providerSpecificBashibleBootstrapSecret.Field("data").Map()
+		Expect(len(providerSpecificBashibleBootstrapSecretData) >= 1).To(BeTrue())
+		Expect(len(providerSpecificBashibleBootstrapSecretData["bootstrap-networks.sh.tpl"].String()) > 0).To(BeTrue())
 
 		// user story #2
 		Expect(cinderCSIDriver.Exists()).To(BeTrue())
