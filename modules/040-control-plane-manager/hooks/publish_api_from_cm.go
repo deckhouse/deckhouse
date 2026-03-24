@@ -52,11 +52,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handlePublishAPIConfig)
 
 type Config struct {
-	Enabled                     *bool        `json:"enabled,omitempty"`
-	IngressClass                *string      `json:"ingressClass,omitempty"`
-	WhitelistSourceRanges       []string     `json:"whitelistSourceRanges,omitempty"`
-	HTTPS                       *HTTPSConfig `json:"https,omitempty"`
-	AddKubeconfigGeneratorEntry *bool        `json:"addKubeconfigGeneratorEntry,omitempty"`
+	Enabled                     bool        `json:"enabled,omitempty"`
+	IngressClass                string      `json:"ingressClass,omitempty"`
+	WhitelistSourceRanges       []string    `json:"whitelistSourceRanges,omitempty"`
+	HTTPS                       HTTPSConfig `json:"https,omitempty"`
+	AddKubeconfigGeneratorEntry bool        `json:"addKubeconfigGeneratorEntry,omitempty"`
 }
 
 type HTTPSConfig struct {
@@ -99,22 +99,40 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal cm_publishapi_config_migration snapshot: %w", err)
 	}
 	publishAPIConfig := publishAPIConfigSnaps[0]
-	path := "controlPlaneManager.apiserver.publishAPI.ingress."
 
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
+	ingressConfig := make(map[string]interface{})
 
-	setValueIfNotNull(input, path, "enabled", publishAPIConfig.Enabled)
-	setValueIfNotNull(input, path, "ingressClass", publishAPIConfig.IngressClass)
-	setValueIfNotNull(input, path, "whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
-	setValueIfNotNull(input, path, "https", publishAPIConfig.HTTPS)
-	setValueIfNotNull(input, path, "addKubeconfigGeneratorEntry", publishAPIConfig.AddKubeconfigGeneratorEntry)
+	ingressConfig["enabled"] = publishAPIConfig.Enabled
 
-	return nil
-}
-
-func setValueIfNotNull(input *go_hook.HookInput, path string, key string, value any) error {
-	if value != nil {
-		input.Values.Set(path+key, value)
+	if publishAPIConfig.IngressClass != "" {
+		ingressConfig["ingressClass"] = publishAPIConfig.IngressClass
 	}
+
+	if publishAPIConfig.WhitelistSourceRanges != nil {
+		ingressConfig["whitelistSourceRanges"] = publishAPIConfig.WhitelistSourceRanges
+	} else {
+		ingressConfig["whitelistSourceRanges"] = []string{}
+	}
+
+	httpsConfig := map[string]interface{}{
+		"mode": publishAPIConfig.HTTPS.Mode,
+	}
+
+	if publishAPIConfig.HTTPS.Global != nil {
+		httpsConfig["global"] = map[string]interface{}{
+			"kubeconfigGeneratorMasterCA": publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA,
+		}
+	} else {
+		httpsConfig["global"] = map[string]interface{}{
+			"kubeconfigGeneratorMasterCA": "",
+		}
+	}
+
+	ingressConfig["https"] = httpsConfig
+	ingressConfig["addKubeconfigGeneratorEntry"] = publishAPIConfig.AddKubeconfigGeneratorEntry
+
+	input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", ingressConfig)
+
 	return nil
 }
