@@ -304,12 +304,11 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 	var matchingZonesMap = make(map[string]struct{})
 	for _, clusterTags := range clustersWithTags {
 		for _, clusterTag := range clusterTags.Tags {
-			if _, ok := tagsInCategoryMap[clusterTag.Name]; ok {
-				if len(allowedZones) > 0 {
-					if _, allowed := allowedZones[clusterTag.Name]; !allowed {
-						continue
-					}
-				}
+			if _, ok := tagsInCategoryMap[clusterTag.Name]; !ok {
+				continue
+			}
+
+			if isZoneAllowed(allowedZones, clusterTag.Name) {
 				matchingZonesMap[clusterTag.Name] = struct{}{}
 			}
 		}
@@ -387,15 +386,15 @@ func (v *client) getDataStoresInDC(ctx context.Context, datacenter *object.Datac
 	for _, attachedTags := range datastoresWithTags {
 		var dsZones []string
 		for _, tag := range attachedTags.Tags {
-			if tag.CategoryID == zoneTagCategory.ID {
-				if len(allowedZones) > 0 {
-					if _, allowed := allowedZones[tag.Name]; !allowed {
-						continue
-					}
-				}
+			if tag.CategoryID != zoneTagCategory.ID {
+				continue
+			}
+
+			if isZoneAllowed(allowedZones, tag.Name) {
 				dsZones = append(dsZones, tag.Name)
 			}
 		}
+
 		if len(dsZones) == 0 {
 			continue
 		}
@@ -534,4 +533,14 @@ func murmurHash(args ...string) string {
 
 func prepareHashArgs(args ...string) string {
 	return strings.Join(args, ":::")
+}
+
+func isZoneAllowed(allowedZones map[string]any, zone string) bool {
+	// If no allowed zones are specified, then we assume that all zones are allowed
+	if len(allowedZones) == 0 {
+		return true
+	}
+
+	_, allowed := allowedZones[zone]
+	return allowed
 }
