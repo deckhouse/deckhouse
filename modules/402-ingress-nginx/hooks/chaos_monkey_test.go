@@ -40,7 +40,7 @@ import (
 var _ = Describe("ingress-nginx :: hooks :: chaos_monkey ::", func() {
 	ingressNginxControllerMainInitialYAML := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main
@@ -118,7 +118,7 @@ spec:
 `
 
 	f := HookExecutionConfigInit("", "")
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "IngressNginxController", true)
+	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", true)
 
 	// only to initialize fake cluster
 	f.KubeStateSet(``)
