@@ -34,7 +34,7 @@ shell:
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -59,7 +59,7 @@ shell:
 ############################################################################
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-frontend
-fromImage: base/nginx
+from: {{ index $.Images "base/nginx" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/server/public
