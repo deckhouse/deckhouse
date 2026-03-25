@@ -24,7 +24,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
         }
       ],
       "status": "not_affected",
