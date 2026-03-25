@@ -1661,7 +1661,7 @@ EOF
 
 ### Развёртывание первого приложения
 
-* **Настройка CI/CD** — создайте ServiceAccount для развёртнывания в кластере и выдайте ему права. В результате вы получите kubeconfig, который можно использовать в системах автоматизированного развёртывания в Kubernetes. Подробнее о настройке доступа для CI/CD в разделе [«Доступ для CI/CD»](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/ci_cd.html). Адрес: **kubeconfig.test.local**.
+* **Настройка CI/CD** — создайте ServiceAccount для развёртывания в кластере и выдайте ему права. В результате вы получите kubeconfig, который можно использовать в системах автоматизированного развёртывания в Kubernetes. Подробнее о настройке доступа для CI/CD в разделе [«Доступ для CI/CD»](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/ci_cd.html). Адрес: **kubeconfig.test.local**.
 * **Направление трафика на приложение** — создайте Service и Ingress для приложения. Подробнее о возможностях сетевого взаимодействия в разделе [«Обработка входящего трафика»](/products/kubernetes-platform/documentation/v1/user/network/ingress/).
 * **Мониторинг приложения** — добавьте к созданному Service аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"`. Подробнее о настройке мониторинга приложений в разделе [«Мониторинг приложений и инфраструктур»](/products/kubernetes-platform/documentation/v1/user/monitoring/).
 
