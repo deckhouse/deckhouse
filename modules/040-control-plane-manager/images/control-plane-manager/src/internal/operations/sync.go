@@ -17,12 +17,13 @@ limitations under the License.
 package operations
 
 import (
-	"control-plane-manager/internal/constants"
 	"os"
 	"path/filepath"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"control-plane-manager/internal/constants"
 )
 
 // syncSecretToTmp syncs secret data to tmp directory in control-plane-manager pod in specify folders for manifests, patches, extra files and pki.
@@ -30,13 +31,13 @@ import (
 func SyncSecretToTmp(secret *corev1.Secret, tmpDir string) error {
 	pkiDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.KubernetesPkiPath))
 	etcdPkiDir := filepath.Join(pkiDir, "etcd")
-	patchesDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.PatchesPath))
+	controlPlaneManifestsDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.ControlPlaneManifestsPath))
 	extraFilesDir := filepath.Join(tmpDir, constants.ToRelativePath(constants.ExtraFilesPath))
 
 	if err := os.MkdirAll(etcdPkiDir, 0o700); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(patchesDir, 0o700); err != nil {
+	if err := os.MkdirAll(controlPlaneManifestsDir, 0o700); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(extraFilesDir, 0o700); err != nil {
@@ -50,7 +51,7 @@ func SyncSecretToTmp(secret *corev1.Secret, tmpDir string) error {
 			expandedContent := []byte(os.ExpandEnv(string(content)))
 			name := strings.TrimSuffix(key, ".tpl")
 			if err := os.WriteFile(
-				filepath.Join(patchesDir, name),
+				filepath.Join(controlPlaneManifestsDir, name),
 				expandedContent,
 				0o600,
 			); err != nil {
@@ -87,5 +88,4 @@ func SyncSecretToTmp(secret *corev1.Secret, tmpDir string) error {
 	}
 
 	return nil
-
 }

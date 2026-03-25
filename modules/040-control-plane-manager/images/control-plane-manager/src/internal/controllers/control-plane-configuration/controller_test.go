@@ -227,7 +227,7 @@ func (suite *ControllerTestSuite) TestEtcdChecksumChangesOnManifestUpdate() {
 		oldSchedulerChecksum := cpn.Spec.Components.KubeScheduler.Checksum
 
 		configSecret := suite.getConfigSecret()
-		configSecret.Data["etcd-full.yaml.tpl"] = append(configSecret.Data["etcd-full.yaml.tpl"], []byte("\n# updated")...)
+		configSecret.Data["etcd.yaml.tpl"] = append(configSecret.Data["etcd.yaml.tpl"], []byte("\n# updated")...)
 		require.NoError(suite.T(), suite.client.Update(suite.ctx, configSecret))
 
 		suite.reconcile()

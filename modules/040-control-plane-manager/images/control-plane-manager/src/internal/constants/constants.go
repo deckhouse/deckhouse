@@ -34,6 +34,7 @@ const (
 	DeckhousePath                       = KubernetesConfigPath + "/deckhouse"
 	KubernetesPkiPath                   = KubernetesConfigPath + "/pki"
 	PatchesPath                         = DeckhousePath + "/patches"
+	ControlPlaneManifestsPath           = DeckhousePath + "/control-plane"
 	ExtraFilesPath                      = DeckhousePath + "/extra-files"
 	ConfigPath                          = "/config" // Mounted secret for d8-control-plane-manager-config
 	PkiPath                             = "/pki"    // Mounted secret for d8-pki
