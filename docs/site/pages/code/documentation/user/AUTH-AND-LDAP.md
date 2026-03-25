@@ -228,7 +228,7 @@ No. Since LDAP Sync reads groups in a flat manner using a filter query, it does 
 
 If `Group1` contains `Group2` as a member, the members of `Group2` will **not** be automatically added to `Group1`. The sync process does not recursively expand nested group memberships.
 
-**Why?** The Ruby synchronization code reads member attributes directly without traversing nested groups. It expects all relevant user DNs to be present in the group's member attributes.
+**Why?** The Deckhouse Code synchronization reads member attributes directly without traversing nested groups. It expects all relevant user DNs to be present in the group's member attributes.
 
 **Workaround:** Use external scripts or LDAP server-side mechanisms to flatten nested memberships. For example:
 - Populate the `submember` attribute with all transitive members (including members of nested groups).
