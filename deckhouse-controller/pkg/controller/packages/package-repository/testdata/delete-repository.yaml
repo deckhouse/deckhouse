@@ -15,7 +15,6 @@ metadata:
   name: deckhouse-scan-1234567890
   labels:
     packages.deckhouse.io/repository: deckhouse
-    packages.deckhouse.io/operation-trigger: auto
 spec:
   packageRepositoryName: deckhouse
   type: Update
@@ -31,7 +30,6 @@ metadata:
   name: deckhouse-scan-1234567891
   labels:
     packages.deckhouse.io/repository: deckhouse
-    packages.deckhouse.io/operation-trigger: auto
 spec:
   packageRepositoryName: deckhouse
   type: Update
