@@ -69,7 +69,7 @@ type GlobalHTTPS struct {
 }
 
 const (
-	publishAPIIngressConfigPath = "controlPlaneManager.apiserver.publishAPI."
+	publishAPIIngressConfigPath = "controlPlaneManager.apiserver.publishAPI.ingress."
 )
 
 func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
