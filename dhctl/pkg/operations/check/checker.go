@@ -97,6 +97,10 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
 	}
 
+	if parsedProviderYAML, yamlErr := metaConfig.ProviderClusterConfigYAML(); yamlErr == nil {
+		c.logger.LogInfoF("DEBUG: commander ProviderClusterConfigYAML after ParseMetaConfig:\n%s\n", string(parsedProviderYAML))
+	}
+
 	if c.InfrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           c.TmpDir,
