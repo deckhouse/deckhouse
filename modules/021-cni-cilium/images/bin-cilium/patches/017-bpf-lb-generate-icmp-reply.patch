@@ -30,7 +30,7 @@ index c34db87997..42f074f3c1 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 8873f05e86..3d31e61e7a 100644
+index 8873f05e86..95121735c8 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
 @@ -2677,6 +2677,73 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
@@ -139,9 +139,9 @@ index 8873f05e86..3d31e61e7a 100644
 +if (unlikely(ip4->protocol == IPPROTO_ICMP)) {
 +	printk("MEG: ==========Creating ICMP reply packet for service %d ip %x dst %x\n", 0, ip4->saddr, ip4->daddr);
 +	ret = make_icmp_response_lb4(ctx, ip4);
-+	if (ret != CTX_ACT_REDIRECT)
-+		goto skip_service_lookup;
-+	return ret;
++	if (ret == CTX_ACT_REDIRECT)
++		return ret;
++	
 +}
 +#endif /* ENABLE_LOADBALANCER_ICMP_REPLY */
  #ifdef ENABLE_NAT_46X64_GATEWAY
