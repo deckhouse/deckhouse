@@ -164,9 +164,12 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 
 	var metaConfig *config.MetaConfig
 	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
+		loggerFor.LogDebugF("ProviderSpecificClusterConfig in check:\n%s\n", p.request.ProviderSpecificClusterConfig)
+		yamls := input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig)
+		loggerFor.LogDebugF("Combine Configuration in check:\n%s\n", yamls)
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
-			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			yamls,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
 			),
