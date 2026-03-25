@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -188,7 +188,7 @@ type defaultCertProvider struct {
 }
 
 func newDefaultCertProvider(certificatesDir string, validityPeriod *metav1.Duration) (*defaultCertProvider, error) {
-	caCert, caKey, err := pki.TryLoadCertAndKeyFromDisk(certificatesDir, constants.CACertAndKeyBaseName)
+	caCert, caKey, err := pkiutil.LoadCertAndKey(certificatesDir, constants.CACertAndKeyBaseName)
 	if os.IsNotExist(errors.Unwrap(err)) {
 		return nil, fmt.Errorf("the CA files do not exist in %s: %w", certificatesDir, err)
 	}

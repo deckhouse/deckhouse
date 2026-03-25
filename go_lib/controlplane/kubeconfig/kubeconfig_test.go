@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/tools/clientcmd"
@@ -204,7 +205,7 @@ func TestCreateKubeConfigFile_Recreation(t *testing.T) {
 			// Debug info
 			t.Logf("Cert NotAfter: %v, Now: %v, Threshold: %v", cert.NotAfter, time.Now(), 30*24*time.Hour)
 
-			if !certificateExpiresSoon(cert, 30*24*time.Hour) {
+			if !pkiutil.CertificateExpiresSoon(cert, 30*24*time.Hour) {
 				t.Errorf("Initial certificate SHOULD be expiring soon. NotAfter: %v", cert.NotAfter)
 			}
 		}
@@ -223,7 +224,7 @@ func TestCreateKubeConfigFile_Recreation(t *testing.T) {
 		certData := cfg.AuthInfos[cfg.Contexts[cfg.CurrentContext].AuthInfo].ClientCertificateData
 		block, _ := pem.Decode(certData)
 		cert, _ := x509.ParseCertificate(block.Bytes)
-		assert.False(t, certificateExpiresSoon(cert, 30*24*time.Hour), "New certificate should not be expiring soon")
+		assert.False(t, pkiutil.CertificateExpiresSoon(cert, 30*24*time.Hour), "New certificate should not be expiring soon")
 
 		os.Remove(filePath)
 		require.NoError(t, err)
