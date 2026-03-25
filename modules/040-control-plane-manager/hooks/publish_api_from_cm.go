@@ -107,11 +107,9 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
 	fmt.Println(publishAPIConfig)
 
-	var enabled *bool
-	enabled = publishAPIConfig.Enabled
+	var enabled *bool = publishAPIConfig.Enabled
 
-	var addKubeconfigGeneratorEntryValue *bool
-	addKubeconfigGeneratorEntryValue = publishAPIConfig.AddKubeconfigGeneratorEntry
+	var addKubeconfigGeneratorEntryValue *bool = publishAPIConfig.AddKubeconfigGeneratorEntry
 
 	setValueIfNotNil(input, "enabled", enabled)
 	setValueIfNotNil(input, "ingressClass", publishAPIConfig.IngressClass)
@@ -120,19 +118,11 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	setValueIfNotNil(input, "https.mode", publishAPIConfig.HTTPS.Mode)
 	setValueIfNotNil(input, "https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
 
-	// input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", map[string]interface{}{
-	// 	"enabled":                     publishAPIConfig.Enabled,
-	// 	"ingressClass":                publishAPIConfig.IngressClass,
-	// 	"whitelistSourceRanges":       publishAPIConfig.WhitelistSourceRanges,
-	// 	"https":                       publishAPIConfig.HTTPS,
-	// 	"addKubeconfigGeneratorEntry": publishAPIConfig.AddKubeconfigGeneratorEntry,
-	// })
-
 	return nil
 }
 
-func setValueIfNotNil(input *go_hook.HookInput, key string, value any) error {
-	fmt.Printf("Trying to set publishAPI ingress settings key: %s, value %v", key, value)
+func setValueIfNotNil(input *go_hook.HookInput, key string, value any) {
+	fmt.Printf("Trying to set publishAPI ingress settings key: %s, value %v\n", key, value)
 	if value != nil {
 		switch v := value.(type) {
 		case []interface{}:
@@ -143,9 +133,14 @@ func setValueIfNotNil(input *go_hook.HookInput, key string, value any) error {
 			if len(v) > 0 || key == "https.global.kubeconfigGeneratorMasterCA" {
 				input.Values.Set(publishAPIIngressConfigPath+key, value)
 			}
+		case *bool:
+			if v != nil {
+				input.Values.Set(publishAPIIngressConfigPath+key, *v)
+			}
+		case bool:
+			input.Values.Set(publishAPIIngressConfigPath+key, v)
 		default:
 			input.Values.Set(publishAPIIngressConfigPath+key, value)
 		}
 	}
-	return nil
 }
