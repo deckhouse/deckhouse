@@ -42,7 +42,7 @@ func main() {
 		MaxAge:     *maxAge,
 		Compress:   *compress,
 	}
-	defer lumberjackLogger.Close()
+
 	scanner := bufio.NewScanner(bufio.NewReaderSize(os.Stdin, 1024*1024))
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -51,7 +51,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-
+	defer lumberjackLogger.Close()
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error reading from stdin:", err)
 		os.Exit(1)

@@ -62,6 +62,9 @@ import:
 mount:
 {{ include "mount points for golang builds" . }}
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache elfutils-dev
   install:
   - go install github.com/onsi/ginkgo/ginkgo@latest
   - go install github.com/go-delve/delve/cmd/dlv@latest
