@@ -1342,11 +1342,8 @@ alerts:
         **Investigate the following:**
 
         1. **Node disk I/O** — etcd is extremely sensitive to disk performance. Check disk utilization and I/O wait on the control plane node.
-
         2. **Network-attached storage** — if etcd data directory resides on NFS, Ceph, or another network storage, check connectivity and latency to the storage backend. etcd requires consistently low-latency local disk (SSD recommended).
-
         3. **Control plane summary** — review the **Kubernetes Cluster → Control Plane Status** Grafana dashboard for an overall picture of API server and etcd health, request rates, and error rates.
-
         4. **Node base performance** — check node CPU and RAM utilization and load average; if the node is CPU-bound (load average significantly exceeds CPU count), consider scaling up the control plane node.
       summary: |
         etcd requests latency (p99) has exceeded 800ms multiple times in the past hour.
