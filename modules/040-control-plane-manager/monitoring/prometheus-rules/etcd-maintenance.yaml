@@ -130,3 +130,43 @@
             --key /etc/kubernetes/pki/etcd/ca.key \
             --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
           ```
+- name: d8.etcd-maintenance.latency
+  rules:
+    - record: etcd_latency:etcd_request_duration_seconds:p99
+      expr: |
+        histogram_quantile(0.99,
+          sum by (instance, le) (
+            rate(etcd_request_duration_seconds_bucket{job="kube-apiserver"}[5m])
+          )
+        )
+    - alert: D8EtcdHighRequestsLatency
+      expr: |
+        count_over_time(
+          (etcd_latency:etcd_request_duration_seconds:p99 > 0.8)[1h:2m]
+        ) > 2
+      labels:
+        severity_level: "5"
+        tier: cluster
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+      for: "30m"
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: etcd requests latency (p99) has exceeded 800ms multiple times in the past hour.
+        description: |
+          The 99th percentile of etcd request duration on `{{ $labels.instance }}` has exceeded 800ms more than twice in the last hour.
+
+          High etcd latency can cause API server timeouts, slow admission webhooks, and general cluster instability.
+
+          **Investigate the following:**
+
+          1. **Node disk I/O** — etcd is extremely sensitive to disk performance. Check disk utilization and I/O wait on the control plane node.
+
+          2. **Network-attached storage** — if etcd data directory resides on NFS, Ceph, or another network storage, check connectivity and latency to the storage backend. etcd requires consistently low-latency local disk (SSD recommended).
+
+          3. **Control plane summary** — review the **Kubernetes Cluster → Control Plane Status** Grafana dashboard for an overall picture of API server and etcd health, request rates, and error rates.
+
+          4. **Node base performance** — check node CPU and RAM utilization and load average; if the node is CPU-bound (load average significantly exceeds CPU count), consider scaling up the control plane node.
