@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-8c3a1f2b9e704d6a91c5b8e3f1d0a7c4e2b9f6d8a5c1e0b3f7d9a2c6e4b8f1d0",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.57.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Компонент Istio Pilot (istiod) использует gRPC в составе control-plane. Уязвимость проявляется только на gRPC-серверах с авторизацией на основе псевдо-заголовка :path (включая google.golang.org/grpc/authz), когда политика содержит явные deny для канонических путей и по умолчанию разрешает прочие запросы — тогда неканонический :path без ведущего «/» может не сопоставиться с deny. В данном образе такая комбинация path-based interceptors и политики не используется, поэтому описанный сценарий обхода авторизации на исполняемом пути недоступен.",
+      "timestamp": "2026-03-25T08:24:25.865706119Z"
+    }
+  ],
+  "timestamp": "2026-03-25T08:24Z"
+}
