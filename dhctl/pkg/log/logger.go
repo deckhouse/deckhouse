@@ -81,7 +81,27 @@ func InitExternalLogger(loggerType string) {
 	if err != nil {
 		panic(err)
 	}
-	defaultLogger = &ExternalLogger{logger: extLogger}
+	l := &ExternalLogger{logger: extLogger}
+	defaultLogger = l
+
+	initExternalKlog(l)
+	// Mute Shell-Operator logs
+	log.Default().SetLevel(log.LevelFatal)
+	if app.IsDebug {
+		// Enable shell-operator log, because it captures klog output
+		// todo: capture output of klog with default logger instead
+		log.Default().SetLevel(log.LevelDebug)
+		// Wrap them with our default logger
+		log.Default().SetOutput(defaultLogger)
+	}
+}
+
+func initExternalKlog(logger *ExternalLogger) {
+	err := ext_logger.InitKlog(logger.logger, ext_logger.WithKlogSanitizer(ext_logger.NewKeywordSanitizer()))
+	if err != nil {
+		panic(err)
+	}
+	klog.SetOutput(newKlogWriterWrapper(logger))
 }
 
 func WrapLoggerWithTeeLogger(writer io.WriteCloser, bufSize int) error {
