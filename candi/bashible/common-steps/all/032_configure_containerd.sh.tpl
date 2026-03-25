@@ -489,12 +489,19 @@ check_additional_configs /etc/containerd/conf.d "v1"
 containerd_toml=$(additional_configs conf.d conf2.d)
 {{- end }}
 
-if ! bb-ctrd-validate-toml "${containerd_toml}"; then
+# Write merged config to /etc/containerd/config.toml.tmp with xtrace off for sequrity config creds.
+_containerd_merged_cfg="/etc/containerd/config.toml.tmp"
+case $- in *x*) _bb_ctr_save_xtrace=1; set +x ;; *) _bb_ctr_save_xtrace=0 ;; esac
+printf '%s' "${containerd_toml}" > "${_containerd_merged_cfg}"
+[[ ${_bb_ctr_save_xtrace} -eq 1 ]] && set -x
+
+if ! bb-ctrd-validate-toml "${_containerd_merged_cfg}"; then
   bb-log-error "containerd config validation failed, refusing to apply"
   exit 1
 fi
 
-bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"
+bb-sync-file /etc/containerd/config.toml "${_containerd_merged_cfg}" containerd-config-file-changed
+rm -f "${_containerd_merged_cfg}"
 
 bb-sync-file /etc/crictl.yaml - << "EOF"
 runtime-endpoint: unix:/var/run/containerd/containerd.sock
