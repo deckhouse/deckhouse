@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 type Config struct {
 	Enabled                     *bool        `json:"enabled,omitempty"`
-	IngressClass                *string      `json:"ingressClass,omitempty"`
+	IngressClass                string       `json:"ingressClass,omitempty"`
 	WhitelistSourceRanges       []string     `json:"whitelistSourceRanges,omitempty"`
 	HTTPS                       *HTTPSConfig `json:"https,omitempty"`
 	AddKubeconfigGeneratorEntry *bool        `json:"addKubeconfigGeneratorEntry,omitempty"`
@@ -107,43 +107,60 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
 	fmt.Println(publishAPIConfig)
 
-	setValueIfNotNil(input, "enabled", publishAPIConfig.Enabled)
-	setValueIfNotNil(input, "ingressClass", publishAPIConfig.IngressClass)
-	setValueIfNotNil(input, "whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
-	setValueIfNotNil(input, "addKubeconfigGeneratorEntry", publishAPIConfig.AddKubeconfigGeneratorEntry)
-	setValueIfNotNil(input, "https.mode", publishAPIConfig.HTTPS.Mode)
-	setValueIfNotNil(input, "https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
+	if publishAPIConfig.Enabled != nil {
+		input.Values.Set(publishAPIIngressConfigPath+"enabled", *publishAPIConfig.Enabled)
+	}
+	if publishAPIConfig.IngressClass != "" {
+		input.Values.Set(publishAPIIngressConfigPath+"ingressClass", publishAPIConfig.IngressClass)
+	}
+	if publishAPIConfig.WhitelistSourceRanges != nil {
+		input.Values.Set(publishAPIIngressConfigPath+"whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
+	}
+	if publishAPIConfig.AddKubeconfigGeneratorEntry != nil {
+		input.Values.Set(publishAPIIngressConfigPath+"enabled", *publishAPIConfig.AddKubeconfigGeneratorEntry)
+	}
+	if publishAPIConfig.HTTPS.Mode != "" {
+		input.Values.Set(publishAPIIngressConfigPath+"https.mode", publishAPIConfig.HTTPS.Mode)
+	}
+	input.Values.Set(publishAPIIngressConfigPath+"https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
+
+	// setValueIfNotNil(input, "enabled", publishAPIConfig.Enabled)
+	// setValueIfNotNil(input, "ingressClass", publishAPIConfig.IngressClass)
+	// setValueIfNotNil(input, "whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
+	// setValueIfNotNil(input, "addKubeconfigGeneratorEntry", publishAPIConfig.AddKubeconfigGeneratorEntry)
+	// setValueIfNotNil(input, "https.mode", publishAPIConfig.HTTPS.Mode)
+	// setValueIfNotNil(input, "https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
 
 	return nil
 }
 
-func setValueIfNotNil(input *go_hook.HookInput, key string, value any) {
-	fmt.Printf("Trying to set publishAPI ingress settings key: %s, value %v\n", key, value)
-	if value != nil {
-		switch v := value.(type) {
-		case []interface{}:
-			fmt.Println(publishAPIIngressConfigPath+key, value)
-			if len(v) > 0 {
-				input.Values.Set(publishAPIIngressConfigPath+key, value)
-			}
-		case []string:
-			fmt.Println(publishAPIIngressConfigPath+key, value)
-			if len(v) > 0 || key == "https.global.kubeconfigGeneratorMasterCA" {
-				input.Values.Set(publishAPIIngressConfigPath+key, value)
-			}
-		case *bool:
-			fmt.Println("checking *bool")
-			if v != nil {
-				fmt.Println(publishAPIIngressConfigPath+key, v, *v, value)
-				input.Values.Set(publishAPIIngressConfigPath+key, true)
-			}
-		case bool:
-			fmt.Println("checking bool")
-			fmt.Println(publishAPIIngressConfigPath+key, v)
-			input.Values.Set(publishAPIIngressConfigPath+key, v)
-		default:
-			fmt.Println(publishAPIIngressConfigPath+key, value)
-			input.Values.Set(publishAPIIngressConfigPath+key, value)
-		}
-	}
-}
+// func setValueIfNotNil(input *go_hook.HookInput, key string, value any) {
+// 	fmt.Printf("Trying to set publishAPI ingress settings key: %s, value %v\n", key, value)
+// 	if value != nil {
+// 		switch v := value.(type) {
+// 		case []interface{}:
+// 			fmt.Println(publishAPIIngressConfigPath+key, value)
+// 			if len(v) > 0 {
+// 				input.Values.Set(publishAPIIngressConfigPath+key, value)
+// 			}
+// 		case []string:
+// 			fmt.Println(publishAPIIngressConfigPath+key, value)
+// 			if len(v) > 0 || key == "https.global.kubeconfigGeneratorMasterCA" {
+// 				input.Values.Set(publishAPIIngressConfigPath+key, value)
+// 			}
+// 		case *bool:
+// 			fmt.Println("checking *bool")
+// 			if v != nil {
+// 				fmt.Println(publishAPIIngressConfigPath+key, v, *v, value)
+// 				input.Values.Set(publishAPIIngressConfigPath+key, true)
+// 			}
+// 		case bool:
+// 			fmt.Println("checking bool")
+// 			fmt.Println(publishAPIIngressConfigPath+key, v)
+// 			input.Values.Set(publishAPIIngressConfigPath+key, v)
+// 		default:
+// 			fmt.Println(publishAPIIngressConfigPath+key, value)
+// 			input.Values.Set(publishAPIIngressConfigPath+key, value)
+// 		}
+// 	}
+// }
