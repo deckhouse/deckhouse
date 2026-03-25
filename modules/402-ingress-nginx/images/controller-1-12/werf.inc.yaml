@@ -1007,7 +1007,6 @@ shell:
 imageSpec:
   config:
     workingDir: /chroot/etc/nginx
-    user: "64535"
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]
