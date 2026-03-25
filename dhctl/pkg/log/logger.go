@@ -32,6 +32,8 @@ import (
 	"github.com/werf/logboek/pkg/types"
 	"k8s.io/klog/v2"
 
+	external "github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -71,8 +73,43 @@ func (l *klogWriterWrapper) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func InitLogger(loggerType string) {
-	InitLoggerWithOptions(loggerType, LoggerOptions{IsDebug: app.IsDebug})
+func InitLogger(loggerType string) error {
+	return InitExternalLogger(loggerType)
+}
+
+func InitExternalLogger(loggerType string) error {
+	extLogger, err := external.NewLogger(external.Type(loggerType), app.IsDebug)
+	if err != nil {
+		return err
+	}
+	l := &ExternalLogger{logger: extLogger}
+	defaultLogger = l
+
+	err = initExternalKlog(l)
+	if err != nil {
+		return err
+	}
+	// Mute Shell-Operator logs
+	log.Default().SetLevel(log.LevelFatal)
+	if app.IsDebug {
+		// Enable shell-operator log, because it captures klog output
+		// todo: capture output of klog with default logger instead
+		log.Default().SetLevel(log.LevelDebug)
+		// Wrap them with our default logger
+		log.Default().SetOutput(defaultLogger)
+	}
+
+	return nil
+}
+
+func initExternalKlog(logger *ExternalLogger) error {
+	sanitizer := external.NewKeywordSanitizer().WithAdditionalKeywords(sensitiveKeywords)
+	err := external.InitKlog(logger.logger, external.WithKlogSanitizer(sanitizer))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func WrapLoggerWithTeeLogger(writer io.WriteCloser, bufSize int) error {
@@ -553,6 +590,106 @@ func (d *DummyLogger) LogJSON(content []byte) {
 func (d *DummyLogger) Write(content []byte) (int, error) {
 	fmt.Print(string(content))
 	return len(content), nil
+}
+
+type ExternalProcessLogger struct {
+	logger external.ProcessLogger
+}
+
+func (e *ExternalProcessLogger) LogProcessStart(name string) {
+	e.logger.ProcessStart(name)
+}
+
+func (e *ExternalProcessLogger) LogProcessEnd() {
+	e.logger.ProcessEnd()
+}
+
+func (e *ExternalProcessLogger) LogProcessFail() {
+	e.logger.ProcessFail()
+}
+
+func newExternalProcessLogger(logger external.ProcessLogger) *ExternalProcessLogger {
+	return &ExternalProcessLogger{logger: logger}
+}
+
+type ExternalLogger struct {
+	logger external.Logger
+}
+
+func (e *ExternalLogger) GetLogger() external.Logger {
+	return e.logger
+}
+
+func (e *ExternalLogger) ProcessLogger() ProcessLogger {
+	return newExternalProcessLogger(e.logger.ProcessLogger())
+}
+
+func (e *ExternalLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
+}
+
+func (e *ExternalLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return &ExternalLogger{logger: e.logger.BufferLogger(buffer)}
+}
+
+func (e *ExternalLogger) FlushAndClose() error {
+	return e.logger.FlushAndClose()
+}
+
+func (e *ExternalLogger) LogProcess(p, t string, run func() error) error {
+	return e.logger.Process(external.Process(p), t, run)
+}
+
+func (e *ExternalLogger) LogInfoF(format string, a ...interface{}) {
+	e.logger.InfoF(format, a...)
+}
+
+func (e *ExternalLogger) LogInfoLn(a ...interface{}) {
+	e.logger.InfoLn(a...)
+}
+
+func (e *ExternalLogger) LogErrorF(format string, a ...interface{}) {
+	e.logger.ErrorF(format, a...)
+}
+
+func (e *ExternalLogger) LogErrorLn(a ...interface{}) {
+	e.logger.ErrorF("%v", a...)
+}
+
+func (e *ExternalLogger) LogDebugF(format string, a ...interface{}) {
+	e.logger.DebugF(format, a...)
+}
+
+func (e *ExternalLogger) LogDebugLn(a ...interface{}) {
+	e.logger.DebugF("%v", a...)
+}
+
+func (e *ExternalLogger) LogSuccess(l string) {
+	e.logger.Success(l)
+}
+
+func (e *ExternalLogger) LogFail(l string) {
+	e.logger.Fail(l)
+}
+
+func (e *ExternalLogger) LogFailRetry(l string) {
+	e.logger.FailRetry(l)
+}
+
+func (e *ExternalLogger) LogWarnLn(a ...interface{}) {
+	e.logger.WarnF("%s", a...)
+}
+
+func (e *ExternalLogger) LogWarnF(format string, a ...interface{}) {
+	e.logger.WarnF(format, a...)
+}
+
+func (e *ExternalLogger) LogJSON(content []byte) {
+	e.logger.JSON(content)
+}
+
+func (e *ExternalLogger) Write(content []byte) (int, error) {
+	return e.logger.Write(content)
 }
 
 func FlushAndClose() error {
