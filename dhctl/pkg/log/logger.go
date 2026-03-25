@@ -32,10 +32,11 @@ import (
 	"github.com/werf/logboek/pkg/types"
 	"k8s.io/klog/v2"
 
+	external "github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	ext_logger "github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
 var (
@@ -72,19 +73,22 @@ func (l *klogWriterWrapper) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func InitLogger(loggerType string) {
-	InitExternalLogger(loggerType)
+func InitLogger(loggerType string) error {
+	return InitExternalLogger(loggerType)
 }
 
-func InitExternalLogger(loggerType string) {
-	extLogger, err := ext_logger.NewLogger(ext_logger.Type(loggerType), app.IsDebug)
+func InitExternalLogger(loggerType string) error {
+	extLogger, err := external.NewLogger(external.Type(loggerType), app.IsDebug)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	l := &ExternalLogger{logger: extLogger}
 	defaultLogger = l
 
-	initExternalKlog(l)
+	err = initExternalKlog(l)
+	if err != nil {
+		return err
+	}
 	// Mute Shell-Operator logs
 	log.Default().SetLevel(log.LevelFatal)
 	if app.IsDebug {
@@ -94,14 +98,18 @@ func InitExternalLogger(loggerType string) {
 		// Wrap them with our default logger
 		log.Default().SetOutput(defaultLogger)
 	}
+
+	return nil
 }
 
-func initExternalKlog(logger *ExternalLogger) {
-	err := ext_logger.InitKlog(logger.logger, ext_logger.WithKlogSanitizer(ext_logger.NewKeywordSanitizer()))
+func initExternalKlog(logger *ExternalLogger) error {
+	sanitizer := external.NewKeywordSanitizer().WithAdditionalKeywords(sensitiveKeywords)
+	err := external.InitKlog(logger.logger, external.WithKlogSanitizer(sanitizer))
 	if err != nil {
-		panic(err)
+		return err
 	}
-	klog.SetOutput(newKlogWriterWrapper(logger))
+
+	return nil
 }
 
 func WrapLoggerWithTeeLogger(writer io.WriteCloser, bufSize int) error {
@@ -585,10 +593,10 @@ func (d *DummyLogger) Write(content []byte) (int, error) {
 }
 
 type ExternalLogger struct {
-	logger ext_logger.Logger
+	logger external.Logger
 }
 
-func (e *ExternalLogger) GetLogger() ext_logger.Logger {
+func (e *ExternalLogger) GetLogger() external.Logger {
 	return e.logger
 }
 
@@ -617,7 +625,7 @@ func (e *ExternalLogger) LogInfoF(format string, a ...interface{}) {
 }
 
 func (e *ExternalLogger) LogInfoLn(a ...interface{}) {
-	e.logger.InfoLn(a...)
+	e.logger.InfoF("%v", a...)
 }
 
 func (e *ExternalLogger) LogErrorF(format string, a ...interface{}) {
@@ -625,7 +633,7 @@ func (e *ExternalLogger) LogErrorF(format string, a ...interface{}) {
 }
 
 func (e *ExternalLogger) LogErrorLn(a ...interface{}) {
-	e.logger.ErrorLn(a...)
+	e.logger.ErrorF("%v", a...)
 }
 
 func (e *ExternalLogger) LogDebugF(format string, a ...interface{}) {
@@ -633,7 +641,7 @@ func (e *ExternalLogger) LogDebugF(format string, a ...interface{}) {
 }
 
 func (e *ExternalLogger) LogDebugLn(a ...interface{}) {
-	e.logger.DebugLn(a...)
+	e.logger.DebugF("%v", a...)
 }
 
 func (e *ExternalLogger) LogSuccess(l string) {
@@ -649,7 +657,7 @@ func (e *ExternalLogger) LogFailRetry(l string) {
 }
 
 func (e *ExternalLogger) LogWarnLn(a ...interface{}) {
-	e.logger.WarnLn(a...)
+	e.logger.WarnF("%s", a...)
 }
 
 func (e *ExternalLogger) LogWarnF(format string, a ...interface{}) {
