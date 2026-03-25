@@ -1,5 +1,12 @@
 - name: d8.etcd-maintenance.quota-backend-bytes
   rules:
+    - record: etcd_latency:etcd_request_duration_seconds:p99
+      expr: |
+        histogram_quantile(0.99,
+          sum by (instance, le) (
+            rate(etcd_request_duration_seconds_bucket{job="kube-apiserver"}[5m])
+          )
+        )
     - alert: D8KubeEtcdDatabaseSizeCloseToTheLimit
       expr: max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) >= scalar(max(last_over_time(d8_etcd_quota_backend_total[6h])) * 0.95)
       labels:
@@ -130,15 +137,6 @@
             --key /etc/kubernetes/pki/etcd/ca.key \
             --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
           ```
-- name: d8.etcd-maintenance.latency
-  rules:
-    - record: etcd_latency:etcd_request_duration_seconds:p99
-      expr: |
-        histogram_quantile(0.99,
-          sum by (instance, le) (
-            rate(etcd_request_duration_seconds_bucket{job="kube-apiserver"}[5m])
-          )
-        )
     - alert: D8EtcdHighRequestsLatency
       expr: |
         count_over_time(
