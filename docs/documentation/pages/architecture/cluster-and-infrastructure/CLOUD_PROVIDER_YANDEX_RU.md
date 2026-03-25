@@ -93,8 +93,8 @@ description: Архитектура модуля cloud-provider-yandex в Deckho
 
 1. Модуль `cloud-provider-yandex` предоставляет модулю [`node-manager`](/modules/node-manager/) следующие артефакты:
 
-   * шаблоны для создания кастомных ресурсов Cluster API для конкретного провайдера, которые `cloud-provider-yandex` использует для создания виртуальных машин в облаке;
-   * секрет `kube-system/d8-node-manager-cloud-provider`, в котором содержатся все необходимые настройки для подключения к облаку и создания CloudEphemeral-узлов. Эти настройки прописываются в кастомных ресурсах Cluster API, созданных на основе упомянутых выше шаблонов и учитывающих особенности провайдера.
+   * шаблоны для создания кастомных ресурсов MCM (Multi-Cluster Management) для конкретного провайдера, которые `cloud-provider-yandex` использует для создания виртуальных машин в облаке;
+   * секрет `kube-system/d8-node-manager-cloud-provider`, в котором содержатся все необходимые настройки для подключения к облаку и создания CloudEphemeral-узлов. Эти настройки прописываются в кастомных ресурсах MCM, созданных на основе упомянутых выше шаблонов и учитывающих особенности провайдера.
 
 2. Модуль `cloud-provider-yandex` предоставляет компоненты Terraform/OpenTofu для Yandex Cloud, которые используются при сборке исполняемого файла утилиты [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) в модуле [`terraform-manager`](/modules/terraform-manager/), такие как:
 
