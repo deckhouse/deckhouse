@@ -27,7 +27,7 @@ import (
 var componentChecksumDeps = map[string]componentFieldMap{
 	"kube-apiserver": {
 		checksumDependsOn: []string{
-			"kube-apiserver-full.yaml.tpl",
+			"kube-apiserver.yaml.tpl",
 			"extra-file-admission-control-config.yaml",
 			"extra-file-audit-policy.yaml",
 			"extra-file-authn-webhook-config.yaml",
@@ -39,17 +39,17 @@ var componentChecksumDeps = map[string]componentFieldMap{
 	},
 	"etcd": {
 		checksumDependsOn: []string{
-			"etcd-full.yaml.tpl",
+			"etcd.yaml.tpl",
 		},
 	},
 	"kube-controller-manager": {
 		checksumDependsOn: []string{
-			"kube-controller-manager-full.yaml.tpl",
+			"kube-controller-manager.yaml.tpl",
 		},
 	},
 	"kube-scheduler": {
 		checksumDependsOn: []string{
-			"kube-scheduler-full.yaml.tpl",
+			"kube-scheduler.yaml.tpl",
 			"extra-file-scheduler-config.yaml",
 		},
 	},
