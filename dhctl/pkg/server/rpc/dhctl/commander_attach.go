@@ -244,6 +244,24 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 	})
 
 	result, attachErr := attacher.Attach(ctx)
+	if result != nil && result.ScanResult != nil {
+		loggerFor.LogInfoF("DEBUG ATTACH: ProviderSpecificClusterConfiguration going to commander (len=%d):\n%s\n",
+			len(result.ScanResult.ProviderSpecificClusterConfiguration),
+			result.ScanResult.ProviderSpecificClusterConfiguration,
+		)
+		loggerFor.LogInfoF("DEBUG ATTACH: ClusterConfiguration going to commander (len=%d):\n%s\n",
+			len(result.ScanResult.ClusterConfiguration),
+			result.ScanResult.ClusterConfiguration,
+		)
+		loggerFor.LogInfoF("DEBUG ATTACH: SSHPrivateKey going to commander (len=%d):\n%s\n",
+			len(result.ScanResult.SSHPrivateKey),
+			result.ScanResult.SSHPrivateKey,
+		)
+		loggerFor.LogInfoF("DEBUG ATTACH: SSHPublicKey going to commander (len=%d):\n%s\n",
+			len(result.ScanResult.SSHPublicKey),
+			result.ScanResult.SSHPublicKey,
+		)
+	}
 	resultData, marshalResultErr := json.Marshal(result)
 	state, stateErr := extractLastState()
 
