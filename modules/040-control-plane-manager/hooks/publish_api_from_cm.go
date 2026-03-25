@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -76,15 +77,17 @@ func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook
 		return nil, err
 	}
 
-	var dataStruct Config
+	var dynamicStruct interface{}
+	var dataStruct map[string]interface{}
 	if data, ok := cm.Data["config"]; ok {
 		err = json.Unmarshal([]byte(data), &dataStruct)
 		if err != nil {
 			return nil, fmt.Errorf("invalid PublishAPI config format - json expected: %s", err)
 		}
+		dynamicStruct = createDynamicStruct(dataStruct)
 	}
 
-	return dataStruct, nil
+	return dynamicStruct, nil
 }
 
 func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
@@ -94,74 +97,31 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	}
 	input.Logger.Info("Unmarshalling")
 
-	publishAPIConfigSnaps, err := sdkobjectpatch.UnmarshalToStruct[Config](input.Snapshots, "cm_publishapi_config_migration")
+	publishAPIConfigSnaps, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.Snapshots, "cm_publishapi_config_migration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cm_publishapi_config_migration snapshot: %w", err)
 	}
 	publishAPIConfig := publishAPIConfigSnaps[0]
+	fmt.Println(publishAPIConfig)
 
-	configMap := map[string]interface{}{
-		"enabled":                     publishAPIConfig.Enabled,
-		"ingressClass":                publishAPIConfig.IngressClass,
-		"whitelistSourceRanges":       publishAPIConfig.WhitelistSourceRanges,
-		"addKubeconfigGeneratorEntry": publishAPIConfig.AddKubeconfigGeneratorEntry,
-		"https": map[string]interface{}{
-			"mode":   publishAPIConfig.HTTPS.Mode,
-			"global": publishAPIConfig.HTTPS.Global,
-		},
-	}
-
-	// Clean nil values
-	strippedConfig := stripNilValues(configMap)
-	fmt.Println(strippedConfig)
-	// strippedConfig["enabled"] =//  publishAPIConfig.Enabled
-
-	// if publishAPIConfig.IngressClass != "" {
-	// 	ingressConfig["ingressClass"] = publishAPIConfig.IngressClass
-	// }
-
-	// if publishAPIConfig.WhitelistSourceRanges != nil {
-	// 	ingressConfig["whitelistSourceRanges"] = publishAPIConfig.WhitelistSourceRanges
-	// } else {
-	// }
-
-	// httpsConfig := map[string]interface{}{
-	// 	"mode": publishAPIConfig.HTTPS.Mode,
-	// }
-
-	// if publishAPIConfig.HTTPS.Global != nil {
-	// 	httpsConfig["global"] = map[string]interface{}{
-	// 		"kubeconfigGeneratorMasterCA": publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA,
-	// 	}
-	// }
-
-	// ingressConfig["https"] = httpsConfig
-	// ingressConfig["addKubeconfigGeneratorEntry"] = publishAPIConfig.AddKubeconfigGeneratorEntry
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
-	input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", strippedConfig)
+	input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", publishAPIConfig)
 
 	return nil
 }
 
-func stripNilValues(data interface{}) interface{} {
-	switch v := data.(type) {
-	case map[string]interface{}:
-		result := make(map[string]interface{})
-		for key, value := range v {
-			if value != nil {
-				result[key] = stripNilValues(value)
-			}
-		}
-		return result
-	case []interface{}:
-		result := make([]interface{}, 0, len(v))
-		for _, item := range v {
-			if item != nil {
-				result = append(result, stripNilValues(item))
-			}
-		}
-		return result
-	default:
-		return data
+func createDynamicStruct(fields map[string]interface{}) interface{} {
+	structFields := make([]reflect.StructField, 0, len(fields))
+
+	for key, value := range fields {
+		fieldType := reflect.TypeOf(value)
+		structFields = append(structFields, reflect.StructField{
+			Name: key,
+			Type: fieldType,
+			Tag:  reflect.StructTag(fmt.Sprintf(`json:"%s"`, key)),
+		})
 	}
+
+	structType := reflect.StructOf(structFields)
+	return reflect.New(structType).Interface()
 }
