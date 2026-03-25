@@ -102,6 +102,7 @@ jobs:
             commit=${{needs.detect_pr_by_comment.outputs.commit}}
             prNumber=${{needs.detect_pr_by_comment.outputs.pr_number}}
           fi
+
           echo "release_branch=${releaseBranch}" >> $GITHUB_OUTPUT
           echo "commit=${commit}" >> $GITHUB_OUTPUT
           echo "pr_number=${prNumber}" >> $GITHUB_OUTPUT
@@ -123,14 +124,13 @@ jobs:
           fetch-depth: 0
       - name: Cherry pick
         id: cherry_pick_pr
-        uses: deckhouse/backport-action@v1.0.0
+        uses: deckhouse/backport-action@fix-backport-milestones
         env:
           RELEASE_BRANCH: ${{ steps.prepare.outputs.release_branch }}
           COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
           SOURCE_PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
           branch: ${{ env.RELEASE_BRANCH }}
           commit: ${{ env.COMMIT_SHA }}
           labels: auto,backported
