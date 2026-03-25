@@ -478,21 +478,24 @@ check_additional_configs() {
   fi
 }
 
-# Check additional configs
+# Check additional configs (registry validation only, no sensitive output)
 {{- if eq .cri "ContainerdV2" }}
 check_additional_configs /etc/containerd/conf2.d "v2"
-containerd_toml=$(additional_configs conf2.d conf.d)
 {{- else if eq .cri "Containerd" }}
   {{- if .registry.registryModuleEnable }}
 check_additional_configs /etc/containerd/conf.d "v1"
   {{- end }}
-containerd_toml=$(additional_configs conf.d conf2.d)
 {{- end }}
 
-# Write merged config to /etc/containerd/config.toml.tmp with xtrace off for sequrity config creds.
+# Write merged config directly to /etc/containerd/config.toml.tmp with xtrace off.
+# Capturing toml-merge output into a variable would expose registry auth in bash -x trace.
 _containerd_merged_cfg="/etc/containerd/config.toml.tmp"
 case $- in *x*) _bb_ctr_save_xtrace=1; set +x ;; *) _bb_ctr_save_xtrace=0 ;; esac
-printf '%s' "${containerd_toml}" > "${_containerd_merged_cfg}"
+{{- if eq .cri "ContainerdV2" }}
+additional_configs conf2.d conf.d > "${_containerd_merged_cfg}"
+{{- else if eq .cri "Containerd" }}
+additional_configs conf.d conf2.d > "${_containerd_merged_cfg}"
+{{- end }}
 [[ ${_bb_ctr_save_xtrace} -eq 1 ]] && set -x
 
 if ! bb-ctrd-validate-toml "${_containerd_merged_cfg}"; then
