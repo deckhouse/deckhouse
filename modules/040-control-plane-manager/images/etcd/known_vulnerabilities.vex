@@ -1,0 +1,24 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-12a63cdde85f3e6ac2dce21023a8c208bf2474fc2a06e1c5b46d50ef00499137",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в etcd в рамках Deckhouse: etcd не использует path-based авторизационные интерцепторы (grpc/authz или аналоги) с deny-правилами и fallback allow. Авторизация в etcd реализована через собственный встроенный механизм на основе mTLS и username/password, который не подвержен данной уязвимости. etcdctl и etcdutl являются CLI-утилитами (gRPC-клиентами), серверный путь исполнения в них не задействован.",
+      "timestamp": "2026-03-24T10:56:49.295089Z"
+    }
+  ],
+  "timestamp": "2026-03-24T10:56:06Z",
+  "last_updated": "2026-03-24T10:56:49Z"
+}
