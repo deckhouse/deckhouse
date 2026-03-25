@@ -107,14 +107,10 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
 	fmt.Println(publishAPIConfig)
 
-	var enabled *bool = publishAPIConfig.Enabled
-
-	var addKubeconfigGeneratorEntryValue *bool = publishAPIConfig.AddKubeconfigGeneratorEntry
-
-	setValueIfNotNil(input, "enabled", enabled)
+	setValueIfNotNil(input, "enabled", publishAPIConfig.Enabled)
 	setValueIfNotNil(input, "ingressClass", publishAPIConfig.IngressClass)
 	setValueIfNotNil(input, "whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
-	setValueIfNotNil(input, "addKubeconfigGeneratorEntry", addKubeconfigGeneratorEntryValue)
+	setValueIfNotNil(input, "addKubeconfigGeneratorEntry", publishAPIConfig.AddKubeconfigGeneratorEntry)
 	setValueIfNotNil(input, "https.mode", publishAPIConfig.HTTPS.Mode)
 	setValueIfNotNil(input, "https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
 
@@ -127,19 +123,24 @@ func setValueIfNotNil(input *go_hook.HookInput, key string, value any) {
 		switch v := value.(type) {
 		case []interface{}:
 			if len(v) > 0 {
+				fmt.Println(publishAPIIngressConfigPath+key, value)
 				input.Values.Set(publishAPIIngressConfigPath+key, value)
 			}
 		case []string:
 			if len(v) > 0 || key == "https.global.kubeconfigGeneratorMasterCA" {
+				fmt.Println(publishAPIIngressConfigPath+key, value)
 				input.Values.Set(publishAPIIngressConfigPath+key, value)
 			}
 		case *bool:
 			if v != nil {
+				fmt.Println(publishAPIIngressConfigPath+key, *v)
 				input.Values.Set(publishAPIIngressConfigPath+key, *v)
 			}
 		case bool:
+			fmt.Println(publishAPIIngressConfigPath+key, v)
 			input.Values.Set(publishAPIIngressConfigPath+key, v)
 		default:
+			fmt.Println(publishAPIIngressConfigPath+key, value)
 			input.Values.Set(publishAPIIngressConfigPath+key, value)
 		}
 	}
