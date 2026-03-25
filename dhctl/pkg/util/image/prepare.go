@@ -39,6 +39,11 @@ func PrepareFiles(path string) error {
 		if info == nil {
 			return nil
 		}
+
+		if err != nil {
+			return err
+		}
+
 		if !strings.HasSuffix(fullPath, ".tpl") {
 			return nil
 		}
