@@ -115,15 +115,19 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 		return err
 	}
 
-	releaseTmpDirLock, err := i.checkAndAcquireTmpLock(c, tmpDir)
+	tmpDirLockResult, err := i.checkAndAcquireTmpLock(c, tmpDir)
 	if err != nil {
 		return err
 	}
 
 	finalizeLogger, err := i.initLogger(c, tmpDir)
 	if err != nil {
-		releaseTmpDirLock()
+		tmpDirLockResult.onShutdown()
 		return err
+	}
+
+	if tmpDirLockResult.skipped {
+		log.InfoF("Tmp dir lock skipped because command '%s' should not acquire tmp dir\n", tmpDirLockResult.skippedBy)
 	}
 
 	runTmpCleaner := i.initTmpDirCleaner(c, tmpDir)
@@ -132,7 +136,7 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 
 	i.registerOnShutdown("Finalize logger", finalizeLogger)
 
-	i.registerOnShutdown("Release dhctl temporary directory lock", releaseTmpDirLock)
+	i.registerOnShutdown("Release dhctl temporary directory lock", tmpDirLockResult.onShutdown)
 
 	i.registerOnShutdown("Clear dhctl temporary directory", runTmpCleaner)
 
@@ -217,17 +221,41 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 	return absPath, nil
 }
 
-func (i *actionIniter) skipCheckAcquireTmpLock(c *kingpin.ParseContext) (bool, string) {
-	cmdName := getCommandName(c)
-	return cmdName == "" || cmdName == grpcServerCmd, cmdName
+var skipTmpLockCommands = []string{
+	// empty is command not passed
+	"",
+	grpcServerCmd,
+	fmt.Sprintf("%s %s", terraformGroupCmd, exporterCmd),
+	autoConvergeCmd,
 }
 
-func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
+func (i *actionIniter) skipCheckAcquireTmpLock(c *kingpin.ParseContext) (bool, string) {
+	cmdName := getCommandName(c)
+	// do not lock for grpc server because for singleshot dhctl runner we create
+	// tmp dir in sub directory of server
+	// exporter and autoconverger run in pods
+	// for pods we are using empty dir for /tmp 
+	// when container is killed (for example by OOM) empty dir was not cleaned
+	// and we got lock error on container restart
+	// we can safe skip tmp dir lock because we cannot get sutuation
+	// when multiple commands run in parallel
+	return slices.Contains(skipTmpLockCommands, cmdName), cmdName
+}
+
+type tmpLockAcquireResult struct {
+	onShutdown onShutdownFunc
+	skipped    bool
+	skippedBy  string
+}
+
+func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir string) (*tmpLockAcquireResult, error) {
 	skipAcquire, cmdName := i.skipCheckAcquireTmpLock(c)
 	if skipAcquire {
-		// do not lock for grpc server because for singleshot dhctl runner we create
-		// tmp dir in sub directory of server
-		return doNothingOnShutdownFunc, nil
+		return &tmpLockAcquireResult{
+			onShutdown: doNothingOnShutdownFunc,
+			skipped:    true,
+			skippedBy:  cmdName,
+		}, nil
 	}
 
 	if err := cache.TmpDirLockAlreadyAcquired(tmpDir); err != nil {
@@ -239,7 +267,12 @@ func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir st
 		return nil, err
 	}
 
-	return func() { releaseLock() }, nil
+	return &tmpLockAcquireResult{
+		onShutdown: func() {
+			releaseLock()
+		},
+		skipped: false,
+	}, nil
 }
 
 func (i *actionIniter) initTmpDirCleaner(c *kingpin.ParseContext, tmpDir string) onShutdownFunc {
@@ -341,7 +374,10 @@ func getCommandName(c *kingpin.ParseContext) string {
 	if c.SelectedCommand == nil {
 		return ""
 	}
-
+	// todo be carefully during migration to cobra
+	// we use full command for check command in skipCheckAcquireTmpLock
+	// and we have "terraform converge-exporter" command
+	// need to check that cobra returns same result or fix cmd name in skipCheckAcquireTmpLock
 	return c.SelectedCommand.FullCommand()
 }
 
