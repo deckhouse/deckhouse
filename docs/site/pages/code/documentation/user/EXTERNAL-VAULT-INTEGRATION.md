@@ -371,11 +371,11 @@ Integration benefits:
 - **Granular access control** — access to secrets is restricted based on project, branch, environment, and other parameters.
 - **No secrets in the repository** — secrets never end up in the code or CI variables.
 
-## Usage examples
+### Usage examples
 
 This section provides common scenarios for using Vault secrets in CI/CD pipelines.
 
-### Deploying an application with database credentials
+#### Deploying an application with database credentials
 
 Example of retrieving PostgreSQL credentials during deployment:
 
@@ -415,7 +415,7 @@ deploy-production:
     - if: $CI_COMMIT_BRANCH == "main"
 ```
 
-### Using API keys for external services
+#### Using API keys for external services
 
 Example of integration with external APIs (Slack, Telegram, S3):
 
@@ -460,7 +460,7 @@ backup-to-s3:
     - aws s3 sync ./artifacts s3://my-backup-bucket/$CI_PROJECT_NAME/$CI_COMMIT_SHA/
 ```
 
-### Signing Docker images with Cosign
+#### Signing Docker images with Cosign
 
 Example of using a private key from Vault to sign images:
 
@@ -493,7 +493,7 @@ sign-image:
     - cosign sign --key $COSIGN_PRIVATE_KEY $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
 ```
 
-### Branch-based access control
+#### Branch-based access control
 
 Example of configuring different secrets for `develop` and `main` branches using bound claims on branch (`ref`):
 
