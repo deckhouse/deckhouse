@@ -391,9 +391,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeRouter":          "imageHash-networkPolicyEngine-kubeRouter",
 	},
 	"nodeLocalDns": map[string]interface{}{
-		"coredns":             "imageHash-nodeLocalDns-coredns",
-		"iptablesLoop":        "imageHash-nodeLocalDns-iptablesLoop",
-		"iptablesWrapperInit": "imageHash-nodeLocalDns-iptablesWrapperInit",
+		"coredns":                    "imageHash-nodeLocalDns-coredns",
+		"iptablesLoop":               "imageHash-nodeLocalDns-iptablesLoop",
+		"iptablesWrapperInit":        "imageHash-nodeLocalDns-iptablesWrapperInit",
+		"staleDnsConnectionsCleaner": "imageHash-nodeLocalDns-staleDnsConnectionsCleaner",
 	},
 	"nodeManager": map[string]interface{}{
 		"bashibleApiserver":               "imageHash-nodeManager-bashibleApiserver",
