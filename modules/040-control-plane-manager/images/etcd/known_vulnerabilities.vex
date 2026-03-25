@@ -10,7 +10,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.71.1"
+          "@id": "pkg:golang/google.golang.org/grpc"
         }
       ],
       "status": "not_affected",
