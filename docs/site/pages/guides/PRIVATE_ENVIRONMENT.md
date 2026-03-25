@@ -31,7 +31,7 @@ Depending on your organization’s security policies, access to external resourc
 
 Overall private environment diagram:
 
-<img src="/images/gs/private-env-schema.png" alt="Deckhouse Kubernetes Platform deployment diagram in a private environment">
+<img src="/images/guides/install_to_private_environment/private_environment-scheme_ru.png" alt="Deckhouse Kubernetes Platform deployment diagram in a private environment">
 
 {% alert level="info" %}
 The diagram also shows an internal OS package repository. It is used to install packages on nodes when access to official repositories is not available even through a proxy.
