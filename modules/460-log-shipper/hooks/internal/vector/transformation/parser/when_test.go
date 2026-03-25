@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package parserlabels
+package parser
 
 import (
 	"testing"
@@ -32,6 +32,10 @@ func TestParseWhen(t *testing.T) {
 			wantOp   WhenOp
 			wantVal  string
 		}{
+			{"exists_path_only", `.pod_labels.app`, ".pod_labels.app", WhenExists, ""},
+			{"exists_trim", `  .namespace  `, ".namespace", WhenExists, ""},
+			{"notexists", `!.pod_labels.app`, ".pod_labels.app", WhenNotExists, ""},
+			{"notexists_trim", `  !.namespace  `, ".namespace", WhenNotExists, ""},
 			{"eq_unquoted", `.pod == foo`, ".pod", WhenEQ, "foo"},
 			{"eq_double", `.pod == "foo"`, ".pod", WhenEQ, "foo"},
 			{"ne_single", `.pod  !=  'bar'`, ".pod", WhenNE, "bar"},

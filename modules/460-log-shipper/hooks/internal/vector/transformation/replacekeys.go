@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/parserlabels"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transformation/parser"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
@@ -28,7 +28,7 @@ func ReplaceKeysVRL(r v1alpha1.ReplaceKeysSpec) (string, error) {
 	if r.Source == "" {
 		return "", fmt.Errorf("transformations replaceKeys: Source is empty")
 	}
-	paths, err := parserlabels.MapLabelPaths(r.Labels, parserlabels.PathSegmentsToVRLDotPath)
+	paths, err := parser.MapLabelPaths(r.Labels, parser.PathSegmentsToVRLDotPath)
 	if err != nil {
 		return "", fmt.Errorf("transformations replaceKeys: %w", err)
 	}

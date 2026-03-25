@@ -23,7 +23,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/parserlabels"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transformation/parser"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
@@ -33,10 +33,10 @@ type addLabelsBuilt struct {
 }
 
 func AddLabelsVRL(rule v1alpha1.AddLabelsRule) (string, []string, error) {
-	if len(rule.Labels) == 0 {
-		return "", nil, fmt.Errorf("addLabels: empty labels")
+	if len(rule.SetLabels) == 0 {
+		return "", nil, fmt.Errorf("addLabels: empty setLabels")
 	}
-	built, err := buildAddLabelsBody(rule.Labels)
+	built, err := buildAddLabelsBody(rule.SetLabels)
 	if err != nil {
 		return "", nil, err
 	}
@@ -44,9 +44,9 @@ func AddLabelsVRL(rule v1alpha1.AddLabelsRule) (string, []string, error) {
 	if len(rule.When) == 0 {
 		return built.body, built.sinkKeys, nil
 	}
-	exprs := make([]*parserlabels.WhenExpr, 0, len(rule.When))
+	exprs := make([]*parser.WhenExpr, 0, len(rule.When))
 	for _, w := range rule.When {
-		e, err := parserlabels.ParseWhen(w)
+		e, err := parser.ParseWhen(w)
 		if err != nil {
 			return "", nil, err
 		}
@@ -56,7 +56,7 @@ func AddLabelsVRL(rule v1alpha1.AddLabelsRule) (string, []string, error) {
 	return s, built.sinkKeys, err
 }
 
-func wrapAddLabelsWhen(exprs []*parserlabels.WhenExpr, body string) (string, error) {
+func wrapAddLabelsWhen(exprs []*parser.WhenExpr, body string) (string, error) {
 	if len(exprs) == 0 {
 		return body, nil
 	}
@@ -80,23 +80,29 @@ func wrapAddLabelsWhen(exprs []*parserlabels.WhenExpr, body string) (string, err
 	return strings.Join(parts, "\n"), nil
 }
 
-func renderWhenLeaf(i int, we *parserlabels.WhenExpr) (string, error) {
+func renderWhenLeaf(i int, we *parser.WhenExpr) (string, error) {
 	args := vrl.Args{
 		"i":            i,
-		"pathArray":    parserlabels.PathSegmentsToVRLArray(we.LeftPathSegs),
-		"arrayWantAny": parserlabels.WhenArrayWantAny(we.Op),
+		"pathArray":    parser.PathSegmentsToVRLArray(we.LeftPathSegs),
+		"arrayWantAny": parser.WhenArrayWantAny(we.Op),
 		"cmpOp":        string(we.Op),
 	}
 	switch we.Op {
-	case parserlabels.WhenEQ, parserlabels.WhenNE:
+	case parser.WhenExists, parser.WhenNotExists:
+		return vrl.AddLabelsWhenPresence.Render(vrl.Args{
+			"i":         i,
+			"pathArray": parser.PathSegmentsToVRLArray(we.LeftPathSegs),
+			"opCmp":     we.Op.PresenceOpCmp(),
+		})
+	case parser.WhenEQ, parser.WhenNE:
 		args["kind"] = "literal"
 		args["quotedValue"] = strconv.Quote(we.Value)
 		return vrl.AddLabelsWhenLeaf.Render(args)
-	case parserlabels.WhenRe, parserlabels.WhenNRe:
-		if err := parserlabels.ValidateWhenRegexExpr(we); err != nil {
+	case parser.WhenRe, parser.WhenNRe:
+		if err := parser.ValidateWhenRegexExpr(we); err != nil {
 			return "", err
 		}
-		op, err := parserlabels.VRLRegexFindComparisonOp(we.Op)
+		op, err := parser.VRLRegexFindComparisonOp(we.Op)
 		if err != nil {
 			return "", err
 		}
@@ -122,13 +128,13 @@ func buildAddLabelsBody(labels map[string]string) (addLabelsBuilt, error) {
 	out := addLabelsBuilt{}
 	lines := make([]string, 0, len(keys))
 	for _, k := range keys {
-		segs, err := parserlabels.ParseLabelPath(k)
+		segs, err := parser.ParseLabelPath(k)
 		if err != nil {
 			return addLabelsBuilt{}, fmt.Errorf("addLabels: label key %q: %w", k, err)
 		}
 		// add sink key for all segments except message
 		if len(segs) > 0 && segs[0] != "message" {
-			out.sinkKeys = append(out.sinkKeys, strings.TrimPrefix(parserlabels.PathSegmentsToVRLDotPath(segs), "."))
+			out.sinkKeys = append(out.sinkKeys, strings.TrimPrefix(parser.PathSegmentsToVRLDotPath(segs), "."))
 		}
 		line, err := buildAddLabelsOneAssignmentFromSegs(segs, labels[k])
 		if err != nil {
@@ -142,19 +148,19 @@ func buildAddLabelsBody(labels map[string]string) (addLabelsBuilt, error) {
 
 func buildAddLabelsOneAssignmentFromSegs(segs []string, value string) (string, error) {
 	value = strings.TrimSpace(value)
-	lhs := parserlabels.PathSegmentsToVRLDotPath(segs)
+	lhs := parser.PathSegmentsToVRLDotPath(segs)
 	// check if value is a mustache template
-	if inner, ok := parserlabels.MatchMustachePath(value); ok {
-		srcSegs, err := parserlabels.ParseLabelPath(inner)
+	if inner, ok := parser.MatchMustachePath(value); ok {
+		srcSegs, err := parser.ParseLabelPath(inner)
 		if err != nil {
 			return "", fmt.Errorf("addLabels template path: %w", err)
 		}
-		pa := parserlabels.PathSegmentsToVRLArray(srcSegs)
+		pa := parser.PathSegmentsToVRLArray(srcSegs)
 		line, err := vrl.AddLabelsFromPath.Render(vrl.Args{"pathArray": pa, "lhs": lhs})
 		return line, err
 	}
 	// check if value is a mustache without dot prefix
-	if _, ok := parserlabels.MatchMustacheGroup(value); ok {
+	if _, ok := parser.MatchMustacheGroup(value); ok {
 		return "", fmt.Errorf("addLabels: label values must be literals or {{ .path }} references; regex capture group templates are not supported")
 	}
 	line, err := vrl.AddLabelsAssign.Render(vrl.Args{"lhs": lhs, "rhs": strconv.Quote(value)})

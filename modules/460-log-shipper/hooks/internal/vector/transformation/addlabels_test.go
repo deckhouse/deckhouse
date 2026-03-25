@@ -28,14 +28,14 @@ import (
 func TestAddLabelsVRL(t *testing.T) {
 	t.Run("literals and path template", func(t *testing.T) {
 		got, keys, err := AddLabelsVRL(v1alpha1.AddLabelsRule{
-			Labels: map[string]string{".z": "1", ".a": "2"},
+			SetLabels: map[string]string{".z": "1", ".a": "2"},
 		})
 		require.NoError(t, err)
 		assert.Equal(t, ".a = \"2\"\n.z = \"1\"", got)
 		assert.Equal(t, []string{"a", "z"}, keys)
 
 		got, keys, err = AddLabelsVRL(v1alpha1.AddLabelsRule{
-			Labels: map[string]string{".out": "{{ .src }}"},
+			SetLabels: map[string]string{".out": "{{ .src }}"},
 		})
 		require.NoError(t, err)
 		assert.Equal(t, []string{"out"}, keys)
@@ -139,6 +139,26 @@ if err == null {
 }`,
 			},
 			{
+				"exists",
+				`.pod_labels.app`,
+				map[string]string{".tag": "x"},
+				`_, err_0 = get(., ["pod_labels", "app"])
+b_0 = err_0 == null
+if b_0 {
+.tag = "x"
+}`,
+			},
+			{
+				"notexists",
+				`!.pod_labels.skip`,
+				map[string]string{".tag": "x"},
+				`_, err_0 = get(., ["pod_labels", "skip"])
+b_0 = err_0 != null
+if b_0 {
+.tag = "x"
+}`,
+			},
+			{
 				"!=~",
 				`.msg !=~ '^\d+$'`,
 				map[string]string{".ok": "1", ".lbl": "{{ .label }}"},
@@ -175,8 +195,8 @@ if err == null {
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				got, _, err := AddLabelsVRL(v1alpha1.AddLabelsRule{
-					When:   []string{tc.when},
-					Labels: tc.labels,
+					When:      []string{tc.when},
+					SetLabels: tc.labels,
 				})
 				require.NoError(t, err)
 				assert.Equal(t, tc.want, got)
@@ -186,16 +206,16 @@ if err == null {
 
 	t.Run("errors", func(t *testing.T) {
 		for _, spec := range []v1alpha1.AddLabelsRule{
-			{Labels: map[string]string{}},
-			{When: []string{`broken`}, Labels: map[string]string{".a": "1"}},
-			{When: []string{`.x =~ '['`}, Labels: map[string]string{".a": "1"}},
+			{SetLabels: map[string]string{}},
+			{When: []string{`broken`}, SetLabels: map[string]string{".a": "1"}},
+			{When: []string{`.x =~ '['`}, SetLabels: map[string]string{".a": "1"}},
 			{
-				When:   []string{`.msg =~ 'x'`},
-				Labels: map[string]string{".ok": "{{ lvl }}"},
+				When:      []string{`.msg =~ 'x'`},
+				SetLabels: map[string]string{".ok": "{{ lvl }}"},
 			},
 			{
-				When:   []string{`.a == "{{ .b }}"`},
-				Labels: map[string]string{".x": "1"},
+				When:      []string{`.a == "{{ .b }}"`},
+				SetLabels: map[string]string{".x": "1"},
 			},
 		} {
 			_, _, err := AddLabelsVRL(spec)
@@ -210,7 +230,7 @@ if err == null {
 				`.bar =~ "bar.*"`,
 				`.tst != "far"`,
 			},
-			Labels: map[string]string{".tag": "x"},
+			SetLabels: map[string]string{".tag": "x"},
 		})
 		require.NoError(t, err)
 		assert.Equal(t, `val_0, err_0 = get(., ["ns"])

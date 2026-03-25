@@ -24,7 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/parserlabels"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transformation/parser"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
@@ -49,11 +49,11 @@ func GenerateParseMessageVRL(spec v1alpha1.ParseMessageSpec) (string, error) {
 	if targetLabel == "" {
 		targetLabel = v1alpha1.DefaultParseMessageTargetLabel
 	}
-	root := parserlabels.IsRootLabel(targetLabel)
+	root := parser.IsRootLabel(targetLabel)
 	var segs []string
 	var err error
 	if !root {
-		segs, err = parserlabels.ParseLabelPath(targetLabel)
+		segs, err = parser.ParseLabelPath(targetLabel)
 		if err != nil {
 			return "", err
 		}
@@ -76,7 +76,7 @@ func GenerateParseMessageVRL(spec v1alpha1.ParseMessageSpec) (string, error) {
 func parseRule(rule vrl.Rule, segs []string, root bool, extra vrl.Args) (string, error) {
 	args := vrl.Args{"mergeRoot": root}
 	if !root {
-		args["pathArray"] = parserlabels.PathSegmentsToVRLArray(segs)
+		args["pathArray"] = parser.PathSegmentsToVRLArray(segs)
 	}
 	for k, v := range extra {
 		args[k] = v
@@ -94,10 +94,10 @@ func parseMessageStringFormat(segs []string, root bool, spec v1alpha1.ParseMessa
 		return parseRule(vrl.ParseMessageString, segs, root, vrl.Args{"targetField": s.TargetField})
 	}
 	if s.Regex == "" {
-		return "", fmt.Errorf("parseMessage string: regex and labels required when targetField is empty")
+		return "", fmt.Errorf("parseMessage string: regex and setLabels required when targetField is empty")
 	}
-	if len(s.Labels) == 0 {
-		return "", fmt.Errorf("parseMessage string: labels required with regex")
+	if len(s.SetLabels) == 0 {
+		return "", fmt.Errorf("parseMessage string: setLabels required with regex")
 	}
 	if _, err := regexp.Compile(s.Regex); err != nil {
 		return "", fmt.Errorf("parseMessage string regex: %w", err)
@@ -106,10 +106,10 @@ func parseMessageStringFormat(segs []string, root bool, spec v1alpha1.ParseMessa
 }
 
 func parseMessageStringRegex(segs []string, root bool, s v1alpha1.SourceFormatStringSpec) (string, error) {
-	keys := loglabels.SortedMapKeys(s.Labels)
+	keys := loglabels.SortedMapKeys(s.SetLabels)
 	lines := make([]string, 0, len(keys))
 	for _, k := range keys {
-		val, err := parseMessageRegexLabelValueToVRL(s.Labels[k])
+		val, err := parseMessageRegexLabelValueToVRL(s.SetLabels[k])
 		if err != nil {
 			return "", err
 		}
@@ -131,7 +131,7 @@ func parseMessageStringRegex(segs []string, root bool, s v1alpha1.SourceFormatSt
 func parseMessageRegexLabelValueToVRL(v string) (string, error) {
 	v = strings.TrimSpace(v)
 	// if value is a mustache group, return the capture string
-	if group, ok := parserlabels.MatchMustacheGroup(v); ok {
+	if group, ok := parser.MatchMustacheGroup(v); ok {
 		return vrl.RegexCaptureString.Render(vrl.Args{"name": group})
 	}
 	// if value is not a mustache group, quote it

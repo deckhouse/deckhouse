@@ -31,12 +31,12 @@ spec:
     addLabels:
       when:
       - ".message.user_id == '123'"
-      labels:
+      setLabels:
         ".from_addlabels": "yes"
         ".from_path": "{{ .message.user_id }}"
   - action: AddLabels
     addLabels:
-      labels:
+      setLabels:
         ".from_static": "static"
         ".message.user_id": "123"
   - action: ReplaceValue

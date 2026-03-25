@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/parserlabels"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transformation/parser"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
@@ -40,7 +40,7 @@ func ReplaceValueVRL(spec v1alpha1.ReplaceValueSpec) (string, error) {
 		return "", fmt.Errorf("replaceValue: labels is empty")
 	}
 	srcEsc := escapeRegexLiteral(spec.Source)
-	pathArrays, err := parserlabels.MapLabelPaths(spec.Labels, parserlabels.PathSegmentsToVRLArray)
+	pathArrays, err := parser.MapLabelPaths(spec.Labels, parser.PathSegmentsToVRLArray)
 	if err != nil {
 		return "", fmt.Errorf("replaceValue: %w", err)
 	}

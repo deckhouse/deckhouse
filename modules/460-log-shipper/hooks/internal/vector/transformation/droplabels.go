@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/parserlabels"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transformation/parser"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
@@ -38,7 +38,7 @@ func DropLabelsVRL(d v1alpha1.DropLabelsSpec) (string, error) {
 	}
 	// if keepOnly is empty, drop all labels
 	if len(d.KeepOnly) == 0 {
-		paths, err := parserlabels.MapLabelPaths(d.Labels, parserlabels.PathSegmentsToVRLDotPath)
+		paths, err := parser.MapLabelPaths(d.Labels, parser.PathSegmentsToVRLDotPath)
 		if err != nil {
 			return "", fmt.Errorf("dropLabels: %w", err)
 		}
@@ -52,7 +52,7 @@ func DropLabelsVRL(d v1alpha1.DropLabelsSpec) (string, error) {
 			return "", fmt.Errorf("dropLabels: invalid keepOnly key %q", k)
 		}
 	}
-	pathArrays, err := parserlabels.MapLabelPaths(d.Labels, parserlabels.PathSegmentsToVRLArray)
+	pathArrays, err := parser.MapLabelPaths(d.Labels, parser.PathSegmentsToVRLArray)
 	if err != nil {
 		return "", fmt.Errorf("dropLabels: %w", err)
 	}

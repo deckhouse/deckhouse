@@ -136,7 +136,7 @@ func TestGenerateParseMessageVRL(t *testing.T) {
 			String: v1alpha1.SourceFormatStringSpec{
 				TargetField: "text",
 				Regex:       `ignored`,
-				Labels:      map[string]string{"x": "{{ x }}"},
+				SetLabels:   map[string]string{"x": "{{ x }}"},
 			},
 		})
 		require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestGenerateParseMessageVRL(t *testing.T) {
 			SourceFormat: v1alpha1.FormatString,
 			String: v1alpha1.SourceFormatStringSpec{
 				Regex: `^(\d+)$`,
-				Labels: map[string]string{
+				SetLabels: map[string]string{
 					"z": "lit",
 					"a": "{{ grp }}",
 				},

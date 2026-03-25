@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package parserlabels
+package parser
 
 import (
 	"errors"
@@ -28,10 +28,12 @@ var ErrWhenExactlyOneOperator = errors.New("when: exactly one operator is allowe
 type WhenOp string
 
 const (
-	WhenEQ  WhenOp = "=="
-	WhenNE  WhenOp = "!="
-	WhenRe  WhenOp = "=~"
-	WhenNRe WhenOp = "!=~"
+	WhenEQ        WhenOp = "=="
+	WhenNE        WhenOp = "!="
+	WhenRe        WhenOp = "=~"
+	WhenNRe       WhenOp = "!=~"
+	WhenExists    WhenOp = "exists"
+	WhenNotExists WhenOp = "notexists"
 )
 
 var whenOpsParseOrder = []WhenOp{WhenNRe, WhenRe, WhenNE, WhenEQ}
@@ -72,6 +74,19 @@ func ParseWhen(s string) (*WhenExpr, error) {
 			}
 		}
 		return expr, nil
+	}
+	if strings.HasPrefix(s, "!.") {
+		rest := strings.TrimSpace(s[1:])
+		if rest != "" {
+			segs, err := ParseLabelPath(rest)
+			if err == nil {
+				return &WhenExpr{LeftPath: rest, LeftPathSegs: segs, Op: WhenNotExists}, nil
+			}
+		}
+	}
+	segs, err := ParseLabelPath(s)
+	if err == nil {
+		return &WhenExpr{LeftPath: s, LeftPathSegs: segs, Op: WhenExists}, nil
 	}
 	return nil, fmt.Errorf("invalid when expression")
 }
@@ -125,5 +140,17 @@ func VRLRegexFindComparisonOp(op WhenOp) (string, error) {
 		return "!=", nil
 	default:
 		return "", fmt.Errorf("when: unsupported regex op %q", op)
+	}
+}
+
+// PresenceOpCmp returns the VRL comparison of get-error to null for exists / not-exists when clauses.
+func (o WhenOp) PresenceOpCmp() string {
+	switch o {
+	case WhenExists:
+		return "=="
+	case WhenNotExists:
+		return "!="
+	default:
+		return ""
 	}
 }

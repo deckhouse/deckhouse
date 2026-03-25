@@ -893,71 +893,59 @@ spec:
                 transformations:
                   type: array
                   description: |
-                    List of transformations that can be applied to logs before sending them to the destination.
+                    Ordered list of transformations applied to each log event before it is sent to the destination.
+                    Items are executed in array order.
 
-                    Available options:
+                    `AddLabels` runs after `extraLabels` when both are configured.
 
-                      - `ReplaceKeys`: Replaces `source` with `target` in the specified label keys.
+                    Available actions:
 
-                        Example:
+                    - `ReplaceKeys` — recursively replace matches of the `source` pattern with `target` in the given paths.
+                    - `ParseMessage` — parse the `message` field using `sourceFormat` and write the result to `targetLabel` (default `.message`; the lone `.` merges into the event root). On parse failure the original `message` is left unchanged.
+                    - `DropLabels` — remove the listed paths or, if `keepOnly` is set, keep only the listed key names inside each object at those paths (not full paths).
+                    - `AddLabels` — add labels (literals, `{{ .path }}` templates, optional `when`). Runs after `extraLabels`; on key name conflicts `AddLabels` wins.
+                    - `ReplaceValue` — replace substrings in scalar string fields using the `source` regex; `target` may reference named groups as `{{ group_name }}`.
 
-                        ```yaml
-                        transformations:
-                        - action: ReplaceKeys
-                          replaceKeys:
-                            source: "."
-                            target: "_"
-                            labels:
-                              - .pod_labels
-                        ```
-
-                      - `ParseMessage`: Converts the `message` field from the format specified in `sourceFormat` into an object. If conversion fails, the `message` field remains unchanged.
-
-                        Examples:
-
-                        ```yaml
-                        transformations:
-                        - action: ParseMessage
-                          parseMessage:
-                            sourceFormat: String
-                            string:
-                              targetField: msg
-                        ```
-
-                        ```yaml
-                        transformations:
-                        - action: ParseMessage
-                          parseMessage:
-                            sourceFormat: Klog
-                        - action: ParseMessage
-                          parseMessage:
-                            sourceFormat: JSON
-                            json:
-                              depth: 1
-                        - action: ParseMessage
-                          parseMessage:
-                            sourceFormat: String
-                            string:
-                              targetField: msg
-                        ```
-
-                      - `DropLabels`: Removes the specified labels (optionally keeping only selected keys inside objects).
-
-                      - `AddLabels`: Adds labels; runs after `extraLabels` when both are set. Optional `when` filter.
-
-                      - `ReplaceValue`: Replaces substrings in scalar fields by regex.
-
-                        Example:
-
-                        ```yaml
-                        transformations:
-                        - action: DropLabels
-                          dropLabels:
-                            labels:
-                              - .first
-                              - .second
-                        ```
-
+                  x-doc-examples:
+                    - action: ReplaceKeys
+                      replaceKeys:
+                        source: "."
+                        target: "_"
+                        labels:
+                          - .pod_labels
+                    - action: ParseMessage
+                      parseMessage:
+                        sourceFormat: String
+                        string:
+                          regex: "^(?P<msg>.*)$"
+                          setLabels:
+                            msg: "{{ msg }}"
+                    - action: ParseMessage
+                      parseMessage:
+                        sourceFormat: Klog
+                    - action: ParseMessage
+                      parseMessage:
+                        sourceFormat: JSON
+                        json:
+                          depth: 1
+                    - action: DropLabels
+                      dropLabels:
+                        labels:
+                          - .first
+                          - .second
+                    - action: AddLabels
+                      addLabels:
+                        when:
+                          - '.namespace == "production"'
+                        setLabels:
+                          .env: prod
+                          .source_app: "{{ .pod_labels.app }}"
+                    - action: ReplaceValue
+                      replaceValue:
+                        source: \d+
+                        target: REDACTED
+                        labels:
+                          - .message
                   items:
                     type: object
                     oneOf:
@@ -1005,10 +993,12 @@ spec:
                       action:
                         type: string
                         enum: ["ReplaceKeys", "ParseMessage", "DropLabels", "AddLabels", "ReplaceValue"]
-                        description: Type of a transformation.
+                        description: |
+                          Transformation type; selects which parameter block is used.
                       replaceKeys:
                         type: object
-                        description: "Recursive replacement of all matches of the `source` pattern with the `target` value in the specified labels."
+                        description: |
+                          Recursively replaces matches of the `source` pattern with the `target` value in the listed paths (`labels`). Paths use Vector notation with a leading `.` on each list item.
                         required:
                           - labels
                           - source
@@ -1018,20 +1008,31 @@ spec:
                             pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
                             description: |
                               Pattern used to find matches.
-                              Can be a static string or a regular expression (Rust regex; same character set as other regex fields in transformations).
+                              Can be a static string or a regular expression (same character set as other regex fields in transformations).
+                            x-doc-examples:
+                              - "."
+                              - '^old\.'
                           target:
                             type: string
                             default: ""
                             description: "Literal replacement string for matched substrings (not a regex)."
+                            x-doc-examples:
+                              - "_"
+                              - ""
                           labels:
                             type: array
-                            description: "List of labels in which the recursive replacement will be performed."
+                            description: |
+                              Label paths where the replacement runs. Each item must start with `.` (Vector field path notation, e.g. `.pod_labels`, `.parsed_data`).
+                            x-doc-examples:
+                              - .pod_labels
+                              - .annotations
                             items:
                               type: string
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
                       parseMessage:
                         type: object
-                        description: "Parses the log line from `.message` and writes the result to `targetLabel` (default `.message`)."
+                        description: |
+                          Parses the string in the `message` field (format from `sourceFormat`) and writes the result to `targetLabel` as a Vector path with a leading `.` (default `.message`; the lone `.` merges the parsed object into the event root). On parse failure the original `message` field is left unchanged.
                         required:
                           - sourceFormat
                         oneOf:
@@ -1083,28 +1084,49 @@ spec:
                             type: string
                             default: ".message"
                             pattern: '^(\.|\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+)$'
-                            description: "Destination path for parsed value (default `.message`). Use `.` for merge into the root."
+                            description: |
+                              Destination path for the parsed value (default `.message`). The lone value `.` merges into the event root. Avoid reserved paths such as `.parsed_data`.
+                            x-doc-examples:
+                              - ".message"
+                              - "."
+                              - ".tmp"
+                            x-kubernetes-validations:
+                              - message: using reserved paths in parseMessage.targetLabel
+                                rule: '![''pod'', ''pod_ip'', ''pod_owner'', ''parsed_data'', ''namespace'', ''image'', ''container'', ''node''].exists(k, self == ''.'' + k || self.startsWith(''.'' + k + ''.''))'
                           string:
                             type: object
+                            description: |
+                              Settings for `sourceFormat: String`. Two mutually exclusive modes: if `targetField` is set, only the legacy behavior applies (wrap the `message` string into a one-key object); `regex` and `setLabels` are not used. If `targetField` is empty, `regex` and `setLabels` are required and the output object is built from named regex groups via `setLabels`.
                             oneOf:
                               - required:
                                   - targetField
                               - required:
                                   - regex
-                                  - labels
+                                  - setLabels
                             properties:
                               targetField:
                                 type: string
                                 x-doc-deprecated: true
                                 pattern: '^[a-zA-Z0-9_\\\.\-]+$'
-                                description: "Deprecated. If set, legacy behavior: wrap `.message` string into a one-key object under this field. When `targetField` is set, `regex` and `labels` are ignored."
+                                description: "Deprecated; do not use. If set, legacy behavior: wrap `.message` string into a one-key object under this field. When `targetField` is set, `regex` and `setLabels` are ignored."
+                                x-doc-examples:
+                                  - msg
+                                  - raw_line
                               regex:
                                 type: string
                                 pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
-                                description: "Used only when `targetField` is empty: Rust-compatible regex with named capture groups; requires `labels`."
-                              labels:
+                                description: "Regular expression with named capture groups; requires `setLabels`. Used only when `targetField` is empty."
+                                x-doc-examples:
+                                  - "(?P<code>\\d{3})\\s+(?P<text>.+)"
+                                  - "^\\S+\\s+\\S+\\s+(?P<msg>.+)$"
+                              setLabels:
                                 type: object
-                                description: "Used with `regex` when `targetField` is empty: maps output keys to literals or `{{ group_name }}`."
+                                description: "Maps output keys to literals or `{{ group_name }}` templates."
+                                x-doc-examples:
+                                  - status: "{{ code }}"
+                                    body: "{{ text }}"
+                                  - level: INFO
+                                    rest: "{{ msg }}"
                                 additionalProperties:
                                   type: string
                           json:
@@ -1117,43 +1139,68 @@ spec:
                                 description: "Depth for JSON parsing."
                       dropLabels:
                         type: object
-                        description: "Removes the specified labels or keeps only keys inside objects."
+                        description: |
+                          Removes the specified label paths or narrows objects to `keepOnly` keys.
                         required:
                           - labels
                         properties:
                           labels:
                             type: array
-                            description: "List of labels to remove or object paths for keepOnly."
+                            description: |
+                              Vector paths: each item starts with `.` (e.g. `.pod_labels`, `.annotations`). If `keepOnly` is unset, each listed path is removed entirely. If `keepOnly` is set, each item is a path to an **object**; inside that object, every key not listed in `keepOnly` is removed.
                             items:
                               type: string
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
                           keepOnly:
                             type: array
-                            description: "If set, only these keys are kept inside each object referenced by `labels`."
+                            description: |
+                              Key names without a leading `.`: for each object at the paths in `labels`, only these keys are kept; all other keys in those objects are removed.
+                            x-doc-examples:
+                              - app
+                              - team
                             items:
                               type: string
                               pattern: '^[a-zA-Z0-9_.\-/]+$'
                       addLabels:
                         type: object
-                        description: "Rule applied after extraLabels when both are configured. Optional `when` filter."
+                        description: |
+                          Adds fields to the event from `setLabels` (literals and `{{ .path }}` templates). Runs after `extraLabels` when both are set; on path conflicts values from this transform win. Optional `when` filter.
                         required:
-                          - labels
+                          - setLabels
                         properties:
                           when:
                             type: array
+                            description: |
+                              Optional list of conditions combined with logical AND. Field paths use Vector notation with a leading `.` in comparisons.
+                              Each item is either: a comparison `path ==|!=|=~|!=~ value` (regular expression for `=~` / `!=~`), a `path` with no operator or right-hand side (field exists), or `!.path` (field does not exist).
+                              If the value at `path` is an array, `==` and `=~` are true when at least one element matches,
+                              and `!=` and `!=~` are true when no element matches. Existence checks (`path` / `!.path`) use the path as a whole (no per-element matching).
+                              For comparisons, the right-hand value must be a literal or quoted string; mustache path templates `{{ .path }}` are not allowed.
+                            x-doc-examples:
+                              - '.namespace == "production"'
+                              - '.pod_labels.app =~ "^api-"'
+                              - '.level != "debug"'
+                              - '.pod_labels.team'
+                              - '!.pod_labels.legacy'
                             items:
                               type: string
                               pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
-                            description: "Optional list of comparisons combined with logical AND. Each item: `path ==|!=|=~|!=~ value` (regex for =~/!=~ is Rust regex). The value must be a literal or quoted string; mustache path templates `{{ .path }}` are not allowed."
-                          labels:
+                          setLabels:
                             type: object
-                            description: "Label keys and literal values or `{{ .path }}` templates. Keys are Vector label paths (must start with `.`)."
+                            description: |
+                              Keys are destination label paths in Vector notation: each key starts with `.` relative to the event root (e.g. `.env`, `.source_app`).
+                              Values are literals or `{{ .path }}` templates where `path` in the template is a source field path with a leading `.`.
+                            x-doc-examples:
+                              - .tier: backend
+                              - .source_app: "{{ .pod_labels.app }}"
                             propertyNames:
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
                             additionalProperties:
                               type: string
                       replaceValue:
                         type: object
+                        description: |
+                          Replace matches of `source` in each listed scalar string field with `target`.
                         required:
                           - source
                           - target
@@ -1162,13 +1209,23 @@ spec:
                           source:
                             type: string
                             pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
-                            description: "Regex to search in each scalar field (Rust regex)."
+                            description: "Regular expression to search in each scalar field value."
+                            x-doc-examples:
+                              - \d+
+                              - "(?P<tok>token=[^\\s]+)"
                           target:
                             type: string
                             description: "Replacement string; may use `{{name}}` for named capture groups."
+                            x-doc-examples:
+                              - REDACTED
+                              - "{{tok}}"
                           labels:
                             type: array
-                            description: "Paths to scalar fields."
+                            description: |
+                              Paths to scalar string fields where replacement runs. Each item must start with `.` (Vector path, e.g. `.message`, `.parsed_data.token`).
+                            x-doc-examples:
+                              - .message
+                              - .parsed_data.line
                             items:
                               type: string
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'

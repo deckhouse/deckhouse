@@ -53,8 +53,8 @@ type ReplaceValueSpec struct {
 }
 
 type AddLabelsRule struct {
-	When   []string          `json:"when,omitempty"`
-	Labels map[string]string `json:"labels"`
+	When      []string          `json:"when,omitempty"`
+	SetLabels map[string]string `json:"setLabels"`
 }
 
 // DefaultParseMessageTargetLabel matches the OpenAPI default for parseMessage.targetLabel in ClusterLogDestination.
@@ -82,7 +82,7 @@ const (
 type SourceFormatStringSpec struct {
 	TargetField string            `json:"targetField,omitempty"`
 	Regex       string            `json:"regex,omitempty"`
-	Labels      map[string]string `json:"labels,omitempty"`
+	SetLabels   map[string]string `json:"setLabels,omitempty"`
 }
 
 type SourceFormatJSONSpec struct {
