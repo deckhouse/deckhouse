@@ -117,7 +117,7 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 		input.Values.Set(publishAPIIngressConfigPath+"whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
 	}
 	if publishAPIConfig.AddKubeconfigGeneratorEntry != nil {
-		input.Values.Set(publishAPIIngressConfigPath+"enabled", *publishAPIConfig.AddKubeconfigGeneratorEntry)
+		input.Values.Set(publishAPIIngressConfigPath+"addKubeconfigGeneratorEntry", *publishAPIConfig.AddKubeconfigGeneratorEntry)
 	}
 	if publishAPIConfig.HTTPS.Mode != "" {
 		input.Values.Set(publishAPIIngressConfigPath+"https.mode", publishAPIConfig.HTTPS.Mode)
