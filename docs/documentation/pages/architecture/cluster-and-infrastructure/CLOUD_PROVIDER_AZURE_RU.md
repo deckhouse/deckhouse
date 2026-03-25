@@ -35,7 +35,8 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
      * заполняет поля `spec.providerID` и `nodeInfo` ресурса Node;
      * проверяет наличие виртуальной машины в облаке и при ее отсутствии удаляет ресурс Node в кластере.
 
-   * при создании ресурса Service типа LoadBalancer в Kubernetes создаёт балансировщик в облаке, который направляет трафик извне к узлам кластера.
+   * при создании ресурса Service типа LoadBalancer в Kubernetes создаёт балансировщик в облаке, который направляет трафик извне к узлам кластера;
+   * создает сетевые маршруты для сети `PodNetwork` на стороне Azure.
 
    Подробнее о cloud-controller-manager можно почитать в [документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/).
 
@@ -80,8 +81,8 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
 
 1. Модуль `cloud-provider-azure` предоставляет модулю [`node-manager`](/modules/node-manager/) следующие артефакты:
 
-   * шаблоны для создания кастомных ресурсов Cluster API для конкретного провайдера, которые `cloud-provider-azure` использует для создания виртуальных машин в облаке;
-   * секрет `kube-system/d8-node-manager-cloud-provider`, в котором содержатся все необходимые настройки для подключения к облаку и создания CloudEphemeral-узлов. Эти настройки прописываются в кастомных ресурсах Cluster API, созданных на основе упомянутых выше шаблонов и учитывающих особенности провайдера.
+   * шаблоны для создания кастомных ресурсов MCM (Machine Controller Manager) для конкретного провайдера, которые `cloud-provider-azure` использует для создания виртуальных машин в облаке;
+   * секрет `kube-system/d8-node-manager-cloud-provider`, в котором содержатся все необходимые настройки для подключения к облаку и создания CloudEphemeral-узлов. Эти настройки прописываются в кастомных ресурсах MCM, созданных на основе упомянутых выше шаблонов и учитывающих особенности провайдера.
 
 2. Модуль `cloud-provider-azure` предоставляет компоненты Terraform/OpenTofu для Azure, которые используются при сборке исполняемого файла утилиты [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) в модуле [`terraform-manager`](/modules/terraform-manager/), такие как:
 
