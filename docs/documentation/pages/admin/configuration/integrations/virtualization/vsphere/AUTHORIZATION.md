@@ -154,7 +154,7 @@ VMware vSphere does not have the concepts of “region” and “zone”. In vSp
    ![Creating tags and tag categories, step 4](images/tags-categories-setup/Screenshot-4.png)
 
 5. In the **Inventory** tab, select the target **Datacenter**, open the **Summary** panel, then choose **Actions** → **Tags & Custom Attributes** → **Assign Tag** and assign the region tag.
-   Repeat this for each **Cluster** where nodes will be размещены, assigning the corresponding zone tags.
+   Repeat this for each **Cluster** where nodes will be placed, assigning the corresponding zone tags.
 
    ![Creating tags and tag categories, step 5.1](images/tags-categories-setup/Screenshot-5-1.png)
    ![Creating tags and tag categories, step 5.2](images/tags-categories-setup/Screenshot-5-2.png)

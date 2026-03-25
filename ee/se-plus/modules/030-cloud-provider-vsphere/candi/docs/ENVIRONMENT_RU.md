@@ -52,7 +52,11 @@ description: "Настройка VMware vSphere для работы облачн
     <tr>
       <td>—</td>
       <td>— (назначаются по умолчанию при создании роли)</td>
-      <td><code>System.Anonymous</code> <br/> <code>System.Read</code> <br/> <code>System.View</code></td>
+      <td>
+        <code>System.Anonymous</code><br/>
+        <code>System.Read</code><br/>
+        <code>System.View</code>
+      </td>
       <td>Базовый доступ к объектам vSphere Inventory, необходимый для работы всех компонентов интеграции Deckhouse с vSphere.</td>
     </tr>
     <tr>
@@ -63,26 +67,72 @@ description: "Настройка VMware vSphere для работы облачн
     </tr>
     <tr>
       <td>Datastore</td>
-      <td>Allocate space, <br/> Browse datastore, <br/> Low level file operations</td>
-      <td><code>Datastore.AllocateSpace</code> <br/> <code>Datastore.Browse</code> <br/> <code>Datastore.FileManagement</code></td>
+      <td>
+        Allocate space,<br/>
+        Browse datastore,<br/>
+        Low level file operations
+      </td>
+      <td>
+        <code>Datastore.AllocateSpace</code><br/>
+        <code>Datastore.Browse</code><br/>
+        <code>Datastore.FileManagement</code>
+      </td>
       <td>Выделение дисков при создании виртуальных машин и заказе <code>PersistentVolumes</code> в кластере.</td>
     </tr>
     <tr>
       <td>Folder</td>
-      <td>Create folder, <br/> Delete folder, <br/> Move folder, <br/> Rename folder</td>
-      <td><code>Folder.Create</code> <br/> <code>Folder.Delete</code> <br/> <code>Folder.Move</code> <br/> <code>Folder.Rename</code></td>
+      <td>
+        Create folder,<br/>
+        Delete folder,<br/>
+        Move folder,<br/>
+        Rename folder
+      </td>
+      <td>
+        <code>Folder.Create</code><br/>
+        <code>Folder.Delete</code><br/>
+        <code>Folder.Move</code><br/>
+        <code>Folder.Rename</code>
+      </td>
       <td>Группировка кластера Deckhouse Kubernetes Platform в одном <code>Folder</code> в vSphere Inventory.</td>
     </tr>
     <tr>
       <td>Global</td>
-      <td>Global tag, <br/> System tag</td>
-      <td><code>Global.GlobalTag</code> <br/> <code>Global.SystemTag</code></td>
+      <td>
+        Global tag,<br/>
+        System tag
+      </td>
+      <td>
+        <code>Global.GlobalTag</code><br/>
+        <code>Global.SystemTag</code>
+      </td>
       <td>Доступ к глобальным и системным тегам, используемым Deckhouse Kubernetes Platform при работе с объектами vSphere.</td>
     </tr>
     <tr>
       <td>vSphere Tagging</td>
-      <td>Assign or Unassign vSphere Tag, <br/> Assign or Unassign vSphere Tag on Object, <br/> Create vSphere Tag, <br/> Create vSphere Tag Category, <br/> Delete vSphere Tag, <br/> Delete vSphere Tag Category, <br/> Edit vSphere Tag, <br/> Edit vSphere Tag Category, <br/> Modify UsedBy Field for Category, <br/> Modify UsedBy Field for Tag</td>
-      <td><code>InventoryService.Tagging.AttachTag</code> <br/> <code>InventoryService.Tagging.ObjectAttachable</code> <br/> <code>InventoryService.Tagging.CreateTag</code> <br/> <code>InventoryService.Tagging.CreateCategory</code> <br/> <code>InventoryService.Tagging.DeleteTag</code> <br/> <code>InventoryService.Tagging.DeleteCategory</code> <br/> <code>InventoryService.Tagging.EditTag</code> <br/> <code>InventoryService.Tagging.EditCategory</code> <br/> <code>InventoryService.Tagging.ModifyUsedByForCategory</code> <br/> <code>InventoryService.Tagging.ModifyUsedByForTag</code></td>
+      <td>
+        Assign or Unassign vSphere Tag,<br/>
+        Assign or Unassign vSphere Tag on Object,<br/>
+        Create vSphere Tag,<br/>
+        Create vSphere Tag Category,<br/>
+        Delete vSphere Tag,<br/>
+        Delete vSphere Tag Category,<br/>
+        Edit vSphere Tag,<br/>
+        Edit vSphere Tag Category,<br/>
+        Modify UsedBy Field for Category,<br/>
+        Modify UsedBy Field for Tag
+      </td>
+      <td>
+        <code>InventoryService.Tagging.AttachTag</code><br/>
+        <code>InventoryService.Tagging.ObjectAttachable</code><br/>
+        <code>InventoryService.Tagging.CreateTag</code><br/>
+        <code>InventoryService.Tagging.CreateCategory</code><br/>
+        <code>InventoryService.Tagging.DeleteTag</code><br/>
+        <code>InventoryService.Tagging.DeleteCategory</code><br/>
+        <code>InventoryService.Tagging.EditTag</code><br/>
+        <code>InventoryService.Tagging.EditCategory</code><br/>
+        <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
+        <code>InventoryService.Tagging.ModifyUsedByForTag</code>
+      </td>
       <td>Deckhouse Kubernetes Platform использует теги для определения доступных ему объектов <code>Datacenter</code>, <code>Cluster</code> и <code>Datastore</code>, а также для определения виртуальных машин, находящихся под его управлением.</td>
     </tr>
     <tr>
@@ -93,8 +143,20 @@ description: "Настройка VMware vSphere для работы облачн
     </tr>
     <tr>
       <td>Resource</td>
-      <td>Assign virtual machine to resource pool, <br/> Create resource pool, <br/> Modify resource pool, <br/> Remove resource pool, <br/> Rename resource pool</td>
-      <td><code>Resource.AssignVMToPool</code> <br/> <code>Resource.CreatePool</code> <br/> <code>Resource.DeletePool</code> <br/> <code>Resource.EditPool</code> <br/> <code>Resource.RenamePool</code></td>
+      <td>
+        Assign virtual machine to resource pool,<br/>
+        Create resource pool,<br/>
+        Modify resource pool,<br/>
+        Remove resource pool,<br/>
+        Rename resource pool
+      </td>
+      <td>
+        <code>Resource.AssignVMToPool</code><br/>
+        <code>Resource.CreatePool</code><br/>
+        <code>Resource.DeletePool</code><br/>
+        <code>Resource.EditPool</code><br/>
+        <code>Resource.RenamePool</code>
+      </td>
       <td>Размещение виртуальных машин кластера Deckhouse Kubernetes Platform в целевом пуле ресурсов и управление этим пулом.</td>
     </tr>
     <tr>
@@ -105,20 +167,100 @@ description: "Настройка VMware vSphere для работы облачн
     </tr>
     <tr>
       <td>vApp</td>
-      <td>Add virtual machine, <br/> Assign resource pool, <br/> Create, <br/> Delete, <br/> Import, <br/> Power Off, <br/> Power On, <br/> View OVF Environment, <br/> vApp application configuration, <br/> vApp instance configuration, <br/> vApp resource configuration</td>
-      <td><code>VApp.ApplicationConfig</code> <br/> <code>VApp.AssignResourcePool</code> <br/> <code>VApp.AssignVM</code> <br/> <code>VApp.Create</code> <br/> <code>VApp.Delete</code> <br/> <code>VApp.ExtractOvfEnvironment</code> <br/> <code>VApp.Import</code> <br/> <code>VApp.InstanceConfig</code> <br/> <code>VApp.PowerOff</code> <br/> <code>VApp.PowerOn</code> <br/> <code>VApp.ResourceConfig</code></td>
+      <td>
+        Add virtual machine,<br/>
+        Assign resource pool,<br/>
+        Create,<br/>
+        Delete,<br/>
+        Import,<br/>
+        Power Off,<br/>
+        Power On,<br/>
+        View OVF Environment,<br/>
+        vApp application configuration,<br/>
+        vApp instance configuration,<br/>
+        vApp resource configuration
+      </td>
+      <td>
+        <code>VApp.ApplicationConfig</code><br/>
+        <code>VApp.AssignResourcePool</code><br/>
+        <code>VApp.AssignVM</code><br/>
+        <code>VApp.Create</code><br/>
+        <code>VApp.Delete</code><br/>
+        <code>VApp.ExtractOvfEnvironment</code><br/>
+        <code>VApp.Import</code><br/>
+        <code>VApp.InstanceConfig</code><br/>
+        <code>VApp.PowerOff</code><br/>
+        <code>VApp.PowerOn</code><br/>
+        <code>VApp.ResourceConfig</code>
+      </td>
       <td>Управление операциями, связанными с развертыванием и конфигурацией vApp и OVF-шаблонов, используемых при создании виртуальных машин.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Change Configuration</td>
-      <td>Add existing disk, <br/> Add new disk, <br/> Add or remove device, <br/> Advanced configuration, <br/> Set annotation, <br/> Change CPU count, <br/> Toggle disk change tracking, <br/> Extend virtual disk, <br/> Acquire disk lease, <br/> Modify device settings, <br/> Configure managedBy, <br/> Change Memory, <br/> Query unowned files, <br/> Configure Raw device, <br/> Reload from path, <br/> Remove disk, <br/> Rename, <br/> Reset guest information, <br/> Change resource, <br/> Change Settings, <br/> Change Swapfile placement, <br/> Upgrade virtual machine compatibility</td>
-      <td><code>VirtualMachine.Config.AddExistingDisk</code> <br/> <code>VirtualMachine.Config.AddNewDisk</code> <br/> <code>VirtualMachine.Config.AddRemoveDevice</code> <br/> <code>VirtualMachine.Config.AdvancedConfig</code> <br/> <code>VirtualMachine.Config.Annotation</code> <br/> <code>VirtualMachine.Config.CPUCount</code> <br/> <code>VirtualMachine.Config.ChangeTracking</code> <br/> <code>VirtualMachine.Config.DiskExtend</code> <br/> <code>VirtualMachine.Config.DiskLease</code> <br/> <code>VirtualMachine.Config.EditDevice</code> <br/> <code>VirtualMachine.Config.ManagedBy</code> <br/> <code>VirtualMachine.Config.Memory</code> <br/> <code>VirtualMachine.Config.QueryUnownedFiles</code> <br/> <code>VirtualMachine.Config.RawDevice</code> <br/> <code>VirtualMachine.Config.ReloadFromPath</code> <br/> <code>VirtualMachine.Config.RemoveDisk</code> <br/> <code>VirtualMachine.Config.Rename</code> <br/> <code>VirtualMachine.Config.ResetGuestInfo</code> <br/> <code>VirtualMachine.Config.Resource</code> <br/> <code>VirtualMachine.Config.Settings</code> <br/> <code>VirtualMachine.Config.SwapPlacement</code> <br/> <code>VirtualMachine.Config.UpgradeVirtualHardware</code></td>
+      <td>
+        Add existing disk,<br/>
+        Add new disk,<br/>
+        Add or remove device,<br/>
+        Advanced configuration,<br/>
+        Set annotation,<br/>
+        Change CPU count,<br/>
+        Toggle disk change tracking,<br/>
+        Extend virtual disk,<br/>
+        Acquire disk lease,<br/>
+        Modify device settings,<br/>
+        Configure managedBy,<br/>
+        Change Memory,<br/>
+        Query unowned files,<br/>
+        Configure Raw device,<br/>
+        Reload from path,<br/>
+        Remove disk,<br/>
+        Rename,<br/>
+        Reset guest information,<br/>
+        Change resource,<br/>
+        Change Settings,<br/>
+        Change Swapfile placement,<br/>
+        Upgrade virtual machine compatibility
+      </td>
+      <td>
+        <code>VirtualMachine.Config.AddExistingDisk</code><br/>
+        <code>VirtualMachine.Config.AddNewDisk</code><br/>
+        <code>VirtualMachine.Config.AddRemoveDevice</code><br/>
+        <code>VirtualMachine.Config.AdvancedConfig</code><br/>
+        <code>VirtualMachine.Config.Annotation</code><br/>
+        <code>VirtualMachine.Config.CPUCount</code><br/>
+        <code>VirtualMachine.Config.ChangeTracking</code><br/>
+        <code>VirtualMachine.Config.DiskExtend</code><br/>
+        <code>VirtualMachine.Config.DiskLease</code><br/>
+        <code>VirtualMachine.Config.EditDevice</code><br/>
+        <code>VirtualMachine.Config.ManagedBy</code><br/>
+        <code>VirtualMachine.Config.Memory</code><br/>
+        <code>VirtualMachine.Config.QueryUnownedFiles</code><br/>
+        <code>VirtualMachine.Config.RawDevice</code><br/>
+        <code>VirtualMachine.Config.ReloadFromPath</code><br/>
+        <code>VirtualMachine.Config.RemoveDisk</code><br/>
+        <code>VirtualMachine.Config.Rename</code><br/>
+        <code>VirtualMachine.Config.ResetGuestInfo</code><br/>
+        <code>VirtualMachine.Config.Resource</code><br/>
+        <code>VirtualMachine.Config.Settings</code><br/>
+        <code>VirtualMachine.Config.SwapPlacement</code><br/>
+        <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
+      </td>
       <td>Управление жизненным циклом виртуальных машин кластера Deckhouse Kubernetes Platform.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Edit Inventory</td>
-      <td>Create new, <br/> Create from existing, <br/> Remove, <br/> Move</td>
-      <td><code>VirtualMachine.Inventory.Create</code> <br/> <code>VirtualMachine.Inventory.CreateFromExisting</code> <br/> <code>VirtualMachine.Inventory.Delete</code> <br/> <code>VirtualMachine.Inventory.Move</code></td>
+      <td>
+        Create new,<br/>
+        Create from existing,<br/>
+        Remove,<br/>
+        Move
+      </td>
+      <td>
+        <code>VirtualMachine.Inventory.Create</code><br/>
+        <code>VirtualMachine.Inventory.CreateFromExisting</code><br/>
+        <code>VirtualMachine.Inventory.Delete</code><br/>
+        <code>VirtualMachine.Inventory.Move</code>
+      </td>
       <td>Создание, удаление и перемещение виртуальных машин кластера Deckhouse Kubernetes Platform в инвентаре vSphere.</td>
     </tr>
     <tr>
@@ -129,21 +271,61 @@ description: "Настройка VMware vSphere для работы облачн
     </tr>
     <tr>
       <td>Virtual Machine > Interaction</td>
-      <td>Answer question, <br/> Device connection, <br/> Guest operating system management by VIX API, <br/> Power Off, <br/> Power On, <br/> Reset, <br/> Configure CD media, <br/> Install VMware Tools</td>
-      <td><code>VirtualMachine.Interact.AnswerQuestion</code> <br/> <code>VirtualMachine.Interact.DeviceConnection</code> <br/> <code>VirtualMachine.Interact.GuestControl</code> <br/> <code>VirtualMachine.Interact.PowerOff</code> <br/> <code>VirtualMachine.Interact.PowerOn</code> <br/> <code>VirtualMachine.Interact.Reset</code> <br/> <code>VirtualMachine.Interact.SetCDMedia</code> <br/> <code>VirtualMachine.Interact.ToolsInstall</code></td>
+      <td>
+        Answer question,<br/>
+        Device connection,<br/>
+        Guest operating system management by VIX API,<br/>
+        Power Off,<br/>
+        Power On,<br/>
+        Reset,<br/>
+        Configure CD media,<br/>
+        Install VMware Tools
+      </td>
+      <td>
+        <code>VirtualMachine.Interact.AnswerQuestion</code><br/>
+        <code>VirtualMachine.Interact.DeviceConnection</code><br/>
+        <code>VirtualMachine.Interact.GuestControl</code><br/>
+        <code>VirtualMachine.Interact.PowerOff</code><br/>
+        <code>VirtualMachine.Interact.PowerOn</code><br/>
+        <code>VirtualMachine.Interact.Reset</code><br/>
+        <code>VirtualMachine.Interact.SetCDMedia</code><br/>
+        <code>VirtualMachine.Interact.ToolsInstall</code>
+      </td>
       <td>Управление состоянием виртуальных машин, подключением устройств и взаимодействием с гостевой операционной системой.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Provisioning</td>
-      <td>Clone virtual machine, <br/> Customize guest, <br/> Deploy template, <br/> Allow virtual machine download, <br/> Allow virtual machine files upload, <br/> Read customization specifications</td>
-      <td><code>VirtualMachine.Provisioning.Clone</code> <br/> <code>VirtualMachine.Provisioning.Customize</code> <br/> <code>VirtualMachine.Provisioning.DeployTemplate</code> <br/> <code>VirtualMachine.Provisioning.GetVmFiles</code> <br/> <code>VirtualMachine.Provisioning.PutVmFiles</code> <br/> <code>VirtualMachine.Provisioning.ReadCustSpecs</code></td>
-      <td>Клонирование шаблонов виртуальных машин, их кастомизация и развертывание при создании узлов кластера Deckhouse Kubernetes Platform.</td>
+      <td>
+        Clone virtual machine,<br/>
+        Customize guest,<br/>
+        Deploy template,<br/>
+        Allow virtual machine download,<br/>
+        Allow virtual machine files upload,<br/>
+        Read customization specifications
+      </td>
+      <td>
+        <code>VirtualMachine.Provisioning.Clone</code><br/>
+        <code>VirtualMachine.Provisioning.Customize</code><br/>
+        <code>VirtualMachine.Provisioning.DeployTemplate</code><br/>
+        <code>VirtualMachine.Provisioning.GetVmFiles</code><br/>
+        <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
+        <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
+      </td>
+      <td>Клонирование шаблонов виртуальных машин, их настройка и развертывание при создании узлов кластера Deckhouse Kubernetes Platform.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Snapshot Management</td>
-      <td>Create snapshot, <br/> Remove Snapshot, <br/> Rename Snapshot</td>
-      <td><code>VirtualMachine.State.CreateSnapshot</code> <br/> <code>VirtualMachine.State.RemoveSnapshot</code> <br/> <code>VirtualMachine.State.RenameSnapshot</code></td>
-      <td>Управление снапшотами виртуальных машин и томов в сценариях, где эта функциональность используется компонентами платформы.</td>
+      <td>
+        Create snapshot,<br/>
+        Remove Snapshot,<br/>
+        Rename Snapshot
+      </td>
+      <td>
+        <code>VirtualMachine.State.CreateSnapshot</code><br/>
+        <code>VirtualMachine.State.RemoveSnapshot</code><br/>
+        <code>VirtualMachine.State.RenameSnapshot</code>
+      </td>
+      <td>Управление снимками виртуальных машин и томов в сценариях, где эта функциональность используется компонентами платформы.</td>
     </tr>
   </tbody>
 </table>
@@ -158,11 +340,11 @@ description: "Настройка VMware vSphere для работы облачн
 
 1. Откройте vSphere Client и перейдите в «Menu» → «Tags & Custom Attributes» → «Tags».
 
-    ![Создание тегов и категорий тегов, шаг 1](images/tags-categories-setup/Screenshot-1.png)
+   ![Создание тегов и категорий тегов, шаг 1](images/tags-categories-setup/Screenshot-1.png)
 
 2. Откройте вкладку «Categories» и нажмите «NEW». Создайте категорию для регионов (например `k8s-region`): установите значение «One tag» для параметра «Tags Per Object» и задайте связываемые типы, включая **Datacenter**.
 
-    ![Создание тегов и категорий тегов, шаг 2](images/tags-categories-setup/Screenshot-2.png)
+   ![Создание тегов и категорий тегов, шаг 2](images/tags-categories-setup/Screenshot-2.png)
 
 3. Создайте вторую категорию для зон (например `k8s-zone`) с типами объектов **Host**, **Cluster** и **Datastore**.
 
@@ -172,7 +354,7 @@ description: "Настройка VMware vSphere для работы облачн
 
    ![Создание тегов и категорий тегов, шаг 4](images/tags-categories-setup/Screenshot-4.png)
 
-5. Во вкладке «Inventory» выберите целевой **Datacenter**, перейдите в панель «Summary», откройте «Actions» → «Tags & Custom Attributes» → «Assign Tag» и назначьте тег региона. 
+5. Во вкладке «Inventory» выберите целевой **Datacenter**, перейдите в панель «Summary», откройте «Actions» → «Tags & Custom Attributes» → «Assign Tag» и назначьте тег региона.
    Повторите для каждого **Cluster**, где будут узлы, назначая соответствующие теги зон.
 
    ![Создание тегов и категорий тегов, шаг 5.1](images/tags-categories-setup/Screenshot-5-1.png)
@@ -196,7 +378,7 @@ description: "Настройка VMware vSphere для работы облачн
 
 2. Нажмите «NEW», введите имя роли (например, `deckhouse`) и добавьте привилегии из [списка](#список-необходимых-привилегий).
 
-    ![Создание и назначение роли, шаг 2](images/role-setup/Screenshot-2.png)
+   ![Создание и назначение роли, шаг 2](images/role-setup/Screenshot-2.png)
 
 3. Назначьте роль для учётной записи Deckhouse, во вкладке «Menu» → «Administration» → «Access Control» → «Global Permissions» нажмите «ADD» и выберите пользователя и роль `deckhouse`.
 
@@ -321,10 +503,10 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 Для создания шаблона виртуальной машины (`Template`) рекомендуется использовать готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
 
-* [**Ubuntu**](https://cloud-images.ubuntu.com/)
-* [**Debian**](https://cloud.debian.org/images/cloud/)
-* [**CentOS**](https://cloud.centos.org/)
-* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (секция *Generic Cloud / OpenStack*)
+- [**Ubuntu**](https://cloud-images.ubuntu.com/)
+- [**Debian**](https://cloud.debian.org/images/cloud/)
+- [**CentOS**](https://cloud.centos.org/)
+- [**Rocky Linux**](https://rockylinux.org/alternative-images/) (секция _Generic Cloud / OpenStack_)
 
 {% alert %}
 Если вы планируете использовать дистрибутив отечественной ОС, обратитесь к вендору ОС для получения образа/OVA-файла.

@@ -11,7 +11,7 @@ lang: ru
 - Datastore — для размещения root-дисков виртуальных машин;
 - CNS-диски (Container Native Storage) — для автоматического создания PersistentVolume’ов через CSI.
 
-Deckhouse Kubernetes Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, тегированных как `zone`.  
+Deckhouse Kubernetes Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, маркированных как `zone`.  
 Можно указать:
 
 - имя StorageClass по умолчанию ([`default`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-default));
