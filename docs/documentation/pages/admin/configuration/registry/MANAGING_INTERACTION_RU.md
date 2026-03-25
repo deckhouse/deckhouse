@@ -35,7 +35,7 @@ lang: ru
 
 Ограничения по настройке взаимодействия с хранилищем образов при установке кластера следующие:
 
-- Bootstrap кластера DKP поддерживается только в `Direct` и `Unmanaged` режимах (`Local` и `Proxy` режимы не поддерживаются). Взаимодействие с хранилищем образов контейнеров (параметры доступа к хранилищу) во время установки кластера настраивается через [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry).
+- Bootstrap кластера DKP поддерживается только в `Direct`, `Unmanaged` и `Proxy` режимах (bootstrap в `Local` режиме не поддерживается). Взаимодействие с хранилищем образов контейнеров (параметры доступа к хранилищу) во время установки кластера настраивается через [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry).
 - Для запуска кластера в неконфигурируемом `Unmanaged` режиме (Legacy), необходимо указать параметры хранилища образов в [`initConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
 ### Ограничения по условиям работы
