@@ -28,7 +28,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 
 Модуль состоит из следующих компонентов:
 
-1. **Prometheus-main** — основной Prometheus. [Prometheus](https://github.com/prometheus/prometheus) — система мониторинга и оповещения, использующая базу данных временных рядов (TSDB или time series database). Она в реальном времени собирает и анализирует метрики работы приложений и серверов. Prometheus-main собирает метрики с настроенных объектов мониторинга каждые 30 секунд. С помощью параметра [scrapeInterval](/modules/prometheus/configuration.html#parameters-scrapeinterval) можно изменить это значение. Prometheus-main обрабатывает настроенные правила, отправляет алерты и является основным источником данных. Prometheus-main также использует настроенный с помощью файла конфигурации `prometheus.yaml` свой внутренний механизм Service Discovery. Посредством Service Discovery prometheus-main взаимодействует с kube-apiserver (в основном получает endpoint`ы) и обновляет список target'ов (целей для мониторинга). Подробнее с описанием работы компонента prometheus-main можно ознакомиться в разделе [Архитектура мониторинга](monitoring.html#prometheus).
+1. **Prometheus-main** (StatefulSet) — основной Prometheus. [Prometheus](https://github.com/prometheus/prometheus) — система мониторинга и оповещения, использующая базу данных временных рядов (TSDB или time series database). Она в реальном времени собирает и анализирует метрики работы приложений и серверов. Prometheus-main собирает метрики с настроенных объектов мониторинга каждые 30 секунд. С помощью параметра [scrapeInterval](/modules/prometheus/configuration.html#parameters-scrapeinterval) можно изменить это значение. Prometheus-main обрабатывает настроенные правила, отправляет алерты и является основным источником данных. Prometheus-main также использует настроенный с помощью файла конфигурации `prometheus.yaml` свой внутренний механизм Service Discovery. Посредством Service Discovery prometheus-main взаимодействует с kube-apiserver (в основном получает endpoint`ы) и обновляет список target'ов (целей для мониторинга). Подробнее с описанием работы компонента prometheus-main можно ознакомиться в разделе [Архитектура мониторинга](monitoring.html#prometheus).
 
    Состоит из следующих контейнеров:
 
@@ -44,7 +44,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
    
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к серверу Prometheus. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-2. **Prometheus-longterm** — дополнительный Prometheus, хранящий выборку разреженных метрик из основного prometheus-main. Это позволяет пользователям просматривать и анализировать исторические тренды за длительный период времени. Prometheus-longterm получает данные благодаря настроенной федерации с основным Prometheus. Состав контейнеров у prometheus-longterm такой же, как и у prometheus-main. 
+2. **Prometheus-longterm** (StatefulSet) — дополнительный Prometheus, хранящий выборку разреженных метрик из основного prometheus-main. Это позволяет пользователям просматривать и анализировать исторические тренды за длительный период времени. Prometheus-longterm получает данные благодаря настроенной федерации с основным Prometheus. Состав контейнеров у prometheus-longterm такой же, как и у prometheus-main. 
 
 {% alert level="info" %}
 Для отображения дашбордов мониторинга в веб-интерфейсе DKP используется Grafana, входящая в модуль [observability](/modules/observability/).
@@ -67,11 +67,11 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
    * **promxy** — сайдкар-контейнер, проксирующий запросы на компонент prometheus-main. Promxy - это прокси-сервер для Prometheus, который позволяет нескольким узлам Prometheus выглядеть как одна конечная точка API для пользователя. Является [Open Source-проектом](https://github.com/jacksontj/promxy);
    * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к контейнерам mimir (запросы на сервер Prometheus и запросы на метрики контейнера) и promxy (запросы на метрики контейнера). Подробно описан выше.
 
-5. **Memcached** — компонент, используемый aggregating-proxy для кэширования метрик Prometheus. Memcached - программное обеспечение, реализующее сервис кэширования данных в оперативной памяти. Цель — ускорить выполнение запросов к метрикам Prometheus. 
+5. **Memcached** (StatefulSet) — компонент, используемый aggregating-proxy для кэширования метрик Prometheus. Memcached - программное обеспечение, реализующее сервис кэширования данных в оперативной памяти. Цель — ускорить выполнение запросов к метрикам Prometheus. 
 
    Состоит из следующих контейнеров:
 
-   * **memcached** (StatefulSet) — основной контейнер. Является [Open Source-проектом](https://github.com/memcached/memcached);
+   * **memcached** — основной контейнер. Является [Open Source-проектом](https://github.com/memcached/memcached);
    * **exporter** — сайдкар-контейнер, экспортирующий метрики контейнера memcached. Memcached собирает метрики контейнера memcached через сетевое подключение, а также из PID-файла процесса memcached. Является [Open Source-проектом](https://github.com/prometheus/memcached_exporter).
 
 6. **Trickster** — кеширующий прокси-сервер, снижающий нагрузку на Prometheus. Используется для кеширования и проксирования запросов на prometheus-longterm. В ближайшее время будет deprecated.
