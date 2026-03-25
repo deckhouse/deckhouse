@@ -135,7 +135,7 @@ func setValueIfNotNil(input *go_hook.HookInput, key string, value any) {
 			fmt.Println("checking *bool")
 			if v != nil {
 				fmt.Println(publishAPIIngressConfigPath+key, v, *v, value)
-				input.Values.Set(publishAPIIngressConfigPath+key, value)
+				input.Values.Set(publishAPIIngressConfigPath+key, *v)
 			}
 		case bool:
 			fmt.Println("checking bool")
