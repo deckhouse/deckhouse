@@ -71,6 +71,7 @@ The module interacts with the following components:
     * Collects cloud parameters.
     * Gets `ProviderId` and other information about the VMs that are cluster nodes.
     * Manages load balancers.
+    * Manages network routes for `PodNetwork` network.
     * Manages disks.
 
 The following external components interact with the module:
@@ -81,8 +82,8 @@ Indirect interactions:
 
 1. The `cloud-provider-vsphere` module provides [`node-manager`](/modules/node-manager/) with following artifacts:
 
-   * Provider-specific Cluster API custom resource templates to be used by `cloud-provider-vsphere` to create VMs in the cloud.
-   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create CloudEphemeral nodes. These settings are registered in the provider-specific Cluster API custom resources created based on the templates mentioned above.
+   * Provider-specific MCM (Multi-Cluster Management) custom resource templates to be used by `cloud-provider-vsphere` to create VMs in the cloud.
+   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create CloudEphemeral nodes. These settings are registered in the provider-specific MCM custom resources created based on the templates mentioned above.
 
 2. The `cloud-provider-vsphere` module provides Terraform/OpenTofu components for VMware vSphere cloud used when building the [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) executable file for the [`terraform-manager`](/modules/terraform-manager/) module, such as:
 
