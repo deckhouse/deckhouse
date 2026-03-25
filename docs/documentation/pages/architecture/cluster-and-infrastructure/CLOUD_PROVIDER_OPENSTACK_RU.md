@@ -83,7 +83,7 @@ description: Архитектура модуля cloud-provider-openstack в Dec
 
 1. Модуль `cloud-provider-openstack` предоставляет модулю [`node-manager`](/modules/node-manager/) следующие артефакты:
 
-   * шаблоны для создания кастомных ресурсов MCM (Multi-Cluster Management) для конкретного провайдера, которые `cloud-provider-openstack` использует для создания виртуальных машин в облаке;
+   * шаблоны для создания кастомных ресурсов MCM (Machine Controller Manager) для конкретного провайдера, которые `cloud-provider-openstack` использует для создания виртуальных машин в облаке;
    * секрет `kube-system/d8-node-manager-cloud-provider`, в котором содержатся все необходимые настройки для подключения к облаку и создания CloudEphemeral-узлов. Эти настройки прописываются в кастомных ресурсах MCM, созданных на основе упомянутых выше шаблонов и учитывающих особенности провайдера.
 
 2. Модуль `cloud-provider-openstack` предоставляет компоненты Terraform/OpenTofu для OpenStack, которые используются при сборке исполняемого файла утилиты [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) в модуле [`terraform-manager`](/modules/terraform-manager/), такие как:
