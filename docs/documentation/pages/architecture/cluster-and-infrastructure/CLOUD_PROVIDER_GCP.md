@@ -81,8 +81,8 @@ Indirect interactions:
 
 1. The `cloud-provider-gcp` module provides [`node-manager`](/modules/node-manager/) with following artifacts:
 
-   * Provider-specific MCM (Machine Controller Manager) custom resource templates to be used by `cloud-provider-gcp` to create VMs in the cloud.
-   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create CloudEphemeral nodes. These settings are registered in the provider-specific MCM custom resources created based on the templates mentioned above.
+   * Provider-specific custom resource templates to be used by `cloud-provider-gcp` to create VMs in the cloud.
+   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create CloudEphemeral nodes. These settings are registered in the provider-specific custom resources created based on the templates mentioned above.
 
 2. The `cloud-provider-gcp` module provides Terraform/OpenTofu components for GCP cloud used when building the [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) executable file for the [`terraform-manager`](/modules/terraform-manager/) module, such as:
 
