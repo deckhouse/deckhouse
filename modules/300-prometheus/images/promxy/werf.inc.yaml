@@ -10,6 +10,11 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/vendor-patches
+  to: /vendor-patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -19,6 +24,7 @@ shell:
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
     - cd /src
     - git apply /patches/*.patch --verbose
+    - cp -r /vendor-patches /src/.vendor-patches
     - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -38,6 +44,11 @@ shell:
   - cd /src
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go install golang.org/x/tools/cmd/goyacc@latest
+  - cp /src/.vendor-patches/op_func.go /src/.vendor-patches/op_top.go /src/vendor/github.com/prometheus/prometheus/promql/
+  - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /src/.vendor-patches/op-functions.patch
+  - cd /src/vendor/github.com/prometheus/prometheus/promql/parser && goyacc -l -o generated_parser.y.go generated_parser.y
+  - cd /src
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
