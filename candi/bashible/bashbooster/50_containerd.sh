@@ -85,29 +85,26 @@ bb-ctrd-v2-has-registry-fields() {
 
 # bb-ctrd-validate-toml:
 # Validate containerd config content before writing to disk using containerd's own parser.
-# Writes content to a staging file; on success the file is removed,
-# on failure it is kept for debugging.
+# Writes content to a temporary file; on success the file is removed, on failure it is kept for debugging.
 #
 # Arguments:
 #   $1 — Config content string
 #
 # Returns:
-#   0 — Config is valid (staging file removed)
+#   0 — Config is valid (temporary file removed)
 #   1 — Config is invalid; containerd's error is printed to stderr
-#       and the staging file is kept at /opt/deckhouse/tmp/containerd/config.toml.staging
+#       and the temporary file is kept at /etc/containerd/config.toml.tmp
 bb-ctrd-validate-toml() {
   local config_content="$1"
-  local staging_dir="/opt/deckhouse/tmp/containerd"
-  local staging_file="${staging_dir}/config.toml.staging"
+  local tmp_file="/etc/containerd/config.toml.tmp"
 
-  mkdir -p "$staging_dir"
-  printf '%s' "$config_content" > "$staging_file"
+  printf '%s' "$config_content" > "$tmp_file"
 
   local validate_output
-  if ! validate_output=$(/opt/deckhouse/bin/containerd --config "${staging_file}" config dump 2>&1); then
+  if ! validate_output=$(/opt/deckhouse/bin/containerd --config "${tmp_file}" config dump 2>&1); then
     >&2 echo "ERROR: containerd config validation failed:"
     >&2 echo "${validate_output}"
-    >&2 echo "Invalid config kept at ${staging_file} for debugging"
+    >&2 echo "Invalid config kept at ${tmp_file} for debugging"
     return 1
   fi
 
