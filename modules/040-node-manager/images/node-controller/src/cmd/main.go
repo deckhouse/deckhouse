@@ -64,7 +64,7 @@ func main() {
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
 	flag.StringVar(&disabledControllers, "disable-controllers", "", "Comma-separated list of controllers to disable")
-	flag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", 1, "Maximum number of concurrent reconciles per controller")
+	flag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", 10, "Maximum number of concurrent reconciles per controller")
 
 	logs.AddGoFlags(flag.CommandLine)
 

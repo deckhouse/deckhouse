@@ -29,10 +29,10 @@ var (
 		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeployment",
 	}
 	CAPIMachineGVK = schema.GroupVersionKind{
-		Group: "cluster.x-k8s.io", Version: "v1beta1", Kind: "Machine",
+		Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "Machine",
 	}
 	CAPIMachineDeploymentGVK = schema.GroupVersionKind{
-		Group: "cluster.x-k8s.io", Version: "v1beta1", Kind: "MachineDeployment",
+		Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "MachineDeployment",
 	}
 )
 
