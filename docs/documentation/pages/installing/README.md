@@ -616,7 +616,7 @@ List of checks performed by the installer before starting Deckhouse Kubernetes P
      - For HTTP server: `http.server` (Python 3) or `SimpleHTTPServer` (Python 2)
      - For TCP server: `http.server` (Python 3) or `SocketServer` (Python 2)
    - The container registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
-   - Network ports described in [Network interaction of the platform components](../reference/network_interaction.html) are free on the master node server (VM) and on the host running the installer.
+   - On the server (VM) intended for the master node and on the host from which the installer is launched, port `22/TCP` (network access from a personal computer) must be accessible, as it is required for the installation process. For details, see the [Network interaction of the platform components](../reference/network_interaction.html) section.
    - DNS must resolve `localhost` to IP address `127.0.0.1`.
    - The user has `sudo` privileges on the server (VM).
    - Required ports for the installation must be open:
