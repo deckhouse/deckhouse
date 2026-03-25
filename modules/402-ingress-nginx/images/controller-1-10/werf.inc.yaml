@@ -423,7 +423,6 @@ shell:
 imageSpec:
   config:
     workingDir: /
-    user: "{{ $controllerUser }}"
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]

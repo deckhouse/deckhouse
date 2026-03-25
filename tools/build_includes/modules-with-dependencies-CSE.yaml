@@ -1033,3 +1033,26 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/modules/500-upmeter/templates/webui
+  to: /deckhouse/modules/500-upmeter/templates/webui
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*.go'
