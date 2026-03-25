@@ -108,27 +108,13 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.59.0"
+          "@id": "pkg:golang/google.golang.org/grpc"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: компонент не использует path-based gRPC авторизационные интерцепторы с deny-правилами и fallback allow. grpc-go присутствует как транзитивная зависимость, однако серверный путь исполнения с уязвимой логикой не задействован.",
       "timestamp": "2026-03-24T10:19:29.339272Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-33186"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.65.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: компонент не использует path-based gRPC авторизационные интерцепторы с deny-правилами и fallback allow. grpc-go присутствует как транзитивная зависимость, однако серверный путь исполнения с уязвимой логикой не задействован.",
-      "timestamp": "2026-03-24T10:19:35.035264Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
