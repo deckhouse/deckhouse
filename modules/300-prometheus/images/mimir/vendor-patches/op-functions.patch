@@ -1,0 +1,82 @@
+diff --git a/promql/parser/lex.go b/promql/parser/lex.go
+--- a/promql/parser/lex.go
++++ b/promql/parser/lex.go
+@@ -68,6 +68,13 @@ func (i ItemType) IsAggregatorWithParam() bool {
+ 	return i == TOPK || i == BOTTOMK || i == COUNT_VALUES || i == QUANTILE || i == LIMITK || i == LIMIT_RATIO
+ }
+ 
++// OP_FUNCTIONS
++
++// IsOPTop is an ad-hoc checker function for OP_TOP aggregate operator.
++func (i ItemType) IsOPTop() bool {
++	return i == OP_TOP
++}
++
+ // IsKeyword returns true if the Item corresponds to a keyword.
+ // Returns false otherwise.
+ func (i ItemType) IsKeyword() bool { return i > keywordsStart && i < keywordsEnd }
+@@ -116,6 +123,7 @@ var key = map[string]ItemType{
+ 	"stdvar":       STDVAR,
+ 	"topk":         TOPK,
+ 	"bottomk":      BOTTOMK,
++	"op_top":       OP_TOP, // OP_FUNCTIONS
+ 	"count_values": COUNT_VALUES,
+ 	"quantile":     QUANTILE,
+ 	"limitk":       LIMITK,
+diff --git a/promql/parser/generated_parser.y b/promql/parser/generated_parser.y
+--- a/promql/parser/generated_parser.y
++++ b/promql/parser/generated_parser.y
+@@ -128,6 +128,7 @@ STDDEV
+ STDVAR
+ SUM
+ TOPK
++OP_TOP
+ LIMITK
+ LIMIT_RATIO
+ %token	aggregatorsEnd
+@@ -644,7 +645,7 @@ metric          : metric_identifier label_set
+                 ;
+ 
+ 
+-metric_identifier: AVG | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | IDENTIFIER |  LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | QUANTILE | STDDEV | STDVAR | SUM | TOPK | WITHOUT | START | END | LIMITK | LIMIT_RATIO;
++metric_identifier: AVG | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | IDENTIFIER |  LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | WITHOUT | START | END | LIMITK | LIMIT_RATIO;
+ 
+ label_set       : LEFT_BRACE label_set_list RIGHT_BRACE
+                         { $$ = labels.New($2...) }
+@@ -892,10 +893,10 @@ counter_reset_hint : UNKNOWN_COUNTER_RESET | COUNTER_RESET | NOT_COUNTER_RESET |
+  * Keyword lists.
+  */
+ 
+-aggregate_op    : AVG | BOTTOMK | COUNT | COUNT_VALUES | GROUP | MAX | MIN | QUANTILE | STDDEV | STDVAR | SUM | TOPK | LIMITK | LIMIT_RATIO;
++aggregate_op    : AVG | BOTTOMK | COUNT | COUNT_VALUES | GROUP | MAX | MIN | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | LIMITK | LIMIT_RATIO;
+ 
+ // Inside of grouping options label names can be recognized as keywords by the lexer. This is a list of keywords that could also be a label name.
+-maybe_label     : AVG | BOOL | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | GROUP_LEFT | GROUP_RIGHT | IDENTIFIER | IGNORING | LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | ON | QUANTILE | STDDEV | STDVAR | SUM | TOPK | START | END | ATAN2 | LIMITK | LIMIT_RATIO;
++maybe_label     : AVG | BOOL | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | GROUP_LEFT | GROUP_RIGHT | IDENTIFIER | IGNORING | LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | ON | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | START | END | ATAN2 | LIMITK | LIMIT_RATIO;
+ 
+ unary_op        : ADD | SUB;
+ 
+diff --git a/promql/parser/parse.go b/promql/parser/parse.go
+--- a/promql/parser/parse.go
++++ b/promql/parser/parse.go
+@@ -445,6 +445,20 @@ func (p *parser) newAggregateExpr(op Item, modifier, args Node) (ret *AggregateE
+ 		return
+ 	}
+ 
++	// OP_FUNCTIONS
++	if ret.Op.IsOPTop() {
++		ret.Expr = arguments[len(arguments)-1]
++		ret.Param = &NumberLiteral{Val: 0}
++		if len(arguments) > 1 {
++			ret.Param = arguments[0]
++			ret.Grouping = make([]string, len(arguments)-2)
++			for i, argument := range arguments[1 : len(arguments)-1] {
++				ret.Grouping[i] = argument.String()
++			}
++		}
++		return ret
++	}
++
+ 	desiredArgs := 1
+ 	if ret.Op.IsAggregatorWithParam() {
+ 		if !EnableExperimentalFunctions && (ret.Op == LIMITK || ret.Op == LIMIT_RATIO) {
