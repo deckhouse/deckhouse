@@ -46,6 +46,7 @@ memory: 10Mi
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
 {{- $_ := set $tpl_context "kubeadmDir" "kubeadm/v1beta4" -}}
+{{- $_ := set $tpl_context "controlPlaneTemplatesDir" "control-plane-templates" -}}
 {{- $_ := set $tpl_context "nodesCount" .Values.controlPlaneManager.internal.nodesCount }}
 {{- $_ := set $tpl_context "apiserver" dict }}
 {{- $_ := set $tpl_context "scheduler" dict }}
@@ -141,8 +142,7 @@ memory: 10Mi
 {{- define "control_plane_config" }}
   {{- $context := index . 0 }}
   {{- $tpl_context := index . 1 }}
-kubeadm-config.yaml: {{ tpl ($context.Files.Get (printf "%s/config.yaml.tpl" $tpl_context.kubeadmDir)) $tpl_context | b64enc }}
-{{- range $path, $_ := $context.Files.Glob (printf "%s/patches/*" $tpl_context.kubeadmDir) }}
+{{- range $path, $_ := $context.Files.Glob (printf "%s/*" $tpl_context.controlPlaneTemplatesDir) }}
 {{ base $path }}: {{ tpl ($context.Files.Get $path) $tpl_context | b64enc }}
 {{- end }}
   {{- if $tpl_context.apiserver.oidcCA }}
