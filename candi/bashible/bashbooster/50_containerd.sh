@@ -108,6 +108,6 @@ bb-ctrd-validate-toml() {
     return 1
   fi
 
-  rm -f "$staging_file"
+  rm -f "$tmp_file"
   return 0
 }
