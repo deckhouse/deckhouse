@@ -229,14 +229,26 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!img || img.dataset.zoomImageBound === '1') return;
     img.dataset.zoomImageBound = '1';
 
+    const isDesktop = window.innerWidth > 1024;
     const state = getState(container);
     let pointerId = null;
+    const pointers = {};
+    let pinchStartDistance = 0;
+    let pinchStartScale = 1;
     let startX = 0;
     let startY = 0;
     let baseX = 0;
     let baseY = 0;
     let moved = false;
     let rafId = 0;
+
+    function getDistance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function getCenter(a, b) {
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
 
     function applyTransformRaf() {
       if (rafId) return;
@@ -247,6 +259,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function pointerDown(e) {
+      pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+      const ids = Object.keys(pointers);
+      if (ids.length === 2) {
+        const a = pointers[ids[0]];
+        const b = pointers[ids[1]];
+        pinchStartDistance = getDistance(a, b);
+        pinchStartScale = state.scale;
+        pointerId = null;
+      }
       if (e.button !== 0 || state.scale <= 1 || pointerId !== null) return;
       pointerId = e.pointerId;
       moved = false;
@@ -259,6 +280,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function pointerMove(e) {
+      if (pointers[e.pointerId]) {
+        pointers[e.pointerId].x = e.clientX;
+        pointers[e.pointerId].y = e.clientY;
+      }
+      const ids = Object.keys(pointers);
+      if (ids.length === 2 && pinchStartDistance > 0) {
+        const a = pointers[ids[0]];
+        const b = pointers[ids[1]];
+        const distance = getDistance(a, b);
+        if (distance > 0) {
+          setScale(container, pinchStartScale * (distance / pinchStartDistance), getCenter(a, b));
+          stopEvent(e);
+        }
+        return;
+      }
       if (pointerId === null || e.pointerId !== pointerId) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
@@ -276,6 +312,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function pointerUp(e) {
+      delete pointers[e.pointerId];
+      if (Object.keys(pointers).length < 2) pinchStartDistance = 0;
       if (pointerId === null || e.pointerId !== pointerId) return;
       if (img.hasPointerCapture(pointerId)) img.releasePointerCapture(pointerId);
       pointerId = null;
@@ -307,8 +345,8 @@ document.addEventListener('DOMContentLoaded', function () {
     img.addEventListener('pointermove', pointerMove, true);
     img.addEventListener('pointerup', pointerUp, true);
     img.addEventListener('pointercancel', pointerUp, true);
-    img.addEventListener('click', clickZoom, true);
-    img.addEventListener('wheel', wheelZoom, { passive: false });
+    if (isDesktop) img.addEventListener('click', clickZoom, true);
+    if (isDesktop) img.addEventListener('wheel', wheelZoom, { passive: false });
 
     applyTransform(container);
   }
@@ -352,9 +390,8 @@ document.addEventListener('DOMContentLoaded', function () {
           fitSvgToViewport(container, img, url);
           addAltOverlay(container, img);
           addToolbar(container);
-          if (!isDesktop) return;
           enablePanAndWheelZoom(container);
-          applyTransform(container);
+          if (isDesktop) applyTransform(container);
         }, 80);
       });
     });
