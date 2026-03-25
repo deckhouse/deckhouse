@@ -240,6 +240,7 @@ properties:
                       In the `Global` mode, the policies specified in the `global.modules.https.mode` global parameter will be applied. Thus, if the global parameter has the `CertManager` mode set (with `letsencrypt` as the ClusterIssuer), then the Let's Encrypt certificate will be issued for the Ingress resource.
                   global:
                     type: object
+                    default: {}
                     description: 'An additional parameter for the `Global` mode.'
                     properties:
                       kubeconfigGeneratorMasterCA:
