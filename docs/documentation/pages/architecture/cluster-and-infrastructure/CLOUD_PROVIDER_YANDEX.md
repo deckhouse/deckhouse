@@ -83,7 +83,10 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
-1. **Prometheus-main**: Collects cloud-data-discoverer metrics, and collects cloud provider's metrics using cloud-metrics-exporter.
+1. **Prometheus-main**: 
+
+   * Collects cloud-data-discoverer metrics.
+   * Collects cloud provider's metrics using cloud-metrics-exporter.
 
 Indirect interactions:
 
