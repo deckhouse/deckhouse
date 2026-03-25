@@ -107,4 +107,4 @@ Prometheus, входящий в состав модуля, собирает ме
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Ingress-controller** (controller nginx на схеме) — пересылает запросы пользователей к Grafana или Prometheus.
+1. **Ingress-controller** (controller nginx на схеме) — пересылает запросы пользователей к Grafana.
