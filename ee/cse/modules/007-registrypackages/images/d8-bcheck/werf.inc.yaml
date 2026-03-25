@@ -49,7 +49,7 @@ import:
   add: /src
   to: /src
   before: install
-- image: libs/musl
+- image: {{ index .Images "libs/musl" }}
   add: /
   to: /
   before: install
@@ -59,7 +59,7 @@ import:
     - usr/lib
     - usr/lib64
     - usr/include
-- image: libs/zstd
+- image: {{ index .Images "libs/zstd" }}
   add: /
   to: /libs/zstd
   before: install
@@ -70,7 +70,7 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: libs/libuv
+- image: {{ index .Images "libs/libuv" }}
   add: /
   to: /libs/libuv
   before: install
@@ -81,7 +81,7 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: libs/zlib
+- image: {{ index .Images "libs/zlib" }}
   add: /
   to: /libs/zlib
   before: install
@@ -92,7 +92,7 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: tools/openssl
+- image: {{ index .Images "tools/openssl" }}
   add: /
   to: /tools/openssl
   before: install
@@ -103,7 +103,7 @@ import:
     - usr/bin
     - usr/sbin
     - usr/share
-- image: tools/elfutils
+- image: {{ index .Images "tools/elfutils" }}
   add: /
   to: /tools/elfutils
   before: install
