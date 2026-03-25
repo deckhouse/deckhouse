@@ -592,6 +592,26 @@ func (d *DummyLogger) Write(content []byte) (int, error) {
 	return len(content), nil
 }
 
+type ExternalProcessLogger struct {
+	logger external.ProcessLogger
+}
+
+func (e *ExternalProcessLogger) LogProcessStart(name string) {
+	e.logger.ProcessStart(name)
+}
+
+func (e *ExternalProcessLogger) LogProcessEnd() {
+	e.logger.ProcessEnd()
+}
+
+func (e *ExternalProcessLogger) LogProcessFail() {
+	e.logger.ProcessFail()
+}
+
+func newExternalProcessLogger(logger external.ProcessLogger) *ExternalProcessLogger {
+	return &ExternalProcessLogger{logger: logger}
+}
+
 type ExternalLogger struct {
 	logger external.Logger
 }
@@ -601,7 +621,7 @@ func (e *ExternalLogger) GetLogger() external.Logger {
 }
 
 func (e *ExternalLogger) ProcessLogger() ProcessLogger {
-	return newWrappedProcessLogger(e)
+	return newExternalProcessLogger(e.logger.ProcessLogger())
 }
 
 func (e *ExternalLogger) NewSilentLogger() *SilentLogger {
@@ -616,8 +636,8 @@ func (e *ExternalLogger) FlushAndClose() error {
 	return e.logger.FlushAndClose()
 }
 
-func (e *ExternalLogger) LogProcess(_, t string, run func() error) error {
-	return e.logger.Process("", t, run)
+func (e *ExternalLogger) LogProcess(p, t string, run func() error) error {
+	return e.logger.Process(external.Process(p), t, run)
 }
 
 func (e *ExternalLogger) LogInfoF(format string, a ...interface{}) {
@@ -625,7 +645,7 @@ func (e *ExternalLogger) LogInfoF(format string, a ...interface{}) {
 }
 
 func (e *ExternalLogger) LogInfoLn(a ...interface{}) {
-	e.logger.InfoF("%v", a...)
+	e.logger.InfoLn(a...)
 }
 
 func (e *ExternalLogger) LogErrorF(format string, a ...interface{}) {
