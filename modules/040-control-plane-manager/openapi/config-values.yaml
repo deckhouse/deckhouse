@@ -189,11 +189,13 @@ properties:
               Authorization webhook CA.
       publishAPI:
         type: object
+        default: {}
         description: |
           Publishing access to Kubernetes API.
         properties:
           ingress:
             type: object
+            default: {}
             description: 'Settings for PublishAPI type Ingress.'
             properties:
               enabled:
@@ -250,6 +252,7 @@ properties:
                           Also, you can set the external LB's certificate itself as a CA if you can't get the CA that signed it for some reason. Note that after the certificate is updated on the LB, all the previously generated kubeconfigs will stop working.
           loadBalancer:
             type: object
+            default: {}
             description: 'Settings type LoadBalancer'
             properties: 
               enabled:
