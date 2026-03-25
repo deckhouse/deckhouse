@@ -122,19 +122,19 @@ func setValueIfNotNil(input *go_hook.HookInput, key string, value any) {
 	if value != nil {
 		switch v := value.(type) {
 		case []interface{}:
+			fmt.Println(publishAPIIngressConfigPath+key, value)
 			if len(v) > 0 {
-				fmt.Println(publishAPIIngressConfigPath+key, value)
 				input.Values.Set(publishAPIIngressConfigPath+key, value)
 			}
 		case []string:
+			fmt.Println(publishAPIIngressConfigPath+key, value)
 			if len(v) > 0 || key == "https.global.kubeconfigGeneratorMasterCA" {
-				fmt.Println(publishAPIIngressConfigPath+key, value)
 				input.Values.Set(publishAPIIngressConfigPath+key, value)
 			}
 		case *bool:
+			fmt.Println(publishAPIIngressConfigPath+key, v, *v, value)
 			if v != nil {
-				fmt.Println(publishAPIIngressConfigPath+key, v, *v)
-				input.Values.Set(publishAPIIngressConfigPath+key, v)
+				input.Values.Set(publishAPIIngressConfigPath+key, value)
 			}
 		case bool:
 			fmt.Println(publishAPIIngressConfigPath+key, v)
