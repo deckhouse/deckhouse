@@ -15,11 +15,11 @@
 040-control-plane-manager/               @sprait
 040-control-plane-manager/images/kubernetes-api-proxy/**   @090809
 040-node-manager/                        @name212 @090809
-/modules/040-node-manager/templates/fencing-agent/        @yalosev
-/modules/040-node-manager/images/fencing-agent/           @yalosev
-/modules/040-node-manager/templates/cluster-autoscaler/   @yalosev
-/modules/040-node-manager/images/cluster-autoscaler/      @yalosev
-/modules/040-node-manager/hooks/fencing**                 @yalosev
+/modules/040-node-manager/templates/fencing-agent/        @yalosev @ergoz
+/modules/040-node-manager/images/fencing-agent/           @yalosev @ergoz
+/modules/040-node-manager/templates/cluster-autoscaler/   @yalosev @ergoz
+/modules/040-node-manager/images/cluster-autoscaler/      @yalosev @ergoz
+/modules/040-node-manager/hooks/fencing**                 @yalosev @ergoz
 040-terraform-manager/                   @name212 @090809 @aleksey-su
 042-kube-dns/                            @AndreyPavlovFlant @apolovov
 050-network-policy-engine/               @AndreyPavlovFlant @apolovov
