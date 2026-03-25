@@ -364,7 +364,7 @@ In the job output, you will see the value of the `DATABASE_PASSWORD` field loade
 
 ![Stronghold and Deckhouse Code integration](/images/code/stronghold_code_en.png)
 
-### Integration benefits
+Integration benefits:
 
 - **Centralized secrets management** — all secrets are stored in one place with access auditing.
 - **Automatic rotation** — secrets can be automatically rotated without modifying pipelines.
@@ -377,7 +377,7 @@ This section provides common scenarios for using Vault secrets in CI/CD pipeline
 
 ### Deploying an application with database credentials
 
-Retrieving PostgreSQL credentials during deployment:
+Example of retrieving PostgreSQL credentials during deployment:
 
 ```yaml
 stages:
@@ -417,7 +417,7 @@ deploy-production:
 
 ### Using API keys for external services
 
-Integration with external APIs (Slack, Telegram, S3):
+Example of integration with external APIs (Slack, Telegram, S3):
 
 ```yaml
 stages:
@@ -462,7 +462,7 @@ backup-to-s3:
 
 ### Signing Docker images with Cosign
 
-Using a private key from Vault to sign images:
+Example of using a private key from Vault to sign images:
 
 ```yaml
 stages:
@@ -495,7 +495,7 @@ sign-image:
 
 ### Branch-based access control
 
-Configuring different secrets for develop and main branches using bound claims on branch (`ref`):
+Example of configuring different secrets for `develop` and `main` branches using bound claims on branch (`ref`):
 
 ```yaml
 stages:
@@ -545,10 +545,10 @@ deploy-main:
     - if: $CI_COMMIT_BRANCH == "main"
 ```
 
-To enforce access control, configure Vault roles with branch-based bound claims:
+Example of configuring a Vault role with bound claims based on branch for access control:
 
 ```bash
-# Role for develop — access only from develop branch
+# Role for `develop` — access only from `develop` branch.
 vault write auth/jwt/role/myapp-develop - <<EOF
 {
   "role_type": "jwt",
@@ -564,7 +564,7 @@ vault write auth/jwt/role/myapp-develop - <<EOF
 }
 EOF
 
-# Role for main — access only from main branch (protected)
+# Role for `main` — access only from `main` branch (protected).
 vault write auth/jwt/role/myapp-main - <<EOF
 {
   "role_type": "jwt",
