@@ -10,11 +10,6 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "kubeconfig"
     web.deckhouse.io/export-icon: "/public/img/kubeconfig-generator.jpeg"
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
-  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
-    alb-gateway.network.deckhouse.io/tls-secrets: d8-{{ .Chart.Name }}/{{ include "helm_lib_module_https_secret_name" (list . "kubeconfig-httproute-tls") }}
-  {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
@@ -47,8 +42,6 @@ metadata:
   name: kubeconfig-generator-redirect
   namespace: d8-{{ .Chart.Name }}
   annotations:
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   hostnames:
