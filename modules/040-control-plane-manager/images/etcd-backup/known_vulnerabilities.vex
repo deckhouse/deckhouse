@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-017b2d41d47cbfeb73ee1faf1053fde46572ef52bf2c9efae04f2048e7f76027",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в etcdBackup в рамках Deckhouse: etcdctl является CLI-утилитой (gRPC-клиентом), а не сервером. Уязвимость затрагивает исключительно серверную часть gRPC-Go, серверный путь исполнения в etcdctl не задействован.",
+      "timestamp": "2026-03-24T10:13:12.35769Z"
+    }
+  ],
+  "timestamp": "2026-03-24T10:13:12Z"
+}
