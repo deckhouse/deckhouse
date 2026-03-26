@@ -115,6 +115,20 @@ func (s *Storage) GetConfigValues() addonutils.Values {
 	return s.configValues
 }
 
+// GetSettings returns config values with config-schema defaults applied.
+// Available in templates as .Application.Settings or .Module.Settings.
+func (s *Storage) GetSettings() addonutils.Values {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	settings := s.configValues
+	if len(settings) == 0 {
+		settings = addonutils.Values{}
+	}
+
+	return s.openapiDefaultsTransformer(validation.ConfigValuesSchema).Transform(settings)
+}
+
 // ApplyDefaultsConfigValues returns a copy of the provided values with defaults
 // from the config OpenAPI schema applied. Does not modify stored values.
 func (s *Storage) ApplyDefaultsConfigValues(settings addonutils.Values) addonutils.Values {

@@ -183,10 +183,11 @@ func (a *Application) addHooks(found ...hooks.Hook) error {
 }
 
 // RuntimeValues holds runtime values that are not part of schema.
-// These values are passed to helm templates under .Runtime prefix.
+// These values are passed to helm templates under .Application prefix.
 type RuntimeValues struct {
 	Instance addonutils.Values `json:"Instance"`
 	Package  addonutils.Values `json:"Package"`
+	Settings addonutils.Values `json:"Settings"`
 }
 
 // GetRuntimeValues returns values that are not part of schema.
@@ -210,6 +211,7 @@ func (a *Application) GetRuntimeValues() RuntimeValues {
 			"Registry": a.repository,
 			"Version":  a.definition.Version,
 		},
+		Settings: a.values.GetSettings(),
 	}
 }
 
