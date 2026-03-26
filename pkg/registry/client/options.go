@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -153,8 +152,8 @@ func WithCustomTransport(transport http.RoundTripper) Option {
 	return func(o *Options) { o.Transport = transport }
 }
 
-// ensureLogger sets a default logger if none is provided
-func ensureLogger(logger *log.Logger) *log.Logger {
+// resolveLogger returns the provided logger, or a default named logger when nil.
+func resolveLogger(logger *log.Logger) *log.Logger {
 	if logger == nil {
 		logger = log.NewLogger().Named("registry-client")
 	}
@@ -164,7 +163,7 @@ func ensureLogger(logger *log.Logger) *log.Logger {
 
 // buildRemoteOptions constructs remote options including auth and transport configuration.
 // logger is used to warn about ignored options when a custom transport is provided.
-func buildRemoteOptions(registry string, opts *Options, logger *log.Logger) []remote.Option {
+func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 	remoteOptions := []remote.Option{}
 
 	if opts.Auth != nil {
@@ -204,23 +203,15 @@ func buildRemoteOptions(registry string, opts *Options, logger *log.Logger) []re
 	}
 
 	if opts.CA != "" || needsCustomTransport(opts) {
+		if opts.TLSSkipVerify {
+			logger.Debug("TLS certificate verification disabled")
+		}
+		if opts.Insecure {
+			logger.Debug("Insecure HTTP mode enabled")
+		}
+
 		transport := buildTransport(opts)
 		remoteOptions = append(remoteOptions, remote.WithTransport(transport))
-
-		opts.Scheme = strings.ToLower(opts.Scheme)
-		if opts.Scheme == "http" {
-			opts.Insecure = true
-		}
-
-		if opts.TLSSkipVerify {
-			logger.Debug("TLS certificate verification disabled",
-				slog.String("registry", registry))
-		}
-
-		if opts.Insecure {
-			logger.Debug("Insecure HTTP mode enabled",
-				slog.String("registry", registry))
-		}
 	}
 
 	return remoteOptions

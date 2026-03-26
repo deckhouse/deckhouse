@@ -81,23 +81,24 @@ func New(registry string, opts ...Option) *Client {
 
 // NewClientWithOptions creates a new container registry client with advanced options.
 // Prefer New with functional options for new code.
-func NewClientWithOptions(registry string, opts *Options) *Client {
-	// Ensure logger first before using it
-	logger := ensureLogger(opts.Logger)
+func NewClientWithOptions(host string, opts *Options) *Client {
+	logger := resolveLogger(opts.Logger)
 
-	remoteOptions := buildRemoteOptions(registry, opts, logger)
+	// Normalize host and scheme before building remote options.
+	host = strings.TrimSuffix(host, "/")
 
-	registry = strings.TrimSuffix(registry, "/")
+	opts.Scheme = strings.ToLower(opts.Scheme)
+	if opts.Scheme == "http" {
+		opts.Insecure = true
+	}
 
-	client := &Client{
-		registryHost: registry,
-		options:      remoteOptions,
+	return &Client{
+		registryHost: host,
+		options:      buildRemoteOptions(opts, logger),
 		timeout:      opts.Timeout,
 		logger:       logger,
 		insecure:     opts.Insecure,
 	}
-
-	return client
 }
 
 // nameOptions returns name.Option slice for parsing references
@@ -142,6 +143,7 @@ func (c *Client) WithSegment(segments ...string) *Client {
 		options:      c.options,
 		logger:       c.logger,
 		insecure:     c.insecure,
+		timeout:      c.timeout,
 	}
 }
 
@@ -326,8 +328,6 @@ func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts .
 // GetImageConfig retrieves the image config file containing labels and metadata
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile, error) {
-	_ = c.GetRegistry()
-
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
@@ -539,10 +539,8 @@ func (c *Client) CheckImageExists(ctx context.Context, tag string) error {
 			return fmt.Errorf("%w: %w", ErrImageNotFound, err)
 		}
 
-		logentry.Debug("get Head error", log.Err(err))
-	}
+		logentry.Debug("HEAD failed, retrying with GET", log.Err(err))
 
-	if err != nil {
 		_, err = remote.Get(ref, opts...)
 	}
 
@@ -550,8 +548,6 @@ func (c *Client) CheckImageExists(ctx context.Context, tag string) error {
 		if isNotFound(err) {
 			return fmt.Errorf("%w: %w", ErrImageNotFound, err)
 		}
-
-		logentry.Debug("get Get error", log.Err(err))
 
 		return err
 	}
