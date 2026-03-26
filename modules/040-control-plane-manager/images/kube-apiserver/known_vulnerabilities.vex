@@ -108,7 +108,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
         }
       ],
       "status": "not_affected",
@@ -122,21 +122,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.59.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: kube-apiserver использует HTTP/REST для внешнего API, а не path-based gRPC авторизационные интерцепторы. grpc-go присутствует как транзитивная зависимость, однако серверный путь исполнения с deny-правилами и fallback allow не задействован.",
-      "timestamp": "2026-03-24T14:32:20.553485Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-33186"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.65.0"
+          "@id": "pkg:golang/google.golang.org/grpc"
         }
       ],
       "status": "not_affected",
