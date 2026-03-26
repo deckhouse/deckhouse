@@ -162,7 +162,6 @@ func verifySingle(ctx context.Context, target string) error {
 
 func main() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
@@ -173,6 +172,7 @@ func main() {
 			cancelFunc()
 			os.Exit(1)
 		}
+		cancelFunc()
 		return
 	}
 
@@ -183,4 +183,5 @@ func main() {
 	// Block until a signal is received
 	<-sigChan
 	slog.Info("Received OS signal, initiating graceful shutdown")
+	cancelFunc()
 }
