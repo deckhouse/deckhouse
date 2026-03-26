@@ -199,7 +199,7 @@ func (s *syncer) getTimeseries() ([]*prompb.TimeSeries, time.Time, error) {
 	}
 	s.logger.Debugf("got %d episodes", len(episodes))
 
-	ts := convEpisodes2Timeseries(slot, episodes, s.labels)
+	ts := convEpisodes2Timeseries(slot.Add(s.slotSize), episodes, s.labels)
 
 	return ts, slot, nil
 }
