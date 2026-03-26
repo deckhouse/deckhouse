@@ -114,13 +114,13 @@ func WithUserAgent(ua string) Option {
 }
 
 // WithInsecure enables plain HTTP instead of HTTPS.
-func WithInsecure() Option {
-	return func(o *Options) { o.Insecure = true }
+func WithInsecure(insecure bool) Option {
+	return func(o *Options) { o.Insecure = insecure }
 }
 
 // WithTLSSkipVerify disables TLS certificate verification.
-func WithTLSSkipVerify() Option {
-	return func(o *Options) { o.TLSSkipVerify = true }
+func WithTLSSkipVerify(skip bool) Option {
+	return func(o *Options) { o.TLSSkipVerify = skip }
 }
 
 // WithCA sets a custom PEM-encoded CA certificate for TLS verification.

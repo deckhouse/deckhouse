@@ -201,7 +201,7 @@ func newTestServer(t *testing.T) (addr string, c *Client) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 	addr = strings.TrimPrefix(srv.URL, "http://")
-	c = New(addr, WithInsecure())
+	c = New(addr, WithInsecure(true))
 	return addr, c
 }
 
