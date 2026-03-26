@@ -14,7 +14,7 @@ The provider supports working with only one disk in the virtual machine template
 You need to create a service account with the editor role with the cloud provider so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available [in the provider's documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
 
 1. Create a user named `deckhouse`:
-   
+
    ```shell
    yc iam service-account create --name deckhouse
    ```
@@ -181,7 +181,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
 
-   $ d8 k -n external-secrets get secretstores.external-secrets.io 
+   $ d8 k -n external-secrets get secretstores.external-secrets.io
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
