@@ -41,7 +41,6 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        word-break: break-all;
 
         @include breakpoints.max-w(xxl) {
             padding: 15px;
@@ -80,6 +79,10 @@
         }
 
         &-description {
+            > p {
+                word-break: break-all;
+            }
+
             @include breakpoints.max-w(xs) {
                 font-size: 12px;
             }
