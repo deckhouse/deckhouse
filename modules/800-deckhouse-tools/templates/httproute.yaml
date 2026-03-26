@@ -22,7 +22,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name" (list . "tools-httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name" (list . "deckhouse-tools-httproute") }}
         namespace: d8-system
       mode: Terminate
   - allowedRoutes:
@@ -56,9 +56,6 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "tools"
     web.deckhouse.io/export-icon: "/public/img/tools.ico"
-  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
-    alb-gateway.network.deckhouse.io/tls-secrets: d8-system/{{ include "helm_lib_module_https_secret_name" (list . "tools-httproute-tls") }}
-  {{- end }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.deckhouseTools.auth.externalAuthentication }}
     alb-gateway.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "tools")) .Values.deckhouseTools.auth.externalAuthentication.authSignInURL | quote }}
     alb-gateway.network.deckhouse.io/auth-url: {{ .Values.deckhouseTools.auth.externalAuthentication.authURL | quote }}

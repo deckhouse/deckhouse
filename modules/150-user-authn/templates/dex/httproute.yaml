@@ -2,16 +2,56 @@
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if and $moduleGateway }}
 ---
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XListenerSet
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+  name: d8-listenerset
+  namespace: d8-{{ .Chart.Name }}
+spec:
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    name: dex
+{{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
+        namespace: d8-{{ .Chart.Name }}
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    name: dex-redirect
+    port: 80
+    protocol: HTTP
+{{- else }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    name: tools
+    port: 80
+    protocol: HTTP
+{{- end }}
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{ $moduleGateway.name }}
+    namespace: {{ $moduleGateway.namespace }}
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   annotations:
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
     alb-gateway.network.deckhouse.io/limit-rps: "50"
-  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
-    alb-gateway.network.deckhouse.io/tls-secrets: d8-{{ .Chart.Name }}/{{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
-  {{- end }}
   name: dex
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
@@ -40,9 +80,6 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  annotations:
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
   name: dex-redirect
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
