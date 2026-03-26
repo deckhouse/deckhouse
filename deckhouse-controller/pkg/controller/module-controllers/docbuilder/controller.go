@@ -44,12 +44,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 	docsbuilder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const defaultDocumentationCheckInterval = 10 * time.Second
@@ -58,18 +60,20 @@ type reconciler struct {
 	client               client.Client
 	downloadedModulesDir string
 
-	dc          dependency.Container
-	docsBuilder *docsbuilder.Client
+	dc            dependency.Container
+	docsBuilder   *docsbuilder.Client
+	metricStorage metricsstorage.Storage
 
 	logger *log.Logger
 }
 
-func RegisterController(mgr manager.Manager, dc dependency.Container, logger *log.Logger) error {
+func RegisterController(mgr manager.Manager, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) error {
 	r := &reconciler{
 		client:               mgr.GetClient(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
 		docsBuilder:          docsbuilder.NewClient(dc.GetHTTPClient()),
+		metricStorage:        metricStorage,
 		logger:               logger,
 	}
 
@@ -286,18 +290,25 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 		mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
 	}
 
+	metricLabels := map[string]string{
+		metrics.LabelModule: moduleName,
+	}
+
 	switch {
 	case rendered == 0:
 		mdCopy.Status.RenderResult = v1alpha1.ResultError
 		r.logger.Warn("No documentation was rendered for any builder", slog.String("module_name", moduleName), slog.Int("total_builders", len(addrs)))
+		r.metricStorage.Grouped().GaugeSet(metrics.ModuleDocumentationRenderingGroup, metrics.D8ModuleDocumentationRenderError, 1, metricLabels)
 
 	case rendered == len(addrs):
 		mdCopy.Status.RenderResult = v1alpha1.ResultRendered
 		r.logger.Debug("Documentation rendered successfully for all builders", slog.String("module_name", moduleName), slog.Int("builders_count", len(addrs)))
+		r.metricStorage.Grouped().ExpireGroupMetricByName(metrics.ModuleDocumentationRenderingGroup, metrics.D8ModuleDocumentationRenderError)
 
 	default:
 		mdCopy.Status.RenderResult = v1alpha1.ResultPartially
 		r.logger.Warn("Documentation rendered partially", slog.String("module_name", moduleName), slog.Int("rendered", rendered), slog.Int("total_builders", len(addrs)))
+		r.metricStorage.Grouped().GaugeSet(metrics.ModuleDocumentationRenderingGroup, metrics.D8ModuleDocumentationRenderError, 1, metricLabels)
 	}
 
 	if err = r.client.Status().Patch(ctx, mdCopy, client.MergeFrom(md)); err != nil {

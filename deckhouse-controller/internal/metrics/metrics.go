@@ -72,16 +72,22 @@ const (
 	ModuleSizeBytesTotal       = "deckhouse_module_size_bytes_total"
 	ModuleUpdatePolicyNotFound = "deckhouse_module_update_policy_not_found"
 	ModuleConfigurationError   = "deckhouse_module_configuration_error"
+
+	// ============================================================================
+	// Documentation Builder Controller Metrics
+	// ============================================================================
+	D8ModuleDocumentationRenderError = "d8_module_documentation_render_error"
 )
 
 // ============================================================================
 // Metric Groups
 // ============================================================================
 const (
-	MigratedModuleNotFoundGroup = "migrated_module_not_found"
-	D8Updating                  = "d8_updating"
-	D8ModuleUpdatingGroup       = "d8_module_updating_group"
-	ModuleReleaseGroup          = "module_release_group"
+	MigratedModuleNotFoundGroup       = "migrated_module_not_found"
+	D8Updating                        = "d8_updating"
+	D8ModuleUpdatingGroup             = "d8_module_updating_group"
+	ModuleReleaseGroup                = "module_release_group"
+	ModuleDocumentationRenderingGroup = "module_documentation_rendering"
 )
 
 // Group templates for dynamic metric names using fmt.Sprintf
@@ -337,6 +343,15 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 	)
 	if err != nil {
 		return fmt.Errorf("failed to register %s: %w", D8ModuleUpdatingBrokenSequence, err)
+	}
+
+	_, err = metricStorage.RegisterGauge(
+		D8ModuleDocumentationRenderError,
+		configLabels,
+		options.WithHelp("Gauge indicating module documentation rendering errors (1.0 = render error)"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", D8ModuleDocumentationRenderError, err)
 	}
 
 	return nil

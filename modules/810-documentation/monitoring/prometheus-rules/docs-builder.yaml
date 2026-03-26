@@ -1,0 +1,29 @@
+- name: d8.documentation.docs-builder
+  rules:
+  - alert: ModuleDocumentationRenderError
+    expr: |
+      max by (module) (d8_module_documentation_render_error) > 0
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: documentation
+      d8_component: docs-builder
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Documentation rendering failed for module `{{ $labels.module }}`.
+      description: |-
+        An error occurred while rendering documentation for the `{{ $labels.module }}` module.
+
+        Check the `ModuleDocumentation` resource status for details:
+
+        ```bash
+        d8 k get moduledocumentations {{ $labels.module }} -o yaml
+        ```
+
+        Check Deckhouse logs for more information:
+
+        ```bash
+        d8 k -n d8-system logs -f -l app=deckhouse | grep -i "documentation"
+        ```

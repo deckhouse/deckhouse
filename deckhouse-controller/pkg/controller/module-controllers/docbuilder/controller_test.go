@@ -44,6 +44,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 var golden bool
@@ -284,6 +285,7 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 		logger:               log.NewNop(),
 		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
 		dc:                   dc,
+		metricStorage:        metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
 	}
 
 	suite.ctr = rec
