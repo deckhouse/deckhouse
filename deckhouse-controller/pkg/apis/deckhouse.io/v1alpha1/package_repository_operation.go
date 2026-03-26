@@ -75,6 +75,7 @@ var _ runtime.Object = (*PackageRepositoryOperation)(nil)
 // +kubebuilder:printcolumn:name=Count,type=integer,JSONPath=.status.packages.total
 // +kubebuilder:printcolumn:name=Completed,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].status
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].message
+// +kubebuilder:printcolumn:name=CompletionTime,type=date,JSONPath=.status.completionTime
 
 // PackageRepositoryOperation represents an operation to scan/update a package repository.
 type PackageRepositoryOperation struct {
