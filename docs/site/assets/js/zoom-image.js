@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const ZOOM_STEP = 0.25;
   const ZOOM_MIN = 1;
   const ZOOM_MAX = 4;
+  const DESKTOP_BREAKPOINT = 1024;
 
   function stopEvent(e) {
     e.preventDefault();
@@ -29,6 +30,10 @@ document.addEventListener('DOMContentLoaded', function () {
     pollUntilReady(function () {
       return document.querySelector('.glightbox-container');
     }, cb, 60);
+  }
+
+  function isDesktopViewport() {
+    return window.innerWidth > DESKTOP_BREAKPOINT;
   }
 
   function isSvgUrl(url) {
@@ -229,26 +234,17 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!img || img.dataset.zoomImageBound === '1') return;
     img.dataset.zoomImageBound = '1';
 
-    const isDesktop = window.innerWidth > 1024;
+    const isDesktop = isDesktopViewport();
     const state = getState(container);
+    const closeBtn = container.querySelector('.gclose');
+    const wrapper = img.closest('.gslide-inner-content');
     let pointerId = null;
-    const pointers = {};
-    let pinchStartDistance = 0;
-    let pinchStartScale = 1;
     let startX = 0;
     let startY = 0;
     let baseX = 0;
     let baseY = 0;
     let moved = false;
     let rafId = 0;
-
-    function getDistance(a, b) {
-      return Math.hypot(a.x - b.x, a.y - b.y);
-    }
-
-    function getCenter(a, b) {
-      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    }
 
     function applyTransformRaf() {
       if (rafId) return;
@@ -259,15 +255,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function pointerDown(e) {
-      pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
-      const ids = Object.keys(pointers);
-      if (ids.length === 2) {
-        const a = pointers[ids[0]];
-        const b = pointers[ids[1]];
-        pinchStartDistance = getDistance(a, b);
-        pinchStartScale = state.scale;
-        pointerId = null;
-      }
       if (e.button !== 0 || state.scale <= 1 || pointerId !== null) return;
       pointerId = e.pointerId;
       moved = false;
@@ -280,21 +267,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function pointerMove(e) {
-      if (pointers[e.pointerId]) {
-        pointers[e.pointerId].x = e.clientX;
-        pointers[e.pointerId].y = e.clientY;
-      }
-      const ids = Object.keys(pointers);
-      if (ids.length === 2 && pinchStartDistance > 0) {
-        const a = pointers[ids[0]];
-        const b = pointers[ids[1]];
-        const distance = getDistance(a, b);
-        if (distance > 0) {
-          setScale(container, pinchStartScale * (distance / pinchStartDistance), getCenter(a, b));
-          stopEvent(e);
-        }
-        return;
-      }
       if (pointerId === null || e.pointerId !== pointerId) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
@@ -312,8 +284,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function pointerUp(e) {
-      delete pointers[e.pointerId];
-      if (Object.keys(pointers).length < 2) pinchStartDistance = 0;
       if (pointerId === null || e.pointerId !== pointerId) return;
       if (img.hasPointerCapture(pointerId)) img.releasePointerCapture(pointerId);
       pointerId = null;
@@ -341,12 +311,22 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
+    function clickWrapperToClose(e) {
+      if (!closeBtn) return;
+      if (e.target === img || (e.target.closest && e.target.closest('.zoom-image-toolbar'))) return;
+      stopEvent(e);
+      closeBtn.click();
+    }
+
     img.addEventListener('pointerdown', pointerDown, true);
     img.addEventListener('pointermove', pointerMove, true);
     img.addEventListener('pointerup', pointerUp, true);
     img.addEventListener('pointercancel', pointerUp, true);
-    if (isDesktop) img.addEventListener('click', clickZoom, true);
-    if (isDesktop) img.addEventListener('wheel', wheelZoom, { passive: false });
+    if (isDesktop) {
+      img.addEventListener('click', clickZoom, true);
+      img.addEventListener('wheel', wheelZoom, { passive: false });
+    }
+    if (wrapper) wrapper.addEventListener('click', clickWrapperToClose, true);
 
     applyTransform(container);
   }
@@ -369,13 +349,12 @@ document.addEventListener('DOMContentLoaded', function () {
     img.addEventListener('click', function (e) {
       e.preventDefault();
       const url = img.currentSrc || img.src;
-      const isDesktop = window.innerWidth > 1024;
       const lb = GLightbox({
         elements: [{ href: url, type: 'image' }],
-        touchNavigation: !isDesktop,
+        touchNavigation: false,
         loop: false,
-        zoomable: !isDesktop,
-        draggable: !isDesktop,
+        zoomable: false,
+        draggable: false,
         closeButton: true,
         openEffect: 'zoom',
         closeEffect: 'fade'
@@ -391,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function () {
           addAltOverlay(container, img);
           addToolbar(container);
           enablePanAndWheelZoom(container);
-          if (isDesktop) applyTransform(container);
+          applyTransform(container);
         }, 80);
       });
     });

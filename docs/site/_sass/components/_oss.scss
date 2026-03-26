@@ -7,12 +7,19 @@
     grid-row-gap: 60px;
     grid-column-gap: 45px;
 
+    @include breakpoints.max-w(xxl) {
+        grid-row-gap: 40px;
+        grid-column-gap: 25px;
+    }
+
     @include breakpoints.max-w(xl) {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
         grid-row-gap: 40px;
         grid-column-gap: 35px;
     }
 
     @include breakpoints.max-w(l) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         grid-row-gap: 30px;
         grid-column-gap: 25px;
     }
@@ -34,6 +41,11 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start;
+        word-break: break-all;
+
+        @include breakpoints.max-w(xxl) {
+            padding: 15px;
+        }
 
         @include breakpoints.max-w(s) {
             padding: 20px;
@@ -53,6 +65,10 @@
             font-size: variables.$font-size-h2;
             font-weight: variables.$font-weight-bold;
 
+            @include breakpoints.max-w(xxl) {
+                font-size: 22px;
+            }
+
             @include breakpoints.max-w(s) {
                 margin-bottom: 5px;
                 font-size: 20px;
@@ -67,20 +83,12 @@
             @include breakpoints.max-w(xs) {
                 font-size: 12px;
             }
-
-            @include breakpoints.max-w(xxs) {
-                word-break: break-all;
-            }
         }
 
         &-license {
             font-size: variables.$font-size-tiny;
             opacity: 0.5;
             margin-top: variables.$spacing-s;
-
-            @include breakpoints.max-w(xxs) {
-                word-break: break-all;
-            }
         }
     }
 }
