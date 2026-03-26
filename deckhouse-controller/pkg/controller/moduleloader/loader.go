@@ -98,8 +98,6 @@ type Loader struct {
 	downloadedModulesDir string
 	symlinksDir          string
 	conversionsStore     *conversion.ConversionsStore
-
-	moduleTelemetry []loader.ModuleVersion
 }
 
 func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, logger *log.Logger) *Loader {
@@ -442,35 +440,24 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 		attribute.Int("status_updated_modules", statusUpdatedCount),
 	)
 
-	l.refreshModuleTelemetry(modulesList.Items)
+	l.syncModuleVersions(modulesList.Items)
 
 	return nil
 }
 
-// refreshModuleTelemetry collects deployed module version data for later
-// consumption by addon-operator's ModuleManager.RefreshModuleTelemetry.
-func (l *Loader) refreshModuleTelemetry(modules []v1alpha1.Module) {
-	versions := make([]loader.ModuleVersion, 0, len(modules))
+// syncModuleVersions propagates deployed module versions from Kubernetes
+// Module CRs into the corresponding BasicModule instances so that
+// addon-operator can read them directly via BasicModule.GetVersion().
+func (l *Loader) syncModuleVersions(modules []v1alpha1.Module) {
 	for i := range modules {
 		m := &modules[i]
-		if m.IsEmbedded() {
-			continue
-		}
 		if m.Properties.Version == "" {
 			continue
 		}
-		versions = append(versions, loader.ModuleVersion{
-			Name:    m.Name,
-			Version: m.Properties.Version,
-		})
+		if mod, ok := l.modules[m.Name]; ok {
+			mod.GetBasicModule().SetVersion(m.Properties.Version)
+		}
 	}
-	l.moduleTelemetry = versions
-}
-
-// ModuleTelemetry returns collected module version data.
-// Implements loader.ModuleTelemetryProvider.
-func (l *Loader) ModuleTelemetry() []loader.ModuleVersion {
-	return l.moduleTelemetry
 }
 
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {
