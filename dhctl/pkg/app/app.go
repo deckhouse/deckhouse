@@ -21,8 +21,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 const (
