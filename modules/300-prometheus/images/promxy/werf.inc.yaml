@@ -10,11 +10,6 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/vendor-patches
-  to: /vendor-patches
-  stageDependencies:
-    install:
-    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -23,8 +18,7 @@ shell:
     - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
     - cd /src
-    - git apply /patches/*.patch --verbose
-    - cp -r /vendor-patches /src/.vendor-patches
+    - git apply /patches/001-go-mod.patch --verbose
     - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -33,6 +27,10 @@ final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /patches
+    to: /patches
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -45,9 +43,9 @@ shell:
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - GOPROXY=$(cat /run/secrets/GOPROXY) go install golang.org/x/tools/cmd/goyacc@latest
-  - cp /src/.vendor-patches/op_func.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_func.go
-  - cp /src/.vendor-patches/op_top.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_top.go
-  - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /src/.vendor-patches/op-functions.patch
+  - cp /patches/op_func.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_func.go
+  - cp /patches/op_top.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_top.go
+  - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/002-op-functions.patch
   - cd /src/vendor/github.com/prometheus/prometheus/promql/parser && goyacc -l -o generated_parser.y.go generated_parser.y
   - cd /src
   - |
