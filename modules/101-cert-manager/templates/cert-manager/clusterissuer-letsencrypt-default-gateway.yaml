@@ -23,5 +23,8 @@ spec:
           - group: gateway.networking.x-k8s.io
             kind: XListenerSet
             name: d8-listenerset
+          - group: gateway.networking.x-k8s.io
+            kind: XListenerSet
+            name: d8-listenerset-documentation
   {{- end }}
 {{- end }}

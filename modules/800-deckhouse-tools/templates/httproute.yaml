@@ -22,7 +22,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name" (list . "deckhouse-tools-httproute") }}
+        name: {{ include "helm_lib_module_https_secret_name" (list . "tools-httproute-tls") }}
         namespace: d8-system
       mode: Terminate
   - allowedRoutes:
