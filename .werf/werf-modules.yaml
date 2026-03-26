@@ -2,6 +2,8 @@
   {{- $Root := . }}
   {{- $ModulesImagesDigestList := list }}
   {{- $ExcludedModulesDict := dict }}
+  {{- $AvailableModulesDict := dict }}
+  {{- $HasAvailableModules := false }}
 
 # Collect images if desired for editions
 #
@@ -20,6 +22,12 @@
     {{- $_ := set $ExcludedModulesDict (printf "%s" $exludeModuleName) "true" }}
     {{- end }}
     {{- end }}
+    {{- if $edition.AvailableModules }}
+    {{- $HasAvailableModules = true }}
+    {{- range $_, $availableModuleName := $edition.AvailableModules }}
+    {{- $_ := set $AvailableModulesDict (printf "%s" $availableModuleName) "true" }}
+    {{- end }}
+    {{- end }}
 
     {{- break -}}
     {{- end }}
@@ -36,6 +44,9 @@
       {{- $moduleName := $ImageData._2 }}
       # exclude modules and images from editions
       {{- if hasKey $ExcludedModulesDict $moduleName }}
+      {{- continue -}}
+      {{- end }}
+      {{- if and $HasAvailableModules (not (hasKey $AvailableModulesDict $moduleName)) }}
       {{- continue -}}
       {{- end }}
 
