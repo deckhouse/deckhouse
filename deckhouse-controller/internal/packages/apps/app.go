@@ -213,8 +213,8 @@ func (a *Application) GetRuntimeValues() RuntimeValues {
 	}
 }
 
-// GetExtraNelmValues returns runtime values in string format
-func (a *Application) GetExtraNelmValues() string {
+// GetValues returns runtime values in string format
+func (a *Application) GetValues() string {
 	runtimeValues := a.GetRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
@@ -313,8 +313,8 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 	}, nil
 }
 
-// GetValues returns values for rendering
-func (a *Application) GetValues() addonutils.Values {
+// GetHookValues returns values for hook rendering
+func (a *Application) GetHookValues() addonutils.Values {
 	return a.values.GetValues()
 }
 

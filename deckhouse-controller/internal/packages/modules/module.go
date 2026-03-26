@@ -195,8 +195,8 @@ func (m *Module) GetRuntimeValues() RuntimeValues {
 	}
 }
 
-// GetExtraNelmValues returns runtime values in string format
-func (m *Module) GetExtraNelmValues() string {
+// GetValues returns runtime values in string format
+func (m *Module) GetValues() string {
 	runtimeValues := m.GetRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
@@ -290,8 +290,8 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 	}, nil
 }
 
-// GetValues returns values for rendering
-func (m *Module) GetValues() addonutils.Values {
+// GetHookValues returns values for hook rendering
+func (m *Module) GetHookValues() addonutils.Values {
 	return addonutils.MergeValues(
 		addonutils.Values{"global": m.globalValuesGetter(false)},
 		m.values.GetValues())
