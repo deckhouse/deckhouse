@@ -101,17 +101,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return res, err
 	}
 
-	// handle delete event
+	// handle delete event - no cleanup needed, child resources are owned by PackageRepository
 	if !operation.DeletionTimestamp.IsZero() {
 		logger.Debug("deleting package repository operation")
-
-		err := r.delete(ctx, operation)
-		if err != nil {
-			logger.Warn("failed to delete package repository operation", log.Err(err))
-
-			return res, err
-		}
-
 		return res, nil
 	}
 
@@ -592,12 +584,6 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 			return fmt.Errorf("delete old operation: %w", err)
 		}
 	}
-
-	return nil
-}
-
-func (r *reconciler) delete(_ context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
-	r.logger.Info("deleting PackageRepositoryOperation", slog.String("name", operation.Name))
 
 	return nil
 }
