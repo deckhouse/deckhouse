@@ -32,10 +32,6 @@ metadata:
   {{- if $app.whitelistSourceRanges }}
     alb-gateway.network.deckhouse.io/whitelist-source-range: {{ $app.whitelistSourceRanges | join "," }}
   {{- end }}
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
-  {{- if $app.gatewayAPI.httpRouteGatewayName }}
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $app.gatewayAPI.httpRouteGatewayNamespace $app.gatewayAPI.httpRouteGatewayName }}
-  {{- end }}
   name: {{ $routeName }}
   namespace: {{ $crd.namespace }}
   {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
