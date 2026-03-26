@@ -237,4 +237,5 @@ shell:
   - strip /pidumount
   - chmod 0700 /pidumount
   {{- end }}
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}
