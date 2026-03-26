@@ -69,6 +69,7 @@ editions:
   modulesDir: "ee/fe/modules"
 
 - name: CSE
+  versionMapFile: "ee/cse/candi/version_map.yml"
   modulesDir: "ee/cse/modules"
   AvailableModules:
   - admission-policy-engine
