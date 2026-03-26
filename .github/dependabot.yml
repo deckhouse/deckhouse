@@ -88,16 +88,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/cse/modules/007-registrypackages/images/d8-bcheck/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/ee/cse/modules/007-registrypackages/images/logpipe/src"
+  directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
