@@ -108,4 +108,15 @@ type Client interface {
 	// ListRepositories retrieves sub-repositories under the current scope with pagination
 	// The scope is determined by the chained WithSegment() calls
 	ListRepositories(ctx context.Context, opts ...ListRepositoriesOption) ([]string, error)
+
+	// DeleteTag deletes a specific tag from the repository.
+	// Returns ErrImageNotFound if the tag does not exist.
+	// The repository is determined by the chained WithSegment() calls.
+	DeleteTag(ctx context.Context, tag string) error
+
+	// TagImage adds a new tag pointing to the same manifest as sourceTag without
+	// re-uploading any layers (single manifest PUT).
+	// Standard promotion pattern: e.g. :latest → :v1.2.3.
+	// The repository is determined by the chained WithSegment() calls.
+	TagImage(ctx context.Context, sourceTag, destTag string) error
 }
