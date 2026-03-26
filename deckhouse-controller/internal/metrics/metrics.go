@@ -72,17 +72,16 @@ const (
 	ModuleSizeBytesTotal       = "deckhouse_module_size_bytes_total"
 	ModuleUpdatePolicyNotFound = "deckhouse_module_update_policy_not_found"
 	ModuleConfigurationError   = "deckhouse_module_configuration_error"
-
 )
 
 // ============================================================================
 // Metric Groups
 // ============================================================================
 const (
-	MigratedModuleNotFoundGroup   = "migrated_module_not_found"
-	D8Updating                    = "d8_updating"
-	D8ModuleUpdatingGroup = "d8_module_updating_group"
-	ModuleReleaseGroup    = "module_release_group"
+	MigratedModuleNotFoundGroup = "migrated_module_not_found"
+	D8Updating                  = "d8_updating"
+	D8ModuleUpdatingGroup       = "d8_module_updating_group"
+	ModuleReleaseGroup          = "module_release_group"
 )
 
 // Group templates for dynamic metric names using fmt.Sprintf
