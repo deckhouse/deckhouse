@@ -13,10 +13,15 @@ The provider supports working with only one disk in the virtual machine template
 
 You need to create a service account with the editor role with the cloud provider so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available [in the provider's documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
 
-1. Create a user named `deckhouse`. The command response will contain its parameters:
-
-   ```yaml
+1. Create a user named `deckhouse`: 
+   
+   ```shell
    yc iam service-account create --name deckhouse
+   ```
+
+   The command response will contain its parameters:
+
+   ```console
    id: <userID>
    folder_id: <folderID>
    created_at: "YYYY-MM-DDTHH:MM:SSZ"
@@ -25,7 +30,7 @@ You need to create a service account with the editor role with the cloud provide
 
 1. Assign the required roles to the newly created user for your cloud:
 
-   ```yaml
+   ```shell
    yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
@@ -33,7 +38,7 @@ You need to create a service account with the editor role with the cloud provide
 
 1. Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
 
-   ```yaml
+   ```shell
    yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
    ```
 
