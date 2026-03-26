@@ -104,6 +104,7 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	}
 	if len(publishAPIConfigSnaps) == 0 {
 		input.Logger.Info("Configmap 'd8-publishapi-config-migration' is empty or does not exist, skipping")
+		return nil
 	}
 	publishAPIConfig := publishAPIConfigSnaps[0]
 
