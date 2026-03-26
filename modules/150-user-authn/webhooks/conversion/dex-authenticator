@@ -56,8 +56,6 @@ function __on_conversion::v2alpha1_to_v1() {
 	  applicationHTTPRouteListenerSetName: (.spec.applications[0].gatewayAPI?.httpRouteListenerSetName // null),
           applicationHTTPRouteListenerSetNamespace: (.spec.applications[0].gatewayAPI?.httpRouteListenerSetNamespace // null),
 	  applicationHTTPRouteListenerSetSectionName: (.spec.applications[0].gatewayAPI?.httpRouteListenerSetSectionName // null),
-	  applicationHTTPRouteGatewayName: (.spec.applications[0].gatewayAPI?.httpRouteGatewayName // null),
-	  applicationHTTPRouteGatewayNamespace: (.spec.applications[0].gatewayAPI?.httpRouteGatewayNamespace // null),
         },
         signOutURL: (.spec.applications[0].signOutURL // null),
         whitelistSourceRanges: (.spec.applications[0].whitelistSourceRanges // null),
@@ -129,9 +127,7 @@ function __on_conversion::v1_to_v2alpha1() {
 	  httpRouteCertificateSecretName: .spec.gatewayAPI?.applicationHTTPRouteCertificateSecretName,
 	  httpRouteListenerSetName: .spec.gatewayAPI?.applicationHTTPRouteListenerSetName,
 	  httpRouteListenerSetNamespace: .spec.gatewayAPI?.applicationHTTPRouteListenerSetNamespace,
-	  httpRouteListenerSetSectionName: .spec.gatewayAPI?.applicationHTTPRouteListenerSetSectionName,
-	  httpRouteGatewayName: .spec.gatewayAPI?.applicationHTTPRouteGatewayName,
-	  httpRouteGatewayNamespace: .spec.gatewayAPI?.applicationHTTPRouteGatewayNamespace
+	  httpRouteListenerSetSectionName: .spec.gatewayAPI?.applicationHTTPRouteListenerSetSectionName
         }
       } +
       (if .spec.applicationIngressCertificateSecretName then {ingressSecretName: .spec.applicationIngressCertificateSecretName} else {} end) +

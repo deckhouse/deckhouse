@@ -96,14 +96,6 @@ spec:
                   type: object
                   required:
                   - applicationHTTPRouteListenerSetName
-                  oneOf:
-                  - not:
-                      anyOf:
-                      - required: [applicationHTTPRouteGatewayName]
-                      - required: [applicationHTTPRouteGatewayNamespace]
-                  - required:
-                    - applicationHTTPRouteGatewayName
-                    - applicationHTTPRouteGatewayNamespace
                   description: |-
                     Defines Gateway API-specific parameters to use when creating HTTPRoutes.
                   properties:
@@ -137,22 +129,6 @@ spec:
                       x-doc-examples: ['default-listener']
                       pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       maxLength: 
-                    applicationHTTPRouteGatewayName:
-                      type: string
-                      description: |
-                        The name of the Gateway the ListenerSet will be attached to.
-
-                        If not set, the cluster default Gateway will be used.
-                      x-doc-examples: ['shared-gateway']
-                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
-                      maxLength: 253
-                    applicationHTTPRouteGatewayNamespace:
-                      type: string
-                      description: |
-                        The namespace of the Gateway the ListenerSet will be attached to.
-                      x-doc-examples: ['default']
-                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
-                      maxLength: 63
                 signOutURL:
                   type: string
                   description: |-
@@ -396,14 +372,6 @@ spec:
                         type: object
                         required:
                         - httpRouteListenerSetName
-                        oneOf:
-                        - not:
-                            anyOf:
-                            - required: [httpRouteGatewayName]
-                            - required: [httpRouteGatewayNamespace]
-                        - required:
-                          - httpRouteGatewayName
-                          - httpRouteGatewayNamespace
                         description: |-
                           Defines Gateway API-specific parameters to use when creating HTTPRoutes.
                         properties:
@@ -437,22 +405,6 @@ spec:
                             x-doc-examples: ['web-listener']
                             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                             maxLength: 253
-                          httpRouteGatewayName:
-                            type: string
-                            description: |
-                              The name of the Gateway the ListenerSet will be attached to.
-
-                              If not set, the cluster default Gateway will be used.
-                            x-doc-examples: ['shared-gateway']
-                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
-                            maxLength: 253
-                          httpRouteGatewayNamespace:
-                            type: string
-                            description: |
-                              The namespace of the Gateway the ListenerSet will be attached to.
-                            x-doc-examples: ['default']
-                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
-                            maxLength: 63
                       whitelistSourceRanges:
                         type: array
                         description: |

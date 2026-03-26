@@ -2,6 +2,50 @@
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- $satisfyAny := dig "auth" "satisfyAny" false .Values.deckhouseTools }}
 {{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XListenerSet
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-tools")) | nindent 2 }}
+  name: d8-listenerset
+  namespace: d8-system
+spec:
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "tools") }}
+    name: tools
+{{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ include "helm_lib_module_https_secret_name" (list . "tools-httproute-tls") }}
+        namespace: d8-system
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "tools") }}
+    name: tools-redirect
+    port: 80
+    protocol: HTTP
+{{- else }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "tools") }}
+    name: tools
+    port: 80
+    protocol: HTTP
+{{- end }}
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{ $moduleGateway.name }}
+    namespace: {{ $moduleGateway.namespace }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -12,8 +56,6 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "tools"
     web.deckhouse.io/export-icon: "/public/img/tools.ico"
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
   {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
     alb-gateway.network.deckhouse.io/tls-secrets: d8-system/{{ include "helm_lib_module_https_secret_name" (list . "tools-httproute-tls") }}
   {{- end }}
@@ -57,9 +99,6 @@ metadata:
   name: deckhouse-tools-redirect
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-tools")) | nindent 2 }}
-  annotations:
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
 spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "tools") }}
