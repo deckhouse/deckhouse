@@ -104,6 +104,10 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+- from: registry.deckhouse.io/container-factory@sha256:5677ff6e1d7cf6897c995dd575c1aafe96805afb534853aa04862a2953eb3977
+  add: /usr/bin/minget
+  to: /deckhouse/candi/bashible/bootstrap/minget
+  after: setup
 git:
 - add: /tools/mounts/mountdir
   to: /.kube

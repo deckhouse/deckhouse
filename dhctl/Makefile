@@ -26,6 +26,7 @@ GOARCH=amd64
 TEST_PACKAGES := $(shell go list ./... | grep -Ev '/pkg/preflight(/|$$)')
 
 DHCTL_BIN_NAME=bin/dhctl
+MINGET_EMBED_PATH=pkg/minget/embed/minget
 
 ADDITIONAL_BUILD_ARGS=
 DEV_IMAGES_DIGESTS=./pkg/config/digests/images_digests_dev.json
@@ -122,7 +123,16 @@ generate: protoc
 generate-preflight-checks:
 	@go generate hack/gen_preflight_checks/main.go
 
-build: check-vars
+.PHONY: prepare-minget-embed
+prepare-minget-embed:
+	@mkdir -p $(dir $(MINGET_EMBED_PATH))
+	@if [ -f /minget ]; then \
+		cp /minget $(MINGET_EMBED_PATH); \
+	else \
+		echo "Warning! /minget was not found, embedded minget will not be updated"; \
+	fi
+
+build: check-vars prepare-minget-embed
 	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build $(ADDITIONAL_BUILD_ARGS) -ldflags "-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build/test/check-digests:

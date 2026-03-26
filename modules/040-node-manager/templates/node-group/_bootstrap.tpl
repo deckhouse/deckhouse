@@ -15,6 +15,7 @@
   {{- $_ := set $tpl_context "images" $context.Values.global.modulesImages.digests }}
   {{- $packagesProxy := $context.Values.nodeManager.internal.packagesProxy | default (dict) }}
   {{- $_ := set $tpl_context "packagesProxy" $packagesProxy }}
+  {{- $_ := set $tpl_context "mingetB64" ($context.Files.Get "candi/bashible/bootstrap/minget" | b64enc) }}
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
     {{- $_ := set $tpl_context "provider" $context.Values.nodeManager.internal.cloudProvider.type }}
   {{- end }}
