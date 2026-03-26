@@ -119,13 +119,35 @@ Changes:
 
 Files:
 
+- api/v1beta1/vcdcluster_types.go
+- api/v1beta1/vcdmachine_types.go
+- api/v1beta1/zz_generated.conversion.go
+- api/v1beta1/zz_generated.deepcopy.go
+- api/v1beta2/vcdcluster_types.go
+- api/v1beta2/vcdcluster_webhook.go
 - api/v1beta2/vcdmachine_types.go
+- api/v1beta2/vcdmachine_webhook.go
+- api/v1beta2/vcdmachinetemplate_types.go
+- api/v1beta2/zz_generated.deepcopy.go
+- controllers/capi_objects_utils.go
+- controllers/cluster_scripts/cloud_init.tmpl
+- controllers/condition_consts.go
+- controllers/vcdcluster_controller.go
 - controllers/vcdmachine_controller.go
+- go.mod
+- go.sum
+- main.go
+- tests/e2e/utils/cluster_upgrade_utils.go
+- tests/e2e/utils/node_pool_scaling_utils.go
+- tests/e2e/workload_cluster_resize_test.go
+- tests/e2e/workload_cluster_upgrade_test.go
 
 Changes:
 
 - Add TemplateOrg field to VCDMachineSpec
-- Update AddNewVM call to use TemplateOrg parameter
+- Update AddNewVM call to use TemplateOrg parameter and add guestCustScript parameter
+- Note: This patch also restores changes from patch 001 that were inadvertently removed by patch 006
+- The patch includes all changes from 001-our-machinery.patch that are needed for proper VM creation
 
 ### 008-add-metadata.patch
 
