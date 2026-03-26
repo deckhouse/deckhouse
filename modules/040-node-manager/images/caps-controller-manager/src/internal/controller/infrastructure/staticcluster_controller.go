@@ -25,13 +25,14 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
-	"caps-controller-manager/internal/scope"
 )
 
 // StaticClusterReconciler reconciles a StaticCluster object
@@ -41,10 +42,10 @@ type StaticClusterReconciler struct {
 	Config *rest.Config
 }
 
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticclusters,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;list;watch
-//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters/status,verbs=get
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticclusters,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticclusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;list;watch
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters/status,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -80,18 +81,7 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	if cluster == nil {
 		logger.V(1).Info("Cluster Controller has not yet set OwnerRef")
-
 		return ctrl.Result{}, nil
-	}
-
-	newScope, err := scope.NewScope(r.Client, r.Config, ctrl.LoggerFrom(ctx))
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to create a scope")
-	}
-
-	clusterScope, err := scope.NewClusterScope(newScope, cluster, staticCluster)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to create a cluster scope")
 	}
 
 	// Handle deleted cluster
@@ -99,42 +89,37 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	reconcileErr := r.reconcile(ctx, clusterScope)
-	if reconcileErr != nil {
-		clusterScope.Logger.Error(reconcileErr, "failed to reconcile StaticCluster")
-	}
-
-	return ctrl.Result{}, reconcileErr
+	return r.reconcile(ctx, staticCluster)
 }
 
-func (r *StaticClusterReconciler) reconcile(
-	ctx context.Context,
-	clusterScope *scope.ClusterScope,
-) error {
+func (r *StaticClusterReconciler) reconcile(ctx context.Context, staticCluster *infrav1.StaticCluster) (ctrl.Result, error) {
 	controlPlaneEndpointURL, err := url.Parse(r.Config.Host)
 	if err != nil {
-		return errors.Wrap(err, "failed to parse api server host")
+		return ctrl.Result{}, errors.Wrap(err, "failed to parse api server host")
 	}
 
 	port, err := strconv.Atoi(controlPlaneEndpointURL.Port())
 	if err != nil {
-		return errors.Wrap(err, "failed to parse api server port")
+		return ctrl.Result{}, errors.Wrap(err, "failed to parse api server port")
 	}
 
-	clusterScope.StaticCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+	staticCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: controlPlaneEndpointURL.Hostname(),
 		Port: int32(port),
 	}
+	staticCluster.Status.Initialization.Provisioned = ptr.To(true)
 
-	clusterReady := true
-	clusterScope.StaticCluster.Status.Initialization.Provisioned = &clusterReady
-
-	err = clusterScope.Patch(ctx)
+	patchHelper, err := patch.NewHelper(staticCluster, r.Client)
 	if err != nil {
-		return errors.Wrap(err, "failed to patch StaticCluster")
+		return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
 	}
 
-	return nil
+	err = patchHelper.Patch(ctx, staticCluster)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticCluster")
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
