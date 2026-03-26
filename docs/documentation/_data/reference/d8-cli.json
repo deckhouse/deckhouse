@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.28.0",
+  "version": "v0.29.14",
   "aliases": null,
   "flags": {
     "help": {
@@ -39661,6 +39661,11 @@
               "shorthand": "",
               "global": false
             },
+            "installer-tag": {
+              "description": "Specific Deckhouse installer build tag to pull. If not specified, the latest tag for the installer will be pulled from the registry path.",
+              "shorthand": "",
+              "global": false
+            },
             "license": {
               "description": "Deckhouse license key. Shortcut for --source-login=license-token --source-password=\u003c\u003e.",
               "shorthand": "l",
@@ -39668,6 +39673,11 @@
             },
             "modules-path-suffix": {
               "description": "Suffix to append to source repo path to locate modules.",
+              "shorthand": "",
+              "global": false
+            },
+            "no-installer": {
+              "description": "Do not pull Deckhouse installer into bundle.",
               "shorthand": "",
               "global": false
             },
@@ -39770,6 +39780,51 @@
       ]
     },
     {
+      "name": "network",
+      "description": "A group of commands to operate network related tasks in The Deckhouse Ecosystem.",
+      "aliases": [
+        "n"
+      ],
+      "flags": {},
+      "subcommands": [
+        {
+          "name": "cni-migration",
+          "description": "A group of commands to switch CNI in the cluster",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "cleanup",
+              "description": "Cleans up resources created during CNI switching",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "switch",
+              "description": "Initiates the CNI switching",
+              "aliases": null,
+              "flags": {
+                "to-cni": {
+                  "description": "Target CNI provider to switch to. Supported values: cilium, flannel, simple-bridge",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "watch",
+              "description": "Monitors the CNI switching progress",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "status",
       "description": "Get cluster status information",
       "aliases": null,
@@ -39788,180 +39843,11 @@
       "subcommands": null
     },
     {
-      "name": "stronghold",
+      "name": "stronghold [command] [args...]",
       "description": "Deckhouse Stronghold commands",
       "aliases": null,
       "flags": {},
-      "subcommands": [
-        {
-          "name": "agent",
-          "description": "Start a Stronghold agent",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "auth",
-          "description": "Interact with auth methods",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "delete",
-          "description": "Delete secrets and configuration",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "kv",
-          "description": "Interact with Stronghold's Key-Value storage",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "lease",
-          "description": "Interact with leases",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "list",
-          "description": "List data or secrets",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "login",
-          "description": "Authenticate locally",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "namespace",
-          "description": "Interact with namespaces",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "operator",
-          "description": "Perform operator-specific tasks",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "patch",
-          "description": "Patch data, configuration, and secrets",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "path-help",
-          "description": "Retrieve API help for paths",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "pki",
-          "description": "Interact with Stronghold's PKI Secrets Engine",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "policy",
-          "description": "Interact with policies",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "print",
-          "description": "Prints runtime configurations",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "proxy",
-          "description": "Start a Stronghold Proxy",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "read",
-          "description": "Read data and retrieves secrets",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "secrets",
-          "description": "Interact with secrets engines",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "status",
-          "description": "Print seal and HA status",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "token",
-          "description": "Interact with tokens",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "transit",
-          "description": "Interact with Stronghold's Transit Secrets Engine",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "unwrap",
-          "description": "Unwrap a wrapped secret",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "version",
-          "description": "Print version",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "version-history",
-          "description": "Prints the version history of the target Stronghold server",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        },
-        {
-          "name": "write",
-          "description": "Write data, configuration, and secrets",
-          "aliases": null,
-          "flags": {},
-          "subcommands": null
-        }
-      ]
+      "subcommands": null
     },
     {
       "name": "system",
@@ -40680,6 +40566,141 @@
       ]
     },
     {
+      "name": "user",
+      "description": "Manage Deckhouse users (user-authn)",
+      "aliases": [
+        "userop"
+      ],
+      "flags": {
+        "context": {
+          "description": "The name of the kubeconfig context to use",
+          "shorthand": "",
+          "global": false
+        },
+        "kubeconfig": {
+          "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+          "shorthand": "k",
+          "global": false
+        }
+      },
+      "subcommands": [
+        {
+          "name": "lock \u003cusername\u003e \u003clockDuration\u003e",
+          "description": "Lock local user in Dex for a period of time",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "timeout": {
+              "description": "How long to wait for completion when --wait is enabled.",
+              "shorthand": "",
+              "global": false
+            },
+            "wait": {
+              "description": "Wait for UserOperation completion and print result.",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "reset-password \u003cusername\u003e \u003cbcryptHash\u003e",
+          "description": "Reset local user's password in Dex (requires bcrypt hash)",
+          "aliases": [
+            "resetpass"
+          ],
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "timeout": {
+              "description": "How long to wait for completion when --wait is enabled.",
+              "shorthand": "",
+              "global": false
+            },
+            "wait": {
+              "description": "Wait for UserOperation completion and print result.",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "reset2fa \u003cusername\u003e",
+          "description": "Reset local user's 2FA (TOTP) in Dex",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "timeout": {
+              "description": "How long to wait for completion when --wait is enabled.",
+              "shorthand": "",
+              "global": false
+            },
+            "wait": {
+              "description": "Wait for UserOperation completion and print result.",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "unlock \u003cusername\u003e",
+          "description": "Unlock local user in Dex",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "timeout": {
+              "description": "How long to wait for completion when --wait is enabled.",
+              "shorthand": "",
+              "global": false
+            },
+            "wait": {
+              "description": "Wait for UserOperation completion and print result.",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        }
+      ]
+    },
+    {
       "name": "v",
       "description": "d8 v controls virtual machine related operations on your kubernetes cluster.",
       "aliases": [
@@ -41155,7 +41176,7 @@
               "global": true
             },
             "timeout": {
-              "description": "The number of minutes to wait for the virtual machine to be ready.",
+              "description": "Duration to wait until console is successfully connected (e.g., 1s, 5m, 300s).",
               "shorthand": "",
               "global": false
             },
@@ -41238,7 +41259,7 @@
               "global": true
             },
             "create-only": {
-              "description": "--create-only, -c: Set this flag for create operation only.",
+              "description": "Set this flag to only create the action without status warnings or notifications.",
               "shorthand": "c",
               "global": false
             },
@@ -41248,7 +41269,7 @@
               "global": true
             },
             "force": {
-              "description": "--force, -f: Set this flag to force the operation.",
+              "description": "Set this flag to force the operation.",
               "shorthand": "f",
               "global": false
             },
@@ -41293,7 +41314,7 @@
               "global": true
             },
             "timeout": {
-              "description": "--timeout, -t: Set this flag to change the timeout.",
+              "description": "Set this flag to change the timeout.",
               "shorthand": "t",
               "global": false
             },
@@ -41328,7 +41349,155 @@
               "global": true
             },
             "wait": {
-              "description": "--wait, -w: Set this flag to wait for the operation to complete.",
+              "description": "Set this flag to wait for the operation to complete.",
+              "shorthand": "w",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "migrate (VirtualMachine)",
+          "description": "Migrate a virtual machine.",
+          "aliases": null,
+          "flags": {
+            "as": {
+              "description": "Username to impersonate for the operation",
+              "shorthand": "",
+              "global": true
+            },
+            "as-group": {
+              "description": "Group to impersonate for the operation, this flag can be repeated to specify multiple groups.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-uid": {
+              "description": "UID to impersonate for the operation",
+              "shorthand": "",
+              "global": true
+            },
+            "certificate-authority": {
+              "description": "Path to a cert file for the certificate authority",
+              "shorthand": "",
+              "global": true
+            },
+            "client-certificate": {
+              "description": "Path to a client certificate file for TLS",
+              "shorthand": "",
+              "global": true
+            },
+            "client-key": {
+              "description": "Path to a client key file for TLS",
+              "shorthand": "",
+              "global": true
+            },
+            "cluster": {
+              "description": "The name of the kubeconfig cluster to use",
+              "shorthand": "",
+              "global": true
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "create-only": {
+              "description": "Set this flag to only create the action without status warnings or notifications.",
+              "shorthand": "c",
+              "global": false
+            },
+            "disable-compression": {
+              "description": "If true, opt-out of response compression for all requests to the server",
+              "shorthand": "",
+              "global": true
+            },
+            "force": {
+              "description": "Set this flag to force the operation.",
+              "shorthand": "f",
+              "global": false
+            },
+            "insecure-skip-tls-verify": {
+              "description": "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "log-flush-frequency": {
+              "description": "Maximum number of seconds between log flushes",
+              "shorthand": "",
+              "global": true
+            },
+            "namespace": {
+              "description": "If present, the namespace scope for this CLI request",
+              "shorthand": "n",
+              "global": true
+            },
+            "password": {
+              "description": "Password for basic authentication to the API server",
+              "shorthand": "",
+              "global": true
+            },
+            "proxy-url": {
+              "description": "If provided, this URL will be used to connect via proxy",
+              "shorthand": "",
+              "global": true
+            },
+            "request-timeout": {
+              "description": "The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "server": {
+              "description": "The address and port of the Kubernetes API server",
+              "shorthand": "s",
+              "global": true
+            },
+            "target-node-name": {
+              "description": "Set the target node name for virtual machine migration.",
+              "shorthand": "",
+              "global": false
+            },
+            "timeout": {
+              "description": "Set this flag to change the timeout.",
+              "shorthand": "t",
+              "global": false
+            },
+            "tls-server-name": {
+              "description": "If provided, this name will be used to validate server certificate. If this is not provided, hostname used to contact the server is used.",
+              "shorthand": "",
+              "global": true
+            },
+            "token": {
+              "description": "Bearer token for authentication to the API server",
+              "shorthand": "",
+              "global": true
+            },
+            "user": {
+              "description": "The name of the kubeconfig user to use",
+              "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Username for basic authentication to the API server",
+              "shorthand": "",
+              "global": true
+            },
+            "v": {
+              "description": "number for the log level verbosity",
+              "shorthand": "v",
+              "global": true
+            },
+            "vmodule": {
+              "description": "comma-separated list of pattern=N settings for file-filtered logging (only works for the default text log format)",
+              "shorthand": "",
+              "global": true
+            },
+            "wait": {
+              "description": "Set this flag to wait for the operation to complete.",
               "shorthand": "w",
               "global": false
             }
@@ -41514,7 +41683,7 @@
               "global": true
             },
             "create-only": {
-              "description": "--create-only, -c: Set this flag for create operation only.",
+              "description": "Set this flag to only create the action without status warnings or notifications.",
               "shorthand": "c",
               "global": false
             },
@@ -41524,7 +41693,7 @@
               "global": true
             },
             "force": {
-              "description": "--force, -f: Set this flag to force the operation.",
+              "description": "Set this flag to force the operation.",
               "shorthand": "f",
               "global": false
             },
@@ -41569,7 +41738,7 @@
               "global": true
             },
             "timeout": {
-              "description": "--timeout, -t: Set this flag to change the timeout.",
+              "description": "Set this flag to change the timeout.",
               "shorthand": "t",
               "global": false
             },
@@ -41604,7 +41773,7 @@
               "global": true
             },
             "wait": {
-              "description": "--wait, -w: Set this flag to wait for the operation to complete.",
+              "description": "Set this flag to wait for the operation to complete.",
               "shorthand": "w",
               "global": false
             }
@@ -41968,7 +42137,7 @@
               "global": true
             },
             "create-only": {
-              "description": "--create-only, -c: Set this flag for create operation only.",
+              "description": "Set this flag to only create the action without status warnings or notifications.",
               "shorthand": "c",
               "global": false
             },
@@ -41978,7 +42147,7 @@
               "global": true
             },
             "force": {
-              "description": "--force, -f: Set this flag to force the operation.",
+              "description": "Set this flag to force the operation.",
               "shorthand": "f",
               "global": false
             },
@@ -42023,7 +42192,7 @@
               "global": true
             },
             "timeout": {
-              "description": "--timeout, -t: Set this flag to change the timeout.",
+              "description": "Set this flag to change the timeout.",
               "shorthand": "t",
               "global": false
             },
@@ -42058,7 +42227,7 @@
               "global": true
             },
             "wait": {
-              "description": "--wait, -w: Set this flag to wait for the operation to complete.",
+              "description": "Set this flag to wait for the operation to complete.",
               "shorthand": "w",
               "global": false
             }
@@ -42111,7 +42280,7 @@
               "global": true
             },
             "create-only": {
-              "description": "--create-only, -c: Set this flag for create operation only.",
+              "description": "Set this flag to only create the action without status warnings or notifications.",
               "shorthand": "c",
               "global": false
             },
@@ -42121,7 +42290,7 @@
               "global": true
             },
             "force": {
-              "description": "--force, -f: Set this flag to force the operation.",
+              "description": "Set this flag to force the operation.",
               "shorthand": "f",
               "global": false
             },
@@ -42166,7 +42335,7 @@
               "global": true
             },
             "timeout": {
-              "description": "--timeout, -t: Set this flag to change the timeout.",
+              "description": "Set this flag to change the timeout.",
               "shorthand": "t",
               "global": false
             },
@@ -42201,7 +42370,7 @@
               "global": true
             },
             "wait": {
-              "description": "--wait, -w: Set this flag to wait for the operation to complete.",
+              "description": "Set this flag to wait for the operation to complete.",
               "shorthand": "w",
               "global": false
             }
