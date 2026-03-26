@@ -31,7 +31,7 @@ status:
   packages:
     failed:
     - errors:
-      - error: no release images found for package "test-package" in /version path
+      - message: no release images found for package "test-package" in /version path
         version: unknown
       name: test-package
     processed:
