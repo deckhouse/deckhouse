@@ -105,8 +105,6 @@ type DeckhouseController struct {
 
 	defaultReleaseChannel string
 
-	refreshModuleTelemetry func()
-
 	log *log.Logger
 }
 
@@ -435,8 +433,6 @@ func NewDeckhouseController(
 
 		defaultReleaseChannel: defaultReleaseChannel,
 
-		refreshModuleTelemetry: operator.ModuleManager.RefreshModuleTelemetry,
-
 		log: logger,
 	}, nil
 }
@@ -464,8 +460,6 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	if err := c.moduleLoader.LoadModulesFromFS(ctx); err != nil {
 		return fmt.Errorf("load modules from fs: %w", err)
 	}
-
-	c.refreshModuleTelemetry()
 
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
 	go c.syncDeckhouseSettings()

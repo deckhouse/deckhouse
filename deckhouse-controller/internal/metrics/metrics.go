@@ -73,13 +73,6 @@ const (
 	ModuleUpdatePolicyNotFound = "deckhouse_module_update_policy_not_found"
 	ModuleConfigurationError   = "deckhouse_module_configuration_error"
 
-	// ============================================================================
-	// DOP Telemetry: Module Versions (d8_telemetry_deckhouse_module_telemetry)
-	// ============================================================================
-	// DeckhouseModuleTelemetryMetricName is the base name for the DOP telemetry metric
-	// that reports deployed version per module. Wrapped with d8_telemetry_ prefix.
-	// Labels: module_name, module_version. Value: 1.
-	DeckhouseModuleTelemetryMetricName = "deckhouse_module_telemetry"
 )
 
 // ============================================================================
@@ -88,9 +81,8 @@ const (
 const (
 	MigratedModuleNotFoundGroup   = "migrated_module_not_found"
 	D8Updating                    = "d8_updating"
-	D8ModuleUpdatingGroup         = "d8_module_updating_group"
-	ModuleReleaseGroup            = "module_release_group"
-	DeckhouseModuleTelemetryGroup = "deckhouse_module_telemetry"
+	D8ModuleUpdatingGroup = "d8_module_updating_group"
+	ModuleReleaseGroup    = "module_release_group"
 )
 
 // Group templates for dynamic metric names using fmt.Sprintf
