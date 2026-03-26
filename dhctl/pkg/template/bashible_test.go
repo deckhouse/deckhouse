@@ -17,6 +17,7 @@ package template
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -69,6 +70,9 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 func TestRenderBashibleTemplateUsesClusterMasterRPPAddressesForBootstrap(t *testing.T) {
 	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider())
 	require.NoError(t, err)
+	mingetPath := filepath.Join(t.TempDir(), "minget")
+	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
+	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
 	data, err := metaConfig.ConfigForBashibleBundleTemplate("10.0.0.2")
 	require.NoError(t, err)

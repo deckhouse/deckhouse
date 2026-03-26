@@ -16,6 +16,7 @@ package config
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -34,6 +35,7 @@ import (
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
 )
 
 type MetaConfig struct {
@@ -494,6 +496,13 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
 	configForBashibleBundleTemplate["clusterMasterEndpoints"] = m.clusterMasterEndpointsBashibleContext()
+
+	mingetBytes, err := minget.Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("get minget bytes: %w", err)
+	}
+	configForBashibleBundleTemplate["mingetB64"] = base64.StdEncoding.EncodeToString(mingetBytes)
+
 	return configForBashibleBundleTemplate, nil
 }
 

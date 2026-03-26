@@ -15,6 +15,7 @@
   {{- $_ := set $tpl_context "images" $context.Values.global.modulesImages.digests }}
   {{- $packagesProxy := $context.Values.nodeManager.internal.packagesProxy | default (dict) }}
   {{- $_ := set $tpl_context "packagesProxy" $packagesProxy }}
+  {{- $_ := set $tpl_context "mingetB64" ($context.Files.Get "candi/bashible/bootstrap/minget" | b64enc) }}
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
     {{- $_ := set $tpl_context "provider" $context.Values.nodeManager.internal.cloudProvider.type }}
   {{- end }}
@@ -30,9 +31,7 @@ export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
 exec >"${TMPDIR}/bootstrap.log" 2>&1
   {{- end }}
 
-  {{- $candi := "candi/bashible/lib.sh.tpl" -}}
-  {{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
-  {{- $lib := $context.Files.Get $deckhouse | default ($context.Files.Get $candi) -}}
+  {{- $lib := $context.Files.Get "candi/bashible/lib.sh.tpl" -}}
   {{- $ctx := $tpl_context -}}
   {{- tpl (printf `
   %s

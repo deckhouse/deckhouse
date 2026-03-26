@@ -16,6 +16,7 @@ package template
 
 import (
 	"context"
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,6 +29,9 @@ import (
 func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider())
 	require.NoError(t, err)
+	mingetPath := filepath.Join(t.TempDir(), "minget")
+	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
+	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
 	templateController := NewTemplateController("")
 	defer templateController.Close()
@@ -39,6 +43,8 @@ func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	content := string(renderedBootstrap)
+	require.Contains(t, content, `local minget_b64='`+base64.StdEncoding.EncodeToString([]byte("test-minget"))+`'`)
+	require.NotContains(t, content, `export MINGET_B64=`)
 	require.Contains(t, content, `PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID=""`)
 	require.Contains(t, content, `export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="127.0.0.1:4300"`)
 	require.NotContains(t, content, "PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS")
