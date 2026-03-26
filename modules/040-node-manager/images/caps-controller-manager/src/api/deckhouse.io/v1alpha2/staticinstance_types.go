@@ -17,8 +17,13 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cluster-api/util/conditions"
+
+	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -118,4 +123,39 @@ func (r *StaticInstance) GetConditions() []metav1.Condition {
 // SetConditions sets the StaticInstance status conditions
 func (r *StaticInstance) SetConditions(conditions []metav1.Condition) {
 	r.Status.Conditions = conditions
+}
+
+// SetPhase gets the current phase of the static instance.
+func (r *StaticInstance) GetPhase() StaticInstanceStatusCurrentStatusPhase {
+	if r.Status.CurrentStatus == nil {
+		return ""
+	}
+
+	return r.Status.CurrentStatus.Phase
+}
+
+// SetPhase sets the current phase of the static instance.
+func (r *StaticInstance) SetPhase(phase StaticInstanceStatusCurrentStatusPhase) {
+	if r.Status.CurrentStatus == nil {
+		r.Status.CurrentStatus = &StaticInstanceStatusCurrentStatus{}
+	}
+
+	r.Status.CurrentStatus.Phase = phase
+	r.Status.CurrentStatus.LastUpdateTime = metav1.NewTime(time.Now().UTC())
+}
+
+func (r *StaticInstance) ToPending() {
+	r.Status.MachineRef = nil
+	r.Status.NodeRef = nil
+	r.Status.CurrentStatus = nil
+
+	conditions.Set(r, metav1.Condition{
+		Type:               infrav1.StaticInstanceBootstrapSucceededCondition,
+		Status:             metav1.ConditionFalse,
+		Reason:             infrav1.StaticInstanceWaitingForNodeRefReason,
+		Message:            "StaticInstance is pending",
+		LastTransitionTime: metav1.Now(),
+	})
+
+	r.SetPhase(StaticInstanceStatusCurrentStatusPhasePending)
 }
