@@ -53,19 +53,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 type Config struct {
 	Enabled                     *bool        `json:"enabled,omitempty"`
-	IngressClass                string       `json:"ingressClass,omitempty"`
+	IngressClass                *string      `json:"ingressClass,omitempty"`
 	WhitelistSourceRanges       []string     `json:"whitelistSourceRanges,omitempty"`
 	HTTPS                       *HTTPSConfig `json:"https,omitempty"`
 	AddKubeconfigGeneratorEntry *bool        `json:"addKubeconfigGeneratorEntry,omitempty"`
 }
 
 type HTTPSConfig struct {
-	Mode   string       `json:"mode,omitempty"`
+	Mode   *string      `json:"mode,omitempty"`
 	Global *GlobalHTTPS `json:"global,omitempty"`
 }
 
 type GlobalHTTPS struct {
-	KubeconfigGeneratorMasterCA string `json:"kubeconfigGeneratorMasterCA,omitempty"`
+	KubeconfigGeneratorMasterCA *string `json:"kubeconfigGeneratorMasterCA,omitempty"`
 }
 
 const (
@@ -114,14 +114,14 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	fmt.Println(publishAPIConfig)
 
 	setBoolPtrValue(input, "enabled", publishAPIConfig.Enabled)
-	setStringValue(input, "ingressClass", publishAPIConfig.IngressClass)
+	setStringPtrValue(input, "ingressClass", publishAPIConfig.IngressClass)
 	setStringSliceValue(input, "whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
 	setBoolPtrValue(input, "addKubeconfigGeneratorEntry", publishAPIConfig.AddKubeconfigGeneratorEntry)
 
 	if publishAPIConfig.HTTPS != nil {
-		setStringValue(input, "https.mode", publishAPIConfig.HTTPS.Mode)
+		setStringPtrValue(input, "https.mode", publishAPIConfig.HTTPS.Mode)
 		if publishAPIConfig.HTTPS.Global != nil {
-			setStringValue(input, "https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
+			setStringPtrValue(input, "https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
 		}
 	}
 
@@ -130,7 +130,7 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 
 func setBoolPtrValue(input *go_hook.HookInput, key string, value *bool) {
 	if value == nil {
-		fmt.Printf("Skipping key %s: value is nil\n", key)
+		fmt.Printf("Skipping key %s: not set in json\n", key)
 		return
 	}
 	path := publishAPIIngressConfigPath + key
@@ -138,19 +138,21 @@ func setBoolPtrValue(input *go_hook.HookInput, key string, value *bool) {
 	input.Values.Set(path, *value)
 }
 
-func setStringValue(input *go_hook.HookInput, key string, value string) {
-	if value == "" && key != "https.global.kubeconfigGeneratorMasterCA" {
-		fmt.Printf("Skipping key %s: value is empty\n", key)
+// setStringPtrValue sets the value if the key was present in JSON.
+// nil means key was absent, non-nil (including pointer to "") means key was explicitly set.
+func setStringPtrValue(input *go_hook.HookInput, key string, value *string) {
+	if value == nil {
+		fmt.Printf("Skipping key %s: not set in json\n", key)
 		return
 	}
 	path := publishAPIIngressConfigPath + key
-	fmt.Printf("Setting %s = %v\n", path, value)
-	input.Values.Set(path, value)
+	fmt.Printf("Setting %s = %q\n", path, *value)
+	input.Values.Set(path, *value)
 }
 
 func setStringSliceValue(input *go_hook.HookInput, key string, value []string) {
-	if len(value) == 0 {
-		fmt.Printf("Skipping key %s: value is empty\n", key)
+	if value == nil {
+		fmt.Printf("Skipping key %s: not set in json\n", key)
 		return
 	}
 	path := publishAPIIngressConfigPath + key
