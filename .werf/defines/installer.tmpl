@@ -221,7 +221,19 @@
 #   Editions - Editions from werf.yaml
 {{- define "installer_and_installer_standalone_opentofu_imports" }}
 {{- $context := . -}}
-
+{{- $targetAvailableModules := dict -}}
+{{- $hasTargetAvailableModules := false -}}
+{{- range $_, $edition := $context.Editions }}
+  {{- if eq $context.Env $edition.name }}
+    {{- if $edition.AvailableModules }}
+      {{- $hasTargetAvailableModules = true }}
+      {{- range $_, $moduleName := $edition.AvailableModules }}
+        {{- $_ := set $targetAvailableModules $moduleName true }}
+      {{- end }}
+    {{- end }}
+    {{- break -}}
+  {{- end }}
+{{- end }}
 - image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /opentofu/opentofu
   to: /bin/opentofu
@@ -229,6 +241,10 @@
 {{- range $_, $edition := $context.Editions }}
   {{- if $edition.terraformProviders }}
     {{- range $_, $tfProvider := $edition.terraformProviders }}
+      {{- $providerModuleName := printf "cloud-provider-%s" $tfProvider }}
+      {{- if and $hasTargetAvailableModules (not (hasKey $targetAvailableModules $providerModuleName)) }}
+        {{- continue }}
+      {{- end }}
       {{- $tf := index $context.TF $tfProvider }}
 
         {{- if not $tf.useOpentofu  }}
@@ -265,6 +281,19 @@
 #   Editions - Editions from werf.yaml
 {{- define "installer_and_installer_standalone_terraform_imports" }}
 {{- $context := . -}}
+{{- $targetAvailableModules := dict -}}
+{{- $hasTargetAvailableModules := false -}}
+{{- range $_, $edition := $context.Editions }}
+  {{- if eq $context.Env $edition.name }}
+    {{- if $edition.AvailableModules }}
+      {{- $hasTargetAvailableModules = true }}
+      {{- range $_, $moduleName := $edition.AvailableModules }}
+        {{- $_ := set $targetAvailableModules $moduleName true }}
+      {{- end }}
+    {{- end }}
+    {{- break -}}
+  {{- end }}
+{{- end }}
 
 - image: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform
@@ -273,6 +302,10 @@
 {{- range $_, $edition := $context.Editions }}
   {{- if $edition.terraformProviders }}
     {{- range $_, $tfProvider := $edition.terraformProviders }}
+      {{- $providerModuleName := printf "cloud-provider-%s" $tfProvider }}
+      {{- if and $hasTargetAvailableModules (not (hasKey $targetAvailableModules $providerModuleName)) }}
+        {{- continue }}
+      {{- end }}
       {{- $tf := index $context.TF $tfProvider }}
 
         {{- if $tf.useOpentofu  }}
