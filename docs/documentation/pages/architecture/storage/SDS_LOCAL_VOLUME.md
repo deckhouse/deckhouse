@@ -56,3 +56,4 @@ The following external components interact with the module:
    * Mutates `spec.schedulerName` attribute for pods which use volumes created by `local.csi.storage.deckhouse.io` provisioner.
 
 1. **Kube-scheduler**: Sends scheduling requests to the `sds-local-volume-scheduler-extender` webhook for the pods with `sds-local-volume` value specified in the `spec.schedulerName` attribute.
+webhook — сайдкар-контейнер, реализующий вебхук-сервер для проверки ресурсов LocalStorageClass и StorageClass, а также для изменения значения поля `spec.schedulerName` у подов, использующих тома, созданные provisioner’ом `local.csi.storage.deckhouse.io`.

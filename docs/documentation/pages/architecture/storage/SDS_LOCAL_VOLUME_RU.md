@@ -33,7 +33,7 @@ description: Архитектура модуля sds-local-volume в Deckhouse K
    Состоит из следующих контейнеров:
 
    * **controller** — основной контейнер;
-   * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер, который выполняет валидацию кастомных ресурсов LocalStorageClass и ресурсов StorageClass, а также для изменения значения поля `spec.schedulerName` у подов, использующих тома, созданные provisioner’ом `local.csi.storage.deckhouse.io`. После изменения значением поля `spec.schedulerName` становится `sds-local-volume`, что позволяет передать планирование таких подов компоненту `sds-local-volume-scheduler-extender` вместо стандартного планировщика Kubernetes (kube-scheduler).
+   * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов LocalStorageClass и ресурсов StorageClass, а также для изменения значения поля `spec.schedulerName` у подов, использующих тома, созданные provisioner’ом `local.csi.storage.deckhouse.io`. После изменения значением поля `spec.schedulerName` становится `sds-local-volume`, что позволяет передать планирование таких подов компоненту `sds-local-volume-scheduler-extender` вместо стандартного планировщика Kubernetes (kube-scheduler).
 
 1. **Sds-local-volume-scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler, реализует специфичную для подов, использующих локальные тома логику размещения. При планировании учитывается свободное место на узлах, используемых для размещения на них локальных томов, а также размер дискового пространства, которое надо зарезервировать под эти тома.
 
