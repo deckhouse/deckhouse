@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 770e310..6f896f4 100644
+index 770e310..ee55a6c 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
@@ -19,17 +19,8 @@ index 770e310..6f896f4 100644
  	go.uber.org/zap v1.24.0
  	gopkg.in/yaml.v2 v2.4.0
  	k8s.io/api v0.26.1
-@@ -51,7 +51,7 @@ require (
- 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
- 	github.com/golang/protobuf v1.5.3 // indirect
- 	github.com/google/gnostic v0.6.9 // indirect
--	github.com/google/go-cmp v0.5.9 // indirect
-+	github.com/google/go-cmp v0.6.0 // indirect
- 	github.com/google/gofuzz v1.2.0 // indirect
- 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
- 	github.com/hashicorp/go-version v1.3.0 // indirect
 diff --git a/go.sum b/go.sum
-index b51e987..4109858 100644
+index b51e987..960e3d2 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -35,6 +35,7 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7
@@ -79,17 +70,6 @@ index b51e987..4109858 100644
  github.com/google/gnostic v0.6.9 h1:ZK/5VhkoX835RikCHpSUJV9a+S3e1zLh59YnyWeBW+0=
  github.com/google/gnostic v0.6.9/go.mod h1:Nm8234We1lq6iB9OmlgNv3nH91XLLVZHCDayfA3xq+E=
  github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
-@@ -207,8 +213,8 @@ github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
- github.com/google/go-cmp v0.5.1/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
- github.com/google/go-cmp v0.5.4/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
- github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
--github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
--github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-+github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
-+github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
- github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
- github.com/google/gofuzz v1.2.0 h1:xRy4A+RhZaiKjJ1bPfwQ8sedCA+YS2YcCHW6ec7JMi0=
- github.com/google/gofuzz v1.2.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 @@ -248,7 +254,6 @@ github.com/hashicorp/go-sockaddr v1.0.0/go.mod h1:7Xibr9yA9JjQq1JpNB2Vw7kxv8xerX
  github.com/hashicorp/go-syslog v1.0.0/go.mod h1:qPfqrKkXGihmCqbJM2mZgkZGvKG1dFdvsLplgctolz4=
  github.com/hashicorp/go-uuid v1.0.0/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
