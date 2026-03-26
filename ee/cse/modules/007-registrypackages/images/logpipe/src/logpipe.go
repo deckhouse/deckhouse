@@ -48,10 +48,11 @@ func main() {
 		line := scanner.Text()
 		if _, err := lumberjackLogger.Write([]byte(line + "\n")); err != nil {
 			fmt.Fprintln(os.Stderr, "Error writing to log file:", err)
+			lumberjackLogger.Close()
 			os.Exit(1)
 		}
 	}
-	defer lumberjackLogger.Close()
+	lumberjackLogger.Close()
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error reading from stdin:", err)
 		os.Exit(1)
