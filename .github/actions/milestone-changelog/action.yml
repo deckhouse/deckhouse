@@ -44,7 +44,7 @@ runs:
 
     - name: Collect Changelog
       id: changelog
-      uses: deckhouse/changelog-action@v3.0.0
+      uses: deckhouse/changelog-action@feature/deduplication
       with:
         token: ${{ inputs.token }}
         repo: ${{ github.repository }}
@@ -78,8 +78,27 @@ runs:
         ${{ steps.changelog.outputs.branch_markdown }}
         EOF
 
+    - name: Check if changelog files differ from repository
+      id: changelog_diff
+      shell: bash
+      run: |
+        git add -A CHANGELOG/
+        if git diff --cached --quiet HEAD; then
+          git reset HEAD CHANGELOG/ 2>/dev/null || true
+          echo "skip_pr=true" >> "$GITHUB_OUTPUT"
+          echo "::notice::Skipping create pull request: generated files under CHANGELOG/ are identical to the current branch (no changes to publish)."
+          {
+            echo "## Changelog pull request skipped"
+            echo "Generated \`CHANGELOG/\` content matches the repository — **create pull request** was not run."
+          } >> "$GITHUB_STEP_SUMMARY"
+        else
+          git reset HEAD CHANGELOG/ 2>/dev/null || true
+          echo "skip_pr=false" >> "$GITHUB_OUTPUT"
+        fi
+
     # Patch-version markdown changelog + malformed and impact digest
     - name: Create Pull Request
+      if: steps.changelog_diff.outputs.skip_pr != 'true'
       uses: peter-evans/create-pull-request@v3.10.1
       with:
         commit-message: |

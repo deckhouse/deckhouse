@@ -177,7 +177,7 @@ jobs:
         if: ${{ failure() && (steps.cherry_pick_pr.conclusion == 'failure' || steps.check_target_branch.conclusion == 'failure') }}
         uses: peter-evans/create-or-update-comment@v2
         env:
-          error_message: "⚠️ ${{ steps.cherry_pick_pr.outputs.error_message }}"
+          error_message: "Backport failed ⚠️. ${{ steps.cherry_pick_pr.outputs.error_message }}"
           common_error: "Backport failed ⚠️. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details."
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
