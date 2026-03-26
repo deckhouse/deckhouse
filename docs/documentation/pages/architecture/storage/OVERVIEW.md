@@ -32,7 +32,7 @@ The Storage subsystem includes the following modules:
 The following modules are currently described in this section:
 
 * [`local-path-provisioner`](local-path-provisioner.html)
-* [`snapshot-controller`](snapshot-controller.html);
-* [`sds-local-volume`](sds-local-volume.html).
+* [`snapshot-controller`](snapshot-controller.html)
+* [`sds-local-volume`](sds-local-volume.html)
 
 Documentation for the remaining Storage subsystem modules will be added as it becomes available.
