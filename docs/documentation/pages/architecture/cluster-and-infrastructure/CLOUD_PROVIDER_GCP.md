@@ -67,7 +67,6 @@ The module interacts with the following components:
 2. **Google Cloud Platform**:
 
     * Collects cloud parameters.
-    * Manages virtual machines.
     * Gets `ProviderId` and other information about the VMs that are cluster nodes.
     * Manages load balancers.
     * Manages network routes for `PodNetwork` network.
