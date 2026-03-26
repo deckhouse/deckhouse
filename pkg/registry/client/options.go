@@ -183,6 +183,8 @@ func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 	// Build transport configuration - use custom transport if provided,
 	// otherwise combine CA and TLS settings into a single transport.
 	if opts.Transport != nil {
+		logger.Info("WithCustomTransport is set: Insecure option must be equal to the transport configuration")
+
 		// Warn about options that are silently ignored when a custom transport is set.
 		if opts.CA != "" {
 			logger.Warn("WithCustomTransport is set: CA option will be ignored",
@@ -191,10 +193,6 @@ func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 
 		if opts.TLSSkipVerify {
 			logger.Warn("WithCustomTransport is set: TLSSkipVerify option will be ignored")
-		}
-
-		if opts.Insecure {
-			logger.Warn("WithCustomTransport is set: Insecure option will be ignored")
 		}
 
 		remoteOptions = append(remoteOptions, remote.WithTransport(opts.Transport))
@@ -206,6 +204,7 @@ func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 		if opts.TLSSkipVerify {
 			logger.Debug("TLS certificate verification disabled")
 		}
+
 		if opts.Insecure {
 			logger.Debug("Insecure HTTP mode enabled")
 		}
