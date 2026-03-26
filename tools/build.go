@@ -102,6 +102,7 @@ type writeSettings struct {
 	ExcludePaths      []string
 	StageDependencies map[string][]string
 	ExcludedModules   map[string]struct{}
+	AvailableModules  map[string]struct{}
 }
 
 func writeExcludedModules(settings writeSettings, modules map[string]string, ed edition) {
@@ -195,6 +196,13 @@ func writeSections(settings writeSettings) {
 			moduleName := filepath.Base(file)[4:]
 			// skip excluded modules
 			if _, ok := settings.ExcludedModules[moduleName]; ok {
+				continue
+			}
+		}
+		if len(settings.AvailableModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			// include only modules from AvailableModules list
+			if _, ok := settings.AvailableModules[moduleName]; !ok {
 				continue
 			}
 		}
@@ -302,6 +310,12 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 		if !info.IsDir() {
 			continue
 		}
+		if len(settings.AvailableModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			if _, ok := settings.AvailableModules[moduleName]; !ok {
+				continue
+			}
+		}
 
 		addNewFileEntry(file)
 	}
@@ -358,10 +372,11 @@ type buildIncludes struct {
 }
 
 type edition struct {
-	Name           string         `yaml:"name,omitempty"`
-	ModulesDir     string         `yaml:"modulesDir,omitempty"`
-	BuildIncludes  *buildIncludes `yaml:"buildIncludes,omitempty"`
-	ExcludeModules []string       `yaml:"excludeModules,omitempty"`
+	Name             string         `yaml:"name,omitempty"`
+	ModulesDir       string         `yaml:"modulesDir,omitempty"`
+	BuildIncludes    *buildIncludes `yaml:"buildIncludes,omitempty"`
+	ExcludeModules   []string       `yaml:"excludeModules,omitempty"`
+	AvailableModules []string       `yaml:"AvailableModules,omitempty"`
 }
 
 type editions struct {
@@ -421,6 +436,16 @@ func main() {
 func (e *executor) executeEdition(editionName string) {
 	deleteRevisionFiles(editionName)
 	modulesDict := make(map[string]string)
+	availableModules := make(map[string]struct{})
+	for _, ed := range e.Editions {
+		if ed.Name != editionName {
+			continue
+		}
+		for _, moduleName := range ed.AvailableModules {
+			availableModules[moduleName] = struct{}{}
+		}
+		break
+	}
 
 	for _, ed := range e.Editions {
 		// get moduleName => path dict
@@ -442,7 +467,6 @@ func (e *executor) executeEdition(editionName string) {
 		for _, moduleName := range ed.ExcludeModules {
 			excludeModules[moduleName] = struct{}{}
 		}
-
 		bi := ed.BuildIncludes
 		if bi == nil {
 			bi = &buildIncludes{
@@ -459,6 +483,7 @@ func (e *executor) executeEdition(editionName string) {
 			Dir:               "modules",
 			Prefix:            prefix,
 			StageDependencies: stageDependenciesFile,
+			AvailableModules:  availableModules,
 		}
 
 		writeSettingCandi := writeSettings{
@@ -472,21 +497,24 @@ func (e *executor) executeEdition(editionName string) {
 		}
 
 		writeSettingsModules := writeSettings{
-			Edition:         editionName,
-			SaveTo:          modulesFileName,
-			ExcludedModules: excludeModules,
+			Edition:          editionName,
+			SaveTo:           modulesFileName,
+			ExcludedModules:  excludeModules,
+			AvailableModules: availableModules,
 		}
 
 		writeSettingsExcludeFileName := writeSettings{
-			Edition:         editionName,
-			SaveTo:          modulesWithExcludeFileName,
-			ExcludedModules: excludeModules,
+			Edition:          editionName,
+			SaveTo:           modulesWithExcludeFileName,
+			ExcludedModules:  excludeModules,
+			AvailableModules: availableModules,
 		}
 
 		writeSettingStageDeps := writeSettings{
-			Edition:         editionName,
-			SaveTo:          modulesWithDependencies,
-			ExcludedModules: excludeModules,
+			Edition:          editionName,
+			SaveTo:           modulesWithDependencies,
+			ExcludedModules:  excludeModules,
+			AvailableModules: availableModules,
 		}
 
 		if bi.SkipModules == nil || !*bi.SkipModules {

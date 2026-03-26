@@ -99,21 +99,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/se-plus/modules/030-cloud-provider-vsphere
-  to: /deckhouse/modules/030-cloud-provider-vsphere
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/se-plus/modules/030-cloud-provider-zvirt
-  to: /deckhouse/modules/030-cloud-provider-zvirt
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/se-plus/modules/030-csi-vsphere
-  to: /deckhouse/modules/030-csi-vsphere
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
   stageDependencies:
@@ -121,26 +106,6 @@
         - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/capi/zvirt
   to: /deckhouse/modules/040-node-manager/capi/zvirt
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/030-cloud-provider-dynamix
-  to: /deckhouse/modules/030-cloud-provider-dynamix
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/030-cloud-provider-huaweicloud
-  to: /deckhouse/modules/030-cloud-provider-huaweicloud
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/030-cloud-provider-openstack
-  to: /deckhouse/modules/030-cloud-provider-openstack
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/030-cloud-provider-vcd
-  to: /deckhouse/modules/030-cloud-provider-vcd
   stageDependencies:
     install:
         - '**/*'
@@ -304,16 +269,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/450-keepalived
-  to: /deckhouse/modules/450-keepalived
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/450-network-gateway
-  to: /deckhouse/modules/450-network-gateway
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/610-service-with-healthchecks
   to: /deckhouse/modules/610-service-with-healthchecks
   stageDependencies:
@@ -326,26 +281,6 @@
         - '**/*'
 - add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/340-monitoring-applications
-  to: /deckhouse/modules/340-monitoring-applications
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/500-basic-auth
-  to: /deckhouse/modules/500-basic-auth
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/500-okmeter/hooks/update_agent_image.go
-  to: /deckhouse/modules/500-okmeter/hooks/update_agent_image.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/500-okmeter/templates/daemonset.yaml
-  to: /deckhouse/modules/500-okmeter/templates/daemonset.yaml
   stageDependencies:
     install:
         - '**/*'
