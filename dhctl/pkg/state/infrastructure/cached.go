@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -36,7 +37,7 @@ func NewFileTerraStateLoader(stateCache state.Cache, metaConfig *config.MetaConf
 	}
 }
 
-func (s *FileTerraStateLoader) PopulateMetaConfig(_ context.Context, dc map[string]string) (*config.MetaConfig, error) {
+func (s *FileTerraStateLoader) PopulateMetaConfig(_ context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
 	return s.metaConfig, nil
 }
 

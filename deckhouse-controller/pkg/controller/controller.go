@@ -414,7 +414,7 @@ func NewDeckhouseController(
 		configtools.NewValidator(operator.ModuleManager, conversionsStore),
 		loader,
 		operator.MetricStorage,
-		config.NewSchemaStore(make(map[string]string)),
+		config.NewSchemaStore(nil),
 		settingsContainer,
 		exts,
 	)

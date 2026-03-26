@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
@@ -1592,9 +1593,10 @@ func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *co
 	stat, err := os.Stat(configPath)
 	require.NoError(t, err)
 	require.False(t, stat.IsDir())
-	dc := make(map[string]string)
-	dc["downloadDir"] = "/tmp"
-	dc["cacheDir"] = "/tmp/cache"
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 
 	cfg, err := config.ParseConfig(context.TODO(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{
 		logger: params.logger,

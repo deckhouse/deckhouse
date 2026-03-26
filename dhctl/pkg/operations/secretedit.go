@@ -25,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	dh_config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -48,7 +49,7 @@ var emptySecret = &v1.Secret{
 func SecretEdit(
 	kubeCl *client.KubernetesClient, name string, namespace string, secret string, dataKey string,
 	labels map[string]string,
-	dirConfig map[string]string,
+	dirConfig *directoryconfig.DirectoryConfig,
 ) error {
 	config, err := kubeCl.CoreV1().Secrets(namespace).Get(context.TODO(), secret, metav1.GetOptions{})
 	switch {

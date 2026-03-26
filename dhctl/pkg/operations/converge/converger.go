@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -63,7 +64,7 @@ type Params struct {
 	TmpDir          string
 	Logger          log.Logger
 	IsDebug         bool
-	DirectoryConfig map[string]string
+	DirectoryConfig *directoryconfig.DirectoryConfig
 
 	NoSwitchToNodeUser bool
 

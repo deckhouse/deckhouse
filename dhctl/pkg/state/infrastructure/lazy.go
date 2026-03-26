@@ -19,11 +19,12 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 type StateLoader interface {
-	PopulateMetaConfig(ctx context.Context, dc map[string]string) (*config.MetaConfig, error)
+	PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error)
 	PopulateClusterState(ctx context.Context) ([]byte, map[string]state.NodeGroupInfrastructureState, error)
 }
 
@@ -42,7 +43,7 @@ func NewLazyTerraStateLoader(stateLoader StateLoader) *LazyTerraStateLoader {
 	}
 }
 
-func (l *LazyTerraStateLoader) PopulateMetaConfig(ctx context.Context, dc map[string]string) (*config.MetaConfig, error) {
+func (l *LazyTerraStateLoader) PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 

@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -31,49 +32,43 @@ var (
 	preflightScriptDirPath            = candiBashibleDir + "/preflight/"
 )
 
-func RenderAndSavePreflightCheckPortsScript(dc map[string]string) (string, error) {
+func RenderAndSavePreflightCheckPortsScript(dc *directoryconfig.DirectoryConfig) (string, error) {
 	log.DebugLn("Start render check ports script")
 
 	_, err := os.Stat(checkPortsScriptPath)
 	if err != nil {
-		// fallback to /tmp
-		downloadDir, ok := dc["downloadDir"]
-		if !ok {
-			return "", fmt.Errorf("could not get value of downloadDir from map %-v", dc)
+		if dc == nil {
+			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		checkPortsScriptPath = filepath.Join(downloadDir, "deckhouse", "candi", "bashible", "preflight", "check_ports.sh.tpl")
+		checkPortsScriptPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight", "check_ports.sh.tpl")
 	}
 
 	return RenderAndSaveTemplate("check_ports.sh", checkPortsScriptPath, map[string]interface{}{})
 }
 
-func RenderAndSavePreflightCheckDeckhouseUserScript(dc map[string]string) (string, error) {
+func RenderAndSavePreflightCheckDeckhouseUserScript(dc *directoryconfig.DirectoryConfig) (string, error) {
 	log.DebugLn("Start render check user script")
 
 	_, err := os.Stat(checkDeckhouseUserScriptPath)
 	if err != nil {
-		// fallback to /tmp
-		downloadDir, ok := dc["downloadDir"]
-		if !ok {
-			return "", fmt.Errorf("could not get value of downloadDir from map %-v", dc)
+		if dc == nil {
+			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		checkDeckhouseUserScriptPath = filepath.Join(downloadDir, "deckhouse", "candi", "bashible", "preflight", "check_deckhouse_user.sh.tpl")
+		checkDeckhouseUserScriptPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight", "check_deckhouse_user.sh.tpl")
 	}
 
 	return RenderAndSaveTemplate("check_deckhouse_user.sh", checkDeckhouseUserScriptPath, map[string]interface{}{})
 }
 
-func RenderAndSavePreflightCheckLocalhostScript(dc map[string]string) (string, error) {
+func RenderAndSavePreflightCheckLocalhostScript(dc *directoryconfig.DirectoryConfig) (string, error) {
 	log.DebugLn("Start render check localhost script")
 
 	_, err := os.Stat(checkLocalhostScriptPath)
 	if err != nil {
-		// fallback to /tmp
-		downloadDir, ok := dc["downloadDir"]
-		if !ok {
-			return "", fmt.Errorf("could not get value of downloadDir from map %-v", dc)
+		if dc == nil {
+			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		checkLocalhostScriptPath = filepath.Join(downloadDir, "deckhouse", "candi", "bashible", "preflight", "check_localhost.sh.tpl")
+		checkLocalhostScriptPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight", "check_localhost.sh.tpl")
 	}
 
 	return RenderAndSaveTemplate(
@@ -83,17 +78,15 @@ func RenderAndSavePreflightCheckLocalhostScript(dc map[string]string) (string, e
 	)
 }
 
-func RenderAndSavePreflightReverseTunnelOpenScript(url string, dc map[string]string) (string, error) {
+func RenderAndSavePreflightReverseTunnelOpenScript(url string, dc *directoryconfig.DirectoryConfig) (string, error) {
 	log.DebugLn("Start render proxy reverse tunnel open script")
 
 	_, err := os.Stat(checkProxyRevTunnelOpenScriptPath)
 	if err != nil {
-		// fallback to /tmp
-		downloadDir, ok := dc["downloadDir"]
-		if !ok {
-			return "", fmt.Errorf("could not get value of downloadDir from map %-v", dc)
+		if dc == nil {
+			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		checkProxyRevTunnelOpenScriptPath = filepath.Join(downloadDir, "deckhouse", "candi", "bashible", "preflight", "check_reverse_tunnel_open.sh.tpl")
+		checkProxyRevTunnelOpenScriptPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight", "check_reverse_tunnel_open.sh.tpl")
 	}
 
 	return RenderAndSaveTemplate(
@@ -105,17 +98,15 @@ func RenderAndSavePreflightReverseTunnelOpenScript(url string, dc map[string]str
 	)
 }
 
-func RenderAndSaveKillReverseTunnelScript(host, port string, dc map[string]string) (string, error) {
+func RenderAndSaveKillReverseTunnelScript(host, port string, dc *directoryconfig.DirectoryConfig) (string, error) {
 	log.DebugLn("Start render kill reverse tunnel script")
 
 	_, err := os.Stat(killReverseTunnelPath)
 	if err != nil {
-		// fallback to /tmp
-		downloadDir, ok := dc["downloadDir"]
-		if !ok {
-			return "", fmt.Errorf("could not get value of downloadDir from map %-v", dc)
+		if dc == nil {
+			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		killReverseTunnelPath = filepath.Join(downloadDir, "deckhouse", "candi", "bashible", "preflight", "kill_reverse_tunnel.sh.tpl")
+		killReverseTunnelPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight", "kill_reverse_tunnel.sh.tpl")
 	}
 
 	return RenderAndSaveTemplate(
@@ -131,18 +122,16 @@ func RenderAndSaveKillReverseTunnelScript(host, port string, dc map[string]strin
 func RenderAndSavePreflightCheckScript(
 	filename string,
 	params map[string]interface{},
-	dc map[string]string,
+	dc *directoryconfig.DirectoryConfig,
 ) (string, error) {
 	log.DebugLn("Start render check localhost script")
 
 	_, err := os.Stat(preflightScriptDirPath)
 	if err != nil {
-		// fallback to /tmp
-		downloadDir, ok := dc["downloadDir"]
-		if !ok {
-			return "", fmt.Errorf("could not get value of downloadDir from map %-v", dc)
+		if dc == nil {
+			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		preflightScriptDirPath = filepath.Join(downloadDir, "deckhouse", "candi", "bashible", "preflight")
+		preflightScriptDirPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight")
 	}
 
 	return RenderAndSaveTemplate(

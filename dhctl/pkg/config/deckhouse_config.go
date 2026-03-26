@@ -26,6 +26,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -151,11 +152,12 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		DeckhouseSettings.
 		ToMap()
 
-	dirConfig := make(map[string]string)
-	dirConfig[downloadDirKey] = metaConfig.DownloadRootDir
-	dirConfig[app.DownloadCacheDirName] = metaConfig.DownloadCacheDir
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      metaConfig.DownloadRootDir,
+		DownloadCacheDir: metaConfig.DownloadCacheDir,
+	}
 
-	schemasStore := NewSchemaStore(dirConfig)
+	schemasStore := NewSchemaStore(dc)
 
 	var deckhouseCm *ModuleConfig
 	// find deckhouse module config for extract release

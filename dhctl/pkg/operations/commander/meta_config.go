@@ -41,7 +41,7 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(logger),
 		),
-		make(map[string]string),
+		nil,
 		config.ValidateOptionCommanderMode(true),
 		config.ValidateOptionStrictUnmarshal(true),
 		config.ValidateOptionValidateExtensions(true),

@@ -23,6 +23,7 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -59,7 +60,7 @@ type Context struct {
 	providerGetter infrastructure.CloudProviderGetter
 
 	logger          log.Logger
-	directoryConfig map[string]string
+	directoryConfig *directoryconfig.DirectoryConfig
 }
 
 type Params struct {
@@ -69,7 +70,7 @@ type Params struct {
 	ProviderGetter  infrastructure.CloudProviderGetter
 	Logger          log.Logger
 	ClientSwitcher  MultiMasterClientSwitcher
-	DirectoryConfig map[string]string
+	DirectoryConfig *directoryconfig.DirectoryConfig
 }
 
 func newContext(ctx context.Context, params Params) *Context {

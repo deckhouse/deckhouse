@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -153,10 +154,9 @@ func GetDefaultTmpDir() string {
 	return defaultTmpAndStateDir
 }
 
-func GetDirConfig() map[string]string {
-	dirs := make(map[string]string)
-	dirs["downloadDir"] = DownloadDirName
-	dirs["cacheDir"] = DownloadCacheDirName
-
-	return dirs
+func GetDirConfig() *directoryconfig.DirectoryConfig {
+	return &directoryconfig.DirectoryConfig{
+		DownloadDir:      DownloadDirName,
+		DownloadCacheDir: DownloadCacheDirName,
+	}
 }

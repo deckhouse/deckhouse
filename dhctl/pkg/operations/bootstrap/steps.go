@@ -46,6 +46,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -108,7 +109,7 @@ func BootstrapMaster(ctx context.Context, nodeInterface node.Interface, controll
 	})
 }
 
-func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller, dc map[string]string) error {
+func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller, dc *directoryconfig.DirectoryConfig) error {
 	return log.Process("bootstrap", "Prepare Bashible", func() error {
 		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig, dc)
 	})
@@ -262,7 +263,7 @@ func cleanupPreviousBashibleRunIfNeed(ctx context.Context, nodeInterface node.In
 	})
 }
 
-func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient, dc map[string]string) (node.ReverseTunnel, error) {
+func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient, dc *directoryconfig.DirectoryConfig) (node.ReverseTunnel, error) {
 	port := "5444"
 	listenAddress := "127.0.0.1"
 
@@ -409,7 +410,7 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool, dc map[string]string) error {
+func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool, dc *directoryconfig.DirectoryConfig) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -542,7 +543,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		})
 }
 
-func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient, dc map[string]string) (func(), error) {
+func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient, dc *directoryconfig.DirectoryConfig) (func(), error) {
 	var tun node.ReverseTunnel
 	log.DebugLn("Starting reverse tunnel routine")
 	tun, err := SetupSSHTunnelToRegistryPackagesProxy(ctx, sshClient, dc)

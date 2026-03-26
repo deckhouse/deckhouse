@@ -20,23 +20,23 @@ import (
 	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 const bootstrapDir = "/bootstrap"
 
-func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig *config.MetaConfig, dc map[string]string) error {
+func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig *config.MetaConfig, dc *directoryconfig.DirectoryConfig) error {
 	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
 	if err != nil {
 		return err
 	}
 	_, err = os.Stat(candiDir)
 	if err != nil {
-		downloadDir, ok := dc["downloadDir"]
-		if !ok {
+		if dc == nil {
 			return fmt.Errorf("could not get downloadDir")
 		}
-		candiDir = filepath.Join(downloadDir, "deckhouse", "candi")
+		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
 		candiBashibleDir = filepath.Join(candiDir, "bashible")
 	}
 	saveInfo := []saveFromTo{

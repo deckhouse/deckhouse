@@ -20,6 +20,7 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -29,7 +30,7 @@ import (
 )
 
 type StateLoader interface {
-	PopulateMetaConfig(ctx context.Context, dc map[string]string) (*config.MetaConfig, error)
+	PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error)
 	PopulateClusterState(ctx context.Context) ([]byte, map[string]state.NodeGroupInfrastructureState, error)
 }
 
@@ -49,7 +50,7 @@ type ClusterInfra struct {
 	tmpDir  string
 	isDebug bool
 	logger  log.Logger
-	dc      map[string]string
+	dc      *directoryconfig.DirectoryConfig
 
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
@@ -59,7 +60,7 @@ type ClusterInfraOptions struct {
 	TmpDir                 string
 	IsDebug                bool
 	Logger                 log.Logger
-	DirectoryConfig        map[string]string
+	DirectoryConfig        *directoryconfig.DirectoryConfig
 }
 
 func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infrastructureContext *infrastructure.Context, opts ClusterInfraOptions) *ClusterInfra {

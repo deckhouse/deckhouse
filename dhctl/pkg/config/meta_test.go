@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
@@ -217,9 +218,10 @@ func generateOldDockerCfg(host string, username, password *string) string {
 
 func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
-	dc := make(map[string]string)
-	dc[downloadDirKey] = "/tmp"
-	dc[cacheDirKey] = "/tmp/cache"
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 
 	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), dc)
 	f := require.NoError

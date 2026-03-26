@@ -335,7 +335,7 @@ func validateClusterConfiguration(ctx context.Context, clusterConfiguration []by
 		ctx,
 		string(clusterConfiguration),
 		config.DummyPreparatorProvider(),
-		make(map[string]string),
+		nil,
 		config.ValidateOptionOmitDocInError(true),
 		config.ValidateOptionStrictUnmarshal(true),
 	)

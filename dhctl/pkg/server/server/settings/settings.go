@@ -18,13 +18,15 @@ import (
 	"fmt"
 	"path"
 	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 type ServerGeneralParams struct {
 	Network           string
 	Address           string
 	TmpDir            string
-	DownloadDirConfig map[string]string
+	DownloadDirConfig *directoryconfig.DirectoryConfig
 }
 
 func (p *ServerGeneralParams) Validate() error {

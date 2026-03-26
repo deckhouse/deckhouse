@@ -29,6 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -53,7 +54,7 @@ type ServiceParams struct {
 	PodNamespace      string
 	SchemaStore       *config.SchemaStore
 	IsDebug           bool
-	DownloadDirConfig map[string]string
+	DownloadDirConfig *directoryconfig.DirectoryConfig
 }
 
 func New(params ServiceParams) *Service {

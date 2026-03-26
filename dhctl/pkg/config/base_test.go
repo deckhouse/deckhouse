@@ -28,15 +28,17 @@ import (
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func TestParseConfigFromData(t *testing.T) {
-	dc := make(map[string]string)
-	dc[downloadDirKey] = "/tmp"
-	dc[cacheDirKey] = "/tmp/cache"
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 	clusterConfig := `
 ---
 apiVersion: deckhouse.io/v1
@@ -437,9 +439,10 @@ spec:
 
 func TestParseConfigFromFiles(t *testing.T) {
 	app.VersionFile = "./mocks/version"
-	dc := make(map[string]string)
-	dc[downloadDirKey] = "/tmp"
-	dc[cacheDirKey] = "/tmp/cache"
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 	t.Run("parse wildcard", func(t *testing.T) {
 		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider(), dc)
 		require.NoError(t, err)
@@ -460,7 +463,7 @@ func TestParseConfigFromFiles(t *testing.T) {
 
 func TestParseConfigFromCluster(t *testing.T) {
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
-		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider, make(map[string]string))
+		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider, nil)
 
 		require.NoError(t, err)
 		require.NotNil(t, metaConfig)
@@ -475,7 +478,7 @@ func TestParseConfigFromCluster(t *testing.T) {
 	}
 
 	doParseFromClusterWithError := func(t *testing.T, tst *testParseConfigFromCluster) {
-		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider, make(map[string]string))
+		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider, nil)
 
 		require.Error(t, err)
 		require.Nil(t, metaConfig)
@@ -817,9 +820,10 @@ func createTestParseConfigFromCluster(t *testing.T, p testParseConfigFromCluster
 }
 
 func TestParseConfigFromData_MergedDocuments(t *testing.T) {
-	dc := make(map[string]string)
-	dc[downloadDirKey] = "/tmp"
-	dc[cacheDirKey] = "/tmp/cache"
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 	t.Run("Should detect missing separator between InitConfiguration and ModuleConfig", func(t *testing.T) {
 		// This reproduces the issue from https://github.com/deckhouse/deckhouse/issues/14009
 		// When --- separator is commented out, documents get merged

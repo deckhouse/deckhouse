@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 var clusterConfig = `
@@ -47,9 +48,10 @@ deckhouse:
 `
 
 func TestRenderBashBooster(t *testing.T) {
-	dc := make(map[string]string)
-	dc["downloadDir"] = "/tmp"
-	dc["cacheDir"] = "/tmp/cache"
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), dc)
 	if err != nil {
 		t.Errorf("ParseConfigFromData error: %v", err)

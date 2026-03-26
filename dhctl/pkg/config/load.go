@@ -34,6 +34,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -92,13 +93,12 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	}
 }
 
-func NewSchemaStore(dc map[string]string, paths ...string) *SchemaStore {
+func NewSchemaStore(dc *directoryconfig.DirectoryConfig, paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
 	_, err := os.Stat(candiDir)
 	if err != nil {
-		downloadDir, ok := dc[downloadDirKey]
-		if ok {
-			paths = append(paths, filepath.Join(downloadDir, "deckhouse", "candi"))
+		if dc != nil {
+			paths = append(paths, filepath.Join(dc.DownloadDir, "deckhouse", "candi"))
 		}
 	}
 
@@ -113,7 +113,7 @@ func NewSchemaStore(dc map[string]string, paths ...string) *SchemaStore {
 	return newOnceSchemaStore(dc, paths)
 }
 
-func newSchemaStore(dc map[string]string, schemasDir []string) *SchemaStore {
+func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
@@ -121,9 +121,8 @@ func newSchemaStore(dc map[string]string, schemasDir []string) *SchemaStore {
 	}
 	_, err := os.Stat(deckhouseDir)
 	if err != nil {
-		downloadDir, ok := dc[downloadDirKey]
-		if ok {
-			deckhouseDir = filepath.Join(downloadDir, "deckhouse")
+		if dc != nil {
+			deckhouseDir = filepath.Join(dc.DownloadDir, "deckhouse")
 			modulesDir = filepath.Join(deckhouseDir, "modules")
 		}
 	}
@@ -237,7 +236,7 @@ func newSchemaStore(dc map[string]string, schemasDir []string) *SchemaStore {
 	return st
 }
 
-func newOnceSchemaStore(dc map[string]string, schemasDir []string) *SchemaStore {
+func newOnceSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
 	once.Do(func() {
 		store = newSchemaStore(dc, schemasDir)
 	})

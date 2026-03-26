@@ -24,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -52,7 +53,7 @@ type infraDestroyer interface {
 }
 
 type metaConfigPopulator interface {
-	PopulateMetaConfig(ctx context.Context, dc map[string]string) (*config.MetaConfig, error)
+	PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error)
 }
 
 type Params struct {
@@ -75,7 +76,7 @@ type Params struct {
 	TmpDir          string
 	LoggerProvider  log.LoggerProvider
 	IsDebug         bool
-	DirectoryConfig map[string]string
+	DirectoryConfig *directoryconfig.DirectoryConfig
 }
 
 func (p *Params) getExecutionContext() phases.DefaultPhasedExecutionContext {
@@ -145,7 +146,7 @@ type ClusterDestroyer struct {
 
 	d8Destroyer     *deckhouse.Destroyer
 	infraProvider   *infraDestroyerProvider
-	DirectoryConfig map[string]string
+	DirectoryConfig *directoryconfig.DirectoryConfig
 }
 
 // NewClusterDestroyer
