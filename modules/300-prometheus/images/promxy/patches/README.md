@@ -6,18 +6,9 @@ Update dependencies to fix CVEs
 - [CVE-2025-47914](https://github.com/advisories/GHSA-f6x5-jh6r-wrfv)
 - [CVE-2025-58181](https://github.com/advisories/GHSA-j5w8-q4qc-rx2x)
 
-## Vendor Patches (in `vendor-patches/`)
+### 002-op-functions.patch
 
 Applied to vendored `github.com/prometheus/prometheus` after `go mod vendor`.
-
-### op_func.go, op_top.go
-
-New Go source files adding custom PromQL op-functions (`op_defined`, `op_replace_nan`,
-`op_smoothie`, `op_zero_if_none`) and the `op_top` aggregate operator to the vendored
-Prometheus engine. These are adapted for the older Prometheus API used by the
-`jacksontj/prometheus` fork (uses `Point.V` instead of `FPoint.F`, etc.).
-
-### op-functions.patch
 
 Patches existing vendored Prometheus files to:
 - Register `OP_TOP` as a keyword and aggregate operator in the parser lexer and grammar
@@ -26,3 +17,12 @@ Patches existing vendored Prometheus files to:
   and `NewRangeQuery` in the engine
 
 The parser is regenerated from the `.y` grammar using `goyacc` during the build.
+
+### op_func.go.tpl, op_top.go.tpl
+
+Copied into vendored `github.com/prometheus/prometheus/promql/` after `go mod vendor`.
+
+New Go source files adding custom PromQL op-functions (`op_defined`, `op_replace_nan`,
+`op_smoothie`, `op_zero_if_none`) and the `op_top` aggregate operator to the vendored
+Prometheus engine. These are adapted for the older Prometheus API used by the
+`jacksontj/prometheus` fork (uses `Point.V` instead of `FPoint.F`, etc.).
