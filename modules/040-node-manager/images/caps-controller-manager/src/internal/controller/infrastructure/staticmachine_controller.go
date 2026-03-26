@@ -36,7 +36,6 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
-	clientpkg "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -102,8 +101,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, nil
 		}
 
-		logger.Error(err, "failed to get StaticMachine")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, errors.Wrap(err, "failed to get StaticMachine")
 	}
 
 	defer func() {
@@ -121,8 +119,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	machine, err := util.GetOwnerMachine(ctx, r.Client, staticMachine.ObjectMeta)
 	if err != nil {
-		logger.Error(err, "failed to get Machine")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, errors.Wrap(err, "failed to get Machine")
 	}
 	if machine == nil {
 		logger.Info("Machine Controller has not yet set OwnerRef")
@@ -131,19 +128,25 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	logger = logger.WithValues("machine", machine.Name)
 	ctx = ctrl.LoggerInto(ctx, logger)
 
-	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, staticMachine.ObjectMeta)
-	if err != nil {
-		logger.Info("Machine is missing cluster label or cluster does not exist")
+	nodeGroupLabel, ok := machine.Labels["node-group"]
+	if !ok {
+		patchHelper, err := patch.NewHelper(machine, r.Client)
+		if err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
+		}
+
+		machine.Labels["node-group"] = staticMachine.Labels["node-group"]
+		if err = patchHelper.Patch(ctx, machine); err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "failed to patch Machine with node-group label")
+		}
+	} else if nodeGroupLabel != staticMachine.Labels["node-group"] {
+		logger.Info("'node-group' label in StaticMachine and Machine are different")
 		return ctrl.Result{}, nil
 	}
 
-	staticCluster := &infrav1.StaticCluster{}
-	staticClusterNamespacedName := clientpkg.ObjectKey{
-		Namespace: req.Namespace,
-		Name:      cluster.Spec.InfrastructureRef.Name,
-	}
-	if err = r.Get(ctx, staticClusterNamespacedName, staticCluster); err != nil {
-		logger.Info("StaticCluster is not available yet")
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, staticMachine.ObjectMeta)
+	if err != nil {
+		logger.Info("Machine is missing cluster label or cluster does not exist")
 		return ctrl.Result{}, nil
 	}
 
@@ -154,7 +157,6 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		instances,
 		k8sClient.MatchingFieldsSelector{Selector: uidSelector},
 	); err != nil {
-		logger.Error(err, "failed to list StaticInstances by UID", "staticMachineUID", string(staticMachine.UID))
 		return ctrl.Result{}, errors.Wrapf(err, "failed to find StaticInstance by static machine uid %s", string(staticMachine.UID))
 	}
 
@@ -328,11 +330,9 @@ func (r *StaticMachineReconciler) reconcileDelete(
 	staticMachine *infrav1.StaticMachine,
 	staticInstance *deckhousev1.StaticInstance,
 ) (ctrl.Result, error) {
-	logger := ctrl.LoggerFrom(ctx)
 	if staticInstance != nil {
 		result, err := r.cleanup(ctx, machine, staticMachine, staticInstance)
 		if err != nil {
-			logger.Error(err, "failed to cleanup StaticInstance")
 			return result, errors.Wrap(err, "failed to cleanup StaticInstance")
 		}
 
@@ -386,6 +386,7 @@ func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv
 		if cond != nil && cond.Status == metav1.ConditionTrue {
 			err = r.HostClient.Cleanup(ctx, staticInstance)
 			if err != nil {
+				// don't return here
 				logger.Error(err, "failed to clean up StaticInstance")
 			}
 
