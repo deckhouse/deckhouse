@@ -8,6 +8,10 @@ description: Архитектура Istio на уровне кластера Dec
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%B0%D1%80%D1%85%D0%B8%D1%82%D0%B5%D0%BA%D1%82%D1%83%D1%80%D0%B0-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0-%D1%81-%D0%B2%D0%BA%D0%BB%D1%8E%D1%87%D0%B5%D0%BD%D0%BD%D1%8B%D0%BC-istio -->
 
+{% alert level="info" %}
+Совместимость версий Istio с версиями Kubernetes определяется таблицей совместимости [в документации модуля `istio`](/modules/istio/#таблица-совместимости-поддерживаемых-версий). Перед использованием ориентируйтесь на актуальные версии и их статус из этого раздела.
+{% endalert %}
+
 Компоненты Istio делятся на две категории:
 
 * **Control plane** — управляющие и обслуживающие сервисы. Под control plane обычно подразумевают поды istiod.
