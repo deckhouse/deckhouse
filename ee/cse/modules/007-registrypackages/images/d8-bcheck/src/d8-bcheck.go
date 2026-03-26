@@ -91,7 +91,6 @@ func verifyBinaries(ctx context.Context) {
 					continue
 				}
 				if err != nil {
-
 					if errors.Is(err, os.ErrNotExist) || errors.Is(err, os.ErrPermission) {
 						slog.Warn("skip non-signature error", "file", file, "error", err)
 						continue
@@ -112,7 +111,7 @@ func verifyBinaries(ctx context.Context) {
 func generateSyscall(filePath string) error {
 	slog.Error("generate syscall event", "file", filePath)
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND, 0)
-	defer f.Close()
+	f.Close()
 	return err
 }
 
@@ -121,14 +120,14 @@ func verifySingle(ctx context.Context, target string) error {
 	start := time.Now()
 	slog.Info("single-file verification: starting", "file", target)
 
-	info, err := os.Stat(target)
+	info, _ := os.Stat(target)
 	if info.IsDir() {
 		slog.Error("path is a directory, expected a regular file", "path", target)
 		return errors.New("path is a directory")
 	}
 	slog.Info("verifier: inhouse.Verify", "root_ca_present", rootca.RootCABase64 != "")
 	slog.Info("calling verifier", "file", target)
-	err = inhouse.Verify(ctx, []string{rootca.RootCABase64}, target)
+	err := inhouse.Verify(ctx, []string{rootca.RootCABase64}, target)
 
 	switch {
 	case errors.Is(err, elf.ErrNotELF):
@@ -171,6 +170,7 @@ func main() {
 
 	if len(os.Args) > 1 {
 		if err := verifySingle(ctx, os.Args[1]); err != nil {
+			cancelFunc()
 			os.Exit(1)
 		}
 		return
