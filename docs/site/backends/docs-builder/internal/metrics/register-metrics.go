@@ -26,8 +26,8 @@ const (
 	DocsBuilderUploadDurationSeconds = "docs_builder_upload_duration_seconds"
 	DocsBuilderDeleteDurationSeconds = "docs_builder_delete_duration_seconds"
 
-	DocsBuilderCachedModules         = "docs_builder_cached_modules"
-	DocsBuilderModuleRenderError     = "docs_builder_module_render_error"
+	DocsBuilderCachedModules     = "docs_builder_cached_modules"
+	DocsBuilderModuleRenderError = "docs_builder_module_render_error"
 )
 
 func RegisterMetrics(mStorage *metricsstorage.MetricStorage) error {

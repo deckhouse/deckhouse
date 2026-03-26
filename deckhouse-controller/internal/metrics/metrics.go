@@ -72,7 +72,6 @@ const (
 	ModuleSizeBytesTotal       = "deckhouse_module_size_bytes_total"
 	ModuleUpdatePolicyNotFound = "deckhouse_module_update_policy_not_found"
 	ModuleConfigurationError   = "deckhouse_module_configuration_error"
-
 )
 
 // ============================================================================
