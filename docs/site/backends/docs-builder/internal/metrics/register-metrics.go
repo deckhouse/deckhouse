@@ -26,7 +26,8 @@ const (
 	DocsBuilderUploadDurationSeconds = "docs_builder_upload_duration_seconds"
 	DocsBuilderDeleteDurationSeconds = "docs_builder_delete_duration_seconds"
 
-	DocsBuilderCachedModules = "docs_builder_cached_modules"
+	DocsBuilderCachedModules         = "docs_builder_cached_modules"
+	DocsBuilderModuleRenderError     = "docs_builder_module_render_error"
 )
 
 func RegisterMetrics(mStorage *metricsstorage.MetricStorage) error {
@@ -63,6 +64,12 @@ func RegisterMetrics(mStorage *metricsstorage.MetricStorage) error {
 
 	// Gauge: total number of loaded modules in the cache
 	_, err = mStorage.RegisterGauge(DocsBuilderCachedModules, nil)
+	if err != nil {
+		return err
+	}
+
+	// Gauge: module documentation render error (1.0 = broken module was removed during build)
+	_, err = mStorage.RegisterGauge(DocsBuilderModuleRenderError, []string{"module"})
 	if err != nil {
 		return err
 	}

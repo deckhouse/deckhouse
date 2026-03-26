@@ -5310,6 +5310,7 @@ alerts:
       edition: ce
       description: |-
         An error occurred while rendering documentation for the `{{ $labels.module }}` module.
+        The broken module was removed from the documentation site during Hugo build.
 
         Check the `ModuleDocumentation` resource status for details:
 
@@ -5317,10 +5318,10 @@ alerts:
         d8 k get moduledocumentations {{ $labels.module }} -o yaml
         ```
 
-        Check Deckhouse logs for more information:
+        Check docs-builder logs for more information:
 
         ```bash
-        d8 k -n d8-system logs -f -l app=deckhouse | grep -i "documentation"
+        d8 k -n d8-system logs -l app=docs-builder | grep -i "removed broken module"
         ```
       summary: |
         Documentation rendering failed for module {{ $labels.module }}.

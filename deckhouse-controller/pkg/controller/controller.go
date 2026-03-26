@@ -333,7 +333,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
 	}
 
-	err = docbuilder.RegisterController(runtimeManager, dc, operator.MetricStorage, logger.Named("module-documentation-controller"))
+	err = docbuilder.RegisterController(runtimeManager, dc, logger.Named("module-documentation-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module documentation controller: %w", err)
 	}

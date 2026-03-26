@@ -118,6 +118,7 @@ func (svc *Service) buildHugo() error {
 			}
 
 			svc.logger.Warn("removed broken module", slog.String("name", moduleName), log.Err(buildErr))
+			svc.metrics.GaugeSet(metrics.DocsBuilderModuleRenderError, 1, map[string]string{"module": moduleName})
 			continue
 		}
 
