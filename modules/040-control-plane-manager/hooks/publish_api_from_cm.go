@@ -113,64 +113,47 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
 	fmt.Println(publishAPIConfig)
 
-	// if publishAPIConfig.Enabled != nil {
-	// 	input.Values.Set(publishAPIIngressConfigPath+"enabled", *publishAPIConfig.Enabled)
-	// }
-	// if publishAPIConfig.IngressClass != "" {
-	// 	input.Values.Set(publishAPIIngressConfigPath+"ingressClass", publishAPIConfig.IngressClass)
-	// }
-	// if publishAPIConfig.WhitelistSourceRanges != nil {
-	// 	input.Values.Set(publishAPIIngressConfigPath+"whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
-	// }
-	// if publishAPIConfig.AddKubeconfigGeneratorEntry != nil {
-	// 	input.Values.Set(publishAPIIngressConfigPath+"addKubeconfigGeneratorEntry", *publishAPIConfig.AddKubeconfigGeneratorEntry)
-	// }
-	// if publishAPIConfig.HTTPS.Mode != "" {
-	// 	input.Values.Set(publishAPIIngressConfigPath+"https.mode", publishAPIConfig.HTTPS.Mode)
-	// }
-	// input.Values.Set(publishAPIIngressConfigPath+"https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
+	setBoolPtrValue(input, "enabled", publishAPIConfig.Enabled)
+	setStringValue(input, "ingressClass", publishAPIConfig.IngressClass)
+	setStringSliceValue(input, "whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
+	setBoolPtrValue(input, "addKubeconfigGeneratorEntry", publishAPIConfig.AddKubeconfigGeneratorEntry)
 
-	setValueIfNotNil(input, "enabled", publishAPIConfig.Enabled)
-	setValueIfNotNil(input, "ingressClass", publishAPIConfig.IngressClass)
-	setValueIfNotNil(input, "whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
-	setValueIfNotNil(input, "addKubeconfigGeneratorEntry", publishAPIConfig.AddKubeconfigGeneratorEntry)
-	setValueIfNotNil(input, "https.mode", publishAPIConfig.HTTPS.Mode)
-	setValueIfNotNil(input, "https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
+	if publishAPIConfig.HTTPS != nil {
+		setStringValue(input, "https.mode", publishAPIConfig.HTTPS.Mode)
+		if publishAPIConfig.HTTPS.Global != nil {
+			setStringValue(input, "https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
+		}
+	}
 
 	return nil
 }
 
-func setValueIfNotNil(input *go_hook.HookInput, key string, value any) {
-	fmt.Printf("Trying to set publishAPI ingress settings key: %s, value %v\n", key, value)
-	if value != nil {
-		switch v := value.(type) {
-		case []interface{}:
-			fmt.Println(publishAPIIngressConfigPath+key, value)
-			if len(v) > 0 {
-				input.Values.Set(publishAPIIngressConfigPath+key, value)
-			}
-		case []string:
-			fmt.Println(publishAPIIngressConfigPath+key, value)
-			if len(v) > 0 || key == "https.global.kubeconfigGeneratorMasterCA" {
-				input.Values.Set(publishAPIIngressConfigPath+key, value)
-			}
-		case *bool:
-			fmt.Println("checking *bool")
-			if v != nil {
-				fmt.Println("setting boolval")
-				boolVal := *v
-				fmt.Println("printing path and all values")
-				fmt.Println(publishAPIIngressConfigPath+key, v, boolVal, value)
-				fmt.Println("values set")
-				input.Values.Set(publishAPIIngressConfigPath+key, boolVal)
-			}
-		case bool:
-			fmt.Println("checking bool")
-			fmt.Println(publishAPIIngressConfigPath+key, v)
-			input.Values.Set(publishAPIIngressConfigPath+key, v)
-		default:
-			fmt.Println(publishAPIIngressConfigPath+key, value)
-			input.Values.Set(publishAPIIngressConfigPath+key, value)
-		}
+func setBoolPtrValue(input *go_hook.HookInput, key string, value *bool) {
+	if value == nil {
+		fmt.Printf("Skipping key %s: value is nil", key)
+		return
 	}
+	path := publishAPIIngressConfigPath + key
+	fmt.Printf("Setting %s = %v", path, *value)
+	input.Values.Set(path, *value)
+}
+
+func setStringValue(input *go_hook.HookInput, key string, value string) {
+	if value == "" && key != "https.global.kubeconfigGeneratorMasterCA" {
+		fmt.Printf("Skipping key %s: value is empty", key)
+		return
+	}
+	path := publishAPIIngressConfigPath + key
+	fmt.Printf("Setting %s = %v", path, value)
+	input.Values.Set(path, value)
+}
+
+func setStringSliceValue(input *go_hook.HookInput, key string, value []string) {
+	if len(value) == 0 {
+		fmt.Printf("Skipping key %s: value is empty", key)
+		return
+	}
+	path := publishAPIIngressConfigPath + key
+	fmt.Printf("Setting %s = %v", path, value)
+	input.Values.Set(path, value)
 }
