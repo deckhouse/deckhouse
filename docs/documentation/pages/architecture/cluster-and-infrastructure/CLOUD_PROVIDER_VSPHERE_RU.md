@@ -51,7 +51,7 @@ description: Архитектура модуля cloud-provider-vsphere в Deckh
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-3. **CSI-драйвер (vsphere)** — реализация CSI-драйвера для VMware vSphere. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-driver.html).
+3. **CSI-драйвер (vsphere)** — реализация CSI-драйвера для VMware vSphere. С архитектурой CSI-драйвера, используемого в модуле `cloud-provider-vsphere` DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-vsphere.html).
 
    CSI-драйвер (vsphere) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 
