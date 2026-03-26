@@ -29,7 +29,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
@@ -597,19 +596,8 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 	return nil
 }
 
-func (r *reconciler) delete(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
+func (r *reconciler) delete(_ context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
 	r.logger.Info("deleting PackageRepositoryOperation", slog.String("name", operation.Name))
-
-	// Remove finalizer if present
-	if controllerutil.ContainsFinalizer(operation, "packages.deckhouse.io/finalizer") {
-		original := operation.DeepCopy()
-
-		controllerutil.RemoveFinalizer(operation, "packages.deckhouse.io/finalizer")
-
-		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
