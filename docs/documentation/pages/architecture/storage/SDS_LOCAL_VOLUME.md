@@ -27,7 +27,7 @@ The Level 2 C4 architecture of the [`sds-local-volume`](/modules/sds-local-volum
 
 The module consists of the following components:
 
-1. **Controller**: It reconciles [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) custom resources. LocalStorageClass is a Kubernetes custom resource that defines the configuration for Kubernetes StorageClass. The StorageClass being created uses `local.csi.storage.deckhouse.io` provisioner. StorageClass configures LVM logical volume types, VolumeGroups settings, reclaim policy, volume binding mode, etc. These settings are used by the provisioner of CSI driver (`sds-local-volume`) when managing LVM-based local volumes.
+1. **Controller**: It reconciles [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) custom resources. LocalStorageClass is a Kubernetes custom resource that defines the configuration for Kubernetes StorageClass. The StorageClass being created uses `local.csi.storage.deckhouse.io` provisioner. StorageClass configures LVM logical volume types, VolumeGroups settings, reclaim policy, volume binding mode, etc. These settings are used by the provisioner of CSI driver (`sds-local-volume`) when managing LVM-based local volumes.
 
    It consists of the following containers:
 
@@ -36,7 +36,7 @@ The module consists of the following components:
 
 1. **Sds-local-volume-scheduler-extender**: It consists of a single container. It is a kube-scheduler extender, which implements a scheduling logic specific for pods using local volumes. When planning, the free space on the nodes used to place local volumes on them is taken into account, as well as the size of the disk space that needs to be reserved for these volumes.
 
-1. **CSI driver (`sds-local-volume`)**: It is an implementation of the CSI driver for `local.csi.storage.deckhouse.io`. To study the CSI driver typical architecture used in DKP, refer to [the corresponding documentation section](../infrastructure/csi-driver.html). CSI driver (`sds-local-volume`) is developed by Flant.
+1. **CSI driver (`sds-local-volume`)**: It is an implementation of the CSI driver for `local.csi.storage.deckhouse.io`. To study the CSI driver typical architecture used in DKP, refer to [the CSI-driver architecture documentation section](../cluster-and-infrastructure/infrastructure/csi-driver.html). CSI driver (`sds-local-volume`) is developed by Flant.
 
 ## Module interactions
 

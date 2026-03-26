@@ -28,7 +28,7 @@ description: Архитектура модуля sds-local-volume в Deckhouse K
 
 Модуль состоит из следующих компонентов:
 
-1. **Controller** — контроллер, обслуживающий кастомные ресурсы [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass). LocalStorageClass — пользовательский ресурс Kubernetes, определяющий конфигурацию для Kubernetes StorageClass. Создаваемый StorageClass использует `local.csi.storage.deckhouse.io` provisioner. В StorageClass задаются типы логических томов LVM, параметры VolumeGroups, reclaim policy, volume binding mode и другие настройки. Эти параметры используются provisioner’ом CSI-драйвера `sds-local-volume` при управлении локальными томами на базе LVM.
+1. **Controller** — контроллер, обслуживающий кастомные ресурсы [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass). LocalStorageClass — пользовательский ресурс Kubernetes, определяющий конфигурацию для Kubernetes StorageClass. Создаваемый StorageClass использует `local.csi.storage.deckhouse.io` provisioner. В StorageClass задаются типы логических томов LVM, параметры VolumeGroups, reclaim policy, volume binding mode и другие настройки. Эти параметры используются provisioner’ом CSI-драйвера `sds-local-volume` при управлении локальными томами на базе LVM.
 
    Состоит из следующих контейнеров:
 
@@ -37,7 +37,7 @@ description: Архитектура модуля sds-local-volume в Deckhouse K
 
 1. **Sds-local-volume-scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler, реализует специфичную для подов, использующих локальные тома логику размещения. При планировании учитывается свободное место на узлах, используемых для размещения на них локальных томов, а также размер дискового пространства, которое надо зарезервировать под эти тома.
 
-1. **CSI-драйвер (`sds-local-volume`)** — реализация CSI-драйвера для `local.csi.storage.deckhouse.io` provisioner. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в соответствующем разделе документации](../infrastructure/csi-driver.html). CSI-драйвер (`sds-local-volume`) — разработка компании Флант.
+1. **CSI-драйвер (`sds-local-volume`)** — реализация CSI-драйвера для `local.csi.storage.deckhouse.io` provisioner. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html). CSI-драйвер (`sds-local-volume`) — разработка компании Флант.
 
 ## Взаимодействия модуля
 
