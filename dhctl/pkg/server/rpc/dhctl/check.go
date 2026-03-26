@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	gcmp "github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
@@ -31,6 +32,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -162,17 +165,16 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
 
+	metaConfigPreparator := infrastructureprovider.MetaConfigPreparatorProvider(
+		infrastructureprovider.NewPreparatorProviderParams(loggerFor),
+	)
+
 	var metaConfig *config.MetaConfig
 	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
-		loggerFor.LogDebugF("ProviderSpecificClusterConfig in check:\n%s\n", p.request.ProviderSpecificClusterConfig)
-		yamls := input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig)
-		loggerFor.LogDebugF("Combine Configuration in check:\n%s\n", yamls)
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
-			yamls,
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
-			),
+			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			metaConfigPreparator,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -262,6 +264,8 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		}
 	}
 
+	compareMetaConfigs(ctx, kubeClient, metaConfigPreparator, metaConfig, loggerFor)
+
 	checkParams.KubeClient = kubeClient
 	checkParams.SSHClient = sshClient
 
@@ -289,6 +293,48 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		Result: string(resultData),
 		Err:    util.ErrToString(err),
 		State:  string(state),
+	}
+}
+
+func compareMetaConfigs(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider config.MetaConfigPreparatorProvider, fromData *config.MetaConfig, logger dhctllog.Logger) {
+	fromCluster, err := config.ParseConfigInCluster(ctx, kubeCl, preparatorProvider)
+	if err != nil {
+		logger.LogErrorF("Cannot get config from cluster: %v\n", err)
+		return
+	}
+
+	mapProvider := func(c *config.MetaConfig) (map[string]any, error) {
+		res := make(map[string]any)
+		for k, vJSON := range c.ProviderClusterConfig {
+			var v any
+			err := json.Unmarshal(vJSON, &v)
+			if err != nil {
+				return nil, err
+			}
+
+			res[k] = v
+		}
+		return res, nil
+	}
+
+	fromClusterMap, err := mapProvider(fromCluster)
+	if err != nil {
+		logger.LogErrorF("Cannot convert from cluster: %v\n", err)
+		return
+	}
+
+	fromDataMap, err := mapProvider(fromData)
+	if err != nil {
+		logger.LogErrorF("Cannot convert from data: %v\n", err)
+		return
+	}
+
+	diff := gcmp.Diff(fromClusterMap, fromDataMap)
+
+	if diff != "" {
+		logger.LogInfoF("From cluster -> fromData:\n%s\n", diff)
+	} else {
+		logger.LogInfoF("From cluster -> fromData equal\n")
 	}
 }
 

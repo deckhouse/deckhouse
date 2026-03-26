@@ -269,8 +269,6 @@ func (i *Attacher) scan(
 			return fmt.Errorf("unable to prepare provider cluster config yaml: %w", err)
 		}
 
-		i.Params.Logger.LogDebugF("Provider cluster configuration in attach: '%s'\n", providerConfiguration)
-
 		res.ProviderSpecificClusterConfiguration = string(providerConfiguration)
 
 		if len(i.Params.SSHClient.PrivateKeys()) > 0 {
