@@ -21,13 +21,15 @@ import (
 	"math/rand"
 
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
+	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/event"
-	"caps-controller-manager/internal/scope"
 )
 
 // StaticInstancePool defines a pool of static instances.
@@ -47,52 +49,27 @@ func NewStaticInstancePool(client client.Client, config *rest.Config, recorder *
 }
 
 // PickStaticInstance picks a StaticInstance for the given StaticMachine.
-func (p *StaticInstancePool) PickStaticInstance(
-	ctx context.Context,
-	machineScope *scope.MachineScope,
-) (*scope.InstanceScope, bool, error) {
+func (p *StaticInstancePool) PickStaticInstance(ctx context.Context, staticMachine *infrav1.StaticMachine) (*deckhousev1.StaticInstance, error) {
 	staticInstances, err := p.findStaticInstancesInPhase(
 		ctx,
-		machineScope,
+		staticMachine,
 		deckhousev1.StaticInstanceStatusCurrentStatusPhasePending,
 	)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to find static instances in pending phase")
+		return nil, errors.Wrap(err, "failed to find static instances in pending phase")
 	}
 	if len(staticInstances) == 0 {
-		return nil, false, nil
+		return nil, nil
 	}
 
 	staticInstance := staticInstances[rand.Intn(len(staticInstances))]
-
-	newScope, err := scope.NewScope(p.Client, p.config, ctrl.LoggerFrom(ctx))
-	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to create scope")
-	}
-
-	instanceScope, err := scope.NewInstanceScope(newScope, &staticInstance, ctx)
-	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to create instance scope")
-	}
-
-	instanceScope.AttachMachineScope(machineScope)
-
-	err = instanceScope.LoadSSHCredentials(ctx, p.recorder)
-	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to load SSHCredentials")
-	}
-
-	return instanceScope, true, nil
+	return &staticInstance, nil
 }
 
-func (p *StaticInstancePool) findStaticInstancesInPhase(
-	ctx context.Context,
-	machineScope *scope.MachineScope,
-	phase deckhousev1.StaticInstanceStatusCurrentStatusPhase,
-) ([]deckhousev1.StaticInstance, error) {
+func (p *StaticInstancePool) findStaticInstancesInPhase(ctx context.Context, staticMachine *infrav1.StaticMachine, phase deckhousev1.StaticInstanceStatusCurrentStatusPhase) ([]deckhousev1.StaticInstance, error) {
 	staticInstances := &deckhousev1.StaticInstanceList{}
 
-	labelSelector, err := machineScope.LabelSelector()
+	labelSelector, err := staticMachineLabelSelector(staticMachine)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get label selector")
 	}
@@ -117,4 +94,30 @@ func (p *StaticInstancePool) findStaticInstancesInPhase(
 	}
 
 	return staticInstancesInPhase, nil
+}
+
+func staticMachineLabelSelector(staticMachine *infrav1.StaticMachine) (labels.Selector, error) {
+	allowBootstrapRequirement, err := labels.NewRequirement("node.deckhouse.io/allow-bootstrap", selection.NotIn, []string{"false"})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if staticMachine.Spec.LabelSelector == nil {
+		return labels.NewSelector().Add(*allowBootstrapRequirement), nil
+	}
+
+	labelSelector, err := metav1.LabelSelectorAsSelector(staticMachine.Spec.LabelSelector)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to convert StaticMachine label selector")
+	}
+
+	requirements, _ := labelSelector.Requirements()
+
+	for _, requirement := range requirements {
+		if requirement.Key() == allowBootstrapRequirement.Key() {
+			return nil, errors.New("label selector requirement for the 'node.deckhouse.io/allow-bootstrap' key can't be added manually")
+		}
+	}
+
+	return labelSelector.Add(*allowBootstrapRequirement), nil
 }
