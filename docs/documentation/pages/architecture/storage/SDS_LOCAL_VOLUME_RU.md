@@ -8,7 +8,7 @@ description: Архитектура модуля sds-local-volume в Deckhouse K
 
 Модуль `sds-local-volume` предназначен для управления локальным блочным хранилищем на базе LVM. Он позволяет создавать StorageClass в Kubernetes с помощью ресурса LocalStorageClass.
 
-Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/sds-local-volume/).
+Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/sds-local-volume/).
 
 ## Архитектура модуля
 
@@ -28,22 +28,22 @@ description: Архитектура модуля sds-local-volume в Deckhouse K
 
 Модуль состоит из следующих компонентов:
 
-1. **controller** — контроллер, обслуживающий кастомные ресурсы [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass). LocalStorageClass — пользовательский ресурс Kubernetes, определяющий конфигурацию для Kubernetes StorageClass. Создаваемый StorageClass использует `local.csi.storage.deckhouse.io` provisioner. В StorageClass конфигурируются типы логических томов LVM, настройки VolumeGroups, reclaim policy, volume binding mode и т.д. Данные настройки использует provisioner CSI-драйвера (sds-local-volume) при управлении локальными томами на базе LVM.
+1. **controller** — контроллер, обслуживающий кастомные ресурсы [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass). LocalStorageClass — пользовательский ресурс Kubernetes, определяющий конфигурацию для Kubernetes StorageClass. Создаваемый StorageClass использует `local.csi.storage.deckhouse.io` provisioner. В StorageClass задаются типы логических томов LVM, параметры VolumeGroups, reclaim policy, volume binding mode и другие настройки. Эти параметры используются provisioner’ом CSI-драйвера `sds-local-volume` при управлении локальными томами на базе LVM.
 
    Состоит из следующих контейнеров:
 
    * **controller** — основной контейнер;
-   * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для валидации кастомных ресурсов LocalStorageClass, ресурсов StorageClass, а также мутации атрибута `spec.schedulerName` подов, использующих тома, созданные при помощи `local.csi.storage.deckhouse.io` provisioner. В результате мутации в имени планировщика (`spec.schedulerName`) спецификации пода проставляется название `sds-local-volume`, чтобы размещение подов определялось не стандартным планировщиком Kubernetes (kube-scheduler), а компонентом sds-local-volume-scheduler-extender из данного модуля.
+   * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер, который выполняет валидацию кастомных ресурсов LocalStorageClass и ресурсов StorageClass, а также для изменения значения поля `spec.schedulerName` у подов, использующих тома, созданные provisioner’ом `local.csi.storage.deckhouse.io`. После изменения значением поля `spec.schedulerName` становится `sds-local-volume`, что позволяет передать планирование таких подов компоненту `sds-local-volume-scheduler-extender` вместо стандартного планировщика Kubernetes (kube-scheduler).
 
-2. **Sds-local-volume-scheduler-extender** — состоит из одного контейнера, представляет собой extender для kube-scheduler, реализует специфичную для подов, использующих локальные тома логику размещения. При планировании учитывается свободное место на узлах, используемых для размещения на них локальных томов, а также размер дискового пространства, которое надо зарезервировать под эти тома.
+1. **sds-local-volume-scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler, реализует специфичную для подов, использующих локальные тома логику размещения. При планировании учитывается свободное место на узлах, используемых для размещения на них локальных томов, а также размер дискового пространства, которое надо зарезервировать под эти тома.
 
-3. **CSI-драйвер (sds-local-volume)** — реализация CSI-драйвера для `local.csi.storage.deckhouse.io` provisioner. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-driver.html). CSI-драйвер (sds-local-volume) — разработка компании Флант.
+3. **CSI-драйвер (`sds-local-volume`)** — реализация CSI-драйвера для `local.csi.storage.deckhouse.io` provisioner. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в соответствующем разделе документации](../infrastructure/csi-driver.html). CSI-драйвер (`sds-local-volume`) — разработка компании Флант.
 
 ## Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
 
-1. **Kube-apiserver**:
+1. **kube-apiserver**:
 
    * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
    * работа с кастомными ресурсами LocalStorageClass;
@@ -51,9 +51,9 @@ description: Архитектура модуля sds-local-volume в Deckhouse K
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Kube-apiserver**:
+1. **kube-apiserver**:
 
    * валидация кастомных ресурсов LocalStorageClass, ресурсов StorageClass;
-   * мутация атрибута `spec.schedulerName` подов, использующих тома, созданные при помощи `local.csi.storage.deckhouse.io` provisioner.
+   * изменение поля `spec.schedulerName` подов, использующих тома, созданные при помощи `local.csi.storage.deckhouse.io` provisioner.
 
-2. **Kube-scheduler** — отправка на вебхук sds-local-volume-scheduler-extender запросов на планирование подов, в атрибуте `spec.schedulerName` которых указано значение `sds-local-volume`.
+1. **kube-scheduler** — отправка на вебхук `sds-local-volume-scheduler-extender` запросов на планирование подов, в поле `spec.schedulerName` которых указано значение `sds-local-volume`.
