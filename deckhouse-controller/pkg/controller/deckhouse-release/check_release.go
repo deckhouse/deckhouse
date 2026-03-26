@@ -766,7 +766,7 @@ func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 			if err != nil {
 				return fmt.Errorf("copy: %w", err)
 			}
-		case "module.yaml":
+		case "module.yaml", "module.yml":
 			_, err := io.Copy(rr.moduleReader, tr)
 			if err != nil {
 				return fmt.Errorf("copy: %w", err)
