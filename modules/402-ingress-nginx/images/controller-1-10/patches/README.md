@@ -154,3 +154,13 @@ https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
 ### 026-lua_ingress-use-request-host-for-https-redirect.patch
 
 This patch fixes HTTP-to-HTTPS redirect host selection in `lua_ingress`: when `Host` differs from the actual request host (for example with absolute-form requests), redirect now uses the request host (`$host`) instead of raw `Host` header to prevent redirects to arbitrary domains.
+
+### 027-fix-rewrite-target-cve.patch
+
+This patch fixes rewrite-target CVE-2026-3288 in Ingress-NGINX
+
+https://github.com/kubernetes/kubernetes/issues/137560
+
+### 028-stable-config-hash-metric-02.patch
+
+This patch updates the way config_hash controller metric is calculated so that all pods of a controller report the same value

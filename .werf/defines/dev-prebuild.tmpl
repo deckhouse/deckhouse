@@ -34,19 +34,19 @@
   includePaths:
   - deckhouse-controller
   - caps-deckhouse-controller
-- image: libs/ncurses
+- from: {{ index $.Images "libs/ncurses" }}
   add: /usr/share/terminfo/
   to: /usr/share/terminfo/
   before: install
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
-- image: tools/erofs-utils
+- from: {{ index $.Images "tools/erofs-utils" }}
   add: /usr/bin/mkfs.erofs
   to: /usr/bin/mkfs.erofs
   after: setup
-- image: tools/cryptsetup
+- from: {{ index $.Images "tools/cryptsetup" }}
   add: /usr/sbin/veritysetup
   to: /usr/sbin/veritysetup
   after: setup

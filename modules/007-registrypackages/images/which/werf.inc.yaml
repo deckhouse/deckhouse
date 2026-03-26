@@ -1,8 +1,8 @@
-{{- $version := "2.23" }}
+{{- $version := include "get_oss_version_by_id" (list "which" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -39,7 +39,7 @@ shell:
   - rm -rf /src/which/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

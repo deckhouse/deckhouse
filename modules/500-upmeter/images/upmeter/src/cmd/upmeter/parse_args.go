@@ -79,7 +79,6 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 }
 
 func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
-
 	// Sender
 	cmd.Flag("service-host", "Upmeter server host.").
 		Envar("UPMETER_SERVICE_HOST").
@@ -184,7 +183,7 @@ func parseKubeArgs(cmd *kingpin.CmdClause, config *kubernetes.Config) {
 	cmd.Flag("kube-client-qps", "QPS for a rate limiter of a kubernetes client. Can be set with $KUBE_CLIENT_QPS.").
 		Envar("KUBE_CLIENT_QPS").
 		Default("5"). // DefaultQPS from k8s.io/client-go/rest/config.go
-		Float32Var(&config.ClientQps)
+		Float32Var(&config.ClientQPS)
 
 	cmd.Flag("kube-client-burst", "Burst for a rate limiter of a kubernetes client. Can be set with $KUBE_CLIENT_BURST.").
 		Envar("KUBE_CLIENT_BURST").

@@ -18,7 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 // DeckhouseClusterSpec defines the desired state of DeckhouseCluster.
@@ -35,6 +35,11 @@ type DeckhouseClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// initialization provides observations of the Cluster initialization process.
+	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+	// +optional
+	Initialization ClusterInitializationStatus `json:"initialization,omitempty,omitzero"`
+
 	// +optional
 	Ready bool `json:"ready,omitempty"`
 
@@ -45,8 +50,16 @@ type DeckhouseClusterStatus struct {
 	FailureMessage string `json:"failureMessage,omitempty"`
 }
 
+// ClusterInitializationStatus provides observations of the Cluster initialization process.
+// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+// +kubebuilder:validation:MinProperties=1
+type ClusterInitializationStatus struct {
+	Provisioned *bool `json:"provisioned,omitempty"`
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Namespaced
 
 // DeckhouseCluster is the Schema for the deckhouseclusters API.
 type DeckhouseCluster struct {

@@ -70,6 +70,105 @@ alerts:
         Certificate is expiring soon.
       severity: "8"
       markupFormat: markdown
+    - name: CertmanagerCertificateChallengePending
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
+      moduleUrl: 101-cert-manager
+      module: cert-manager
+      edition: ce
+      description: |-
+        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` has been in `pending` state for more than 1 hour and requires investigation.
+
+        **Common causes:**
+        * DNS misconfiguration (for DNS-01 challenges).
+        * Ingress or firewall issues blocking HTTP-01 validation.
+        * ACME provider rate limiting.
+        * Network connectivity issues.
+
+        **Resolution steps:**
+
+        1. Check the Challenge status and reason:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
+           ```
+
+        2. Check `cert-manager` logs for errors:
+           ```bash
+           d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
+           ```
+
+        3. If the challenge is stuck, delete the Order to trigger a retry:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} get orders
+           d8 k -n {{ $labels.exported_namespace }} delete order <ORDER_NAME>
+           ```
+      summary: |
+        ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is pending for more than 1 hour.
+      severity: "4"
+      markupFormat: markdown
+    - name: CertmanagerCertificateChallengePending
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
+      moduleUrl: 101-cert-manager
+      module: cert-manager
+      edition: ce
+      description: |-
+        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` has been in `pending` state for more than 10 minutes.
+
+        This may indicate issues with the ACME challenge validation process.
+
+        **Common causes:**
+        * DNS propagation delays (for DNS-01 challenges).
+        * Ingress or firewall issues blocking HTTP-01 validation.
+        * ACME provider rate limiting or temporary unavailability.
+
+        **Diagnostic steps:**
+
+        1. Check the Challenge status:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
+           ```
+
+        2. Check `cert-manager` logs for errors:
+           ```bash
+           d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager --tail=100
+           ```
+      summary: |
+        ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is pending for more than 10 minutes.
+      severity: "6"
+      markupFormat: markdown
+    - name: CertmanagerCertificateChallengeStuck
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
+      moduleUrl: 101-cert-manager
+      module: cert-manager
+      edition: ce
+      description: |-
+        The ACME Challenge `{{ $labels.exported_namespace }}/{{ $labels.name }}` for domain `{{ $labels.domain }}` is in `{{ $labels.status }}` state and requires manual intervention.
+
+        **Reason:** {{ $labels.reason }}
+
+        The certificate will not be issued or renewed until the issue is resolved.
+
+        **Common causes:**
+        * DNS misconfiguration (for DNS-01 challenges).
+        * Ingress or firewall issues (for HTTP-01 challenges).
+        * Rate limiting by the ACME provider.
+        * Authorization expired before challenge completion.
+
+        **Resolution steps:**
+
+        1. Check the Challenge status and reason:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} describe challenge {{ $labels.name }}
+           ```
+
+        2. Delete the failed Order to trigger a new certificate request:
+           ```bash
+           d8 k -n {{ $labels.exported_namespace }} get orders
+           d8 k -n {{ $labels.exported_namespace }} delete order <ORDER_NAME>
+           ```
+      summary: |
+        ACME Challenge for domain &quot;{{ $labels.domain }}&quot; is stuck in &quot;{{ $labels.status }}&quot; state.
+      severity: "4"
+      markupFormat: markdown
     - name: CertmanagerCertificateExpired
       sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
       moduleUrl: 101-cert-manager
@@ -637,12 +736,10 @@ alerts:
       module: node-manager
       edition: ce
       description: |-
-        The {{$labels.pod}} Pod is {{$labels.phase}}.
-
         To check the Pod's status, run the following command:
 
         ```shell
-        d8 k -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
+        d8 k -n {{$labels.namespace}} logs {{$labels.pod}}
         ```
       summary: |
         The {{$labels.pod}} Pod is NOT Ready.
@@ -1766,6 +1863,21 @@ alerts:
         - Remote and local Istio versions mismatch.
       summary: |
         Istio remote cluster {{$labels.cluster_id}} is not synchronized.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IstioReservedUIDConflict
+      sourceFile: modules/110-istio/monitoring/prometheus-rules/reserved-uid.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ce
+      description: |
+        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` is running as UID `1337`.
+
+        UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
+
+        To fix the issue, change the `runAsUser` in the container's or pod's `securityContext` to a different UID.
+      summary: |
+        Application container is running as UID 1337 (reserved by Istio).
       severity: "4"
       markupFormat: markdown
     - name: D8IstioVersionIsIncompatibleWithK8sVersion
@@ -5540,6 +5652,34 @@ alerts:
         Excessive Ingress NGINX restarts indicate that something is wrong. Normally, it should be up and running all the time.
       summary: |
         Too many Ingress NGINX restarts detected.
+      severity: "4"
+      markupFormat: markdown
+    - name: NginxIngressPodsReportConfigurationHashDrift
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        The `{{ $labels.controller }}` Ingress NGINX Controller pods report different configuration hashes.
+        It can result in inconsistent processing of incoming requests.
+
+        To diagnose the issue, follow these steps:
+
+        1. Make sure that the pods of `{{ $labels.controller }}` Ingress NGINX Controller are not being updated at the moment. During an update, pods of a single controller may report different config hashes for some time.
+
+           ```bash
+           d8 k -n {{ $labels.namespace }} get pod -l app=controller,name={{ $labels.controller }}
+           ```
+
+        2. Check the associated metrics `nginx_ingress_controller_config_hash{namespace="d8-ingress-nginx", controller="{{ $labels.controller }}"}` manually to find the outliers.
+
+        3. Check the controller logs for any configuration errors resulting in the configuration drift across the pods:
+
+           ```bash
+           d8 k -n {{ $labels.namespace }} logs -l app=controller,name={{ $labels.controller }} -c controller --tail=10000
+           ```
+      summary: |
+        Ingress NGINX Controller pods report different configuration hashes.
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressProfilingIsEnabled

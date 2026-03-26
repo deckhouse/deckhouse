@@ -9,6 +9,14 @@ properties:
     type: object
     default: {}
     properties:
+      cniMigrationEnabled:
+        type: boolean
+        default: false
+      cniMigrationName:
+        type: string
+      cniMigrationWebhooksDisable:
+        type: boolean
+        default: false
       modules:
         default: {}
         additionalProperties: false
@@ -98,6 +106,14 @@ properties:
           Default storage class for cluster
           It gets form storage class annotated as "storageclass.beta.kubernetes.io/is-default-class" or "storageclass.kubernetes.io/is-default-class"
         x-examples: [ "default" ]
+      cloudProviderDefaultStorageClass:
+        type: string
+        # it is name of resource in kubernetes
+        pattern: '[a-z0-9]([\-a-z0-9\.]*[a-z0-9])?'
+        description: |
+          Default storage class discovered from cloud provider in parent cluster.
+          Used as fallback when global.defaultClusterStorageClass is not explicitly set by user.
+        x-examples: [ "fast-ssd" ]
       clusterDNSAddress:
         type: string
         pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$'

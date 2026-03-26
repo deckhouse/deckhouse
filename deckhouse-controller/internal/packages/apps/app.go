@@ -40,6 +40,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -192,6 +193,12 @@ type RuntimeValues struct {
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
 func (a *Application) GetRuntimeValues() RuntimeValues {
+	images := make(map[string]string, len(a.digests))
+	for name, tag := range a.digests {
+		image := fmt.Sprintf("%s/%s@%s", a.repository.Repository, a.definition.Name, tag)
+		images[name] = image
+	}
+
 	return RuntimeValues{
 		Instance: addonutils.Values{
 			"Name":      a.instance,
@@ -199,7 +206,7 @@ func (a *Application) GetRuntimeValues() RuntimeValues {
 		},
 		Package: addonutils.Values{
 			"Name":     a.definition.Name,
-			"Digests":  a.digests,
+			"Images":   images,
 			"Registry": a.repository,
 			"Version":  a.definition.Version,
 		},
@@ -239,8 +246,8 @@ func (a *Application) GetPath() string {
 	return a.path
 }
 
-// GetQueues returns package queues from all hooks
-func (a *Application) GetQueues() []string {
+// GetHooksQueues returns package queues from all hooks
+func (a *Application) GetHooksQueues() []string {
 	var res []string //nolint:prealloc
 	scheduleHooks := a.hooks.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range scheduleHooks {
@@ -258,6 +265,17 @@ func (a *Application) GetQueues() []string {
 
 	slices.Sort(res)
 	return slices.Compact(res)
+}
+
+// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
+func (a *Application) GetHookSnapshotsDump() []byte {
+	d := make(map[string]interface{})
+	for _, h := range a.hooks.GetHooks() {
+		d[h.GetName()] = h.GetHookController().SnapshotsDump()
+	}
+
+	marshalled, _ := yaml.Marshal(d)
+	return marshalled
 }
 
 // GetValuesChecksum returns a checksum of the current values.

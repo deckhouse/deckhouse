@@ -150,8 +150,6 @@ func (e *Scheduler) run() {
 		if !runner.ShouldRun(now) {
 			continue
 		}
-
-		runner := runner // avoid closure capturing
 		go func() {
 			e.recv <- runner.Run(now)
 		}()
@@ -197,7 +195,7 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 	// Collect episodes for calculated probes.
 	for _, calc := range e.registry.Calculators() {
 		sss := make([]*check.StatusSeries, 0)
-		for _, id := range calc.MergeIds() {
+		for _, id := range calc.MergeIDs() {
 			if ss, ok := e.seriesMap[id]; ok {
 				sss = append(sss, ss)
 			}

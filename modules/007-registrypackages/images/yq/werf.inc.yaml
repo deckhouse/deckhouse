@@ -1,8 +1,8 @@
-{{- $version := .CandiVersionMap.yq.version }}
+{{- $version := include "get_oss_version_by_id" (list "yq" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -34,7 +34,7 @@ git:
     setup:
     - '**/*'
 import:
-- image: tools/yq-v{{ $version }}
+- from: {{ index $.Images (printf "tools/yq-v%s" $version) }}
   add: /usr/bin/yq
   to: /yq
   before: setup

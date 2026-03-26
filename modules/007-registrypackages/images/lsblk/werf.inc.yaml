@@ -1,8 +1,8 @@
-{{- $version := "2.40.2" }}
-{{- $image_version := $version | replace "." "-" }}
+{{- $lsblk_version := include "get_oss_version_by_id" (list "util-linux-lsblk" $ )  -}}
+{{- $image_version := $lsblk_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -14,7 +14,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "lsblk": "{{ $version }}" }
+    labels: {"distro": "all", "version": "all", "lsblk": "{{ $lsblk_version }}" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
@@ -35,11 +35,11 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/util-linux/util-linux.git  /src/util-linux
+  - git clone -b v{{ $lsblk_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/util-linux/util-linux.git  /src/util-linux
   - rm -rf /src/util-linux/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

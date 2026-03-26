@@ -19,7 +19,7 @@
 # Based on https://github.com/istio/istio/blob/1.25.2/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.25.2/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
@@ -39,6 +39,18 @@ import:
   owner: 1337
   group: 1337
   after: setup
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  before: install
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  before: install
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
@@ -60,27 +72,19 @@ import:
   before: setup
 git:
 {{- include "image mount points" . }}
-shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y ca-certificates
-  - update-ca-trust
-  - apt-get clean
-  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
-  install:
-  - useradd -m --uid 1337 istio-proxy
-  - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
 imageSpec:
   config:
     user: "1337:1337"
-    env: { "ISTIO_META_ISTIO_PROXY_SHA": "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489", "ISTIO_META_ISTIO_VERSION": "{{ $istioVersion }}" }
+    env: 
+      ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
+      ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
     workingDir: "/"
     entrypoint: ["/usr/local/bin/pilot-agent"]
 ---
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
@@ -180,11 +184,11 @@ shell:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
-fromImage: builder/golang-bookworm
+from: {{ index $.Images "builder/golang-bookworm" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

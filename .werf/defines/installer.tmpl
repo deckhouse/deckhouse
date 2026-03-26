@@ -24,7 +24,7 @@
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   before: setup
-- image: libs/ncurses
+- from: {{ index $.Images "libs/ncurses" }}
   add: /usr/share/terminfo/
   to: /usr/share/terminfo/
   before: install
@@ -41,11 +41,11 @@
 
 # render imports for install images for relocate binaries and libraries
 {{- define "installer_and_installer_standalone_libraries_and_binaries_imports" }}
-- image: tools/bash
+- from: {{ index $.Images "tools/bash" }}
   add: /usr/bin/bash
   to: /bin/bash
   before: install
-- image: tools/bash-completion
+- from: {{ index $.Images "tools/bash-completion" }}
   add: /
   to: /
   includePaths:
@@ -53,29 +53,29 @@
   - etc/bash_completion.d
   - usr/share/bash-completion
   before: install
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   before: install
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   before: install
-- image: tools/sed
+- from: {{ index $.Images "tools/sed" }}
   add: /usr/bin/sed
   before: install
-- image: tools/grep
+- from: {{ index $.Images "tools/grep" }}
   add: /usr/bin/grep
   before: install
-- image: tools/gawk
+- from: {{ index $.Images "tools/gawk" }}
   add: /
   to: /
   includePaths:
   - usr/bin/awk
   - usr/bin/gawk
   before: install
-- image: tools/findutils
+- from: {{ index $.Images "tools/findutils" }}
   add: /usr/bin/find
   before: install
-- image: tools/coreutils
+- from: {{ index $.Images "tools/coreutils" }}
   add: /
   to: /
   includePaths:
@@ -187,7 +187,7 @@
   - usr/bin/whoami
   - usr/bin/yes
   before: install
-- image: tools/openssl
+- from: {{ index $.Images "tools/openssl" }}
   add: /usr/lib
   to: /usr/lib
   includePaths:
@@ -196,18 +196,18 @@
   - engines-3
   - ossl-modules
   before: install
-- image: tools/openssl
+- from: {{ index $.Images "tools/openssl" }}
   add: /usr/bin/openssl
   to: /usr/bin/openssl
   before: install
-- image: tools/vim
+- from: {{ index $.Images "tools/vim" }}
   add: /
   to: /
   includePaths:
   - usr/bin/vim
   - usr/share/vim
   before: install
-- image: tools/less
+- from: {{ index $.Images "tools/less" }}
   add: /usr/bin/less
   to: /usr/bin/less
   before: install
@@ -440,7 +440,7 @@ shell:
 {{- $context := . -}}
 
 image: dev/install-standalone
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: install-standalone-builder
   add: /dhctl-{{- $context.CI_COMMIT_TAG }}.x86_64.tar.gz

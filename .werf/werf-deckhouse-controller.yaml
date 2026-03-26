@@ -1,7 +1,7 @@
 ---
 image: deckhouse-controller-src-artifact
 final: false
-fromImage: builder/src
+from: {{ index $.Images "builder/src" }}
 git:
 - add: /
   to: /deckhouse

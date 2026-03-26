@@ -79,7 +79,28 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость затрагивает runc при запуске контейнеров, позволяя перенаправление записей в /proc на другие файлы через специальные условия. Cluster-autoscaler не использует runc для запуска контейнеров и управляет только масштабированием узлов Kubernetes через API, уязвимый код не исполняется.",
       "timestamp": "2025-11-07T09:55:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.65.0"
+        },
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.68.1"
+        },
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.72.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость связана с обходом авторизации на стороне gRPC-сервера через некорректный путь в заголовке :path без ведущего слеша. Cluster-autoscaler не запускает gRPC-сервер и не использует серверные авторизационные интерцепторы gRPC. Библиотека google.golang.org/grpc используется только как транзитивная зависимость для клиентских операций через Kubernetes и etcd библиотеки. Уязвимый серверный код не исполняется.",
+      "timestamp": "2026-03-23T09:38:11.040030Z"
     }
   ],
-  "timestamp": "2026-03-04T14:40:21Z"
+  "timestamp": "2026-03-04T14:40:21Z",
+  "last_updated": "2026-03-23T09:38:11Z"
 }

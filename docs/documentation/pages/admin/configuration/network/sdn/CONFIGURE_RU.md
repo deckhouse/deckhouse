@@ -178,13 +178,13 @@ d8 k label nodenetworkinterface virtlab-ap-2-nic-1c61b4a6800c nic-group=extra
   * **Тегированный VLAN** — для связи между подами на разных узлах сетевые пакеты помечаются соответствующим VLAN ID и используют инфраструктурное сетевое оборудование для коммутации. Этот метод позволяет создать 4096 дополнительных сетей в рамках одного кластера;
   * **Прямой доступ в сетевой интерфейс на узлах** — для связи между подами на разных узлах используются локальные сетевые интерфейсы на узлах.
 * По модели управления сети бывают двух типов:
-  * **[Кластерная сеть](#создание-общедоступной-сети-кластерной)** — сеть, общедоступная в каждом проекте, управляется администратором. Пример — публичная WAN-сеть или shared-сеть обмена трафиком между проектами;
+  * **[Кластерная сеть](#создание-общедоступной-кластерной-сети)** — сеть, общедоступная в каждом проекте, управляется администратором. Пример — публичная WAN-сеть или shared-сеть обмена трафиком между проектами;
   * **[Сеть проекта](#создание-сети-проекта-пользовательской-сети)** — сеть, доступная в рамках неймспейса, управляется пользователем.
 
 Для настройки и подключения дополнительных сетей для прикладных подов используются кастомные ресурсы [ClusterNetwork](/modules/sdn/cr.html#clusternetwork), [Network](/modules/sdn/cr.html#network) и [NetworkClass](/modules/sdn/cr.html#networkclass).
 
 {% alert level="info" %}
-Если в ресурсах [Network](/modules/sdn/cr.html#network) или [ClusterNetwork](/modules/sdn/cr.html#clusternetwork) был указан тип VLAN, также создадутся [NodeNetworkInterface](/modules/sdn/stable/cr.html#nodenetworkinterface) для VLAN и Bridge-интерфейсов.
+Если в ресурсах [Network](/modules/sdn/cr.html#network) или [ClusterNetwork](/modules/sdn/cr.html#clusternetwork) был указан тип VLAN, также создадутся [NodeNetworkInterface](/modules/sdn/cr.html#nodenetworkinterface) для VLAN и Bridge-интерфейсов.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -302,7 +302,7 @@ spec:
 
 По запросу пользователя администратор предоставляет ему название созданного NetworkClass, который используется при создании сети проекта.
 
-Пример создания пользовательской сети с использованием созданного административного ресурса NetworkClass описан в разделе [«Создание сети проекта (пользовательской сети)»](../../../../user/network/sdn/dedicated-networks.html).
+Пример создания пользовательской сети с использованием созданного административного ресурса NetworkClass описан в разделе [«Создание сети проекта (пользовательской сети)»](../../../../user/network/sdn/dedicated.html#создание-сети-проекта-пользовательской-сети).
 
 ### Проверка присоединения дополнительной сети к интерфейсам на узлах
 
@@ -370,6 +370,74 @@ right-worker-b23d3a26-5fb4b-h2bkv-nic-fa163eebea7b   Deckhouse   right-worker-b2
 right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b23d3a26-5fb4b-h2bkv   VLAN     ens3.900    683       Up      14h
 ...
 ```
+
+### IPAM для дополнительных сетей
+
+Механизм IPAM (IP Address Management) позволяет выделять IPv4-адреса из пулов и назначать их на дополнительные сетевые интерфейсы подов, подключаемых к [кластерным сетям](#создание-общедоступной-кластерной-сети) и [сетям проекта](#создание-сети-проекта-пользовательской-сети).
+
+#### Принципы и особенности работы IPAM в DKP
+
+Для каждого выделяемого IP-адреса создаётся и используется объект [IPAddress](/modules/sdn/cr.html#ipaddress) ([ClusterIPAddress](/modules/sdn/cr.html#clusteripaddress) — для кластерных сетей), который ссылается на сеть проекта или кластерную сеть. Контроллер выделяет адрес из пула и сохраняет результат в `status.address`, `status.network`, `status.routes` объекта IPAddress (ClusterIPAddress). Агент на узле назначает IP-адрес и маршруты на интерфейс внутри пода и устанавливает поля `status.conditions[Attached]` и `status.usedByPods` объекта IPAddress (ClusterIPAddress).
+
+##### Защита от конфликтов при переиспользовании IP-адресов
+
+Для защиты от конфликтов создаётся cluster-scoped объект [IPAddressLease](/modules/sdn/cr.html#ipaddresslease), который резервирует IP-адрес. При удалении объекта IPAddress (ClusterIPAddress) соответствующий ему IPAddressLease помечается как `orphaned` (для этого используется поле `status.orphaningTimestamp`) и удерживает адрес в течение времени, указанном в параметре [`spec.ttl`](/modules/sdn/cr.html#ipaddresslease-v1alpha1-spec-ttl) (чтобы избежать быстрых переиспользований IP-адресов).
+
+#### Ресурсы и параметры для настройки IPAM
+
+Для управления выделением и назначением IP-адресов используются:
+
+* Пулы адресов: для кластерных сетей (ресурс [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool)) или сетей проекта (ресурс [IPAddressPool](/modules/sdn/cr.html#ipaddresspool)).
+* Параметры для включения IPAM для конкретной сети: [`Network.spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#network-v1alpha1-spec-ipam-ipaddresspoolref) —  для сетей проекта, [`ClusterNetwork.spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) — для кластерных сетей.
+* Ресурс [IPAddress](/modules/sdn/cr.html#ipaddress) ([ClusterIPAddress](/modules/sdn/cr.html#clusteripaddress) — для кластерных сетей) — запрос (автоматический или статический) на выделение адреса, который затем назначается на интерфейс пода, подключаемого к кластерной сети или сети проекта.
+
+#### Пример выделения пула IP-адресов для кластерной сети
+
+> Чтобы выделить пул адресов для [кластерной сети](#создание-общедоступной-кластерной-сети), используйте ресурс [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool).
+
+Для выделения пула адресов, предназначенных для назначения на сетевые интерфейсы подов, подключаемых к кластерной сети, выполните следующие действия:
+
+1. Создайте пул адресов. Для этого используйте ресурс [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool).
+
+   Пример:
+
+   ```yaml
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: ClusterIPAddressPool
+   metadata:
+     name: public-net-pool
+   spec:
+     leaseTTL: 24h
+     pools:
+       - network: 203.0.113.0/24
+         ranges:
+           - 203.0.113.10-203.0.113.200
+   ```
+
+   > Параметр [`spec.pools[].ranges`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-ranges) опционален. Если он не указан, доступным считается весь CIDR из [`spec.pools[].network`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-network) (за исключением network/broadcast адресов, см. поведение `/31` и `/32`).
+
+1. Включите IPAM в сети. Для этого в параметре [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) ресурса ClusterNetwork укажите параметры созданного на предыдущем шаге ClusterIPAddressPool.
+
+   ```yaml
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: ClusterNetwork
+   metadata:
+     name: my-cluster-network
+   spec:
+     type: VLAN
+     vlan:
+       id: 900
+     parentNodeNetworkInterfaces:
+       labelSelector:
+         matchLabels:
+           nic-group: extra
+     ipam:
+       ipAddressPoolRef:
+         kind: ClusterIPAddressPool
+         name: public-net-pool
+   ```
+
+После выделения пула IP-адресов для кластерной сети их можно назначать на сетевые интерфейсы подов, подключаемых к этой сети. Подробнее — в разделе [«Назначение IP-адресов на сетевые интерфейсы подов, подключаемых к дополнительной сети»](../../../../user/network/sdn/dedicated.html#назначение-ip-адресов-на-сетевые-интерфейсы-подов-подключаемых-к-дополнительной-сети).
 
 ## Настройка и подключение underlay-сетей для проброса аппаратных устройств
 
@@ -508,7 +576,7 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
 
 Чтобы создать Underlay-сеть в режиме Dedicated, выполните следующие шаги:
 
-1. Создайте и примените ресурс [UnderlayNetwork](/modules/sdn/stable/cr.html#underlaynetwork). В поле `spec.mode` укажите значение `Dedicated`.
+1. Создайте и примените ресурс [UnderlayNetwork](/modules/sdn/cr.html#underlaynetwork). В поле `spec.mode` укажите значение `Dedicated`.
 
    Пример конфигурации:
 
@@ -623,7 +691,7 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
        type: InterfacesAvailable
    ```
 
-1. Убедитесь, что VF были созданы, проверив ресурс [NodeNetworkInterface](/modules/sdn/stable/cr.html#nodenetworkinterface):
+1. Убедитесь, что VF были созданы, проверив ресурс [NodeNetworkInterface](/modules/sdn/cr.html#nodenetworkinterface):
 
    ```shell
    d8 k get nni -l network.deckhouse.io/nic-pci-type=VF
@@ -638,3 +706,156 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
 ```shell
 d8 k label namespace mydpdk direct-nic-access.network.deckhouse.io/enabled=""
 ```
+
+## Настройка и подключение системных сетей (сервисных сетей)
+
+Системные сети (сервисные сети) предназначены для служебного трафика на уровне узлов (например, для нужд хранилища, управления и т. д.) и не используются как дополнительные сети подов.
+
+Дополнительные сервисные сети создаются на узлах кластера поверх существующих underlay-сетей. Для этого используется кастомный ресурс [SystemNetwork](/modules/sdn/cr.html#systemnetwork). Системные сети получают IP-адреса из [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) при настройке IPAM.
+
+Принципы и особенности работы системных сетей:
+
+* **Работа поверх underlay-сетей**. Системная сеть подключается к underlay-сети ([UnderlayNetwork](/modules/sdn/cr.html#underlaynetwork)). Для подключения в параметре [`spec.underlayNetworkName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-underlaynetworkname) ресурса SystemNetwork указывается имя underlay-сети, к которой должна быть подключена системная сеть. Набор интерфейсов узла (PF или VF), которые будет использовать системная сеть, определяется в параметре [`memberNodeNetworkInterfaces`](/modules/sdn/cr.html#underlaynetwork-v1alpha1-spec-membernodenetworkinterfaces) объекта UnderlayNetwork.
+* **Поддержка разных типов подключения системной сети к underlay-сети**. Можно создавать VLAN-интерфейсы для подов (`type: VLAN`), использовать прямой доступ к интерфейсам на узлах, подключенным к underlay-сети (`type: Access`) или подключиться через SR-IOV виртуальную функцию (`type: SRIOVVirtualFunction`) с опциональной настройкой (MTU, MAC, spoof checking и т. д.).
+* **Поддержка механизма IPAM**. Опциональный параметр [`spec.ipam`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-ipam) ссылается на [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool). Контроллер и агент выделяют адреса из этого пула и назначают их сетевым интерфейсам узла для данной системной сети.
+* **Отслеживание статусов системных сетей**. Агент отчитывается об адресах узла (включая IP-адреса системных сетей) в ресурсах NodeNetworkStatus. Внутренние ресурсы SystemNetworkNodeNetworkInterfaceAttachment отслеживают привязку каждой системной сети к родительскому интерфейсу на каждом узле.
+
+### Предварительные требования для создания и использования системных сетей
+
+Для создания и использования системных сетей в кластере необходимо выполнение следующих требований:
+
+1. Должна существовать [underlay-сеть](#настройка-и-подключение-underlay-сетей-для-проброса-аппаратных-устройств). Системная сеть подключается к ней с помощью параметра [`spec.underlayNetworkName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-underlaynetworkname). Селекторы, указанные в параметре [`memberNodeNetworkInterfaces`](/modules/sdn/cr.html#underlaynetwork-v1alpha1-spec-membernodenetworkinterfaces) объекта UnderlayNetwork, определяют, какие интерфейсы узлов используются системной сетью.
+1. **Опционально**. Для автоматической выдачи IP-адресов на интерфейсах, принадлежащих системной сети, [создайте пул адресов для системной сети](#создание-пула-ip-адресов-для-настройки-ipam-системной-сети). Его необходимо указать в параметре [`spec.ipam.clusterIPAddressPoolName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-ipam-clusteripaddresspoolname) ресурса SystemNetwork при создании сети.
+
+### Создание системной сети
+
+Для создания системной сети используйте ресурс [SystemNetwork](/modules/sdn/cr.html#systemnetwork). Поддерживается создание системных сетей со следующими типами подключения к underlay-сетям, поверх которых они будут работать:
+
+* [`VLAN`](#тип-vlan) — на интерфейсах, подключенных к underlay-сети (underlay-интерфейсах) создаются VLAN-интерфейсы;
+* [`Access`](#тип-access) — прямой доступ (без VLAN) к интерфейсам на узлах, подключенным к underlay-сети;
+* [`SRIOVVirtualFunction`](#тип-sriovvirtualfunction) — подключение к физическому интерфейсу через SR-IOV.
+
+#### Тип VLAN
+
+Создаёт VLAN-интерфейс на каждом совпавшем underlay-интерфейсе. При создании сети требуется указать VLAN ID (параметр [`spec.vlan.id`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-vlan-id)).
+
+Пример манифеста системной сети с типом подключения к underlay-сети `VLAN`:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: SystemNetwork
+metadata:
+  name: storage-network
+spec:
+  type: VLAN
+  underlayNetworkName: my-underlay
+  vlan:
+    id: 100
+  ipam:
+    clusterIPAddressPoolName: storage-pool
+```
+
+Для проверки статуса сети после создания воспользуйтесь разделом [«Проверка статуса системной сети»](#проверка-статуса-системной-сети).
+
+#### Тип Access
+
+Использует underlay-интерфейс напрямую (без VLAN). Удобно, когда underlay уже представляет один L2-сегмент.
+
+Пример манифеста системной сети с типом подключения к underlay-сети `Access`:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: SystemNetwork
+metadata:
+  name: mgmt-network
+spec:
+  type: Access
+  underlayNetworkName: my-underlay
+  ipam:
+    clusterIPAddressPoolName: mgmt-pool
+```
+
+Для проверки статуса сети после создания воспользуйтесь разделом [«Проверка статуса системной сети»](#проверка-статуса-системной-сети).
+
+#### Тип SRIOVVirtualFunction
+
+Подключение через SR-IOV виртуальную функцию. Физический сетевой интерфейс должен быть в режиме [`Shared`](#создание-underlay-сети-в-режиме-shared), чтобы существовали VF. Опционально можно настроить параметры VF.
+
+Пример манифеста системной сети с типом подключения к underlay-сети `SRIOVVirtualFunction`:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: SystemNetwork
+metadata:
+  name: vf-service-network
+spec:
+  type: SRIOVVirtualFunction
+  underlayNetworkName: dpdk-shared-network
+  sriovVirtualFunction:
+    vlan: 200
+    mtu: 1500
+    linkState: Auto
+  ipam:
+    clusterIPAddressPoolName: vf-pool
+```
+
+Для проверки статуса сети после создания воспользуйтесь разделом [«Проверка статуса системной сети»](#проверка-статуса-системной-сети).
+
+### Создание пула IP-адресов для настройки IPAM системной сети
+
+Чтобы создать пул адресов для настройки IPAM системной сети, используйте ресурс [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool):
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ClusterIPAddressPool
+metadata:
+  name: storage-pool
+spec:
+  leaseTTL: 24h
+  pools:
+    - network: 10.20.30.0/24
+      ranges:
+        - 10.20.30.10-10.20.30.250
+```
+
+При [создании системной сети](#создание-системной-сети) укажите этот пул в параметре [`spec.ipam.clusterIPAddressPoolName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-ipam-clusteripaddresspoolname) ресурса SystemNetwork.
+
+### Проверка статуса системной сети
+
+Для получения списка системных сетей используйте команду:
+
+```shell
+d8 k get systemnetworks
+```
+
+Для просмотра статуса конкретной системной сети используйте команду:
+
+```shell
+d8 k get systemnetwork storage-network -o yaml
+```
+
+В `status` отображаются:
+
+* `nodeAttachementsCount` — общее число привязок (по одной на совпавший интерфейс узла);
+* `readyNodeAttachementsCount` — привязки в состоянии готовности (настроены и работают);
+* `conditions` — например, `Ready`, когда все привязки готовы.
+
+Для просмотра внутренних привязок (по одной на пару «системная сеть + родительский интерфейс») используйте команду:
+
+```shell
+d8 k get systemnetworknodenetworkinterfaceattachments
+```
+
+Для просмотра IP-адресов на уровне узла (включая IP системных сетей) для всех узлов используйте команду (на каждый узел назначается по одному NodeNetworkStatus):
+
+```shell
+d8 k get nodenetworkstatus
+```
+
+Для просмотра информации об IP-адресах на уровне узла (включая IP системных сетей) для конкретного узла используйте команду:
+
+```shell
+d8 k get nodenetworkstatus -l network.deckhouse.io/node-name=worker-01 -o yaml
+```
+
+В `status.addresses` ищите записи с `type: SystemNetworkIP` и полем `systemNetworkName`, значение которого равно имени вашей системной сети.
