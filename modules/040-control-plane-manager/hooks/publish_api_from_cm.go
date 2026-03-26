@@ -93,7 +93,8 @@ func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook
 
 func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	if input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Exists() {
-		input.Logger.Info("Publish API ingress settings are set in moduleconfig control-plane-manager, skipping")
+		input.Logger.Info("Publish API ingress settings are set in moduleconfig control-plane-manager, setting from moduleconfig")
+		input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress"))
 		return nil
 	}
 	input.Logger.Info("Unmarshalling")
