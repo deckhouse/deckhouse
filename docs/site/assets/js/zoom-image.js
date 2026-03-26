@@ -349,12 +349,13 @@ document.addEventListener('DOMContentLoaded', function () {
     img.addEventListener('click', function (e) {
       e.preventDefault();
       const url = img.currentSrc || img.src;
+      const isDesktop = isDesktopViewport();
       const lb = GLightbox({
         elements: [{ href: url, type: 'image' }],
-        touchNavigation: false,
+        touchNavigation: !isDesktop,
         loop: false,
         zoomable: false,
-        draggable: false,
+        draggable: !isDesktop,
         closeButton: true,
         openEffect: 'zoom',
         closeEffect: 'fade'
