@@ -226,6 +226,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controlPlaneManager134VexArtifact":   "imageHash-controlPlaneManager-controlPlaneManager134VexArtifact",
 		"etcd":                                "imageHash-controlPlaneManager-etcd",
 		"etcdBackup":                          "imageHash-controlPlaneManager-etcdBackup",
+		"etcdBackupVexArtifact":               "imageHash-controlPlaneManager-etcdBackupVexArtifact",
+		"etcdVexArtifact":                     "imageHash-controlPlaneManager-etcdVexArtifact",
 		"kubeApiserver130":                    "imageHash-controlPlaneManager-kubeApiserver130",
 		"kubeApiserver130VexArtifact":         "imageHash-controlPlaneManager-kubeApiserver130VexArtifact",
 		"kubeApiserver131":                    "imageHash-controlPlaneManager-kubeApiserver131",
@@ -474,7 +476,9 @@ var DefaultImagesDigests = map[string]interface{}{
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":               "imageHash-registrypackages-amazonEc2Utils220",
 		"containerd1730":                  "imageHash-registrypackages-containerd1730",
+		"containerd1730VexArtifact":       "imageHash-registrypackages-containerd1730VexArtifact",
 		"containerd216":                   "imageHash-registrypackages-containerd216",
+		"containerd216VexArtifact":        "imageHash-registrypackages-containerd216VexArtifact",
 		"crictl130":                       "imageHash-registrypackages-crictl130",
 		"crictl130VexArtifact":            "imageHash-registrypackages-crictl130VexArtifact",
 		"crictl131":                       "imageHash-registrypackages-crictl131",
