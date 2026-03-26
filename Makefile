@@ -579,8 +579,6 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	@cp bin/crd/bases/deckhouse.io_packagerepositories.yaml deckhouse-controller/crds/packagerepository.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
-	@cp bin/crd/bases/deckhouse.io_modulepackages.yaml deckhouse-controller/crds/modulepackage.yaml
-	@cp bin/crd/bases/deckhouse.io_modulepackageversions.yaml deckhouse-controller/crds/modulepackageversion.yaml
 
 ## Generate clientset
 .PHONY: client-gen-generate
