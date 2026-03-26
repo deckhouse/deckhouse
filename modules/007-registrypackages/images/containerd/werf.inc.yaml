@@ -5,7 +5,7 @@
 
 # calculate additional build options for containerd
 # skip for v1 and not CSE. Now we calculate namespaces for integrity check
-# from /tools/build_includes/integrity-check-namespaces.yaml file
+# from /tools/build_includes/integrity-check-namespaces-{Env}.yaml file (e.g. integrity-check-namespaces-CSE.yaml)
 # . is dict with keys:
 #   rootContext - context of template. Should contain Files and Env (werf env) keys
 #   isV2 - bool value that indicates that we render container v2 template
@@ -14,9 +14,10 @@
 {{- $is_v2 := .isV2 -}}
 
   {{- if and (eq $context.Env "CSE") $is_v2 -}}
-    {{- $namespacesSettings := ($context.Files.Get "/tools/build_includes/integrity-check-namespaces.yaml" | fromYaml) }}
+    {{- $namespacesFile := printf "/tools/build_includes/integrity-check-namespaces-%s.yaml" $context.Env -}}
+    {{- $namespacesSettings := ($context.Files.Get $namespacesFile | fromYaml) }}
     {{- if not (hasKey $namespacesSettings "namespaces_for_integrity") -}}
-      {{- fail "file /tools/build_includes/integrity-check-namespaces.yaml has not key namespaces_for_integrity" -}}
+      {{- fail (printf "file %s has not key namespaces_for_integrity" $namespacesFile) -}}
     {{- end }}
 
     {{- $namespaces := get $namespacesSettings "namespaces_for_integrity" | join "," -}}
