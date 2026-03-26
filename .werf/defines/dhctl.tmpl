@@ -59,7 +59,7 @@ import:
   to: /images_digests.json
   before: install
 {{- end }}
-- from: registry.deckhouse.io/container-factory@sha256:5677ff6e1d7cf6897c995dd575c1aafe96805afb534853aa04862a2953eb3977
+- from: {{ index $.Images "minget" }}
   add: /usr/bin/minget
   to: /minget
   before: install
