@@ -519,10 +519,13 @@ spec:
 
 ## Преобразование логов
 
+В `ClusterLogDestination` можно задать цепочку трансформаций по порядку. Доступны действия: `ParseMessage`, `ReplaceKeys`, `ReplaceValue`, `AddLabels`, `DropLabels`.
+
 ### Преобразование логов в структурированный объект
 
 Вы можете использовать трансформацию `ParseMessage`,
 чтобы преобразовать строку в поле `message` в структурированный объект.
+Для формата `String` задаётся регулярное выражение с именованными группами и карта `setLabels`: ключи результата сопоставляются с группами через шаблоны `{{ имя_группы }}`.
 При использовании нескольких трансформаций `ParseMessage`, преобразование строки должно выполняться последним.
 
 ```yaml
@@ -537,7 +540,9 @@ spec:
       parseMessage:
         sourceFormat: String
         string:
-          targetField: msg
+          regex: "^(?P<msg>.*)$"
+          setLabels:
+            msg: "{{ msg }}"
 ```
 
 Пример изначальной записи в логе:
@@ -608,7 +613,7 @@ spec:
   transformations:
     - action: ParseMessage
       parseMessage:
-        sourceFormat: Syslog
+        sourceFormat: SysLog
 ```
 
 Пример изначальной записи в логе:
@@ -766,15 +771,17 @@ spec:
   transformations:
   - action: ParseMessage
     parseMessage:
-      sourseFormat: JSON
+      sourceFormat: JSON
   - action: ParseMessage
     parseMessage:
       sourceFormat: Klog
   - action: ParseMessage
     parseMessage:
       sourceFormat: String
-        string:
-          targetField: "text"
+      string:
+        regex: "^(?P<text>.*)$"
+        setLabels:
+          text: "{{ text }}"
 ```
 
 Пример изначальной записи в логе:
@@ -849,9 +856,80 @@ spec:
 }
 ```
 
+### Замена подстрок в строковых полях
+
+Трансформация `ReplaceValue` заменяет вхождения регулярного выражения `source` в скалярных строковых полях. В `target` можно задать литерал или шаблон с именованными группами `{{ имя }}` из `source`.
+
+> Если замена нужна для поля внутри структурированного `message`, сначала примените `ParseMessage`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: redact-digits
+spec:
+  ...
+  transformations:
+    - action: ReplaceValue
+      replaceValue:
+        source: \d+
+        target: REDACTED
+        labels:
+          - .message
+```
+
+Пример изначальной записи в логе:
+
+```text
+user id 12345 connected from 10.0.0.1
+```
+
+Результат преобразования:
+
+```json
+{... "message": "user id REDACTED connected from REDACTED"
+}
+```
+
+### Добавление лейблов из литералов и шаблонов
+
+Трансформация `AddLabels` добавляет поля со статическими значениями или шаблонами вроде `{{ .pod_labels.app }}`. Трансформации выполняются после `extraLabels`, при конфликте лейблов будет применяться значение из `AddLabels`.
+
+Поле `when` — необязательный список условий, объединяемых логическим И. Слева указывается путь к полю записи лога — строка с ведущей точкой и сегментами через точку (например `.namespace`, `.pod_labels.app`, `.message.level`). Каждый элемент списка может быть:
+
+- сравнением: `.namespace == "production"` допустимы операторы `==`, `!=`, `=~` и `!=~`;
+- проверкой наличия поля: в строке условия указан только путь без оператора, например `.pod_labels.team` (поле должно существовать);
+- проверкой отсутствия: `!.pod_labels.legacy`.
+
+Если значение по пути — массив, для `==` и `=~` условие выполняется, если совпадает хотя бы один элемент; для `!=` и `!=~` — если ни один элемент не совпадает.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: add-env-from-pod
+spec:
+  ...
+  transformations:
+    - action: AddLabels
+      addLabels:
+        when:
+          - '.namespace == "production"'
+        setLabels:
+          .env: prod
+          .source_app: "{{ .pod_labels.app }}"
+```
+
+Результат преобразования (условно, для события в пространстве имён `production` с лейблом пода `app=api`):
+
+```json
+{..."namespace": "production", "pod_labels": { "app": "api" } "env": "prod", "source_app": "api", ...
+}
+```
+
 ### Удаление лейблов
 
-Вы можете использовать трансформацию `DropLabels`, чтобы удалить заданные лейблы из записей логов.
+Вы можете использовать трансформацию `DropLabels`, чтобы удалить заданные лейблы из записей логов. Если задано поле `keepOnly`, каждый элемент списка `labels` указывает путь к **объекту**; внутри этого объекта удаляются все вложенные ключи, кроме перечисленных в `keepOnly` (имена ключей без ведущей точки). Если `keepOnly` не задан — каждый путь из `labels` удаляется целиком.
 
 > Перед применением трансформации `DropLabels` к полю `message` или его вложенным полям
 > необходимо преобразовать запись лога в структурированный объект с помощью трансформации `ParseMessage`.
@@ -905,6 +983,58 @@ spec:
 {... "message": {
   "msg" : "fetching.module.release"
   }
+}
+```
+
+## Отправка логов в Elasticsearch с трансформациями
+
+Пример `ClusterLogDestination` для Elasticsearch: JSON из поля `message` сливается в корень события (`targetLabel: "."`), затем в `pod_labels` точки в именах ключей заменяются на подчёркивания, после чего поле `message` удаляется.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://elasticsearch:9200
+    index: logs-%F
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: JSON
+        targetLabel: "."
+    - action: ReplaceKeys
+      replaceKeys:
+        source: "."
+        target: "_"
+        labels:
+          - .pod_labels
+    - action: DropLabels
+      dropLabels:
+        labels:
+          - .message
+```
+
+Пример записи: приложение на Java пишет структурированный JSON в stdout, а в поле `message` события попадает эта строка; поле `msg` внутри JSON — текст программного лога.
+
+```text
+{... "namespace": "prod", "pod_labels": {"app.kubernetes.io/name": "orders", "app": "api"}, "message": "{\"@timestamp\":\"2025-03-25T10:15:00.123Z\",\"level\":\"INFO\",\"logger\":\"com.example.OrderService\",\"msg\":\"Order id=42 created; user=1001\"}"}
+```
+
+Результат после преобразований: поля из JSON оказываются в корне события, в `pod_labels` точки в именах ключей заменены на подчёркивания, поле `message` удалено.
+
+```json
+{... "namespace": "prod",
+  "pod_labels": {
+    "app_kubernetes_io/name": "orders",
+    "app": "api"
+  },
+  "@timestamp": "2025-03-25T10:15:00.123Z",
+  "level": "INFO",
+  "logger": "com.example.OrderService",
+  "msg": "Order id=42 created; user=1001"
 }
 ```
 

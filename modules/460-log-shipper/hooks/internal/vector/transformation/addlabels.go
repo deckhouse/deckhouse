@@ -89,7 +89,7 @@ func renderWhenLeaf(i int, we *parser.WhenExpr) (string, error) {
 	}
 	switch we.Op {
 	case parser.WhenExists, parser.WhenNotExists:
-		return vrl.AddLabelsWhenPresence.Render(vrl.Args{
+		return vrl.AddLabelsWhenPresenceLeaf.Render(vrl.Args{
 			"i":         i,
 			"pathArray": parser.PathSegmentsToVRLArray(we.LeftPathSegs),
 			"opCmp":     we.Op.PresenceOpCmp(),

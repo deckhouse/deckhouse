@@ -76,7 +76,7 @@ if err == null && value != null && is_string(value) {
 `
 
 // AddLabelsWhenPresenceLeaf is one addLabels when clause: path exists (opCmp ==) or missing (opCmp !=).
-const AddLabelsWhenPresence Rule = `
+const AddLabelsWhenPresenceLeaf Rule = `
 _, err_{{.i}} = get(., {{.pathArray}})
 b_{{.i}} = err_{{.i}} {{.opCmp}} null
 `

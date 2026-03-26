@@ -1108,7 +1108,7 @@ spec:
                                 type: string
                                 x-doc-deprecated: true
                                 pattern: '^[a-zA-Z0-9_\\\.\-]+$'
-                                description: "Deprecated; do not use. If set, legacy behavior: wrap `.message` string into a one-key object under this field. When `targetField` is set, `regex` and `setLabels` are ignored."
+                                description: "Deprecated; do not use. If set, legacy behavior: wrap `.message` string into a one-key object under this field. When `targetField` is set, `regex` and `setLabels` are ignored. Use `regex` and `setLabels` instead (see the `ParseMessage` / `string` example under `transformations` `x-doc-examples`)."
                                 x-doc-examples:
                                   - msg
                                   - raw_line
@@ -1171,11 +1171,10 @@ spec:
                           when:
                             type: array
                             description: |
-                              Optional list of conditions combined with logical AND. Field paths use Vector notation with a leading `.` in comparisons.
+                              Optional list of conditions combined with logical AND. In comparisons, the field path is a leading dot and dot-separated segments (e.g. `.namespace`, `.pod_labels.app`).
                               Each item is either: a comparison `path ==|!=|=~|!=~ value` (regular expression for `=~` / `!=~`), a `path` with no operator or right-hand side (field exists), or `!.path` (field does not exist).
                               If the value at `path` is an array, `==` and `=~` are true when at least one element matches,
-                              and `!=` and `!=~` are true when no element matches. Existence checks (`path` / `!.path`) use the path as a whole (no per-element matching).
-                              For comparisons, the right-hand value must be a literal or quoted string; mustache path templates `{{ .path }}` are not allowed.
+                              and `!=` and `!=~` are true when no element matches. Existence and absence checks (a bare path or `!path`, with no comparison operators) do not iterate array elements; they only test whether a value exists at that full path.
                             x-doc-examples:
                               - '.namespace == "production"'
                               - '.pod_labels.app =~ "^api-"'
