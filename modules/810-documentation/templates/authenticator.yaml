@@ -15,7 +15,7 @@ spec:
     {{- if $moduleGateway }}
   gatewayAPI:
     applicationHTTPRouteCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
-    applicationHTTPRouteListenerSetName: "d8-listenerset"
+    applicationHTTPRouteListenerSetName: "d8-listenerset-documentation"
     {{- end }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
