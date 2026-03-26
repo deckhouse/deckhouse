@@ -44,6 +44,7 @@ const (
 	maxConcurrentReconciles = 1
 	requeueTime             = 30 * time.Second
 	defaultPathSegment      = "version"
+	legacyPathSegment       = "release"
 )
 
 type reconciler struct {
@@ -148,7 +149,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, logger *log.Logge
 	// Determine registry path segment: "version" (default) or "release" (legacy)
 	pathSegment := defaultPathSegment
 	if mpv.Labels[v1alpha1.ModulePackageVersionLabelLegacy] == "true" {
-		pathSegment = "release"
+		pathSegment = legacyPathSegment
 	}
 
 	registryPath := path.Join(packageRepo.Spec.Registry.Repo, mpv.Spec.PackageName, pathSegment)
