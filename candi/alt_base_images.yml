@@ -1,3 +1,4 @@
 # version=v1.0.8
 REGISTRY_PATH: registry.deckhouse.io/container-factory
 builder/golang: "sha256:163bc6f2555b813572804ea77594035546ebcf2b56edb559ae5fb1d461dad514" # from: base/distroless
+minget: "sha256:5677ff6e1d7cf6897c995dd575c1aafe96805afb534853aa04862a2953eb3977" # from: builder/scratch
