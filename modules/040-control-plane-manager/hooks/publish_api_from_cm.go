@@ -130,30 +130,30 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 
 func setBoolPtrValue(input *go_hook.HookInput, key string, value *bool) {
 	if value == nil {
-		fmt.Printf("Skipping key %s: value is nil", key)
+		fmt.Printf("Skipping key %s: value is nil\n", key)
 		return
 	}
 	path := publishAPIIngressConfigPath + key
-	fmt.Printf("Setting %s = %v", path, *value)
+	fmt.Printf("Setting %s = %v\n", path, *value)
 	input.Values.Set(path, *value)
 }
 
 func setStringValue(input *go_hook.HookInput, key string, value string) {
 	if value == "" && key != "https.global.kubeconfigGeneratorMasterCA" {
-		fmt.Printf("Skipping key %s: value is empty", key)
+		fmt.Printf("Skipping key %s: value is empty\n", key)
 		return
 	}
 	path := publishAPIIngressConfigPath + key
-	fmt.Printf("Setting %s = %v", path, value)
+	fmt.Printf("Setting %s = %v\n", path, value)
 	input.Values.Set(path, value)
 }
 
 func setStringSliceValue(input *go_hook.HookInput, key string, value []string) {
 	if len(value) == 0 {
-		fmt.Printf("Skipping key %s: value is empty", key)
+		fmt.Printf("Skipping key %s: value is empty\n", key)
 		return
 	}
 	path := publishAPIIngressConfigPath + key
-	fmt.Printf("Setting %s = %v", path, value)
+	fmt.Printf("Setting %s = %v\n", path, value)
 	input.Values.Set(path, value)
 }
