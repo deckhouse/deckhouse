@@ -451,6 +451,9 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 func (l *Loader) syncModuleVersions(modules []v1alpha1.Module) {
 	for i := range modules {
 		m := &modules[i]
+		if m.IsEmbedded() {
+			continue
+		}
 		if m.Properties.Version == "" {
 			continue
 		}
