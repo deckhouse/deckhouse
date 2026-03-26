@@ -2510,7 +2510,10 @@ select#contact-select {
 // alertslist class
 .alertslist {
   .alertslist__name {
-    display: flex;
+    display: inline-block;
+    word-break: break-all;
+    max-width: 100%;
+    white-space: normal;
     align-items: center;
     font-size: 16px;
     font-weight: variables.$font-weight-bold;
@@ -2532,6 +2535,11 @@ select#contact-select {
     padding: 0 4px;
     border-radius: 4px;
     white-space: nowrap;
+    vertical-align: middle;
+
+    &> span {
+      vertical-align: middle;
+    }
   }
 
   .alertslist__badge_edition {
