@@ -126,7 +126,10 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 		return err
 	}
 
-	if tmpDirLockResult.skipped {
+	// exclude server command for prevent break json log in pod
+	// pod uses json logs, but here json logger not initialized
+	// and we got not json log string
+	if tmpDirLockResult.skipped && tmpDirLockResult.skippedBy != grpcServerCmd {
 		log.InfoF("Tmp dir lock skipped because command '%s' should not acquire tmp dir\n", tmpDirLockResult.skippedBy)
 	}
 
@@ -234,7 +237,7 @@ func (i *actionIniter) skipCheckAcquireTmpLock(c *kingpin.ParseContext) (bool, s
 	// do not lock for grpc server because for singleshot dhctl runner we create
 	// tmp dir in sub directory of server
 	// exporter and autoconverger run in pods
-	// for pods we are using empty dir for /tmp 
+	// for pods we are using empty dir for /tmp
 	// when container is killed (for example by OOM) empty dir was not cleaned
 	// and we got lock error on container restart
 	// we can safe skip tmp dir lock because we cannot get sutuation
