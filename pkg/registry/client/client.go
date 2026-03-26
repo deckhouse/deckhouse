@@ -85,22 +85,7 @@ func NewClientWithOptions(registry string, opts *Options) *Client {
 	// Ensure logger first before using it
 	logger := ensureLogger(opts.Logger)
 
-	remoteOptions := buildRemoteOptions(opts)
-
-	opts.Scheme = strings.ToLower(opts.Scheme)
-	if opts.Scheme == "http" {
-		opts.Insecure = true
-	}
-
-	if opts.TLSSkipVerify {
-		logger.Debug("TLS certificate verification disabled",
-			slog.String("registry", registry))
-	}
-
-	if opts.Insecure {
-		logger.Debug("Insecure HTTP mode enabled",
-			slog.String("registry", registry))
-	}
+	remoteOptions := buildRemoteOptions(registry, opts, logger)
 
 	registry = strings.TrimSuffix(registry, "/")
 

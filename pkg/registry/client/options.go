@@ -18,8 +18,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -63,6 +65,10 @@ type Options struct {
 
 	// Timeout sets the timeout for registry operations
 	Timeout time.Duration
+
+	// Transport overrides the HTTP transport used for registry requests.
+	// When set, CA, TLSSkipVerify and Insecure transport settings are ignored.
+	Transport http.RoundTripper
 
 	// Logger for client operations
 	Logger *log.Logger
@@ -140,6 +146,13 @@ func WithLogger(logger *log.Logger) Option {
 	return func(o *Options) { o.Logger = logger }
 }
 
+// WithCustomTransport sets a custom HTTP transport for registry requests.
+// When provided, it takes precedence over any transport built from CA,
+// TLSSkipVerify, or Insecure settings.
+func WithCustomTransport(transport http.RoundTripper) Option {
+	return func(o *Options) { o.Transport = transport }
+}
+
 // ensureLogger sets a default logger if none is provided
 func ensureLogger(logger *log.Logger) *log.Logger {
 	if logger == nil {
@@ -149,8 +162,9 @@ func ensureLogger(logger *log.Logger) *log.Logger {
 	return logger
 }
 
-// buildRemoteOptions constructs remote options including auth and transport configuration
-func buildRemoteOptions(opts *Options) []remote.Option {
+// buildRemoteOptions constructs remote options including auth and transport configuration.
+// logger is used to warn about ignored options when a custom transport is provided.
+func buildRemoteOptions(registry string, opts *Options, logger *log.Logger) []remote.Option {
 	remoteOptions := []remote.Option{}
 
 	if opts.Auth != nil {
@@ -167,10 +181,46 @@ func buildRemoteOptions(opts *Options) []remote.Option {
 		remoteOptions = append(remoteOptions, remote.WithUserAgent(opts.UserAgent))
 	}
 
-	// Build transport configuration - combine CA and TLS settings into a single transport
+	// Build transport configuration - use custom transport if provided,
+	// otherwise combine CA and TLS settings into a single transport.
+	if opts.Transport != nil {
+		// Warn about options that are silently ignored when a custom transport is set.
+		if opts.CA != "" {
+			logger.Warn("WithCustomTransport is set: CA option will be ignored",
+				slog.String("ca", opts.CA))
+		}
+
+		if opts.TLSSkipVerify {
+			logger.Warn("WithCustomTransport is set: TLSSkipVerify option will be ignored")
+		}
+
+		if opts.Insecure {
+			logger.Warn("WithCustomTransport is set: Insecure option will be ignored")
+		}
+
+		remoteOptions = append(remoteOptions, remote.WithTransport(opts.Transport))
+
+		return remoteOptions
+	}
+
 	if opts.CA != "" || needsCustomTransport(opts) {
 		transport := buildTransport(opts)
 		remoteOptions = append(remoteOptions, remote.WithTransport(transport))
+
+		opts.Scheme = strings.ToLower(opts.Scheme)
+		if opts.Scheme == "http" {
+			opts.Insecure = true
+		}
+
+		if opts.TLSSkipVerify {
+			logger.Debug("TLS certificate verification disabled",
+				slog.String("registry", registry))
+		}
+
+		if opts.Insecure {
+			logger.Debug("Insecure HTTP mode enabled",
+				slog.String("registry", registry))
+		}
 	}
 
 	return remoteOptions
