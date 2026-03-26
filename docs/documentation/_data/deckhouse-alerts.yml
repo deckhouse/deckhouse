@@ -5303,6 +5303,29 @@ alerts:
         ModuleConfig {{ $labels.name }} is outdated.
       severity: "4"
       markupFormat: markdown
+    - name: ModuleDocumentationRenderError
+      sourceFile: modules/810-documentation/monitoring/prometheus-rules/docs-builder.yaml
+      moduleUrl: 810-documentation
+      module: documentation
+      edition: ce
+      description: |-
+        An error occurred while rendering documentation for the `{{ $labels.module }}` module.
+
+        Check the `ModuleDocumentation` resource status for details:
+
+        ```bash
+        d8 k get moduledocumentations {{ $labels.module }} -o yaml
+        ```
+
+        Check Deckhouse logs for more information:
+
+        ```bash
+        d8 k -n d8-system logs -f -l app=deckhouse | grep -i "documentation"
+        ```
+      summary: |
+        Documentation rendering failed for module {{ $labels.module }}.
+      severity: "6"
+      markupFormat: markdown
     - name: ModuleHasDeprecatedUpdatePolicy
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
