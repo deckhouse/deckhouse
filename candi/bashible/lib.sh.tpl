@@ -52,6 +52,8 @@ bb-discover-node-name() {
 
 
 {{- define "bb-minget" -}}
+{{- $images := .images | default (dict) -}}
+{{- $registryPackages := get $images "registrypackages" | default (dict) -}}
 bb-minget-install() {
   local minget_path="/opt/deckhouse/bin/minget"
   local minget_b64='{{ .mingetB64 }}'
@@ -67,7 +69,7 @@ bb-minget-install() {
 
 bb-rpp-get-install() {
   local rpp_client_path="/opt/deckhouse/bin/rpp-get"
-  local rpp_client_digest="{{ .images.registrypackages.rppGet }}"
+  local rpp_client_digest="{{ get $registryPackages "rppGet" }}"
   local bootstrap_cluster_uuid="${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID}"
   local bootstrap_path_prefix=""
   local installed_store="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}"

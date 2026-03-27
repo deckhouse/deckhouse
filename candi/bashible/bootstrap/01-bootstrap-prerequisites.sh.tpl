@@ -19,17 +19,15 @@ set -Eeo pipefail
 # candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl
 
 {{- $packagesProxy := .packagesProxy | default (dict) }}
-{{- $clusterMasterEndpoints := .clusterMasterEndpoints | default (list) }}
 {{- $clusterMasterKubeAPIEndpoints := list }}
 {{- $clusterMasterRPPAddresses := list }}
 {{- $clusterMasterBootstrapRPPAddresses := list }}
-{{- range $endpoint := $clusterMasterEndpoints }}
-  {{- $address := get $endpoint "address" }}
+{{- range $endpoint := .clusterMasterEndpoints | default (list) }}
   {{- if hasKey $endpoint "kubeApiPort" }}
-    {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $address (get $endpoint "kubeApiPort")) }}
+    {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) }}
   {{- end }}
-  {{- $clusterMasterRPPAddresses = append $clusterMasterRPPAddresses (printf "%s:%v" $address (get $endpoint "rppServerPort")) }}
-  {{- $clusterMasterBootstrapRPPAddresses = append $clusterMasterBootstrapRPPAddresses (printf "%s:%v" $address (get $endpoint "rppBootstrapServerPort")) }}
+  {{- $clusterMasterRPPAddresses = append $clusterMasterRPPAddresses (printf "%s:%v" $endpoint.address $endpoint.rppServerPort) }}
+  {{- $clusterMasterBootstrapRPPAddresses = append $clusterMasterBootstrapRPPAddresses (printf "%s:%v" $endpoint.address $endpoint.rppBootstrapServerPort) }}
 {{- end }}
 {{- $candi := "candi/bashible/lib.sh.tpl" -}}
 {{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
