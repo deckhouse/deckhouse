@@ -2759,6 +2759,16 @@ alerts:
         Node {{ $labels.node }} cannot obtain disruption approval.
       severity: "8"
       markupFormat: markdown
+    - name: D8ObsoletePublishAPIInUserAuthn
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/migrate-publish-api.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: "Publish API ingress settings are being migrated from `mc user-authn` to `mc control-plane-manager`.\n\nTo complete the migration, follow the steps below:\n\n1. Review current settings for `publishAPI` in resource `modeleConfig user-authn`.\n2. Update `moduleConfig control-plane-manager` spec to `spec.version: 3`, if the `mc` exists. This may require migrating `settings.apiserver.loadBalancer` to newer `settings.apiserver.publishAPI.loadBalancer` if it's set.\n3. If `moduleConfig` does not exist, create it via `d8`: \n  ```\n  d8 s module enable control-plane-manager\n  ```\n  And patch in the version:\n  ```\n  d8 k patch moduleconfig control-plane-manager --type merge \\\n  -p '{\"spec\":{\"version\":3}}'\n  ```\n4. Patch settings into `moduleConfig control-plane-manager` from temporary configMap by executing the following script:\n  ```bash\n  d8 k patch moduleconfig control-plane-manager --type merge \\\n-p \"$(cat <<EOF\n{\"spec\": {\"settings\": {\"apiserver\": {\"publishAPI\": {\"ingress\": \\\n$(d8 k -n kube-system get cm d8-publishapi-config-migration -ojsonpath='{.data.config}')\n      }}}}}\nEOF\n)\"\n  ```\n5. Remove obsolete `spec.settings.publishAPI` from `moduleConfig user-authn`"
+      summary: |
+        Obsolete Publish API settings in user-authn need to be migrated.
+      severity: "6"
+      markupFormat: markdown
     - name: D8OkmeterAgentPodIsNotReady
       sourceFile: modules/500-okmeter/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 500-okmeter
