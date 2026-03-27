@@ -184,7 +184,7 @@ spec:
             - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
               value: "false"
             - name: USE_NELM
-              value: "true"
+              value: "false"
             - name: LOG_TYPE
               value: "json"
             - name: DECKHOUSE_HA
