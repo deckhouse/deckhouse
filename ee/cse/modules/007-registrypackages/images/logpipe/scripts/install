@@ -3,18 +3,5 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 set -Eeo pipefail
-
-# Stop/disable/remove old logrotate timer and service if they exist, now we use logpipe
-# Delete this block after 1.73.1 CSE was released
-systemctl stop containerd-deckhouse-logger-logrotate.timer 2>/dev/null || true
-systemctl disable containerd-deckhouse-logger-logrotate.timer 2>/dev/null || true
-systemctl stop containerd-deckhouse-logger-logrotate.service 2>/dev/null || true
-
-rm -f /etc/systemd/system/containerd-deckhouse-logger-logrotate.timer
-rm -f /etc/systemd/system/containerd-deckhouse-logger-logrotate.service
-rm -f /etc/logrotate.d/containerd-integrity.conf
-rm -f /var/lib/logrotate/containerd-deckhouse-logger-logrotate.status
-
-
 mkdir -p /opt/deckhouse/bin
 cp -f logpipe /opt/deckhouse/bin
