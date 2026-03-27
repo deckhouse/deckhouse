@@ -48,3 +48,6 @@ Upstream PR: https://github.com/dexidp/dex/pull/4363
 Fix CVEs:
 - CVE-2025-47914
 - CVE-2025-58181
+- CVE-2026-33186
+- CVE-2026-26958 
+- GHSA-479m-364c-43vc
