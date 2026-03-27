@@ -12,7 +12,8 @@
     ],
     "skipFixingImports": true,
     "buildIncludes": {
-      "skipCandi": true
+      "skipCandi": true,
+      "skipModules": true
     },
     "title": "Community Edition"
   },
