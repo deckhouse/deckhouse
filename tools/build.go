@@ -236,7 +236,6 @@ func writeSections(settings writeSettings) {
 	}
 }
 
-
 func deleteRevisionFiles(template string, edition string) {
 	files, err := filepath.Glob(includePath(fmt.Sprintf(template, edition)))
 	if err != nil {
@@ -329,7 +328,7 @@ func writeStageDepsSections(settings writeSettings) {
 		log.Fatalf("globbing: %v", err)
 	}
 	addNewFileEntry := func(file string) {
-		if !strings.Contains(file, "hooks") {
+		if !strings.Contains(file, "/hooks") && !strings.Contains(file, "/apis") {
 			return
 		}
 		// modules/500-okmeter/hooks empty if FE override one files ee/fe/modules/500-okmeter/hooks/update_agent_image.go
@@ -409,6 +408,7 @@ func writeStageDepsSections(settings writeSettings) {
 			}
 		} else {
 			addNewFileEntry(file + "/hooks")
+			addNewFileEntry(file + "/apis")
 		}
 	}
 	var result []byte
