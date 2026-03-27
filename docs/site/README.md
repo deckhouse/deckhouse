@@ -397,8 +397,7 @@ Below are some data structures used in the Jekyll projects.
       ],
       "skipFixingImports": true,
       "buildIncludes": {
-        "skipCandi": true,
-        "skipModules": true
+        "skipCandi": true
       }
     },
     "be": {

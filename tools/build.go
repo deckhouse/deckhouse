@@ -120,7 +120,7 @@ func writeExcludedModules(settings writeSettings, modules map[string]string, ed 
 	for _, name := range ed.ExcludeModules {
 		modulePath, ok := modules[name]
 		if !ok {
-			log.Print(fmt.Sprintf("Not found module path for module %s\n", modulePath))
+			log.Printf("Not found module path for module %s\n", modulePath)
 			continue
 		}
 		resultArr = append(resultArr, fmt.Sprintf("- %s/**", modulePath))
@@ -136,7 +136,7 @@ func writeExcludedModules(settings writeSettings, modules map[string]string, ed 
 func writeSections(settings writeSettings) {
 	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
 
-	if settings.Dir == "" || settings.Prefix == "" {
+	if settings.Dir == "" {
 		if err := writeToFile(saveTo, nil); err != nil {
 			log.Fatal(err)
 		}
@@ -258,11 +258,17 @@ func writeSections(settings writeSettings) {
 }
 
 func deleteRevisionFiles(edition string) {
-	files, err := filepath.Glob(includePath(fmt.Sprintf("*-%s.yaml", edition)))
+	files, err := filepath.Glob(includePath(fmt.Sprintf("modules*-%s.yaml", edition)))
 	if err != nil {
 		log.Fatalf("globbing: %v", err)
 	}
-
+	for _, file := range files {
+		_ = os.Remove(file)
+	}
+	files, err = filepath.Glob(includePath(fmt.Sprintf("candi*-%s.yaml", edition)))
+	if err != nil {
+		log.Fatalf("globbing: %v", err)
+	}
 	for _, file := range files {
 		_ = os.Remove(file)
 	}
@@ -368,7 +374,6 @@ func cwd() string {
 
 type buildIncludes struct {
 	SkipCandi   *bool `yaml:"skipCandi,omitempty"`
-	SkipModules *bool `yaml:"skipModules,omitempty"`
 }
 
 type edition struct {
@@ -471,7 +476,6 @@ func (e *executor) executeEdition(editionName string) {
 		if bi == nil {
 			bi = &buildIncludes{
 				SkipCandi:   ptr.To(false),
-				SkipModules: ptr.To(false),
 			}
 		}
 
@@ -517,20 +521,18 @@ func (e *executor) executeEdition(editionName string) {
 			AvailableModules: availableModules,
 		}
 
-		if bi.SkipModules == nil || !*bi.SkipModules {
-			writeSettingsModules.Prefix = prefix
-			writeSettingsModules.Dir = "modules"
-			writeSettingsModules.StageDependencies = stageDependenciesFile
+		writeSettingsModules.Prefix = prefix
+		writeSettingsModules.Dir = "modules"
+		writeSettingsModules.StageDependencies = stageDependenciesFile
 
-			writeSettingsExcludeFileName.Prefix = prefix
-			writeSettingsExcludeFileName.Dir = "modules"
-			writeSettingsExcludeFileName.ExcludePaths = defaultModulesExcludes
+		writeSettingsExcludeFileName.Prefix = prefix
+		writeSettingsExcludeFileName.Dir = "modules"
+		writeSettingsExcludeFileName.ExcludePaths = defaultModulesExcludes
 
-			writeSettingStageDeps.Prefix = prefix
-			writeSettingStageDeps.Dir = "modules"
-			writeSettingStageDeps.StageDependencies = stageDependencies
-			writeSettingStageDeps.ExcludePaths = nothingButGoHooksExcludes
-		}
+		writeSettingStageDeps.Prefix = prefix
+		writeSettingStageDeps.Dir = "modules"
+		writeSettingStageDeps.StageDependencies = stageDependencies
+		writeSettingStageDeps.ExcludePaths = nothingButGoHooksExcludes
 
 		writeSections(writeSettingsModules)
 		writeSections(writeSettingsExcludeFileName)
