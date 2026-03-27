@@ -16,7 +16,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: user-authn
     namespace: d8-{{ .Chart.Name }}
     sectionName: dex
   rules:
@@ -44,7 +44,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: user-authn
     namespace: d8-{{ .Chart.Name }}
     sectionName: dex-redirect
   rules:

@@ -24,7 +24,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: user-authn
     namespace: d8-{{ .Chart.Name }}
     sectionName: api
   rules:
@@ -107,7 +107,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: user-authn
     namespace: d8-{{ .Chart.Name }}
     sectionName: api
   rules:
@@ -167,7 +167,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: user-authn
     namespace: d8-{{ .Chart.Name }}
     sectionName: api-redirect
   rules:

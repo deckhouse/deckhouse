@@ -6,7 +6,7 @@ apiVersion: gateway.networking.x-k8s.io/v1alpha1
 kind: XListenerSet
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
-  name: d8-listenerset-documentation
+  name: documentation-documentation
   namespace: d8-system
 spec:
   listeners:
@@ -64,7 +64,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset-documentation
+    name: documentation-documentation
     namespace: d8-system
     sectionName: documentation
   rules:
@@ -125,7 +125,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset-documentation
+    name: documentation-documentation
     namespace: d8-system
     sectionName: documentation
   rules:
@@ -163,7 +163,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset-documentation
+    name: documentation-documentation
     namespace: d8-system
     sectionName: documentation-redirect
   rules:

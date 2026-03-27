@@ -36,7 +36,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: istio
     namespace: d8-{{ $.Chart.Name }}
     sectionName: istio
   rules:
@@ -67,7 +67,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: istio
     namespace: d8-{{ $.Chart.Name }}
     sectionName: istio-redirect
   rules:

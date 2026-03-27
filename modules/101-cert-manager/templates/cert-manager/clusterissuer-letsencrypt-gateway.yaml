@@ -20,11 +20,10 @@ spec:
     - http01:
         gatewayHTTPRoute:
           parentRefs:
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
-            name: d8-listenerset
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
-            name: d8-listenerset-documentation
+          - group: gateway.networking.k8s.io
+            kind: Gateway
+            name: {{ $mdouleGateway.name }}
+            namespace: {{ $moduleGateway.namespace }}
+            section: d8-http-default
   {{- end }}
 {{- end }}
