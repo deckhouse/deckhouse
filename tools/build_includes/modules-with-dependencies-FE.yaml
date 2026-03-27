@@ -31,6 +31,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/021-cni-cilium/requirements
+  to: /deckhouse/modules/021-cni-cilium/requirements
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/030-cloud-provider-aws/hooks
   to: /deckhouse/modules/030-cloud-provider-aws/hooks
   excludePaths:
@@ -71,6 +79,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/030-cloud-provider-yandex/requirements
+  to: /deckhouse/modules/030-cloud-provider-yandex/requirements
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/031-local-path-provisioner/hooks
   to: /deckhouse/modules/031-local-path-provisioner/hooks
   excludePaths:
@@ -87,8 +103,24 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/035-cni-flannel/requirements
+  to: /deckhouse/modules/035-cni-flannel/requirements
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/035-cni-simple-bridge/hooks
   to: /deckhouse/modules/035-cni-simple-bridge/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /modules/035-cni-simple-bridge/requirements
+  to: /deckhouse/modules/035-cni-simple-bridge/requirements
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
@@ -119,8 +151,24 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/040-control-plane-manager/requirements
+  to: /deckhouse/modules/040-control-plane-manager/requirements
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/040-node-manager/hooks
   to: /deckhouse/modules/040-node-manager/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /modules/040-node-manager/requirements
+  to: /deckhouse/modules/040-node-manager/requirements
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
@@ -145,6 +193,14 @@
         - '**/*'
 - add: /modules/110-istio/hooks
   to: /deckhouse/modules/110-istio/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /modules/110-istio/requirements
+  to: /deckhouse/modules/110-istio/requirements
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
@@ -215,6 +271,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/340-monitoring-kubernetes/requirements
+  to: /deckhouse/modules/340-monitoring-kubernetes/requirements
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/340-monitoring-ping/hooks
   to: /deckhouse/modules/340-monitoring-ping/hooks
   excludePaths:
@@ -233,6 +297,14 @@
         - '**/*'
 - add: /modules/402-ingress-nginx/hooks
   to: /deckhouse/modules/402-ingress-nginx/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /modules/402-ingress-nginx/requirements
+  to: /deckhouse/modules/402-ingress-nginx/requirements
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
@@ -329,6 +401,14 @@
         - '**/*'
 - add: /ee/se/modules/380-metallb/hooks
   to: /deckhouse/modules/380-metallb/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/se/modules/380-metallb/requirements
+  to: /deckhouse/modules/380-metallb/requirements
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'

@@ -328,7 +328,7 @@ func writeStageDepsSections(settings writeSettings) {
 		log.Fatalf("globbing: %v", err)
 	}
 	addNewFileEntry := func(file string) {
-		if !strings.Contains(file, "/hooks") && !strings.Contains(file, "/apis") {
+		if !strings.Contains(file, "/hooks") && !strings.Contains(file, "/apis") && !strings.Contains(file, "/requirements") {
 			return
 		}
 		// modules/500-okmeter/hooks empty if FE override one files ee/fe/modules/500-okmeter/hooks/update_agent_image.go
@@ -409,6 +409,7 @@ func writeStageDepsSections(settings writeSettings) {
 		} else {
 			addNewFileEntry(file + "/hooks")
 			addNewFileEntry(file + "/apis")
+			addNewFileEntry(file + "/requirements")
 		}
 	}
 	var result []byte
