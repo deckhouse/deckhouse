@@ -6,7 +6,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/002-deckhouse/hooks
   to: /deckhouse/modules/002-deckhouse/hooks
   excludePaths:
@@ -14,7 +14,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/015-admission-policy-engine/hooks
   to: /deckhouse/modules/015-admission-policy-engine/hooks
   excludePaths:
@@ -22,7 +22,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/021-cni-cilium/hooks
   to: /deckhouse/modules/021-cni-cilium/hooks
   excludePaths:
@@ -30,7 +30,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/030-cloud-provider-aws/hooks
   to: /deckhouse/modules/030-cloud-provider-aws/hooks
   excludePaths:
@@ -38,7 +38,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/030-cloud-provider-azure/hooks
   to: /deckhouse/modules/030-cloud-provider-azure/hooks
   excludePaths:
@@ -46,7 +46,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/030-cloud-provider-dvp/hooks
   to: /deckhouse/modules/030-cloud-provider-dvp/hooks
   excludePaths:
@@ -54,7 +54,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/030-cloud-provider-gcp/hooks
   to: /deckhouse/modules/030-cloud-provider-gcp/hooks
   excludePaths:
@@ -62,7 +62,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/030-cloud-provider-yandex/hooks
   to: /deckhouse/modules/030-cloud-provider-yandex/hooks
   excludePaths:
@@ -70,7 +70,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/031-local-path-provisioner/hooks
   to: /deckhouse/modules/031-local-path-provisioner/hooks
   excludePaths:
@@ -78,7 +78,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/035-cni-flannel/hooks
   to: /deckhouse/modules/035-cni-flannel/hooks
   excludePaths:
@@ -86,7 +86,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/035-cni-simple-bridge/hooks
   to: /deckhouse/modules/035-cni-simple-bridge/hooks
   excludePaths:
@@ -94,7 +94,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/036-kube-proxy/hooks
   to: /deckhouse/modules/036-kube-proxy/hooks
   excludePaths:
@@ -102,7 +102,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/038-registry/hooks
   to: /deckhouse/modules/038-registry/hooks
   excludePaths:
@@ -110,7 +110,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/040-control-plane-manager/hooks
   to: /deckhouse/modules/040-control-plane-manager/hooks
   excludePaths:
@@ -118,7 +118,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/040-node-manager/hooks
   to: /deckhouse/modules/040-node-manager/hooks
   excludePaths:
@@ -126,7 +126,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/042-kube-dns/hooks
   to: /deckhouse/modules/042-kube-dns/hooks
   excludePaths:
@@ -134,7 +134,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/101-cert-manager/hooks
   to: /deckhouse/modules/101-cert-manager/hooks
   excludePaths:
@@ -142,7 +142,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/110-istio/hooks
   to: /deckhouse/modules/110-istio/hooks
   excludePaths:
@@ -150,7 +150,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/140-user-authz/hooks
   to: /deckhouse/modules/140-user-authz/hooks
   excludePaths:
@@ -158,7 +158,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/150-user-authn/hooks
   to: /deckhouse/modules/150-user-authn/hooks
   excludePaths:
@@ -166,7 +166,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/160-multitenancy-manager/hooks
   to: /deckhouse/modules/160-multitenancy-manager/hooks
   excludePaths:
@@ -174,7 +174,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/300-prometheus/hooks
   to: /deckhouse/modules/300-prometheus/hooks
   excludePaths:
@@ -182,7 +182,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/301-prometheus-metrics-adapter/hooks
   to: /deckhouse/modules/301-prometheus-metrics-adapter/hooks
   excludePaths:
@@ -190,7 +190,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler/hooks
   to: /deckhouse/modules/302-vertical-pod-autoscaler/hooks
   excludePaths:
@@ -198,7 +198,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/340-monitoring-custom/hooks
   to: /deckhouse/modules/340-monitoring-custom/hooks
   excludePaths:
@@ -206,7 +206,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/340-monitoring-kubernetes/hooks
   to: /deckhouse/modules/340-monitoring-kubernetes/hooks
   excludePaths:
@@ -214,7 +214,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/340-monitoring-ping/hooks
   to: /deckhouse/modules/340-monitoring-ping/hooks
   excludePaths:
@@ -222,7 +222,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/400-descheduler/hooks
   to: /deckhouse/modules/400-descheduler/hooks
   excludePaths:
@@ -230,7 +230,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/402-ingress-nginx/hooks
   to: /deckhouse/modules/402-ingress-nginx/hooks
   excludePaths:
@@ -238,7 +238,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/460-log-shipper/hooks
   to: /deckhouse/modules/460-log-shipper/hooks
   excludePaths:
@@ -246,7 +246,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/462-loki/hooks
   to: /deckhouse/modules/462-loki/hooks
   excludePaths:
@@ -254,7 +254,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/500-cilium-hubble/hooks
   to: /deckhouse/modules/500-cilium-hubble/hooks
   excludePaths:
@@ -262,7 +262,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/500-okmeter/hooks
   to: /deckhouse/modules/500-okmeter/hooks
   excludePaths:
@@ -270,7 +270,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/500-openvpn/hooks
   to: /deckhouse/modules/500-openvpn/hooks
   excludePaths:
@@ -278,7 +278,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/500-upmeter/hooks
   to: /deckhouse/modules/500-upmeter/hooks
   excludePaths:
@@ -286,7 +286,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/600-namespace-configurator/hooks
   to: /deckhouse/modules/600-namespace-configurator/hooks
   excludePaths:
@@ -294,7 +294,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/600-secret-copier/hooks
   to: /deckhouse/modules/600-secret-copier/hooks
   excludePaths:
@@ -302,7 +302,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/800-deckhouse-tools/hooks
   to: /deckhouse/modules/800-deckhouse-tools/hooks
   excludePaths:
@@ -310,7 +310,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /modules/810-documentation/hooks
   to: /deckhouse/modules/810-documentation/hooks
   excludePaths:
@@ -318,7 +318,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/be/modules/350-node-local-dns/hooks
   to: /deckhouse/modules/350-node-local-dns/hooks
   excludePaths:
@@ -326,7 +326,7 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se/modules/380-metallb/hooks
   to: /deckhouse/modules/380-metallb/hooks
   excludePaths:
@@ -334,4 +334,4 @@
     - '**/*.sh'
   stageDependencies:
     install:
-        - '**/*.go'
+        - '**/*'

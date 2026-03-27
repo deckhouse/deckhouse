@@ -67,12 +67,6 @@ var nothingButGoHooksExcludes = []string{
 	"**/*.sh",
 }
 
-var stageDependencies = map[string][]string{
-	"install": {
-		"**/*.go",
-	},
-}
-
 var stageDependenciesFile = map[string][]string{
 	"install": {
 		"**/*",
@@ -622,7 +616,7 @@ func (e *executor) executeEdition(editionName string) {
 
 		writeSettingStageDeps.Prefix = prefix
 		writeSettingStageDeps.Dir = "modules"
-		writeSettingStageDeps.StageDependencies = stageDependencies
+		writeSettingStageDeps.StageDependencies = stageDependenciesFile
 		writeSettingStageDeps.ExcludePaths = nothingButGoHooksExcludes
 
 		writeSections(writeSettingsModules)
