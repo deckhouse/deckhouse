@@ -63,21 +63,6 @@ var defaultModulesExcludes = []string{
 }
 
 var nothingButGoHooksExcludes = []string{
-	"images",
-	"templates",
-	"charts",
-	"crds",
-	"docs",
-	"monitoring",
-	"openapi",
-	"oss.yaml",
-	"cloud-instance-manager",
-	"values_matrix_test.yaml",
-	"values.yaml",
-	".helmignore",
-	"candi",
-	"Chart.yaml",
-	".namespace",
 	"**/*_test.go",
 	"**/*.sh",
 }
@@ -252,6 +237,112 @@ func writeSections(settings writeSettings) {
 		}
 	}
 
+	if err := writeToFile(saveTo, result); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func writeStageDepsSections(settings writeSettings) {
+	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
+	if settings.Dir == "" {
+		if err := writeToFile(saveTo, nil); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	var addEntries []addEntry
+	prefix := filepath.Join(workDir, settings.Prefix)
+	searchDir := filepath.Join(prefix, settings.Dir, "*")
+	files, err := filepath.Glob(searchDir)
+	if err != nil {
+		log.Fatalf("globbing: %v", err)
+	}
+	addNewFileEntry := func(file string) {
+		if !strings.Contains(file, "hooks") {
+			return
+		}
+		hooksPathRegex := regexp.MustCompile(`\d+-[\w\-]+\/hooks`)
+		if settings.SaveTo == modulesWithExcludeFileName && hooksPathRegex.Match([]byte(file)) {
+			return
+		}
+		info, err := os.Stat(file)
+		if err == nil {
+			if info.IsDir() {
+				addEntries = append(addEntries, addEntry{
+					Add:               strings.TrimPrefix(file, workDir),
+					To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+					ExcludePaths:      settings.ExcludePaths,
+					StageDependencies: settings.StageDependencies,
+				})
+			}
+			if info.Mode().IsRegular() {
+				addEntries = append(addEntries, addEntry{
+					Add:               strings.TrimPrefix(file, workDir),
+					To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+					ExcludePaths:      nil,
+					StageDependencies: stageDependenciesFile,
+				})
+			}
+		}
+	}
+
+	for _, file := range files {
+		info, err := os.Stat(file)
+		if err != nil {
+			continue
+		}
+		if !info.IsDir() {
+			continue
+		}
+		if len(settings.ExcludedModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			// skip excluded modules
+			if _, ok := settings.ExcludedModules[moduleName]; ok {
+				continue
+			}
+		}
+		if len(settings.AvailableModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			// include only modules from AvailableModules list
+			if _, ok := settings.AvailableModules[moduleName]; !ok {
+				continue
+			}
+		}
+		buildFile := filepath.Join(file, ".build.yaml")
+		ok, err := fileExists(buildFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if ok {
+			content, err := os.ReadFile(buildFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if len(content) == 0 {
+				continue
+			}
+			scanner := bufio.NewScanner(bytes.NewReader(content))
+			for scanner.Scan() {
+				s := strings.TrimSpace(scanner.Text())
+				additionalFiles, err := filepath.Glob(filepath.Join(file, s))
+				if err != nil {
+					log.Fatalf("globbing: %v", err)
+				}
+				for _, additionalFile := range additionalFiles {
+					addNewFileEntry(additionalFile)
+				}
+			}
+		} else {
+			addNewFileEntry(file + "/hooks")
+		}
+	}
+	var result []byte
+	if len(addEntries) != 0 {
+		result, err = yaml.Marshal(addEntries)
+		if err != nil {
+			log.Fatalf("converting entries to YAML: %v", err)
+		}
+	}
 	if err := writeToFile(saveTo, result); err != nil {
 		log.Fatal(err)
 	}
@@ -532,7 +623,7 @@ func (e *executor) executeEdition(editionName string) {
 
 		writeSections(writeSettingsModules)
 		writeSections(writeSettingsExcludeFileName)
-		writeSections(writeSettingStageDeps)
+		writeStageDepsSections(writeSettingStageDeps)
 		writeSections(writeSettingCandi)
 		writeCandiCloudProvidersSections(writeSettingCandiCloudProviders)
 
