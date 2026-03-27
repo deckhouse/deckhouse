@@ -93,17 +93,10 @@ func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook
 
 func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	if input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Exists() {
-		input.Logger.Info("Publish API ingress settings are set in moduleconfig control-plane-manager, setting from moduleconfig")
-
-		fmt.Println(input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress"))
-		configValues := input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Value()
-		fmt.Println(configValues)
-		fmt.Println(input.Values.Get("controlPlaneManager.apiserver.publishAPI.ingress"))
-		input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", configValues)
+		input.Logger.Info("Publish API ingress settings are set in moduleconfig control-plane-manager, setting values from said moduleconfig")
+		input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Value())
 		return nil
 	}
-	input.Logger.Info("Unmarshalling")
-
 	publishAPIConfigSnaps, err := sdkobjectpatch.UnmarshalToStruct[Config](input.Snapshots, "cm_publishapi_config_migration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cm_publishapi_config_migration snapshot: %w", err)
@@ -117,7 +110,6 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	publishAPIConfig := publishAPIConfigSnaps[0]
 
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
-	fmt.Println(publishAPIConfig)
 
 	setBoolPtrValue(input, "enabled", publishAPIConfig.Enabled)
 	setStringPtrValue(input, "ingressClass", publishAPIConfig.IngressClass)
@@ -136,32 +128,23 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 
 func setBoolPtrValue(input *go_hook.HookInput, key string, value *bool) {
 	if value == nil {
-		fmt.Printf("Skipping key %s: not set in json\n", key)
 		return
 	}
-	path := publishAPIIngressConfigPath + key
-	fmt.Printf("Setting %s = %v\n", path, *value)
-	input.Values.Set(path, *value)
+	input.Values.Set(publishAPIIngressConfigPath+key, *value)
 }
 
 // setStringPtrValue sets the value if the key was present in JSON.
 // nil means key was absent, non-nil (including pointer to "") means key was explicitly set.
 func setStringPtrValue(input *go_hook.HookInput, key string, value *string) {
 	if value == nil {
-		fmt.Printf("Skipping key %s: not set in json\n", key)
 		return
 	}
-	path := publishAPIIngressConfigPath + key
-	fmt.Printf("Setting %s = %q\n", path, *value)
-	input.Values.Set(path, *value)
+	input.Values.Set(publishAPIIngressConfigPath+key, *value)
 }
 
 func setStringSliceValue(input *go_hook.HookInput, key string, value []string) {
 	if value == nil {
-		fmt.Printf("Skipping key %s: not set in json\n", key)
 		return
 	}
-	path := publishAPIIngressConfigPath + key
-	fmt.Printf("Setting %s = %v\n", path, value)
-	input.Values.Set(path, value)
+	input.Values.Set(publishAPIIngressConfigPath+key, value)
 }
