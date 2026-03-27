@@ -24,6 +24,9 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Completed')].message
       name: MSG
       type: string
+    - jsonPath: .status.completionTime
+      name: CompletionTime
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:

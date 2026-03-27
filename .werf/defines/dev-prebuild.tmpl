@@ -35,8 +35,8 @@
   - deckhouse-controller
   - caps-deckhouse-controller
 - from: {{ index $.Images "libs/ncurses" }}
-  add: /usr/share/terminfo/
-  to: /usr/share/terminfo/
+  add: /usr/share/terminfo
+  to: /usr/share/terminfo
   before: install
 - from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
