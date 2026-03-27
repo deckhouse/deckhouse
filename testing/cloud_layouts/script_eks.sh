@@ -123,8 +123,8 @@ function bootstrap_eks() {
   >&2 echo "Run opentofu to create nodes for EKS cluster ..."
 #  pushd "$cwd"
   cd $cwd
-  /bin/opentofu init -input=false -plugin-dir=/usr/local/share/opentofu/plugins || return $?
-  /bin/opentofu apply -state="${opentofu_state_file}" -auto-approve -no-color | tee "$cwd/opentofu.log" || return $?
+  /image/bin/opentofu init -input=false -plugin-dir=/usr/local/share/opentofu/plugins || return $?
+  /image/bin/opentofu apply -state="${opentofu_state_file}" -auto-approve -no-color | tee "$cwd/opentofu.log" || return $?
 #  popd
 
   if ! cluster_endpoint="$(tail -n5 "$cwd/opentofu.log" | grep "cluster_endpoint" | cut -d "=" -f2 | tr -d " \"")" ; then
@@ -311,8 +311,8 @@ function destroy_eks_infra() {
 
 #  pushd "$cwd"
   cd $cwd
-  /bin/opentofu init -input=false -plugin-dir=/usr/local/share/opentofu/plugins || return $?
-  /bin/opentofu destroy -state="${opentofu_state_file}" -auto-approve -no-color | tee "$cwd/opentofu.log" || return $?
+  /image/bin/opentofu init -input=false -plugin-dir=/usr/local/share/opentofu/plugins || return $?
+  /image/bin/opentofu destroy -state="${opentofu_state_file}" -auto-approve -no-color | tee "$cwd/opentofu.log" || return $?
 #  popd
 
   return $exitCode
