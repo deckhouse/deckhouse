@@ -34,6 +34,7 @@ shell:
   - cd /src
   - git apply /patches/*.patch --verbose
   - echo "replace github.com/vmware/cloud-provider-for-cloud-director => /src/ccm" >> go.mod
+  - echo "replace golang.org/x/net => golang.org/x/net v0.17.0" >> go.mod
   - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
