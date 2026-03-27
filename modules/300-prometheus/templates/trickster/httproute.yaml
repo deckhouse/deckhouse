@@ -8,12 +8,9 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "trickster")) | nindent 2 }}
   annotations:
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
     alb-gateway.network.deckhouse.io/rewrite-target: /\2
     alb-gateway.network.deckhouse.io/session-affinity: '{"mode": "cookie", "path": "/", "ttl": 0}'
     alb-gateway.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
-    alb-gateway.network.deckhouse.io/tls-secrets: d8-monitoring/{{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
@@ -35,7 +32,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: prometheus
     namespace: d8-monitoring
     sectionName: grafana
   rules:
