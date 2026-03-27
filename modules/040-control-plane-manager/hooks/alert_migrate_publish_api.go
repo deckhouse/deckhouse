@@ -66,9 +66,7 @@ func applyModuleConfigFilterForAlerts(obj *unstructured.Unstructured) (go_hook.F
 }
 
 func checkMcForNonMigratedConfig(_ context.Context, input *go_hook.HookInput) error {
-	// Check ModuleConfig version and pools
 	input.MetricsCollector.Expire("D8ObsoletePublishAPIInUserAuthn")
-	input.MetricsCollector.Expire("D8ControlPlaneManagerUpdateMCVersionRequired")
 
 	mcSnaps := input.Snapshots.Get("module_config_authn")
 	if len(mcSnaps) != 1 {
@@ -82,21 +80,10 @@ func checkMcForNonMigratedConfig(_ context.Context, input *go_hook.HookInput) er
 		return fmt.Errorf("cannot unmarshal ModuleConfig: %w", err)
 	}
 
-	if mc.Spec.Version >= 2 {
-		if mc.Spec.Settings.PublishAPI != nil {
-			input.MetricsCollector.Set("d8_obsolete_publishapi_in_user_authn", 1,
-				map[string]string{},
-				metrics.WithGroup("D8ObsoletePublishAPIInUserAuthn"))
-		}
-
-		return nil
+	if mc.Spec.Settings.PublishAPI != nil {
+		input.MetricsCollector.Set("d8_obsolete_publishapi_in_user_authn", 1,
+			map[string]string{},
+			metrics.WithGroup("D8ObsoletePublishAPIInUserAuthn"))
 	}
-	if mc.Spec.Version <= 2 {
-		input.MetricsCollector.Set("d8_control_plane_manager_update_mc_version_required", 1,
-			map[string]string{}, metrics.WithGroup("D8ControlPlaneManagerUpdateMCVersionRequired"))
-
-		return nil
-	}
-
 	return nil
 }
