@@ -123,7 +123,7 @@ shell:
   - luarocks-5.1 install lua-iconv-7-3.src.rock
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -332,11 +332,11 @@ import:
   to: /wait-shutdown
   before: setup
 # required by the wait-shutdown utility
-- image: tools/procps
+- from: {{ index $.Images "tools/procps" }}
   add: /bin/pkill
   to: /usr/bin/pkill
   before: setup
-- image: tools/procps
+- from: {{ index $.Images "tools/procps" }}
   add: /bin/pgrep
   to: /usr/bin/pgrep
   before: setup
@@ -423,7 +423,6 @@ shell:
 imageSpec:
   config:
     workingDir: /
-    user: "{{ $controllerUser }}"
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]

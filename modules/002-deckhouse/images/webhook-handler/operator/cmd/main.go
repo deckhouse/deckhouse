@@ -30,7 +30,6 @@ import (
 	"syscall"
 	"time"
 
-	soapp "github.com/flant/shell-operator/pkg/app"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -107,23 +106,6 @@ func main() {
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
-
-	soapp.ValidatingWebhookSettings.ConfigurationName = ReturnNotEmpty(
-		soapp.ValidatingWebhookSettings.ConfigurationName,
-		os.Getenv("VALIDATING_WEBHOOK_CONFIGURATION_NAME"))
-	// TODO: use env var instead of hardcoded value
-	// os.Getenv("VALIDATING_WEBHOOK_SERVICE_NAME")
-	soapp.ValidatingWebhookSettings.ServiceName = ReturnNotEmpty("test", "test")
-	soapp.ValidatingWebhookSettings.ServerCertPath = ReturnNotEmpty(
-		soapp.ValidatingWebhookSettings.ServerCertPath,
-		os.Getenv("VALIDATING_WEBHOOK_SERVER_CERT"))
-	soapp.ValidatingWebhookSettings.ServerKeyPath = ReturnNotEmpty(
-		soapp.ValidatingWebhookSettings.ServerKeyPath,
-		os.Getenv("VALIDATING_WEBHOOK_SERVER_KEY"))
-	soapp.ValidatingWebhookSettings.CAPath = ReturnNotEmpty(
-		soapp.ValidatingWebhookSettings.CAPath,
-		os.Getenv("VALIDATING_WEBHOOK_CA"))
-	soapp.Namespace = ReturnNotEmpty("default", os.Getenv("SHELL_OPERATOR_NAMESPACE"))
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 

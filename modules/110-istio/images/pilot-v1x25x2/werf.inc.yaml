@@ -27,7 +27,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:

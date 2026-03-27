@@ -39,15 +39,15 @@ import:
   owner: 1337
   group: 1337
   after: setup
-- image: libs/glibc-v2.41
+- from: {{ index $.Images "libs/glibc-v2.41" }}
   add: /lib64/libc.so.6
   to: /lib64/libc.so.6
   before: install
-- image: libs/glibc-v2.41
+- from: {{ index $.Images "libs/glibc-v2.41" }}
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
   before: install
-- image: libs/glibc-v2.41
+- from: {{ index $.Images "libs/glibc-v2.41" }}
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   before: install
@@ -84,7 +84,7 @@ imageSpec:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
@@ -184,11 +184,11 @@ shell:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
-fromImage: builder/golang-bookworm
+from: {{ index $.Images "builder/golang-bookworm" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
