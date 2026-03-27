@@ -25,7 +25,8 @@ data:
         service_name d8-kube-dns
         port_name dns
         expire 10s
-        health_check 330ms
+        upstream_read_timeout 330ms
+        health_check domain {{ printf "%s." (.Values.global.discovery.clusterDomain) }} # override the queried domain for health checks
         prefer_udp
         slow_threshold 300ms # show slow query and export metrics coredns_kubeforward_slow_requests_total
 {{- if .Values.nodeLocalDns.enableLogs }}

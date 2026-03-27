@@ -37,12 +37,16 @@ import (
 
 var ErrImageNotFound = errors.New("image not found")
 
+// isNotFound reports whether err is an HTTP 404 response from the registry.
+func isNotFound(err error) bool {
+	var transportErr *transport.Error
+	return errors.As(err, &transportErr) && transportErr.StatusCode == http.StatusNotFound
+}
+
 // Client provides methods to interact with container registries
 type Client struct {
 	// e.g., "registry.deckhouse.io"
 	registryHost string
-	// custom transport for TLS/insecure settings
-	transport http.RoundTripper
 	// e.g., [deckhouse,ee,modules] (built from chained WithSegment calls)
 	segments []string
 	// cached joined segments for scope path
@@ -59,43 +63,42 @@ type Client struct {
 	logger *log.Logger
 }
 
-// NewClientWithOptions creates a new container registry client with advanced options
-func NewClientWithOptions(registry string, opts *Options) *Client {
-	// Ensure logger first before using it
-	logger := ensureLogger(opts.Logger)
+// New creates a new container registry client using functional options.
+//
+//	client.New("registry.example.com",
+//		client.WithAuth(auth),
+//		client.WithCA(caPEM),
+//		client.WithTLSSkipVerify(),
+//	)
+func New(registry string, opts ...Option) *Client {
+	o := &Options{}
+	for _, opt := range opts {
+		opt(o)
+	}
 
-	remoteOptions := buildRemoteOptions(opts)
+	return NewClientWithOptions(registry, o)
+}
+
+// NewClientWithOptions creates a new container registry client with advanced options.
+// Prefer New with functional options for new code.
+func NewClientWithOptions(host string, opts *Options) *Client {
+	logger := resolveLogger(opts.Logger)
+
+	// Normalize host and scheme before building remote options.
+	host = strings.TrimSuffix(host, "/")
 
 	opts.Scheme = strings.ToLower(opts.Scheme)
 	if opts.Scheme == "http" {
 		opts.Insecure = true
 	}
 
-	if opts.TLSSkipVerify {
-		logger.Debug("TLS certificate verification disabled",
-			slog.String("registry", registry))
-	}
-
-	if opts.Insecure {
-		logger.Debug("Insecure HTTP mode enabled",
-			slog.String("registry", registry))
-	}
-
-	registry = strings.TrimSuffix(registry, "/")
-
-	client := &Client{
-		registryHost: registry,
-		options:      remoteOptions,
+	return &Client{
+		registryHost: host,
+		options:      buildRemoteOptions(opts, logger),
 		timeout:      opts.Timeout,
 		logger:       logger,
 		insecure:     opts.Insecure,
 	}
-
-	if needsCustomTransport(opts) {
-		client.transport = configureTransport(opts)
-	}
-
-	return client
 }
 
 // nameOptions returns name.Option slice for parsing references
@@ -125,7 +128,7 @@ func (c *Client) withContext(ctx context.Context) remote.Option {
 // WithSegment creates a new client with an additional scope path segment
 // This method can be chained to build complex paths:
 // client.WithSegment("deckhouse").WithSegment("ee").WithSegment("modules")
-func (c *Client) WithSegment(segments ...string) registry.Client {
+func (c *Client) WithSegment(segments ...string) *Client {
 	for idx, scope := range segments {
 		segments[idx] = strings.TrimSuffix(strings.TrimPrefix(scope, "/"), "/")
 	}
@@ -139,8 +142,8 @@ func (c *Client) WithSegment(segments ...string) registry.Client {
 		segments:     append(append([]string(nil), c.segments...), segments...),
 		options:      c.options,
 		logger:       c.logger,
-		transport:    c.transport,
 		insecure:     c.insecure,
+		timeout:      c.timeout,
 	}
 }
 
@@ -274,9 +277,7 @@ func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.Imag
 
 	img, err := remote.Image(ref, imageOptions...)
 	if err != nil {
-		var transportErr *transport.Error
-		if errors.As(err, &transportErr) && transportErr.StatusCode == http.StatusNotFound {
-			// Image not found, which is expected for non-vulnerable images
+		if isNotFound(err) {
 			return nil, fmt.Errorf("%w: %w", ErrImageNotFound, err)
 		}
 
@@ -327,8 +328,6 @@ func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts .
 // GetImageConfig retrieves the image config file containing labels and metadata
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile, error) {
-	_ = c.GetRegistry()
-
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
@@ -536,32 +535,108 @@ func (c *Client) CheckImageExists(ctx context.Context, tag string) error {
 
 	_, err = remote.Head(ref, opts...)
 	if err != nil {
-		var transportErr *transport.Error
-		if errors.As(err, &transportErr) && transportErr.StatusCode == http.StatusNotFound {
-			// Image not found, which is expected for non-vulnerable images
-			return ErrImageNotFound
+		if isNotFound(err) {
+			return fmt.Errorf("%w: %w", ErrImageNotFound, err)
 		}
 
-		logentry.Debug("get Head error", log.Err(err))
-	}
+		logentry.Debug("HEAD failed, retrying with GET", log.Err(err))
 
-	if err != nil {
 		_, err = remote.Get(ref, opts...)
 	}
 
 	if err != nil {
-		var transportErr *transport.Error
-		if errors.As(err, &transportErr) && transportErr.StatusCode == http.StatusNotFound {
-			// Image not found, which is expected for non-vulnerable images
-			return ErrImageNotFound
+		if isNotFound(err) {
+			return fmt.Errorf("%w: %w", ErrImageNotFound, err)
 		}
-
-		logentry.Debug("get Get error", log.Err(err))
 
 		return err
 	}
 
 	logentry.Debug("Image exists")
+
+	return nil
+}
+
+// DeleteTag deletes a specific tag from the registry.
+// Returns ErrImageNotFound if the tag does not exist.
+// The repository is determined by the chained WithSegment() calls.
+func (c *Client) DeleteTag(ctx context.Context, tag string) error {
+	fullRegistry := c.GetRegistry()
+
+	logentry := c.logger.With(
+		slog.String("registry_host", c.registryHost),
+		slog.String("segments", c.constructedSegments),
+		slog.String("tag", tag),
+	)
+
+	logentry.Debug("Deleting tag")
+
+	ref, err := name.ParseReference(fullRegistry+":"+tag, c.nameOptions()...)
+	if err != nil {
+		return fmt.Errorf("failed to parse reference: %w", err)
+	}
+
+	opts := append([]remote.Option{}, c.options...)
+	opts = append(opts, c.withContext(ctx))
+
+	if err := remote.Delete(ref, opts...); err != nil {
+		if isNotFound(err) {
+			return fmt.Errorf("%w: %w", ErrImageNotFound, err)
+		}
+
+		return fmt.Errorf("failed to delete tag: %w", err)
+	}
+
+	logentry.Debug("Tag deleted successfully")
+
+	return nil
+}
+
+// TagImage adds a new tag pointing to the same manifest as sourceTag without
+// re-uploading any layers. This is a single manifest PUT — the standard
+// promotion pattern (e.g. :latest → :v1.2.3).
+// The repository is determined by the chained WithSegment() calls.
+func (c *Client) TagImage(ctx context.Context, sourceTag, destTag string) error {
+	fullRegistry := c.GetRegistry()
+
+	logentry := c.logger.With(
+		slog.String("registry_host", c.registryHost),
+		slog.String("segments", c.constructedSegments),
+		slog.String("source_tag", sourceTag),
+		slog.String("dest_tag", destTag),
+	)
+
+	logentry.Debug("Retagging image")
+
+	srcRef, err := name.ParseReference(fullRegistry+":"+sourceTag, c.nameOptions()...)
+	if err != nil {
+		return fmt.Errorf("failed to parse source reference: %w", err)
+	}
+
+	opts := append([]remote.Option{}, c.options...)
+	opts = append(opts, c.withContext(ctx))
+
+	// Fetch the manifest descriptor without downloading any layers.
+	desc, err := remote.Get(srcRef, opts...)
+	if err != nil {
+		if isNotFound(err) {
+			return fmt.Errorf("%w: %w", ErrImageNotFound, err)
+		}
+
+		return fmt.Errorf("failed to get source manifest: %w", err)
+	}
+
+	dstTag, err := name.NewTag(fullRegistry+":"+destTag, c.nameOptions()...)
+	if err != nil {
+		return fmt.Errorf("failed to parse destination tag: %w", err)
+	}
+
+	// remote.Tag performs a single manifest PUT with the same bytes — no layer uploads.
+	if err := remote.Tag(dstTag, desc, opts...); err != nil {
+		return fmt.Errorf("failed to tag image: %w", err)
+	}
+
+	logentry.Debug("Image retagged successfully", slog.String("dest_tag", destTag))
 
 	return nil
 }

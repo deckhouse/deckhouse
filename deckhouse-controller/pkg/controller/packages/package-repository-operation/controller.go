@@ -168,6 +168,27 @@ func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.Pac
 		op.Labels[v1alpha1.PackagesRepositoryOperationLabelRepository] = op.Spec.PackageRepositoryName
 	}
 
+	// Ensure ownerReference to PackageRepository is set (for cascade deletion via GC).
+	// Auto-created operations get this at creation time, manually created ones need enrichment.
+	if !hasPackageRepositoryOwnerRef(op) {
+		repo := new(v1alpha1.PackageRepository)
+		if err := r.client.Get(ctx, client.ObjectKey{Name: op.Spec.PackageRepositoryName}, repo); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, fmt.Errorf("get package repository for owner ref: %w", err)
+			}
+			// Repository not found - skip ownerRef, operation will be processed without it
+		} else {
+			update = true
+			op.OwnerReferences = append(op.OwnerReferences, metav1.OwnerReference{
+				APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
+				Kind:       v1alpha1.PackageRepositoryGVK.Kind,
+				Name:       repo.Name,
+				UID:        repo.UID,
+				Controller: &[]bool{true}[0],
+			})
+		}
+	}
+
 	if update {
 		if err := r.client.Patch(ctx, op, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("patch operation labels: %w", err)
@@ -177,6 +198,16 @@ func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.Pac
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// hasPackageRepositoryOwnerRef checks if the operation already has an ownerReference to a PackageRepository.
+func hasPackageRepositoryOwnerRef(op *v1alpha1.PackageRepositoryOperation) bool {
+	for _, ref := range op.OwnerReferences {
+		if ref.Kind == v1alpha1.PackageRepositoryGVK.Kind {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {

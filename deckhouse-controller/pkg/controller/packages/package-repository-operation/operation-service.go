@@ -528,14 +528,42 @@ type failedVersion struct {
 func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, packageName, version string) error {
 	apvName := v1alpha1.MakeApplicationPackageVersionName(s.repo.Name, packageName, version)
 
+	logger := s.logger.With(slog.String("package version", apvName))
+
 	pkgVersion := &v1alpha1.ApplicationPackageVersion{}
 	err := s.client.Get(ctx, types.NamespacedName{Name: apvName}, pkgVersion)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("get application package version: %w", err)
 	}
-
 	// Version already exists
 	if err == nil {
+		isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry]
+		if !ok || isBundleExistInRegistry != "false" {
+			return nil
+		}
+		// Version marked as not exist in registry
+		logger.Debug("version marked as not exist in registry, checking if bundle image exists")
+
+		if err := s.svc.Package(packageName).CheckImageExists(ctx, version); err != nil {
+			if errors.Is(err, regClient.ErrImageNotFound) {
+				logger.Debug("bundle image not found")
+				return nil
+			}
+			return fmt.Errorf("check bundle image exists: %w", err)
+		}
+
+		logger.Debug("bundle image exists, marking package version as draft")
+
+		original := pkgVersion.DeepCopy()
+
+		pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "true"
+		pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelDraft] = "true"
+
+		err = s.client.Patch(ctx, pkgVersion, client.MergeFrom(original))
+		if err != nil {
+			return fmt.Errorf("update application package version: %w", err)
+		}
+
 		return nil
 	}
 

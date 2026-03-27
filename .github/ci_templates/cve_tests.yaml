@@ -143,27 +143,27 @@ remove_labels:
 - name: Archive report artifacts
   if: success()
   run: |
-    tar -zcvf ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
+    tar -zcvf ${{ env.WORKDIR }}/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
 - name: Create fail artifact
   if: failure()
   run: |
-    echo "Trivy tests for ${{ steps.scan_type.outputs.tag }} have failed." > "${{ env.WORKDIR }}/artifacts/${{ steps.scan_type.outputs.tag }}_test-failed.txt"
-    tar -zcvf ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
+    echo "Trivy tests for ${{ steps.scan_type.outputs.tag }} have failed." > "${{ env.WORKDIR }}/${{ steps.scan_type.outputs.tag }}_test-failed.txt"
+    tar -zcvf ${{ env.WORKDIR }}/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
 - name: Upload report artifacts
   if: success()
   uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
   with:
     name: cve-reports
     path: |
-      ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz
+      ${{ env.WORKDIR }}/trivy_json_reports.tar.gz
 - name: Upload fail artifact
   if: failure()
   uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
   with:
     name: cve-reports
     path: |
-      ${{ env.WORKDIR }}/artifacts/${{ steps.scan_type.outputs.tag }}_test-failed.txt
-      ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz
+      ${{ env.WORKDIR }}/${{ steps.scan_type.outputs.tag }}_test-failed.txt
+      ${{ env.WORKDIR }}/trivy_json_reports.tar.gz
 - name: Remove workdir
   run: |
     rm -r ${{ env.WORKDIR }}

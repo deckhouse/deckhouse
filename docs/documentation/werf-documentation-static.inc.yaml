@@ -81,11 +81,11 @@ shell:
         rm -rf /app/_site/documentation/compare/
 {{ end }}
 import:
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: setup
