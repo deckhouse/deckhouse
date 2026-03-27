@@ -33,9 +33,12 @@ import (
 	v1 "k8s.io/component-base/logs/api/v1"
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	deckhousev1alpha1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "caps-controller-manager/api/deckhouse.io/v1alpha2"
@@ -96,10 +99,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	webhookserver := webhook.NewServer(webhook.Options{
+		Port: 9443,
+	})
+
+	metricsServerOptions := metricsserver.Options{
+		BindAddress:   metricsAddr,
+		SecureServing: false,
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Metrics:                metricsServerOptions,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "controller-leader-election-caps",
@@ -117,7 +128,10 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
-		SyncPeriod: &syncPeriod,
+		Cache: cache.Options{
+			SyncPeriod: &syncPeriod,
+		},
+		WebhookServer: webhookserver,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

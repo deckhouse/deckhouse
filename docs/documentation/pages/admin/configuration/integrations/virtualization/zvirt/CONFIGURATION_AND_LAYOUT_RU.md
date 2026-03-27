@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка zVirt
 permalink: ru/admin/integrations/virtualization/zvirt/layout.html
 lang: ru
 ---
@@ -25,7 +25,7 @@ lang: ru
 apiVersion: deckhouse.io/v1
 kind: ZvirtClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa AAAABBBB"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 clusterID: "b46372e7-0d52-40c7-9bbf-fda31e187088"
 provider:
   server: "<SERVER>"

@@ -1,4 +1,4 @@
-{{ $appRelPath := printf "%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
+{{ $appRelPath := printf "/%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
 {{ $appAbsPath := printf "/deckhouse/modules/038-%s/images/%s/app" $.ModuleName $.ImageName }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
@@ -15,7 +15,7 @@ shell:
     - mkdir -m 1777 /src/tmp
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"

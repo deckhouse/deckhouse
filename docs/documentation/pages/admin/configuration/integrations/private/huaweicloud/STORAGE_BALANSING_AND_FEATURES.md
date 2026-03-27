@@ -1,5 +1,5 @@
 ---
-title: Storage and load balancing
+title: Storage and load balancing in Huawei Cloud
 permalink: en/admin/integrations/private/huaweicloud/storage.html
 ---
 

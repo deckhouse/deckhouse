@@ -1,5 +1,6 @@
 ---
-title: "Secret management"
+title: "Secret management web interface"
+description: "Stronghold web interface for managing secrets in Deckhouse Kubernetes Platform. Configuring secrets engines, managing authentication methods, access control, and security policies."
 permalink: en/user/web/stronghold.html
 ---
 

@@ -30,7 +30,9 @@ import (
 
 // Cleanup runs the cleanup script on StaticInstance.
 func (c *Client) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	switch instanceScope.GetPhase() {
+	phase := instanceScope.GetPhase()
+
+	switch phase {
 	case
 		deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping,
 		deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
@@ -43,11 +45,35 @@ func (c *Client) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope
 		if err != nil {
 			return errors.Wrap(err, "failed to clean up StaticInstance from cleaning phase")
 		}
+	case
+		deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
+		if !canSkipCleanupForPendingPhase(instanceScope) {
+			return errors.New("StaticInstance is pending outside delete flow")
+		}
+		// During machine deletion, StaticInstance can still be Pending.
+		// In this case cleanup is a no-op and deletion should proceed.
+		instanceScope.Logger.V(1).Info("Skipping cleanup for StaticInstance in pending phase during deletion", "phase", phase)
 	default:
 		return errors.New("StaticInstance is not running or cleaning")
 	}
 
 	return nil
+}
+
+func canSkipCleanupForPendingPhase(instanceScope *scope.InstanceScope) bool {
+	if instanceScope.MachineScope == nil || instanceScope.MachineScope.StaticMachine == nil || instanceScope.MachineScope.Machine == nil {
+		return false
+	}
+
+	if instanceScope.MachineScope.StaticMachine.DeletionTimestamp.IsZero() || instanceScope.MachineScope.Machine.DeletionTimestamp.IsZero() {
+		return false
+	}
+
+	if instanceScope.Instance.Status.MachineRef == nil {
+		return true
+	}
+
+	return instanceScope.Instance.Status.MachineRef.UID == instanceScope.MachineScope.StaticMachine.UID
 }
 
 func (c *Client) cleanupFromBootstrappingOrRunningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {

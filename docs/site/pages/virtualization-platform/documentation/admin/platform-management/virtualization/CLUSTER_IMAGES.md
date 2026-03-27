@@ -5,57 +5,71 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/vi
 
 ## Images
 
-The [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) resource is used to upload virtual machine images to the in-cluster storage, enabling the creation of disks for virtual machines. This resource is available in any namespace or project within the cluster.
+The [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource is designed for uploading virtual machine images and subsequently using them to create virtual machine disks.
 
-The process of creating an image involves the following steps:
+{% alert level="warning" %}
+Please note that [VirtualImage](/modules/virtualization/cr.html#virtualimage) is a project resource, which means it is only available within the project or namespace where it was created. To use images at the cluster level, a separate resource is provided — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+{% endalert %}
 
-1. The user creates a [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) resource.
-1. Once created, the image is automatically uploaded from the source specified in the specification to the storage (DVCR).
-1. Once the upload is complete, the resource becomes available for disk creation.
+When connected to a virtual machine, the image is accessed in read-only mode.
+
+The image creation process includes the following steps:
+
+- The user creates a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource.
+- After creation, the image is automatically downloaded from the source specified in the specification to DVCR or PVC storage, depending on the type.
+- Once the download is complete, the resource becomes available for disk creation.
 
 There are different types of images:
 
-- **ISO image**: An installation image used for the initial installation of an operating system (OS). Such images are released by OS vendors and are used for installation on physical and virtual servers.
-- **Preinstalled disk image**: contains an already installed and configured operating system ready for use after the virtual machine is created. You can obtain pre-configured images from the distribution developers' resources or create them manually.
+- **ISO image**: an installation image used for the initial installation of an operating system. Such images are released by OS vendors and are used for installation on physical and virtual servers.
+- **Preinstalled disk image**: contains an already installed and configured operating system ready for use after the virtual machine is created. Ready images can be obtained from the distribution developers' resources or created by yourself.
 
-Examples of resources for obtaining pre-installed virtual machine disk images:
+Examples of resources for obtaining virtual machine images:
 
-- Ubuntu
-  - [24.04 LTS (Noble Numbat)](https://cloud-images.ubuntu.com/noble/current/)
-  - [22.04 LTS (Jammy Jellyfish)](https://cloud-images.ubuntu.com/jammy/current/)
-  - [20.04 LTS (Focal Fossa)](https://cloud-images.ubuntu.com/focal/current/)
-  - [Minimal images](https://cloud-images.ubuntu.com/minimal/releases/)
-- Debian
-  - [12 bookworm](https://cdimage.debian.org/images/cloud/bookworm/latest/)
-  - [11 bullseye](https://cdimage.debian.org/images/cloud/bullseye/latest/)
-- AlmaLinux
-  - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/)
-  - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/)
-- RockyLinux
-  - [9.5](https://dl.rockylinux.org/vault/rocky/9.5/images/x86_64/)
-  - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/)
-- CentOS
-  - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/)
-  - [9 Stream](https://cloud.centos.org/centos/9-stream/x86_64/images/)
-  - [8 Stream](https://cloud.centos.org/centos/8-stream/x86_64/)
-  - [8](https://cloud.centos.org/centos/8/x86_64/images/)
+<a id="image-resources-table"></a>
+
+| Distribution                                                                      | Default user.             |
+| --------------------------------------------------------------------------------- | ------------------------- |
+| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
+| [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
+| [CentOS](https://cloud.centos.org/centos/)                                        | `cloud-user`              |
+| [Debian](https://cdimage.debian.org/images/cloud/)                                | `debian`                  |
+| [Rocky](https://rockylinux.org/download/)                                         | `rocky`                   |
+| [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`                  |
 
 The following preinstalled image formats are supported:
 
-- `qcow2`
-- `raw`
-- `vmdk`
-- `vdi`
+- qcow2
+- raw
+- vmdk
+- vdi
 
-Image files can also be compressed with one of the following compression algorithms: `gz`, `xz`.
+Image files can also be compressed with one of the following compression algorithms: gz, xz.
 
-After creating the resource, the type and size of the image are automatically determined and reflected in the resource's status.
+Once a share is created, the image type and size are automatically determined, and this information is reflected in the share status.
 
-Images can be downloaded from various sources, such as HTTP servers hosting image files or container registries. Additionally, there is an option to upload images directly from the command line using the `curl` utility.
+The image status shows two sizes:
 
-Images can also be created based on other images or virtual machine disks.
+- `STOREDSIZE` (storage size): The amount of space the image actually occupies in storage (DVCR or PVC). For images uploaded in a compressed format (for example, `.gz` or `.xz`), this value is smaller than the unpacked size.
+- `UNPACKEDSIZE` (unpacked size): The image size after unpacking. It is used when creating a disk from the image and defines the minimum disk size that can be created.
 
-For a complete description of the configuration parameters for the `ClusterVirtualImage` resource, refer to [the documentation](/modules/virtualization/cr.html#clustervirtualimage).
+{% alert level="info" %}
+When creating a disk from an image, set the disk size to `UNPACKEDSIZE` or larger .  
+If the size is not specified, the disk will be created with a size equal to `UNPACKEDSIZE`.
+{% endalert %}
+
+Images can be downloaded from various sources, such as HTTP servers where image files are located or container registries. It is also possible to download images directly from the command line using the curl utility.
+
+Images can be created from other images and virtual machine disks.
+
+Project image two storage options are supported:
+
+- `ContainerRegistry`: The default type in which the image is stored in `DVCR`.
+- `PersistentVolumeClaim`: The type that uses `PVC` as the storage for the image. This option is preferred if you are using storage that supports `PVC` fast cloning, which allows you to create disks from images faster.
+
+{% alert level="warning" %}
+Using an image with the `storage: PersistentVolumeClaim` parameter is only supported for creating disks in the same storage class (StorageClass).
+{% endalert %}
 
 ## Increasing the size of DVCR
 
@@ -111,6 +125,207 @@ To increase the disk size for DVCR, you need to set a larger size in the virtual
     dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
     ```
 
+## Creating a golden image for Linux
+
+A golden image is a pre-configured virtual machine image that can be used to quickly create new VMs with pre-installed software and settings.
+
+1. Create a virtual machine, install the required software on it, and perform all necessary configurations.
+
+1. Install and configure qemu-guest-agent (recommended):
+
+   - For RHEL/CentOS:
+
+   ```bash
+   yum install -y qemu-guest-agent
+   ```
+
+   - For Debian/Ubuntu:
+
+   ```bash
+   apt-get update
+   apt-get install -y qemu-guest-agent
+   ```
+
+1. Enable and start the service:
+
+   ```bash
+   systemctl enable qemu-guest-agent
+   systemctl start qemu-guest-agent
+   ```
+
+1. Set the VM run policy to [`runPolicy: AlwaysOnUnlessStoppedManually`](/modules/virtualization/stable/cr.html#virtualmachine-v1alpha2-spec-runpolicy). This is required to be able to shut down the VM.
+
+1. Prepare the image. Clean unused filesystem blocks:
+
+   ```bash
+   fstrim -v /
+   fstrim -v /boot
+   ```
+
+1. Clean network settings:
+
+   - For RHEL:
+
+   ```bash
+   nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
+   rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
+   ```
+
+   - For Debian/Ubuntu:
+
+   ```bash
+   rm -f /etc/network/interfaces.d/*
+   ```
+
+1. Clean system identifiers:
+
+   ```bash
+   echo -n > /etc/machine-id
+   rm -f /var/lib/dbus/machine-id
+   ln -s /etc/machine-id /var/lib/dbus/machine-id
+   ```
+
+1. Remove SSH host keys:
+
+   ```bash
+   rm -f /etc/ssh/ssh_host_*
+   ```
+
+1. Clean systemd journal:
+
+   ```bash
+   journalctl --vacuum-size=100M --vacuum-time=7d
+   ```
+
+1. Clean package manager cache:
+
+   - For RHEL:
+
+   ```bash
+   yum clean all
+   ```
+
+   - For Debian/Ubuntu:
+
+   ```bash
+   apt-get clean
+   ```
+
+1. Clean temporary files:
+
+   ```bash
+   rm -rf /tmp/*
+   rm -rf /var/tmp/*
+   ```
+
+1. Clean logs:
+
+   ```bash
+   find /var/log -name "*.log" -type f -exec truncate -s 0 {} \;
+   ```
+
+1. Clean command history:
+
+   ```bash
+   history -c
+   ```
+
+   For RHEL: reset and restore SELinux contexts (choose one of the following):
+
+   - Option 1: Check and restore contexts immediately:
+
+     ```bash
+     restorecon -R /
+     ```
+
+   - Option 2: Schedule relabel on next boot:
+
+     ```bash
+     touch /.autorelabel
+     ```
+
+1. Verify that `/etc/fstab` uses UUID or LABEL instead of device names (e.g., `/dev/sdX`). To check, run:
+
+   ```bash
+   blkid
+   cat /etc/fstab
+   ```
+
+1. Clean cloud-init state, logs, and seed (recommended method):
+
+   ```bash
+   cloud-init clean --logs --seed
+   ```
+
+1. Perform final synchronization and buffer cleanup:
+
+   ```bash
+   sync
+   echo 3 > /proc/sys/vm/drop_caches
+   ```
+
+1. Shut down the virtual machine:
+
+   ```bash
+   poweroff
+   ```
+
+1. Create a `VirtualImage` resource from the prepared VM disk:
+
+   ```bash
+   d8 k apply -f -<<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualImage
+   metadata:
+     name: <image-name>
+     namespace: <namespace>
+   spec:
+     dataSource:
+       type: ObjectRef
+       objectRef:
+         kind: VirtualDisk
+         name: <source-disk-name>
+   EOF
+   ```
+
+   Alternatively, create a `ClusterVirtualImage` to make the image available at the cluster level for all projects:
+
+    ```bash
+    d8 k apply -f -<<EOF
+    apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: ClusterVirtualImage
+    metadata:
+      name: <image-name>
+    spec:
+      dataSource:
+        type: ObjectRef
+        objectRef:
+          kind: VirtualDisk
+          name: <source-disk-name>
+          namespace: <namespace>
+    EOF
+    ```
+
+1. Create a VM disk from the created image:
+
+   ```bash
+   d8 k apply -f -<<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualDisk
+   metadata:
+     name: <vm-disk-name>
+     namespace: <namespace>
+   spec:
+     dataSource:
+       type: ObjectRef
+       objectRef:
+         kind: VirtualImage
+         name: <image-name>
+   EOF
+   ```
+
+After completing these steps, you will have a golden image that can be used to quickly create new virtual machines with pre-installed software and configurations.
+
 ### Creating an image from an HTTP server
 
 Let's explore how to create a cluster image.
@@ -153,12 +368,14 @@ Let's explore how to create a cluster image.
 
 After creation, the `ClusterVirtualImage` resource may have the following states (phases):
 
-- `Pending` — waiting for all dependent resources required for image creation to become ready.
-- `WaitForUserUpload` — waiting for the user to upload the image (this phase exists only for `type=Upload`).
-- `Provisioning` — the image creation process is in progress.
-- `Ready` —  the image has been created and is ready for use.
-- `Failed` — an error occurred during the image creation process.
-- `Terminating` — the image is being deleted. The image may "hang" in this state if it is still attached to a virtual machine.
+- `Pending`: Waiting for all dependent resources required for image creation to become ready.
+- `WaitForUserUpload`: Waiting for the user to upload the image (this phase exists only for `type=Upload`).
+- `Provisioning`: The image creation process is in progress.
+- `Ready`: The image has been created and is ready for use.
+- `Failed`: An error occurred during the image creation process.
+- `Terminating`: The image is being deleted. The image may "hang" in this state if it is still attached to a virtual machine.
+- `ImageLost`: The image is missing in DVCR. The resource cannot be used.
+- `PVCLost`: The child PVC of the resource is missing. The resource cannot be used.
 
 Until the image transitions to the `Ready` phase, the contents of the `.spec` block can be modified. If any changes are made, the image creation process will be reinitiated.
 

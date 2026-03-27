@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в zVirt
 permalink: ru/admin/integrations/virtualization/zvirt/authorization.html
 lang: ru
 ---

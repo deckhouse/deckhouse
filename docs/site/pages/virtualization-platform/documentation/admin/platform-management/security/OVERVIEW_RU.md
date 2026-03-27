@@ -1,5 +1,5 @@
 ---
-title: Обзор
+title: Безопасность
 permalink: ru/virtualization-platform/documentation/admin/platform-management/security/
 lang: ru
 ---

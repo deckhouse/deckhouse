@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in Deckhouse Virtualization Platform
 permalink: en/admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
 ---
 
@@ -15,7 +15,7 @@ Example of the layout configuration:
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
-sshPublicKey: ssh-rsa AAAABBBB
+sshPublicKey: <SSH_PUBLIC_KEY>
 masterNodeGroup:
   replicas: 1
   instanceClass:

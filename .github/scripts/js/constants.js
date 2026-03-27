@@ -41,7 +41,6 @@ const labels = {
   'e2e/run/zvirt': { type: 'e2e-run', provider: 'zvirt' },
 
   // E2E: use Kubernetes version
-  'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
   'e2e/use/k8s/1.31': { type: 'e2e-use', ver: '1.31' },
   'e2e/use/k8s/1.32': { type: 'e2e-use', ver: '1.32' },
   'e2e/use/k8s/1.33': { type: 'e2e-use', ver: '1.33' },
@@ -59,6 +58,7 @@ const labels = {
   'e2e/use/edition/se': { type: 'e2e-use', edition: 'SE' },
   'e2e/use/edition/se+': { type: 'e2e-use', edition: 'SE-plus' },
   'e2e/use/edition/fe': { type: 'e2e-use', edition: 'FE' },
+  'e2e/use/edition/cse': { type: 'e2e-use', edition: 'CSE' },
 
   // E2E: autoscaler
   'e2e/use/autoscaler': { type: 'e2e-use', autoscaler: true },
@@ -78,6 +78,9 @@ const labels = {
   'deploy/web/test5': { type: 'deploy-web', env: 'test5' },
   'deploy/web/test6': { type: 'deploy-web', env: 'test6' },
   'deploy/web/test7': { type: 'deploy-web', env: 'test7' },
+  'deploy/web/test8': { type: 'deploy-web', env: 'test8' },
+  'deploy/web/test9': { type: 'deploy-web', env: 'test9' },
+  'deploy/web/test10': { type: 'deploy-web', env: 'test10' },
   'deploy/web/stage': { type: 'deploy-web', env: 'stage' },
 
   // Edition for build-and-test workflow
@@ -86,6 +89,7 @@ const labels = {
   'edition/be': { type: 'edition', edition: 'BE' },
   'edition/se': { type: 'edition', edition: 'SE' },
   'edition/se+': { type: 'edition', edition: 'SE-plus' },
+  'edition/cse': { type: 'edition', edition: 'CSE' },
 
   // Enable operator-trivy to get CIS benchmark report
   'e2e/use/cis': { type: 'e2e-use', cis: true },
@@ -171,5 +175,5 @@ module.exports.e2eDefaults = {
   cis: false
 };
 
-const editions = ['CE', 'EE', 'FE', 'BE', 'SE', 'SE-plus'];
+const editions = ['CE', 'EE', 'FE', 'BE', 'SE', 'SE-plus', 'CSE'];
 module.exports.knownEditions = editions;

@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в Deckhouse Virtualization Platform
 permalink: ru/admin/integrations/virtualization/dvp/authorization.html
 lang: ru
 ---

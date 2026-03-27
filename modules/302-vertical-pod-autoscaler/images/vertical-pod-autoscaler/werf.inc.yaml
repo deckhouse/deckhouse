@@ -21,7 +21,7 @@ shell:
     - rm -rf /src/autoscaler /src/vertical-pod-autoscaler/e2e/ /patches /src/autoscaler/.git/
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
   - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact

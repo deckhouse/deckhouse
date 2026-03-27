@@ -125,3 +125,45 @@
         ```
 
         Note that the taint `key: node-role.kubernetes.io/master` is deprecated and has no effect starting from Kubernetes 1.24.
+
+  - alert: D8NodeCgroupV2NotSupported
+    expr: |
+      max by (node, node_group) (d8_node_cgroup_v2_unsupported == 1)
+    for: 10m
+    labels:
+      tier: cluster
+      severity_level: "8"
+      d8_module: node-manager
+      d8_component: node-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cluster_has_nodes_with_cgroup_v1: "ClusterHasNodesWithCgroupV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_nodes_with_cgroup_v1: "ClusterHasNodesWithCgroupV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "node,node_group"
+      summary: Node {{`{{ $labels.node }}`}} is using deprecated cgroup v1 – migration to v2 required.
+      description: |
+        Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} does not support cgroup v2.
+        Starting from Kubernetes 1.35, cgroup v1 is [deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1).
+        To migrate to cgroup v2, please upgrade the kernel to version 5.8 or newer. For more information, please refer to the [documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
+
+  - alert: D8NodeContainerdV2NotSupported
+    expr: |
+      max by (node, node_group) (d8_nodes_cntrd_v2_unsupported == 1)
+    for: 10m
+    labels:
+      tier: cluster
+      severity_level: "8"
+      d8_module: node-manager
+      d8_component: node-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cluster_has_nodes_with_containerd_v1: "ClusterHasNodesWithContainerdV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_nodes_with_containerd_v1: "ClusterHasNodesWithContainerdV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "node,node_group"
+      summary: Node {{`{{ $labels.node }}`}} is using deprecated containerd v1 – migration to v2 required.
+      description: |
+        Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} does not support containerd v2.
+        Starting from Kubernetes 1.36, containerd v1.y [will no longer be supported](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+        Please check the requirements for containerd v2 and schedule your migration plan.

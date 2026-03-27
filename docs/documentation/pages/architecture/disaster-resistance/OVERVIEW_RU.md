@@ -1,5 +1,5 @@
 ---
-title: Обзор
+title: Катастрофоустойчивость
 permalink: ru/architecture/disaster-resilience/
 lang: ru
 ---

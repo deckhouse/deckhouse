@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Deckhouse Code administrator guide"
 permalink: en/code/documentation/admin/
 lang: en
 ---

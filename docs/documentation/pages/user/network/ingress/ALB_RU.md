@@ -1,5 +1,6 @@
 ---
-title: "ALB"
+title: "Использование Application Load Balancer (ALB)"
+description: "Настройка Application Load Balancer для HTTP/HTTPS/gRPC трафика в Deckhouse Kubernetes Platform. Использование ingress-nginx и istio для маршрутизации запросов, терминации SSL/TLS и публикации приложений."
 permalink: ru/user/network/ingress/alb.html
 lang: ru
 ---
@@ -133,7 +134,7 @@ spec:
         mode: SIMPLE
         # Ресурс Secret с сертификатом и ключом, который должен быть создан в пространстве имен d8-ingress-istio.
         # Поддерживаемые форматы Secret можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
-        credentialName: app-tls-secrets
+        credentialName: app-tls-secret
       hosts:
         - app.example.com
 ```

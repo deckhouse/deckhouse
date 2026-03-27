@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/selection"
 
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
@@ -30,6 +31,7 @@ import (
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -52,11 +54,9 @@ func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeCli
 			return err
 		}
 
-		_, err = kubeCl.Dynamic().Resource(v1.NodeUserGVR).Create(ctx, nodeUserResource, metav1.CreateOptions{})
-		if err != nil {
+		if err := createNodeUser(ctx, kubeCl, nodeUserResource); err != nil {
 			if k8errors.IsAlreadyExists(err) {
-				_, err = kubeCl.Dynamic().Resource(v1.NodeUserGVR).Update(ctx, nodeUserResource, metav1.UpdateOptions{})
-				return err
+				return updateNodeUser(ctx, kubeCl, nodeUserResource)
 			}
 
 			return fmt.Errorf("Failed to create NodeUser: %w", err)
@@ -67,7 +67,8 @@ func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeCli
 }
 
 func DeleteNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, name string) error {
-	return retry.NewLoop("Delete dhctl converge NodeUser", 45, 10*time.Second).RunContext(ctx, func() error {
+	processName := fmt.Sprintf("Delete NodeUser %s", name)
+	return retry.NewLoop(processName, 45, 10*time.Second).RunContext(ctx, func() error {
 		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err
@@ -121,7 +122,14 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 	listOpts := metav1.ListOptions{}
 
 	if len(nodeUser.NodeGroups) > 0 {
-		selector, err := kubernetes.GetLabelSelector(global.NodeGroupLabel, selection.In, nodeUser.NodeGroups)
+		selector, err := kubernetes.GetLabelSelector([]kubernetes.LabelSelector{
+			{
+				Label:    global.NodeGroupLabel,
+				Operator: selection.In,
+				Vals:     nodeUser.NodeGroups,
+			},
+		})
+
 		if err != nil {
 			return err
 		}
@@ -171,4 +179,26 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 func (w *NodeUserPresentsWaiter) loopParams(userName string) retry.Params {
 	return w.params.Clone().
 		WithName(fmt.Sprintf("Waiting for NodeUser '%s' present on hosts", userName))
+}
+
+func defaultTimeoutCtx(parent context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(parent, 10*time.Second)
+}
+
+func createNodeUser(ctx context.Context, kubeCl client.KubeClient, nodeUserResource *unstructured.Unstructured) error {
+	timeoutCtx, cancel := defaultTimeoutCtx(ctx)
+	defer cancel()
+
+	_, err := kubeCl.Dynamic().Resource(v1.NodeUserGVR).Create(timeoutCtx, nodeUserResource, metav1.CreateOptions{})
+
+	return err
+}
+
+func updateNodeUser(ctx context.Context, kubeCl client.KubeClient, nodeUserResource *unstructured.Unstructured) error {
+	timeoutCtx, cancel := defaultTimeoutCtx(ctx)
+	defer cancel()
+
+	_, err := kubeCl.Dynamic().Resource(v1.NodeUserGVR).Update(timeoutCtx, nodeUserResource, metav1.UpdateOptions{})
+
+	return err
 }

@@ -31,7 +31,7 @@ status:
       end of JSON input'
     reason: RegistryClientCreationFailed
     status: "False"
-    type: Processed
+    type: Completed
   phase: Processing
   startTime: "2025-10-31T12:00:00Z"
 ---

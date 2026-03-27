@@ -16,11 +16,13 @@ package status
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmapper"
@@ -105,6 +107,7 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 
 	// Apply mapped conditions (external user-facing conditions)
 	for _, cond := range s.mapper.Map(mapperStatus) {
+		// Reason is required by metav1.Condition contract
 		reason := cond.Reason
 		if reason == "" {
 			reason = cond.Type
@@ -112,22 +115,6 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 
 		meta.SetStatusCondition(&app.Status.Conditions, metav1.Condition{
 			Type:               cond.Type,
-			Status:             cond.Status,
-			Reason:             reason,
-			Message:            cond.Message,
-			ObservedGeneration: app.Generation,
-		})
-	}
-
-	// Apply internal conditions from the operator
-	for _, cond := range packageStatus.Conditions {
-		reason := string(cond.Reason)
-		if reason == "" {
-			reason = string(cond.Type)
-		}
-
-		meta.SetStatusCondition(&app.Status.Conditions, metav1.Condition{
-			Type:               string(cond.Type),
 			Status:             cond.Status,
 			Reason:             reason,
 			Message:            cond.Message,
@@ -145,6 +132,9 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 	if internalConditionIsTrue(packageStatus.Conditions, status.ConditionReadyInCluster) {
 		app.Status.CurrentVersion.Version = packageStatus.Version
 	}
+
+	raw, _ := json.Marshal(packageStatus.Tracking)
+	app.Status.Tracking = runtime.RawExtension{Raw: raw}
 }
 
 // buildMapperStatus creates mapper input from Application and internal conditions.

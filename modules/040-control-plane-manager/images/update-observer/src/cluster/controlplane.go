@@ -18,6 +18,8 @@ package cluster
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	"golang.org/x/mod/semver"
 	corev1 "k8s.io/api/core/v1"
@@ -45,7 +47,7 @@ const (
 )
 
 func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion string) (*ControlPlaneState, error) {
-	masterNodes, err := buildControlPlaneTopology(controlPlanePods)
+	masterNodes, err := buildControlPlaneTopology(controlPlanePods, desiredVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get components state: %w", err)
 	}
@@ -56,26 +58,28 @@ func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion strin
 		versions:     version.NewUniqueAggregator(semver.Sort),
 	}
 
-	res.aggregateNodesState(desiredVersion)
+	res.aggregateNodesState()
 
 	return res, nil
 }
 
-func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
+func (s *ControlPlaneState) aggregateNodesState() {
 	var desiredCount, upToDateCount, desiredComponentsCount, upToDateComponentsCount int
 	var phase ControlPlanePhase
 
 	for _, masterNode := range s.MasterNodes {
 		var failedComponents, updatingComponents int
+		var descriptions []string
 
 		desiredCount++
-		for _, component := range masterNode.Components {
+		for componentName, component := range masterNode.Components {
 			desiredComponentsCount++
 			s.versions.Set(component.Version)
 
-			switch component.getState(desiredVersion) {
+			switch component.State {
 			case ControlPlaneComponentFailed:
 				failedComponents++
+				descriptions = append(descriptions, fmt.Sprintf("%s: %s", componentName, component.Description))
 			case ControlPlaneComponentUpdating:
 				updatingComponents++
 			case ControlPlaneComponentUpToDate:
@@ -86,6 +90,8 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 		switch {
 		case failedComponents > 0:
 			masterNode.Phase = MasterNodeFailed
+			slices.Sort(descriptions)
+			masterNode.Description = strings.Join(descriptions, ", ")
 		case updatingComponents > 0:
 			masterNode.Phase = MasterNodeUpdating
 		default:

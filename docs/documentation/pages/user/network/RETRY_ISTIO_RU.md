@@ -1,5 +1,6 @@
 ---
 title: "Настройка Retry для запросов с Istio"
+description: "Настройка повторных попыток (retry) для HTTP запросов с использованием Istio в Deckhouse Kubernetes Platform. Конфигурация VirtualService с параметрами retries, attempts, perTryTimeout."
 permalink: ru/user/network/retry_istio.html
 lang: ru
 ---
@@ -39,7 +40,7 @@ spec:
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/istio-cr.html#virtualservice -->
 
-При необходимости ознакомьтесь с [документацией VirtualService](https://istio.io/v1.19/docs/reference/config/networking/virtual-service/).
+При необходимости ознакомьтесь с [документацией VirtualService](https://istio.io/v1.21/docs/reference/config/networking/virtual-service/).
 
 Использование VirtualService опционально, классические сервисы продолжают работать, если их функционала достаточно. С помощью этого ресурса можно настроить маршрутизацию запросов:
 

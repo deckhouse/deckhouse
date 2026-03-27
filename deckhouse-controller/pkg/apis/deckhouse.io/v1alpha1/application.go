@@ -27,7 +27,8 @@ const (
 	ApplicationKind     = "Application"
 
 	// ApplicationConditionTypeProcessed changes only by application controller
-	ApplicationConditionTypeProcessed                    = "Processed"
+	ApplicationConditionTypeInstalled                    = "Installed"
+	ApplicationConditionTypeReady                        = "Ready"
 	ApplicationConditionReasonReconciled                 = "Reconciled"
 	ApplicationConditionReasonVersionNotFound            = "VersionNotFound"
 	ApplicationConditionReasonApplicationPackageNotFound = "ApplicationPackageNotFound"
@@ -107,6 +108,11 @@ type ApplicationStatus struct {
 	// Information about the currently installed version.
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
+
+	// Nelm tracking.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	Tracking runtime.RawExtension `json:"tracking"`
 
 	// Conditions represent the latest available observations of the application's state.
 	// +optional

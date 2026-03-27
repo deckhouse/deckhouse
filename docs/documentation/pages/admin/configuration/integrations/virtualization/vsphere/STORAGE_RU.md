@@ -1,5 +1,5 @@
 ---
-title: Хранилище и балансировка
+title: Хранилище и балансировка нагрузки в VMware vSphere
 permalink: ru/admin/integrations/virtualization/vsphere/storage.html
 lang: ru
 ---
@@ -25,7 +25,7 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-vsphere
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
     storageClass:

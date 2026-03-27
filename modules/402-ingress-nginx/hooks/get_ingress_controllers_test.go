@@ -27,7 +27,7 @@ import (
 )
 
 var _ = Describe("ingress-nginx :: hooks :: get_ingress_controllers ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.10", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.12", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 
 	Context("Fresh cluster", func() {
@@ -87,6 +87,7 @@ spec:
   "loadBalancer": {},
   "controllerLogLevel": "Info",
   "loadBalancerWithProxyProtocol": {},
+  "loadBalancerWithSSLPassthrough": {},
   "maxReplicas": 1,
   "minReplicas": 1,
   "resourcesRequests": {
@@ -194,6 +195,7 @@ spec:
 "inlet": "LoadBalancer",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "controllerLogLevel": "Info",
@@ -232,6 +234,7 @@ spec:
 "inlet": "HostPortWithProxyProtocol",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "resourcesRequests": {
@@ -271,6 +274,7 @@ spec:
 "inlet": "LoadBalancerWithProxyProtocol",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "resourcesRequests": {

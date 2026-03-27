@@ -8,21 +8,21 @@ description: "Настройка VMware vSphere для работы облачн
 ## Требования к окружению
 
 * Версия vSphere: `7.x` или `8.x` с поддержкой механизма [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion).
-* vCenter, до которого есть доступ изнутри кластера с master-узлов.
-* Создать Datacenter, в котором создать:
+* vCenter с доступом изнутри кластера (с master-узлов).
+* В vSphere должен быть создан Datacenter, содержащий:
   1. VirtualMachine template.
      * Образ виртуальной машины должен использовать `Virtual machines with hardware version 15 or later` (необходимо для работы online resize).
-     * В образе должны быть установлены следующие пакеты: `open-vm-tools`, `cloud-init` и [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3).
-  1. Network, доступную на всех ESXi, на которых будут создаваться виртуальные машины.
-  1. Datastore (или несколько), подключенный ко всем ESXi, на которых будут создаваться виртуальные машины.
-     * На Datastore'ы **необходимо** «повесить» тег из категории тегов, указанных в [`zoneTagCategory`](./configuration.html#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**. Все Cluster'ы из конкретной зоны должны иметь доступ ко всем Datastore'ам с идентичной зоной.
+     * В образе должны быть установлены пакеты: `open-vm-tools`, `cloud-init` и [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3).
+  1. Network, доступную на всех ESXi, где планируется создание виртуальных машин.
+  1. Datastore (или несколько), подключенный ко всем ESXi, где планируется создание виртуальных машин.
+     * На Datastore'ы **необходимо** назначить тег из категории тегов, указанных в [`zoneTagCategory`](./configuration.html#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег определяет **зону**. Все кластеры в пределах одной зоны должны иметь доступ ко всем Datastore с этой зоной.
   1. Cluster, в который добавить необходимые используемые ESXi.
-     * На Cluster **необходимо** «повесить» тег из категории тегов, указанных в [`zoneTagCategory`](./configuration.html#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**.
+     * На Cluster **необходимо** назначить тег из категории тегов, указанных в [`zoneTagCategory`](./configuration.html#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег определяет **зону**.
   1. Folder для создаваемых виртуальных машин.
      * Опциональный. По умолчанию будет использоваться root vm-каталог.
   1. Роль с необходимым [набором](#список-необходимых-привилегий) прав.
   1. Пользователя, привязав к нему роль из п. 6.
-* На созданный Datacenter **необходимо** «повесить» тег из категории тегов, указанный в [`regionTagCategory`](./configuration.html#parameters-regiontagcategory) (по умолчанию `k8s-region`). Этот тег будет обозначать **регион**.
+* На созданный Datacenter **необходимо** назначить тег из категории тегов, указанный в [`regionTagCategory`](./configuration.html#parameters-regiontagcategory) (по умолчанию `k8s-region`). Тег определяет **регион**.
 
 ## Список необходимых ресурсов vSphere
 
@@ -199,7 +199,13 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 #### Подготовка образа виртуальной машины
 
-DKP использует `cloud-init` для настройки виртуальной машины после запуска. Чтобы подготовить `cloud-init` и образ ВМ, выполните следующие действия:
+DKP использует `cloud-init` для настройки виртуальной машины после запуска.
+
+{% alert level="warning" %}
+Отключите VMware Guest OS Customization (а также любые механизмы vApp/OS customization, если они применимы в вашей схеме) для шаблона и виртуальных машин кластера. DKP выполняет первичную настройку узлов через `cloud-init` (datasource VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
+{% endalert %}
+
+Чтобы подготовить `cloud-init` и образ ВМ, выполните следующие действия:
 
 1. Установите необходимые пакеты:
 

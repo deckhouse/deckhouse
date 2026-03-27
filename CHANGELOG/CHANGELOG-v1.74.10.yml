@@ -1,0 +1,6 @@
+ingress-nginx:
+  fixes:
+    - summary: Nginx and module's dependencies are updated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18156
+      impact: All ingress-nginx controller pods will be restared.
+

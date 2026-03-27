@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in Deckhouse Virtualization Platform
 permalink: en/admin/integrations/virtualization/dvp/authorization.html
 ---
 

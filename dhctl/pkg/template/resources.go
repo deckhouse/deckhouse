@@ -26,8 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 
-	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -219,65 +217,4 @@ func BigFileSplit(content string) []string {
 type ResourceRef struct {
 	Kind string
 	Name string
-}
-
-func (r *Resources) GetCloudNGs() (Resources, Resources) {
-	if r == nil {
-		return nil, nil
-	}
-	cloudNgs := make([]*Resource, 0)
-	firstReturn := make([]*Resource, 0)
-	otherResources := make([]*Resource, 0)
-	references := make(map[ResourceRef]struct{})
-	ngGVK := schema.GroupVersionKind{
-		Kind:    "NodeGroup",
-		Group:   "deckhouse.io",
-		Version: "v1",
-	}
-
-	for _, res := range *r {
-		if res.GVK == ngGVK {
-			ng, err := entity.UnstructuredToNodeGroup(&res.Object)
-			if err != nil {
-				return nil, nil
-			}
-			if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
-				cloudNgs = append(cloudNgs, res)
-				ref := ResourceRef{
-					Kind: ng.Spec.CloudInstances.ClassReference.Kind,
-					Name: ng.Spec.CloudInstances.ClassReference.Name,
-				}
-				references[ref] = struct{}{}
-			}
-		}
-	}
-
-	for _, res := range *r {
-		if res.GVK == ngGVK {
-			ng, err := entity.UnstructuredToNodeGroup(&res.Object)
-			if err != nil {
-				return nil, nil
-			}
-			if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
-				continue
-			}
-		}
-		meta := res.Object.Object["metadata"].(map[string]interface{})
-		name := meta["name"].(string)
-
-		ref := ResourceRef{
-			Kind: res.GVK.Kind,
-			Name: name,
-		}
-
-		if _, exists := references[ref]; exists {
-			firstReturn = append(firstReturn, res)
-			continue
-		}
-		otherResources = append(otherResources, res)
-	}
-
-	firstReturn = append(firstReturn, cloudNgs...)
-
-	return firstReturn, otherResources
 }

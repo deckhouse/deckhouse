@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.27.1",
+  "version": "v0.28.0",
   "aliases": null,
   "flags": {
     "help": {
@@ -19817,7 +19817,7 @@
               "global": false
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -20386,7 +20386,7 @@
               "global": true
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -20406,7 +20406,7 @@
               "global": false
             },
             "subresource": {
-              "description": "If specified, apply will operate on the subresource of the requested object.  Only allowed when using --server-side. This flag is beta and may change in the future.",
+              "description": "If specified, apply will operate on the subresource of the requested object.  Only allowed when using --server-side.",
               "shorthand": "",
               "global": false
             },
@@ -20969,7 +20969,7 @@
                   "global": true
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -25564,7 +25564,7 @@
               "global": true
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -25925,7 +25925,7 @@
               "global": false
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -31071,7 +31071,7 @@
               "global": true
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -31254,7 +31254,7 @@
               "global": true
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -31447,7 +31447,7 @@
               "global": true
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -31645,7 +31645,7 @@
               "global": true
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -31858,7 +31858,7 @@
               "global": false
             },
             "subresource": {
-              "description": "If specified, edit will operate on the subresource of the requested object. This flag is beta and may change in the future.",
+              "description": "If specified, edit will operate on the subresource of the requested object.",
               "shorthand": "",
               "global": false
             },
@@ -32287,7 +32287,7 @@
           "aliases": null,
           "flags": {
             "api-version": {
-              "description": "Use given api-version (group/version) of the resource.",
+              "description": "Get different explanations for particular API version (API group/version)",
               "shorthand": "",
               "global": false
             },
@@ -32367,7 +32367,7 @@
               "global": true
             },
             "output": {
-              "description": "Format in which to render the schema. Valid values are: (plaintext, plaintext-openapiv2).",
+              "description": "Format in which to render the schema (plaintext, plaintext-openapiv2)",
               "shorthand": "o",
               "global": false
             },
@@ -32387,7 +32387,7 @@
               "global": true
             },
             "recursive": {
-              "description": "When true, print the name of all the fields recursively. Otherwise, print the available fields with their description.",
+              "description": "Print the fields of fields (Currently only 1 level deep)",
               "shorthand": "",
               "global": false
             },
@@ -32868,7 +32868,7 @@
               "global": true
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -32903,7 +32903,7 @@
               "global": false
             },
             "subresource": {
-              "description": "If specified, gets the subresource of the requested object. This flag is beta and may change in the future.",
+              "description": "If specified, gets the subresource of the requested object.",
               "shorthand": "",
               "global": false
             },
@@ -33354,7 +33354,7 @@
               "global": false
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -33567,7 +33567,7 @@
               "global": true
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -33943,7 +33943,7 @@
               "global": false
             },
             "subresource": {
-              "description": "If specified, patch will operate on the subresource of the requested object. This flag is beta and may change in the future.",
+              "description": "If specified, patch will operate on the subresource of the requested object.",
               "shorthand": "",
               "global": false
             },
@@ -34819,7 +34819,7 @@
               "global": false
             },
             "subresource": {
-              "description": "If specified, replace will operate on the subresource of the requested object. This flag is beta and may change in the future.",
+              "description": "If specified, replace will operate on the subresource of the requested object.",
               "shorthand": "",
               "global": false
             },
@@ -35154,7 +35154,7 @@
                   "global": false
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -35342,7 +35342,7 @@
                   "global": true
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -35530,7 +35530,7 @@
                   "global": true
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -35718,7 +35718,7 @@
                   "global": true
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -35896,7 +35896,7 @@
                   "global": false
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -36084,7 +36084,7 @@
                   "global": true
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -36622,7 +36622,7 @@
               "global": false
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -37012,7 +37012,7 @@
                   "global": false
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -37220,7 +37220,7 @@
                   "global": true
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -37443,7 +37443,7 @@
                   "global": false
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -38059,7 +38059,7 @@
                   "global": true
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -38254,7 +38254,7 @@
               "global": true
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -38567,7 +38567,7 @@
                   "global": true
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -38753,7 +38753,7 @@
                   "global": true
                 },
                 "selector": {
-                  "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+                  "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
                   "shorthand": "l",
                   "global": false
                 },
@@ -38923,7 +38923,7 @@
               "global": true
             },
             "selector": {
-              "description": "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.",
+              "description": "Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin'.(e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.",
               "shorthand": "l",
               "global": false
             },
@@ -40360,6 +40360,58 @@
                   "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
                   "shorthand": "k",
                   "global": true
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "package",
+          "description": "Operate the Deckhouse Kubernetes Platform packages",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            }
+          },
+          "subcommands": [
+            {
+              "name": "scan \u003crepository-name\u003e",
+              "description": "Create a scan task for a PackageRepository",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "dry-run": {
+                  "description": "Preview the operation without creating it",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "name": {
+                  "description": "Custom name for the PackageRepositoryOperation (auto-generated if not specified)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "timeout": {
+                  "description": "Timeout for the scan operation",
+                  "shorthand": "",
+                  "global": false
                 }
               },
               "subcommands": null

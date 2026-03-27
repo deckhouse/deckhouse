@@ -16,6 +16,7 @@
 
   {{- $sandbox_image := "deckhouse.local/images:pause" -}}
   {{- $kubernetes_api_proxy_image := "deckhouse.local/images:kubernetes-api-proxy" }}
+  {{- $registry_proxy_image := "deckhouse.local/images:registry-proxy" }}
 
 ctr_import_image() {
   local image_name="$1"
@@ -29,7 +30,7 @@ ctr_import_image() {
 post-install-import() {
   bb-log-info "start crt images import"
   local PACKAGE="$1"
-  
+
   if [[ "${PACKAGE}" == "pause" ]]; then
     ctr_import_image {{ $sandbox_image }} "/opt/deckhouse/images/pause.tar"
     return 0
@@ -39,16 +40,23 @@ post-install-import() {
     ctr_import_image {{ $kubernetes_api_proxy_image }} "/opt/deckhouse/images/kubernetes-api-proxy.tar"
     return 0
   fi
+
+  if [[ "${PACKAGE}" == "registry-proxy" ]]; then
+    ctr_import_image {{ $registry_proxy_image }} "/opt/deckhouse/images/registry-proxy.tar"
+    return 0
+  fi
 }
 
 bb-event-on 'bb-package-installed' 'post-install-import'
 
 bb-package-install "pause:{{ $.images.registrypackages.pause }}"
 bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
+bb-package-install "registry-proxy:{{ $.images.registrypackages.registryProxy }}"
 
 if bb-flag? need-local-images-import; then
   post-install-import pause
   post-install-import kubernetes-api-proxy
+  post-install-import registry-proxy
   bb-flag-unset need-local-images-import
 fi
 {{- end }}

@@ -23,9 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capierrors "sigs.k8s.io/cluster-api/errors"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
@@ -92,18 +90,12 @@ func NewMachineScope(
 
 // Patch updates the StaticMachine resource.
 func (m *MachineScope) Patch(ctx context.Context) error {
-	conditions.SetSummary(m.StaticMachine,
-		conditions.WithConditions(infrav1.StaticMachineStaticInstanceReadyCondition),
-		conditions.WithStepCounterIf(m.StaticMachine.ObjectMeta.DeletionTimestamp.IsZero()),
-		conditions.WithStepCounter(),
-	)
-
 	err := m.PatchHelper.Patch(
 		ctx,
 		m.StaticMachine,
-		patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
+		patch.WithOwnedConditions{Conditions: []string{
 			clusterv1.ReadyCondition,
-			infrav1.StaticMachineStaticInstanceReadyCondition,
+			string(infrav1.StaticMachineStaticInstanceReadyCondition),
 		}})
 	if err != nil {
 		return errors.Wrap(err, "failed to patch StaticMachine")
@@ -114,16 +106,20 @@ func (m *MachineScope) Patch(ctx context.Context) error {
 
 // SetReady sets the StaticMachine Ready Status.
 func (m *MachineScope) SetReady() {
-	m.StaticMachine.Status.Ready = true
+	machineReady := true
+	m.StaticMachine.Status.Ready = machineReady
+	m.StaticMachine.Status.Initialization.Provisioned = &machineReady
 }
 
 // SetNotReady sets the StaticMachine Ready Status to false.
 func (m *MachineScope) SetNotReady() {
-	m.StaticMachine.Status.Ready = false
+	machineReady := false
+	m.StaticMachine.Status.Ready = machineReady
+	m.StaticMachine.Status.Initialization.Provisioned = &machineReady
 }
 
 // Fail marks the StaticMachine as failed.
-func (m *MachineScope) Fail(reason capierrors.MachineStatusError, err error) {
+func (m *MachineScope) Fail(reason string, err error) {
 	m.StaticMachine.Status.FailureReason = &reason
 
 	failureMessage := err.Error()

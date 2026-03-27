@@ -1,5 +1,5 @@
 ---
-title: Обзор
+title: Публичные облачные провайдеры
 permalink: ru/admin/integrations/public/overview.html
 description: "Развертывание Deckhouse Kubernetes Platform на публичных облачных провайдерах включая AWS, Azure, GCP, OpenStack, OVH, Selectel, VK и Yandex. Полное руководство по интеграции с облаком."
 lang: ru

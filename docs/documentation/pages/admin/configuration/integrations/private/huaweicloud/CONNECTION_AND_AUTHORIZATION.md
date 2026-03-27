@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in Huawei Cloud
 permalink: en/admin/integrations/private/huaweicloud/authorization.html
 ---
 

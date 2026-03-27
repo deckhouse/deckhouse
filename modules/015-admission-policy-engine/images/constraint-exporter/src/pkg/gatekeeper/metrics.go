@@ -40,6 +40,11 @@ var (
 		"Some general information of all constraints",
 		[]string{"kind", "name", "enforcementAction", "totalViolations"}, nil,
 	)
+	ConstraintViolationsTruncated = prometheus.NewDesc(
+		prometheus.BuildFQName(prefix, "", "constraint_violations_truncated"),
+		"Indicates that constraint has more violations than shown (limited by --constraint-violations-limit). Value is the number of hidden violations.",
+		[]string{"kind", "name", "source_type"}, nil,
+	)
 )
 
 func ExportViolations(constraints []Constraint) []prometheus.Metric {
@@ -63,6 +68,26 @@ func ExportConstraintInformation(constraints []Constraint) []prometheus.Metric {
 	for _, c := range constraints {
 		metric := prometheus.MustNewConstMetric(ConstraintInformation, prometheus.GaugeValue, c.Status.TotalViolations, c.Meta.Kind, c.Meta.Name, c.Spec.EnforcementAction, fmt.Sprintf("%f", c.Status.TotalViolations))
 		m = append(m, metric)
+	}
+	return m
+}
+
+func ExportViolationsTruncated(constraints []Constraint) []prometheus.Metric {
+	m := make([]prometheus.Metric, 0)
+	for _, c := range constraints {
+		shownViolations := float64(len(c.Status.Violations))
+		if c.Status.TotalViolations > shownViolations {
+			hiddenCount := c.Status.TotalViolations - shownViolations
+			metric := prometheus.MustNewConstMetric(
+				ConstraintViolationsTruncated,
+				prometheus.GaugeValue,
+				hiddenCount,
+				c.Meta.Kind,
+				c.Meta.Name,
+				c.Meta.SourceType,
+			)
+			m = append(m, metric)
+		}
 	}
 	return m
 }

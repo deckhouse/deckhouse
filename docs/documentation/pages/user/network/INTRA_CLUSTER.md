@@ -1,5 +1,6 @@
 ---
 title: "Intra-cluster communication"
+description: "Organizing intra-cluster communication in Deckhouse Kubernetes Platform via Services. Standard load balancing and advanced load balancing with the service-with-healthchecks module."
 permalink: en/user/network/intra-cluster.html
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: Storage and load balancing
+title: Storage and load balancing in Microsoft Azure
 permalink: en/admin/integrations/public/azure/storage.html
 ---
 

@@ -1,8 +1,8 @@
 diff --git a/deploy/crds/cert-manager.io_certificates.yaml b/deploy/crds/cert-manager.io_certificates.yaml
-index 340b020df..33c5fc96f 100644
+index 7a1cba078..ba755f880 100644
 --- a/deploy/crds/cert-manager.io_certificates.yaml
 +++ b/deploy/crds/cert-manager.io_certificates.yaml
-@@ -693,6 +693,10 @@ spec:
+@@ -690,6 +690,10 @@ spec:
                    type: string
                  type: array
                  x-kubernetes-list-type: atomic
@@ -14,10 +14,10 @@ index 340b020df..33c5fc96f 100644
              - issuerRef
              - secretName
 diff --git a/internal/apis/certmanager/types_certificate.go b/internal/apis/certmanager/types_certificate.go
-index 028a267fc..96939ccd0 100644
+index 5c7aed2e2..96aa246ca 100644
 --- a/internal/apis/certmanager/types_certificate.go
 +++ b/internal/apis/certmanager/types_certificate.go
-@@ -259,6 +259,11 @@ type CertificateSpec struct {
+@@ -257,6 +257,11 @@ type CertificateSpec struct {
  	// to be written to this Certificate's target Secret.
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat
  
@@ -58,10 +58,10 @@ index d64f9cd5e..1e9379d05 100644
  }
  
 diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
-index bc5475a32..51f7df870 100644
+index 80e641520..7a6f480ae 100644
 --- a/pkg/apis/certmanager/v1/types_certificate.go
 +++ b/pkg/apis/certmanager/v1/types_certificate.go
-@@ -315,6 +315,12 @@ type CertificateSpec struct {
+@@ -316,6 +316,12 @@ type CertificateSpec struct {
  	// +listType=atomic
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
  
@@ -91,7 +91,7 @@ index e889ecf1a..3b29f924f 100644
  }
  
 diff --git a/pkg/controller/certificates/issuing/internal/secret.go b/pkg/controller/certificates/issuing/internal/secret.go
-index 341eef730..432c37852 100644
+index 223b082ae..3af42d64f 100644
 --- a/pkg/controller/certificates/issuing/internal/secret.go
 +++ b/pkg/controller/certificates/issuing/internal/secret.go
 @@ -106,10 +106,16 @@ func (s *SecretsManager) UpdateData(ctx context.Context, crt *cmapi.Certificate,
@@ -113,7 +113,7 @@ index 341eef730..432c37852 100644
  		applyCnf = applyCnf.WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
  			APIVersion: &ref.APIVersion, Kind: &ref.Kind,
 diff --git a/pkg/controller/certificates/issuing/internal/secret_test.go b/pkg/controller/certificates/issuing/internal/secret_test.go
-index 041bd7b04..fb3559e23 100644
+index 06ca3eb1a..2341399ac 100644
 --- a/pkg/controller/certificates/issuing/internal/secret_test.go
 +++ b/pkg/controller/certificates/issuing/internal/secret_test.go
 @@ -66,6 +66,30 @@ func Test_SecretsManager(t *testing.T) {
@@ -251,10 +251,11 @@ index 041bd7b04..fb3559e23 100644
  		"if secret does exist, update existing Secret and leave custom annotations and labels, with owner enabled": {
  			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: true},
  			certificate:        baseCertBundle.Certificate,
-@@ -297,6 +384,103 @@ func Test_SecretsManager(t *testing.T) {
+@@ -297,7 +384,104 @@ func Test_SecretsManager(t *testing.T) {
  						})
  					assert.Equal(t, expCnf, gotCnf)
  
+-					expOpts := metav1.ApplyOptions{FieldManager: testpkg.FieldManager, Force: true}
 +					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
 +					assert.Equal(t, expOpts, gotOpts)
 +
@@ -352,14 +353,15 @@ index 041bd7b04..fb3559e23 100644
 +						WithType(corev1.SecretTypeTLS)
 +					assert.Equal(t, expCnf, gotCnf)
 +
- 					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test", Force: true}
++					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test", Force: true}
  					assert.Equal(t, expOpts, gotOpts)
  
+ 					return nil, nil
 diff --git a/test/unit/gen/certificate.go b/test/unit/gen/certificate.go
-index c5f021eb8..98205af7f 100644
+index 149857cf5..5c97b29b0 100644
 --- a/test/unit/gen/certificate.go
 +++ b/test/unit/gen/certificate.go
-@@ -295,8 +295,9 @@ func SetCertificateAdditionalOutputFormats(additionalOutputFormats ...v1.Certifi
+@@ -292,8 +292,9 @@ func SetCertificateAdditionalOutputFormats(additionalOutputFormats ...v1.Certifi
  	}
  }
  

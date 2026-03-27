@@ -1,0 +1,36 @@
+diff --git a/rootfs/etc/nginx/lua/lua_ingress.lua b/rootfs/etc/nginx/lua/lua_ingress.lua
+index 5643ebf59..d3587ce3f 100644
+--- a/rootfs/etc/nginx/lua/lua_ingress.lua
++++ b/rootfs/etc/nginx/lua/lua_ingress.lua
+@@ -80,10 +80,10 @@ local function redirect_to_https(location_config)
+ end
+ 
+ local function redirect_host()
+-  local host_port, err = ngx_re_split(ngx.var.best_http_host, ":")
++  local host_port, err = ngx_re_split(ngx.ctx.redirect_host, ":")
+   if err then
+     ngx.log(ngx.ERR, "could not parse variable: ", err)
+-    return ngx.var.best_http_host;
++    return ngx.ctx.redirect_host;
+   end
+ 
+   return host_port[1];
+@@ -127,6 +127,7 @@ function _M.rewrite()
+   ngx.var.pass_access_scheme = ngx.var.scheme
+ 
+   ngx.var.best_http_host = ngx.var.http_host or ngx.var.host
++  ngx.ctx.redirect_host = ngx.var.host
+ 
+   if config.use_forwarded_headers and iputils.ip_in_cidrs(ngx.var.realip_remote_addr, config.real_ip_from) then
+     -- trust http_x_forwarded_proto headers correctly indicate ssl offloading
+@@ -140,7 +141,9 @@ function _M.rewrite()
+ 
+     -- Obtain best http host
+     if ngx.var.http_x_forwarded_host then
+-      ngx.var.best_http_host = parse_x_forwarded_host()
++      local forwarded_host = parse_x_forwarded_host()
++      ngx.var.best_http_host = forwarded_host
++      ngx.ctx.redirect_host = forwarded_host
+     end
+   end
+ 

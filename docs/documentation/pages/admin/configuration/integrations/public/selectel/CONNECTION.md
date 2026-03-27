@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in Selectel Cloud
 permalink: en/admin/integrations/public/selectel/connection-and-authorization.html
 cloud_type: selectel
 ---

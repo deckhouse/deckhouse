@@ -46,7 +46,7 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
-  kubernetesVersion: "1.30.0"
+  kubernetesVersion: "1.31.0"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
@@ -68,7 +68,7 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
-  kubernetesVersion: "1.30.0"
+  kubernetesVersion: "1.31.0"
   d8SpecificNodeCountByRole:
     system: 1
 modules:

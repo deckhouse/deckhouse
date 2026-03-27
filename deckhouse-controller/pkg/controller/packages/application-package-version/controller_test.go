@@ -29,6 +29,7 @@ import (
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -255,6 +256,7 @@ version: "1.0.0"
 				}}}, nil
 			},
 		}, nil)
+		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
 		suite.setupController("successful-reconcile.yaml", withDependencyContainer(dc))
 
@@ -351,6 +353,7 @@ version: "1.0.0"
 				}}}, nil
 			},
 		}, nil)
+		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
 		suite.setupController("error-to-success.yaml", withDependencyContainer(dc))
 
@@ -359,6 +362,43 @@ version: "1.0.0"
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("no bundle image in registry", func() {
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: func() (*crv1.Manifest, error) {
+				return &crv1.Manifest{
+					Layers: []crv1.Descriptor{},
+				}, nil
+			},
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
+					"package.yaml": `name: test-package
+description:
+  en: Test package
+  ru: Ru Test package
+category: Test
+stage: Preview
+type: Application
+version: "1.0.0"
+`,
+					"version.json": `{"version": "1.0.0"}`,
+				}}}, nil
+			},
+		}, nil)
+		dc.CRClient.DigestMock.When(ctx, "v1.0.0").Then("", &transport.Error{StatusCode: http.StatusNotFound})
+
+		suite.setupController("no-bundle-image-in-registry.yaml", withDependencyContainer(dc))
+
+		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: apv.Name},
+		})
+		require.NoError(suite.T(), err)
+
+		apv = suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
+		require.Equal(suite.T(), "false", apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry])
 	})
 }
 

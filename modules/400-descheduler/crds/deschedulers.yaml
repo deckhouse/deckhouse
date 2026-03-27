@@ -639,12 +639,53 @@ spec:
                           type: boolean
                           default: false
                           description: Makes the strategy active.
+                    removePodsViolatingTopologySpreadConstraint:
+                      type: object
+                      description: |-
+                        The strategy ensures that pods violating [topology spread constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) are evicted from nodes. It evicts the minimum number of pods required to balance topology domains to within each constraint's `maxSkew`.
+
+                        This is useful for rebalancing pods across zones after a zone outage recovery.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Makes the strategy active.
+                        constraints:
+                          type: array
+                          description: |-
+                            List of topology spread constraint types to consider when deciding which pods to evict.
+
+                            Topology spread constraints control how pods are distributed across your cluster
+                            topology (e.g. regions, zones, nodes).
+
+                            By default, only `DoNotSchedule` (hard constraints) are considered — these are
+                            constraints that the scheduler strictly enforces: a pod will NOT be placed if
+                            doing so would violate the constraint. `Descheduler` will evict pods that are
+                            currently violating such constraints (e.g. due to node failures or cluster
+                            topology changes after initial scheduling).
+
+                            Optionally, `ScheduleAnyway` (soft constraints) can also be included — these are
+                            constraints that the scheduler tries to satisfy but does not strictly enforce:
+                            a pod WILL be placed even if the constraint cannot be satisfied, though the
+                            scheduler will attempt to minimize the imbalance. Including this type causes
+                            `descheduler` to also evict pods that violate soft constraints.
+                          items:
+                            type: string
+                            enum: ["DoNotSchedule", "ScheduleAnyway"]
+                          default: ["DoNotSchedule"]
+                        topologyBalanceNodeFit:
+                          type: boolean
+                          default: true
+                          description: |-
+                            If set to `true`, the strategy will consider whether the pods can fit on other nodes
+                            when balancing topology domains.
                   anyOf:
                     - required: ["lowNodeUtilization"]
                     - required: ["highNodeUtilization"]
                     - required: ["removeDuplicates"]
                     - required: ["removePodsViolatingNodeAffinity"]
                     - required: ["removePodsViolatingInterPodAntiAffinity"]
+                    - required: ["removePodsViolatingTopologySpreadConstraint"]
               required:
                 - strategies
           required:

@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в OpenStack
 permalink: ru/admin/integrations/public/openstack/connection-and-authorization.html
 cloud_type: openstack
 lang: ru

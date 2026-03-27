@@ -429,6 +429,7 @@ stage:
           name: channels-artifact
           path: publish-channels
           include-hidden-files: true
+      {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
 {!{ range $env, $env_properties := $envs }!}
   {!{ $env_properties.job }!}:
@@ -456,6 +457,7 @@ stage:
           WERF_NAMESPACE: "{!{ $env_properties.werf_namespace }!}"
           WERF_DIR: "publish-channels"
           WERF_DEV: "true"
+      {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
 {!{ end }!}
   update_latest_release:
@@ -496,4 +498,5 @@ stage:
           fi
 
           echo -e "\e[32mRelease ${TARGET_RELEASE_ID} has been successfully marked as latest."
+      {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 {!{ end -}!}

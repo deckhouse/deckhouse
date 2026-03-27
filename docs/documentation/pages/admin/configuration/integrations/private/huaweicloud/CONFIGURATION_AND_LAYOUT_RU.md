@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка Huawei Cloud
 permalink: ru/admin/integrations/private/huaweicloud/layout.html
 lang: ru
 ---
@@ -21,7 +21,7 @@ lang: ru
 apiVersion: deckhouse.io/v1
 kind: HuaweiCloudClusterConfiguration
 layout: Standard
-sshPublicKey: "<Public SSH key>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 standard:
   internalNetworkDNSServers:
     - 8.8.8.8
@@ -61,7 +61,7 @@ masterNodeGroup:
 apiVersion: deckhouse.io/v1
 kind: HuaweiCloudClusterConfiguration
 layout: VpcPeering
-sshPublicKey: "<Public SSH key>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 vpcPeering:
   internalNetworkDNSServers:
     - 8.8.8.8

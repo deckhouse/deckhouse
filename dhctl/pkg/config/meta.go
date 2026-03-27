@@ -175,17 +175,31 @@ func (m *MetaConfig) prepareRegistry() error {
 			)
 		}
 
-		// Check bootstrap mode
+		// Check Local and Proxy modes
 		switch deckhouseSettings.Mode {
-		case registry_const.ModeLocal, registry_const.ModeProxy:
+		case registry_const.ModeLocal:
 			return fmt.Errorf(
 				"bootstrap is not supported with registry mode '%s'. "+
-					"Please use one of the supported bootstrap modes: %v. ",
+					"Please use one of the supported bootstrap modes: %v",
 				deckhouseSettings.Mode,
 				[]registry_const.ModeType{
-					registry_const.ModeUnmanaged, registry_const.ModeDirect,
+					registry_const.ModeUnmanaged,
+					registry_const.ModeDirect,
+					registry_const.ModeProxy,
 				},
 			)
+		case registry_const.ModeProxy:
+			if !m.IsStatic() {
+				return fmt.Errorf(
+					"bootstrap with registry mode '%s' is supported only in static cluster. "+
+						"Please use one of the supported bootstrap modes for non-static cluster: %v",
+					deckhouseSettings.Mode,
+					[]registry_const.ModeType{
+						registry_const.ModeUnmanaged,
+						registry_const.ModeDirect,
+					},
+				)
+			}
 		}
 
 		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings); err != nil {
@@ -633,17 +647,12 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (m *MetaConfig) LoadImagesDigests(filename string) error {
+func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
 	var imagesDigests imagesDigests
 
-	imagesDigestsJSONFile, err := os.ReadFile(filename)
+	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
 	if err != nil {
-		return fmt.Errorf("%s file load: %v", filename, err)
-	}
-
-	err = yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
-	if err != nil {
-		return fmt.Errorf("%s file unmarshal: %v", filename, err)
+		return fmt.Errorf("unmarshal: %v", err)
 	}
 
 	m.Images = imagesDigests

@@ -1,19 +1,25 @@
 ---
 title: "Application service architecture with Istio enabled"
 permalink: en/architecture/network/service-with-istio.html
+search: application architecture, istio
+description: Application service architecture with Istio enabled in Deckhouse Kubernetes Platform.
 ---
+
+{% alert level="info" %}
+Compatibility between Istio versions and Kubernetes versions is defined by the compatibility table [in the `istio` module documentation](/modules/istio/#compatibility-table-for-supported-versions). Before using Istio, refer to the current versions and their status in that section.
+{% endalert %}
 
 ## Architecture features
 
 * **Sidecar proxy**:
-  Each service Pod gets a sidecar container, a sidecar proxy, with two applications:
+  Each application service Pod gets a sidecar container, a sidecar proxy, with two applications:
   * **Envoy**: Proxies application traffic. It is responsible for implementing all the Istio functionality,
     including routing, authentication, authorization, etc.
   * **Pilot-agent**: A part of Istio that is responsible for keeping the Envoy configuration up to date
     and has a built-in caching DNS server.
 * **DNAT settings**:
-  * DNAT of incoming and outgoing application requests in the sidecar proxy is configured in each Pod.
-    This is done using an additional init container. Thus, traffic will be intercepted transparently for applications.
+  * DNAT of incoming and outgoing application requests in the sidecar proxy is configured in each Pod using an additional init container.
+    Thus, traffic will be intercepted transparently for applications.
   * Since incoming traffic is redirected to the sidecar proxy, this also applies to readiness/liveness probes.
     Since the Kubernetes subsystem does not support Mutual TLS probes,
     all existing probes are redirected to a port in the sidecar proxy, which passes them to the application unchanged.
@@ -26,7 +32,7 @@ permalink: en/architecture/network/service-with-istio.html
     as upstream instead of the Pod addresses. In this case, traffic balancing between the Pods is handled by the sidecar proxy.
     Use this option only if your service has a ClusterIP.
   * `nginx.ingress.kubernetes.io/upstream-vhost: "myservice.myns.svc"`: The Ingress controller's sidecar proxy makes
-    routing decisions based on the Host header. If this annotation is omitted, the controller will leave a header
+    routing decisions based on the `Host` header. If this annotation is omitted, the controller will leave a header
     with the site address (for example, `Host: example.com`).
 * **Services**:
   * Service resources do not require modifications and continue to work without adaptation.

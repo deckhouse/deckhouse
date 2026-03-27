@@ -65,7 +65,7 @@ func generateOldDockerCfg(host, username, password string) string {
 	return string(data)
 }
 
-func TestConfig_ApplySettings(t *testing.T) {
+func TestConfig_Merge(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    Config
@@ -102,17 +102,6 @@ func TestConfig_ApplySettings(t *testing.T) {
 			},
 		},
 		{
-			name: "trim ImagesRepo",
-			input: Config{
-				ImagesRepo:     "registry.example.com/",
-				RegistryScheme: "HTTPS",
-			},
-			expected: Config{
-				ImagesRepo:     "registry.example.com",
-				RegistryScheme: "HTTPS",
-			},
-		},
-		{
 			name: "full",
 			input: Config{
 				ImagesRepo:        "registry.example.com",
@@ -127,16 +116,49 @@ func TestConfig_ApplySettings(t *testing.T) {
 				RegistryCA:        "<ca>",
 			},
 		},
+		{
+			name: "partial override only RegistryCA",
+			input: Config{
+				ImagesRepo:     "",
+				RegistryScheme: "",
+				RegistryCA:     "<ca>",
+			},
+			expected: Config{
+				ImagesRepo:     constant.DefaultImagesRepo,
+				RegistryScheme: string(constant.DefaultScheme),
+				RegistryCA:     "<ca>",
+			},
+		},
+		{
+			name: "partial override only RegistryDockerCfg",
+			input: Config{
+				ImagesRepo:        "",
+				RegistryScheme:    "",
+				RegistryDockerCfg: "<dockerCfg>",
+			},
+			expected: Config{
+				ImagesRepo:        constant.DefaultImagesRepo,
+				RegistryScheme:    string(constant.DefaultScheme),
+				RegistryDockerCfg: "<dockerCfg>",
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var config Config
-			config.ApplyConfig(tt.input)
+			config := New().
+				Merge(&tt.input)
 
 			require.Equal(t, tt.expected, config)
 		})
 	}
+
+	t.Run("merge with nil other returns copy of base", func(t *testing.T) {
+		base := New()
+		merged := base.Merge(nil)
+
+		require.Equal(t, base, merged)
+	})
 }
 
 func TestConfig_ToRegistrySettings(t *testing.T) {
@@ -168,6 +190,20 @@ func TestConfig_ToRegistrySettings(t *testing.T) {
 					CA:         "-----BEGIN CERTIFICATE-----",
 					Username:   "test-user",
 					Password:   "test-password",
+				},
+			},
+		},
+		{
+			name: "with trimmed ImagesRepo",
+			input: Config{
+				ImagesRepo:     "registry.example.com/",
+				RegistryScheme: "HTTPS",
+			},
+			output: output{
+				err: false,
+				want: module_config.RegistrySettings{
+					ImagesRepo: "registry.example.com",
+					Scheme:     constant.SchemeHTTPS,
 				},
 			},
 		},

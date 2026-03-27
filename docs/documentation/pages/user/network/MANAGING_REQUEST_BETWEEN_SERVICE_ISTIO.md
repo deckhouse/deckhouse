@@ -1,5 +1,6 @@
 ---
 title: "Managing request balancing between service endpoints with Istio"
+description: "Managing request load balancing between endpoints in Deckhouse Kubernetes Platform using Istio. Configuring DestinationRule with TCP limits, load balancing algorithms, and outlier detection rules."
 permalink: en/user/network/managing_request_between_service_istio.html
 ---
 
@@ -22,7 +23,7 @@ the Service will receive three incoming connections.
 
 ## DestinationRule resource
 
-For more details on DestinationRule, refer to the [Istio documentation](https://istio.io/v1.19/docs/reference/config/networking/destination-rule/).
+For more details on DestinationRule, refer to the [Istio documentation](https://istio.io/v1.21/docs/reference/config/networking/destination-rule/).
 Use this resource to:
 
 - Define a traffic load balancing strategy between service endpoints:

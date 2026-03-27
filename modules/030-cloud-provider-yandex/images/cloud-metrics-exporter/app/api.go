@@ -32,9 +32,9 @@ func openFile(path string) (*os.File, error) {
 	return os.Open(absPath)
 }
 
-func InitAPI(api *yandex.CloudApi) error {
-	if ApiKeyFilePath != "" {
-		apiKeyFile, err := openFile(ApiKeyFilePath)
+func InitAPI(api *yandex.CloudAPI) error {
+	if APIKeyFilePath != "" {
+		apiKeyFile, err := openFile(APIKeyFilePath)
 		if err != nil {
 			return err
 		}
@@ -50,8 +50,8 @@ func InitAPI(api *yandex.CloudApi) error {
 		return nil
 	}
 
-	if ApiKey != "" {
-		api.InitWithAPIKey(ApiKey)
+	if APIKey != "" {
+		api.InitWithAPIKey(APIKey)
 		return nil
 	}
 

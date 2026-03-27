@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка Deckhouse Virtualization Platform
 permalink: ru/admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
 lang: ru
 ---
@@ -14,7 +14,7 @@ lang: ru
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
-sshPublicKey: ssh-rsa AAAABBBB
+sshPublicKey: <SSH_PUBLIC_KEY>
 masterNodeGroup:
   replicas: 1
   instanceClass:

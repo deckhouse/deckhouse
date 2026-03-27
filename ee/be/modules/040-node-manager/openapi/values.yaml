@@ -107,6 +107,20 @@ properties:
         description: |
           kubernetes.ca content
 
+      kubernetesAPIProxyDiscoveryCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
       standbyNodeGroups:
         type: array
         description: |
@@ -321,7 +335,7 @@ properties:
               description: |
                 Major.Minor of the Kubernetes version used in cluster.
               x-examples:
-                - "1.30"
+                - "1.31"
             updateEpoch:
               type: [integer, string]
               x-examples:
@@ -397,15 +411,18 @@ properties:
               properties:
                 mode:
                   type: string
-                  enum:
-                    - "Watchdog"
+                watchdog:
+                  type: object
+                  properties:
+                    timeout:
+                      type: integer
         x-examples:
           - - name: worker
               instanceClass: # minimum
                 ami: myami
                 instanceType: t2.medium
               nodeType: CloudEphemeral
-              kubernetesVersion: "1.30"
+              kubernetesVersion: "1.31"
               cri:
                 type: "Docker"
               cloudInstances:

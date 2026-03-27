@@ -143,19 +143,6 @@ func TestResourcesWithEmptyDocs(t *testing.T) {
 	})
 }
 
-func TestGetCloudNGs(t *testing.T) {
-	t.Run("returns two slices, one with ngs", func(t *testing.T) {
-		resources, err := ParseResources("testdata/resources/with_ngs.yaml", make(map[string]interface{}))
-
-		require.NoError(t, err)
-		require.Len(t, resources, 14)
-
-		cloudNGres, otherres := resources.GetCloudNGs()
-		require.Len(t, cloudNGres, 4)
-		require.Len(t, otherres, 10)
-	})
-}
-
 func TestResourcesDetailedGVKString(t *testing.T) {
 	t.Run("returns group if not empty", func(t *testing.T) {
 		cases := []struct {

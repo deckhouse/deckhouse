@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in Microsoft Azure
 permalink: en/admin/integrations/public/azure/layout.html
 ---
 

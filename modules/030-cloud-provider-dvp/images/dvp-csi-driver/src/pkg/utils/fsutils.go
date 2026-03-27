@@ -30,29 +30,37 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func StatFS(path string) (available, capacity, used, inodesFree, inodes, inodesUsed int64, err error) {
+func StatFS(path string) (int64, int64, int64, int64, int64, int64, error) {
+	var (
+		available  int64
+		capacity   int64
+		used       int64
+		inodesFree int64
+		inodes     int64
+		inodesUsed int64
+	)
+
 	statfs := &unix.Statfs_t{}
-	err = unix.Statfs(path, statfs)
-	if err != nil {
+	if err := unix.Statfs(path, statfs); err != nil {
 		err = fmt.Errorf("failed to get fs info on path %s: %v", path, err)
-		return
+		return available, capacity, used, inodesFree, inodes, inodesUsed, err
 	}
 
 	// Available is blocks available * fragment size
-	available = int64(statfs.Bavail) * int64(statfs.Bsize)
+	available = int64(statfs.Bavail) * int64(statfs.Bsize) // nolint:unconvert
 
 	// Capacity is total block count * fragment size
-	capacity = int64(statfs.Blocks) * int64(statfs.Bsize)
+	capacity = int64(statfs.Blocks) * int64(statfs.Bsize) // nolint:unconvert
 
 	// Usage is block being used * fragment size (aka block size).
-	used = (int64(statfs.Blocks) - int64(statfs.Bfree)) * int64(statfs.Bsize)
+	used = (int64(statfs.Blocks) - int64(statfs.Bfree)) * int64(statfs.Bsize) // nolint:unconvert
 
 	// Get inode usage
 	inodes = int64(statfs.Files)
 	inodesFree = int64(statfs.Ffree)
 	inodesUsed = inodes - inodesFree
 
-	return
+	return available, capacity, used, inodesFree, inodes, inodesUsed, nil
 }
 
 func IsBlockDevice(fullPath string) (bool, error) {
@@ -126,13 +134,16 @@ func MakeFS(device string, fsType string) error {
 
 	var cmd *exec.Cmd
 	var stdout, stderr bytes.Buffer
-	if strings.HasPrefix(fsType, "ext") {
+
+	switch {
+	case strings.HasPrefix(fsType, "ext"):
 		cmd = exec.Command("mkfs", "-F", "-t", fsType, device)
-	} else if strings.HasPrefix(fsType, "xfs") {
+	case strings.HasPrefix(fsType, "xfs"):
 		cmd = exec.Command("mkfs", "-t", fsType, "-f", device)
-	} else {
+	default:
 		return errors.New(fsType + " is not supported, only xfs and ext are supported")
 	}
+
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 

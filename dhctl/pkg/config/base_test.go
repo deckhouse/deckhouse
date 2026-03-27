@@ -39,7 +39,7 @@ func TestParseConfigFromData(t *testing.T) {
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.30"
+kubernetesVersion: "1.31"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 `
@@ -266,7 +266,7 @@ spec:
     registry:
       mode: Unmanaged
       unmanaged:
-        imagesRepo: r.example.com/test/
+        imagesRepo: r.example.com/test
         username: test-user
         password: test-password
         scheme: HTTPS
@@ -433,7 +433,6 @@ spec:
 }
 
 func TestParseConfigFromFiles(t *testing.T) {
-	imagesDigestsJSON = "./mocks/images_digests.json"
 	app.VersionFile = "./mocks/version"
 	t.Run("parse wildcard", func(t *testing.T) {
 		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider())

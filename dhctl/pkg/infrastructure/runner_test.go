@@ -232,7 +232,7 @@ loop:
 	return 0, nil
 }
 
-func (e *sleepExecutor) Output(ctx context.Context, statePath string, outFields ...string) (result []byte, err error) {
+func (e *sleepExecutor) Output(ctx context.Context, opts OutputOpts) (result []byte, err error) {
 	return nil, nil
 }
 
@@ -240,7 +240,7 @@ func (e *sleepExecutor) Destroy(ctx context.Context, opts DestroyOpts) error {
 	return nil
 }
 
-func (e *sleepExecutor) Show(ctx context.Context, planPath string) (result []byte, err error) {
+func (e *sleepExecutor) Show(ctx context.Context, opts ShowOpts) (result []byte, err error) {
 	return nil, nil
 }
 

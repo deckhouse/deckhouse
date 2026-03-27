@@ -21,15 +21,15 @@ import (
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
 
 	podstatus "update-observer/pkg/pod-status"
 	"update-observer/pkg/version"
 )
 
 type MasterNode struct {
-	Phase      MasterNodePhase
-	Components map[string]*ControlPlaneComponent
+	Phase       MasterNodePhase
+	Description string
+	Components  map[string]*ControlPlaneComponent
 }
 
 type MasterNodePhase string
@@ -40,7 +40,7 @@ const (
 	MasterNodeFailed   MasterNodePhase = "Failed"
 )
 
-func buildControlPlaneTopology(pods *corev1.PodList) (map[string]*MasterNode, error) {
+func buildControlPlaneTopology(pods *corev1.PodList, desiredVersion string) (map[string]*MasterNode, error) {
 	nodesState := make(map[string]*MasterNode)
 
 	for _, pod := range pods.Items {
@@ -68,20 +68,16 @@ func buildControlPlaneTopology(pods *corev1.PodList) (map[string]*MasterNode, er
 			return nil, fmt.Errorf("failed to normalize kubernetes-version '%s': %w", kubeVersion, err)
 		}
 
-		component := &ControlPlaneComponent{
-			Version: version,
-			Pod:     pod,
-		}
-
-		nodeState.Components[componentLabel] = component
+		nodeState.Components[componentLabel] = newControlPlaneComponent(version, pod, desiredVersion)
 	}
 
 	return nodesState, nil
 }
 
 type ControlPlaneComponent struct {
-	Version string
-	Pod     corev1.Pod
+	Version     string
+	State       ControlPlaneComponentState
+	Description string
 }
 
 type ControlPlaneComponentState int
@@ -92,44 +88,43 @@ const (
 	ControlPlaneComponentUpToDate
 )
 
-func (s *ControlPlaneComponent) getState(desiredVersion string) ControlPlaneComponentState {
-	if s.Pod.Status.Phase != corev1.PodRunning {
-		klog.Warningf("Pod is not in Running phase: \n\tName: %s\n\tPodPhase: %s",
-			s.Pod.Name,
-			s.Pod.Status.Phase)
-		return ControlPlaneComponentFailed
+func newControlPlaneComponent(version string, pod corev1.Pod, desiredVersion string) *ControlPlaneComponent {
+	state, message := determineComponentState(version, pod, desiredVersion)
+
+	return &ControlPlaneComponent{
+		Version:     version,
+		State:       state,
+		Description: message,
+	}
+}
+
+func determineComponentState(version string, pod corev1.Pod, desiredVersion string) (ControlPlaneComponentState, string) {
+	if pod.Status.Phase != corev1.PodRunning {
+		return ControlPlaneComponentFailed, fmt.Sprintf("Pod is not Running - %s", pod.Status.Phase)
 	}
 
-	for _, containerStatus := range s.Pod.Status.ContainerStatuses {
+	for _, containerStatus := range pod.Status.ContainerStatuses {
 		switch {
 		case containerStatus.State.Waiting != nil:
 			if slices.Contains(podstatus.GetProblematicStatuses(), containerStatus.State.Waiting.Reason) {
-				klog.Warningf("Container waiting state has problematic reason: \n\tName: %s\n\tReason: %s",
-					containerStatus.Name,
-					containerStatus.State.Waiting.Reason,
-				)
-				return ControlPlaneComponentFailed
+				return ControlPlaneComponentFailed, fmt.Sprintf("Container %s is Waiting - %s", containerStatus.Name, containerStatus.State.Waiting.Reason)
 			}
-			return ControlPlaneComponentUpdating
+			return ControlPlaneComponentUpdating, ""
 
 		case containerStatus.State.Terminated != nil:
 			if slices.Contains(podstatus.GetProblematicStatuses(), containerStatus.State.Terminated.Reason) {
-				klog.Warningf("Container terminated state has problematic reason: \n\tName: %s\n\tReason: %s",
-					containerStatus.Name,
-					containerStatus.State.Terminated.Reason,
-				)
-				return ControlPlaneComponentFailed
+				return ControlPlaneComponentFailed, fmt.Sprintf("Container %s is Terminated - %s", containerStatus.Name, containerStatus.State.Terminated.Reason)
 			}
-			return ControlPlaneComponentUpdating
+			return ControlPlaneComponentUpdating, ""
 
 		case containerStatus.State.Running != nil && !containerStatus.Ready:
-			return ControlPlaneComponentUpdating
+			return ControlPlaneComponentUpdating, ""
 		}
 	}
 
-	if s.Version != desiredVersion {
-		return ControlPlaneComponentUpdating
+	if version != desiredVersion {
+		return ControlPlaneComponentUpdating, ""
 	}
 
-	return ControlPlaneComponentUpToDate
+	return ControlPlaneComponentUpToDate, ""
 }
