@@ -236,6 +236,83 @@ func writeSections(settings writeSettings) {
 	}
 }
 
+
+func deleteRevisionFiles(template string, edition string) {
+	files, err := filepath.Glob(includePath(fmt.Sprintf(template, edition)))
+	if err != nil {
+		log.Fatalf("globbing: %v", err)
+	}
+
+	for _, file := range files {
+		_ = os.Remove(file)
+	}
+}
+
+func writeCandiCloudProvidersSections(settings writeSettings) {
+	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
+
+	prefix := filepath.Join(workDir, settings.Prefix)
+	searchDir := filepath.Join(prefix, settings.Dir, cloudProviderGlob)
+
+	files, err := filepath.Glob(searchDir)
+	if err != nil {
+		log.Fatalf("globbing: %v", err)
+	}
+	var addEntries []addEntry
+
+	addNewFileEntry := func(file string) {
+		candiPath := filepath.Join(file, "candi")
+		info, err := os.Lstat(candiPath)
+		if err != nil {
+			log.Fatalf("cannot lstat file %s: %v", file, err)
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
+			return
+		}
+
+		cloudProviderName := extractCloudProviderName(file)
+
+		addEntries = append(addEntries, addEntry{
+			Add:               strings.TrimPrefix(candiPath, workDir),
+			To:                filepath.Join("/deckhouse", "candi", "cloud-providers", cloudProviderName),
+			ExcludePaths:      settings.ExcludePaths,
+			StageDependencies: settings.StageDependencies,
+		})
+	}
+
+	for _, file := range files {
+		info, err := os.Stat(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if !info.IsDir() {
+			continue
+		}
+		if len(settings.AvailableModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			if _, ok := settings.AvailableModules[moduleName]; !ok {
+				continue
+			}
+		}
+
+		addNewFileEntry(file)
+	}
+
+	var result []byte
+	if len(addEntries) != 0 {
+		result, err = yaml.Marshal(addEntries)
+		if err != nil {
+			log.Fatalf("converting entries to YAML: %v", err)
+		}
+	}
+
+	if err := writeToFile(saveTo, result); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func writeStageDepsSections(settings writeSettings) {
 	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
 	if settings.Dir == "" {
@@ -341,82 +418,6 @@ func writeStageDepsSections(settings writeSettings) {
 			log.Fatalf("converting entries to YAML: %v", err)
 		}
 	}
-	if err := writeToFile(saveTo, result); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func deleteRevisionFiles(template string, edition string) {
-	files, err := filepath.Glob(includePath(fmt.Sprintf(template, edition)))
-	if err != nil {
-		log.Fatalf("globbing: %v", err)
-	}
-
-	for _, file := range files {
-		_ = os.Remove(file)
-	}
-}
-
-func writeCandiCloudProvidersSections(settings writeSettings) {
-	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
-
-	prefix := filepath.Join(workDir, settings.Prefix)
-	searchDir := filepath.Join(prefix, settings.Dir, cloudProviderGlob)
-
-	files, err := filepath.Glob(searchDir)
-	if err != nil {
-		log.Fatalf("globbing: %v", err)
-	}
-	var addEntries []addEntry
-
-	addNewFileEntry := func(file string) {
-		candiPath := filepath.Join(file, "candi")
-		info, err := os.Lstat(candiPath)
-		if err != nil {
-			log.Fatalf("cannot lstat file %s: %v", file, err)
-		}
-
-		if info.Mode()&os.ModeSymlink != 0 {
-			return
-		}
-
-		cloudProviderName := extractCloudProviderName(file)
-
-		addEntries = append(addEntries, addEntry{
-			Add:               strings.TrimPrefix(candiPath, workDir),
-			To:                filepath.Join("/deckhouse", "candi", "cloud-providers", cloudProviderName),
-			ExcludePaths:      settings.ExcludePaths,
-			StageDependencies: settings.StageDependencies,
-		})
-	}
-
-	for _, file := range files {
-		info, err := os.Stat(file)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if !info.IsDir() {
-			continue
-		}
-		if len(settings.AvailableModules) > 0 {
-			moduleName := filepath.Base(file)[4:]
-			if _, ok := settings.AvailableModules[moduleName]; !ok {
-				continue
-			}
-		}
-
-		addNewFileEntry(file)
-	}
-
-	var result []byte
-	if len(addEntries) != 0 {
-		result, err = yaml.Marshal(addEntries)
-		if err != nil {
-			log.Fatalf("converting entries to YAML: %v", err)
-		}
-	}
-
 	if err := writeToFile(saveTo, result); err != nil {
 		log.Fatal(err)
 	}
