@@ -30,10 +30,6 @@ import (
 	"registry-packages-proxy/internal/credentials"
 )
 
-const (
-	rppGetBinaryListenAddress = ":4300"
-)
-
 func main() {
 	config, err := app.InitFlags()
 	if err != nil {
@@ -50,7 +46,7 @@ func main() {
 	}
 	defer listener.Close()
 
-	bootstrapListener, err := net.Listen("tcp", rppGetBinaryListenAddress)
+	bootstrapListener, err := net.Listen("tcp", config.RPPGetBinaryListenAddress)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

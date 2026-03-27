@@ -23,19 +23,15 @@ set -Eeo pipefail
 {{- $clusterMasterKubeAPIEndpoints := list -}}
 {{- $clusterMasterRPPAddresses := list -}}
 {{- if eq .runType "Normal" -}}
-  {{- $clusterMasterEndpoints := .normal.clusterMasterEndpoints | default (list) -}}
-  {{- range $endpoint := $clusterMasterEndpoints -}}
-    {{- $address := get $endpoint "address" -}}
+  {{- range $endpoint := .normal.clusterMasterEndpoints | default (list) -}}
     {{- if hasKey $endpoint "kubeApiPort" -}}
-      {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $address (get $endpoint "kubeApiPort")) -}}
+      {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) -}}
     {{- end -}}
   {{- end -}}
 {{- else -}}
-  {{- $clusterMasterEndpoints := .clusterMasterEndpoints | default (list) -}}
-  {{- range $endpoint := $clusterMasterEndpoints -}}
-    {{- $address := get $endpoint "address" -}}
+  {{- range $endpoint := .clusterMasterEndpoints | default (list) -}}
     {{- if hasKey $endpoint "rppServerPort" -}}
-      {{- $clusterMasterRPPAddresses = append $clusterMasterRPPAddresses (printf "%s:%v" $address (get $endpoint "rppServerPort")) -}}
+      {{- $clusterMasterRPPAddresses = append $clusterMasterRPPAddresses (printf "%s:%v" $endpoint.address $endpoint.rppServerPort) -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}
