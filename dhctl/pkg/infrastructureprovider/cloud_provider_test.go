@@ -76,9 +76,9 @@ func getTestFSDIParams(t *testing.T, logger log.Logger) *fsprovider.DIParams {
 
 	return &fsprovider.DIParams{
 		InfraVersionsFile: "/deckhouse/candi/terraform_versions.yml",
-		BinariesDir:       "/bin",
+		BinariesDir:       "/dhctl-tests/bin",
 		CloudProviderDir:  cloudProvidersDir,
-		PluginsDir:        "/plugins",
+		PluginsDir:        "/dhctl-tests/plugins",
 	}
 }
 

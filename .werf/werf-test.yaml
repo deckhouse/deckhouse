@@ -88,3 +88,8 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+shell:
+  setup:
+  - mkdir /dhctl-tests
+  - ln -s -v /bin /dhctl-tests/bin
+  - ln -s -v /plugins /dhctl-tests/plugins
