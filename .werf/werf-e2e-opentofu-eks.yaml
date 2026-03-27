@@ -10,7 +10,10 @@ import:
     add: /src/_output/bin/kubectl
     to: /usr/local/bin/kubectl
     before: setup
-{{ include "installer_and_installer_standalone_opentofu_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) | nindent 2 }}
+  - image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+    add: /opentofu/opentofu
+    to: /image/bin/opentofu
+    before: setup
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-random
     to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
