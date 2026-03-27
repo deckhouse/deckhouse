@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package applicationpackageversion
+package modulepackageversion
 
 import (
 	"bytes"
@@ -26,13 +26,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -124,11 +125,11 @@ func (suite *ControllerTestSuite) setupController(filename string, options ...re
 func (suite *ControllerTestSuite) fetchResults() []byte {
 	result := bytes.NewBuffer(nil)
 
-	var apvList v1alpha1.ApplicationPackageVersionList
-	err := suite.kubeClient.List(context.TODO(), &apvList)
+	var mpvList v1alpha1.ModulePackageVersionList
+	err := suite.kubeClient.List(context.TODO(), &mpvList)
 	require.NoError(suite.T(), err)
 
-	for _, item := range apvList.Items {
+	for _, item := range mpvList.Items {
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -167,7 +168,7 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 	kubeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects().
-		WithStatusSubresource(&v1alpha1.ApplicationPackageVersion{}).
+		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}).
 		Build()
 
 	ctr := &reconciler{
@@ -176,13 +177,11 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		dc:     dependency.NewDependencyContainer(),
 	}
 
-	// Load test data from file
 	testDataPath := filepath.Join("./testdata", filename)
 	if _, err := os.Stat(testDataPath); err == nil {
 		data, err := os.ReadFile(testDataPath)
 		require.NoError(t, err)
 
-		// Parse and create objects
 		manifests := singleDocToManifests(data)
 		for _, manifest := range manifests {
 			if manifest == "" {
@@ -194,11 +193,11 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 			require.NoError(t, err)
 
 			switch obj.Kind {
-			case "ApplicationPackageVersion":
-				var apv v1alpha1.ApplicationPackageVersion
-				err := yaml.Unmarshal([]byte(manifest), &apv)
+			case "ModulePackageVersion":
+				var mpv v1alpha1.ModulePackageVersion
+				err := yaml.Unmarshal([]byte(manifest), &mpv)
 				require.NoError(t, err)
-				require.NoError(t, kubeClient.Create(context.TODO(), &apv))
+				require.NoError(t, kubeClient.Create(context.TODO(), &mpv))
 			case "PackageRepository":
 				var repo v1alpha1.PackageRepository
 				err := yaml.Unmarshal([]byte(manifest), &repo)
@@ -228,12 +227,12 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	suite.Run("resource not found", func() {
 		suite.setupController("resource-not-found.yaml")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: "non-existent-apv"},
+			NamespacedName: types.NamespacedName{Name: "non-existent-mpv"},
 		})
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("successful reconcile with golden file", func() {
+	suite.Run("successful reconcile with v2 package metadata", func() {
 		dc := dependency.NewMockedContainer()
 		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: func() (*crv1.Manifest, error) {
@@ -243,13 +242,12 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			},
 			LayersStub: func() ([]crv1.Layer, error) {
 				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
-					"package.yaml": `name: test-package
+					"package.yaml": `name: test-module
 description:
-  en: Test package
-  ru: Ru Test package
-category: Test
-stage: Preview
-type: Application
+  en: Test module
+category: Networking
+stage: GA
+type: Module
 version: "1.0.0"
 `,
 					"version.json":  `{"version": "1.0.0"}`,
@@ -257,158 +255,167 @@ version: "1.0.0"
 				}}}, nil
 			},
 		}, nil)
-		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
-		suite.setupController("successful-reconcile.yaml", withDependencyContainer(dc))
+		suite.setupController("successful-reconcile-v2.yaml", withDependencyContainer(dc))
 
-		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
+		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: apv.Name},
+			NamespacedName: types.NamespacedName{Name: mpv.Name},
 		})
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("registry error reconcile with golden file", func() {
-		// Override with invalid package.yaml
+	suite.Run("successful reconcile with legacy module metadata", func() {
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: func() (*crv1.Manifest, error) {
+				return &crv1.Manifest{
+					Layers: []crv1.Descriptor{},
+				}, nil
+			},
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
+					"module.yaml": `name: test-module
+descriptions:
+  en: Legacy test module
+stage: Sandbox
+requirements:
+  deckhouse: ">= 1.60"
+  kubernetes: ">= 1.27"
+`,
+					"version.json":  `{"version": "1.0.0"}`,
+					"changelog.yaml": "features:\n- Legacy feature\n",
+				}}}, nil
+			},
+		}, nil)
+
+		suite.setupController("successful-reconcile-legacy.yaml", withDependencyContainer(dc))
+
+		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: mpv.Name},
+		})
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("legacy module from old registry", func() {
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: func() (*crv1.Manifest, error) {
+				return &crv1.Manifest{
+					Layers: []crv1.Descriptor{},
+				}, nil
+			},
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
+					"module.yaml": `name: test-module
+descriptions:
+  en: Legacy module from old registry
+stage: Sandbox
+`,
+					"version.json": `{"version": "1.0.0"}`,
+				}}}, nil
+			},
+		}, nil)
+
+		suite.setupController("release-path-segment.yaml", withDependencyContainer(dc))
+
+		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: mpv.Name},
+		})
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("registry error reconcile", func() {
 		dc := dependency.NewMockedContainer()
 		dc.CRClient.ImageMock.Return(nil, fmt.Errorf("registry error"))
 
 		suite.setupController("registry-error-reconcile.yaml", withDependencyContainer(dc))
 
-		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
+		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: apv.Name},
+			NamespacedName: types.NamespacedName{Name: mpv.Name},
 		})
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("metadata parsing error reconcile with golden file", func() {
-		// Override with invalid package.yaml
-		dc := dependency.NewMockedContainer()
-		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
-			ManifestStub: func() (*crv1.Manifest, error) {
-				return &crv1.Manifest{
-					Layers: []crv1.Descriptor{},
-				}, nil
-			},
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
-					"package.yaml": `invalid: yaml: content: [unclosed`,
-					"version.json": `{"version": "1.0.0"}`,
-				}}}, nil
-			},
-		}, nil)
-
-		suite.setupController("metadata-parsing-error-reconcile.yaml", withDependencyContainer(dc))
-
-		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: apv.Name},
-		})
-		require.NoError(suite.T(), err)
-	})
 
 	suite.Run("non-draft resource skip", func() {
 		suite.setupController("non-draft-resource.yaml")
-		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
+		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: apv.Name},
+			NamespacedName: types.NamespacedName{Name: mpv.Name},
 		})
 		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("two errors reconcile with golden file", func() {
-		// Override with invalid package.yaml
-		dc := dependency.NewMockedContainer()
-		dc.CRClient.ImageMock.Return(nil, fmt.Errorf("registry error"))
-
-		suite.setupController("two-errors-reconcile.yaml", withDependencyContainer(dc))
-
-		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: apv.Name},
-		})
-		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("err-to-success reconcile with golden file", func() {
-		dc := dependency.NewMockedContainer()
-		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
-			ManifestStub: func() (*crv1.Manifest, error) {
-				return &crv1.Manifest{
-					Layers: []crv1.Descriptor{},
-				}, nil
-			},
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
-					"package.yaml": `name: test-package
-description:
-  en: Test package
-  ru: Ru Test package
-category: Test
-stage: Preview
-type: Application
-version: "1.0.0"
-`,
-					"version.json": `{"version": "1.0.0"}`,
-				}}}, nil
-			},
-		}, nil)
-		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
-
-		suite.setupController("error-to-success.yaml", withDependencyContainer(dc))
-
-		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: apv.Name},
-		})
-		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("no bundle image in registry", func() {
-		dc := dependency.NewMockedContainer()
-		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
-			ManifestStub: func() (*crv1.Manifest, error) {
-				return &crv1.Manifest{
-					Layers: []crv1.Descriptor{},
-				}, nil
-			},
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
-					"package.yaml": `name: test-package
-description:
-  en: Test package
-  ru: Ru Test package
-category: Test
-stage: Preview
-type: Application
-version: "1.0.0"
-`,
-					"version.json": `{"version": "1.0.0"}`,
-				}}}, nil
-			},
-		}, nil)
-		dc.CRClient.DigestMock.When(ctx, "v1.0.0").Then("", &transport.Error{StatusCode: http.StatusNotFound})
-
-		suite.setupController("no-bundle-image-in-registry.yaml", withDependencyContainer(dc))
-
-		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: apv.Name},
-		})
-		require.NoError(suite.T(), err)
-
-		apv = suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
-		require.Equal(suite.T(), "false", apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry])
 	})
 }
 
-// nolint:unparam
-func (suite *ControllerTestSuite) getApplicationPackageVersion(name string) *v1alpha1.ApplicationPackageVersion {
-	var apv v1alpha1.ApplicationPackageVersion
-	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &apv)
+func (suite *ControllerTestSuite) getModulePackageVersion(name string) *v1alpha1.ModulePackageVersion {
+	var mpv v1alpha1.ModulePackageVersion
+	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &mpv)
 	require.NoError(suite.T(), err)
-	return &apv
+	return &mpv
+}
+
+func TestDeleteBlockedByUsedByCount(t *testing.T) {
+	ctx := context.Background()
+	ctr, kubeClient := setupFakeController(t, "delete-with-used-by.yaml")
+
+	mpvName := "deckhouse-test-module-v1.0.0"
+
+	// First reconcile adds the finalizer
+	_, err := ctr.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: mpvName},
+	})
+	require.NoError(t, err)
+
+	// Trigger deletion (fake client sets DeletionTimestamp because finalizer exists)
+	var mpv v1alpha1.ModulePackageVersion
+	require.NoError(t, kubeClient.Get(ctx, types.NamespacedName{Name: mpvName}, &mpv))
+	require.NoError(t, kubeClient.Delete(ctx, &mpv))
+
+	// Reconcile should block deletion because UsedByCount > 0
+	result, err := ctr.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: mpvName},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 5*time.Second, result.RequeueAfter, "should requeue when UsedByCount > 0")
+
+	// Verify finalizer is still present (object not deleted)
+	var updated v1alpha1.ModulePackageVersion
+	require.NoError(t, kubeClient.Get(ctx, types.NamespacedName{Name: mpvName}, &updated))
+	assert.Contains(t, updated.Finalizers, v1alpha1.ModulePackageVersionFinalizer)
+}
+
+func TestDeleteSucceedsWhenUnused(t *testing.T) {
+	ctx := context.Background()
+	ctr, kubeClient := setupFakeController(t, "delete-unused.yaml")
+
+	mpvName := "deckhouse-test-module-v1.0.0"
+
+	// First reconcile adds the finalizer
+	_, err := ctr.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: mpvName},
+	})
+	require.NoError(t, err)
+
+	// Trigger deletion
+	var mpv v1alpha1.ModulePackageVersion
+	require.NoError(t, kubeClient.Get(ctx, types.NamespacedName{Name: mpvName}, &mpv))
+	require.NoError(t, kubeClient.Delete(ctx, &mpv))
+
+	// Reconcile should remove finalizer because UsedByCount == 0
+	result, err := ctr.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: mpvName},
+	})
+	require.NoError(t, err)
+	assert.Zero(t, result.RequeueAfter, "should not requeue when unused")
+
+	// Object should be fully deleted (finalizer removed, fake client garbage-collected it)
+	var updated v1alpha1.ModulePackageVersion
+	err = kubeClient.Get(ctx, types.NamespacedName{Name: mpvName}, &updated)
+	assert.True(t, apierrors.IsNotFound(err), "object should be deleted after finalizer removal")
 }
 
 func TestConvertLicensingEditions(t *testing.T) {

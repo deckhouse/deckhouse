@@ -1,36 +1,31 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: ApplicationPackageVersion
+kind: ModulePackageVersion
 metadata:
   creationTimestamp: null
   finalizers:
-  - applicationpackageversion.deckhouse.io/used-by-application
+  - modulepackageversion.deckhouse.io/used-by-module
   labels:
-    packages.deckhouse.io/package: test
+    packages.deckhouse.io/legacy: "true"
+    packages.deckhouse.io/package: test-module
     packages.deckhouse.io/repository: deckhouse
-  name: deckhouse-test-v1.0.0
+  name: deckhouse-test-module-v1.0.0
   resourceVersion: "4"
 spec:
-  packageName: test
+  packageName: test-module
   packageRepositoryName: deckhouse
   packageVersion: v1.0.0
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: MetadataLoaded
     status: "True"
     type: MetadataLoaded
   packageMetadata:
-    category: Test
-    changelog:
-      features:
-      - Added new feature
-      fixes:
-      - Fixed a bug
     description:
-      en: Test package
-      ru: Ru Test package
-    stage: Preview
+      en: Legacy module from old registry
+    stage: Sandbox
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

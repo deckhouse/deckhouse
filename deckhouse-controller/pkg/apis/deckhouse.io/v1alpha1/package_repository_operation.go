@@ -71,7 +71,7 @@ var _ runtime.Object = (*PackageRepositoryOperation)(nil)
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=pro
 // +kubebuilder:printcolumn:name=Count,type=integer,JSONPath=.status.packages.total
 // +kubebuilder:printcolumn:name=Completed,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].status
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].message
@@ -188,6 +188,10 @@ type PackageRepositoryOperationStatusPackage struct {
 	// Type of the package.
 	// +optional
 	Type string `json:"type,omitempty"`
+
+	// Number of versions found during this operation.
+	// +optional
+	FoundVersions int `json:"foundVersions,omitempty"`
 }
 
 type PackageRepositoryOperationStatusCondition struct {
