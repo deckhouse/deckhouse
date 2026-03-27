@@ -29,6 +29,7 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -45,6 +46,8 @@ var (
 	scheme     = runtime.NewScheme()
 	logOptions = logs.NewOptions()
 )
+
+const MachineNamespace = "d8-cloud-instance-manager"
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -81,6 +84,13 @@ func main() {
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
+		},
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{
+				MachineNamespace: {},
+				"kube-system":    {},
+				"default":        {},
+			},
 		},
 		WebhookServer: ctrlwebhook.NewServer(ctrlwebhook.Options{
 			Port: 9443,

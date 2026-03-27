@@ -33,6 +33,7 @@ func (cn ControllerName) String() string { return string(cn) }
 const (
 	NodeControllers      ControllerName = "node"
 	NodeGroupControllers ControllerName = "nodegroup"
+	InstanceControllers  ControllerName = "instance"
 )
 
 type controllerEntry struct {
