@@ -12,7 +12,7 @@ The `sds-node-configurator` manages block devices and LVM on Kubernetes cluster 
 * Scanning LVM Physical Volumes on nodes that are part of managed LVM Volume Groups. When underlying block devices are expanded, corresponding LVM Physical Volumes are automatically increased (performs pvresize).
 * Creation/expansion/deletion of LVM Volume Groups on the node according to [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource settings.
 
-For more details about the module, refer to the [corresponding documentation section](/modules/sds-node-configurator/).
+For more details about the module, refer to [the module documentation section](/modules/sds-node-configurator/).
 
 ## Module architecture
 

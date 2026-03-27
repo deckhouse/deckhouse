@@ -13,7 +13,7 @@ description: Архитектура модуля sds-node-configurator в Deckho
 * Сканирование на узлах физических томов LVM, входящих в управляемые группы томов LVM. При расширении базовых блочных устройств соответствующие физические тома LVM автоматически увеличиваются (выполняется pvresize).
 * Создание/расширение/удаление групп томов LVM на узле в соответствии с настройками ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup).
 
-Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/sds-node-configurator/).
+Подробнее с описанием модуля можно ознакомиться в [в разделе документации модуля](/modules/sds-node-configurator/).
 
 ## Архитектура модуля
 
@@ -47,7 +47,7 @@ description: Архитектура модуля sds-node-configurator в Deckho
    Состоит из следующих контейнеров:
 
    * **controller** — основной контейнер;
-   * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для валидации кастомных ресурсов [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot). Если используемая редакция DKP не поддерживает функционал снимков логических томов LVM, кастомный ресурс [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) не проходит валидацию.
+   * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot). Если используемая редакция DKP не поддерживает функционал снимков логических томов LVM, кастомный ресурс [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) не проходит валидацию.
 
 ## Взаимодействия модуля
 
