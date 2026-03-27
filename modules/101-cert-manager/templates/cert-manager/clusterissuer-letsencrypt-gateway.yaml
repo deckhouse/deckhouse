@@ -24,6 +24,6 @@ spec:
             kind: Gateway
             name: {{ $moduleGateway.name }}
             namespace: {{ $moduleGateway.namespace }}
-            section: d8-http-default
+            sectionName: d8-http-default
   {{- end }}
 {{- end }}
