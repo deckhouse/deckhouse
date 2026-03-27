@@ -1,0 +1,24 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-8672d6eafe61e4f890bf57dfe22d2a4475b99af4354ceed6f3f9ae9a9ff2f1ed",
+  "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: etcdctl и etcdutl является CLI-инструментами для взаимодействия с etcd и не поднимают долгоживущий gRPC-сервер с path-based авторизационными интерцепторами. grpc-go присутствует как транзитивная зависимость, однако серверный путь исполнения с deny-правилами и fallback allow в данном компоненте не задействован.",
+      "timestamp": "2026-03-24T14:30:42.406256Z"
+    }
+  ],
+  "timestamp": "2026-03-27T08:45:30Z",
+  "last_updated": "2026-03-27T08:45:30Z"
+}
