@@ -21,9 +21,9 @@ Files:
 Changes:
 
 - Update Go version: 1.20 → 1.24.0
-- Update go-vcloud-director SDK: v2.15.0 → v2.17.0 (minimum version with AddMetadataEntryWithVisibility method required by patch 005)
+- Update go-vcloud-director SDK: v2.15.0 → v2.21.0 (required for compatibility with cloud-controller-manager-legacy which uses v2.21.0 for patch 005)
 - Update sigs.k8s.io/yaml: v1.3.0 → v1.4.0
-- Note: golang.org/x/* packages are NOT updated due to controller-runtime v0.14.5 incompatibility with newer versions
+- Note: SDK v2.21.0 is compatible with controller-runtime v0.14.5 when used without replace directive for cloud-provider-for-cloud-director
 
 ### 003-klog.patch
 

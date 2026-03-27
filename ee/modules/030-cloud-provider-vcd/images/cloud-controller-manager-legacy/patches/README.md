@@ -33,7 +33,7 @@ Files:
 
 Changes:
 
-- Update go-vcloud-director SDK: v2.14.0-rc.3 → v2.17.0 (minimum version with AddMetadataEntryWithVisibility method, required for compatibility with capcd-controller-manager-legacy)
+- Update go-vcloud-director SDK: v2.14.0-rc.3 → v2.21.0 (required for patch 005 which uses QueryCatalogRecords method introduced in v2.21.0)
 
 ### 004-klog.patch
 
