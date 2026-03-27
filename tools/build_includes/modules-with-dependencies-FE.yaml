@@ -263,14 +263,6 @@
   stageDependencies:
     install:
         - '**/*.go'
-- add: /modules/500-okmeter/hooks
-  to: /deckhouse/modules/500-okmeter/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*.go'
 - add: /modules/500-openvpn/hooks
   to: /deckhouse/modules/500-openvpn/hooks
   excludePaths:

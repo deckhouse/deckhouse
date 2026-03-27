@@ -261,6 +261,10 @@ func writeStageDepsSections(settings writeSettings) {
 		if !strings.Contains(file, "hooks") {
 			return
 		}
+		// modules/500-okmeter/hooks empty if FE override one files ee/fe/modules/500-okmeter/hooks/update_agent_image.go
+		if file == prefix+"/modules/500-okmeter/hooks" && settings.Edition == "FE" {
+			return
+		}
 		hooksPathRegex := regexp.MustCompile(`\d+-[\w\-]+\/hooks`)
 		if settings.SaveTo == modulesWithExcludeFileName && hooksPathRegex.Match([]byte(file)) {
 			return
