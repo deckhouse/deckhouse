@@ -37,6 +37,9 @@ import (
 const (
 	oneShotDhctlServerCmd = "_server"
 	grpcServerCmd         = "server"
+	autoConvergeCmd       = "converge-periodical"
+	terraformGroupCmd     = "terraform"
+	exporterCmd           = "converge-exporter"
 )
 
 var (
@@ -102,7 +105,7 @@ var (
 			DefineFunc: commands.DefineConvergeCommand,
 		},
 		{
-			Name:       "converge-periodical",
+			Name:       autoConvergeCmd,
 			Help:       "Start service for periodical run converge.",
 			DefineFunc: commands.DefineAutoConvergeCommand,
 		},
@@ -132,11 +135,11 @@ var (
 			DefineFunc: commands.DefineSessionCommand,
 		},
 		{
-			Name: "terraform",
+			Name: terraformGroupCmd,
 			Help: "Infrastructure commands.",
 		},
 		{
-			Name:       "converge-exporter",
+			Name:       exporterCmd,
 			Help:       "Run infrastructure converge exporter.",
 			DefineFunc: commands.DefineInfrastructureConvergeExporterCommand,
 			Parrent:    "terraform",
