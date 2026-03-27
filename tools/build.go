@@ -36,13 +36,13 @@ import (
 //go:generate go run ./build.go --edition all
 
 const (
-	modulesFileName             = "modules-%s.yaml"
-	modulesWithExcludeFileName  = "modules-with-exclude-%s.yaml"
-	modulesWithDependencies     = "modules-with-dependencies-%s.yaml"
-	candiFileName               = "candi-%s.yaml"
-	candiCloudProviders         = "candi-cloud-providers-%s.yaml"
-	modulesExcluded             = "modules-excluded-%s.yaml"
-	cloudProviderGlob           = "030-cloud-provider-*"
+	modulesFileName            = "modules-%s.yaml"
+	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
+	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
+	candiFileName              = "candi-%s.yaml"
+	candiCloudProviders        = "candi-cloud-providers-%s.yaml"
+	modulesExcluded            = "modules-excluded-%s.yaml"
+	cloudProviderGlob          = "030-cloud-provider-*"
 )
 
 var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`)
@@ -257,18 +257,12 @@ func writeSections(settings writeSettings) {
 	}
 }
 
-func deleteRevisionFiles(edition string) {
-	files, err := filepath.Glob(includePath(fmt.Sprintf("modules*-%s.yaml", edition)))
+func deleteRevisionFiles(template string, edition string) {
+	files, err := filepath.Glob(includePath(fmt.Sprintf(template, edition)))
 	if err != nil {
 		log.Fatalf("globbing: %v", err)
 	}
-	for _, file := range files {
-		_ = os.Remove(file)
-	}
-	files, err = filepath.Glob(includePath(fmt.Sprintf("candi*-%s.yaml", edition)))
-	if err != nil {
-		log.Fatalf("globbing: %v", err)
-	}
+
 	for _, file := range files {
 		_ = os.Remove(file)
 	}
@@ -373,7 +367,7 @@ func cwd() string {
 }
 
 type buildIncludes struct {
-	SkipCandi   *bool `yaml:"skipCandi,omitempty"`
+	SkipCandi *bool `yaml:"skipCandi,omitempty"`
 }
 
 type edition struct {
@@ -439,7 +433,9 @@ func main() {
 }
 
 func (e *executor) executeEdition(editionName string) {
-	deleteRevisionFiles(editionName)
+	deleteRevisionFiles("modules*-%s.yaml", editionName)
+	deleteRevisionFiles("candi*-%s.yaml", editionName)
+
 	modulesDict := make(map[string]string)
 	availableModules := make(map[string]struct{})
 	for _, ed := range e.Editions {
@@ -475,7 +471,7 @@ func (e *executor) executeEdition(editionName string) {
 		bi := ed.BuildIncludes
 		if bi == nil {
 			bi = &buildIncludes{
-				SkipCandi:   ptr.To(false),
+				SkipCandi: ptr.To(false),
 			}
 		}
 
