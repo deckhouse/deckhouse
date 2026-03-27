@@ -90,13 +90,18 @@ func main() {
         Password: "mypassword",
     })
     
+    // Create base client using functional options (preferred)
+    registryClient := client.New("registry.example.com",
+        client.WithAuth(auth),
+        client.WithLogger(logger),
+    )
+
+    // Or using the Options struct directly
     opts := &client.Options{
         Auth:   auth,
         Logger: logger,
     }
-    
-    // Create base client
-    registryClient := client.NewClientWithOptions("registry.example.com", opts)
+    registryClient = client.NewClientWithOptions("registry.example.com", opts)
     
     // Build repository path using segments
     moduleClient := registryClient.
@@ -140,7 +145,7 @@ type Client interface {
     GetRegistry() string
     
     // Image operations
-    GetImage(ctx context.Context, tag string, opts ...ImageGetOption) (ClientImage, error)
+    GetImage(ctx context.Context, tag string, opts ...ImageGetOption) (Image, error)
     PushImage(ctx context.Context, tag string, img v1.Image, opts ...ImagePushOption) error
     GetDigest(ctx context.Context, tag string) (*v1.Hash, error)
     GetManifest(ctx context.Context, tag string) (ManifestResult, error)
@@ -185,7 +190,36 @@ component := base.WithSegment("myorg", "myproject", "mycomponent")
 
 ## Creating a Client
 
-### Basic Client
+### Using Functional Options (Preferred)
+
+```go
+import (
+    "github.com/deckhouse/deckhouse/pkg/log"
+    "github.com/deckhouse/deckhouse/pkg/registry/client"
+    "github.com/google/go-containerregistry/pkg/authn"
+)
+
+// Anonymous / default keychain
+registryClient := client.New("registry.example.com",
+    client.WithLogger(log.NewLogger().Named("registry")),
+)
+
+// With explicit credentials
+registryClient := client.New("registry.example.com",
+    client.WithLoginPassword("myuser", "mypassword"),
+    client.WithLogger(log.NewLogger().Named("registry")),
+)
+
+// With TLS options and timeout
+registryClient := client.New("registry.example.com",
+    client.WithAuth(auth),
+    client.WithTLSSkipVerify(),
+    client.WithTimeout(30*time.Second),
+    client.WithLogger(log.NewLogger().Named("registry")),
+)
+```
+
+### Using the Options Struct
 
 ```go
 import (
@@ -257,33 +291,60 @@ opts := &client.Options{
 registryClient := client.NewClientWithOptions("registry.example.com", opts)
 ```
 
+### With Keychain
+
+```go
+// Use a custom keychain (e.g., Kubernetes service-account keychain)
+registryClient := client.New("registry.example.com",
+    client.WithKeychain(myKeychain),
+)
+```
+
+### From a Docker config JSON
+
+`WithDockercfg` parses a raw or base64-encoded `dockerconfig.json` and extracts
+credentials for the target repository:
+
+```go
+dockercfgOpt, err := client.WithDockercfg("registry.example.com", dockerCfgBase64)
+if err != nil {
+    log.Fatal(err)
+}
+
+registryClient := client.New("registry.example.com", dockercfgOpt)
+```
+
 ### With TLS Configuration
 
 ```go
 // Skip TLS verification (for testing)
-auth := authn.FromConfig(authn.AuthConfig{
-    Username: "myuser",
-    Password: "mypassword",
-})
+registryClient := client.New("registry.example.com",
+    client.WithAuth(auth),
+    client.WithTLSSkipVerify(),
+)
 
-opts := &client.Options{
-    Auth:          auth,
-    TLSSkipVerify: true,
-    Logger:        logger,
-}
+// Custom CA certificate
+registryClient := client.New("registry.example.com",
+    client.WithAuth(auth),
+    client.WithCA(caPEM),
+)
 
 // Use insecure HTTP
-opts := &client.Options{
-    Insecure: true,
-    Logger:   logger,
-}
-
-registryClient := client.NewClientWithOptions("registry.example.com", opts)
+registryClient := client.New("registry.example.com",
+    client.WithInsecure(),
+)
 ```
 
 ## Authentication
 
-The package supports authentication through the `authn.Authenticator` interface from `go-containerregistry`:
+The package supports multiple authentication strategies:
+
+| Method | Function | Description |
+|---|---|---|
+| Explicit authenticator | `WithAuth(auth)` | Any `authn.Authenticator` implementation |
+| Username / password | `WithLoginPassword(u, p)` | Convenience wrapper around `authn.Basic` |
+| Docker config JSON | `WithDockercfg(repo, cfg)` | Parses raw or base64-encoded config |
+| Keychain | `WithKeychain(kc)` | Custom `authn.Keychain` |
 
 ```go
 import "github.com/google/go-containerregistry/pkg/authn"
@@ -293,26 +354,27 @@ auth := authn.FromConfig(authn.AuthConfig{
     Username: "myuser",
     Password: "mypassword",
 })
+registryClient := client.New("registry.example.com", client.WithAuth(auth))
 
-opts := &client.Options{
-    Auth:   auth,
-    Logger: logger,
-}
+// Convenience helper – equivalent to the above
+registryClient := client.New("registry.example.com",
+    client.WithLoginPassword("myuser", "mypassword"),
+)
 
 // Token-based authentication
-auth := authn.FromConfig(authn.AuthConfig{
+auth = authn.FromConfig(authn.AuthConfig{
     IdentityToken: "my-token",
 })
 
 // OAuth2 token
-auth := authn.FromConfig(authn.AuthConfig{
+auth = authn.FromConfig(authn.AuthConfig{
     RegistryToken: "oauth2-token",
 })
 
-// Anonymous access (no auth)
-opts := &client.Options{
-    Logger: logger,
-}
+// Anonymous access — use anonymous authenticator
+registryClient := client.New("registry.example.com",
+    client.WithAuth(authn.Anonymous),
+)
 ```
 
 ## Image Operations
@@ -331,6 +393,9 @@ img, err := registryClient.GetImage(ctx, "@sha256:abc123...")
 if err != nil {
     log.Fatal(err)
 }
+
+// Get the reference string used to pull the image
+fmt.Printf("Pull reference: %s\n", img.(*client.Image).GetPullReference())
 ```
 
 ### Push an Image
@@ -770,38 +835,75 @@ The `Options` struct provides comprehensive configuration:
 
 ```go
 type Options struct {
-    // Authentication
-    Auth authn.Authenticator  // Authenticator for registry access
-    
-    // TLS Configuration
-    Insecure      bool  // Use HTTP instead of HTTPS
-    TLSSkipVerify bool  // Skip TLS certificate verification
-    
+    // Authentication — Auth takes precedence over Keychain.
+    // If neither is set, authn.DefaultKeychain is used.
+    Auth     authn.Authenticator // Explicit authenticator
+    Keychain authn.Keychain      // Custom keychain (alternative to Auth)
+
+    // HTTP / TLS
+    Insecure      bool   // Use plain HTTP instead of HTTPS
+    TLSSkipVerify bool   // Skip TLS certificate verification
+    CA            string // PEM-encoded custom CA certificate
+    Scheme        string // "http" or "https" (deprecated: prefer Insecure)
+
+    // Request behaviour
+    UserAgent string        // User-Agent header value
+    Timeout   time.Duration // Per-operation timeout (0 = no limit)
+
     // Logging
-    Logger *log.Logger  // Custom logger (auto-created if nil)
+    Logger *log.Logger // Custom logger (auto-created if nil)
 }
 ```
+
+**Functional options** (pass to `client.New()`):
+
+| Function | Description |
+|---|---|
+| `WithAuth(auth)` | Set an explicit authenticator |
+| `WithKeychain(kc)` | Set a custom keychain |
+| `WithLoginPassword(u, p)` | Set Basic auth credentials |
+| `WithDockercfg(repo, cfg)` | Parse Docker config JSON |
+| `WithInsecure()` | Enable plain HTTP |
+| `WithTLSSkipVerify()` | Disable TLS verification |
+| `WithCA(pem)` | Set a custom CA certificate |
+| `WithUserAgent(ua)` | Set the User-Agent header |
+| `WithTimeout(d)` | Set per-operation timeout |
+| `WithLogger(l)` | Set the logger |
+| `WithScheme(s)` | Set URL scheme (deprecated) |
 
 ### Complete Example
 
 ```go
-import "github.com/google/go-containerregistry/pkg/authn"
+import (
+    "time"
+    "github.com/google/go-containerregistry/pkg/authn"
+    "github.com/deckhouse/deckhouse/pkg/registry/client"
+)
 
 logger := log.NewLogger().Named("registry")
 
+// Functional options style (preferred)
+registryClient := client.New("registry.example.com",
+    client.WithLoginPassword("myuser", "mypassword"),
+    client.WithCA(caPEM),
+    client.WithTimeout(2*time.Minute),
+    client.WithLogger(logger),
+)
+
+// Equivalent using Options struct
 auth := authn.FromConfig(authn.AuthConfig{
     Username: "myuser",
     Password: "mypassword",
 })
 
 opts := &client.Options{
-    Auth:          auth,
-    TLSSkipVerify: false,
-    Insecure:      false,
-    Logger:        logger,
+    Auth:    auth,
+    CA:      caPEM,
+    Timeout: 2 * time.Minute,
+    Logger:  logger,
 }
 
-registryClient := client.NewClientWithOptions("registry.example.com", opts)
+registryClient = client.NewClientWithOptions("registry.example.com", opts)
 ```
 
 ## Error Handling
@@ -853,7 +955,7 @@ if err != nil {
 // Try multiple tags with fallback
 tags := []string{"latest", "stable", "v1.0.0"}
 
-var img registry.ClientImage
+var img registry.Image
 var err error
 
 for _, tag := range tags {

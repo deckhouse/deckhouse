@@ -239,6 +239,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controlPlaneManager135VexArtifact":   "imageHash-controlPlaneManager-controlPlaneManager135VexArtifact",
 		"etcd":                                "imageHash-controlPlaneManager-etcd",
 		"etcdBackup":                          "imageHash-controlPlaneManager-etcdBackup",
+		"etcdBackupVexArtifact":               "imageHash-controlPlaneManager-etcdBackupVexArtifact",
+		"etcdVexArtifact":                     "imageHash-controlPlaneManager-etcdVexArtifact",
 		"kubeApiserver131":                    "imageHash-controlPlaneManager-kubeApiserver131",
 		"kubeApiserver131VexArtifact":         "imageHash-controlPlaneManager-kubeApiserver131VexArtifact",
 		"kubeApiserver132":                    "imageHash-controlPlaneManager-kubeApiserver132",
@@ -390,10 +392,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeRouter":          "imageHash-networkPolicyEngine-kubeRouter",
 	},
 	"nodeLocalDns": map[string]interface{}{
-		"coredns":             "imageHash-nodeLocalDns-coredns",
-		"iptablesLoop":        "imageHash-nodeLocalDns-iptablesLoop",
-		"iptablesWrapperInit": "imageHash-nodeLocalDns-iptablesWrapperInit",
-		"safeUpdater":         "imageHash-nodeLocalDns-safeUpdater",
+		"coredns":                    "imageHash-nodeLocalDns-coredns",
+		"iptablesLoop":               "imageHash-nodeLocalDns-iptablesLoop",
+		"iptablesWrapperInit":        "imageHash-nodeLocalDns-iptablesWrapperInit",
+		"safeUpdater":                "imageHash-nodeLocalDns-safeUpdater",
+		"staleDnsConnectionsCleaner": "imageHash-nodeLocalDns-staleDnsConnectionsCleaner",
 	},
 	"nodeManager": map[string]interface{}{
 		"bashibleApiserver":               "imageHash-nodeManager-bashibleApiserver",
@@ -471,6 +474,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":               "imageHash-registrypackages-amazonEc2Utils220",
+		"cfssl165":                        "imageHash-registrypackages-cfssl165",
 		"containerd1730":                  "imageHash-registrypackages-containerd1730",
 		"containerd1730VexArtifact":       "imageHash-registrypackages-containerd1730VexArtifact",
 		"containerd216":                   "imageHash-registrypackages-containerd216",

@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: base/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /registry-packages-proxy
@@ -13,7 +13,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
-fromImage: builder/src
+from: {{ index $.Images "builder/src" }}
 git:
 - add: /{{ .ModulePath }}modules/039-{{ .ModuleName }}/images/{{ .ImageName }}/src
   to: /src
@@ -41,7 +41,7 @@ git:
 {{ $rppSignCheck := ternary "true" "false" (eq .Env "CSE") -}}
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
