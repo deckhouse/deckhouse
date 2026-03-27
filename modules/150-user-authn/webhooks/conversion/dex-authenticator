@@ -52,7 +52,6 @@ function __on_conversion::v2alpha1_to_v1() {
         applicationIngressClassName: .spec.applications[0].ingressClassName,
         applicationIngressCertificateSecretName: (.spec.applications[0].ingressSecretName // null),
         gatewayAPI: {
-	  applicationHTTPRouteCertificateSecretName: (.spec.applications[0].gatewayAPI?.httpRouteCertificateSecretName // null),
 	  applicationHTTPRouteListenerSetName: (.spec.applications[0].gatewayAPI?.httpRouteListenerSetName // null),
           applicationHTTPRouteListenerSetNamespace: (.spec.applications[0].gatewayAPI?.httpRouteListenerSetNamespace // null),
 	  applicationHTTPRouteListenerSetSectionName: (.spec.applications[0].gatewayAPI?.httpRouteListenerSetSectionName // null),
@@ -124,7 +123,6 @@ function __on_conversion::v1_to_v2alpha1() {
         domain: .spec.applicationDomain,
         ingressClassName: .spec.applicationIngressClassName,
         gatewayAPI: {
-	  httpRouteCertificateSecretName: .spec.gatewayAPI?.applicationHTTPRouteCertificateSecretName,
 	  httpRouteListenerSetName: .spec.gatewayAPI?.applicationHTTPRouteListenerSetName,
 	  httpRouteListenerSetNamespace: .spec.gatewayAPI?.applicationHTTPRouteListenerSetNamespace,
 	  httpRouteListenerSetSectionName: .spec.gatewayAPI?.applicationHTTPRouteListenerSetSectionName

@@ -32,7 +32,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: prometheus
     namespace: d8-monitoring
     sectionName: grafana
   rules:

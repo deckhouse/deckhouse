@@ -99,13 +99,6 @@ spec:
                   description: |-
                     Defines Gateway API-specific parameters to use when creating HTTPRoutes.
                   properties:
-                    applicationHTTPRouteCertificateSecretName:
-                      type: string
-                      description: |
-                        The name of the Secret containing the TLS certificate for the application domain (is used in the HTTPRoute resource).
-                      x-doc-examples: ['httproute-tls']
-                      pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
-                      maxLength: 253
                     applicationHTTPRouteListenerSetName:
                       type: string
                       description: |
@@ -375,13 +368,6 @@ spec:
                         description: |-
                           Defines Gateway API-specific parameters to use when creating HTTPRoutes.
                         properties:
-                          httpRouteCertificateSecretName:
-                            type: string
-                            description: |-
-                              The name of the Secret containing the TLS certificate for the application domain (is used in the HTTPRoute resource).
-                            x-doc-examples: ['httproute-tls']
-                            pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
-                            maxLength: 253
                           httpRouteListenerSetName:
                             type: string
                             description: |

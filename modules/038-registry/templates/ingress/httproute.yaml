@@ -70,7 +70,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: registry
     namespace: d8-system
     sectionName: registry
   rules:
@@ -98,7 +98,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: registry
     namespace: d8-system
     sectionName: registry-redirect
   rules:
