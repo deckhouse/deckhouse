@@ -1329,6 +1329,26 @@ alerts:
         etcd cluster database is growing rapidly.
       severity: "4"
       markupFormat: markdown
+    - name: D8EtcdHighRequestsLatency
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |
+        The 99th percentile of etcd request duration on `{{ $labels.instance }}` has exceeded 800 ms more than twice in the last hour.
+
+        High etcd latency can cause API server timeouts, slow admission webhooks, and general cluster instability.
+
+        **Investigate the following:**
+
+        - **Node disk I/O**: Etcd is extremely sensitive to disk performance. Check disk utilization and I/O wait on the control plane node.
+        - **Network-attached storage**: If the etcd data directory resides on NFS, Ceph, or another network storage, check connectivity and latency to the storage backend. Etcd requires a consistently low-latency local disk (SSD recommended).
+        - **Control plane summary**: Review the **Kubernetes Cluster → Control Plane Status** Grafana dashboard for an overall picture of API server and etcd health, request rates, and error rates.
+        - **Node base performance**: Check node CPU and RAM utilization and load average. If the node is CPU-bound (load average significantly exceeds the number of CPU cores), consider scaling up the control plane node.
+      summary: |
+        Etcd request latency (p99) has exceeded 800 ms multiple times in the past hour.
+      severity: "5"
+      markupFormat: markdown
     - name: D8GrafanaDeploymentReplicasUnavailable
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
       moduleUrl: 300-prometheus
