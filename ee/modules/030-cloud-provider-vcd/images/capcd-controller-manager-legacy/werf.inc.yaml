@@ -53,7 +53,7 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go get
+  - GOPROXY=$(cat /run/secrets/GOPROXY) GOFLAGS="-mod=readonly" go get
   setup:
   - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version={{ $version }}" -o /cluster-api-provider-cloud-director
