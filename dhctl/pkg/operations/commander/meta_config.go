@@ -44,6 +44,7 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		config.ValidateOptionCommanderMode(true),
 		config.ValidateOptionStrictUnmarshal(true),
 		config.ValidateOptionValidateExtensions(true),
+		config.ValidateOptionParseSource("check inside"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse config: %w", err)
