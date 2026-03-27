@@ -251,3 +251,5 @@ imageSpec:
     user: "root:root"
     entrypoint: ["/opt/entrypoint.sh"]
     cmd: ["/bin/bash"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
