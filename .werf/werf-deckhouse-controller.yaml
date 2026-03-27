@@ -2,6 +2,7 @@
 image: deckhouse-controller-src-artifact
 final: false
 from: {{ index $.Images "builder/src" }}
+cacheVersion: 20260327
 git:
 - add: /
   to: /deckhouse
