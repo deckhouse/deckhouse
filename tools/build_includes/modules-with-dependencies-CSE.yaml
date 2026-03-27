@@ -309,11 +309,3 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/610-service-with-healthchecks/hooks
-  to: /deckhouse/modules/610-service-with-healthchecks/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*.go'
