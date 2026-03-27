@@ -1,7 +1,7 @@
 {{- $version := "08.04.25" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -16,7 +16,7 @@ imageSpec:
     labels: {"distro": "all", "version": "all", "pause": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
@@ -29,7 +29,7 @@ import:
   add: /crane
   to: /crane
   before: setup
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   before: setup
 dependencies:

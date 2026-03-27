@@ -53,9 +53,9 @@ build:
 {{- $_ := set . "prefix" "" }}
 {{- $_ := set . "gitPrefix" "" }}
 ---
-# Base Images
-{{- include "parse_base_images_map" . }}
----
+# Base Images not cached
+{{- $_ := include "parse_base_images_map" . }}
+
 # version map
 {{- include "parse_version_map" . }}
 {{- include "base_k8s_versions" . }}
@@ -92,7 +92,7 @@ build:
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
 ---
-{{ include "common_base_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
+{{ include "common_base_image" (dict "Images" .Images "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
 ---
 {{ include "dhctl_src_artifact" (dict "gitPrefix" .gitPrefix) }}
 ---

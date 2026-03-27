@@ -16,7 +16,7 @@
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 final: false
 shell:
   setup:
@@ -32,15 +32,15 @@ shell:
   - |
     jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
 import:
-- image: tools/curl
+- from: {{ index $.Images "tools/curl" }}
   add: /usr/bin/curl-static
   to: /usr/bin/curl
   before: setup
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: setup
@@ -149,16 +149,16 @@ import:
 {{- if and (ne $.Env "development") (ne $.Env "local") }}
 ---
 image: web-frontend-init
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 git:
 - add: /{{ .ModulePath }}docs/site/.werf/channels-convert.sh
   to: /scripts/channels-convert.sh
 import:
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: setup
@@ -166,9 +166,9 @@ import:
 ---
 image: web-frontend
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 {{- else }}
-fromImage: base/nginx
+from: {{ index $.Images "base/nginx" }}
 imageSpec:
   config:
     workingDir: "/app"
@@ -191,11 +191,11 @@ import:
   - en/includes/
   - ru/includes/
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: setup

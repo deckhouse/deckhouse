@@ -57,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "controllers",
-			ApiVersion:                   "deckhouse.io/v1alpha1",
+			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "IngressNginxController",
 			FilterFunc:                   chaosMonkeyApplyControllerFilter,
 			ExecuteHookOnSynchronization: ptr.To(false),

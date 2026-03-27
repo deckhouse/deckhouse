@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-8672d6eafe61e4f890bf57dfe22d2a4475b99af4354ceed6f3f9ae9a9ff2f1ed",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "version": 5,
   "statements": [
     {
       "vulnerability": {
@@ -24,15 +24,29 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-03-04T09:41:59.487895Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: компонент controller (controlPlaneManager) не поднимает gRPC-сервер с path-based авторизационными интерцепторами. grpc-go присутствует как транзитивная зависимость, однако серверный путь исполнения с deny-правилами и fallback allow в данном компоненте не задействован.",
+      "timestamp": "2026-03-24T09:40:38.893711Z"
     }
   ],
   "timestamp": "2025-10-28T18:45:30Z",
-  "last_updated": "2026-03-04T09:41:59Z"
+  "last_updated": "2026-03-24T09:40:45Z"
 }
