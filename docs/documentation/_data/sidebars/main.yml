@@ -1279,6 +1279,10 @@ entries:
                     ru: Модуль cloud-provider-huaweicloud
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-huaweicloud.html
                 - title:
+                    en: Cloud-provider-yandex module
+                    ru: Модуль cloud-provider-yandex
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html
+                - title:
                     en: Cloud-provider-zvirt module
                     ru: Модуль cloud-provider-zvirt
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-zvirt.html
@@ -1373,7 +1377,11 @@ entries:
             - title:
                 en: Snapshot-controller module
                 ru: Модуль snapshot-controller
-              url: /architecture/storage/snapshot-controller.html              
+              url: /architecture/storage/snapshot-controller.html          
+            - title:
+                en: Sds-local-volume module
+                ru: Модуль sds-local-volume
+              url: /architecture/storage/sds-local-volume.html      
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
