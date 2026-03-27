@@ -11,11 +11,6 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "status"
     web.deckhouse.io/export-icon: "/public/img/heart.ico"
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
-  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
-    alb-gateway.network.deckhouse.io/tls-secrets: d8-{{ .Chart.Name }}/{{ include "helm_lib_module_https_secret_name" (list . "httproute-tls-status") }}
-  {{- end }}
   {{- if not .Values.upmeter.statusPageAuthDisabled }}
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.status.externalAuthentication }}
     alb-gateway.network.deckhouse.io/auth-signin: {{ replace "$host" $statusHost .Values.upmeter.auth.status.externalAuthentication.authSignInURL | quote }}
@@ -37,7 +32,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: upmeter
     namespace: d8-{{ .Chart.Name }}
     sectionName: status
   rules:
@@ -58,12 +53,7 @@ metadata:
   name: upmeter-api-status
   namespace: d8-{{ .Chart.Name }}
   annotations:
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
     alb-gateway.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
-  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
-    alb-gateway.network.deckhouse.io/tls-secrets: d8-{{ .Chart.Name }}/{{ include "helm_lib_module_https_secret_name" (list . "httproute-tls-status") }}
-  {{- end }}
   {{- if not .Values.upmeter.statusPageAuthDisabled }}
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.status.externalAuthentication }}
     alb-gateway.network.deckhouse.io/auth-signin: {{ replace "$host" $statusHost .Values.upmeter.auth.status.externalAuthentication.authSignInURL | quote }}
@@ -85,7 +75,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: upmeter
     namespace: d8-{{ .Chart.Name }}
     sectionName: status
   rules:
@@ -107,9 +97,6 @@ kind: HTTPRoute
 metadata:
   name: status-redirect
   namespace: d8-{{ .Chart.Name }}
-  annotations:
-    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
-    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
   {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
 spec:
   hostnames:
@@ -117,7 +104,7 @@ spec:
   parentRefs:
   - group: gateway.networking.x-k8s.io
     kind: XListenerSet
-    name: d8-listenerset
+    name: upmeter
     namespace: d8-{{ .Chart.Name }}
     sectionName: status-redirect
   rules:
