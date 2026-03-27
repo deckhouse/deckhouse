@@ -123,7 +123,7 @@ jobs:
           fetch-depth: 0
       - name: Cherry pick
         id: cherry_pick_pr
-        uses: deckhouse/backport-action@v1.0.0
+        uses: deckhouse/backport-action@fix-backport-milestones
         env:
           RELEASE_BRANCH: ${{ steps.prepare.outputs.release_branch }}
           COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
