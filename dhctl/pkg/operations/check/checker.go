@@ -63,6 +63,8 @@ type Params struct {
 	TmpDir  string
 	Logger  log.Logger
 	IsDebug bool
+
+	metaConfigFromRoot *config.MetaConfig
 }
 
 type Cleaner func() error
@@ -107,6 +109,15 @@ func (c *Checker) SetExternalPhasedContext(pec externalPhasedContext) {
 	c.ExternalPhasedContext = pec
 }
 
+func (c *Checker) logDiffConfigs(source string, first, second *config.MetaConfig) {
+	diff := config.CompareConfigs(first, second)
+	c.logger.LogInfoF("Diff %s:\n%sn", source, diff)
+}
+
+func (c *Checker) logDiffWithRoot(source string, another *config.MetaConfig) {
+	c.logDiffConfigs(source, c.metaConfigFromRoot, another)
+}
+
 func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	cleaner := func() error {
 		return nil
@@ -121,6 +132,8 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	if err != nil {
 		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
 	}
+
+	c.logDiffWithRoot("run check fromRoot -> fromData", metaConfig)
 
 	if !c.Embedded {
 		if err = c.PhasedExecutionContext.InitPipeline(c.StateCache); err != nil {
@@ -269,6 +282,7 @@ func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClien
 		CheckStateOptions{
 			CommanderMode: c.CommanderMode,
 			StateCache:    c.StateCache,
+			Logger:        c.logger,
 		},
 		false,
 	)

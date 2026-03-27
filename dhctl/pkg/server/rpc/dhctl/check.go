@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	gcmp "github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
@@ -303,39 +302,10 @@ func compareMetaConfigs(ctx context.Context, kubeCl *client.KubernetesClient, pr
 		return
 	}
 
-	mapProvider := func(c *config.MetaConfig) (map[string]any, error) {
-		res := make(map[string]any)
-		for k, vJSON := range c.ProviderClusterConfig {
-			var v any
-			err := json.Unmarshal(vJSON, &v)
-			if err != nil {
-				return nil, err
-			}
 
-			res[k] = v
-		}
-		return res, nil
-	}
+	diff := config.CompareConfigs(fromCluster, fromData)
 
-	fromClusterMap, err := mapProvider(fromCluster)
-	if err != nil {
-		logger.LogErrorF("Cannot convert from cluster: %v\n", err)
-		return
-	}
-
-	fromDataMap, err := mapProvider(fromData)
-	if err != nil {
-		logger.LogErrorF("Cannot convert from data: %v\n", err)
-		return
-	}
-
-	diff := gcmp.Diff(fromClusterMap, fromDataMap)
-
-	if diff != "" {
-		logger.LogInfoF("From cluster -> fromData:\n%s\n", diff)
-	} else {
-		logger.LogInfoF("From cluster -> fromData equal\n")
-	}
+	logger.LogInfoF("Diff before run check: fromCluster -> fromData:\n%s\n", diff)
 }
 
 func (s *Service) checkServerTransitions() []fsm.Transition {

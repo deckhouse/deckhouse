@@ -23,6 +23,7 @@ import (
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/mitchellh/copystructure"
+	"github.com/name212/govalue"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -192,6 +193,9 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 			if err != nil {
 				return plan.HasNoChanges, nil, nil, fmt.Errorf("unable to prepare copied config: %v", err)
 			}
+
+			opts.logDiff("checkAbandonedNodeState deep copy", config.CompareConfigs(metaConfig, cfg))
+
 			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
 		}
 	}
@@ -295,6 +299,19 @@ func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaCo
 type CheckStateOptions struct {
 	CommanderMode bool
 	StateCache    dhctlstate.Cache
+	Logger        log.Logger
+}
+
+func (o CheckStateOptions) getLogger() log.Logger {
+	if govalue.IsNil(o.Logger) {
+		return log.GetDefaultLogger()
+	}
+
+	return o.Logger
+}
+
+func (o CheckStateOptions) logDiff(source, diff string) {
+	o.getLogger().LogInfoF("Diff %s:\n%s\n", source, diff)
 }
 
 func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context, opts CheckStateOptions, noout bool) (*Statistics, bool, error) {

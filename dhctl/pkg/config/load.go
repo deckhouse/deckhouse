@@ -55,6 +55,7 @@ type validateOptions struct {
 	strictUnmarshal    bool
 	validateExtensions bool
 	requiredSSHHost    bool
+	parseSource        string
 }
 
 type ValidateOption func(o *validateOptions)
@@ -90,6 +91,22 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	return func(o *validateOptions) {
 		o.requiredSSHHost = v
 	}
+}
+
+func ValidateOptionParseSource(s string) ValidateOption {
+	return func(o *validateOptions) {
+		o.parseSource = s
+	}
+}
+
+func extractValidateOptions(opts... ValidateOption) *validateOptions {
+	res := &validateOptions{}
+	
+	for _, o := range opts {
+		o(res)
+	}
+
+	return res
 }
 
 func NewSchemaStore(paths ...string) *SchemaStore {
