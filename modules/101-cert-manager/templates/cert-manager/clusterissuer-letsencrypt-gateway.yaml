@@ -22,7 +22,7 @@ spec:
           parentRefs:
           - group: gateway.networking.k8s.io
             kind: Gateway
-            name: {{ $mdouleGateway.name }}
+            name: {{ $moduleGateway.name }}
             namespace: {{ $moduleGateway.namespace }}
             section: d8-http-default
   {{- end }}
