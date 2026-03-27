@@ -96,10 +96,10 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 		input.Logger.Info("Publish API ingress settings are set in moduleconfig control-plane-manager, setting from moduleconfig")
 
 		fmt.Println(input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress"))
-		configValuesRaw := input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Raw
-		fmt.Println(configValuesRaw)
+		configValues := input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Value()
+		fmt.Println(configValues)
 		fmt.Println(input.Values.Get("controlPlaneManager.apiserver.publishAPI.ingress"))
-		input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", configValuesRaw)
+		input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", configValues)
 		return nil
 	}
 	input.Logger.Info("Unmarshalling")
