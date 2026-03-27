@@ -28,6 +28,8 @@ const (
 
 	DocsBuilderCachedModules     = "docs_builder_cached_modules"
 	DocsBuilderModuleRenderError = "docs_builder_module_render_error"
+
+	DocsBuilderModuleRenderErrorGroup = "docs_builder_module_render_error_group"
 )
 
 func RegisterMetrics(mStorage *metricsstorage.MetricStorage) error {
