@@ -5,8 +5,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -18,8 +19,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -31,8 +33,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -44,8 +47,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -57,8 +61,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -70,8 +75,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -83,8 +89,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -96,8 +103,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -109,8 +117,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -122,8 +131,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -135,8 +145,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -148,8 +159,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -161,8 +173,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -174,8 +187,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -187,8 +201,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -200,8 +215,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -213,8 +229,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -226,8 +243,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -239,8 +257,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -252,8 +271,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -265,8 +285,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -278,8 +299,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -291,8 +313,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -304,8 +327,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -317,8 +341,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -330,8 +355,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -343,8 +369,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -356,8 +383,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -369,8 +397,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -382,8 +411,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -395,8 +425,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -408,8 +439,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -421,8 +453,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -434,8 +467,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -447,8 +481,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -460,8 +495,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -473,8 +509,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -486,8 +523,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -499,8 +537,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -532,8 +571,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -545,8 +585,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -558,8 +599,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -571,8 +613,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -584,8 +627,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -597,8 +641,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -630,8 +675,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -643,8 +689,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -656,8 +703,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -669,8 +717,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -687,8 +736,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -700,8 +750,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -713,8 +764,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -726,8 +778,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -739,8 +792,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -752,8 +806,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -770,8 +825,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -788,8 +844,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -801,8 +858,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -814,8 +872,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -827,8 +886,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -840,8 +900,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -898,8 +959,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -911,8 +973,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -934,8 +997,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
@@ -957,8 +1021,9 @@
     - docs
     - README.md
     - images
-    - hooks/**/*.go
-    - hooks/*.go
+    - hooks
+    - apis
+    - requirements
     - hack
     - template_tests
     - .namespace
