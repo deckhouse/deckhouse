@@ -7,7 +7,7 @@
    ```shell
    yc iam service-account create --name deckhouse
    ```
-    
+
    В ответ вернутся параметры пользователя:
 
    ```console
