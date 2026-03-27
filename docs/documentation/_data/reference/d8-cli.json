@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.29.18",
+  "version": "v0.29.20",
   "aliases": null,
   "flags": {
     "help": {
@@ -43860,6 +43860,11 @@
             },
             "since-version": {
               "description": "Minimal Deckhouse release to pull. Ignored if above current Rock Solid release. Conflicts with --deckhouse-tag.",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-vex-images": {
+              "description": "Do not pull VEX images.",
               "shorthand": "",
               "global": false
             },
