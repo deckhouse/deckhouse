@@ -64,7 +64,7 @@ type Params struct {
 	Logger  log.Logger
 	IsDebug bool
 
-	metaConfigFromRoot *config.MetaConfig
+	MetaConfigFromRoot *config.MetaConfig
 }
 
 type Cleaner func() error
@@ -115,7 +115,7 @@ func (c *Checker) logDiffConfigs(source string, first, second *config.MetaConfig
 }
 
 func (c *Checker) logDiffWithRoot(source string, another *config.MetaConfig) {
-	c.logDiffConfigs(source, c.metaConfigFromRoot, another)
+	c.logDiffConfigs(source, c.MetaConfigFromRoot, another)
 }
 
 func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {

@@ -239,6 +239,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		TmpDir:                s.params.TmpDir,
 		OnPhaseFunc:           func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
 		OnProgressFunc:        p.sendProgress,
+		MetaConfigFromRoot:    metaConfig,
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
