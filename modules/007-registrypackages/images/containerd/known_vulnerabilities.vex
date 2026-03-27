@@ -45,6 +45,20 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость CVE-2025-15558 невозможно эксплуатировать в рамках Deckhouse: платформа использует исключительно Linux-окружения для узлов, в которых отсутствует уязвимый компонент — Docker CLI для Windows. Все операции с контейнерами выполняются через стандартный CRI-интерфейс (containerd), который не использует и не поддерживает механизм плагинов Docker CLI, что исключает сам вектор атаки.",
       "timestamp": "2026-03-04T12:00:38Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24137"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/sigstore"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Функционал TUF клиента с использованием уязвимого кода sigstore версии v1.8.8 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-04T12:00:38Z"
     }
   ],
   "timestamp": "2026-03-04T12:00:38Z",
