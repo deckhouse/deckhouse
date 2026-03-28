@@ -153,6 +153,7 @@ tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
+
 dmt-lint:
 	export DMT_METRICS_URL="${DMT_METRICS_URL}"
 	export DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}"
@@ -243,7 +244,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools generate-docs generate-werf
+generate: generate-kubernetes generate-tools generate-docs generate-werf generate-dmt-lint
 
 .PHONY: generate-tools
 generate-tools:
@@ -535,6 +536,7 @@ YQ = $(LOCALBIN)/yq
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
 DECKHOUSE_CLI_VERSION ?= v0.28.0
+DMT_VERSION ?= 0.1.69
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.33.8
 YQ_VERSION ?= v4.47.2
@@ -612,6 +614,14 @@ informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
 		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
 		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
 		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+
+# Generate tools
+##~ make DMT_VERSION=<version> to set a new version constant in the helper script
+.PHONY: generate-dmt-lint
+generate-dmt-lint:  ## Sync DMT_VERSION constant in tools/dmt-lint.sh with the value defined above
+	@echo "Updating tools/dmt-lint.sh to DMT_VERSION=$(DMT_VERSION)"
+	@sed -i 's/^DMT_VERSION=.*/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh
+
 
 ## Tool installations
 
