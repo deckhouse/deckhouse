@@ -24,7 +24,7 @@ if ! bb-flag? reboot; then
 fi
 
 bb-deckhouse-get-disruptive-update-approval
-bb-log-info "Rebooting machine after bootstrap process completed"
+bb-log-info "Rebooting machine"
 bb-flag-unset reboot
 
 # If it is first run bashible on bootstrap simple reboot node

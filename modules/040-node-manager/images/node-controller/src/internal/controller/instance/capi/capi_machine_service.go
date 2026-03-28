@@ -88,6 +88,38 @@ func (s *CAPIMachineService) ReconcileMachine(ctx context.Context, c client.Clie
 	return false, nil
 }
 
+func (s *CAPIMachineService) EnsureInstanceFromMachine(
+	ctx context.Context,
+	c client.Client,
+	name types.NamespacedName,
+) (bool, error) {
+	capiMachine := &capiv1beta2.Machine{}
+	if err := c.Get(ctx, name, capiMachine); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return false, nil
+		}
+		return false, err
+	}
+
+	machineObj, err := s.machineFactory.NewMachine(capiMachine)
+	if err != nil {
+		return false, fmt.Errorf("build machine for capi %q: %w", capiMachine.Name, err)
+	}
+
+	spec := deckhousev1alpha2.InstanceSpec{}
+	if nodeName := machineObj.GetNodeName(); nodeName != "" {
+		spec.NodeRef = deckhousev1alpha2.NodeRef{Name: nodeName}
+	}
+	if ref := machineObj.GetMachineRef(); ref != nil {
+		refCopy := *ref
+		spec.MachineRef = &refCopy
+	}
+	if _, err := instancecommon.EnsureInstanceExists(ctx, c, machineObj.GetName(), spec); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // capiMachineReconcileData holds computed data for one reconcile pass.
 type capiMachineReconcileData struct {
 	capiMachine   *capiv1beta2.Machine
@@ -215,22 +247,6 @@ func deleteInstanceIfExists(ctx context.Context, c client.Client, name string) (
 	)
 
 	return true, nil
-}
-
-// getConditionByType delegates to instancecommon for use in predicates and tests.
-func getConditionByType(
-	conditions []deckhousev1alpha2.InstanceCondition,
-	conditionType string,
-) (deckhousev1alpha2.InstanceCondition, bool) {
-	return instancecommon.GetInstanceConditionByType(conditions, conditionType)
-}
-
-// conditionEqualExceptLastTransitionTime delegates to instancecommon for tests.
-func conditionEqualExceptLastTransitionTime(
-	left deckhousev1alpha2.InstanceCondition,
-	right deckhousev1alpha2.InstanceCondition,
-) bool {
-	return instancecommon.ConditionEqualExceptLastTransitionTime(left, right)
 }
 
 func isBeingDeleted(ts *metav1.Time) bool {

@@ -29,14 +29,6 @@ import (
 	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
 )
 
-func (s *InstanceService) reconcileInstanceFinalization(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
-	machineGone, err := s.reconcileLinkedMachineDeletion(ctx, instance)
-	if err != nil {
-		return false, err
-	}
-	return s.finalizeAfterMachineDeletion(ctx, instance, machineGone)
-}
-
 // finalizeAfterMachineDeletion completes the finalization: waits for machine to be gone,
 // then removes the controller finalizer.
 func (s *InstanceService) finalizeAfterMachineDeletion(

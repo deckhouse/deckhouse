@@ -9,14 +9,11 @@ Single controller responsible for the full lifecycle of `Instance` objects
 controller/instance/
 ├── controller.go          ← single dynctrl.Reconciler, registered via register.RegisterController
 ├── capi/
-│   ├── capi_machine_service.go   ← reconcile logic: CAPI Machine → Instance spec/status
-│   └── capi_predicates.go        ← MapInstanceToCAPIMachine, InstanceWatchPredicate, IsCAPIMachineRef
+│   └── capi_machine_service.go   ← reconcile logic: CAPI Machine → Instance spec/status
 ├── mcm/
-│   ├── mcm_machine_service.go    ← reconcile logic: MCM Machine → Instance spec/status
-│   └── mcm_predicates.go         ← MapInstanceToMCMMachine, InstanceWatchPredicate, IsMCMMachineRef
+│   └── mcm_machine_service.go    ← reconcile logic: MCM Machine → Instance spec/status
 ├── node/
-│   ├── node_service.go           ← reconcile logic: static Node → Instance create/delete
-│   └── node_predicate.go         ← nodePredicate (label-change filter for node controller)
+│   └── node_service.go           ← reconcile logic: static Node → Instance create/delete
 ├── instance/
 │   ├── instance_service.go       ← public API: ReconcileHeartbeat, ReconcileBashibleStatus, etc.
 │   ├── instance_reconciler_finalizer.go   ← finalizer add/remove + linked machine deletion
@@ -30,7 +27,6 @@ controller/instance/
     ├── instance_helpers.go   ← EnsureInstanceExists, SetInstancePhase, RemoveInstanceControllerFinalizer
     ├── instance_status.go    ← SyncInstanceStatus, ApplyInstanceMachineStatus, ConditionEqualExceptLastTransitionTime
     ├── watch_helpers.go      ← MapObjectNameToInstance, StaticNodeEventPredicate, IsStaticNode
-    ├── gvk.go                ← CAPIMachineGVK, MCMMachineGVK, NewUnstructured
     └── machine/
         ├── machine_types.go        ← MachineFactory interface, Machine interface, MachineStatus
         ├── machine_factory.go      ← NewMachineFactory, dispatch by type/apiVersion
@@ -55,7 +51,7 @@ controller/instance/
   │                               │
   └───────────────────────────────┘
           │
-  mcmv1alpha1.Machine (unstructured watch, any change)
+  mcmv1alpha1.Machine (typed watch, any change)
           │
           ▼  MapObjectNameToInstance
   ┌───────────────────────────────┐

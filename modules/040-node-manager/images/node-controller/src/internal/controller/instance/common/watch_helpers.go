@@ -60,11 +60,15 @@ func StaticNodeEventPredicate() predicate.Predicate {
 				return false
 			}
 
-			if !apiequality.Semantic.DeepEqual(oldNode.Labels, newNode.Labels) {
-				return IsStaticNode(oldNode) || IsStaticNode(newNode)
+			oldStatic := IsStaticNode(oldNode)
+			newStatic := IsStaticNode(newNode)
+			if oldStatic != newStatic {
+				return true
 			}
-
-			return false
+			if !oldStatic {
+				return false
+			}
+			return !apiequality.Semantic.DeepEqual(oldNode.Labels, newNode.Labels)
 		},
 	}
 }

@@ -86,6 +86,35 @@ func (s *MCMMachineService) ReconcileMachine(ctx context.Context, c client.Clien
 	return false, nil
 }
 
+func (s *MCMMachineService) EnsureInstanceFromMachine(
+	ctx context.Context,
+	c client.Client,
+	name types.NamespacedName,
+) (bool, error) {
+	mcmMachine := &mcmv1alpha1.Machine{}
+	if err := c.Get(ctx, name, mcmMachine); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return false, nil
+		}
+		return false, err
+	}
+
+	machineObj, err := s.machineFactory.NewMachine(mcmMachine)
+	if err != nil {
+		return false, fmt.Errorf("build machine for mcm %q: %w", mcmMachine.Name, err)
+	}
+
+	spec := deckhousev1alpha2.InstanceSpec{}
+	if ref := machineObj.GetMachineRef(); ref != nil {
+		refCopy := *ref
+		spec.MachineRef = &refCopy
+	}
+	if _, err := instancecommon.EnsureInstanceExists(ctx, c, machineObj.GetName(), spec); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // mcmMachineReconcileData holds computed data for one reconcile pass.
 type mcmMachineReconcileData struct {
 	mcmMachine    *mcmv1alpha1.Machine

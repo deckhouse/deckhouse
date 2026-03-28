@@ -49,7 +49,10 @@ func init() {
 	)
 }
 
-const instanceRequeueInterval = time.Minute
+const (
+	instanceRequeueInterval         = time.Minute
+	instanceDeletionRequeueInterval = 5 * time.Second
+)
 
 type InstanceController struct {
 	dynctrl.Base
@@ -58,6 +61,7 @@ type InstanceController struct {
 	machineFactory machine.MachineFactory
 	capiService    *capi.CAPIMachineService
 	mcmService     *mcm.MCMMachineService
+	instanceSvc    *instancepkg.InstanceService
 }
 
 var _ dynctrl.Reconciler = (*InstanceController)(nil)
@@ -85,6 +89,7 @@ func (r *InstanceController) init() {
 		r.machineFactory = machine.NewMachineFactory()
 		r.capiService = capi.NewCAPIMachineService()
 		r.mcmService = mcm.NewMCMMachineService()
+		r.instanceSvc = instancepkg.NewInstanceService(r.Client)
 	})
 }
 
@@ -97,29 +102,20 @@ func (r *InstanceController) Reconcile(ctx context.Context, req ctrl.Request) (c
 	instance := &deckhousev1alpha2.Instance{}
 	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
 		if apierrors.IsNotFound(err) {
-			// Instance not found — try to create it from a linked source (Machine or Node).
 			return r.reconcileCreateFromSource(ctx, req.Name)
 		}
 		return ctrl.Result{}, err
 	}
 
-	instanceSvc := instancepkg.NewInstanceService(r.Client)
-
 	type reconcileStep func(ctx context.Context, instance *deckhousev1alpha2.Instance) (done bool, result ctrl.Result, err error)
 
 	for _, step := range []reconcileStep{
-		// refresh bashible heartbeat condition by timeout rules
-		instanceSvc.ReconcileHeartbeat,
-		// derive bashible status and message from current conditions
-		instanceSvc.ReconcileBashibleStatus,
-		// handle deleting instance and run finalization flow
+		r.instanceSvc.ReconcileHeartbeat,
+		r.instanceSvc.ReconcileBashibleStatus,
 		r.reconcileDeletion,
-		// ensure controller finalizer exists on active object
-		instanceSvc.ReconcileEnsureFinalizer,
-		// sync Instance status (Phase, MachineStatus, MachineReady) from linked Machine
+		r.instanceSvc.ReconcileEnsureFinalizer,
 		r.reconcileMachineStatus,
-		// remove instance when both linked sources are confirmed missing
-		instanceSvc.ReconcileSourceExistence,
+		r.instanceSvc.ReconcileSourceExistence,
 	} {
 		done, result, err := step(ctx, instance)
 		if err != nil {
@@ -145,27 +141,24 @@ func (r *InstanceController) reconcileCreateFromSource(ctx context.Context, name
 	log := ctrl.LoggerFrom(ctx).WithValues("instance", name)
 	ns := types.NamespacedName{Namespace: machine.MachineNamespace, Name: name}
 
-	// Try CAPI Machine first.
-	_, err := r.capiService.ReconcileMachine(ctx, r.Client, ns)
-	if err == nil {
+	found, err := r.capiService.EnsureInstanceFromMachine(ctx, r.Client, ns)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if found {
 		log.V(1).Info("instance ensured from capi machine")
 		return ctrl.Result{}, nil
 	}
-	if !apierrors.IsNotFound(err) {
+
+	found, err = r.mcmService.EnsureInstanceFromMachine(ctx, r.Client, ns)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	// Try MCM Machine.
-	_, err = r.mcmService.ReconcileMachine(ctx, r.Client, ns)
-	if err == nil {
+	if found {
 		log.V(1).Info("instance ensured from mcm machine")
 		return ctrl.Result{}, nil
 	}
-	if !apierrors.IsNotFound(err) {
-		return ctrl.Result{}, err
-	}
 
-	// Try static Node.
 	_, err = instancenode.ReconcileNode(ctx, r.Client, name)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -175,7 +168,6 @@ func (r *InstanceController) reconcileCreateFromSource(ctx context.Context, name
 	return ctrl.Result{}, nil
 }
 
-// reconcileDeletion handles the deletion flow for an Instance.
 func (r *InstanceController) reconcileDeletion(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,
@@ -186,20 +178,17 @@ func (r *InstanceController) reconcileDeletion(
 	}
 	ctrl.LoggerFrom(ctx).V(4).Info("tick", "op", "instance.reconcile.deletion")
 
-	instanceSvc := instancepkg.NewInstanceService(r.Client)
-	fastRequeue, err := instanceSvc.ReconcileFinalization(ctx, instance)
+	fastRequeue, err := r.instanceSvc.ReconcileFinalization(ctx, instance)
 	if err != nil {
 		return false, ctrl.Result{}, err
 	}
 	if fastRequeue {
-		return true, ctrl.Result{RequeueAfter: time.Second}, nil
+		return true, ctrl.Result{RequeueAfter: instanceDeletionRequeueInterval}, nil
 	}
 
 	return true, ctrl.Result{RequeueAfter: instanceRequeueInterval}, nil
 }
 
-// reconcileMachineStatus syncs Instance.Status (Phase, MachineStatus, MachineReady condition)
-// from the linked Machine using the machine factory.
 func (r *InstanceController) reconcileMachineStatus(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,
@@ -212,7 +201,6 @@ func (r *InstanceController) reconcileMachineStatus(
 	machineObj, err := r.machineFactory.NewMachineFromRef(ctx, r.Client, ref)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Machine is gone — source existence step will handle cleanup
 			return false, ctrl.Result{}, nil
 		}
 		return false, ctrl.Result{}, err

@@ -19,8 +19,10 @@ package capi
 import (
 	"testing"
 
-	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
 )
 
 func TestGetConditionByType(t *testing.T) {
@@ -39,7 +41,7 @@ func TestGetConditionByType(t *testing.T) {
 		},
 	}
 
-	condition, ok := getConditionByType(conditions, deckhousev1alpha2.InstanceConditionTypeMachineReady)
+	condition, ok := instancecommon.GetInstanceConditionByType(conditions, deckhousev1alpha2.InstanceConditionTypeMachineReady)
 	if !ok {
 		t.Fatalf("expected to find %q condition", deckhousev1alpha2.InstanceConditionTypeMachineReady)
 	}
@@ -65,12 +67,12 @@ func TestConditionEqualExceptLastTransitionTime(t *testing.T) {
 	rightTime := metav1.Now()
 	right.LastTransitionTime = &rightTime
 
-	if !conditionEqualExceptLastTransitionTime(left, right) {
+	if !instancecommon.ConditionEqualExceptLastTransitionTime(left, right) {
 		t.Fatal("expected conditions to be equal when only LastTransitionTime differs")
 	}
 
 	right.Reason = "InfrastructureReady"
-	if conditionEqualExceptLastTransitionTime(left, right) {
+	if instancecommon.ConditionEqualExceptLastTransitionTime(left, right) {
 		t.Fatal("expected conditions to be different when non-time field differs")
 	}
 }
