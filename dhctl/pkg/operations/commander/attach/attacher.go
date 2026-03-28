@@ -54,6 +54,8 @@ type Params struct {
 	TmpDir                string
 	Logger                log.Logger
 	IsDebug               bool
+
+	MetaConfigPreparatorProvider func(*ScanResult) func() config.MetaConfigPreparatorProvider
 }
 
 type AttachResources struct {
@@ -377,11 +379,12 @@ func (i *Attacher) check(
 				[]byte(scanResult.ClusterConfiguration),
 				[]byte(scanResult.ProviderSpecificClusterConfiguration),
 			),
-			InfrastructureContext: i.Params.InfrastructureContext,
-			TmpDir:                i.Params.TmpDir,
-			IsDebug:               i.Params.IsDebug,
-			Logger:                i.Params.Logger,
-			Embedded:              true,
+			InfrastructureContext:        i.Params.InfrastructureContext,
+			TmpDir:                       i.Params.TmpDir,
+			IsDebug:                      i.Params.IsDebug,
+			Logger:                       i.Params.Logger,
+			Embedded:                     true,
+			MetaConfigPreparatorProvider: i.Params.MetaConfigPreparatorProvider(scanResult),
 		})
 
 		checker.SetExternalPhasedContext(i.PhasedExecutionContext)

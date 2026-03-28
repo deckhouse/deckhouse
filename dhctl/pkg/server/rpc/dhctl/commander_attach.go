@@ -236,6 +236,14 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 		TmpDir:   s.params.TmpDir,
 		Logger:   loggerFor,
 		IsDebug:  s.params.IsDebug,
+		MetaConfigPreparatorProvider: func(sr *attach.ScanResult) func() config.MetaConfigPreparatorProvider {
+			return func() config.MetaConfigPreparatorProvider {
+				return provideMetaConfigPreparator(&provideMetaConfigPreparatorParams{
+					logger: loggerFor,
+					providerConfigProvider: newSimpleProviderClusterConfigProvider(sr.ProviderSpecificClusterConfiguration),
+				})
+			}
+		},
 	})
 
 	result, attachErr := attacher.Attach(ctx)

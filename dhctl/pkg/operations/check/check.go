@@ -194,8 +194,6 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 				return plan.HasNoChanges, nil, nil, fmt.Errorf("unable to prepare copied config: %v", err)
 			}
 
-			opts.logDiff("checkAbandonedNodeState deep copy", config.CompareConfigs(metaConfig, cfg))
-
 			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
 		}
 	}
@@ -308,10 +306,6 @@ func (o CheckStateOptions) getLogger() log.Logger {
 	}
 
 	return o.Logger
-}
-
-func (o CheckStateOptions) logDiff(source, diff string) {
-	o.getLogger().LogInfoF("Diff %s:\n%s\n", source, diff)
 }
 
 func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context, opts CheckStateOptions, noout bool) (*Statistics, bool, error) {

@@ -40,10 +40,15 @@ type PreflightChecks struct {
 	DVPValidateKubeAPI bool
 }
 
+type PreparatorAdditionalData any
+
+type PreparatorAdditionalDataProvider func(provider string) (any, error)
+
 type PreparatorProviderParams struct {
-	logger          log.Logger
-	phase           DhctlPhase
-	PreflightChecks PreflightChecks
+	logger                 log.Logger
+	phase                  DhctlPhase
+	PreflightChecks        PreflightChecks
+	additionalDataProvider PreparatorAdditionalDataProvider
 }
 
 func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
@@ -52,6 +57,10 @@ func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
 
 func (p *PreparatorProviderParams) WithPhaseBootstrap() {
 	p.WithPhase(DhctlPhaseBootstrap)
+}
+
+func (p *PreparatorProviderParams) WithAdditionalDataProvider(provider PreparatorAdditionalDataProvider) {
+	p.additionalDataProvider = provider
 }
 
 func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
@@ -95,15 +104,33 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 				ValidateClusterPrefix: true,
 			}, logger)
 		case dvp.ProviderName:
-			prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
-			if params.phase != DhctlPhaseBootstrap {
-				return prep
-			}
-			return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeAPI)
+			return providePreparatorForDVP(params, logger)
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}
 	}
+}
+
+func providePreparatorForDVP(params PreparatorProviderParams, logger log.Logger) config.MetaConfigPreparator {
+	prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
+
+	additionalData, err := extractAdditionalData(dvp.PreparatorAdditionalDataFromAny, &extractAdditionalDataParams{
+		providerName: dvp.ProviderName,
+		logger: logger,
+		preparatorParams: params,
+	})
+
+	if err != nil {
+		panic(fmt.Errorf("Internal error: %v", err))
+	}
+
+	// nil data handled in preparator
+	prep.WithAdditionalData(additionalData)
+
+	if params.phase != DhctlPhaseBootstrap {
+		return prep
+	}
+	return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeAPI)
 }
 
 type defaultCloudOnlyPrefixValidatorPreparator struct{}
@@ -119,4 +146,41 @@ func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(_ context.Context, 
 
 func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {
 	return nil
+}
+
+type extractAdditionalDataParams struct {
+	preparatorParams PreparatorProviderParams
+	providerName     string
+	logger           log.Logger
+}
+
+func extractAdditionalData[T any](extractor func(any) (*T, error), params *extractAdditionalDataParams) (*T, error) {
+	logger := params.logger
+	providerName := params.providerName
+	providerFunc := params.preparatorParams.additionalDataProvider
+
+	logSkip := func(msg string) (*T, error) {
+		logger.LogDebugF("Additional data %s for '%s'. Skip\n", msg, providerName)
+		return nil, nil
+	}
+
+	if govalue.IsNil(providerFunc) {
+		return logSkip("provider not provided")
+	}
+
+	dataAny, err := providerFunc(providerName)
+	if err != nil {
+		return nil, fmt.Errorf("Additional data provider return error: %w", err)
+	}
+
+	if govalue.IsNil(dataAny) {
+		return logSkip("data is not provided")
+	}
+
+	res, err := extractor(dataAny)
+	if err != nil {
+		return nil, fmt.Errorf("Additional data extractor return error: %w", err)
+	}
+
+	return res, nil
 }

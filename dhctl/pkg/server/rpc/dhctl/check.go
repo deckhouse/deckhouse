@@ -31,8 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -164,9 +162,10 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
 
-	metaConfigPreparator := infrastructureprovider.MetaConfigPreparatorProvider(
-		infrastructureprovider.NewPreparatorProviderParams(loggerFor),
-	)
+	metaConfigPreparator := provideMetaConfigPreparator(&provideMetaConfigPreparatorParams{
+		providerConfigProvider: p.request,
+		logger:                 loggerFor,
+	})
 
 	var metaConfig *config.MetaConfig
 	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
@@ -239,7 +238,6 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		TmpDir:                s.params.TmpDir,
 		OnPhaseFunc:           func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
 		OnProgressFunc:        p.sendProgress,
-		MetaConfigFromRoot:    metaConfig,
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
@@ -264,8 +262,6 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 			return &pb.CheckResult{Err: err.Error()}
 		}
 	}
-
-	compareMetaConfigs(ctx, kubeClient, metaConfigPreparator, metaConfig, loggerFor)
 
 	checkParams.KubeClient = kubeClient
 	checkParams.SSHClient = sshClient
@@ -295,18 +291,6 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		Err:    util.ErrToString(err),
 		State:  string(state),
 	}
-}
-
-func compareMetaConfigs(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider config.MetaConfigPreparatorProvider, fromData *config.MetaConfig, logger dhctllog.Logger) {
-	fromCluster, err := config.ParseConfigInCluster(ctx, kubeCl, preparatorProvider)
-	if err != nil {
-		logger.LogErrorF("Cannot get config from cluster: %v\n", err)
-		return
-	}
-
-	diff := config.CompareConfigs(fromCluster, fromData)
-
-	logger.LogInfoF("Diff before run check: fromCluster -> fromData:\n%s\n", diff)
 }
 
 func (s *Service) checkServerTransitions() []fsm.Transition {

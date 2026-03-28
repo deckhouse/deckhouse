@@ -27,7 +27,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
@@ -186,14 +185,17 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
 
+	metaConfigPreparator := provideMetaConfigPreparator(&provideMetaConfigPreparatorParams{
+		providerConfigProvider: p.request,
+		logger:                 loggerFor,
+	})
+
 	var metaConfig *config.MetaConfig
 	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
-			),
+			metaConfigPreparator,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),

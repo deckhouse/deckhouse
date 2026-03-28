@@ -64,7 +64,7 @@ type Params struct {
 	Logger  log.Logger
 	IsDebug bool
 
-	MetaConfigFromRoot *config.MetaConfig
+	MetaConfigPreparatorProvider func() config.MetaConfigPreparatorProvider
 }
 
 type Cleaner func() error
@@ -109,15 +109,6 @@ func (c *Checker) SetExternalPhasedContext(pec externalPhasedContext) {
 	c.ExternalPhasedContext = pec
 }
 
-func (c *Checker) logDiffConfigs(source string, first, second *config.MetaConfig) {
-	diff := config.CompareConfigs(first, second)
-	c.logger.LogInfoF("Diff %s:\n%sn", source, diff)
-}
-
-func (c *Checker) logDiffWithRoot(source string, another *config.MetaConfig) {
-	c.logDiffConfigs(source, c.MetaConfigFromRoot, another)
-}
-
 func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	cleaner := func() error {
 		return nil
@@ -130,10 +121,13 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 
 	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger)
 	if err != nil {
-		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
+		return nil, cleaner, fmt.Errorf("Unable to parse meta configuration: %w", err)
 	}
 
-	c.logDiffWithRoot("run check fromRoot -> fromData", metaConfig)
+	metaConfig, err = c.prepareMetaConfig(ctx, metaConfig)
+	if err != nil {
+		return nil, cleaner, fmt.Errorf("Cannot prepare meta config: %w", err)
+	}
 
 	if !c.Embedded {
 		if err = c.PhasedExecutionContext.InitPipeline(c.StateCache); err != nil {
@@ -208,6 +202,25 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	res.HasTerraformState = hasTerraformState
 
 	return res, cleaner, nil
+}
+
+func (c *Checker) prepareMetaConfig(ctx context.Context, metaConfig *config.MetaConfig) (*config.MetaConfig, error) {
+	if govalue.IsNil(c.MetaConfigPreparatorProvider) {
+		return metaConfig, nil
+	}
+
+	preparatorProvider := c.MetaConfigPreparatorProvider()
+	if govalue.IsNil(preparatorProvider) {
+		return metaConfig, nil
+	}
+
+	var err error
+	metaConfig, err = metaConfig.Prepare(ctx, preparatorProvider)
+	if err != nil {
+		return nil, err
+	}
+
+	return metaConfig, nil
 }
 
 const (
