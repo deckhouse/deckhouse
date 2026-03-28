@@ -34,10 +34,13 @@ func TestReplaceValueVRL(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, `value, err = get(., ["message"])
-if err == null && value != null && is_string(value) {
-  replaced, rep_err = replace(value, r'secret', "[REDACTED]")
-  if rep_err == null {
-    . = set!(., ["message"], replaced)
+if err == null && value != null {
+  value_str, err_str = to_string(value)
+  if err_str == null {
+    replaced, rep_err = replace(value_str, r'secret', "[REDACTED]")
+    if rep_err == null {
+      . = set!(., ["message"], replaced)
+    }
   }
 }`, got)
 	})
@@ -50,10 +53,13 @@ if err == null && value != null && is_string(value) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, `value, err = get(., ["message", "secret"])
-if err == null && value != null && is_string(value) {
-  replaced, rep_err = replace(value, r'key\d+', "X")
-  if rep_err == null {
-    . = set!(., ["message", "secret"], replaced)
+if err == null && value != null {
+  value_str, err_str = to_string(value)
+  if err_str == null {
+    replaced, rep_err = replace(value_str, r'key\d+', "X")
+    if rep_err == null {
+      . = set!(., ["message", "secret"], replaced)
+    }
   }
 }`, got)
 	})
@@ -66,17 +72,23 @@ if err == null && value != null && is_string(value) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, `value, err = get(., ["first"])
-if err == null && value != null && is_string(value) {
-  replaced, rep_err = replace(value, r'a', "b")
-  if rep_err == null {
-    . = set!(., ["first"], replaced)
+if err == null && value != null {
+  value_str, err_str = to_string(value)
+  if err_str == null {
+    replaced, rep_err = replace(value_str, r'a', "b")
+    if rep_err == null {
+      . = set!(., ["first"], replaced)
+    }
   }
 }
 value, err = get(., ["second"])
-if err == null && value != null && is_string(value) {
-  replaced, rep_err = replace(value, r'a', "b")
-  if rep_err == null {
-    . = set!(., ["second"], replaced)
+if err == null && value != null {
+  value_str, err_str = to_string(value)
+  if err_str == null {
+    replaced, rep_err = replace(value_str, r'a', "b")
+    if rep_err == null {
+      . = set!(., ["second"], replaced)
+    }
   }
 }`, got)
 	})
@@ -89,12 +101,15 @@ if err == null && value != null && is_string(value) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, `value, err = get(., ["msg"])
-if err == null && value != null && is_string(value) {
-  parsed, perr = parse_regex(value, r'(?P<uid>[0-9]+)')
-  if perr == null {
-    replaced, rerr = replace(value, r'(?P<uid>[0-9]+)', string!(parsed.uid))
-    if rerr == null {
-      . = set!(., ["msg"], replaced)
+if err == null && value != null {
+  value_str, err_str = to_string(value)
+  if err_str == null {
+    parsed, perr = parse_regex(value_str, r'(?P<uid>[0-9]+)')
+    if perr == null {
+      replaced, rerr = replace(value_str, r'(?P<uid>[0-9]+)', string!(parsed.uid))
+      if rerr == null {
+        . = set!(., ["msg"], replaced)
+      }
     }
   }
 }`, got)
@@ -108,12 +123,15 @@ if err == null && value != null && is_string(value) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, `value, err = get(., ["line"])
-if err == null && value != null && is_string(value) {
-  parsed, perr = parse_regex(value, r'(?P<code>\w+)')
-  if perr == null {
-    replaced, rerr = replace(value, r'(?P<code>\w+)', "ERR: " + string!(parsed.code) + " done")
-    if rerr == null {
-      . = set!(., ["line"], replaced)
+if err == null && value != null {
+  value_str, err_str = to_string(value)
+  if err_str == null {
+    parsed, perr = parse_regex(value_str, r'(?P<code>\w+)')
+    if perr == null {
+      replaced, rerr = replace(value_str, r'(?P<code>\w+)', "ERR: " + string!(parsed.code) + " done")
+      if rerr == null {
+        . = set!(., ["line"], replaced)
+      }
     }
   }
 }`, got)
@@ -127,12 +145,15 @@ if err == null && value != null && is_string(value) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, `value, err = get(., ["line"])
-if err == null && value != null && is_string(value) {
-  parsed, perr = parse_regex(value, r'(?P<a>\w+)-(?P<b>\d+)-(?P<c>\w+)')
-  if perr == null {
-    replaced, rerr = replace(value, r'(?P<a>\w+)-(?P<b>\d+)-(?P<c>\w+)', string!(parsed.a) + ":" + string!(parsed.b) + ":" + string!(parsed.c))
-    if rerr == null {
-      . = set!(., ["line"], replaced)
+if err == null && value != null {
+  value_str, err_str = to_string(value)
+  if err_str == null {
+    parsed, perr = parse_regex(value_str, r'(?P<a>\w+)-(?P<b>\d+)-(?P<c>\w+)')
+    if perr == null {
+      replaced, rerr = replace(value_str, r'(?P<a>\w+)-(?P<b>\d+)-(?P<c>\w+)', string!(parsed.a) + ":" + string!(parsed.b) + ":" + string!(parsed.c))
+      if rerr == null {
+        . = set!(., ["line"], replaced)
+      }
     }
   }
 }`, got)

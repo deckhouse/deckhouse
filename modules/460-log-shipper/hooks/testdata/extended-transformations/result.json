@@ -45,7 +45,7 @@
       "inputs": [
         "transform/File/destination/test-ext-loki/03_tf_addLabels"
       ],
-      "source": "value, err = get(., [\"message\"])\nif err == null \u0026\u0026 value != null \u0026\u0026 is_string(value) {\n  replaced, rep_err = replace(value, r'token[0-9]+', \"[REDACTED]\")\n  if rep_err == null {\n    . = set!(., [\"message\"], replaced)\n  }\n}",
+      "source": "value, err = get(., [\"message\"])\nif err == null \u0026\u0026 value != null {\n  value_str, err_str = to_string(value)\n  if err_str == null {\n    replaced, rep_err = replace(value_str, r'token[0-9]+', \"[REDACTED]\")\n    if rep_err == null {\n      . = set!(., [\"message\"], replaced)\n    }\n  }\n}",
       "type": "remap"
     },
     "transform/File/destination/test-ext-loki/05_tf_dropLabels": {

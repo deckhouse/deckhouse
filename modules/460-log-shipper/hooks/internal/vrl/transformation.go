@@ -57,21 +57,24 @@ if err == null && is_object(obj) {
 // Named captures read from the `parsed` value produced by parse_regex (same as parseMessage string-regex).
 const ReplaceValueRule Rule = `
 value, err = get(., {{.pathArray}})
-if err == null && value != null && is_string(value) {
+if err == null && value != null {
+  value_str, err_str = to_string(value)
+  if err_str == null {
 {{- if .useNamedGroups }}
-  parsed, perr = parse_regex(value, r'{{.sourceRegex}}')
-  if perr == null {
-    replaced, rerr = replace(value, r'{{.sourceRegex}}', {{.replacementExpr}})
-    if rerr == null {
+    parsed, perr = parse_regex(value_str, r'{{.sourceRegex}}')
+    if perr == null {
+      replaced, rerr = replace(value_str, r'{{.sourceRegex}}', {{.replacementExpr}})
+      if rerr == null {
+        . = set!(., {{.pathArray}}, replaced)
+      }
+    }
+{{- else }}
+    replaced, rep_err = replace(value_str, r'{{.sourceRegex}}', {{.targetQuoted}})
+    if rep_err == null {
       . = set!(., {{.pathArray}}, replaced)
     }
-  }
-{{- else }}
-  replaced, rep_err = replace(value, r'{{.sourceRegex}}', {{.targetQuoted}})
-  if rep_err == null {
-    . = set!(., {{.pathArray}}, replaced)
-  }
 {{- end }}
+  }
 }
 `
 

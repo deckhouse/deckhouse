@@ -528,6 +528,8 @@ to convert a string in the `message` field into a structured object.
 For `sourceFormat: String`, provide a regular expression with named capture groups and a `setLabels` map; output keys are filled from `{{ group_name }}` templates.
 If multiple `ParseMessage` transformations are used, the one that parses the string must be applied last.
 
+You cannot set `parseMessage.targetLabel` to one of the following paths: `.pod`, `.pod_ip`, `.pod_owner`, `.parsed_data`, `.namespace`, `.image`, `.container`, `.node`.
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination

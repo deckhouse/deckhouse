@@ -528,6 +528,8 @@ spec:
 Для формата `String` задаётся регулярное выражение с именованными группами и карта `setLabels`: ключи результата сопоставляются с группами через шаблоны `{{ имя_группы }}`.
 При использовании нескольких трансформаций `ParseMessage`, преобразование строки должно выполняться последним.
 
+В `parseMessage.targetLabel` нельзя задать один из следующих путей: `.pod`, `.pod_ip`, `.pod_owner`, `.parsed_data`, `.namespace`, `.image`, `.container`, `.node`.
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
