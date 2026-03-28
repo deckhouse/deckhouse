@@ -18,12 +18,15 @@
   {{- end }}
   {{- $_ := unset $baseImages "REGISTRY_PATH" }}
 
-  {{- $_ := set . "Images" (mustMerge $imageVersions $baseImages) }}
-  # base images artifacts
-  {{- range $k, $v := .Images }}
----
-image: {{ $k }}
-from: {{ $v }}
-final: false
+  {{- $altBaseImages := (merge (.Files.Get "candi/alt_base_images.yml" | fromYaml) (.Files.Get (printf "%scandi/alt_base_images.yml" .prefix) | fromYaml)) }}
+  {{- if $altBaseImages }}
+    {{- range $k, $v := $altBaseImages }}
+      {{- if ne $k "REGISTRY_PATH" }}
+        {{ $altImagePath := (printf "%s@%s" $altBaseImages.REGISTRY_PATH (trimSuffix "/" $v)) }}
+        {{- $_ := set $baseImages $k $altImagePath }}
+      {{- end }}
+    {{- end }}
   {{- end }}
+
+  {{- $_ := set . "Images" (mustMerge $imageVersions $baseImages) }}
 {{- end }}

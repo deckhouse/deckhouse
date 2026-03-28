@@ -117,13 +117,13 @@ import:
   includePaths:
     - lib64
   before: setup
-- image: libs/glibc
+- from: {{ index $.Images "libs/glibc" }}
   add: /
   to: /
   includePaths:
   - sbin/*
   before: setup
-- image: tools/bash
+- from: {{ index $.Images "tools/bash" }}
   add: /usr/bin/bash
   to: /usr/bin/bash
   before: setup

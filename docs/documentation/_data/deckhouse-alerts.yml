@@ -1329,6 +1329,26 @@ alerts:
         etcd cluster database is growing rapidly.
       severity: "4"
       markupFormat: markdown
+    - name: D8EtcdHighRequestsLatency
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |
+        The 99th percentile of etcd request duration on `{{ $labels.instance }}` has exceeded 800 ms more than twice in the last hour.
+
+        High etcd latency can cause API server timeouts, slow admission webhooks, and general cluster instability.
+
+        **Investigate the following:**
+
+        - **Node disk I/O**: Etcd is extremely sensitive to disk performance. Check disk utilization and I/O wait on the control plane node.
+        - **Network-attached storage**: If the etcd data directory resides on NFS, Ceph, or another network storage, check connectivity and latency to the storage backend. Etcd requires a consistently low-latency local disk (SSD recommended).
+        - **Control plane summary**: Review the **Kubernetes Cluster → Control Plane Status** Grafana dashboard for an overall picture of API server and etcd health, request rates, and error rates.
+        - **Node base performance**: Check node CPU and RAM utilization and load average. If the node is CPU-bound (load average significantly exceeds the number of CPU cores), consider scaling up the control plane node.
+      summary: |
+        Etcd request latency (p99) has exceeded 800 ms multiple times in the past hour.
+      severity: "5"
+      markupFormat: markdown
     - name: D8GrafanaDeploymentReplicasUnavailable
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
       moduleUrl: 300-prometheus
@@ -1863,6 +1883,21 @@ alerts:
         - Remote and local Istio versions mismatch.
       summary: |
         Istio remote cluster {{$labels.cluster_id}} is not synchronized.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IstioReservedUIDConflict
+      sourceFile: modules/110-istio/monitoring/prometheus-rules/reserved-uid.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ce
+      description: |
+        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` is running as UID `1337`.
+
+        UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
+
+        To fix the issue, change the `runAsUser` in the container's or pod's `securityContext` to a different UID.
+      summary: |
+        Application container is running as UID 1337 (reserved by Istio).
       severity: "4"
       markupFormat: markdown
     - name: D8IstioVersionIsIncompatibleWithK8sVersion
@@ -2673,13 +2708,54 @@ alerts:
       module: node-local-dns
       edition: be
       description: |
-        The 95th percentile DNS request latency for A-records through kubeforward on node `{{$labels.node}}`
+        The 95th percentile DNS request latency for A-records through kubeforward
         exceeded 300 milliseconds over the last 5 minutes while handling more than 0.1 QPS.
+
         This may indicate slow upstreams, network issues, or DNS overload on this node.
+
+        Affected node: `{{$labels.node}}`
+
+        For more detailed diagnostics, inspect `Top 5 upstreams by slow kubeforward requests` in Grafana.
+
+        If the alert fires only on one node, run the checks below from node `{{$labels.node}}` (for example, from a debug pod on this node).
+        If the alert fires on many nodes, treat it as a potential systemic issue first.
+
+        Get kubeforward upstream IPs from a master host:
+
+        ```bash
+        d8 k -n kube-system get po -l k8s-app=kube-dns -o jsonpath='{.items[*].status.podIP}'
+        ```
+
+        Then run latency checks on the affected node `{{$labels.node}}` (or from a debug pod on that node):
+
+        ```bash
+        UPSTREAMS="<paste kube-dns pod IPs here>"
+        for ip in $UPSTREAMS; do
+          echo "== upstream ${ip} =="
+          for i in $(seq 1 20); do
+            dig @"$ip" -p 5353 kubernetes.default.svc.cluster.local A +tries=1 +time=1 +stats | grep "Query time"
+          done
+        done
+        ```
+
+        To identify slow requests, enable module logs ([`enableLogs`](https://deckhouse.io/modules/node-local-dns/configuration.html#parameters-enablelogs))
+        and inspect slow query messages:
+
+        ```bash
+        pod=$(kubectl -n kube-system get po -l k8s-app=node-local-dns --field-selector spec.nodeName={{$labels.node}} -o jsonpath='{.items[0].metadata.name}')
+        d8 k -n kube-system logs "$pod" | grep '\[kubeforward\] slow query'
+        ```
+
+        Example log line:
+        `[kubeforward] slow query A kubernetes.default.svc.cluster.local. took 425ms (rcode=NOERROR, upstream=10.96.0.10:53)`
+
+        Interpretation:
+        - If most upstreams are slow and many nodes are affected, suspect systemic network/CoreDNS overload.
+        - If one upstream is slow or only one node is affected, suspect a localized issue.
       summary: |
         High DNS request latency in kubeforward (p95 &gt; 300ms under load).
       severity: "4"
-      markupFormat: default
+      markupFormat: markdown
     - name: D8NodeLocalDNSUpstreamHealthcheckFailed
       sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/forward-plugin.yaml
       moduleUrl: 350-node-local-dns

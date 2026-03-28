@@ -1,5 +1,5 @@
 image: web-router-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 shell:
   install:
   - cd /go/src/app
@@ -20,13 +20,13 @@ image: web-router
 imageSpec:
   config:
     workingDir: "/app"
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 import:
-  - image: tools/curl
+  - from: {{ index $.Images "tools/curl" }}
     add: /usr/bin/curl-static
     to: /usr/bin/curl
     before: setup
-  - image: tools/jq
+  - from: {{ index $.Images "tools/jq" }}
     add: /usr/bin/jq
     to: /usr/bin/jq
     before: setup
