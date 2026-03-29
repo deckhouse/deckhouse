@@ -181,10 +181,10 @@ type RuntimeValues struct {
 	Package addonutils.Values `json:"Package"`
 }
 
-// GetRuntimeValues returns values that are not part of schema.
+// getRuntimeValues returns values that are not part of schema.
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
-func (m *Module) GetRuntimeValues() RuntimeValues {
+func (m *Module) getRuntimeValues() RuntimeValues {
 	return RuntimeValues{
 		Package: addonutils.Values{
 			"Name":     m.definition.Name,
@@ -197,7 +197,7 @@ func (m *Module) GetRuntimeValues() RuntimeValues {
 
 // GetValues returns runtime values in string format
 func (m *Module) GetValues() string {
-	runtimeValues := m.GetRuntimeValues()
+	runtimeValues := m.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
 	marshalledGlobal := m.globalValuesGetter(false)
@@ -290,7 +290,7 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 	}, nil
 }
 
-// GetHookValues returns values for hook rendering
+// GetHookValues returns values with hooks patches
 func (m *Module) GetHookValues() addonutils.Values {
 	return addonutils.MergeValues(
 		addonutils.Values{"global": m.globalValuesGetter(false)},

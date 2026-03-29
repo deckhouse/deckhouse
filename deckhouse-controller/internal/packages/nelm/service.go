@@ -49,8 +49,8 @@ var ErrPackageNotHelm = errors.New("package not helm")
 type Package interface {
 	GetName() string
 	GetPath() string
-	GetValues() string                // .Applications specified by the user
-	GetHookValues() addonutils.Values // .Values for batch-hooks
+	GetValues() string
+	GetHookValues() addonutils.Values
 }
 
 // Service manages Helm release lifecycle via nelm client.
