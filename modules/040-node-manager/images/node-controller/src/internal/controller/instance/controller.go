@@ -88,6 +88,7 @@ func (r *InstanceController) Reconcile(ctx context.Context, req ctrl.Request) (c
 	r.init()
 
 	log := ctrl.LoggerFrom(ctx).WithValues("instance", req.Name)
+	log.Info("reconcile triggered")
 	log.V(4).Info("tick", "op", "instance.reconcile.start")
 
 	instance := &deckhousev1alpha2.Instance{}
@@ -137,7 +138,7 @@ func (r *InstanceController) reconcileCreateFromSource(ctx context.Context, name
 		return ctrl.Result{}, err
 	}
 	if found {
-		log.V(1).Info("instance ensured from capi machine")
+		log.Info("instance ensured from capi machine")
 		return ctrl.Result{}, nil
 	}
 
@@ -146,7 +147,7 @@ func (r *InstanceController) reconcileCreateFromSource(ctx context.Context, name
 		return ctrl.Result{}, err
 	}
 	if found {
-		log.V(1).Info("instance ensured from mcm machine")
+		log.Info("instance ensured from mcm machine")
 		return ctrl.Result{}, nil
 	}
 
@@ -155,7 +156,7 @@ func (r *InstanceController) reconcileCreateFromSource(ctx context.Context, name
 		return ctrl.Result{}, err
 	}
 
-	log.V(4).Info("no source found for instance, nothing to create")
+	log.Info("no source found for instance, nothing to create")
 	return ctrl.Result{}, nil
 }
 
