@@ -326,25 +326,13 @@ func detectMergedDocuments(doc string) error {
 func ParseConfigFromData(ctx context.Context, configData string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore()
 
-	vOptions := extractValidateOptions(opts...)
-
-	parseSource := "unknown"
-	if vOptions.parseSource != "" {
-		parseSource = vOptions.parseSource
-	}
-
-	log.DebugF("ParseConfigFromData[%s] - config data before trim:\n'%s'\n", parseSource, configData)
-
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
-
-	log.DebugF("ParseConfigFromData[%s] - config data after trim:\n'%s'\n", parseSource, bigFileTmp)
 
 	resourcesDocs := make([]string, 0, len(docs))
 
 	metaConfig := MetaConfig{}
-	for i, doc := range docs {
-		log.DebugF("ParseConfigFromData[%s] - doc %d:\n'%s'\n", parseSource, i, bigFileTmp)
+	for _, doc := range docs {
 		// Check for merged documents before parsing
 		if err := detectMergedDocuments(doc); err != nil {
 			return nil, fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))

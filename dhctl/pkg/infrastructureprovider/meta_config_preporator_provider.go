@@ -40,8 +40,6 @@ type PreflightChecks struct {
 	DVPValidateKubeAPI bool
 }
 
-type PreparatorAdditionalData any
-
 type PreparatorAdditionalDataProvider func(provider string) (any, error)
 
 type PreparatorProviderParams struct {
@@ -115,22 +113,23 @@ func providePreparatorForDVP(params PreparatorProviderParams, logger log.Logger)
 	prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
 
 	additionalData, err := extractAdditionalData(dvp.PreparatorAdditionalDataFromAny, &extractAdditionalDataParams{
-		providerName: dvp.ProviderName,
-		logger: logger,
+		providerName:     dvp.ProviderName,
+		logger:           logger,
 		preparatorParams: params,
 	})
 
 	if err != nil {
-		panic(fmt.Errorf("Internal error: %v", err))
+		panic(fmt.Errorf("Internal error during extract additional preparator data for dvp: %v", err))
 	}
 
 	// nil data handled in preparator
 	prep.WithAdditionalData(additionalData)
 
-	if params.phase != DhctlPhaseBootstrap {
-		return prep
+	if params.phase == DhctlPhaseBootstrap {
+		prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeAPI)
 	}
-	return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeAPI)
+
+	return prep
 }
 
 type defaultCloudOnlyPrefixValidatorPreparator struct{}

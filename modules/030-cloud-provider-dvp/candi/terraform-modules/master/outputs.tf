@@ -36,12 +36,3 @@ output "uid" {
 output "cloudinit_secret_name" {
   value = local.cloudinit_secret_name
 }
-
-output "destructive_json" {
-  value = local.vm_destructive_params_json
-}
-
-
-output "ssh_pub_key" {
-  value = var.ssh_public_key
-}

@@ -23,11 +23,3 @@ output "node_internal_ip_address" {
 output "kubernetes_data_device_path" {
   value = module.master.kubernetes_data_device_path
 }
-
-output "destructive_json" {
-  value = module.master.destructive_json
-}
-
-output "ssh_pub_key" {
-  value = module.master.ssh_pub_key
-}

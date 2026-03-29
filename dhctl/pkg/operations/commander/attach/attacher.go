@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -41,6 +42,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
+type metaConfigPreparatorProvider func(*ScanResult) func() config.MetaConfigPreparatorProvider
+
 type Params struct {
 	CommanderMode         bool
 	CommanderUUID         uuid.UUID
@@ -55,7 +58,7 @@ type Params struct {
 	Logger                log.Logger
 	IsDebug               bool
 
-	MetaConfigPreparatorProvider func(*ScanResult) func() config.MetaConfigPreparatorProvider
+	MetaConfigPreparatorProvider metaConfigPreparatorProvider
 }
 
 type AttachResources struct {
@@ -371,6 +374,12 @@ func (i *Attacher) check(
 	err := log.Process("commander/attach", "Check cluster", func() error {
 		var err error
 
+		var preparatorProvider func() config.MetaConfigPreparatorProvider
+
+		if !govalue.IsNil(i.Params.MetaConfigPreparatorProvider) {
+			preparatorProvider = i.Params.MetaConfigPreparatorProvider(scanResult)
+		}
+
 		checker := check.NewChecker(&check.Params{
 			KubeClient:    kubeClient,
 			StateCache:    cache.Global(),
@@ -384,7 +393,7 @@ func (i *Attacher) check(
 			IsDebug:                      i.Params.IsDebug,
 			Logger:                       i.Params.Logger,
 			Embedded:                     true,
-			MetaConfigPreparatorProvider: i.Params.MetaConfigPreparatorProvider(scanResult),
+			MetaConfigPreparatorProvider: preparatorProvider,
 		})
 
 		checker.SetExternalPhasedContext(i.PhasedExecutionContext)

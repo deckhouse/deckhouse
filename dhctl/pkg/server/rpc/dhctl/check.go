@@ -176,7 +176,6 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-			config.ValidateOptionParseSource("check handler"),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing cluster meta config: %w", err)
