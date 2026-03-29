@@ -37,17 +37,8 @@ import (
 	instancepkg "github.com/deckhouse/node-controller/internal/controller/instance/instance"
 	"github.com/deckhouse/node-controller/internal/controller/instance/mcm"
 	instancenode "github.com/deckhouse/node-controller/internal/controller/instance/node"
-	"github.com/deckhouse/node-controller/internal/register"
 	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
-
-func init() {
-	register.RegisterController(
-		register.InstanceControllers,
-		&deckhousev1alpha2.Instance{},
-		&InstanceController{},
-	)
-}
 
 const (
 	instanceRequeueInterval         = time.Minute

@@ -20,9 +20,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/controller/bashiblecleanup"
 	"github.com/deckhouse/node-controller/internal/controller/draining"
 	"github.com/deckhouse/node-controller/internal/controller/fencing"
+	instance_controller "github.com/deckhouse/node-controller/internal/controller/instance"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup"
 	"github.com/deckhouse/node-controller/internal/controller/nodetemplate"
 	"github.com/deckhouse/node-controller/internal/controller/staticproviderid"
@@ -42,5 +44,9 @@ func init() {
 	register.RegisterGroup(register.NodeGroupControllers, &v1.NodeGroup{},
 		&nodegroup.Status{},
 		updateapproval.New(),
+	)
+
+	register.RegisterController(register.InstanceControllers, &deckhousev1alpha2.Instance{},
+		&instance_controller.InstanceController{},
 	)
 }
