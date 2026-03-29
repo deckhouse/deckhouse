@@ -61,15 +61,6 @@ func TestReconcileLinkedSourceExistence(t *testing.T) {
 			},
 		},
 		{
-			name: "node source with missing node",
-			instance: &deckhousev1alpha2.Instance{
-				ObjectMeta: v1.ObjectMeta{Name: "node-source-missing"},
-				Spec: deckhousev1alpha2.InstanceSpec{
-					NodeRef: deckhousev1alpha2.NodeRef{Name: "ghost-node"},
-				},
-			},
-		},
-		{
 			name: "machine source with live machine",
 			instance: &deckhousev1alpha2.Instance{
 				ObjectMeta: v1.ObjectMeta{Name: "machine-source-live"},
@@ -87,20 +78,6 @@ func TestReconcileLinkedSourceExistence(t *testing.T) {
 			},
 		},
 		{
-			name: "machine source missing machine and empty node name",
-			instance: &deckhousev1alpha2.Instance{
-				ObjectMeta: v1.ObjectMeta{Name: "machine-source-missing"},
-				Spec: deckhousev1alpha2.InstanceSpec{
-					MachineRef: &deckhousev1alpha2.MachineRef{
-						Kind:       "Machine",
-						APIVersion: capi.GroupVersion.String(),
-						Name:       "missing-machine",
-						Namespace:  machine.MachineNamespace,
-					},
-				},
-			},
-		},
-		{
 			name: "source none instance",
 			instance: &deckhousev1alpha2.Instance{
 				ObjectMeta: v1.ObjectMeta{Name: "source-none"},
@@ -109,7 +86,6 @@ func TestReconcileLinkedSourceExistence(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -125,6 +101,79 @@ func TestReconcileLinkedSourceExistence(t *testing.T) {
 			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: tc.instance.Name}, persisted)
 			require.False(t, apierrors.IsNotFound(err), "instance %q should not be deleted on skip path", tc.instance.Name)
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestReconcileLinkedSourceExistenceDeletes(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, deckhousev1alpha2.AddToScheme(scheme))
+	require.NoError(t, capi.AddToScheme(scheme))
+	require.NoError(t, mcmv1alpha1.AddToScheme(scheme))
+
+	testCases := []struct {
+		name           string
+		instance       *deckhousev1alpha2.Instance
+		initialObjects []client.Object
+	}{
+		{
+			name: "node source with missing node",
+			instance: &deckhousev1alpha2.Instance{
+				ObjectMeta: v1.ObjectMeta{Name: "node-source-missing"},
+				Spec: deckhousev1alpha2.InstanceSpec{
+					NodeRef: deckhousev1alpha2.NodeRef{Name: "ghost-node"},
+				},
+			},
+		},
+		{
+			name: "machine source with missing machine and no node ref",
+			instance: &deckhousev1alpha2.Instance{
+				ObjectMeta: v1.ObjectMeta{Name: "machine-source-missing"},
+				Spec: deckhousev1alpha2.InstanceSpec{
+					MachineRef: &deckhousev1alpha2.MachineRef{
+						Kind:       "Machine",
+						APIVersion: capi.GroupVersion.String(),
+						Name:       "missing-machine",
+						Namespace:  machine.MachineNamespace,
+					},
+				},
+			},
+		},
+		{
+			name: "machine source with missing machine and missing node",
+			instance: &deckhousev1alpha2.Instance{
+				ObjectMeta: v1.ObjectMeta{Name: "machine-and-node-both-missing"},
+				Spec: deckhousev1alpha2.InstanceSpec{
+					MachineRef: &deckhousev1alpha2.MachineRef{
+						Kind:       "Machine",
+						APIVersion: capi.GroupVersion.String(),
+						Name:       "missing-machine",
+						Namespace:  machine.MachineNamespace,
+					},
+					NodeRef: deckhousev1alpha2.NodeRef{Name: "missing-node"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			objects := append([]client.Object{tc.instance.DeepCopy()}, tc.initialObjects...)
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+			svc := &InstanceService{client: fakeClient, machineFactory: machine.NewMachineFactory()}
+
+			deleted, err := svc.reconcileLinkedSourceExistence(context.Background(), tc.instance)
+			require.NoError(t, err)
+			require.True(t, deleted)
+
+			persisted := &deckhousev1alpha2.Instance{}
+			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: tc.instance.Name}, persisted)
+			require.True(t, apierrors.IsNotFound(err), "instance %q should be deleted", tc.instance.Name)
 		})
 	}
 }

@@ -28,30 +28,40 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
 
+type sourceStatus string
+
+const (
+	sourceStatusExists   sourceStatus = "exists"
+	sourceStatusNotFound sourceStatus = "not-found"
+	sourceStatusSkipped  sourceStatus = "skipped"
+)
+
 func (s *InstanceService) reconcileLinkedSourceExistence(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
 	source := getInstanceSource(instance)
 	logger := log.FromContext(ctx)
 
-	machineExists, machineNotFound, err := s.linkedMachineExists(ctx, source.MachineRef)
+	machineStatus, err := s.linkedMachineExists(ctx, source.MachineRef)
 	if err != nil {
 		return false, err
 	}
-	if machineExists {
+	if machineStatus == sourceStatusExists {
 		return false, nil
 	}
-	nodeExists, nodeNotFound, err := s.linkedNodeExists(ctx, source.NodeName)
+	nodeStatus, err := s.linkedNodeExists(ctx, source.NodeName)
 	if err != nil {
 		return false, err
 	}
-	if nodeExists {
+	if nodeStatus == sourceStatusExists {
 		return false, nil
 	}
-	if !machineNotFound || !nodeNotFound {
+	hasConfirmedMissing := machineStatus == sourceStatusNotFound || nodeStatus == sourceStatusNotFound
+
+	if !hasConfirmedMissing {
 		logger.V(1).Info(
 			"linked resources are not confirmed missing, skip delete",
 			"instance", instance.Name,
-			"machineNotFound", machineNotFound,
-			"nodeNotFound", nodeNotFound,
+			"machineStatus", machineStatus,
+			"nodeStatus", nodeStatus,
 			"machineRefName", machineRefName(source.MachineRef),
 			"nodeName", source.NodeName,
 		)
@@ -85,9 +95,9 @@ func (s *InstanceService) reconcileLinkedSourceExistence(ctx context.Context, in
 func (s *InstanceService) linkedMachineExists(
 	ctx context.Context,
 	ref *deckhousev1alpha2.MachineRef,
-) (bool, bool, error) {
+) (sourceStatus, error) {
 	if ref == nil || ref.Name == "" {
-		return false, false, nil
+		return sourceStatusSkipped, nil
 	}
 	logger := log.FromContext(ctx)
 
@@ -99,12 +109,12 @@ func (s *InstanceService) linkedMachineExists(
 				"missingObject", "machine",
 				"machineRefName", ref.Name,
 			)
-			return false, true, nil
+			return sourceStatusNotFound, nil
 		}
-		return false, false, machineErr
+		return "", fmt.Errorf("get machine %q: %w", ref.Name, machineErr)
 	}
 
-	return true, false, nil
+	return sourceStatusExists, nil
 }
 
 func machineRefName(ref *deckhousev1alpha2.MachineRef) string {
@@ -114,10 +124,10 @@ func machineRefName(ref *deckhousev1alpha2.MachineRef) string {
 	return ref.Name
 }
 
-func (s *InstanceService) linkedNodeExists(ctx context.Context, nodeName string) (bool, bool, error) {
+func (s *InstanceService) linkedNodeExists(ctx context.Context, nodeName string) (sourceStatus, error) {
 	logger := log.FromContext(ctx)
 	if nodeName == "" {
-		return false, false, nil
+		return sourceStatusSkipped, nil
 	}
 
 	node := &corev1.Node{}
@@ -129,10 +139,10 @@ func (s *InstanceService) linkedNodeExists(ctx context.Context, nodeName string)
 				"missingObject", "node",
 				"nodeName", nodeName,
 			)
-			return false, true, nil
+			return sourceStatusNotFound, nil
 		}
-		return false, false, fmt.Errorf("get node %q: %w", nodeName, err)
+		return "", fmt.Errorf("get node %q: %w", nodeName, err)
 	}
 
-	return true, false, nil
+	return sourceStatusExists, nil
 }
