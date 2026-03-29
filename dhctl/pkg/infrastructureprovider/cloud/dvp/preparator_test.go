@@ -38,17 +38,31 @@ func TestKubeconfigDataBase64HappyPath(t *testing.T) {
 }
 
 func TestPrepare(t *testing.T) {
-	createPreparator := func(t *testing.T, sshKey string) (*MetaConfigPreparator, *config.MetaConfig, *log.InMemoryLogger) {
+	type preparatorTest struct {
+		preparator *MetaConfigPreparator
+		cfg        *config.MetaConfig
+		logger     *log.InMemoryLogger
+	}
+
+	setOriginCfg := func(preparator *MetaConfigPreparator, originCfg string) {
+		preparator.WithAdditionalData(NewPreparatorAdditionalData(originCfg))
+	}
+
+	createPreparator := func(t *testing.T, sshKey, original string) *preparatorTest {
 		c := metaConfigForPrepare(t, sshKey)
 		logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
 		preparator := NewMetaConfigPreparator()
 		preparator.WithLogger(logger)
 
-		return preparator, c, logger
-	}
+		if original != "" {
+			setOriginCfg(preparator, original)
+		}
 
-	setOriginCfg := func(preparator *MetaConfigPreparator, originCfg string) {
-		preparator.WithAdditionalData(NewPreparatorAdditionalData(originCfg))
+		return &preparatorTest{
+			preparator: preparator,
+			cfg:        c,
+			logger:     logger,
+		}
 	}
 
 	assertMetaConfig := func(t *testing.T, cfg *config.MetaConfig, sshKey string) {
@@ -74,129 +88,142 @@ func TestPrepare(t *testing.T) {
 		require.NotEmpty(t, find, "log '%s' should be found", msg)
 	}
 
-	ctx := context.TODO()
+	assertSkipPrepare := func(t *testing.T, test *preparatorTest, sshKey, logMsg string) {
+		cfg := test.cfg
 
-	t.Run("No additional data", func(t *testing.T) {
-		const sshKey = "ssh-rsa AAAAAA"
-		preparator, cfg, logger := createPreparator(t, sshKey)
-		err := preparator.Prepare(ctx, cfg)
+		err := test.preparator.Prepare(context.TODO(), cfg)
+
+		require.NoError(t, err, "should prepared with skip")
+		assertMetaConfig(t, cfg, sshKey)
+		if logMsg != "" {
+			assertLog(t, test.logger, logMsg)
+		}
+	}
+
+	assertSkipWithProviderConfigLen := func(t *testing.T, test *preparatorTest, l int, logMsg string) {
+		cfg := test.cfg
+
+		err := test.preparator.Prepare(context.TODO(), cfg)
+
+		require.NoError(t, err, "should skip prepared")
+		require.Len(t, cfg.ProviderClusterConfig, l, "should not change meta config")
+		assertLog(t, test.logger, logMsg)
+	}
+
+	assertPrepared := func(t *testing.T, test *preparatorTest, sshKey string) {
+		cfg := test.cfg
+
+		err := test.preparator.Prepare(context.TODO(), cfg)
 
 		require.NoError(t, err, "should prepared")
 		assertMetaConfig(t, cfg, sshKey)
-		assertLog(t, logger, "Additional data for cloud provider dvp not provided")
+	}
+
+	assertNotPrepared := func(t *testing.T, test *preparatorTest) {
+		err := test.preparator.Prepare(context.TODO(), test.cfg)
+
+		require.Error(t, err, "should not prepared")
+	}
+
+	t.Run("No additional data", func(t *testing.T) {
+		const sshKey = "ssh-rsa AAAAAA"
+
+		test := createPreparator(t, sshKey, "")
+
+		assertSkipPrepare(t, test, sshKey, "Additional data for cloud provider dvp not provided")
 	})
 
 	t.Run("Same key", func(t *testing.T) {
 		const sshKey = "ssh-rsa AAAAAA"
-		preparator, cfg, logger := createPreparator(t, sshKey)
-
 		original := fmt.Sprintf(`
 layout: Standard
 sshPublicKey: "%s"
 `, sshKey)
 
-		setOriginCfg(preparator, original)
+		test := createPreparator(t, sshKey, original)
 
-		err := preparator.Prepare(ctx, cfg)
-
-		require.NoError(t, err, "should prepared")
-		assertMetaConfig(t, cfg, sshKey)
-		assertLog(t, logger, "Meta config ssh pub key equals to original ssh pub key")
+		assertSkipPrepare(t, test, sshKey, "Meta config ssh pub key equals to original ssh pub key")
 	})
 
 	t.Run("MetaConfig key contains new line", func(t *testing.T) {
 		const sshKey = "ssh-rsa AAAAAA"
 		keyWithNewLine := fmt.Sprintf("%s\n", sshKey)
-		preparator, cfg, logger := createPreparator(t, keyWithNewLine)
-
 		original := fmt.Sprintf(`
 layout: Standard
 sshPublicKey: "%s"
 `, sshKey)
 
-		setOriginCfg(preparator, original)
+		test := createPreparator(t, keyWithNewLine, original)
 
-		err := preparator.Prepare(ctx, cfg)
-
-		require.NoError(t, err, "should prepared")
-		assertMetaConfig(t, cfg, keyWithNewLine)
-		assertLog(t, logger, "Meta config ssh pub key already contains new line")
+		assertSkipPrepare(t, test, keyWithNewLine, "Meta config ssh pub key already contains new line")
 	})
 
 	t.Run("Meta config key not found", func(t *testing.T) {
 		const sshKey = "ssh-rsa AAAAAA"
-		preparator, cfg, logger := createPreparator(t, sshKey)
-		delete(cfg.ProviderClusterConfig, "sshPublicKey")
-
 		original := `
 layout: Standard
 sshPublicKey: |
   ssh-rsa CCCCCC
 `
+		test := createPreparator(t, sshKey, original)
+		delete(test.cfg.ProviderClusterConfig, "sshPublicKey")
 
-		setOriginCfg(preparator, original)
+		setOriginCfg(test.preparator, original)
 
-		err := preparator.Prepare(ctx, cfg)
-
-		require.NoError(t, err, "should prepared")
-		require.Len(t, cfg.ProviderClusterConfig, 1, "should not change meta config")
-		assertLog(t, logger, "Is not provided key")
+		assertSkipWithProviderConfigLen(t, test, 1, "Meta config not provide key")
 	})
 
 	t.Run("Skip original key not found", func(t *testing.T) {
 		const sshKey = "ssh-rsa AAAAAA"
-		preparator, cfg, logger := createPreparator(t, sshKey)
-
 		original := `
 layout: Standard
 zones:
 - default
 `
 
-		setOriginCfg(preparator, original)
+		test := createPreparator(t, sshKey, original)
 
-		err := preparator.Prepare(ctx, cfg)
-
-		require.NoError(t, err, "should prepared")
-		assertMetaConfig(t, cfg, sshKey)
-		assertLog(t, logger, "Original provider cluster config does not contains ssh pub key")
+		assertSkipPrepare(t, test, sshKey, "Original provider cluster config does not contains ssh pub key")
 	})
 
 	t.Run("Skip original config not provided", func(t *testing.T) {
 		const sshKey = "ssh-rsa AAAAAA"
-		preparator, cfg, logger := createPreparator(t, sshKey)
+		test := createPreparator(t, sshKey, "")
 
-		setOriginCfg(preparator, "")
+		setOriginCfg(test.preparator, "")
 
-		err := preparator.Prepare(ctx, cfg)
+		assertSkipPrepare(t, test, sshKey, "Original provider cluster config yaml key not provided")
+	})
 
-		require.NoError(t, err, "should prepared")
-		assertMetaConfig(t, cfg, sshKey)
-		assertLog(t, logger, "Original provider cluster config yaml key not provided")
+	t.Run("Skip provider config not provided in meta config", func(t *testing.T) {
+		const sshKey = "ssh-rsa AAAAAA"
+		original := `
+layout: Standard
+sshPublicKey: |
+  ssh-rsa CCCCCC
+`
+		test := createPreparator(t, sshKey, original)
+
+		test.cfg.ProviderClusterConfig = nil
+
+		assertSkipWithProviderConfigLen(t, test, 0, "Provider cluster config not provided")
 	})
 
 	t.Run("Same key when original with multiline new line use original", func(t *testing.T) {
 		const sshKey = "ssh-rsa AAAAAA"
-		preparator, cfg, _ := createPreparator(t, sshKey)
-
 		original := fmt.Sprintf(`
 layout: Standard
 sshPublicKey: |
   %s
 `, sshKey)
 
-		setOriginCfg(preparator, original)
+		test := createPreparator(t, sshKey, original)
 
-		err := preparator.Prepare(ctx, cfg)
-
-		require.NoError(t, err, "should prepared")
-		assertMetaConfig(t, cfg, fmt.Sprintf("%s\n", sshKey))
+		assertPrepared(t, test, fmt.Sprintf("%s\n", sshKey))
 	})
 
 	t.Run("Same key when original with multiline new line in middle use original", func(t *testing.T) {
 		const sshKey = "ssh-rsa AAAAAA"
-		preparator, cfg, _ := createPreparator(t, sshKey)
-
 		original := fmt.Sprintf(`
 layout: Standard
 sshPublicKey: |
@@ -204,18 +231,13 @@ sshPublicKey: |
 zones:
 - default`, sshKey)
 
-		setOriginCfg(preparator, original)
+		test := createPreparator(t, sshKey, original)
 
-		err := preparator.Prepare(ctx, cfg)
-
-		require.NoError(t, err, "should prepared")
-		assertMetaConfig(t, cfg, fmt.Sprintf("%s\n", sshKey))
+		assertPrepared(t, test, fmt.Sprintf("%s\n", sshKey))
 	})
 
 	t.Run("Different keys use meta config key", func(t *testing.T) {
 		const sshKey = "ssh-rsa AAAAAA"
-		preparator, cfg, logger := createPreparator(t, sshKey)
-
 		// also test that another keys not changed
 		original := fmt.Sprintf(`
 layout: NonStandard
@@ -223,47 +245,32 @@ sshPublicKey: |
   %s
 `, "ssh-rsa BBBBBB")
 
-		setOriginCfg(preparator, original)
+		test := createPreparator(t, sshKey, original)
 
-		err := preparator.Prepare(ctx, cfg)
-
-		require.NoError(t, err, "should prepared")
-		assertMetaConfig(t, cfg, sshKey)
-		assertLog(t, logger, "Original trimmed ssh key not equal to meta config ssh pub key")
+		assertSkipPrepare(t, test, sshKey, "Original trimmed ssh key not equal to meta config ssh pub key")
 	})
 
 	t.Run("Original unmarshal error", func(t *testing.T) {
 		const sshKey = "ssh-rsa AAAAAA"
-		preparator, cfg, _ := createPreparator(t, sshKey)
-
-		// also test that another keys not changed
 		original := `3"sntgt`
 
-		setOriginCfg(preparator, original)
+		test := createPreparator(t, sshKey, original)
 
-		err := preparator.Prepare(ctx, cfg)
-
-		require.Error(t, err, "should not prepared")
+		assertNotPrepared(t, test)
 	})
 
 	t.Run("Meta config unmarshal error", func(t *testing.T) {
 		const sshKey = "ssh-rsa AAAAAA"
-		preparator, cfg, _ := createPreparator(t, sshKey)
-
-		cfg.ProviderClusterConfig["sshPublicKey"] = json.RawMessage([]byte(`3"rfrifj`))
-
-		// also test that another keys not changed
 		original := `
 layout: Standard
 sshPublicKey: |
   ssh-rsa CCCCC
 `
+		test := createPreparator(t, sshKey, original)
 
-		setOriginCfg(preparator, original)
+		test.cfg.ProviderClusterConfig["sshPublicKey"] = json.RawMessage([]byte(`3"rfrifj`))
 
-		err := preparator.Prepare(ctx, cfg)
-
-		require.Error(t, err, "should not prepared")
+		assertNotPrepared(t, test)
 	})
 }
 

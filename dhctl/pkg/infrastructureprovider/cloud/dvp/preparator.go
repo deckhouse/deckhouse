@@ -211,7 +211,7 @@ func (p *MetaConfigPreparator) getSSHPublicKey(metaConfig *config.MetaConfig) (s
 
 	sshPubKeyJSON, ok := providerConfig[sshPublicKeyConfigKey]
 	if !ok {
-		p.logSkipPrepare("Is not provided key %s", sshPublicKeyConfigKey)
+		p.logSkipPrepare("Meta config not provide key %s", sshPublicKeyConfigKey)
 		return "", nil
 	}
 
