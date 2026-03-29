@@ -46,12 +46,16 @@ func PreparatorAdditionalDataFromAny(data any) (*PreparatorAdditionalData, error
 	return res, nil
 }
 
+func (d *PreparatorAdditionalData) logSkip(logger log.Logger, msg string) (string, error) {
+	logger.LogDebugF("%s. Skip\n", msg)
+	return "", nil
+}
+
 func (d *PreparatorAdditionalData) extractSSHPubKey(logger log.Logger) (string, error) {
 	// Warning! Do not trim config!
 
 	if d.originalProviderClusterConfigYAML == "" {
-		logger.LogDebugF("Original provider cluster config yaml key not provided. Skip\n")
-		return "", nil
+		return d.logSkip(logger, "Original provider cluster config yaml key not provided")
 	}
 
 	type providerConfiguration struct {
@@ -66,8 +70,7 @@ func (d *PreparatorAdditionalData) extractSSHPubKey(logger log.Logger) (string, 
 	}
 
 	if providerConfig.SSHPubKey == nil {
-		logger.LogDebugF("Original provider cluster config does not contains ssh pub key. Skip\n")
-		return "", nil
+		return d.logSkip(logger, "Original provider cluster config does not contains ssh pub key")
 	}
 
 	return *providerConfig.SSHPubKey, nil

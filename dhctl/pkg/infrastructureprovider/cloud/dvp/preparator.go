@@ -163,15 +163,15 @@ func (p *MetaConfigPreparator) prepareSSHPublicKey(metaConfig *config.MetaConfig
 		return err
 	}
 
+	if metaConfigSSHPubKey == "" {
+		// log in getSSHPublicKey
+		return nil
+	}
+
 	const processSuffix = "\n"
 
 	if strings.HasSuffix(metaConfigSSHPubKey, processSuffix) {
 		p.logSkipPrepare("Meta config ssh pub key already contains new line")
-		return nil
-	}
-
-	if metaConfigSSHPubKey == "" {
-		// log in getSSHPublicKey
 		return nil
 	}
 
@@ -180,7 +180,7 @@ func (p *MetaConfigPreparator) prepareSSHPublicKey(metaConfig *config.MetaConfig
 		return err
 	}
 
-	if metaConfigSSHPubKey == "" {
+	if originalSSHPubKey == "" {
 		// log in extractSSHPubKey
 		return nil
 	}
@@ -211,7 +211,7 @@ func (p *MetaConfigPreparator) getSSHPublicKey(metaConfig *config.MetaConfig) (s
 
 	sshPubKeyJSON, ok := providerConfig[sshPublicKeyConfigKey]
 	if !ok {
-		p.logSkipPrepare("%s is not provided", sshPublicKeyConfigKey)
+		p.logSkipPrepare("Is not provided key %s", sshPublicKeyConfigKey)
 		return "", nil
 	}
 
