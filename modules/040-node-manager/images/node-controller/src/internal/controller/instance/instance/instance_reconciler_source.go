@@ -52,7 +52,7 @@ func (s *InstanceService) reconcileLinkedSourceExistence(ctx context.Context, in
 			"instance", instance.Name,
 			"machineNotFound", machineNotFound,
 			"nodeNotFound", nodeNotFound,
-			"machineRefName", source.MachineRef.Name,
+			"machineRefName", machineRefName(source.MachineRef),
 			"nodeName", source.NodeName,
 		)
 		return false, nil
@@ -71,7 +71,7 @@ func (s *InstanceService) reconcileLinkedSourceExistence(ctx context.Context, in
 		"instance deleted",
 		"instance", instance.Name,
 		"sourceType", source.Type,
-		"machineRefName", source.MachineRef.Name,
+		"machineRefName", machineRefName(source.MachineRef),
 		"nodeName", source.NodeName,
 		"finalizerRemoved", true,
 		"deletedBy", "instance-controller",
@@ -105,6 +105,13 @@ func (s *InstanceService) linkedMachineExists(
 	}
 
 	return true, false, nil
+}
+
+func machineRefName(ref *deckhousev1alpha2.MachineRef) string {
+	if ref == nil {
+		return ""
+	}
+	return ref.Name
 }
 
 func (s *InstanceService) linkedNodeExists(ctx context.Context, nodeName string) (bool, bool, error) {
