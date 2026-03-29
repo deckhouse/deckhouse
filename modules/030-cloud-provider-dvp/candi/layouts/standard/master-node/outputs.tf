@@ -23,3 +23,4 @@ output "node_internal_ip_address" {
 output "kubernetes_data_device_path" {
   value = module.master.kubernetes_data_device_path
 }
+

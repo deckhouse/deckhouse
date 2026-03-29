@@ -280,13 +280,13 @@ func metaConfigForPrepare(t *testing.T, sshKey string) *config.MetaConfig {
 	sshKeyRaw, err := json.Marshal(sshKey)
 	require.NoError(t, err, "cannot marshal ssh pub key")
 
-	nsRaw, err := json.Marshal(testLayout)
+	layoutRaw, err := json.Marshal(testLayout)
 	require.NoError(t, err, "cannot marshal namespace")
 
 	return &config.MetaConfig{
 		ProviderClusterConfig: map[string]json.RawMessage{
 			"sshPublicKey": sshKeyRaw,
-			"layout":       nsRaw,
+			"layout":       layoutRaw,
 		},
 	}
 }
