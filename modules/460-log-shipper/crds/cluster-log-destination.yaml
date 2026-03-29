@@ -1085,14 +1085,14 @@ spec:
                             default: ".message"
                             pattern: '^(\.|\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+)$'
                             description: |
-                              Destination path for the parsed value (default `.message`). The lone value `.` merges into the event root. Must not be one of `.pod`, `.pod_ip`, `.pod_owner`, `.parsed_data`, `.namespace`, `.image`, `.container`, or `.node`.
+                              Destination path for the parsed value (default `.message`). The lone value `.` merges into the event root. Must not be `.parsed_data`.
                             x-doc-examples:
                               - ".message"
                               - "."
                               - ".tmp"
                             x-kubernetes-validations:
-                              - message: using reserved paths in parseMessage.targetLabel
-                                rule: '![''.pod'', ''.pod_ip'', ''.pod_owner'', ''.parsed_data'', ''.namespace'', ''.image'', ''.container'', ''.node''].exists(k, self == k)'
+                              - message: parseMessage.targetLabel must not be .parsed_data
+                                rule: '![''.parsed_data''].exists(k, self == k)'
                           string:
                             type: object
                             description: |

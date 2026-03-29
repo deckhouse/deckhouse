@@ -471,7 +471,7 @@ spec:
                             description: Формат исходной строки в `message` для преобразования в объект (String, JSON, Klog, SysLog, CLF, Logfmt).
                           targetLabel:
                             description: |
-                              Путь назначения для распарсенного значения (по умолчанию `.message`). Значение `.` — слияние с корнем лога. Не может быть одним из `.pod`, `.pod_ip`, `.pod_owner`, `.parsed_data`, `.namespace`, `.image`, `.container`, `.node`.
+                              Путь назначения для распарсенного значения (по умолчанию `.message`). Значение `.` — слияние с корнем лога. Не может быть `.parsed_data`.
                           string:
                             description: |
                               Параметры для `sourceFormat: String`. Возможны два непересекающихся варианта: если задан `targetField` — срабатывает только устаревшая обёртка строки `message` в объект с одним ключом, поля `regex` и `setLabels` не используются; если `targetField` не задан — должны быть заданы `regex` и `setLabels`, объект для записи собирается из именованных групп регулярного выражения по карте `setLabels`.
