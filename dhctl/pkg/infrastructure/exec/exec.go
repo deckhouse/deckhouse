@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -35,6 +36,8 @@ const HasChangesExitCode = 2
 // based on https://stackoverflow.com/a/43931246
 // https://regex101.com/r/qtIrSj/1
 var infrastructureLogsMatcher = regexp.MustCompile(`(\s+\[(TRACE|DEBUG|INFO|WARN|ERROR)\]\s+|Use TF_LOG=TRACE|there is no package|\-\-\-\-)`)
+
+type forceStopKey struct{}
 
 func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	// Start infrastructure utility as a leader of the new process group to prevent
@@ -109,9 +112,13 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		return cmd.ProcessState.ExitCode(), err
 	}
 
+	processDone := make(chan struct{})
+	go forceStopOnTimeout(ctx, processDone, cmd.Process.Pid, logger)
+
 	wg.Wait()
 
 	err = cmd.Wait()
+	close(processDone)
 
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if infrastructure plan has diff
 	if err != nil && exitCode != HasChangesExitCode {
@@ -139,4 +146,45 @@ func ReplaceHomeDirEnv(env []string, homeDir string) []string {
 	}
 
 	return res
+}
+
+// ContextWithForceStop returns a new context that enables force stop behavior.
+// Intended for server mode where hanging processes must be terminated within a bounded time.
+func ContextWithForceStop(ctx context.Context) context.Context {
+	return context.WithValue(ctx, forceStopKey{}, true)
+}
+
+// forceStopOnTimeout waits for the context to be cancelled, then gives the process
+// gracefulStopDelay to exit on its own after the first SIGINT.
+// If the process does not exit in time, a second SIGINT is sent to force immediate exit.
+func forceStopOnTimeout(ctx context.Context, processDone <-chan struct{}, pid int, logger log.Logger) {
+	const gracefulStopDelay = time.Minute
+
+	if !hasForceStop(ctx) {
+		return
+	}
+
+	select {
+	case <-ctx.Done():
+	case <-processDone:
+		return
+	}
+
+	t := time.NewTimer(gracefulStopDelay)
+	defer t.Stop()
+
+	select {
+	case <-t.C:
+		logger.LogInfoF(
+			"infrastructure utility process did not exit after graceful stop timeout (%s), sending second SIGINT\n",
+			gracefulStopDelay.String(),
+		)
+		_ = syscall.Kill(-pid, syscall.SIGINT)
+	case <-processDone:
+	}
+}
+
+func hasForceStop(ctx context.Context) bool {
+	v, _ := ctx.Value(forceStopKey{}).(bool)
+	return v
 }
