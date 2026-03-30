@@ -142,13 +142,13 @@ func (m *ServiceManager[T]) getAuth(registryURL, dockerCFG, login, password stri
 
 	switch {
 	case login != "":
-		if auth, err = client.AuthFromCredentials(login, password); err != nil {
+		if auth, err = client.WithLoginPassword(login, password); err != nil {
 			return nil, fmt.Errorf("failed to get auth from credentials: %w", err)
 		}
 
 		m.logger.Debug("init auth from credentials")
 	case dockerCFG != "":
-		if auth, err = client.AuthFromDockerConfig(registryURL, dockerCFG); err != nil {
+		if auth, err = client.WithDockercfg(registryURL, dockerCFG); err != nil {
 			return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
 		}
 
