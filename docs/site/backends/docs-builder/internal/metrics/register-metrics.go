@@ -15,6 +15,7 @@ package metrics
 
 import (
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 )
 
 const (
@@ -71,7 +72,9 @@ func RegisterMetrics(mStorage *metricsstorage.MetricStorage) error {
 	}
 
 	// Gauge: module documentation render error (1.0 = broken module was removed during build)
-	_, err = mStorage.RegisterGauge(DocsBuilderModuleRenderError, []string{"module"})
+	_, err = mStorage.RegisterGauge(DocsBuilderModuleRenderError, []string{"module"},
+		options.WithHelp("Set to 1 if a module's documentation failed to render and was removed during the build"),
+	)
 	if err != nil {
 		return err
 	}
