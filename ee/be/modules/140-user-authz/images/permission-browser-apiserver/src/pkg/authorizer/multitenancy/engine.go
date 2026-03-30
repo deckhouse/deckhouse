@@ -488,7 +488,12 @@ func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
 		// No ClusterAuthorizationRules apply to this user.
 		// Privileged users (system:masters, etc.) bypass MT restrictions.
 		// Non-privileged users without CAR get no access (deny-by-default).
-		return isPrivilegedUser(userInfo.GetGroups())
+		if isPrivilegedUser(userInfo.GetGroups()) {
+			klog.V(4).Infof("IsNamespaceAllowed: user=%s is privileged, bypassing MT restrictions", userInfo.GetName())
+			return true
+		}
+		klog.V(4).Infof("IsNamespaceAllowed: user=%s has no CAR and is not privileged, denying access (deny-by-default)", userInfo.GetName())
+		return false
 	}
 
 	combinedDir := e.combineDirEntries(dirEntriesAffected)
@@ -552,9 +557,11 @@ func (e *Engine) GetAllowedNamespaces(userInfo user.Info) ([]string, bool) {
 		// No ClusterAuthorizationRules apply to this user.
 		// Privileged users (system:masters, etc.) bypass MT restrictions.
 		if isPrivilegedUser(userInfo.GetGroups()) {
+			klog.V(4).Infof("GetAllowedNamespaces: user=%s is privileged, all namespaces allowed", userInfo.GetName())
 			return nil, false // All namespaces allowed
 		}
 		// Non-privileged users without CAR get no access (deny-by-default).
+		klog.V(4).Infof("GetAllowedNamespaces: user=%s has no CAR and is not privileged, returning empty list (deny-by-default)", userInfo.GetName())
 		return []string{}, true // Empty list, has restrictions
 	}
 

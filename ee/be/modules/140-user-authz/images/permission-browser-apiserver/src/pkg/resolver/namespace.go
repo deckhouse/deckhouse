@@ -388,6 +388,22 @@ func (r *NamespaceResolver) filterByMultitenancy(userInfo user.Info, candidates 
 		return result
 	}
 
+	// Early-exit optimization: check if user has any restrictions
+	allowedNs, hasRestrictions := r.mtEngine.GetAllowedNamespaces(userInfo)
+	if !hasRestrictions {
+		// No MT restrictions, return all candidates
+		result := make([]string, 0, len(candidates))
+		for ns := range candidates {
+			result = append(result, ns)
+		}
+		return result
+	}
+	if allowedNs != nil && len(allowedNs) == 0 {
+		// Deny-by-default: user has no CAR and is not privileged
+		return []string{}
+	}
+
+	// User has restrictions - filter each namespace
 	result := make([]string, 0, len(candidates))
 	for ns := range candidates {
 		if r.isNamespaceAllowedByMultitenancy(userInfo, ns) {

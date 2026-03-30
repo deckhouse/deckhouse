@@ -237,6 +237,7 @@ func TestEngine_AuthorizeNamespacedRequest(t *testing.T) {
 	tests := []struct {
 		name             string
 		userName         string
+		groups           []string
 		namespace        string
 		expectedDecision authorizer.Decision
 	}{
@@ -265,8 +266,15 @@ func TestEngine_AuthorizeNamespacedRequest(t *testing.T) {
 			expectedDecision: authorizer.DecisionNoOpinion,
 		},
 		{
-			name:             "unknown user - no restrictions",
+			name:             "unknown user without CAR - NoOpinion (defers to RBAC)",
 			userName:         "unknown-user",
+			namespace:        "any-ns",
+			expectedDecision: authorizer.DecisionNoOpinion,
+		},
+		{
+			name:             "superadmins group without CAR - NoOpinion (defers to RBAC)",
+			userName:         "super-admin",
+			groups:           []string{"superadmins"},
 			namespace:        "any-ns",
 			expectedDecision: authorizer.DecisionNoOpinion,
 		},
@@ -275,7 +283,7 @@ func TestEngine_AuthorizeNamespacedRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			attrs := &mockAttrs{
-				userInfo:   &mockUserInfo{name: tt.userName},
+				userInfo:   &mockUserInfo{name: tt.userName, groups: tt.groups},
 				namespace:  tt.namespace,
 				resource:   "pods",
 				verb:       "get",
@@ -556,6 +564,12 @@ func TestEngine_IsNamespaceAllowed(t *testing.T) {
 			expected:  true,
 		},
 		{
+			name:      "superadmins user without CAR - allowed (privileged bypass)",
+			userInfo:  &mockUserInfo{name: "super-admin", groups: []string{"superadmins"}},
+			namespace: "any-ns",
+			expected:  true,
+		},
+		{
 			name:      "regular authenticated user without CAR - denied",
 			userInfo:  &mockUserInfo{name: "random-user", groups: []string{"system:authenticated"}},
 			namespace: "any-ns",
@@ -607,6 +621,11 @@ func TestIsPrivilegedUser(t *testing.T) {
 		{
 			name:     "kubeadm:cluster-admins is privileged",
 			groups:   []string{"kubeadm:cluster-admins"},
+			expected: true,
+		},
+		{
+			name:     "superadmins is privileged",
+			groups:   []string{"superadmins"},
 			expected: true,
 		},
 		{
