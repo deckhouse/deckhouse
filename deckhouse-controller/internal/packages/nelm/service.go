@@ -152,7 +152,7 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 	return s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		Values:      pkg.GetValues(),
+		RootValues:  pkg.GetValues(),
 	})
 }
 
@@ -226,7 +226,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	renderedManifests, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		Values:      pkg.GetValues(),
+		RootValues:  pkg.GetValues(),
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -258,7 +258,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		ReleaseLabels: map[string]string{
 			nelm.LabelPackageChecksum: checksum,
 		},
-		Values: pkg.GetValues(),
+		RootValues: pkg.GetValues(),
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
