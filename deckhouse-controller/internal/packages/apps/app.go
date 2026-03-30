@@ -216,7 +216,7 @@ func (a *Application) getRuntimeValues() RuntimeValues {
 }
 
 // GetValues returns runtime values in string format
-func (a *Application) GetValues() string {
+func (a *Application) GetRuntimeValues() string {
 	runtimeValues := a.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
@@ -316,7 +316,7 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 }
 
 // GetHookValues returns values for hook rendering
-func (a *Application) GetHookValues() addonutils.Values {
+func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
 }
 

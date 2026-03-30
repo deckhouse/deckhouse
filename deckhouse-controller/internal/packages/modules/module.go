@@ -196,7 +196,7 @@ func (m *Module) getRuntimeValues() RuntimeValues {
 }
 
 // GetValues returns runtime values in string format
-func (m *Module) GetValues() string {
+func (m *Module) GetRuntimeValues() string {
 	runtimeValues := m.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
@@ -291,10 +291,11 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 }
 
 // GetHookValues returns values with hooks patches
-func (m *Module) GetHookValues() addonutils.Values {
+func (m *Module) GetValues() addonutils.Values {
 	return addonutils.MergeValues(
 		addonutils.Values{"global": m.globalValuesGetter(false)},
-		m.values.GetValues())
+		m.values.GetValues(),
+	)
 }
 
 // ApplySettings applies settings values
