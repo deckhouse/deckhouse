@@ -40,10 +40,33 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function getState(container) {
-    if (!container.__zoomImageState) {
-      container.__zoomImageState = { scale: 1, x: 0, y: 0, dragging: false };
+    if (!container.zoomImageState) {
+      container.zoomImageState = { scale: 1, x: 0, y: 0, dragging: false };
     }
-    return container.__zoomImageState;
+    return container.zoomImageState;
+  }
+
+  function updateAltOverlayVisibility(container) {
+    const altOverlay = container.zoomImageAltOverlay;
+    if (!altOverlay) return;
+    const hasText = container.zoomImageAltText;
+    altOverlay.style.display = hasText ? 'block' : 'none';
+  }
+
+  function addAltOverlay(container, sourceImg) {
+    const altText = sourceImg && sourceImg.alt ? sourceImg.alt.trim() : '';
+    container.zoomImageAltText = altText;
+    if (!altText) {
+      container.zoomImageAltOverlay = null;
+      return;
+    }
+
+    const altOverlay = document.createElement('div');
+    altOverlay.className = 'zoom-image-alt';
+    altOverlay.textContent = altText;
+    document.body.appendChild(altOverlay);
+    container.zoomImageAltOverlay = altOverlay;
+    updateAltOverlayVisibility(container);
   }
 
   function applyTransform(container) {
@@ -59,6 +82,7 @@ document.addEventListener('DOMContentLoaded', function () {
       img.style.cursor = 'pointer';
     }
     img.draggable = false;
+    updateAltOverlayVisibility(container);
   }
 
   function clampPan(container) {
@@ -171,6 +195,9 @@ document.addEventListener('DOMContentLoaded', function () {
       stopEvent(e);
       document.body.style.cursor = '';
       closeBtn.click();
+      if (container.zoomImageAltOverlay && container.zoomImageAltOverlay.parentNode) {
+        container.zoomImageAltOverlay.parentNode.removeChild(container.zoomImageAltOverlay);
+      }
       if (toolbar.parentNode) toolbar.parentNode.removeChild(toolbar);
     });
 
@@ -186,6 +213,9 @@ document.addEventListener('DOMContentLoaded', function () {
       cleanupTries += 1;
       if (!document.body.contains(container)) {
         document.body.style.cursor = '';
+        if (container.zoomImageAltOverlay && container.zoomImageAltOverlay.parentNode) {
+          container.zoomImageAltOverlay.parentNode.removeChild(container.zoomImageAltOverlay);
+        }
         if (toolbar.parentNode) toolbar.parentNode.removeChild(toolbar);
         return;
       }
@@ -319,6 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
           return imgInSlide && closeInSlide;
         }, function () {
           fitSvgToViewport(container, img, url);
+          addAltOverlay(container, img);
           addToolbar(container);
           enablePanAndWheelZoom(container);
           applyTransform(container);
