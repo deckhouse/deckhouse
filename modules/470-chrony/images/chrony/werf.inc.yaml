@@ -24,7 +24,7 @@ shell:
   - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/chrony/chrony /src/chrony && rm -rf /src/chrony/.git
 ---
 image: {{ .ModuleName }}/build-chrony-static-artifact
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -46,7 +46,7 @@ shell:
   - chmod +x /opt/chrony-static/sbin/chronyd
 ---
 image: {{ .ModuleName }}/build-entrypoint-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -71,7 +71,7 @@ import:
 - image: {{ .ModuleName }}/build-chrony-static-artifact
   add: /opt/chrony-static
   before: setup
-- image: tools/tini
+- from: {{ index $.Images "tools/tini" }}
   add: /usr/bin/tini
   to: /tini
   before: setup

@@ -33,15 +33,15 @@ import (
 )
 
 const (
-	istioReservedUID          int64 = 1337
-	istioProxyContainerName         = "istio-proxy"
-	istioCanonicalNameLabel         = "service.istio.io/canonical-name"
-	reservedUIDMetricsGroup         = "d8_istio_reserved_uid"
+	istioReservedUID        int64 = 1337
+	istioProxyContainerName       = "istio-proxy"
+	istioCanonicalNameLabel       = "service.istio.io/canonical-name"
+	reservedUIDMetricsGroup       = "d8_istio_reserved_uid"
 )
 
 type podReservedUIDInfo struct {
-	Namespace  string
-	Pod        string
+	Namespace              string
+	Pod                    string
 	ImproperContainerNames []string
 }
 
@@ -81,8 +81,8 @@ func applyReservedUIDFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}
 
 	return podReservedUIDInfo{
-		Namespace:  pod.Namespace,
-		Pod:        pod.Name,
+		Namespace:              pod.Namespace,
+		Pod:                    pod.Name,
 		ImproperContainerNames: matchingContainers,
 	}, nil
 }

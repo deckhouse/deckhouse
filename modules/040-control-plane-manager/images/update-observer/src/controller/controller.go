@@ -174,7 +174,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	reconcileTrigger := determineReconcileTrigger(configMap, clusterCfg)
 
-	clusterState, err := r.getClusterState(ctx, clusterCfg, reconcileTrigger == ReconcileTriggerDowngradeK8s)
+	clusterState, err := r.getClusterState(ctx, clusterCfg, configMap.Labels, reconcileTrigger == ReconcileTriggerDowngradeK8s)
 	if err != nil {
 		klog.Error("Error encountered while getting cluster state", err)
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil

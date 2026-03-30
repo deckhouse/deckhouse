@@ -49,6 +49,12 @@ Ensuring the stable operation of live migration mechanisms requires using the sa
 Differences between kernel versions can lead to incompatibilities in interfaces, system calls, and resource handling, which can disrupt the virtual machine migration process.
 {% endalert %}
 
+It is recommended to use Linux kernels with up-to-date security updates provided by the maintainers of your chosen distribution. Such updates are not a prerequisite for virtualization to function, but they reduce security risks for the cluster as a whole.
+
+{% alert level="info" %}
+On Astra Linux nodes, **Astra Linux platform version 1.8.3 or higher** is required for virtualization to work correctly (earlier versions contain a bug that interferes with virtualization).
+{% endalert %}
+
 ## Supported guest operating systems
 
 Deckhouse Virtualization Platform supports operating systems running on `x86` and `x86_64` architectures as guest operating systems. For correct operation in paravirtualization mode, `VirtIO` drivers must be installed to ensure efficient interaction between the virtual machine and the hypervisor.

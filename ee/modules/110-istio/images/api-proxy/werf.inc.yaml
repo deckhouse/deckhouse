@@ -15,7 +15,7 @@ imageSpec:
     entrypoint: ["/api-proxy"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

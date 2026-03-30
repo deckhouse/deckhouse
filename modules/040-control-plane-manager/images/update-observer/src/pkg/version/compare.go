@@ -20,6 +20,18 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+// Compare compares two versions semantically by normalizing them first.
+// Returns -1, 0, or 1 analogous to semver.Compare - 0 if v == w, -1 if v < w, or +1 if v > w.
+// If normalization of either version fails, returns 0 (versions are considered equal).
+func Compare(v, w string) int {
+	vNorm, errV := Normalize(v)
+	wNorm, errW := Normalize(w)
+	if errV != nil || errW != nil {
+		return 0
+	}
+	return semver.Compare(vNorm, wNorm)
+}
+
 func GetMax(v, w string) string {
 	switch semver.Compare(v, w) {
 	case -1:
