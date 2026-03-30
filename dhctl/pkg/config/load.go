@@ -95,8 +95,7 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 
 func NewSchemaStore(dc *directoryconfig.DirectoryConfig, paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
-	_, err := os.Stat(candiDir)
-	if err != nil {
+	if _, err := os.Stat(candiDir); err != nil {
 		if dc != nil {
 			paths = append(paths, filepath.Join(dc.DownloadDir, "deckhouse", "candi"))
 		}
@@ -119,8 +118,7 @@ func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *S
 		moduleConfigsCache: make(map[string]*spec.Schema),
 		modulesCache:       make(map[string]struct{}),
 	}
-	_, err := os.Stat(deckhouseDir)
-	if err != nil {
+	if _, err := os.Stat(deckhouseDir); err != nil {
 		if dc != nil {
 			deckhouseDir = filepath.Join(dc.DownloadDir, "deckhouse")
 			modulesDir = filepath.Join(deckhouseDir, "modules")

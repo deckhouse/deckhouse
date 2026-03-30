@@ -382,23 +382,17 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 	}
 
 	imgName := ref.Identifier()
-	var img v1.Image
-	var restoreError error
-	if f, err := os.OpenFile(filepath.Join(destDir, imgName), os.O_RDONLY, 0644); err == nil {
-		f.Close()
-		fileChecksum, errGettingFileHash := hashFileSHA256(filepath.Join(destDir, imgName))
-		storedChecksum, errGettingStoredChecksum := getHash(imgName, destDir)
-		img, restoreError = restoreImageFromTarGz(filepath.Join(destDir, imgName), nil)
-		log.DebugLn("restoring image from local tarball")
-		if restoreError == nil && errGettingFileHash == nil && errGettingStoredChecksum == nil && fileChecksum == storedChecksum {
-			return extractImage(img, destDir)
-		}
+	img, err := tryToRestoreLocalImage(destDir, imgName)
+	if err == nil {
+		return extractImage(img, destDir)
 	}
+	log.DebugF("Could not use local image. Reason: %s\n", err.Error())
 
 	opts, err := getOptsFromRegistryConfig(ref, &regConfig)
 	if err != nil {
 		return err
 	}
+
 	desc, err := remote.Get(ref, opts...)
 	if err != nil {
 		return fmt.Errorf("getting manifest descriptor for %q: %w", ref.String(), err)
@@ -511,6 +505,34 @@ func processLayer(r io.Reader, peek []byte, destDir string) error {
 		}
 	}
 	return nil
+}
+
+func tryToRestoreLocalImage(imgName, destDir string) (v1.Image, error) {
+	filename := filepath.Join(destDir, imgName)
+	f, err := os.OpenFile(filename, os.O_RDONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := f.Close(); err != nil {
+		return nil, fmt.Errorf("could not close file %s: %w", filename, err)
+	}
+
+	fileChecksum, err := hashFileSHA256(filename)
+	if err != nil {
+		return nil, fmt.Errorf("could not calculate file checksum %s: %w", filename, err)
+	}
+
+	storedChecksum, err := getHash(imgName, destDir)
+	if err != nil {
+		return nil, fmt.Errorf("could not get checksum %s from file: %w", filename, err)
+	}
+
+	if fileChecksum != storedChecksum {
+		return nil, fmt.Errorf("stored checksum must be the same as file checksum")
+	}
+
+	return restoreImageFromTarGz(filename, nil)
 }
 
 func restoreImageFromTarGz(path string, tag *name.Tag) (v1.Image, error) {

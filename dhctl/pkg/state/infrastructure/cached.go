@@ -37,7 +37,7 @@ func NewFileTerraStateLoader(stateCache state.Cache, metaConfig *config.MetaConf
 	}
 }
 
-func (s *FileTerraStateLoader) PopulateMetaConfig(_ context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
+func (s *FileTerraStateLoader) PopulateMetaConfig(_ context.Context, _ *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
 	return s.metaConfig, nil
 }
 

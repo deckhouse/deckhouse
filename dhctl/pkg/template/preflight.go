@@ -35,12 +35,11 @@ var (
 func RenderAndSavePreflightCheckPortsScript(dc *directoryconfig.DirectoryConfig) (string, error) {
 	log.DebugLn("Start render check ports script")
 
-	_, err := os.Stat(checkPortsScriptPath)
-	if err != nil {
+	if _, err := os.Stat(checkPortsScriptPath); err != nil {
 		if dc == nil {
 			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		checkPortsScriptPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight", "check_ports.sh.tpl")
+		checkPortsScriptPath = getPreflightPath(dc.DownloadDir, "check_ports.sh.tpl")
 	}
 
 	return RenderAndSaveTemplate("check_ports.sh", checkPortsScriptPath, map[string]interface{}{})
@@ -49,12 +48,11 @@ func RenderAndSavePreflightCheckPortsScript(dc *directoryconfig.DirectoryConfig)
 func RenderAndSavePreflightCheckDeckhouseUserScript(dc *directoryconfig.DirectoryConfig) (string, error) {
 	log.DebugLn("Start render check user script")
 
-	_, err := os.Stat(checkDeckhouseUserScriptPath)
-	if err != nil {
+	if _, err := os.Stat(checkDeckhouseUserScriptPath); err != nil {
 		if dc == nil {
 			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		checkDeckhouseUserScriptPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight", "check_deckhouse_user.sh.tpl")
+		checkDeckhouseUserScriptPath = getPreflightPath(dc.DownloadDir, "check_deckhouse_user.sh.tpl")
 	}
 
 	return RenderAndSaveTemplate("check_deckhouse_user.sh", checkDeckhouseUserScriptPath, map[string]interface{}{})
@@ -63,12 +61,11 @@ func RenderAndSavePreflightCheckDeckhouseUserScript(dc *directoryconfig.Director
 func RenderAndSavePreflightCheckLocalhostScript(dc *directoryconfig.DirectoryConfig) (string, error) {
 	log.DebugLn("Start render check localhost script")
 
-	_, err := os.Stat(checkLocalhostScriptPath)
-	if err != nil {
+	if _, err := os.Stat(checkLocalhostScriptPath); err != nil {
 		if dc == nil {
 			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		checkLocalhostScriptPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight", "check_localhost.sh.tpl")
+		checkLocalhostScriptPath = getPreflightPath(dc.DownloadDir, "check_localhost.sh.tpl")
 	}
 
 	return RenderAndSaveTemplate(
@@ -81,12 +78,11 @@ func RenderAndSavePreflightCheckLocalhostScript(dc *directoryconfig.DirectoryCon
 func RenderAndSavePreflightReverseTunnelOpenScript(url string, dc *directoryconfig.DirectoryConfig) (string, error) {
 	log.DebugLn("Start render proxy reverse tunnel open script")
 
-	_, err := os.Stat(checkProxyRevTunnelOpenScriptPath)
-	if err != nil {
+	if _, err := os.Stat(checkProxyRevTunnelOpenScriptPath); err != nil {
 		if dc == nil {
 			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		checkProxyRevTunnelOpenScriptPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight", "check_reverse_tunnel_open.sh.tpl")
+		checkProxyRevTunnelOpenScriptPath = getPreflightPath(dc.DownloadDir, "check_reverse_tunnel_open.sh.tpl")
 	}
 
 	return RenderAndSaveTemplate(
@@ -101,12 +97,11 @@ func RenderAndSavePreflightReverseTunnelOpenScript(url string, dc *directoryconf
 func RenderAndSaveKillReverseTunnelScript(host, port string, dc *directoryconfig.DirectoryConfig) (string, error) {
 	log.DebugLn("Start render kill reverse tunnel script")
 
-	_, err := os.Stat(killReverseTunnelPath)
-	if err != nil {
+	if _, err := os.Stat(killReverseTunnelPath); err != nil {
 		if dc == nil {
 			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		killReverseTunnelPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight", "kill_reverse_tunnel.sh.tpl")
+		killReverseTunnelPath = getPreflightPath(dc.DownloadDir, "kill_reverse_tunnel.sh.tpl")
 	}
 
 	return RenderAndSaveTemplate(
@@ -126,12 +121,11 @@ func RenderAndSavePreflightCheckScript(
 ) (string, error) {
 	log.DebugLn("Start render check localhost script")
 
-	_, err := os.Stat(preflightScriptDirPath)
-	if err != nil {
+	if _, err := os.Stat(preflightScriptDirPath); err != nil {
 		if dc == nil {
 			return "", fmt.Errorf("could not get value of dc.DownloadDir")
 		}
-		preflightScriptDirPath = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible", "preflight")
+		preflightScriptDirPath = getPreflightPath(dc.DownloadDir, "")
 	}
 
 	return RenderAndSaveTemplate(
@@ -139,4 +133,13 @@ func RenderAndSavePreflightCheckScript(
 		filepath.Join(preflightScriptDirPath, filename),
 		params,
 	)
+}
+
+func getPreflightPath(rootDir, dest string) string {
+	path := filepath.Join(rootDir, "deckhouse", "candi", "bashible", "preflight")
+	if dest != "" {
+		path = filepath.Join(path, dest)
+	}
+
+	return path
 }

@@ -268,13 +268,18 @@ func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHCl
 	listenAddress := "127.0.0.1"
 
 	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(
-		fmt.Sprintf("https://localhost:%s/healthz", port), dc)
+		fmt.Sprintf("https://localhost:%s/healthz", port),
+		dc,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot render reverse tunnel checking script: %v", err)
 	}
 
 	killScript, err := template.RenderAndSaveKillReverseTunnelScript(
-		listenAddress, port, dc)
+		listenAddress,
+		port,
+		dc,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
 	}
@@ -410,7 +415,15 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool, dc *directoryconfig.DirectoryConfig) error {
+func RunBashiblePipeline(
+	ctx context.Context,
+	nodeInterface node.Interface,
+	cfg *config.MetaConfig,
+	nodeIP string,
+	devicePath string,
+	commanderMode bool,
+	dc *directoryconfig.DirectoryConfig,
+) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {

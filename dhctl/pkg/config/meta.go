@@ -668,9 +668,10 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
 		// TODO param instead of hardcode path
-		rawFile, err = os.ReadFile(filepath.Join(app.DownloadDirName, "deckhouse", "version"))
+		versionFilePath := filepath.Join(app.DownloadDirName, "deckhouse", "version")
+		rawFile, err = os.ReadFile(versionFilePath)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not read both %s and %s: %w", app.VersionFile, versionFilePath, err)
 		}
 
 	}

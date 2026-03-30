@@ -65,8 +65,7 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 		return nil, fmt.Errorf("directory config is nil")
 	}
 
-	err = checkDirs()
-	if err != nil {
+	if err := checkDirs(); err != nil {
 		// download and init schemaStore
 		// get registry setting first
 		regSettings, err := fetchRegistrySettings(paths)
@@ -101,18 +100,15 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 		return nil, fmt.Errorf("ClusterConfiguration must be provided")
 	}
 
-	err = metaConfig.LoadVersionMap(versionMap)
-	if err != nil {
+	if err := metaConfig.LoadVersionMap(versionMap); err != nil {
 		return nil, err
 	}
 
-	err = metaConfig.LoadImagesDigests(imagesDigestsJSONFIle)
-	if err != nil {
+	if err := metaConfig.LoadImagesDigests(imagesDigestsJSONFIle); err != nil {
 		return nil, err
 	}
 
-	err = metaConfig.LoadInstallerVersion()
-	if err != nil {
+	if err := metaConfig.LoadInstallerVersion(); err != nil {
 		return nil, err
 	}
 
@@ -570,14 +566,14 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dc *direct
 
 // prepare CandiDir if not exists
 func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, logger log.Logger, dc *directoryconfig.DirectoryConfig) error {
-	if err := checkDirs(); err != nil {
-		conf, _, err := registrydata.GetRegistryData(ctx, kubeCl)
-		if err != nil {
-			return err
-		}
-
-		return prepareCandiDir(ctx, conf, dc)
+	if err := checkDirs(); err == nil {
+		return nil
 	}
 
-	return nil
+	conf, _, err := registrydata.GetRegistryData(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	return prepareCandiDir(ctx, conf, dc)
 }

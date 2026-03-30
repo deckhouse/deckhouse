@@ -86,20 +86,17 @@ func (p *CloudProviderGetterParams) gtFSDIParams() (*fsprovider.DIParams, error)
 		PluginsDir:        filepath.Join(dhctlPath, "plugins"),
 	}
 
-	_, err = os.Stat(diDefaultParams.BinariesDir)
-	if err != nil {
+	if _, err := os.Stat(diDefaultParams.BinariesDir); err != nil {
 		// fallback to /bin
 		diDefaultParams.BinariesDir = "/bin"
 	}
 
-	_, err = os.Stat(diDefaultParams.CloudProviderDir)
-	if err != nil {
+	if _, err = os.Stat(diDefaultParams.CloudProviderDir); err != nil {
 		// fallback to /tmp
 		diDefaultParams.CloudProviderDir = filepath.Join(app.DownloadDirName, "deckhouse", "candi", "cloud-providers")
 	}
 
-	_, err = os.Stat(diDefaultParams.PluginsDir)
-	if err != nil {
+	if _, err = os.Stat(diDefaultParams.PluginsDir); err != nil {
 		// fallback to /tmp
 		diDefaultParams.PluginsDir = filepath.Join(app.DownloadDirName, "plugins")
 	}

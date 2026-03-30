@@ -35,13 +35,17 @@ func GetImage(section, name string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not load images digests: %w", err)
 	}
+
 	if err := json.Unmarshal(digest, &digests); err != nil {
 		return "", fmt.Errorf("could not unmarshal: %w", err)
 	}
-	sec := digests[section].(map[string]interface{})
-	img, ok := sec[name]
-	if ok {
-		return img.(string), nil
+
+	if digests[section] != nil {
+		sec := digests[section].(map[string]interface{})
+		img, ok := sec[name]
+		if ok {
+			return img.(string), nil
+		}
 	}
 
 	return "", fmt.Errorf("could not find image %s in section %s", name, section)

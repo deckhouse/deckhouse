@@ -80,13 +80,16 @@ func copyTFVersionFile(downloadRootDir string) error {
 	terraformManagerDir := filepath.Join(downloadRootDir, "terraform-manager")
 	downloadCandiPath := filepath.Join(downloadRootDir, "deckhouse", "candi")
 	src := filepath.Join(terraformManagerDir, versionFile)
+
 	f, err := os.OpenFile(src, os.O_RDONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("could not read file %s: %w\n", src, err)
 	}
+
 	if err = os.RemoveAll(filepath.Join(downloadCandiPath, versionFile)); err != nil {
 		return fmt.Errorf("could not delete %s: %w", versionFile, err)
 	}
+
 	dst, err := os.OpenFile(filepath.Join(downloadCandiPath, versionFile), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
 	if err != nil {
 		return fmt.Errorf("could not open file %s: %w\n", filepath.Join(downloadCandiPath, versionFile), err)

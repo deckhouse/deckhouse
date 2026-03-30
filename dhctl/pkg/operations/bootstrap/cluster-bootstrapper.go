@@ -236,6 +236,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		b.DirectoryConfig,
+		config.ValidateOptionValidateExtensions(true),
 	)
 	if err != nil {
 		return err

@@ -65,7 +65,13 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	log.DebugF("Data %s\n%s", name, string(formattedData))
 }
 
-func PrepareBundle(templateController *Controller, nodeIP, devicePath string, metaConfig *config.MetaConfig, dc *directoryconfig.DirectoryConfig) error {
+func PrepareBundle(
+	templateController *Controller,
+	nodeIP string,
+	devicePath string,
+	metaConfig *config.MetaConfig,
+	dc *directoryconfig.DirectoryConfig,
+) error {
 	kubeadmData, err := metaConfig.ConfigForKubeadmTemplates("")
 	if err != nil {
 		return err
@@ -100,7 +106,13 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 }
 
 //nolint:prealloc
-func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, devicePath string, dc *directoryconfig.DirectoryConfig) error {
+func PrepareBashibleBundle(
+	templateController *Controller,
+	templateData map[string]interface{},
+	provider string,
+	devicePath string,
+	dc *directoryconfig.DirectoryConfig,
+) error {
 	_, err := os.Stat(candiBashibleDir)
 	if err != nil {
 		if dc == nil {
