@@ -43,8 +43,8 @@ type packageI interface {
 	// GetValuesChecksum returns hash of current values to detect changes by hooks.
 	GetValuesChecksum() string
 	GetPath() string
-	GetValues() string
-	GetHookValues() addonutils.Values
+	GetRuntimeValues() string
+	GetValues() addonutils.Values
 	// RunHooksByBinding executes hooks for BeforeHelm/AfterHelm bindings.
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 }
