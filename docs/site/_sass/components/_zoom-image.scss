@@ -91,12 +91,19 @@
   display: none !important;
 }
 
-.gslide-image img.zoomable {
-    transform-origin: center center;
-    will-change: transform;
-    user-select: none;
-    touch-action: none;
+.gslide-image {
+  img {
+    max-height: 90vh !important;
+
+    &.zoomable {
+      transform-origin: center center;
+      will-change: transform;
+      user-select: none;
+      touch-action: none;
+    }
+  }
 }
+
 
 .glightbox-container .gslide-image img.zoom-image-svg {
   padding: 12px;
