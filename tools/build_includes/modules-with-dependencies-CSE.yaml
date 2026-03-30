@@ -335,6 +335,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/030-cloud-provider-openstack/hooks
+  to: /deckhouse/modules/030-cloud-provider-openstack/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee
   excludePaths:

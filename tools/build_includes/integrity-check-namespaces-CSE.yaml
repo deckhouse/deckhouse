@@ -5,6 +5,7 @@ namespaces_for_integrity:
     - d8-chrony
     - d8-cloud-instance-manager
     - d8-cloud-provider-dvp
+    - d8-cloud-provider-openstack
     - d8-cni-cilium
     - d8-commander
     - d8-commander-agent
