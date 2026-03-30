@@ -31,7 +31,7 @@ import (
 type sourceStatus string
 
 const (
-	sourceStatusExists   sourceStatus = "exists"
+	sourceStatusFound    sourceStatus = "found"
 	sourceStatusNotFound sourceStatus = "not-found"
 	sourceStatusSkipped  sourceStatus = "skipped"
 )
@@ -40,18 +40,18 @@ func (s *InstanceService) reconcileLinkedSourceExistence(ctx context.Context, in
 	source := getInstanceSource(instance)
 	logger := log.FromContext(ctx)
 
-	machineStatus, err := s.linkedMachineExists(ctx, source.MachineRef)
+	machineStatus, err := s.linkedMachineStatus(ctx, source.MachineRef)
 	if err != nil {
 		return false, err
 	}
-	if machineStatus == sourceStatusExists {
+	if machineStatus == sourceStatusFound {
 		return false, nil
 	}
-	nodeStatus, err := s.linkedNodeExists(ctx, source.NodeName)
+	nodeStatus, err := s.linkedNodeStatus(ctx, source.NodeName)
 	if err != nil {
 		return false, err
 	}
-	if nodeStatus == sourceStatusExists {
+	if nodeStatus == sourceStatusFound {
 		return false, nil
 	}
 	hasConfirmedMissing := machineStatus == sourceStatusNotFound || nodeStatus == sourceStatusNotFound
@@ -92,7 +92,7 @@ func (s *InstanceService) reconcileLinkedSourceExistence(ctx context.Context, in
 	return true, nil
 }
 
-func (s *InstanceService) linkedMachineExists(
+func (s *InstanceService) linkedMachineStatus(
 	ctx context.Context,
 	ref *deckhousev1alpha2.MachineRef,
 ) (sourceStatus, error) {
@@ -114,7 +114,7 @@ func (s *InstanceService) linkedMachineExists(
 		return "", fmt.Errorf("get machine %q: %w", ref.Name, machineErr)
 	}
 
-	return sourceStatusExists, nil
+	return sourceStatusFound, nil
 }
 
 func machineRefName(ref *deckhousev1alpha2.MachineRef) string {
@@ -124,7 +124,7 @@ func machineRefName(ref *deckhousev1alpha2.MachineRef) string {
 	return ref.Name
 }
 
-func (s *InstanceService) linkedNodeExists(ctx context.Context, nodeName string) (sourceStatus, error) {
+func (s *InstanceService) linkedNodeStatus(ctx context.Context, nodeName string) (sourceStatus, error) {
 	logger := log.FromContext(ctx)
 	if nodeName == "" {
 		return sourceStatusSkipped, nil
@@ -144,5 +144,5 @@ func (s *InstanceService) linkedNodeExists(ctx context.Context, nodeName string)
 		return "", fmt.Errorf("get node %q: %w", nodeName, err)
 	}
 
-	return sourceStatusExists, nil
+	return sourceStatusFound, nil
 }
