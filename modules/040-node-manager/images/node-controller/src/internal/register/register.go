@@ -21,9 +21,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
 
 type ControllerName string

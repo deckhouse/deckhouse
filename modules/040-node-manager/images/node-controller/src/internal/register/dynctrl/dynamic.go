@@ -24,13 +24,12 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var _ reconcile.Reconciler = (*dynamicController)(nil)
@@ -123,7 +122,7 @@ func (dc *dynamicController) Reconcile(ctx context.Context, req reconcile.Reques
 			log.Error(err, "reconcile failed", "key", req.NamespacedName.String(), "duration", time.Since(start).String())
 			return result, err
 		}
-		log.V(1).Info("reconcile completed", "key", req.NamespacedName.String(), "duration", time.Since(start).String(), "requeue", result.Requeue, "requeueAfter", result.RequeueAfter.String())
+		log.V(1).Info("reconcile completed", "key", req.NamespacedName.String(), "duration", time.Since(start).String(), "requeueAfter", result.RequeueAfter.String())
 		return result, nil
 	}
 
@@ -132,7 +131,7 @@ func (dc *dynamicController) Reconcile(ctx context.Context, req reconcile.Reques
 		log.Error(err, "reconcile group failed", "key", req.NamespacedName.String(), "duration", time.Since(start).String())
 		return result, err
 	}
-	log.V(1).Info("reconcile group completed", "key", req.NamespacedName.String(), "duration", time.Since(start).String(), "requeue", result.Requeue, "requeueAfter", result.RequeueAfter.String())
+	log.V(1).Info("reconcile group completed", "key", req.NamespacedName.String(), "duration", time.Since(start).String(), "requeueAfter", result.RequeueAfter.String())
 	return result, nil
 }
 
@@ -153,8 +152,7 @@ func (dc *dynamicController) reconcileGroup(ctx context.Context, req reconcile.R
 			errs = append(errs, fmt.Errorf("reconciler %T: %w", r, err))
 			continue
 		}
-		log.V(1).Info("subreconciler completed", "reconciler", fmt.Sprintf("%T", r), "key", req.NamespacedName.String(), "duration", time.Since(subStart).String(), "requeue", result.Requeue, "requeueAfter", result.RequeueAfter.String())
-		combined.Requeue = combined.Requeue || result.Requeue
+		log.V(1).Info("subreconciler completed", "reconciler", fmt.Sprintf("%T", r), "key", req.NamespacedName.String(), "duration", time.Since(subStart).String(), "requeueAfter", result.RequeueAfter.String())
 		if result.RequeueAfter > 0 && (combined.RequeueAfter == 0 || result.RequeueAfter < combined.RequeueAfter) {
 			combined.RequeueAfter = result.RequeueAfter
 		}

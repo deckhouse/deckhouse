@@ -20,12 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
@@ -73,117 +69,4 @@ func (s *CAPIMachineService) EnsureInstanceFromMachine(
 		return false, err
 	}
 	return true, nil
-}
-
-type capiMachineReconcileData struct {
-	capiMachine   *capiv1beta2.Machine
-	instanceName  string
-	nodeName      string
-	machineRef    *deckhousev1alpha2.MachineRef
-	machineStatus machine.MachineStatus
-	nodeGroup     string
-}
-
-func reconcileLinkedInstance(ctx context.Context, c client.Client, data capiMachineReconcileData) error {
-	logger := log.FromContext(ctx)
-	logger.V(4).Info("tick", "op", "capi.instance.reconcile")
-
-	instance, err := ensureInstanceExists(ctx, c, data.instanceName, data.nodeName, data.machineRef)
-	if err != nil {
-		return err
-	}
-
-	instance, specUpdated, err := syncInstanceSpec(ctx, c, instance, data.nodeName, data.machineRef)
-	if err != nil {
-		return err
-	}
-
-	machineDeleteRequested, err := ensureMachineDeletionForDeletingInstance(ctx, c, data.capiMachine, instance)
-	if err != nil {
-		return err
-	}
-
-	if err := instancecommon.SyncInstanceStatus(ctx, c, instance, data.machineStatus); err != nil {
-		return err
-	}
-
-	logger.V(1).Info(
-		"linked instance reconciled",
-		"instance", instance.Name,
-		"specUpdated", specUpdated,
-		"machineDeleteRequested", machineDeleteRequested,
-	)
-	return nil
-}
-
-func ensureInstanceExists(
-	ctx context.Context,
-	c client.Client,
-	name string,
-	nodeName string,
-	machineRef *deckhousev1alpha2.MachineRef,
-) (*deckhousev1alpha2.Instance, error) {
-	spec := deckhousev1alpha2.InstanceSpec{}
-	if nodeName != "" {
-		spec.NodeRef = deckhousev1alpha2.NodeRef{Name: nodeName}
-	}
-	if machineRef != nil {
-		refCopy := *machineRef
-		spec.MachineRef = &refCopy
-	}
-
-	return instancecommon.EnsureInstanceExists(ctx, c, name, spec)
-}
-
-func syncInstanceSpec(
-	ctx context.Context,
-	c client.Client,
-	instance *deckhousev1alpha2.Instance,
-	nodeName string,
-	machineRef *deckhousev1alpha2.MachineRef,
-) (*deckhousev1alpha2.Instance, bool, error) {
-	updated := instance.DeepCopy()
-	if nodeName != "" {
-		updated.Spec.NodeRef = deckhousev1alpha2.NodeRef{Name: nodeName}
-	}
-	if machineRef == nil {
-		updated.Spec.MachineRef = nil
-	} else {
-		refCopy := *machineRef
-		updated.Spec.MachineRef = &refCopy
-	}
-
-	if apiequality.Semantic.DeepEqual(instance.Spec, updated.Spec) {
-		return instance, false, nil
-	}
-	log.FromContext(ctx).V(4).Info("tick", "op", "capi.instance.spec.patch")
-
-	if err := c.Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
-		return nil, false, fmt.Errorf("patch instance %q spec: %w", instance.Name, err)
-	}
-	return updated, true, nil
-}
-
-func ensureMachineDeletionForDeletingInstance(
-	ctx context.Context,
-	c client.Client,
-	capiMachine *capiv1beta2.Machine,
-	instance *deckhousev1alpha2.Instance,
-) (bool, error) {
-	if !isBeingDeleted(instance.DeletionTimestamp) || isBeingDeleted(capiMachine.DeletionTimestamp) {
-		return false, nil
-	}
-	log.FromContext(ctx).V(4).Info("tick", "op", "capi.machine.delete.request")
-
-	if err := c.Delete(ctx, capiMachine); err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, fmt.Errorf("delete capi machine %q for deleting instance %q: %w", capiMachine.Name, instance.Name, err)
-	}
-	return true, nil
-}
-
-func isBeingDeleted(ts *metav1.Time) bool {
-	return ts != nil && !ts.IsZero()
 }

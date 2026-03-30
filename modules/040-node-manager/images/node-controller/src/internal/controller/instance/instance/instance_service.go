@@ -88,7 +88,7 @@ func (s *InstanceService) ReconcileSourceExistence(
 func (s *InstanceService) ReconcileFinalization(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,
-) (fastRequeue bool, err error) {
+) (bool, error) {
 	machineGone, err := s.reconcileLinkedMachineDeletion(ctx, instance)
 	if err != nil {
 		return false, err
