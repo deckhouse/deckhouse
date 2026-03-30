@@ -42,6 +42,7 @@ import (
 	k8sfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	internalRegistry "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service/mock"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -117,7 +118,7 @@ type mockRegistryClient struct {
 	segments                  []string
 }
 
-func (m *mockRegistryClient) WithSegment(segments ...string) registry.Client {
+func (m *mockRegistryClient) WithSegment(segments ...string) internalRegistry.Interface {
 	newClient := &mockRegistryClient{
 		listTagsFunc:              m.listTagsFunc,
 		getImageConfigFunc:        m.getImageConfigFunc,
@@ -233,7 +234,7 @@ type segmentAwareMockClient struct {
 	segments []string
 }
 
-func (m *segmentAwareMockClient) WithSegment(segments ...string) registry.Client {
+func (m *segmentAwareMockClient) WithSegment(segments ...string) internalRegistry.Interface {
 	newClient := &segmentAwareMockClient{
 		rootListTags:                m.rootListTags,
 		packageListTags:             m.packageListTags,
@@ -414,12 +415,17 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 		require.NoError(suite.T(), err)
 	} else {
 		got := singleDocToManifests(gotB)
+
 		expB, err := os.ReadFile(goldenFile)
 		require.NoError(suite.T(), err)
 		exp := singleDocToManifests(expB)
+		// "there is no authorization data"
 		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
+
 		for i := range got {
-			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
+			if assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match") {
+				suite.T().Logf("test data file: %s", goldenFile)
+			}
 		}
 	}
 }
@@ -433,7 +439,7 @@ func withPackageServiceManager(psm registryService.ServiceManagerInterface[regis
 }
 
 // createMockPSM creates a PackageServiceManager with a mock PackagesService for the given registry URL
-func createMockPSM(mockClient registry.Client) registryService.ServiceManagerInterface[registryService.PackagesService] {
+func createMockPSM(mockClient internalRegistry.Interface) registryService.ServiceManagerInterface[registryService.PackagesService] {
 	psm := mock.NewServiceManagerMock[registryService.PackagesService](&testing.T{})
 	// Create a PackagesService with the mock client
 	svc := registryService.NewPackagesService(mockClient, log.NewNop())
