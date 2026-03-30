@@ -36,7 +36,7 @@ import (
 //go:generate go run ./build.go --edition all
 
 const (
-	modulesFileName            = "modules-%s.yaml"
+	modulesTestsName            = "modules-tests-%s.yaml"
 	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
 	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
 	candiFileName              = "candi-%s.yaml"
@@ -48,6 +48,14 @@ const (
 var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`)
 
 var workDir = cwd()
+
+var testsExcludes = []string{
+	"docs",
+	"README.md",
+	"images",
+	"webhooks",
+	"crds",
+}
 
 var defaultModulesExcludes = []string{
 	"docs",
@@ -590,9 +598,9 @@ func (e *executor) executeEdition(editionName string) {
 			writeSettingCandi.Dir = "candi"
 		}
 
-		writeSettingsModules := writeSettings{
+		writeSettingsModulesTests := writeSettings{
 			Edition:          editionName,
-			SaveTo:           modulesFileName,
+			SaveTo:           modulesTestsName,
 			ExcludedModules:  excludeModules,
 			AvailableModules: availableModules,
 		}
@@ -611,9 +619,10 @@ func (e *executor) executeEdition(editionName string) {
 			AvailableModules: availableModules,
 		}
 
-		writeSettingsModules.Prefix = prefix
-		writeSettingsModules.Dir = "modules"
-		writeSettingsModules.StageDependencies = stageDependenciesFile
+		writeSettingsModulesTests.Prefix = prefix
+		writeSettingsModulesTests.Dir = "modules"
+		writeSettingsModulesTests.StageDependencies = stageDependenciesFile
+		writeSettingsModulesTests.ExcludePaths = testsExcludes
 
 		writeSettingsExcludeFileName.Prefix = prefix
 		writeSettingsExcludeFileName.Dir = "modules"
@@ -624,7 +633,7 @@ func (e *executor) executeEdition(editionName string) {
 		writeSettingStageDeps.StageDependencies = stageDependenciesFile
 		writeSettingStageDeps.ExcludePaths = nothingButGoHooksExcludes
 
-		writeSections(writeSettingsModules)
+		writeSections(writeSettingsModulesTests)
 		writeSections(writeSettingsExcludeFileName)
 		writeStageDepsSections(writeSettingStageDeps)
 		writeSections(writeSettingCandi)

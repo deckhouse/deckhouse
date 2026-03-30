@@ -1,4 +1,3 @@
-{{- if ne $.Env "CSE" }}
 ---
 image: e2e-opentofu-eks
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
@@ -92,4 +91,3 @@ shell:
   - mv /src/provider-kubernetes/terraform-provider-kubernetes /terraform-provider-kubernetes
   - chmod 755 /terraform-provider-*
   - chown 64535:64535 /terraform-provider-*
-{{- end }}
