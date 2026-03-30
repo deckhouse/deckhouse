@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
 	"update-observer/pkg/version"
 )
 
@@ -56,8 +57,8 @@ func LoadVersionSettingsFromEnv() (VersionSettings, error) {
 		Supported: nSupportedVersions,
 		Automatic: nAutomaticVersion,
 	}, nil
-
 }
+
 func (s VersionSettings) Available(maxUsedVersion string) []string {
 	for i, v := range s.Supported {
 		if v == maxUsedVersion {
