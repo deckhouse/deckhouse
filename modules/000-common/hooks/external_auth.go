@@ -22,7 +22,7 @@ var _ = external_auth.RegisterHook(external_auth.Settings{
 	ExternalAuthPath:            "common.auth.externalAuthentication",
 	DexAuthenticatorEnabledPath: "common.internal.deployDexAuthenticator",
 	DexExternalAuth: external_auth.ExternalAuth{
-		AuthURL:       "https://test.%CLUSTER_DOMAIN%/test",
-		AuthSignInURL: "https://test/sign_in",
+		AuthURL:       "https://dex-authenticator.deckhouse.svc.%CLUSTER_DOMAIN%/dex-authenticator/auth",
+		AuthSignInURL: "https://$host/dex-authenticator/sign_in",
 	},
 })
