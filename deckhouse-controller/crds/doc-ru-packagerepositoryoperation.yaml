@@ -78,7 +78,7 @@ spec:
                               Список ошибок, возникших при обработке этого пакета.
                             items:
                               properties:
-                                error:
+                                message:
                                   description: |
                                     Сообщение об ошибке.
                                 version:
