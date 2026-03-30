@@ -1092,7 +1092,7 @@ spec:
                               - ".tmp"
                             x-kubernetes-validations:
                               - message: parseMessage.targetLabel must not be .parsed_data
-                                rule: '![''.parsed_data''].exists(k, self == k)'
+                                rule: 'self != ".parsed_data"'
                           string:
                             type: object
                             description: |
