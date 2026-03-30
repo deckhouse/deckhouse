@@ -315,7 +315,7 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 	}, nil
 }
 
-// GetHookValues returns values for hook rendering
+// GetValues returns values for hook rendering
 func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
 }
