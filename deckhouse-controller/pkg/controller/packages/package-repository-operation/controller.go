@@ -275,7 +275,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 
 		var reason, message string
 		// Check if the underlying error is NotFound (works with wrapped errors)
@@ -322,7 +322,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 		message := fmt.Sprintf("Failed to list packages: %v", err)
 
 		r.SetConditionFalse(
@@ -374,6 +374,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 
 		var reason, message string
 		// Check if the underlying error is NotFound (works with wrapped errors)
