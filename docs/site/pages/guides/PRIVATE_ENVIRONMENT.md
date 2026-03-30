@@ -1069,15 +1069,6 @@ chmod 600 /home/caps/.ssh/authorized_keys
 
 {% endofftopic %}
 
-{% offtopic title="If you are using Astra Linux..." %}
-When using the Parsec mandatory integrity control module, set the maximum integrity level for the `caps` user:
-
-```bash
-pdpl-user -i 63 caps
-```
-
-{% endofftopic %}
-
 ## Preparing the configuration file
 
 The configuration file for a private environment differs from [bare metal](../gs/bm/step2.html) in several ways. Take `config.yml` from [step 4](../gs/bm/step4.html) of the bare metal guide and apply the changes below.
