@@ -27,40 +27,40 @@ import (
 // certTreeScheme maps each CA name to the list of leaf certificates it signs.
 // It is a type alias so that callers can construct values with the map literal syntax
 // without importing an additional named type.
-type certTreeScheme = map[rootCertName][]leafCertName
+type certTreeScheme = map[RootCertName][]LeafCertName
 
 // defaultCertTreeScheme is the full PKI tree used when no custom scheme is provided.
 // It matches the certificate set created by `kubeadm init phase certs all` with a local etcd.
 var defaultCertTreeScheme = certTreeScheme{
-	caCertName: {
-		apiserverCertName,
-		apiserverKubeletClientCertName,
+	CACertName: {
+		ApiserverCertName,
+		ApiserverKubeletClientCertName,
 	},
-	frontProxyCaCertName: {
-		frontProxyClientCertName,
+	FrontProxyCACertName: {
+		FrontProxyClientCertName,
 	},
-	etcdCaCertName: {
-		etcdServerCertName,
-		etcdPeerCertName,
-		etcdHealthcheckClientCertName,
-		apiserverEtcdClientCertName,
+	EtcdCACertName: {
+		EtcdServerCertName,
+		EtcdPeerCertName,
+		EtcdHealthcheckClientCertName,
+		ApiserverEtcdClientCertName,
 	},
 }
 
 // certSpecTree is the rendered, spec-complete representation of the PKI tree,
 // ready for use by createCertTree. It maps each CA to its full rootCertSpec.
-type certSpecTree map[rootCertName]rootCertSpec
+type certSpecTree map[RootCertName]rootCertSpec
 
 // rootCertSpec combines a CA's own spec with the specs of all leaf certificates it signs.
 type rootCertSpec struct {
-	certSpec[rootCertName]
-	leafCerts []certSpec[leafCertName]
+	certSpec[RootCertName]
+	leafCerts []certSpec[LeafCertName]
 }
 
 // certSpec holds the information needed to locate and generate one certificate on disk.
 // BaseName is the file path relative to PKIDir, without extension (e.g. "etcd/server").
 // BuildConfig constructs the full certificate configuration from the runtime config.
-type certSpec[T leafCertName | rootCertName] struct {
+type certSpec[T LeafCertName | RootCertName] struct {
 	BaseName    string
 	BuildConfig func(cfg config) certConfig
 }
@@ -68,7 +68,7 @@ type certSpec[T leafCertName | rootCertName] struct {
 // renderCertSpecTree converts a certTreeScheme (names only) into a certSpecTree (full specs).
 // It resolves each CA name and leaf name to their respective certSpec definitions.
 func renderCertSpecTree(treeScheme certTreeScheme) certSpecTree {
-	tree := make(map[rootCertName]rootCertSpec, len(treeScheme))
+	tree := make(map[RootCertName]rootCertSpec, len(treeScheme))
 
 	for rootCertName, leafCertNames := range treeScheme {
 		rootCertSpec := getRootCertSpec(rootCertName)
@@ -83,12 +83,12 @@ func renderCertSpecTree(treeScheme certTreeScheme) certSpecTree {
 	return tree
 }
 
-func getRootCertSpec(name rootCertName) rootCertSpec {
+func getRootCertSpec(name RootCertName) rootCertSpec {
 	switch name {
-	case caCertName:
+	case CACertName:
 		return rootCertSpec{
-			certSpec: certSpec[rootCertName]{
-				BaseName:   "ca",
+			certSpec: certSpec[RootCertName]{
+				BaseName: "ca",
 				BuildConfig: func(cfg config) certConfig {
 					return certConfig{
 						Config: certutil.Config{
@@ -100,10 +100,10 @@ func getRootCertSpec(name rootCertName) rootCertSpec {
 				},
 			},
 		}
-	case frontProxyCaCertName:
+	case FrontProxyCACertName:
 		return rootCertSpec{
-			certSpec: certSpec[rootCertName]{
-				BaseName:   "front-proxy-ca",
+			certSpec: certSpec[RootCertName]{
+				BaseName: "front-proxy-ca",
 				BuildConfig: func(cfg config) certConfig {
 					return certConfig{
 						Config: certutil.Config{
@@ -115,10 +115,10 @@ func getRootCertSpec(name rootCertName) rootCertSpec {
 				},
 			},
 		}
-	case etcdCaCertName:
+	case EtcdCACertName:
 		return rootCertSpec{
-			certSpec: certSpec[rootCertName]{
-				BaseName:   "etcd/ca",
+			certSpec: certSpec[RootCertName]{
+				BaseName: "etcd/ca",
 				BuildConfig: func(cfg config) certConfig {
 					return certConfig{
 						Config: certutil.Config{
@@ -135,11 +135,11 @@ func getRootCertSpec(name rootCertName) rootCertSpec {
 	}
 }
 
-func getLeafCertSpec(name leafCertName) certSpec[leafCertName] {
+func getLeafCertSpec(name LeafCertName) certSpec[LeafCertName] {
 	switch name {
-	case apiserverCertName:
-		return certSpec[leafCertName]{
-			BaseName:   "apiserver",
+	case ApiserverCertName:
+		return certSpec[LeafCertName]{
+			BaseName: "apiserver",
 			BuildConfig: func(cfg config) certConfig {
 				domain := cfg.DNSDomain
 
@@ -196,9 +196,9 @@ func getLeafCertSpec(name leafCertName) certSpec[leafCertName] {
 				}
 			},
 		}
-	case apiserverKubeletClientCertName:
-		return certSpec[leafCertName]{
-			BaseName:   "apiserver-kubelet-client",
+	case ApiserverKubeletClientCertName:
+		return certSpec[LeafCertName]{
+			BaseName: "apiserver-kubelet-client",
 			BuildConfig: func(cfg config) certConfig {
 				return certConfig{
 					Config: certutil.Config{
@@ -211,9 +211,9 @@ func getLeafCertSpec(name leafCertName) certSpec[leafCertName] {
 				}
 			},
 		}
-	case frontProxyClientCertName:
-		return certSpec[leafCertName]{
-			BaseName:   "front-proxy-client",
+	case FrontProxyClientCertName:
+		return certSpec[LeafCertName]{
+			BaseName: "front-proxy-client",
 			BuildConfig: func(cfg config) certConfig {
 				return certConfig{
 					Config: certutil.Config{
@@ -225,9 +225,9 @@ func getLeafCertSpec(name leafCertName) certSpec[leafCertName] {
 				}
 			},
 		}
-	case etcdServerCertName:
-		return certSpec[leafCertName]{
-			BaseName:   "etcd/server",
+	case EtcdServerCertName:
+		return certSpec[LeafCertName]{
+			BaseName: "etcd/server",
 			BuildConfig: func(cfg config) certConfig {
 				altNames := certutil.AltNames{
 					DNSNames: []string{cfg.NodeName, "localhost"},
@@ -257,9 +257,9 @@ func getLeafCertSpec(name leafCertName) certSpec[leafCertName] {
 				}
 			},
 		}
-	case etcdPeerCertName:
-		return certSpec[leafCertName]{
-			BaseName:   "etcd/peer",
+	case EtcdPeerCertName:
+		return certSpec[LeafCertName]{
+			BaseName: "etcd/peer",
 			BuildConfig: func(cfg config) certConfig {
 				altNames := certutil.AltNames{
 					DNSNames: []string{cfg.NodeName, "localhost"},
@@ -289,9 +289,9 @@ func getLeafCertSpec(name leafCertName) certSpec[leafCertName] {
 				}
 			},
 		}
-	case etcdHealthcheckClientCertName:
-		return certSpec[leafCertName]{
-			BaseName:   "etcd/healthcheck-client",
+	case EtcdHealthcheckClientCertName:
+		return certSpec[LeafCertName]{
+			BaseName: "etcd/healthcheck-client",
 			BuildConfig: func(cfg config) certConfig {
 				return certConfig{
 					Config: certutil.Config{
@@ -303,9 +303,9 @@ func getLeafCertSpec(name leafCertName) certSpec[leafCertName] {
 				}
 			},
 		}
-	case apiserverEtcdClientCertName:
-		return certSpec[leafCertName]{
-			BaseName:   "apiserver-etcd-client",
+	case ApiserverEtcdClientCertName:
+		return certSpec[LeafCertName]{
+			BaseName: "apiserver-etcd-client",
 			BuildConfig: func(cfg config) certConfig {
 				return certConfig{
 					Config: certutil.Config{

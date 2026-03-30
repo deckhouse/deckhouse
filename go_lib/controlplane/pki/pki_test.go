@@ -87,10 +87,10 @@ func TestCreatePKIBundle_CustomScheme_EtcdOnly(t *testing.T) {
 
 	// Simulate etcd-arbiter mode: only etcd certificates are needed.
 	etcdOnlyScheme := certTreeScheme{
-		etcdCaCertName: {
-			etcdServerCertName,
-			etcdPeerCertName,
-			etcdHealthcheckClientCertName,
+		EtcdCACertName: {
+			EtcdServerCertName,
+			EtcdPeerCertName,
+			EtcdHealthcheckClientCertName,
 		},
 	}
 

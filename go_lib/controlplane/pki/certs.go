@@ -97,7 +97,7 @@ func createRootCertIfNotExists(cfg config, spec rootCertSpec) (*x509.Certificate
 // A read error other than "file not found" is currently treated the same as a missing file
 // (the certificate is regenerated). This is intentional: a corrupted cert file should not
 // block PKI initialization.
-func createLeafCertIfNotExists(cfg config, spec certSpec[leafCertName], caCert *x509.Certificate, caKey crypto.Signer) error {
+func createLeafCertIfNotExists(cfg config, spec certSpec[LeafCertName], caCert *x509.Certificate, caKey crypto.Signer) error {
 	oldCert, _, err := readCertAndKey(cfg.PKIDir, string(spec.BaseName))
 	newCertCfg := spec.BuildConfig(cfg)
 	if err == nil {
@@ -124,4 +124,3 @@ func createLeafCertIfNotExists(cfg config, spec certSpec[leafCertName], caCert *
 
 	return nil
 }
-

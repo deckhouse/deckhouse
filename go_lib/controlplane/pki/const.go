@@ -16,22 +16,22 @@ limitations under the License.
 
 package pki
 
-type rootCertName string
+type RootCertName string
 
 const (
-	caCertName           rootCertName = "ca"
-	frontProxyCaCertName rootCertName = "front-proxy-ca"
-	etcdCaCertName       rootCertName = "etcd-ca"
+	CACertName           RootCertName = "ca"
+	FrontProxyCACertName RootCertName = "front-proxy-ca"
+	EtcdCACertName       RootCertName = "etcd-ca"
 )
 
-type leafCertName string
+type LeafCertName string
 
 const (
-	apiserverCertName              leafCertName = "apiserver"
-	apiserverKubeletClientCertName leafCertName = "apiserver-kubelet-client"
-	frontProxyClientCertName       leafCertName = "front-proxy-client"
-	etcdServerCertName             leafCertName = "etcd-server"
-	etcdPeerCertName               leafCertName = "etcd-peer"
-	etcdHealthcheckClientCertName  leafCertName = "etcd-healthcheck-client"
-	apiserverEtcdClientCertName    leafCertName = "apiserver-etcd-client"
+	ApiserverCertName              LeafCertName = "apiserver"
+	ApiserverKubeletClientCertName LeafCertName = "apiserver-kubelet-client"
+	FrontProxyClientCertName       LeafCertName = "front-proxy-client"
+	EtcdServerCertName             LeafCertName = "etcd-server"
+	EtcdPeerCertName               LeafCertName = "etcd-peer"
+	EtcdHealthcheckClientCertName  LeafCertName = "etcd-healthcheck-client"
+	ApiserverEtcdClientCertName    LeafCertName = "apiserver-etcd-client"
 )

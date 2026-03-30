@@ -26,7 +26,7 @@ import (
 func TestCreateRootCertIfNotExists_CreatesNew(t *testing.T) {
 	dir := t.TempDir()
 	cfg := makeTestConfig(t, dir)
-	spec := getRootCertSpec(caCertName)
+	spec := getRootCertSpec(CACertName)
 
 	cert, key, err := createRootCertIfNotExists(cfg, spec)
 	require.NoError(t, err)
@@ -44,7 +44,7 @@ func TestCreateRootCertIfNotExists_CreatesNew(t *testing.T) {
 func TestCreateRootCertIfNotExists_ReusesExisting(t *testing.T) {
 	dir := t.TempDir()
 	cfg := makeTestConfig(t, dir)
-	spec := getRootCertSpec(caCertName)
+	spec := getRootCertSpec(CACertName)
 
 	cert1, _, err := createRootCertIfNotExists(cfg, spec)
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestCreateRootCertIfNotExists_ReusesExisting(t *testing.T) {
 func TestCreateRootCertIfNotExists_FailsOnInvalidCA(t *testing.T) {
 	dir := t.TempDir()
 	cfg := makeTestConfig(t, dir)
-	spec := getRootCertSpec(caCertName)
+	spec := getRootCertSpec(CACertName)
 
 	// Write a soon-to-expire CA so that validateCert fails.
 	expiredCert, expiredKey := makeExpiringSoonCACert(t, "kubernetes")
@@ -77,7 +77,7 @@ func TestCreateLeafCertIfNotExists_CreatesNew(t *testing.T) {
 	cfg := makeTestConfig(t, dir)
 
 	caCert, caKey := makeTestCACert(t, "kubernetes")
-	spec := getLeafCertSpec(apiserverCertName)
+	spec := getLeafCertSpec(ApiserverCertName)
 
 	err := createLeafCertIfNotExists(cfg, spec, caCert, caKey)
 	require.NoError(t, err)
@@ -92,7 +92,7 @@ func TestCreateLeafCertIfNotExists_SkipsValid(t *testing.T) {
 	cfg := makeTestConfig(t, dir)
 
 	caCert, caKey := makeTestCACert(t, "kubernetes")
-	spec := getLeafCertSpec(apiserverCertName)
+	spec := getLeafCertSpec(ApiserverCertName)
 
 	err := createLeafCertIfNotExists(cfg, spec, caCert, caKey)
 	require.NoError(t, err)
@@ -114,7 +114,7 @@ func TestCreateLeafCertIfNotExists_RegeneratesInvalid(t *testing.T) {
 	cfg := makeTestConfig(t, dir)
 
 	caCert, caKey := makeTestCACert(t, "kubernetes")
-	spec := getLeafCertSpec(apiserverCertName)
+	spec := getLeafCertSpec(ApiserverCertName)
 
 	// Put a soon-to-expire cert on disk so validation fails.
 	stale, staleKey := makeExpiringSoonLeafCert(t, "kube-apiserver", caCert, caKey)
