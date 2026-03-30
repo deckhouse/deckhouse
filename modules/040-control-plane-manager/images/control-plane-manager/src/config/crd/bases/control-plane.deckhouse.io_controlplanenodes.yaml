@@ -47,44 +47,72 @@ spec:
             type: object
           spec:
             properties:
+              caChecksum:
+                description: CAChecksum is the hash of d8-pki secret (CA certificates).
+                type: string
               components:
-                description: Checksums per component
+                description: ComponentChecksums holds checksums for all control plane
+                  components.
                 properties:
                   etcd:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentChecksum holds checksums for a single control
+                      plane component.
                     properties:
-                      checksum:
+                      configChecksum:
+                        description: ConfigChecksum is the hash of the component static
+                          pod template and extra-files.
+                        type: string
+                      pkiChecksum:
+                        description: PKIChecksum is the hash of PKI-related config
+                          keys (certSANs, encryption-algorithm)
                         type: string
                     required:
-                    - checksum
+                    - configChecksum
                     type: object
                   kube-apiserver:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentChecksum holds checksums for a single control
+                      plane component.
                     properties:
-                      checksum:
+                      configChecksum:
+                        description: ConfigChecksum is the hash of the component static
+                          pod template and extra-files.
+                        type: string
+                      pkiChecksum:
+                        description: PKIChecksum is the hash of PKI-related config
+                          keys (certSANs, encryption-algorithm)
                         type: string
                     required:
-                    - checksum
+                    - configChecksum
                     type: object
                   kube-controller-manager:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentChecksum holds checksums for a single control
+                      plane component.
                     properties:
-                      checksum:
+                      configChecksum:
+                        description: ConfigChecksum is the hash of the component static
+                          pod template and extra-files.
+                        type: string
+                      pkiChecksum:
+                        description: PKIChecksum is the hash of PKI-related config
+                          keys (certSANs, encryption-algorithm)
                         type: string
                     required:
-                    - checksum
+                    - configChecksum
                     type: object
                   kube-scheduler:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentChecksum holds checksums for a single control
+                      plane component.
                     properties:
-                      checksum:
+                      configChecksum:
+                        description: ConfigChecksum is the hash of the component static
+                          pod template and extra-files.
+                        type: string
+                      pkiChecksum:
+                        description: PKIChecksum is the hash of PKI-related config
+                          keys (certSANs, encryption-algorithm)
                         type: string
                     required:
-                    - checksum
+                    - configChecksum
                     type: object
                 required:
                 - etcd
@@ -97,58 +125,81 @@ spec:
                   of pki secret]"
                 type: string
               hotReloadChecksum:
-                description: For reload mechanisms (e.g. in-place reload)
-                type: string
-              pkiChecksum:
-                description: Checksum of PKI secret
                 type: string
             required:
+            - caChecksum
             - components
             - configVersion
             - hotReloadChecksum
-            - pkiChecksum
             type: object
           status:
             properties:
+              caChecksum:
+                description: CAChecksum is the applied hash of d8-pki secret (CA certificates).
+                type: string
               components:
-                description: ComponentChecksums holds checksums for control plane
-                  components
+                description: ComponentChecksums holds checksums for all control plane
+                  components.
                 properties:
                   etcd:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentChecksum holds checksums for a single control
+                      plane component.
                     properties:
-                      checksum:
+                      configChecksum:
+                        description: ConfigChecksum is the hash of the component static
+                          pod template and extra-files.
+                        type: string
+                      pkiChecksum:
+                        description: PKIChecksum is the hash of PKI-related config
+                          keys (certSANs, encryption-algorithm)
                         type: string
                     required:
-                    - checksum
+                    - configChecksum
                     type: object
                   kube-apiserver:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentChecksum holds checksums for a single control
+                      plane component.
                     properties:
-                      checksum:
+                      configChecksum:
+                        description: ConfigChecksum is the hash of the component static
+                          pod template and extra-files.
+                        type: string
+                      pkiChecksum:
+                        description: PKIChecksum is the hash of PKI-related config
+                          keys (certSANs, encryption-algorithm)
                         type: string
                     required:
-                    - checksum
+                    - configChecksum
                     type: object
                   kube-controller-manager:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentChecksum holds checksums for a single control
+                      plane component.
                     properties:
-                      checksum:
+                      configChecksum:
+                        description: ConfigChecksum is the hash of the component static
+                          pod template and extra-files.
+                        type: string
+                      pkiChecksum:
+                        description: PKIChecksum is the hash of PKI-related config
+                          keys (certSANs, encryption-algorithm)
                         type: string
                     required:
-                    - checksum
+                    - configChecksum
                     type: object
                   kube-scheduler:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentChecksum holds checksums for a single control
+                      plane component.
                     properties:
-                      checksum:
+                      configChecksum:
+                        description: ConfigChecksum is the hash of the component static
+                          pod template and extra-files.
+                        type: string
+                      pkiChecksum:
+                        description: PKIChecksum is the hash of PKI-related config
+                          keys (certSANs, encryption-algorithm)
                         type: string
                     required:
-                    - checksum
+                    - configChecksum
                     type: object
                 required:
                 - etcd
@@ -216,12 +267,10 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               configVersion:
-                description: 'ConfigVersion that is actually applied / running on
-                  the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"'
+                description: ConfigVersion that is actually applied / running on the
+                  node cpm secret and pki secret resource versions.
                 type: string
               hotReloadChecksum:
-                type: string
-              pkiChecksum:
                 type: string
             type: object
         type: object

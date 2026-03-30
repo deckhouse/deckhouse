@@ -1,0 +1,14 @@
+apiVersion: control-plane.deckhouse.io/v1alpha1
+kind: ControlPlaneOperation
+metadata:
+  name: master-1-etcd-aaa111
+  labels:
+    control-plane.deckhouse.io/node: master-1
+    control-plane.deckhouse.io/component: Etcd
+spec:
+  configVersion: "999.999"
+  nodeName: master-1
+  component: Etcd
+  command: UpdatePKI
+  desiredPkiChecksum: aaa111000000000000000000000000000000000000000000000000000000aaa1
+  approved: false

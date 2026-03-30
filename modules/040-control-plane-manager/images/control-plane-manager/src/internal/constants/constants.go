@@ -28,6 +28,9 @@ const (
 	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"
 	ControlPlaneNodeNameLabelKey        = "control-plane.deckhouse.io/node"
 	ControlPlaneComponentLabelKey       = "control-plane.deckhouse.io/component"
+	ConfigChecksumAnnotationKey         = "control-plane-manager.deckhouse.io/config-checksum"
+	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum"
+	CAChecksumAnnotationKey             = "control-plane-manager.deckhouse.io/ca-checksum"
 	NodeNameEnvVar                      = "NODE_NAME"
 	KubernetesConfigPath                = "/etc/kubernetes"
 	ManifestsPath                       = KubernetesConfigPath + "/manifests"
@@ -53,6 +56,47 @@ const (
 	ReasonPendingUpdate = "PendingUpdate"
 	ReasonUpdateFailed  = "UpdateFailed"
 	ReasonUnknown       = "Unknown"
+
+	// ControlPlaneOperation conditions
+	ConditionApproved = "Approved"
+	ConditionReady    = "Ready"
+	ConditionFailed   = "Failed"
+
+	// Approved condition reasons
+	ReasonApproved             = "Approved"
+	ReasonWaitingForSlot       = "WaitingForSlot"
+	ReasonWaitingForDependency = "WaitingForDependency"
+	ReasonWaitingForFIFO       = "WaitingForFIFO"
+
+	// Ready condition reasons
+	ReasonOperationSucceeded = "OperationSucceeded"
+	ReasonWaitingForApproval = "WaitingForApproval"
+	ReasonWritingManifest    = "WritingManifest"
+	ReasonWaitingForPod      = "WaitingForPod"
+	ReasonCancelled          = "Cancelled"
+
+	// Failed condition reasons
+	ReasonNoFailure          = "NoFailure"
+	ReasonManifestWriteError = "ManifestWriteError"
+	ReasonPodCrashLooping    = "PodCrashLooping"
+	ReasonHealthCheckFailed  = "HealthCheckFailed"
+	ReasonTimeout            = "Timeout"
+
+	// Built-in k8s label on static pods with the component name
+	StaticPodComponentLabelKey = "component"
+
+	// Env vars for path overrides for debug/dev
+	ManifestDirEnvVar   = "MANIFEST_DIR"
+	ExtraFilesDirEnvVar = "EXTRA_FILES_DIR"
+	PkiDirEnvVar        = "PKI_DIR"
+	KubeconfigDirEnvVar = "KUBECONFIG_DIR"
+
+	// Secret keys for PKI config in d8-control-plane-manager-config
+	SecretKeyCertSANs            = "cert-sans"
+	SecretKeyEncryptionAlgorithm = "encryption-algorithm"
+
+	// Not configurable endpoint for local control plane
+	LocalControlPlaneEndpoint = "127.0.0.1:6445"
 )
 
 // ToRelativePath returns path without leading slash for using in tmp directory sync

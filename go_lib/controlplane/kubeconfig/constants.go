@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package operations
+package kubeconfig
 
-import corev1 "k8s.io/api/core/v1"
-
-// If operations need special logic for generating manifests on the node, it can be implemented here.
-func GenerateManifests(cmpSecret, pkiSecret *corev1.Secret) (string, error) {
-	// TODO: Generate using new lib in place of kubeadm
-	return "", nil
-}
+const (
+	DefaultClusterName            = "kubernetes"
+	DefaultOutDir                 = "/etc/kubernetes"
+	DefaultCertificatesDir        = "/etc/kubernetes/pki"
+	DefaultControlPlaneIP         = "127.0.0.1"
+	DefaultKubeApiServerPort      = "6443"
+	DefaultKubeApiProxyServerPort = "6445"
+)
