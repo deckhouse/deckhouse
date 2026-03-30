@@ -106,6 +106,7 @@ jobs:
             commit=${{needs.detect_pr_by_comment.outputs.commit}}
             prNumber=${{needs.detect_pr_by_comment.outputs.pr_number}}
           fi
+
           echo "release_branch=${releaseBranch}" >> $GITHUB_OUTPUT
           echo "commit=${commit}" >> $GITHUB_OUTPUT
           echo "pr_number=${prNumber}" >> $GITHUB_OUTPUT
@@ -127,7 +128,7 @@ jobs:
           fetch-depth: 0
       - name: Cherry pick
         id: cherry_pick_pr
-        uses: deckhouse/backport-action@fix-backport-milestones
+        uses: deckhouse/backport-action@v1.1.0
         env:
           RELEASE_BRANCH: ${{ steps.prepare.outputs.release_branch }}
           COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
@@ -177,8 +178,8 @@ jobs:
         if: ${{ failure() && (steps.cherry_pick_pr.conclusion == 'failure' || steps.check_target_branch.conclusion == 'failure') }}
         uses: peter-evans/create-or-update-comment@v2
         env:
-          error_message: ${{ steps.cherry_pick_pr.outputs.error_message }}
-          common_error: "Backport failed. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details."
+          error_message: "Backport failed ⚠️. ${{ steps.cherry_pick_pr.outputs.error_message }}"
+          common_error: "Backport failed ⚠️. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details."
         with:
           token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           issue-number: ${{ steps.prepare.outputs.pr_number }}
