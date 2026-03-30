@@ -381,7 +381,7 @@ func (r *Reconciler) updateStatusFromOperations(
 	if reflect.DeepEqual(original.Status, cpn.Status) {
 		return nil
 	}
-	return r.client.Status().Patch(ctx, cpn, client.MergeFrom(original))
+	return r.client.Status().Update(ctx, cpn)
 }
 
 // findOperationForState finds the single current CPO for a given component state.
