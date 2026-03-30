@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,6 +45,8 @@ import (
 	"caps-controller-manager/internal/event"
 	"caps-controller-manager/internal/pool"
 	"caps-controller-manager/internal/scope"
+
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
 const (
