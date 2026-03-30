@@ -1,0 +1,201 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package controlplaneoperation
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/checksum"
+	"control-plane-manager/internal/constants"
+
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/yaml"
+)
+
+// writeStaticPodManifest expands env vars in the template, sets checksum annotations and writes the manifest to manifestDir/<component>.yaml atomically.
+func writeStaticPodManifest(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, configChecksum, pkiChecksum, caChecksum, manifestDir string) error {
+	key := component.SecretKey()
+	if key == "" {
+		return fmt.Errorf("no secret key for component %s", component)
+	}
+
+	tpl, ok := secretData[key]
+	if !ok {
+		return fmt.Errorf("template key %q not found in secret", key)
+	}
+
+	expanded := os.ExpandEnv(string(tpl))
+
+	manifest, err := setChecksumAnnotations([]byte(expanded), configChecksum, pkiChecksum, caChecksum)
+	if err != nil {
+		return fmt.Errorf("set checksum annotations: %w", err)
+	}
+
+	filename := filepath.Join(manifestDir, component.PodComponentName()+".yaml")
+	return writeFileAtomically(filename, manifest, 0o600)
+}
+
+// updateChecksumAnnotations reads an existing manifest from disk and updates the given checksum annotations
+// Empty strings are not changed. Used for UpdatePKI command where only checksums change, not the template.
+func updateChecksumAnnotations(component controlplanev1alpha1.OperationComponent, pkiChecksum, caChecksum, manifestDir string) error {
+	filename := filepath.Join(manifestDir, component.PodComponentName()+".yaml")
+	existing, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("read existing manifest %s: %w", filename, err)
+	}
+	updated, err := setChecksumAnnotations(existing, "", pkiChecksum, caChecksum)
+	if err != nil {
+		return fmt.Errorf("set checksum annotations: %w", err)
+	}
+	return writeFileAtomically(filename, updated, 0o600)
+}
+
+// setChecksumAnnotations parses the manifest as a Pod, sets the given checksum annotations, replaces any existing values and serializes back to YAML
+// An empty string for any checksum - not change that annotation.
+func setChecksumAnnotations(manifestBytes []byte, configChecksum, pkiChecksum, caChecksum string) ([]byte, error) {
+	pod := &corev1.Pod{}
+	if err := yaml.Unmarshal(manifestBytes, pod); err != nil {
+		return nil, fmt.Errorf("unmarshal pod manifest: %w", err)
+	}
+
+	if pod.Annotations == nil {
+		pod.Annotations = make(map[string]string)
+	}
+	if configChecksum != "" {
+		pod.Annotations[constants.ConfigChecksumAnnotationKey] = configChecksum
+	}
+	if pkiChecksum != "" {
+		pod.Annotations[constants.PKIChecksumAnnotationKey] = pkiChecksum
+	}
+	if caChecksum != "" {
+		pod.Annotations[constants.CAChecksumAnnotationKey] = caChecksum
+	}
+
+	out, err := yaml.Marshal(pod)
+	if err != nil {
+		return nil, fmt.Errorf("marshal pod manifest: %w", err)
+	}
+	return out, nil
+}
+
+// writeSecretExtraFiles writes selected secret keys as files under extraFilesDir (names without extra-file- prefix)
+func writeSecretExtraFiles(secretData map[string][]byte, extraFilesDir string, keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+	if err := os.MkdirAll(extraFilesDir, 0o700); err != nil {
+		return fmt.Errorf("create extra-files dir: %w", err)
+	}
+	for _, key := range keys {
+		content, exists := secretData[key]
+		if !exists {
+			continue
+		}
+		dstName := strings.TrimPrefix(key, "extra-file-")
+		dst := filepath.Join(extraFilesDir, dstName)
+		if err := writeFileAtomically(dst, content, 0o600); err != nil {
+			return fmt.Errorf("write extra-file %s: %w", dstName, err)
+		}
+	}
+	return nil
+}
+
+// writeExtraFiles writes extra-files that belong to the given component from secret data to the extra-files directory.
+func writeExtraFiles(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, extraFilesDir string) error {
+	podName := component.PodComponentName()
+	if podName == "" {
+		return nil
+	}
+	return writeSecretExtraFiles(secretData, extraFilesDir, checksum.ExtraFileKeysForPodComponent(podName))
+}
+
+// writeHotReloadFiles writes config files that kube-apiserver picks up without restart (see checksum.HotReloadChecksumDependsOn).
+func writeHotReloadFiles(secretData map[string][]byte, extraFilesDir string) error {
+	return writeSecretExtraFiles(secretData, extraFilesDir, checksum.HotReloadChecksumDependsOn)
+}
+
+// isPodReadyWithChecksums returns true if the pod has the expected checksum annotations and is in Ready condition.
+// An empty string for either checksum - do not check that annotation.
+func isPodReadyWithChecksums(pod *corev1.Pod, configChecksum, pkiChecksum string) bool {
+	if pod == nil {
+		return false
+	}
+
+	if configChecksum != "" && pod.Annotations[constants.ConfigChecksumAnnotationKey] != configChecksum {
+		return false
+	}
+	if pkiChecksum != "" && pod.Annotations[constants.PKIChecksumAnnotationKey] != pkiChecksum {
+		return false
+	}
+
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isPodCrashLooping returns true if any container in the pod is in CrashLoopBackOff.
+func isPodCrashLooping(pod *corev1.Pod) bool {
+	if pod == nil {
+		return false
+	}
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff" {
+			return true
+		}
+	}
+	return false
+}
+
+// writeFileAtomically writes data via tmp file + rename.
+func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
+	dir := filepath.Dir(dst)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("create dir %s: %w", dir, err)
+	}
+
+	tmp, err := os.CreateTemp(dir, "."+filepath.Base(dst)+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	defer func() { _ = os.Remove(tmpPath) }()
+
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("write temp file: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("sync temp file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close temp file: %w", err)
+	}
+	if err := os.Chmod(tmpPath, perm); err != nil {
+		return fmt.Errorf("chmod temp file: %w", err)
+	}
+
+	return os.Rename(tmpPath, dst)
+}

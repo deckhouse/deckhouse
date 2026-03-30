@@ -14,12 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package operations
+package pki
 
-import corev1 "k8s.io/api/core/v1"
+import (
+	"time"
 
-// If operations need special logic for generating manifests on the node, it can be implemented here.
-func GenerateManifests(cmpSecret, pkiSecret *corev1.Secret) (string, error) {
-	// TODO: Generate using new lib in place of kubeadm
-	return "", nil
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
+	certutil "k8s.io/client-go/util/cert"
+)
+
+// CertConfig is a wrapper around certutil.Config extending it with EncryptionAlgorithm.
+type CertConfig struct {
+	certutil.Config
+	NotAfter            time.Time
+	EncryptionAlgorithm constants.EncryptionAlgorithmType
 }

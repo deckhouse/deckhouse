@@ -73,6 +73,8 @@ spec:
                 description: Command defines what action to perform on the component.
                 enum:
                 - Update
+                - UpdatePKI
+                - UpdateWithPKI
                 type: string
               component:
                 description: Component is the control plane component this operation
@@ -90,10 +92,20 @@ spec:
                   ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion of pki secret]"
                   that this operation targets.
                 type: string
-              desiredChecksum:
+              desiredCaChecksum:
                 description: |-
-                  DesiredChecksum is the expected checksum of the component configuration after the operation.
-                  The component is identified by the Component field (e.g. for HotReload it's hot-reload config checksum, for PKI it's PKI secret checksum).
+                  DesiredCAChecksum is the expected caChecksum after the operation completed.
+                  Present for UpdatePKI and UpdateWithPKI commands.
+                type: string
+              desiredConfigChecksum:
+                description: |-
+                  DesiredConfigChecksum is the expected configChecksum after the operation completed.
+                  Present for Update and UpdateWithPKI commands.
+                type: string
+              desiredPkiChecksum:
+                description: |-
+                  DesiredPKIChecksum is the expected pkiChecksum after the operation completed.
+                  Present for UpdatePKI and UpdateWithPKI commands.
                 type: string
               nodeName:
                 description: NodeName is the name of the control-plane node on which
@@ -104,7 +116,6 @@ spec:
             - command
             - component
             - configVersion
-            - desiredChecksum
             - nodeName
             type: object
           status:

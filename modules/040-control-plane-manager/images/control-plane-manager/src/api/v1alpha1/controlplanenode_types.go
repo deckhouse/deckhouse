@@ -20,13 +20,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ComponentChecksum holds checksum for a single control plane component
+// ComponentChecksum holds checksums for a single control plane component.
 type ComponentChecksum struct {
+	// ConfigChecksum is the hash of the component static pod template and extra-files.
 	// +kubebuilder:validation:Required
-	Checksum string `json:"checksum"`
+	ConfigChecksum string `json:"configChecksum"`
+
+	// PKIChecksum is the hash of PKI-related config keys (certSANs, encryption-algorithm)
+	// +optional
+	PKIChecksum string `json:"pkiChecksum,omitempty"`
 }
 
-// ComponentChecksums holds checksums for control plane components
+// ComponentChecksums holds checksums for all control plane components.
 type ComponentChecksums struct {
 	// +kubebuilder:validation:Required
 	Etcd ComponentChecksum `json:"etcd"`
@@ -46,9 +51,9 @@ type ControlPlaneNodeSpec struct {
 	// +kubebuilder:validation:Required
 	ConfigVersion string `json:"configVersion"`
 
-	// Checksum of PKI secret
+	// CAChecksum is the hash of d8-pki secret (CA certificates).
 	// +kubebuilder:validation:Required
-	PKIChecksum string `json:"pkiChecksum"`
+	CAChecksum string `json:"caChecksum"`
 
 	// Checksums per component
 	// +kubebuilder:validation:Required
@@ -62,16 +67,16 @@ type ControlPlaneNodeSpec struct {
 type ControlPlaneNodeStatus struct {
 	// ConfigVersion that is actually applied / running on the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"
 	// +optional
-	ConfigVersion string `json:"configVersion"`
+	ConfigVersion string `json:"configVersion,omitempty"`
 
 	// +optional
-	PKIChecksum string `json:"pkiChecksum"`
+	CAChecksum string `json:"caChecksum,omitempty"`
 
 	// +optional
-	Components ComponentChecksums `json:"components"`
+	Components ComponentChecksums `json:"components,omitempty"`
 
 	// +optional
-	HotReloadChecksum string `json:"hotReloadChecksum"`
+	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
 
 	// +optional
 	// +listMapKey=type

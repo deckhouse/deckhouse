@@ -143,6 +143,38 @@ func (suite *ControllerTestSuite) TestHotReloadOutdatedControlPlaneNode() {
 	})
 }
 
+// TestPKIOnlyOutdatedControlPlaneNode verifies that when only etcd pkiChecksum is outdated
+// (configChecksum already matches), a single UpdatePKI operation is created for etcd.
+func (suite *ControllerTestSuite) TestPKIOnlyOutdatedControlPlaneNode() {
+	suite.Run("when only etcd pkiChecksum is outdated, create UpdatePKI operation for etcd", func() {
+		suite.setupController(suite.fetchTestFileData("pki-only-outdated-control-plane-node.yaml"))
+		suite.reconcile()
+
+		operations := suite.getControlPlaneOperations()
+		expected := suite.loadGoldenOperations("pki-only-outdated-control-plane-operations.yaml")
+
+		require.Len(suite.T(), operations, len(expected),
+			"number of created operations should match golden file")
+		suite.compareOperations(operations, expected)
+	})
+}
+
+// TestBothChecksumsOutdatedControlPlaneNode verifies that when etcd has both configChecksum and pkiChecksum
+// outdated, a single UpdateWithPKI operation is created (not two separate operations).
+func (suite *ControllerTestSuite) TestBothChecksumsOutdatedControlPlaneNode() {
+	suite.Run("when etcd has both configChecksum and pkiChecksum outdated, create UpdateWithPKI operation", func() {
+		suite.setupController(suite.fetchTestFileData("both-checksums-outdated-control-plane-node.yaml"))
+		suite.reconcile()
+
+		operations := suite.getControlPlaneOperations()
+		expected := suite.loadGoldenOperations("both-checksums-outdated-control-plane-operations.yaml")
+
+		require.Len(suite.T(), operations, len(expected),
+			"number of created operations should match golden file")
+		suite.compareOperations(operations, expected)
+	})
+}
+
 // TestUpToDateControlPlaneNode verifies that when all spec checksums already match status checksums,
 // no new ControlPlaneOperation objects are created.
 func (suite *ControllerTestSuite) TestUpToDateControlPlaneNode() {

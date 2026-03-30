@@ -14,6 +14,8 @@ data:
   extra-file-admission-control-config.yaml: YXBpVmVyc2lvbjogYXBpc2VydmVyLmNvbmZpZy5rOHMuaW8vdjEKa2luZDogQWRtaXNzaW9uQ29uZmlndXJhdGlvbgpwbHVnaW5zOiBbXQo=
   extra-file-event-rate-limit-config.yaml: YXBpVmVyc2lvbjogZXZlbnRyYXRlbGltaXQuYWRtaXNzaW9uLms4cy5pby92MWFscGhhMQpraW5kOiBDb25maWd1cmF0aW9uCmxpbWl0czoKLSB0eXBlOiBTZXJ2ZXIKICBxcHM6IDUwMDAKICBidXJzdDogMTAwMDAK
   extra-file-scheduler-config.yaml: YXBpVmVyc2lvbjoga3ViZXNjaGVkdWxlci5jb25maWcuazhzLmlvL3YxCmtpbmQ6IEt1YmVTY2hlZHVsZXJDb25maWd1cmF0aW9uCnByb2ZpbGVzOgotIHNjaGVkdWxlck5hbWU6IGRlZmF1bHQtc2NoZWR1bGVyCg==
+  cert-sans: aGEuZXhhbXBsZS5jb20sMTkyLjE2OC4xLjEwMA==
+  encryption-algorithm: RUNEU0EtMjU2
 ---
 apiVersion: v1
 kind: Secret

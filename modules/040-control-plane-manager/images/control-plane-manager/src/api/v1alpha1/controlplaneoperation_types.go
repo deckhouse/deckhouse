@@ -21,12 +21,18 @@ import (
 )
 
 // OperationCommand defines the action to perform on a control plane component.
-// +kubebuilder:validation:Enum=Update
+// +kubebuilder:validation:Enum=Update;UpdatePKI;UpdateWithPKI
 type OperationCommand string
 
 const (
-	// OperationCommandUpdate updates the component configuration to the desired state.
+	// OperationCommandUpdate updates the component static pod manifest (if only configChecksum changed).
 	OperationCommandUpdate OperationCommand = "Update"
+
+	// OperationCommandUpdatePKI renews leaf certificates and restarts the component (if pkiChecksum changed).
+	OperationCommandUpdatePKI OperationCommand = "UpdatePKI"
+
+	// OperationCommandUpdateWithPKI renews leaf certificates and updates the manifest (configChecksum and pkiChecksum changed).
+	OperationCommandUpdateWithPKI OperationCommand = "UpdateWithPKI"
 )
 
 // OperationComponent identifies a control plane component targeted by the operation.
@@ -41,6 +47,51 @@ const (
 	OperationComponentHotReload             OperationComponent = "HotReload"
 	OperationComponentPKI                   OperationComponent = "PKI"
 )
+
+var componentRegistry = map[OperationComponent]string{
+	OperationComponentEtcd:                  "etcd",
+	OperationComponentKubeAPIServer:         "kube-apiserver",
+	OperationComponentKubeControllerManager: "kube-controller-manager",
+	OperationComponentKubeScheduler:         "kube-scheduler",
+}
+
+// podNameToComponent is the reverse of componentRegistry, built in init.
+var podNameToComponent map[string]OperationComponent
+
+func init() {
+	podNameToComponent = make(map[string]OperationComponent, len(componentRegistry))
+	for comp, name := range componentRegistry {
+		podNameToComponent[name] = comp
+	}
+}
+
+// PodComponentName returns the static pod component name used as pod label "component" in kube-system ns.
+// Returns "" for non-static-pod components - HotReload, PKI
+func (c OperationComponent) PodComponentName() string {
+	return componentRegistry[c]
+}
+
+// SecretKey returns the main template key in d8-control-plane-manager-config secret.
+// Returns "" for non-static-pod components.
+func (c OperationComponent) SecretKey() string {
+	name := c.PodComponentName()
+	if name == "" {
+		return ""
+	}
+	return name + ".yaml.tpl"
+}
+
+// IsStaticPodComponent returns true if this component is managed as a static pod.
+func (c OperationComponent) IsStaticPodComponent() bool {
+	return c.PodComponentName() != ""
+}
+
+// OperationComponentFromPodName returns the OperationComponent for a given pod component label value.
+// Returns "", false if the name is not a known static pod component.
+func OperationComponentFromPodName(name string) (OperationComponent, bool) {
+	c, ok := podNameToComponent[name]
+	return c, ok
+}
 
 // ControlPlaneOperationSpec defines the desired state of ControlPlaneOperation.
 type ControlPlaneOperationSpec struct {
@@ -61,10 +112,20 @@ type ControlPlaneOperationSpec struct {
 	// +kubebuilder:validation:Required
 	Command OperationCommand `json:"command"`
 
-	// DesiredChecksum is the expected checksum of the component configuration after the operation.
-	// The component is identified by the Component field (e.g. for HotReload it's hot-reload config checksum, for PKI it's PKI secret checksum).
-	// +kubebuilder:validation:Required
-	DesiredChecksum string `json:"desiredChecksum"`
+	// DesiredConfigChecksum is the expected configChecksum after the operation completed.
+	// Present for Update and UpdateWithPKI commands.
+	// +optional
+	DesiredConfigChecksum string `json:"desiredConfigChecksum,omitempty"`
+
+	// DesiredPKIChecksum is the expected pkiChecksum after the operation completed.
+	// Present for UpdatePKI and UpdateWithPKI commands.
+	// +optional
+	DesiredPKIChecksum string `json:"desiredPkiChecksum,omitempty"`
+
+	// DesiredCAChecksum is the expected caChecksum after the operation completed.
+	// Present for UpdatePKI and UpdateWithPKI commands.
+	// +optional
+	DesiredCAChecksum string `json:"desiredCaChecksum,omitempty"`
 
 	// Approved indicates whether this operation is allowed to proceed.
 	// Only one operation per node may be approved at a time.

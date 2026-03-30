@@ -20,7 +20,6 @@ import (
 	"context"
 	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
-	"control-plane-manager/internal/operations"
 	"fmt"
 	"log/slog"
 	"time"
@@ -288,28 +287,31 @@ func (r *Reconciler) applyControlPlaneNode(ctx context.Context, desired *control
 
 // buildDesiredControlPlaneNode builds desired ControlPlaneNode spec from d8-control-plane-manager-config and d8-pki secrets.
 func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pkiSecret *corev1.Secret) (*controlplanev1alpha1.ControlPlaneNode, error) {
-	pkiChecksum, err := checksum.PKIChecksum(pkiSecret.Data)
+	caChecksum, err := checksum.PKIChecksum(pkiSecret.Data)
 	if err != nil {
 		return nil, err
 	}
 
 	components := []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
-	checksums := make(map[string]string)
+	configChecksums := make(map[string]string)
+	pkiChecksums := make(map[string]string)
 	for _, component := range components {
-		componentChecksum, err := checksum.ComponentChecksum(cpmSecret.Data, component)
+		cs, err := checksum.ComponentChecksum(cpmSecret.Data, component)
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate checksum for %s: %w", component, err)
 		}
-		checksums[component] = componentChecksum
+		configChecksums[component] = cs
+
+		pkiCS, err := checksum.ComponentPKIChecksum(cpmSecret.Data, component)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate pki checksum for %s: %w", component, err)
+		}
+		pkiChecksums[component] = pkiCS
 	}
+
 	hotReloadChecksum, err := checksum.HotReloadChecksum(cpmSecret.Data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate hot reload checksum: %w", err)
-	}
-	// temporary for testing
-	err = operations.SyncSecretToTmp(cpmSecret, "/tmp/control-plane-manager-config")
-	if err != nil {
-		return nil, fmt.Errorf("failed to sync secret to tmp: %w", err)
 	}
 
 	return &controlplanev1alpha1.ControlPlaneNode{
@@ -320,14 +322,24 @@ func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pki
 			},
 		},
 		Spec: controlplanev1alpha1.ControlPlaneNodeSpec{
-			PKIChecksum:       pkiChecksum,
+			CAChecksum:        caChecksum,
 			ConfigVersion:     fmt.Sprintf("%s.%s", cpmSecret.ResourceVersion, pkiSecret.ResourceVersion),
 			HotReloadChecksum: hotReloadChecksum,
 			Components: controlplanev1alpha1.ComponentChecksums{
-				Etcd:                  controlplanev1alpha1.ComponentChecksum{Checksum: checksums["etcd"]},
-				KubeAPIServer:         controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-apiserver"]},
-				KubeControllerManager: controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-controller-manager"]},
-				KubeScheduler:         controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-scheduler"]},
+				Etcd: controlplanev1alpha1.ComponentChecksum{
+					ConfigChecksum: configChecksums["etcd"],
+					PKIChecksum:    pkiChecksums["etcd"],
+				},
+				KubeAPIServer: controlplanev1alpha1.ComponentChecksum{
+					ConfigChecksum: configChecksums["kube-apiserver"],
+					PKIChecksum:    pkiChecksums["kube-apiserver"],
+				},
+				KubeControllerManager: controlplanev1alpha1.ComponentChecksum{
+					ConfigChecksum: configChecksums["kube-controller-manager"],
+				},
+				KubeScheduler: controlplanev1alpha1.ComponentChecksum{
+					ConfigChecksum: configChecksums["kube-scheduler"],
+				},
 			},
 		},
 	}, nil
