@@ -26,6 +26,7 @@ import (
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
 	"gopkg.in/yaml.v2"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -36,7 +37,7 @@ type VersionFile struct {
 
 type PackageMetadata struct {
 	Version           string
-	Changelog         map[string]interface{}
+	Changelog         *v1alpha1.PackageChangelog
 	PackageDefinition *PackageDefinition
 }
 
@@ -127,17 +128,13 @@ func (r *reconciler) fetchPackageMetadata(_ context.Context, img registryv1.Imag
 	}
 
 	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]any
-
-		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
-		if err != nil {
+		var changelog v1alpha1.PackageChangelog
+		if err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog); err != nil {
 			// if changelog build failed - warn about it but don't fail the release
 			r.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
-
-			changelog = make(map[string]any)
+		} else if len(changelog.Features) > 0 || len(changelog.Fixes) > 0 {
+			meta.Changelog = &changelog
 		}
-
-		meta.Changelog = changelog
 	}
 
 	return meta, nil

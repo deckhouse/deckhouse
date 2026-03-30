@@ -223,6 +223,7 @@ type segmentAwareMockClient struct {
 	checkImageExistsFunc  func(ctx context.Context, tag string) error                                  // for <package> path without /version
 
 	packageListTags             func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) // for <package> path with /version
+	releaseListTags             func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) // for <package>/release path
 	checkVersionImageExistsFunc func(ctx context.Context, tag string) error                                  // for <package> path with /version
 	versionGetImageConfigFunc   func(ctx context.Context, tag string) (*crv1.ConfigFile, error)              // for version segment labels
 	versionExtractFunc          func() io.ReadCloser                                                         // tar content for version image Extract()
@@ -235,10 +236,11 @@ type segmentAwareMockClient struct {
 func (m *segmentAwareMockClient) WithSegment(segments ...string) registry.Client {
 	newClient := &segmentAwareMockClient{
 		rootListTags:                m.rootListTags,
-		checkImageExistsFunc:        m.checkImageExistsFunc,
-		checkVersionImageExistsFunc: m.checkVersionImageExistsFunc,
 		packageListTags:             m.packageListTags,
 		packageDirectListTags:       m.packageDirectListTags,
+		releaseListTags:             m.releaseListTags,
+		checkImageExistsFunc:        m.checkImageExistsFunc,
+		checkVersionImageExistsFunc: m.checkVersionImageExistsFunc,
 		getImageConfigFunc:          m.getImageConfigFunc,
 		versionGetImageConfigFunc:   m.versionGetImageConfigFunc,
 		versionExtractFunc:          m.versionExtractFunc,
@@ -250,6 +252,15 @@ func (m *segmentAwareMockClient) WithSegment(segments ...string) registry.Client
 func (m *segmentAwareMockClient) isVersionSegment() bool {
 	for _, s := range m.segments {
 		if s == "version" {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *segmentAwareMockClient) isReleaseSegment() bool {
+	for _, s := range m.segments {
+		if s == "release" {
 			return true
 		}
 	}
@@ -332,8 +343,12 @@ func (m *segmentAwareMockClient) ListTags(ctx context.Context, opts ...registry.
 		if m.isVersionSegment() && m.packageListTags != nil {
 			return m.packageListTags(ctx, opts...)
 		}
-		// Package segment without /version (e.g. <package>): use packageDirectListTags if available
-		if !m.isVersionSegment() && m.packageDirectListTags != nil {
+		// Release segment (e.g. <package>/release): use releaseListTags
+		if m.isReleaseSegment() && m.releaseListTags != nil {
+			return m.releaseListTags(ctx, opts...)
+		}
+		// Package segment without /version or /release (e.g. <package>): use packageDirectListTags if available
+		if !m.isVersionSegment() && !m.isReleaseSegment() && m.packageDirectListTags != nil {
 			return m.packageDirectListTags(ctx, opts...)
 		}
 		// Fallback for backward compatibility: use packageListTags for any non-root segment
@@ -905,9 +920,8 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("legacy module without metadata", func() {
-		// No labels on any image, no package.yaml, but module.yaml present → legacy module (v1alpha1).
-		// Package should appear in Processed (empty type) AND Failed, no resources created.
+	suite.Run("version image without metadata", func() {
+		// No labels on version image, no package.yaml - errTooOldImage, treated as skip (no resources created).
 		segmentAwareMock := &segmentAwareMockClient{
 			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 				return []string{"test-package"}, nil
@@ -915,13 +929,8 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			packageListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 				return []string{"v1.0.0"}, nil
 			},
-			// No versionGetImageConfigFunc → release image has no labels
-			// versionExtractFunc returns module.yaml (no package.yaml) → legacy module detection
-			versionExtractFunc: func() io.ReadCloser {
-				return buildTarWithFiles(map[string]string{
-					"module.yaml": "weight: 900\n",
-				})
-			},
+			// No versionGetImageConfigFunc → version image has no labels
+			// No versionExtractFunc → no package.yaml in version image
 		}
 		psm := createMockPSM(segmentAwareMock)
 
@@ -940,8 +949,8 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 	suite.Run("legacy module from old registry", func() {
 		// The /version path doesn't exist in old registries → NAME_UNKNOWN from ListTags on version segment.
-		// No /version path → immediately treated as legacy module (v1alpha1).
-		// Package should appear in Processed (empty type) AND Failed with legacy message, no resources created.
+		// Fallback to /release path - has semver tags + channel names.
+		// Should create ModulePackageVersion (with legacy=true label) and ModulePackage.
 		segmentAwareMock := &segmentAwareMockClient{
 			rootListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 				return []string{"test-package"}, nil
@@ -955,6 +964,10 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					}},
 					StatusCode: http.StatusNotFound,
 				}
+			},
+			releaseListTags: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				// /release path has semver tags and channel names
+				return []string{"v1.0.0", "stable", "early-access"}, nil
 			},
 		}
 		psm := createMockPSM(segmentAwareMock)
