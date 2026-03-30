@@ -71,10 +71,6 @@
 
             @include breakpoints.max-w(s) {
                 margin-bottom: 5px;
-                font-size: 20px;
-            }
-
-            @include breakpoints.max-w(xs) {
                 font-size: 18px;
             }
         }
