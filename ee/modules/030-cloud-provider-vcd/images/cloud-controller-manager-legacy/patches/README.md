@@ -67,6 +67,7 @@ Files:
 Changes:
 
 - Add support for searching vAppTemplates in a given org
+<<<<<<< HEAD
 
 ### 006-fix-lb-health-monitor.patch
 
@@ -88,3 +89,5 @@ Changes:
 
 - Fix NewCloudControllerManagerCommand call signature for k8s.io v0.34.3
 - In k8s.io v0.34.3, the function signature changed to include an additional `map[string]string` parameter for feature gates between `DefaultInitFuncConstructors` and `NamedFlagSets`
+=======
+>>>>>>> 2713ac7be6 ([cloud-provider-vcd] test without 6th patch in ccm legacy)
