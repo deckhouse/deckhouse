@@ -290,7 +290,7 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 	}, nil
 }
 
-// GetHookValues returns values with hooks patches
+// GetValues returns values with hooks patches
 func (m *Module) GetValues() addonutils.Values {
 	return addonutils.MergeValues(
 		addonutils.Values{"global": m.globalValuesGetter(false)},
