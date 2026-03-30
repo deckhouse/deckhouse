@@ -28,11 +28,11 @@ import (
 	"reflect"
 
 	"github.com/goccy/go-yaml"
-	"github.com/google/go-containerregistry/pkg/authn"
 
+	internalRegistry "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	registryClient "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/client"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/deckhouse/deckhouse/pkg/registry"
 	"github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
@@ -103,7 +103,7 @@ func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryCon
 		return m.services[creds], nil
 	}
 
-	auth, err := m.getAuth(registryURL, config.DockerConfig, config.Login, config.Password) // factory method
+	authOpts, err := m.createAuthOptions(registryURL, config.DockerConfig, config.Login, config.Password) // factory method
 	if err != nil {
 		return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
 	}
@@ -115,13 +115,14 @@ func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryCon
 		m.cachedCredentials[registryURL] = &creds
 	}
 
-	c := client.NewClientWithOptions(registryURL, &client.Options{
-		Auth:      auth,
-		Scheme:    config.Scheme,
-		CA:        config.CA,
-		UserAgent: config.UserAgent,
-		Logger:    m.logger,
-	})
+	c := registryClient.New(registryURL,
+		append(authOpts,
+			client.WithInsecure(config.Scheme == "http"),
+			client.WithCA(config.CA),
+			client.WithUserAgent(config.UserAgent),
+			client.WithLogger(m.logger),
+		)...,
+	)
 
 	var zero T
 	switch any(zero).(type) {
@@ -136,32 +137,29 @@ func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryCon
 
 // getAuth determines and returns an authenticator for accessing a container registry based on the provided authorization data.
 // if both dockerCfg and credentials parameters are filled in, credentials is the priority.
-func (m *ServiceManager[T]) getAuth(registryURL, dockerCFG, login, password string) (authn.Authenticator, error) {
-	var auth authn.Authenticator
-	var err error
+func (m *ServiceManager[T]) createAuthOptions(registryURL, dockerCFG, login, password string) ([]client.Option, error) {
+	var opts []client.Option
 
 	switch {
 	case login != "":
-		if auth, err = client.WithLoginPassword(login, password); err != nil {
-			return nil, fmt.Errorf("failed to get auth from credentials: %w", err)
-		}
-
+		opts = append(opts, client.WithLoginPassword(login, password))
 		m.logger.Debug("init auth from credentials")
 	case dockerCFG != "":
-		if auth, err = client.WithDockercfg(registryURL, dockerCFG); err != nil {
+		opt, err := client.WithDockercfg(registryURL, dockerCFG)
+		if err != nil {
 			return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
 		}
-
+		opts = append(opts, opt)
 		m.logger.Debug("init auth from docker config")
 	default:
 		return nil, errors.New("there is no authorization data")
 	}
 
-	return auth, err
+	return opts, nil
 }
 
 type PackagesService struct {
-	client registry.Client
+	client internalRegistry.Interface
 
 	*BasicService
 
@@ -170,7 +168,7 @@ type PackagesService struct {
 	logger *log.Logger
 }
 
-func NewPackagesService(client registry.Client, logger *log.Logger) *PackagesService {
+func NewPackagesService(client internalRegistry.Interface, logger *log.Logger) *PackagesService {
 	return &PackagesService{
 		client: client,
 
@@ -196,7 +194,7 @@ func (s *PackagesService) Package(packageName string) *PackageService {
 
 // PackageService provides high-level operations for Deckhouse platform management
 type PackageService struct {
-	client registry.Client
+	client internalRegistry.Interface
 
 	*BasicService
 	packageVersion *PackageVersionService
@@ -206,7 +204,7 @@ type PackageService struct {
 }
 
 // NewPackageService creates a new deckhouse service
-func NewPackageService(client registry.Client, logger *log.Logger) *PackageService {
+func NewPackageService(client internalRegistry.Interface, logger *log.Logger) *PackageService {
 	return &PackageService{
 		client: client,
 

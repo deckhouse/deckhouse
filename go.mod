@@ -60,7 +60,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
-	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260330123526-ee5b89c921b0
+	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260330123855-eae1a3478bff
 	github.com/deckhouse/module-sdk v0.10.2
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.0+incompatible

@@ -17,14 +17,14 @@ limitations under the License.
 package service
 
 import (
-	registryClient "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/client"
+	internalRegistry "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // Service provides high-level registry operations using a registry client
 type Service struct {
-	client registryClient.Interface
+	client internalRegistry.Interface
 
 	// modulesService   *BasicService
 	packagesManager  *ServiceManager[PackagesService]
@@ -34,7 +34,7 @@ type Service struct {
 }
 
 // NewService creates a new registry service with the given client and logger
-func NewService(client registryClient.Interface, logger *log.Logger) *Service {
+func NewService(client internalRegistry.Interface, logger *log.Logger) *Service {
 	s := &Service{
 		client: client,
 		logger: logger,

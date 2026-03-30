@@ -20,6 +20,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"go.opentelemetry.io/otel"
 
+	internalRegistry "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/registry"
 	registryClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
@@ -28,29 +29,24 @@ const (
 	tracerName = "registry-client"
 )
 
-type Interface interface {
-	WithSegment(segments ...string) Interface
-	GetRegistry() string
-	GetDigest(ctx context.Context, ref string) (*v1.Hash, error)
-	GetManifest(ctx context.Context, ref string) (registry.ManifestResult, error)
-	GetImageConfig(ctx context.Context, ref string) (*v1.ConfigFile, error)
-	CheckImageExists(ctx context.Context, ref string) error
-	GetImage(ctx context.Context, ref string, opts ...registry.ImageGetOption) (registry.Image, error)
-	PushImage(ctx context.Context, ref string, img v1.Image, opts ...registry.ImagePushOption) error
-	ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error)
-	ListRepositories(ctx context.Context, opts ...registry.ListRepositoriesOption) ([]string, error)
-}
-
 // Client is a wrapper around the underlying registry client, adding tracing support.
 type Client struct {
 	wrapped *registryClient.Client
 }
 
-func NewClient(wrapped *registryClient.Client) *Client {
+// New creates a new wrapped internal registry client with options.
+// It mirrors the public pkg registry client builder style.
+func New(host string, opts ...registryClient.Option) internalRegistry.Interface {
+	wrapped := registryClient.New(host, opts...)
 	return &Client{wrapped: wrapped}
 }
 
-func (c *Client) WithSegment(segments ...string) Interface {
+// NewClientFromWrapped retains old behavior for explicit wrapping from an existing low-level client.
+func NewClientFromWrapped(wrapped *registryClient.Client) internalRegistry.Interface {
+	return &Client{wrapped: wrapped}
+}
+
+func (c *Client) WithSegment(segments ...string) internalRegistry.Interface {
 	return &Client{wrapped: c.wrapped.WithSegment(segments...)}
 }
 
