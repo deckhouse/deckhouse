@@ -13,8 +13,9 @@ spec:
     - name: check-prerequisites
       try:
         - script:
-            timeout: 120s
+            timeout: 180s
             content: |
+              set -eu
               echo "=== Checking prerequisites ==="
 
               if ! kubectl get deployment cluster-autoscaler -n d8-cloud-instance-manager --no-headers 2>/dev/null; then
@@ -23,7 +24,7 @@ spec:
               fi
 
               CA_ARGS=$(kubectl get deployment cluster-autoscaler -n d8-cloud-instance-manager \
-                -o jsonpath='{.spec.template.spec.containers[0].args}' 2>/dev/null)
+                -o jsonpath='{.spec.template.spec.containers[0].args}')
               if ! echo "$CA_ARGS" | grep -q "clusterapi"; then
                 echo "FAIL: CA cloud provider is not clusterapi. This test is for DVP (CAPI) only."
                 echo "CA args: $CA_ARGS"
@@ -40,13 +41,21 @@ spec:
               echo "Cleaning up leftover test resources from previous runs..."
               kubectl delete nodegroup e2e-worker-100 e2e-worker-50 --ignore-not-found 2>/dev/null || true
 
+              echo "Restarting cluster-autoscaler to clear backoff state from previous runs..."
+              kubectl rollout restart deployment cluster-autoscaler -n d8-cloud-instance-manager
+              kubectl rollout status deployment cluster-autoscaler -n d8-cloud-instance-manager --timeout=120s
+
+              echo "Waiting for CA to initialize..."
+              sleep 15
+
               echo "OK: All prerequisites met"
 
-    - name: create-test-resources
+    - name: test-scale-from-zero
       try:
         - script:
-            timeout: 120s
+            timeout: 180s
             content: |
+              set -eu
               echo "=== Creating NodeGroups ==="
 
               kubectl apply -f - <<'EOF'
@@ -147,35 +156,59 @@ spec:
               EOF
               echo "Created Deployment e2e-nginx with 3 replicas"
 
-              echo "Waiting for Deckhouse to process NodeGroups..."
-              sleep 30
+              echo "Waiting for Deckhouse to create MachineDeployments..."
+              for i in $(seq 1 24); do
+                MD_COUNT=$(kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                  -l node-group=e2e-worker-100 --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                if [ "$MD_COUNT" -gt 0 ]; then
+                  echo "MachineDeployment for e2e-worker-100 created"
+                  kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                    -l 'node-group in (e2e-worker-100,e2e-worker-50)' 2>/dev/null || true
+                  break
+                fi
+                if [ "$i" -eq 24 ]; then
+                  echo "WARNING: MachineDeployments not found after 120s"
+                fi
+                sleep 5
+              done
 
               echo ""
               echo "=== Current pod status ==="
               kubectl get pods -n "$NAMESPACE" -l app=e2e-nginx -o wide
 
-      catch:
-        - events: {}
-        - events:
-            namespace: d8-cloud-instance-manager
-        - podLogs:
-            namespace: d8-cloud-instance-manager
-            selector: app=cluster-autoscaler
-
-    - name: verify-priority-selection-and-scale-up
-      try:
         - script:
             timeout: 300s
             content: |
               echo "=== Verifying CA selects priority 100 group and scales from zero ==="
 
-              CA_POD=$(kubectl get pods -n d8-cloud-instance-manager -l app=cluster-autoscaler \
-                --no-headers -o custom-columns=':metadata.name' | head -1)
+              get_ca_pod() {
+                kubectl get pods -n d8-cloud-instance-manager -l app=cluster-autoscaler \
+                  --no-headers -o custom-columns=':metadata.name' \
+                  --field-selector=status.phase=Running 2>/dev/null | head -1
+              }
+
+              CA_POD=$(get_ca_pod)
+              if [ -z "$CA_POD" ]; then
+                echo "FAIL: No running cluster-autoscaler pod found"
+                exit 1
+              fi
               echo "CA pod: $CA_POD"
 
               for i in $(seq 1 60); do
+                CURRENT_POD=$(get_ca_pod)
+                if [ -n "$CURRENT_POD" ] && [ "$CURRENT_POD" != "$CA_POD" ]; then
+                  echo "CA pod changed: $CA_POD -> $CURRENT_POD"
+                  CA_POD="$CURRENT_POD"
+                fi
+
                 LOGS=$(kubectl logs -n d8-cloud-instance-manager "$CA_POD" \
-                  --all-containers --since=10m 2>/dev/null || true)
+                  -c cluster-autoscaler 2>/dev/null || true)
+
+                if echo "$LOGS" | grep -q "failed to increase node group size.*e2e-worker"; then
+                  echo "FAIL: CA encountered error during scale-up"
+                  echo "$LOGS" | grep "failed to increase node group size" | tail -5
+                  exit 1
+                fi
 
                 if echo "$LOGS" | grep -q "e2e-worker-100.*chosen as the highest available"; then
                   echo "PASS: Priority Expander selected e2e-worker-100 group"
@@ -190,25 +223,20 @@ spec:
                   exit 0
                 fi
 
+                if echo "$LOGS" | grep -q "e2e-worker.*not ready for scaleup.*backoff"; then
+                  echo "WARNING: Node group in backoff (attempt $i)"
+                  echo "$LOGS" | grep "not ready for scaleup" | tail -3
+                fi
+
                 if [ "$i" -eq 60 ]; then
                   echo "FAIL: Timed out waiting for priority selection of e2e-worker-100"
                   echo "=== Recent CA logs ==="
-                  echo "$LOGS" | grep -i "e2e-worker\|priority\|unschedulable\|discovered" | tail -30
+                  echo "$LOGS" | grep -i "e2e-worker\|priority\|unschedulable\|discovered\|backoff\|failed" | tail -30
                   exit 1
                 fi
                 sleep 5
               done
 
-      catch:
-        - events: {}
-        - events:
-            namespace: d8-cloud-instance-manager
-        - podLogs:
-            namespace: d8-cloud-instance-manager
-            selector: app=cluster-autoscaler
-
-    - name: verify-pods-running-on-correct-nodes
-      try:
         - script:
             timeout: 900s
             content: |
@@ -216,7 +244,7 @@ spec:
 
               for i in $(seq 1 90); do
                 RUNNING=$(kubectl get pods -n "$NAMESPACE" -l app=e2e-nginx \
-                  --no-headers 2>/dev/null | grep -c Running || echo "0")
+                  --no-headers 2>/dev/null | grep -c Running || true)
 
                 if [ "$RUNNING" -ge 3 ]; then
                   echo "All 3 pods are Running"
@@ -244,11 +272,44 @@ spec:
                   fi
 
                   echo ""
+                  echo "=== Verifying e2e-worker-50 has no nodes ==="
+                  W50_NODES=$(kubectl get nodes -l node.deckhouse.io/group=e2e-worker-50 \
+                    --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                  if [ "$W50_NODES" -ne 0 ]; then
+                    echo "FAIL: e2e-worker-50 should have 0 nodes, but has $W50_NODES"
+                    kubectl get nodes -l node.deckhouse.io/group=e2e-worker-50 -o wide 2>/dev/null
+                    exit 1
+                  fi
+                  echo "PASS: e2e-worker-50 remains at 0 nodes (not selected)"
+
+                  echo ""
                   echo "PASS: All pods are running on e2e-worker-100 nodes (scale from zero succeeded)"
                   exit 0
                 fi
 
-                echo "Running pods: $RUNNING/3, waiting..."
+                echo "Running pods: $RUNNING/3, waiting... ($i/90)"
+
+                if [ $((i % 6)) -eq 0 ]; then
+                  echo "--- Diagnostic snapshot ---"
+                  echo "MachineDeployments:"
+                  kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                    -l 'node-group in (e2e-worker-100,e2e-worker-50)' --no-headers 2>/dev/null || true
+                  echo "Machines:"
+                  kubectl get machines.cluster.x-k8s.io -n d8-cloud-instance-manager --no-headers 2>/dev/null \
+                    | grep "e2e-worker" || echo "  (none)"
+
+                  CA_POD=$(kubectl get pods -n d8-cloud-instance-manager -l app=cluster-autoscaler \
+                    --no-headers -o custom-columns=':metadata.name' \
+                    --field-selector=status.phase=Running 2>/dev/null | head -1)
+                  if [ -n "$CA_POD" ]; then
+                    echo "CA scale status:"
+                    kubectl logs -n d8-cloud-instance-manager "$CA_POD" -c cluster-autoscaler --tail=200 2>/dev/null \
+                      | grep -i "e2e-worker.*scale-up\|e2e-worker.*backoff\|failed to increase\|setting group.*e2e-worker\|expansion options" \
+                      | tail -5 || true
+                  fi
+                  echo "---"
+                fi
+
                 if [ "$i" -eq 90 ]; then
                   echo "FAIL: Timed out waiting for pods to be Running"
                   kubectl get pods -n "$NAMESPACE" -l app=e2e-nginx -o wide
@@ -273,10 +334,10 @@ spec:
               echo "=== Cleanup ==="
 
               echo "Deleting test Deployment..."
-              kubectl delete deployment e2e-nginx -n "$NAMESPACE" --ignore-not-found --timeout=60s
+              kubectl delete deployment e2e-nginx -n "$NAMESPACE" --ignore-not-found --timeout=60s 2>/dev/null || true
 
               echo "Deleting test NodeGroups..."
-              kubectl delete nodegroup e2e-worker-100 e2e-worker-50 --ignore-not-found --timeout=300s
+              kubectl delete nodegroup e2e-worker-100 e2e-worker-50 --ignore-not-found --timeout=300s 2>/dev/null || true
 
               echo "Waiting for test nodes to be removed..."
               for i in $(seq 1 60); do
@@ -289,7 +350,7 @@ spec:
                 echo "Still $NODES test node(s) remaining..."
                 if [ "$i" -eq 60 ]; then
                   echo "WARNING: Timed out waiting for test nodes removal"
-                  kubectl get nodes -l app=e2e-autoscaler-test -o wide 2>/dev/null
+                  kubectl get nodes -l app=e2e-autoscaler-test -o wide 2>/dev/null || true
                 fi
                 sleep 10
               done

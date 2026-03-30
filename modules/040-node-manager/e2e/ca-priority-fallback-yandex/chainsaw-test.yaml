@@ -15,9 +15,10 @@ spec:
         - script:
             timeout: 120s
             content: |
+              set -eu
               echo "=== Checking prerequisites ==="
 
-              if ! command -v jq &>/dev/null; then
+              if ! command -v jq >/dev/null 2>&1; then
                 echo "FAIL: jq is required but not installed"
                 exit 1
               fi
@@ -28,15 +29,15 @@ spec:
               fi
 
               CA_ARGS=$(kubectl get deployment cluster-autoscaler -n d8-cloud-instance-manager \
-                -o jsonpath='{.spec.template.spec.containers[0].args}' 2>/dev/null)
+                -o jsonpath='{.spec.template.spec.containers[0].args}')
               if ! echo "$CA_ARGS" | grep -q "mcm"; then
                 echo "FAIL: CA cloud provider is not mcm. This test is for Yandex Cloud (MCM) only."
                 echo "CA args: $CA_ARGS"
                 exit 1
               fi
 
-              if ! kubectl get yandexinstanceclass worker-small --no-headers 2>/dev/null; then
-                echo "FAIL: Working YandexInstanceClass 'worker-small' not found"
+              if ! kubectl get yandexinstanceclass worker --no-headers 2>/dev/null; then
+                echo "FAIL: Working YandexInstanceClass 'worker' not found"
                 echo "Available YandexInstanceClasses:"
                 kubectl get yandexinstanceclass 2>/dev/null || echo "  (none)"
                 exit 1
@@ -44,17 +45,29 @@ spec:
 
               echo "Cleaning up leftover test resources from previous runs..."
               kubectl delete nodegroup e2e-worker-100 e2e-worker-50 --ignore-not-found 2>/dev/null || true
-              kubectl delete yandexinstanceclass e2e-worker-broken --ignore-not-found 2>/dev/null || true
+              kubectl delete yandexinstanceclass e2e-worker-broken e2e-worker-small --ignore-not-found 2>/dev/null || true
 
               echo "OK: All prerequisites met"
 
-    - name: create-test-resources
+    - name: test-priority-fallback
       try:
         - script:
             timeout: 120s
             content: |
+              set -eu
+              echo "=== Creating e2e-worker-small YandexInstanceClass from worker ==="
+              kubectl get yandexinstanceclass worker -o json | \
+                jq '{
+                  apiVersion: .apiVersion,
+                  kind: .kind,
+                  metadata: { name: "e2e-worker-small" },
+                  spec: (.spec | .cores = 2 | .memory = 4096 | .diskSizeGB = 30)
+                }' | kubectl apply -f -
+              echo "Created YandexInstanceClass 'e2e-worker-small'"
+
+              echo ""
               echo "=== Creating broken YandexInstanceClass ==="
-              kubectl get yandexinstanceclass worker-small -o json | \
+              kubectl get yandexinstanceclass worker -o json | \
                 jq '{
                   apiVersion: .apiVersion,
                   kind: .kind,
@@ -100,7 +113,7 @@ spec:
                   priority: 50
                   classReference:
                     kind: YandexInstanceClass
-                    name: worker-small
+                    name: e2e-worker-small
                   maxPerZone: 3
                   minPerZone: 0
                 nodeType: CloudEphemeral
@@ -171,26 +184,31 @@ spec:
               echo "=== Current pod status ==="
               kubectl get pods -n "$NAMESPACE" -l app=e2e-nginx -o wide
 
-      catch:
-        - events: {}
-        - events:
-            namespace: d8-cloud-instance-manager
-        - podLogs:
-            namespace: d8-cloud-instance-manager
-            selector: app=cluster-autoscaler
-
-    - name: verify-priority-selection
-      try:
         - script:
             timeout: 300s
             content: |
               echo "=== Verifying CA selects priority 100 group ==="
 
-              CA_POD=$(kubectl get pods -n d8-cloud-instance-manager -l app=cluster-autoscaler \
-                --no-headers -o custom-columns=':metadata.name' | head -1)
+              get_ca_pod() {
+                kubectl get pods -n d8-cloud-instance-manager -l app=cluster-autoscaler \
+                  --no-headers -o custom-columns=':metadata.name' \
+                  --field-selector=status.phase=Running 2>/dev/null | head -1
+              }
+
+              CA_POD=$(get_ca_pod)
+              if [ -z "$CA_POD" ]; then
+                echo "FAIL: No running cluster-autoscaler pod found"
+                exit 1
+              fi
               echo "CA pod: $CA_POD"
 
               for i in $(seq 1 60); do
+                CURRENT_POD=$(get_ca_pod)
+                if [ -n "$CURRENT_POD" ] && [ "$CURRENT_POD" != "$CA_POD" ]; then
+                  echo "CA pod changed: $CA_POD -> $CURRENT_POD"
+                  CA_POD="$CURRENT_POD"
+                fi
+
                 LOGS=$(kubectl logs -n d8-cloud-instance-manager "$CA_POD" \
                   --all-containers --since=10m 2>/dev/null || true)
 
@@ -212,28 +230,33 @@ spec:
                 sleep 5
               done
 
-      catch:
-        - events: {}
-        - events:
-            namespace: d8-cloud-instance-manager
-        - podLogs:
-            namespace: d8-cloud-instance-manager
-            selector: app=cluster-autoscaler
-
-    - name: verify-fallback-to-lower-priority
-      try:
         - script:
             timeout: 3600s
             content: |
               echo "=== Waiting for CA to backoff from e2e-worker-100 ==="
               echo "Expected wait: ~45 minutes (MCM backoff, 3 zones × ~15 min each)..."
 
-              CA_POD=$(kubectl get pods -n d8-cloud-instance-manager -l app=cluster-autoscaler \
-                --no-headers -o custom-columns=':metadata.name' | head -1)
+              get_ca_pod() {
+                kubectl get pods -n d8-cloud-instance-manager -l app=cluster-autoscaler \
+                  --no-headers -o custom-columns=':metadata.name' \
+                  --field-selector=status.phase=Running 2>/dev/null | head -1
+              }
+
+              CA_POD=$(get_ca_pod)
+              if [ -z "$CA_POD" ]; then
+                echo "FAIL: No running cluster-autoscaler pod found"
+                exit 1
+              fi
 
               for i in $(seq 1 180); do
+                CURRENT_POD=$(get_ca_pod)
+                if [ -n "$CURRENT_POD" ] && [ "$CURRENT_POD" != "$CA_POD" ]; then
+                  echo "CA pod changed: $CA_POD -> $CURRENT_POD"
+                  CA_POD="$CURRENT_POD"
+                fi
+
                 LOGS=$(kubectl logs -n d8-cloud-instance-manager "$CA_POD" \
-                  --all-containers --since=60m 2>/dev/null || true)
+                  --all-containers --since=90m 2>/dev/null || true)
 
                 BACKOFF_COUNT=$(echo "$LOGS" | grep -c "e2e-worker-100.*not ready for scaleup" || echo "0")
 
@@ -267,16 +290,6 @@ spec:
                 sleep 20
               done
 
-      catch:
-        - events: {}
-        - events:
-            namespace: d8-cloud-instance-manager
-        - podLogs:
-            namespace: d8-cloud-instance-manager
-            selector: app=cluster-autoscaler
-
-    - name: verify-pods-running-on-correct-nodes
-      try:
         - script:
             timeout: 900s
             content: |
@@ -284,7 +297,7 @@ spec:
 
               for i in $(seq 1 90); do
                 RUNNING=$(kubectl get pods -n "$NAMESPACE" -l app=e2e-nginx \
-                  --no-headers 2>/dev/null | grep -c Running || echo "0")
+                  --no-headers 2>/dev/null | grep -c Running || true)
 
                 if [ "$RUNNING" -ge 3 ]; then
                   echo "All 3 pods are Running"
@@ -341,13 +354,13 @@ spec:
               echo "=== Cleanup ==="
 
               echo "Deleting test Deployment..."
-              kubectl delete deployment e2e-nginx -n "$NAMESPACE" --ignore-not-found --timeout=60s
+              kubectl delete deployment e2e-nginx -n "$NAMESPACE" --ignore-not-found --timeout=60s 2>/dev/null || true
 
               echo "Deleting test NodeGroups..."
-              kubectl delete nodegroup e2e-worker-100 e2e-worker-50 --ignore-not-found --timeout=300s
+              kubectl delete nodegroup e2e-worker-100 e2e-worker-50 --ignore-not-found --timeout=300s 2>/dev/null || true
 
-              echo "Deleting broken YandexInstanceClass..."
-              kubectl delete yandexinstanceclass e2e-worker-broken --ignore-not-found --timeout=60s
+              echo "Deleting test YandexInstanceClasses..."
+              kubectl delete yandexinstanceclass e2e-worker-broken e2e-worker-small --ignore-not-found --timeout=60s 2>/dev/null || true
 
               echo "Waiting for test nodes to be removed..."
               for i in $(seq 1 60); do
@@ -360,7 +373,7 @@ spec:
                 echo "Still $NODES test node(s) remaining..."
                 if [ "$i" -eq 60 ]; then
                   echo "WARNING: Timed out waiting for test nodes removal"
-                  kubectl get nodes -l app=e2e-autoscaler-test -o wide 2>/dev/null
+                  kubectl get nodes -l app=e2e-autoscaler-test -o wide 2>/dev/null || true
                 fi
                 sleep 10
               done
