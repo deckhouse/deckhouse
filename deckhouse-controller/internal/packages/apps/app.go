@@ -215,7 +215,7 @@ func (a *Application) getRuntimeValues() RuntimeValues {
 	}
 }
 
-// GetValues returns runtime values in string format
+// GetRuntimeValues returns runtime values in string format
 func (a *Application) GetRuntimeValues() string {
 	runtimeValues := a.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)

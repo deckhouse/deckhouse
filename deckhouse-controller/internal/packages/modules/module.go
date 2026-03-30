@@ -195,7 +195,7 @@ func (m *Module) getRuntimeValues() RuntimeValues {
 	}
 }
 
-// GetValues returns runtime values in string format
+// GetRuntimeValues returns runtime values in string format
 func (m *Module) GetRuntimeValues() string {
 	runtimeValues := m.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
