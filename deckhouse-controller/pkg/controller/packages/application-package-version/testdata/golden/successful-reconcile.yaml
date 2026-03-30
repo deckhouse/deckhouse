@@ -22,6 +22,11 @@ status:
     type: MetadataLoaded
   packageMetadata:
     category: Test
+    changelog:
+      features:
+      - Added new feature
+      fixes:
+      - Fixed a bug
     description:
       en: Test package
       ru: Ru Test package

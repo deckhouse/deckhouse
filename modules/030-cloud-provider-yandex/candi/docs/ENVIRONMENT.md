@@ -13,10 +13,15 @@ The provider supports working with only one disk in the virtual machine template
 
 You need to create a service account with the editor role with the cloud provider so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available [in the provider's documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
 
-1. Create a user named `deckhouse`. The command response will contain its parameters:
+1. Create a user named `deckhouse`:
 
-   ```yaml
+   ```shell
    yc iam service-account create --name deckhouse
+   ```
+
+   The command output will contain its parameters:
+
+   ```console
    id: <userID>
    folder_id: <folderID>
    created_at: "YYYY-MM-DDTHH:MM:SSZ"
@@ -25,7 +30,7 @@ You need to create a service account with the editor role with the cloud provide
 
 1. Assign the required roles to the newly created user for your cloud:
 
-   ```yaml
+   ```shell
    yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
@@ -33,7 +38,7 @@ You need to create a service account with the editor role with the cloud provide
 
 1. Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
 
-   ```yaml
+   ```shell
    yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
    ```
 
@@ -47,10 +52,10 @@ You need to create a service account with the editor role with the cloud provide
 
 Recommended quotas for a new cluster:
 
-* The number of virtual processors: 64.
-* The total volume of SSD disks: 2000 GB.
-* The number of virtual machines: 25.
-* The total amount of RAM of virtual machines: 256 GB.
+- The number of virtual processors: 64.
+- The total volume of SSD disks: 2000 GB.
+- The number of virtual machines: 25.
+- The total amount of RAM of virtual machines: 256 GB.
 
 ## Yandex Cloud integration
 
@@ -73,7 +78,7 @@ This section provides general guidelines for setting up a security group. Incorr
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 
-1. In the Yandex Cloud console, select the Virtual Private Cloud service and navigate to the *Security Groups* section. You should see a single security group labeled `Default`.
+1. In the Yandex Cloud console, select the Virtual Private Cloud service and navigate to the _Security Groups_ section. You should see a single security group labeled `Default`.
 
    ![The default security group](images/sg-en-default.png)
 
@@ -87,7 +92,7 @@ This section provides general guidelines for setting up a security group. Incorr
 
 The [External Secrets Operator](https://github.com/external-secrets/external-secrets) allows you to synchronize [Yandex Lockbox](https://cloud.yandex.com/en/docs/lockbox/concepts/) secrets with the Deckhouse Kubernetes Platform cluster secrets.
 
-The instructions below are meant to be viewed as a *Quick Start* guide. To use integration in production environments, please review the following resources:
+The instructions below are meant to be viewed as a _Quick Start_ guide. To use integration in production environments, please review the following resources:
 
 - [Yandex Lockbox](https://cloud.yandex.com/en/docs/lockbox/)
 - [Synchronizing with Yandex Lockbox secrets](https://cloud.yandex.com/en/docs/managed-kubernetes/tutorials/kubernetes-lockbox-secrets)
@@ -161,7 +166,6 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
    ```
 
    Where:
-
    - `sa-creds` — the name of the `Secret` that contains the authorized key. This secret should show up after the Helm chart has been installed.
    - `key` — the name of the key in the `.data` field of the secret above.
 
@@ -176,13 +180,12 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
 
-   $ d8 k -n external-secrets get secretstores.external-secrets.io 
+   $ d8 k -n external-secrets get secretstores.external-secrets.io
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
 
 1. [Create](https://cloud.yandex.com/en/docs/lockbox/operations/secret-create) a Yandex Lockbox secret with the following parameters:
-
    - **Name** — `lockbox-secret`.
    - **Key** — enter the non-confidential identifier `password`.
    - **Value** — enter the confidential data to store `p@$$w0rd`.
@@ -212,7 +215,6 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
    ```
 
    Where:
-
    - `spec.target.name` — the name of the new secret. The External Secrets Operator will create this secret in the Deckhouse Kubernetes Platform cluster and populate it with the parameters of the Yandex Lockbox's `lockbox-secret`.
    - `spec.data[].secretKey` — the name of the key in the `.data` field of the secret that the External Secrets Operator will create.
    - `spec.data[].remoteRef.key` — identifier of the Yandex Lockbox's `lockbox-secret` created earlier, e.g., `e6q28nvfmhu539******`.
@@ -253,7 +255,6 @@ This integration lets you use [the Yandex Managed Service for Prometheus](https:
    ```
 
    Where:
-
    - `<URL_TO_WRITE_METRICS>` — URL from the Yandex Monitoring/Prometheus/Writing Metrics page.
    - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJRSrfo9jU3aopsXrJyfq_UHs********`.
 
@@ -289,7 +290,6 @@ More details about this feature can be found [in Yandex Cloud documentation](htt
    ```
 
    Where:
-
    - `<URL_READING_METRICS_WITH_GRAFANA>` — URL from the Yandex Monitoring/Prometheus/Reading Metrics with Grafana page.
    - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 

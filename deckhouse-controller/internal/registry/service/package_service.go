@@ -36,10 +36,12 @@ import (
 
 const (
 	packageVersionSegment = "version"
+	packageReleaseSegment = "release"
 
 	packagesServiceName       = "packages"
 	packageServiceName        = "package"
 	packageVersionServiceName = "package_version"
+	packageReleaseServiceName = "package_release"
 )
 
 type ServiceManagerInterface[T any] interface {
@@ -166,6 +168,7 @@ type PackageService struct {
 
 	*BasicService
 	packageVersion *PackageVersionService
+	packageRelease *PackageReleaseService
 
 	logger *log.Logger
 }
@@ -177,14 +180,20 @@ func NewPackageService(client registry.Client, logger *log.Logger) *PackageServi
 
 		BasicService:   NewBasicService(packageServiceName, client, logger),
 		packageVersion: NewPackageVersionService(NewBasicService(packageVersionServiceName, client.WithSegment(packageVersionSegment), logger)),
+		packageRelease: NewPackageReleaseService(NewBasicService(packageReleaseServiceName, client.WithSegment(packageReleaseSegment), logger)),
 
 		logger: logger,
 	}
 }
 
-// TODO: add methods for legacy behaviour
+// Versions returns the service for accessing <package>/version path (new v1alpha2 modules).
 func (s *PackageService) Versions() *PackageVersionService {
 	return s.packageVersion
+}
+
+// Release returns the service for accessing <package>/release path (legacy v1alpha1 modules).
+func (s *PackageService) Release() *PackageReleaseService {
+	return s.packageRelease
 }
 
 // GetRoot gets path of the registry root
@@ -198,6 +207,17 @@ type PackageVersionService struct {
 
 func NewPackageVersionService(basicService *BasicService) *PackageVersionService {
 	return &PackageVersionService{
+		BasicService: basicService,
+	}
+}
+
+// PackageReleaseService provides access to the <package>/release path for legacy v1alpha1 modules.
+type PackageReleaseService struct {
+	*BasicService
+}
+
+func NewPackageReleaseService(basicService *BasicService) *PackageReleaseService {
+	return &PackageReleaseService{
 		BasicService: basicService,
 	}
 }
