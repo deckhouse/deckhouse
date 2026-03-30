@@ -145,6 +145,10 @@ Assigns roles to users based on group names (`cn`):
 
 ### Group membership resolution
 
+{% alert level="warning" %}
+LDAP Sync does not support transitivity for nested groups. See [Nested groups and transitivity](#nested-groups-and-transitivity) section for details and workarounds.
+{% endalert %}
+
 Deckhouse Code supports the following attributes to determine group membership (all values must be arrays of user DNs):
 
 - `member`
@@ -152,8 +156,6 @@ Deckhouse Code supports the following attributes to determine group membership (
 - `memberof`
 - `memberuid`
 - `submember`
-
-> **Note:** LDAP Sync does not support transitivity for nested groups. See [FAQ: Nested groups and transitivity](#nested-groups-and-transitivity) for details and workarounds.
 
 ### User synchronization
 
@@ -205,32 +207,35 @@ To view the full synchronization logs:
 
 > Old logs are removed by rotation over time, so they may become unavailable. If needed, rerun the synchronization and collect the latest logs.
 
-## LDAP Sync FAQ
+### LDAP Sync behavior
 
-### How does the sync algorithm work? {#sync-algorithm}
+#### Synchronization algorithm
 
-LDAP synchronization uses a flat, non-recursive algorithm:
+LDAP Sync uses a flat, non-recursive synchronization algorithm:
 
-1. **Group discovery**: A single LDAP query retrieves all groups matching the configured `base`, `filter`, and `scope`.
-2. **Member extraction**: For each group, member attributes are read (`member`, `uniquemember`, `memberof`, `memberuid`, `submember`).
-3. **User matching**: Each DN from the attributes is matched against `Identity.extern_uid` in the database.
-4. **Unknown DNs are skipped**: If a DN does not correspond to a known user (e.g., it is a nested group DN), it is silently ignored.
+1. Group retrieval. An LDAP query retrieves all groups based on the configured `base`, `filter`, and `scope` parameters.
+1. Member extraction. For each discovered group, LDAP Sync reads the membership attributes: `member`, `uniquemember`, `memberof`, `memberuid`, `submember`.
+1. User matching. Each DN from the membership attributes is matched against `Identity.extern_uid` in the database.
+1. Ignoring unknown DNs. If a DN does not match a known user, it is skipped. For example, this may be the DN of a nested group.
 
+#### Cyclic group dependencies
 
+Cyclic dependencies in the LDAP group hierarchy do not cause synchronization errors. LDAP Sync processes groups in a flat way, according to the configured filter, and does not attempt to reconstruct the LDAP tree structure.
 
-### Are there issues with cycles in group hierarchy? {#cycles}
+Because recursive traversal of nested groups is not performed, cycles do not affect the synchronization result.
 
-No. Since LDAP Sync reads groups in a flat manner using a filter query, it does not attempt to replicate the LDAP tree structure. There is no recursive traversal of group hierarchies, so cyclic group memberships do not cause any problems.
+#### Nested groups and transitivity
 
-### Nested groups and transitivity {#nested-groups-and-transitivity}
+{% alert level="warning" %}
+LDAP Sync does not support transitivity for nested groups.
+{% endalert %}
 
-**LDAP Sync does not support transitivity.**
+During synchronization, LDAP Sync processes only the direct values of a group's membership attributes and does not recursively traverse nested groups.
 
-If `Group1` contains `Group2` as a member, the members of `Group2` will **not** be automatically added to `Group1`. The sync process does not recursively expand nested group memberships.
+If one LDAP group contains another group as a member, users from the nested group are not automatically added to the parent group.
 
-**Why?** The Deckhouse Code synchronization reads member attributes directly without traversing nested groups. It expects all relevant user DNs to be present in the group's member attributes.
+For synchronization to work correctly, all required user DNs must be present directly in the group's membership attributes.
 
-**Workaround:** Use external scripts or LDAP server-side mechanisms to flatten nested memberships. For example:
-- Populate the `submember` attribute with all transitive members (including members of nested groups).
+If nested groups must be taken into account, this must be implemented on the LDAP server side. For example, the `submember` attribute can be populated with the full list of transitive members.
 
-This approach keeps the synchronization logic simple and avoids recursion-related issues while giving you full control over how nested groups are resolved on the LDAP side.
+This approach simplifies synchronization and avoids issues related to recursive group processing.
