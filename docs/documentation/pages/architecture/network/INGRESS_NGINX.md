@@ -51,7 +51,7 @@ The module consists of the following components:
    * **kruise-state-metrics**: Sidecar container that monitors the state of OpenKruise API objects and exposes corresponding metrics (but not metrics of the kruise-controller-manager itself).
    * **kube-rbac-proxy**: Sidecar container providing authorized access to controller metrics and status (described above).
 
-4. **Geoproxy** (StatefulSet): Caching proxy server for the Ingress controller that provides the GeoIP database downloaded from the MaxMind provider for quick access, as well as the cluster does not have access to Internet.  This service is aimed at improving the stability of the Ingress NGINX Controller when working with GeoIP databases and provides the following features:
+4. **Geoproxy** (StatefulSet): Caching proxy server for the Ingress controller that provides the GeoIP database downloaded from the MaxMind provider for quick access, as well as when the cluster does not have access to Internet. This service is aimed at improving the stability of the Ingress NGINX Controller when working with GeoIP databases and provides the following features:
 
 * MaxMind license saving (databases are downloaded from a single point once a day).
 * Persistent data storage (if components are restarted, it doesn't require accessing the MaxMind servers).
@@ -111,9 +111,9 @@ The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet ty
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Ingress-nginx module architecture](../../../images/architecture/network/c4-l2-ingress-nginx-failover.png)
 
-## Components of Ingress controller with HostWithFailover inlet type
+### Components of Ingress controller with HostWithFailover inlet type
 
-1. **Controller-nginx-failover** ([Advanced DaemonSet](https://openkruise.io/docs/user-manuals/advanceddaemonset)): Failover Ingress-controller deployed on the same nodes as the main one. Failover controller has the same pods with same purpose as the main Ingress controller.
+1. **Controller-nginx-failover** ([Advanced DaemonSet](https://openkruise.io/docs/user-manuals/advanceddaemonset)): Failover Ingress-controller deployed on the same nodes as the main one. Failover controller has the same pods with the same purpose as the main Ingress controller.
 
 2. **Proxy-failover** ([Advanced DaemonSet](https://openkruise.io/docs/user-manuals/advanceddaemonset)): Proxy server.
 
@@ -122,7 +122,7 @@ The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet ty
    * **controller**: Server that performs the following functions:
 
      * Monitors a performance of the main Ingress controller and returns its status.
-     * Monitors the NGINX configuration file on the node and reboots Ingress controller if this configuration is changed;
+     * Monitors the NGINX configuration file on the node and reboots Ingress controller if this configuration is changed.
      * Starts a [NGINX](https://github.com/nginx/nginx) instance that proxies traffic to the failover controller in case the main one is unavailable. Traffic is switched to the failover controller and back to the main controller with the use of `iptables` rules, that are configured by the iptables-loop container depending on the availability of the main controller 80 and 443 TCP ports.
 
      This controller is developed by Flant.
@@ -133,7 +133,7 @@ The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet ty
   
    * **kube-rbac-proxy**: Sidecar container providing authorized access to controller metrics and status (described above).
 
-## Failover Ingress controller interactions
+### Failover Ingress controller interactions
 
 Failover Ingress controller interacts with the following components:
 
