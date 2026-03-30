@@ -473,7 +473,7 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 	span.SetAttributes(attribute.String("hook", h.GetName()))
 	span.SetAttributes(attribute.String("name", a.GetName()))
 
-	hookConfigValues := a.values.GetConfigValues()
+	hookConfigValues := a.values.GetSettings()
 	hookValues := a.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 

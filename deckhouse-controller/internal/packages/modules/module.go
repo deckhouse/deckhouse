@@ -446,7 +446,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	span.SetAttributes(attribute.String("hook", h.GetName()))
 	span.SetAttributes(attribute.String("name", m.GetName()))
 
-	hookConfigValues := m.values.GetConfigValues()
+	hookConfigValues := m.values.GetSettings()
 	hookValues := m.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 
