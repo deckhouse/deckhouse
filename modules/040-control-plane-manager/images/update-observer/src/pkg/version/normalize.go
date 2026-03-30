@@ -28,6 +28,20 @@ const (
 )
 
 func NormalizeAndTrimPatch(version string) (string, error) {
+	normalized, err := Normalize(version)
+	if err != nil {
+		return "", err
+	}
+
+	parts := strings.Split(normalized, ".")
+	if len(parts) < SemverMajorMinorAccuracy {
+		return "", fmt.Errorf("version must have at least MAJOR.MINOR: %s", version)
+	}
+
+	return fmt.Sprintf("%s.%s", parts[0], parts[1]), nil
+}
+
+func Normalize(version string) (string, error) {
 	if version == "" {
 		return "", nil
 	}
@@ -41,10 +55,13 @@ func NormalizeAndTrimPatch(version string) (string, error) {
 		return "", fmt.Errorf("invalid semver: %s", version)
 	}
 
-	parts := strings.Split(normalized, ".")
-	if len(parts) < SemverMajorMinorAccuracy {
-		return "", fmt.Errorf("version must have at least MAJOR.MINOR: %s", version)
+	return normalized, nil
+}
+
+func Denormalize(version string) string {
+	if version == "" {
+		return ""
 	}
 
-	return fmt.Sprintf("%s.%s", parts[0], parts[1]), nil
+	return strings.TrimPrefix(version, "v")
 }
