@@ -45,7 +45,7 @@ func updateSpStatus(_ context.Context, input *go_hook.HookInput) error {
 
 	// update SPs' statuses
 	for _, sp := range securityPolicies {
-		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetProcessedStatus(filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetProcessedStatus(filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
 	}
 
 	return nil
