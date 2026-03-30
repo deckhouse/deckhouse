@@ -66,8 +66,8 @@ if err_0 == null {
     }
     b_0 = length(hit_0) > 0
   } else {
-    s_0, err_str_0 = to_string(val_0)
-    b_0 = err_str_0 == null && s_0 == "prod"
+    s_0, err_s_0 = to_string(val_0)
+    b_0 = err_s_0 == null && s_0 == "prod"
   }
 }
 if b_0 {
@@ -92,8 +92,8 @@ if err_0 == null {
     }
     b_0 = length(hit_0) == 0
   } else {
-    s_0, err_str_0 = to_string(val_0)
-    b_0 = err_str_0 == null && s_0 != "v"
+    s_0, err_s_0 = to_string(val_0)
+    b_0 = err_s_0 == null && s_0 != "v"
   }
 }
 if b_0 {
@@ -243,8 +243,8 @@ if err_0 == null {
     }
     b_0 = length(hit_0) > 0
   } else {
-    s_0, err_str_0 = to_string(val_0)
-    b_0 = err_str_0 == null && s_0 == "prod"
+    s_0, err_s_0 = to_string(val_0)
+    b_0 = err_s_0 == null && s_0 == "prod"
   }
 }
 val_1, err_1 = get(., ["bar"])
@@ -279,8 +279,8 @@ if err_2 == null {
     }
     b_2 = length(hit_2) == 0
   } else {
-    s_2, err_str_2 = to_string(val_2)
-    b_2 = err_str_2 == null && s_2 != "far"
+    s_2, err_s_2 = to_string(val_2)
+    b_2 = err_s_2 == null && s_2 != "far"
   }
 }
 if b_0 && b_1 && b_2 {
