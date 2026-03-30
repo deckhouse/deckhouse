@@ -527,9 +527,10 @@ index 941086e0..c8d64174 100644
 +`
  		// vcda-4391 fixed
 -		err = vdcManager.AddNewTkgVM(vmName, vcdCluster.Name, 1,
-+		err = vdcManager.AddNewVM(vmName, vcdCluster.Name, 1,
- 			vcdMachine.Spec.Catalog, vcdMachine.Spec.Template, vcdMachine.Spec.TemplateOrg, vcdMachine.Spec.PlacementPolicy,
+-			vcdMachine.Spec.Catalog, vcdMachine.Spec.Template, vcdMachine.Spec.PlacementPolicy,
 -			vcdMachine.Spec.SizingPolicy, vcdMachine.Spec.StorageProfile, false)
++		err = vdcManager.AddNewVM(vmName, vcdCluster.Name, 1,
++			vcdMachine.Spec.Catalog, vcdMachine.Spec.Template, vcdMachine.Spec.TemplateOrg, vcdMachine.Spec.PlacementPolicy,
 +			vcdMachine.Spec.SizingPolicy, vcdMachine.Spec.StorageProfile, guestCustScript, false)
  		if err != nil {
  			err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineCreationError, "", machine.Name, fmt.Sprintf("%v", err))
