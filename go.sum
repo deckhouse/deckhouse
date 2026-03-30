@@ -137,6 +137,7 @@ github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20251128160944-41d73224a0c9 h
 github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20251128160944-41d73224a0c9/go.mod h1:OdmJduRktTXVMNLAULkzoPbzLbtaU/jBuwSoAUbnxRM=
 github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f h1:z0HVydB3RdiW02V301QPJDx0xmmVgJf1Bkjyu9oILXU=
 github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f/go.mod h1:6idedofcaW43YLVGOAv7Uz9X4xOek/YyOPhiBEr36iM=
+github.com/deckhouse/delivery-kit-sdk v1.1.0 h1:Uu1PoTrpe1pTYLxIEcpau2ONFXgckvET2dw9Ot22ZD4=
 github.com/deckhouse/delivery-kit-sdk v1.1.0/go.mod h1:HgPk8RNOxcy1FZ37pB9RMQRdYHa13pGYAmKnLJh0I9A=
 github.com/deckhouse/lib-dhctl v0.13.0 h1:Xh7G30seic4Aa8MdXOH2ecGvO0zsn6PBGBHbJ4YNnZM=
 github.com/deckhouse/lib-dhctl v0.13.0/go.mod h1:RCthjbhLf0CtgdltTmFHk+lRyjRai8BlAO7SocAYR+E=
