@@ -146,6 +146,26 @@ func mergeLabels(sourceLabels map[string]string, extraLabels map[string]string) 
 	return result
 }
 
+func isKeyUnderOrEqualSourceLabel(label, sourceLabel string) bool {
+	return label == sourceLabel || strings.HasPrefix(label, sourceLabel+".")
+}
+
+func IsSinkKeyRedundantBySourceLabels(l string, sourceType string) bool {
+	labels := sourceLabels(sourceType, true)
+	for k := range labels {
+		if k == podLabelsStar {
+			if isKeyUnderOrEqualSourceLabel(l, K8sLabelPodLabels) {
+				return true
+			}
+			continue
+		}
+		if isKeyUnderOrEqualSourceLabel(l, k) {
+			return true
+		}
+	}
+	return false
+}
+
 func normalizeKey(key string) string {
 	var b strings.Builder
 	for _, c := range key {

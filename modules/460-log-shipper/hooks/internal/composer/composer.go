@@ -158,7 +158,7 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 		}
 
 		spec := destSpec.Spec
-		spec.ExtraLabels = mergeExtraLabelsKeys(destSpec.Spec.ExtraLabels, addLabelSinkKeys)
+		spec.ExtraLabels = mergeExtraLabelsKeys(destSpec.Spec.ExtraLabels, addLabelSinkKeys, sourceType)
 
 		dest := newLogDest(destSpec.Spec.Type, destSpec.Name, spec, sourceType)
 		if dest == nil {
@@ -174,10 +174,13 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 	return destinations, nil
 }
 
-func mergeExtraLabelsKeys(extra map[string]string, keys []string) map[string]string {
+func mergeExtraLabelsKeys(extra map[string]string, keys []string, sourceType string) map[string]string {
 	result := make(map[string]string, len(extra)+len(keys))
 	maps.Copy(result, extra)
 	for _, k := range keys {
+		if loglabels.IsSinkKeyRedundantBySourceLabels(k, sourceType) {
+			continue
+		}
 		result[k] = loglabels.FieldRefTemplate(k)
 	}
 	return result
