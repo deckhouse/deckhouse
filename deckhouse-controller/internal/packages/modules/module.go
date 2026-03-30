@@ -181,10 +181,10 @@ type RuntimeValues struct {
 	Package addonutils.Values `json:"Package"`
 }
 
-// GetRuntimeValues returns values that are not part of schema.
+// getRuntimeValues returns values that are not part of schema.
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
-func (m *Module) GetRuntimeValues() RuntimeValues {
+func (m *Module) getRuntimeValues() RuntimeValues {
 	return RuntimeValues{
 		Package: addonutils.Values{
 			"Name":     m.definition.Name,
@@ -195,9 +195,9 @@ func (m *Module) GetRuntimeValues() RuntimeValues {
 	}
 }
 
-// GetExtraNelmValues returns runtime values in string format
-func (m *Module) GetExtraNelmValues() string {
-	runtimeValues := m.GetRuntimeValues()
+// GetRuntimeValues returns runtime values in string format
+func (m *Module) GetRuntimeValues() string {
+	runtimeValues := m.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
 	marshalledGlobal := m.globalValuesGetter(false)
@@ -290,11 +290,12 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 	}, nil
 }
 
-// GetValues returns values for rendering
+// GetValues returns values with hooks patches
 func (m *Module) GetValues() addonutils.Values {
 	return addonutils.MergeValues(
 		addonutils.Values{"global": m.globalValuesGetter(false)},
-		m.values.GetValues())
+		m.values.GetValues(),
+	)
 }
 
 // ApplySettings applies settings values
@@ -446,7 +447,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	span.SetAttributes(attribute.String("hook", h.GetName()))
 	span.SetAttributes(attribute.String("name", m.GetName()))
 
-	hookConfigValues := m.values.GetConfigValues()
+	hookConfigValues := m.values.GetSettings()
 	hookValues := m.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 
