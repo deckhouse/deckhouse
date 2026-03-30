@@ -51,8 +51,7 @@ spec:
                 description: CAChecksum is the hash of d8-pki secret (CA certificates).
                 type: string
               components:
-                description: ComponentChecksums holds checksums for all control plane
-                  components.
+                description: Checksums per component
                 properties:
                   etcd:
                     description: ComponentChecksum holds checksums for a single control
@@ -125,6 +124,7 @@ spec:
                   of pki secret]"
                 type: string
               hotReloadChecksum:
+                description: For reload mechanisms (e.g. in-place reload)
                 type: string
             required:
             - caChecksum
@@ -135,7 +135,6 @@ spec:
           status:
             properties:
               caChecksum:
-                description: CAChecksum is the applied hash of d8-pki secret (CA certificates).
                 type: string
               components:
                 description: ComponentChecksums holds checksums for all control plane
@@ -267,8 +266,8 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               configVersion:
-                description: ConfigVersion that is actually applied / running on the
-                  node cpm secret and pki secret resource versions.
+                description: 'ConfigVersion that is actually applied / running on
+                  the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"'
                 type: string
               hotReloadChecksum:
                 type: string

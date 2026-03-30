@@ -85,7 +85,7 @@ spec:
                 - KubeControllerManager
                 - KubeScheduler
                 - HotReload
-                - PKI
+                - CA
                 type: string
               configVersion:
                 description: |-
