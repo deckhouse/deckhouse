@@ -78,7 +78,13 @@ var nothingButGoHooksExcludes = []string{
 	"**/*.sh",
 }
 
-var stageDependenciesFile = map[string][]string{
+var stageDependenciesSetup = map[string][]string{
+	"setup": {
+		"**/*",
+	},
+}
+
+var stageDependenciesInstall = map[string][]string{
 	"install": {
 		"**/*",
 	},
@@ -160,7 +166,7 @@ func writeSections(settings writeSettings) {
 				Add:               strings.TrimPrefix(file, workDir),
 				To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
 				ExcludePaths:      nil,
-				StageDependencies: stageDependenciesFile,
+				StageDependencies: stageDependenciesInstall,
 			})
 		} else {
 			addEntries = append(addEntries, addEntry{
@@ -365,7 +371,7 @@ func writeStageDepsSections(settings writeSettings) {
 					Add:               strings.TrimPrefix(file, workDir),
 					To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
 					ExcludePaths:      nil,
-					StageDependencies: stageDependenciesFile,
+					StageDependencies: stageDependenciesInstall,
 				})
 			}
 		}
@@ -584,14 +590,14 @@ func (e *executor) executeEdition(editionName string) {
 			SaveTo:            candiCloudProviders,
 			Dir:               "modules",
 			Prefix:            prefix,
-			StageDependencies: stageDependenciesFile,
+			StageDependencies: stageDependenciesInstall,
 			AvailableModules:  availableModules,
 		}
 
 		writeSettingCandi := writeSettings{
 			Edition:           editionName,
 			SaveTo:            candiFileName,
-			StageDependencies: stageDependenciesFile,
+			StageDependencies: stageDependenciesInstall,
 		}
 		if bi.SkipCandi == nil || !*bi.SkipCandi {
 			writeSettingCandi.Prefix = prefix
@@ -621,7 +627,7 @@ func (e *executor) executeEdition(editionName string) {
 
 		writeSettingsModulesTests.Prefix = prefix
 		writeSettingsModulesTests.Dir = "modules"
-		writeSettingsModulesTests.StageDependencies = stageDependenciesFile
+		writeSettingsModulesTests.StageDependencies = stageDependenciesSetup
 		writeSettingsModulesTests.ExcludePaths = testsExcludes
 
 		writeSettingsExcludeFileName.Prefix = prefix
@@ -630,7 +636,7 @@ func (e *executor) executeEdition(editionName string) {
 
 		writeSettingStageDeps.Prefix = prefix
 		writeSettingStageDeps.Dir = "modules"
-		writeSettingStageDeps.StageDependencies = stageDependenciesFile
+		writeSettingStageDeps.StageDependencies = stageDependenciesInstall
 		writeSettingStageDeps.ExcludePaths = nothingButGoHooksExcludes
 
 		writeSections(writeSettingsModulesTests)

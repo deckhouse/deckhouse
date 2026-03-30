@@ -8,7 +8,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/002-deckhouse
   to: /deckhouse/modules/002-deckhouse
@@ -19,7 +19,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/007-registrypackages
   to: /deckhouse/modules/007-registrypackages
@@ -30,7 +30,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/015-admission-policy-engine
   to: /deckhouse/modules/015-admission-policy-engine
@@ -41,7 +41,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/021-cni-cilium
   to: /deckhouse/modules/021-cni-cilium
@@ -52,7 +52,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/030-cloud-provider-dvp
   to: /deckhouse/modules/030-cloud-provider-dvp
@@ -63,7 +63,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/031-local-path-provisioner
   to: /deckhouse/modules/031-local-path-provisioner
@@ -74,7 +74,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/038-registry
   to: /deckhouse/modules/038-registry
@@ -85,7 +85,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/039-registry-packages-proxy
   to: /deckhouse/modules/039-registry-packages-proxy
@@ -96,7 +96,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/040-control-plane-manager
   to: /deckhouse/modules/040-control-plane-manager
@@ -107,7 +107,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/040-node-manager
   to: /deckhouse/modules/040-node-manager
@@ -118,7 +118,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/040-terraform-manager
   to: /deckhouse/modules/040-terraform-manager
@@ -129,7 +129,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/042-kube-dns
   to: /deckhouse/modules/042-kube-dns
@@ -140,7 +140,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/101-cert-manager
   to: /deckhouse/modules/101-cert-manager
@@ -151,7 +151,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/110-istio
   to: /deckhouse/modules/110-istio
@@ -162,7 +162,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/140-user-authz
   to: /deckhouse/modules/140-user-authz
@@ -173,7 +173,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/150-user-authn
   to: /deckhouse/modules/150-user-authn
@@ -184,7 +184,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/160-multitenancy-manager
   to: /deckhouse/modules/160-multitenancy-manager
@@ -195,7 +195,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/200-operator-prometheus
   to: /deckhouse/modules/200-operator-prometheus
@@ -206,7 +206,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/300-prometheus
   to: /deckhouse/modules/300-prometheus
@@ -217,7 +217,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/301-prometheus-metrics-adapter
   to: /deckhouse/modules/301-prometheus-metrics-adapter
@@ -228,7 +228,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/302-vertical-pod-autoscaler
   to: /deckhouse/modules/302-vertical-pod-autoscaler
@@ -239,7 +239,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/340-extended-monitoring
   to: /deckhouse/modules/340-extended-monitoring
@@ -250,7 +250,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/340-monitoring-custom
   to: /deckhouse/modules/340-monitoring-custom
@@ -261,7 +261,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/340-monitoring-deckhouse
   to: /deckhouse/modules/340-monitoring-deckhouse
@@ -272,7 +272,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/340-monitoring-kubernetes
   to: /deckhouse/modules/340-monitoring-kubernetes
@@ -283,7 +283,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/340-monitoring-kubernetes-control-plane
   to: /deckhouse/modules/340-monitoring-kubernetes-control-plane
@@ -294,7 +294,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/340-monitoring-ping
   to: /deckhouse/modules/340-monitoring-ping
@@ -305,7 +305,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
@@ -316,7 +316,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/402-ingress-nginx
   to: /deckhouse/modules/402-ingress-nginx
@@ -327,7 +327,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/460-log-shipper
   to: /deckhouse/modules/460-log-shipper
@@ -338,7 +338,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/462-loki
   to: /deckhouse/modules/462-loki
@@ -349,7 +349,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/470-chrony
   to: /deckhouse/modules/470-chrony
@@ -360,7 +360,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/500-cilium-hubble
   to: /deckhouse/modules/500-cilium-hubble
@@ -371,7 +371,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/500-upmeter
   to: /deckhouse/modules/500-upmeter
@@ -382,7 +382,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/600-namespace-configurator
   to: /deckhouse/modules/600-namespace-configurator
@@ -393,7 +393,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/600-secret-copier
   to: /deckhouse/modules/600-secret-copier
@@ -404,7 +404,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/800-deckhouse-tools
   to: /deckhouse/modules/800-deckhouse-tools
@@ -415,7 +415,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /modules/810-documentation
   to: /deckhouse/modules/810-documentation
@@ -426,7 +426,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/config-values.yaml
   to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
@@ -457,7 +457,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/be/modules/140-user-authz/templates/permission-browser-apiserver
   to: /deckhouse/modules/140-user-authz/templates/permission-browser-apiserver
@@ -468,7 +468,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/be/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
@@ -479,7 +479,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
@@ -490,7 +490,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/se-plus/modules/015-admission-policy-engine/templates/ratify
   to: /deckhouse/modules/015-admission-policy-engine/templates/ratify
@@ -501,7 +501,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/se-plus/modules/015-admission-policy-engine/crds/ratify
   to: /deckhouse/modules/015-admission-policy-engine/crds/ratify
@@ -512,7 +512,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
@@ -543,7 +543,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/hooks/ee
   to: /deckhouse/modules/021-cni-cilium/hooks/ee
@@ -554,7 +554,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/templates/egress-gateway-agent
   to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
@@ -565,7 +565,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/templates/egress-gateway-instance
   to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-instance
@@ -576,7 +576,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/templates/egress-policy
   to: /deckhouse/modules/021-cni-cilium/templates/egress-policy
@@ -587,7 +587,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
@@ -603,7 +603,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/capi/zvirt
   to: /deckhouse/modules/040-node-manager/capi/zvirt
@@ -614,7 +614,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
@@ -625,7 +625,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/040-node-manager/capi/dynamix
   to: /deckhouse/modules/040-node-manager/capi/dynamix
@@ -636,7 +636,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/040-node-manager/capi/huaweicloud
   to: /deckhouse/modules/040-node-manager/capi/huaweicloud
@@ -647,7 +647,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
@@ -658,7 +658,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/040-node-manager/templates/monitoring.yaml
   to: /deckhouse/modules/040-node-manager/templates/monitoring.yaml
@@ -674,7 +674,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/040-node-manager/templates/podmonitor.yaml
   to: /deckhouse/modules/040-node-manager/templates/podmonitor.yaml
@@ -690,7 +690,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/110-istio/templates/alliance
   to: /deckhouse/modules/110-istio/templates/alliance
@@ -701,7 +701,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/110-istio/templates/control-plane-ee
   to: /deckhouse/modules/110-istio/templates/control-plane-ee
@@ -712,7 +712,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/110-istio/templates/federation
   to: /deckhouse/modules/110-istio/templates/federation
@@ -723,7 +723,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/110-istio/templates/multicluster
   to: /deckhouse/modules/110-istio/templates/multicluster
@@ -734,7 +734,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/110-istio/templates/validations.yaml
   to: /deckhouse/modules/110-istio/templates/validations.yaml
@@ -750,7 +750,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/110-istio/crds/doc-ru-istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
@@ -831,7 +831,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/380-metallb/templates/speaker
   to: /deckhouse/modules/380-metallb/templates/speaker
@@ -842,7 +842,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json
   to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json
@@ -863,7 +863,7 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
   to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
@@ -884,5 +884,5 @@
     - webhooks
     - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
