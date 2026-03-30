@@ -146,10 +146,12 @@ func mergeLabels(sourceLabels map[string]string, extraLabels map[string]string) 
 	return result
 }
 
+// isKeyUnderOrEqualSourceLabel checks if a label is under or equal to a source label.
 func isKeyUnderOrEqualSourceLabel(label, sourceLabel string) bool {
 	return label == sourceLabel || strings.HasPrefix(label, sourceLabel+".")
 }
 
+// IsSinkKeyRedundantBySourceLabels checks if a sink key is redundant by source labels.
 func IsSinkKeyRedundantBySourceLabels(l string, sourceType string) bool {
 	labels := sourceLabels(sourceType, true)
 	for k := range labels {

@@ -158,6 +158,8 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 		}
 
 		spec := destSpec.Spec
+		// merge add labels with extra labels and source labels, but skip redundant keys
+		// This need for destinations like Loki, where source labels are added to the event
 		spec.ExtraLabels = mergeExtraLabelsKeys(destSpec.Spec.ExtraLabels, addLabelSinkKeys, sourceType)
 
 		dest := newLogDest(destSpec.Spec.Type, destSpec.Name, spec, sourceType)
@@ -174,14 +176,13 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 	return destinations, nil
 }
 
-func mergeExtraLabelsKeys(extra map[string]string, keys []string, sourceType string) map[string]string {
-	result := make(map[string]string, len(extra)+len(keys))
+func mergeExtraLabelsKeys(extra map[string]string, addLabels []string, sourceType string) map[string]string {
+	result := make(map[string]string, len(extra)+len(addLabels))
 	maps.Copy(result, extra)
-	for _, k := range keys {
-		if loglabels.IsSinkKeyRedundantBySourceLabels(k, sourceType) {
-			continue
+	for _, label := range addLabels {
+		if !loglabels.IsSinkKeyRedundantBySourceLabels(label, sourceType) {
+			result[label] = loglabels.FieldRefTemplate(label)
 		}
-		result[k] = loglabels.FieldRefTemplate(k)
 	}
 	return result
 }

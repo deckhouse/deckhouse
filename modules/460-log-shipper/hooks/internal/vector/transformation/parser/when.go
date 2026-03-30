@@ -84,8 +84,7 @@ func ParseWhen(s string) (*WhenExpr, error) {
 			}
 		}
 	}
-	segs, err := ParseLabelPath(s)
-	if err == nil {
+	if segs, err := ParseLabelPath(s); err == nil {
 		return &WhenExpr{LeftPath: s, LeftPathSegs: segs, Op: WhenExists}, nil
 	}
 	return nil, fmt.Errorf("invalid when expression")
