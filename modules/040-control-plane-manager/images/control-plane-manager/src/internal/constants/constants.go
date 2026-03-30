@@ -47,7 +47,7 @@ const (
 	ConditionAPIServerReady         = "APIServerReady"
 	ConditionControllerManagerReady = "ControllerManagerReady"
 	ConditionSchedulerReady         = "SchedulerReady"
-	ConditionPKISynced              = "PKISynced"
+	ConditionCASynced               = "CASynced"
 	ConditionHotReloadSynced        = "HotReloadSynced"
 
 	ReasonSynced        = "Synced"

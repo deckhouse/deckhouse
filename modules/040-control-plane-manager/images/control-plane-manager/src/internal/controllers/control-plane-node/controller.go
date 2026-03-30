@@ -210,8 +210,8 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 			hasPKI:               false,
 		},
 		{
-			component:            controlplanev1alpha1.OperationComponentPKI,
-			conditionType:        constants.ConditionPKISynced,
+			component:            controlplanev1alpha1.OperationComponentCA,
+			conditionType:        constants.ConditionCASynced,
 			specConfigChecksum:   cpn.Spec.CAChecksum,
 			statusConfigChecksum: cpn.Status.CAChecksum,
 			hasPKI:               false,
@@ -322,7 +322,7 @@ func newControlPlaneOperation(
 	}
 
 	// TODO: populate DesiredCAChecksum for UpdatePKI/UpdateWithPKI.
-	// Currently CA changes go through a separate OperationComponentPKI which only writes CA files to disk.
+	// Currently CA changes go through a separate OperationComponentCA which only writes CA files to disk.
 	// To trigger pod restarts and kubeconfig renewal on CA rotation, CPN must:
 	// 1. Add specCAChecksum/statusCAChecksum to componentState
 	// 2. Treat CA change as pkiChanged for all 4 static-pod components
@@ -506,7 +506,7 @@ func setConfigChecksum(cpn *controlplanev1alpha1.ControlPlaneNode, component con
 		cpn.Status.Components.KubeScheduler.ConfigChecksum = checksum
 	case controlplanev1alpha1.OperationComponentHotReload:
 		cpn.Status.HotReloadChecksum = checksum
-	case controlplanev1alpha1.OperationComponentPKI:
+	case controlplanev1alpha1.OperationComponentCA:
 		cpn.Status.CAChecksum = checksum
 	}
 }

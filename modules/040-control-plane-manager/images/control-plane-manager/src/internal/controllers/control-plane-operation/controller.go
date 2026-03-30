@@ -214,19 +214,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 				fmt.Sprintf("configVersion mismatch: operation has %s, current is %s", op.Spec.ConfigVersion, currentConfigVersion)))
 	}
 
-	switch op.Spec.Command {
-	case controlplanev1alpha1.OperationCommandUpdate:
-		return r.reconcileUpdate(ctx, op, cpmSecret.Data, logger)
-	case controlplanev1alpha1.OperationCommandUpdatePKI:
-		return r.reconcileUpdatePKI(ctx, op, cpmSecret.Data, pkiSecret.Data, logger)
-	case controlplanev1alpha1.OperationCommandUpdateWithPKI:
-		return r.reconcileUpdateWithPKI(ctx, op, cpmSecret.Data, pkiSecret.Data, logger)
+	// TODO: Future commands RotateCA will be dispatched here
+	switch op.Spec.Component {
+	case controlplanev1alpha1.OperationComponentCA:
+		return r.reconcileCAs(ctx, op, pkiSecret.Data, logger)
+	case controlplanev1alpha1.OperationComponentHotReload:
+		return r.reconcileHotReload(ctx, op, cpmSecret.Data, logger)
 	default:
-		switch {
-		case op.Spec.Component == controlplanev1alpha1.OperationComponentPKI:
-			return r.reconcileCAs(ctx, op, pkiSecret.Data, logger) // TODO: advanced CA rotation logic
-		case op.Spec.Component == controlplanev1alpha1.OperationComponentHotReload:
-			return r.reconcileHotReload(ctx, op, cpmSecret.Data, logger)
+		switch op.Spec.Command {
+		case controlplanev1alpha1.OperationCommandUpdate:
+			return r.reconcileUpdate(ctx, op, cpmSecret.Data, logger)
+		case controlplanev1alpha1.OperationCommandUpdatePKI:
+			return r.reconcileUpdatePKI(ctx, op, cpmSecret.Data, pkiSecret.Data, logger)
+		case controlplanev1alpha1.OperationCommandUpdateWithPKI:
+			return r.reconcileUpdateWithPKI(ctx, op, cpmSecret.Data, pkiSecret.Data, logger)
 		default:
 			return reconcile.Result{}, fmt.Errorf("unknown component/command combination: %s/%s",
 				op.Spec.Component, op.Spec.Command)

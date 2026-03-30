@@ -36,7 +36,7 @@ const (
 )
 
 // OperationComponent identifies a control plane component targeted by the operation.
-// +kubebuilder:validation:Enum=Etcd;KubeAPIServer;KubeControllerManager;KubeScheduler;HotReload;PKI
+// +kubebuilder:validation:Enum=Etcd;KubeAPIServer;KubeControllerManager;KubeScheduler;HotReload;CA
 type OperationComponent string
 
 const (
@@ -45,7 +45,7 @@ const (
 	OperationComponentKubeControllerManager OperationComponent = "KubeControllerManager"
 	OperationComponentKubeScheduler         OperationComponent = "KubeScheduler"
 	OperationComponentHotReload             OperationComponent = "HotReload"
-	OperationComponentPKI                   OperationComponent = "PKI"
+	OperationComponentCA                    OperationComponent = "CA"
 )
 
 var componentRegistry = map[OperationComponent]string{
