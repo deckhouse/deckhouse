@@ -24,12 +24,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"math"
 	"math/big"
 	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
-	"github.com/pkg/errors"
 	certutil "k8s.io/client-go/util/cert"
 )
 
@@ -63,7 +63,7 @@ func NewPrivateKey(keyType constants.EncryptionAlgorithmType) (crypto.Signer, er
 
 	rsaKeySize := rsaKeySizeFromAlgorithmType(keyType)
 	if rsaKeySize == 0 {
-		return nil, errors.Errorf("cannot obtain key size from unknown RSA algorithm: %q", keyType)
+		return nil, fmt.Errorf("cannot obtain key size from unknown RSA algorithm: %q", keyType)
 	}
 	return rsa.GenerateKey(cryptorand.Reader, rsaKeySize)
 }
@@ -78,7 +78,7 @@ func NewPrivateKey(keyType constants.EncryptionAlgorithmType) (crypto.Signer, er
 // to x509.CreateCertificate, and signing with the certificate's own key.
 func NewSelfSignedCACert(cfg CertConfig, key crypto.Signer) (*x509.Certificate, error) {
 	if len(cfg.CommonName) == 0 {
-		return nil, errors.New("must specify a CommonName")
+		return nil, fmt.Errorf("must specify a CommonName")
 	}
 
 	serial, err := cryptorand.Int(cryptorand.Reader, new(big.Int).SetInt64(math.MaxInt64-1))
@@ -127,7 +127,7 @@ func NewSelfSignedCACert(cfg CertConfig, key crypto.Signer) (*x509.Certificate, 
 // "cert is newer than its CA" situations.
 func NewSignedCert(cfg CertConfig, key crypto.Signer, caCert *x509.Certificate, caKey crypto.Signer) (*x509.Certificate, error) {
 	if len(cfg.CommonName) == 0 {
-		return nil, errors.New("must specify a CommonName")
+		return nil, fmt.Errorf("must specify a CommonName")
 	}
 
 	serial, err := cryptorand.Int(cryptorand.Reader, new(big.Int).SetInt64(math.MaxInt64-1))
@@ -176,17 +176,17 @@ func NewSignedCert(cfg CertConfig, key crypto.Signer, caCert *x509.Certificate, 
 // It is a convenience wrapper around NewPrivateKey and NewSignedCert.
 func NewCertAndKey(caCert *x509.Certificate, caKey crypto.Signer, cfg CertConfig) (*x509.Certificate, crypto.Signer, error) {
 	if len(cfg.Usages) == 0 {
-		return nil, nil, errors.New("must specify at least one ExtKeyUsage")
+		return nil, nil, fmt.Errorf("must specify at least one ExtKeyUsage")
 	}
 
 	key, err := NewPrivateKey(cfg.EncryptionAlgorithm)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "unable to create private key")
+		return nil, nil, fmt.Errorf("unable to create private key: %w", err)
 	}
 
 	cert, err := NewSignedCert(cfg, key, caCert, caKey)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "unable to sign certificate")
+		return nil, nil, fmt.Errorf("unable to sign certificate: %w", err)
 	}
 
 	return cert, key, nil

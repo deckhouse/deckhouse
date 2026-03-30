@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/keyutil"
 )
@@ -73,6 +72,6 @@ func loadKey(path string) (crypto.Signer, error) {
 	case *ecdsa.PrivateKey:
 		return k, nil
 	default:
-		return nil, errors.Errorf("private key file %s is neither in RSA nor ECDSA format", path)
+		return nil, fmt.Errorf("private key file %s is neither in RSA nor ECDSA format", path)
 	}
 }
