@@ -52,7 +52,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
    * **kruise-state-metrics** — сайдкар-контейнер, отслеживающий состояние объектов API OpenKruise и предоставляющий соответствующие метрики (но не метрики работы самого kruise-controller-manager);
    * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к метрикам и состоянию контроллера. Подробно описан выше.
 
-4. **Geoproxy** (StatefulSet) — кэширующий прокси-сервер для Ingress-контроллера, предоставляющий базу данных GeoIP, скачанную у провайдера MaxMind, для быстрого доступа, а также, если кластер не имеет доступа в Интернет. Данный компонент нацелен на повышение стабильности Ingress-контроллера при работе с GeoIP-базами и предоставляет следующие возможности:
+4. **Geoproxy** (StatefulSet) — кеширующий прокси-сервер для Ingress-контроллера, предоставляющий базу данных GeoIP, скачанную у провайдера MaxMind, для быстрого доступа, а также, если кластер не имеет доступа в Интернет. Данный компонент нацелен на повышение стабильности Ingress-контроллера при работе с GeoIP-базами и предоставляет следующие возможности:
 
    * экономия лицензий MaxMind (загрузка баз происходит из одной точки, раз в сутки);
    * постоянное хранение данных (перезагрузка компонентов не приводит к обращениям на серверы MaxMind);
@@ -88,7 +88,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 С модулем взаимодействуют следующие внешние компоненты:
 
 1. **Kube-apiserver** — использует validation-вебхук для проверки создаваемых или обновляемых [Ingress-ресурсов](https://kubernetes.io/docs/concepts/services-networking/ingress/).
-2. **Prometheus-main** — собирает метрики компонентов сontroller-nginx, kruise, geoproxy, а также статистику NGINX.
+2. **Prometheus-main** — собирает метрики компонентов controller-nginx, kruise, geoproxy, а также статистику NGINX.
 3. **Балансировщик нагрузки** — балансировка HTTP/HTTPS-трафика между работоспособными экземплярами ingress-controller.
 
 ## Способы приема трафика из внешней сети
@@ -101,7 +101,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
 ## Архитектура ingress-контроллера с инлетом HostWithFailover
 
-При значении `HostWithFailover` параметра [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) кастомного ресурса IngressNginxController в кластере устанавливаются два Ingress-контроллера — основной и резервный (failover), а так же proxy-failover контроллер, координириующий переключения трафика с основного Ingress-контроллера на failover. Основной контроллер запускается в `hostNetwork`, в то время как failover контроллер запускается в `podNetwork`. Если под основного контроллера недоступнен на ноде, proxy-failover начинает проксировать трафик в под failover-контроллера, используя `PROXY PROTOCOL` для сохранения информации об IP-адресе клиента.
+При значении `HostWithFailover` параметра [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) кастомного ресурса IngressNginxController в кластере устанавливаются два Ingress-контроллера — основной и резервный (failover), а так же proxy-failover контроллер, координириующий переключения трафика с основного Ingress-контроллера на failover. Основной контроллер запускается в `hostNetwork`, в то время как failover контроллер запускается в `podNetwork`. Если под основного контроллера недоступен на узле, proxy-failover начинает проксировать трафик в под failover-контроллера, используя `PROXY PROTOCOL` для сохранения информации об IP-адресе клиента.
 
 {% alert level="info" %}
 На следующей схеме не показана архитектура основного Ingress-контроллера, а также взаимодействия модуля, поскольку они подробно описаны на схеме выше.
@@ -112,7 +112,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
 ### Компоненты failover Ingress-контроллера
 
-1. **Controller-nginx-failover** ([Advanced DaemonSet](https://openkruise.io/docs/user-manuals/advanceddaemonset)) — failover Ingress-контроллер, размещаемый на тех же узлах, что и основной. Cостав и назначение контейнеров в поде аналогичны основному Ingress-контроллеру.
+1. **Controller-nginx-failover** ([Advanced DaemonSet](https://openkruise.io/docs/user-manuals/advanceddaemonset)) — failover Ingress-контроллер, размещаемый на тех же узлах, что и основной. Состав и назначение контейнеров в поде аналогичны основному Ingress-контроллеру.
 
 2. **Proxy-failover** ([Advanced DaemonSet](https://openkruise.io/docs/user-manuals/advanceddaemonset)) — прокси-сервер.
 

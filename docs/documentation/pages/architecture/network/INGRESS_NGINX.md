@@ -143,7 +143,7 @@ Failover Ingress controller interacts with the following components:
    * Authorizes requests for metrics, statistics, and controller status checks.
    * Forwards external HTTP requests to the Kubernetes API endpoint.
 
-2. **GeoIP database source** (MaxMind provider or custom mirror): Failever Ingress controller downloads the GeoIP database.
+2. **GeoIP database source** (MaxMind provider or custom mirror): Failover Ingress controller downloads the GeoIP database.
 
 3. **Dex-authenticator of platform services and user applications**: Used to authenticate requests in dex via dex-authenticator, which acts as an OAuth2 proxy.
 
