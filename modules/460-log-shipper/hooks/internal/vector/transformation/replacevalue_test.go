@@ -106,10 +106,8 @@ if err == null && value != null {
   if err_str == null {
     parsed, perr = parse_regex(value_str, r'(?P<uid>[0-9]+)')
     if perr == null {
-      replaced, rerr = replace(value_str, r'(?P<uid>[0-9]+)', string!(parsed.uid))
-      if rerr == null {
-        . = set!(., ["msg"], replaced)
-      }
+      replaced = replace(value_str, r'(?P<uid>[0-9]+)', string!(parsed.uid))
+      . = set!(., ["msg"], replaced)
     }
   }
 }`, got)
@@ -128,10 +126,8 @@ if err == null && value != null {
   if err_str == null {
     parsed, perr = parse_regex(value_str, r'(?P<code>\w+)')
     if perr == null {
-      replaced, rerr = replace(value_str, r'(?P<code>\w+)', "ERR: " + string!(parsed.code) + " done")
-      if rerr == null {
-        . = set!(., ["line"], replaced)
-      }
+      replaced = replace(value_str, r'(?P<code>\w+)', "ERR: " + string!(parsed.code) + " done")
+      . = set!(., ["line"], replaced)
     }
   }
 }`, got)
@@ -150,10 +146,8 @@ if err == null && value != null {
   if err_str == null {
     parsed, perr = parse_regex(value_str, r'(?P<a>\w+)-(?P<b>\d+)-(?P<c>\w+)')
     if perr == null {
-      replaced, rerr = replace(value_str, r'(?P<a>\w+)-(?P<b>\d+)-(?P<c>\w+)', string!(parsed.a) + ":" + string!(parsed.b) + ":" + string!(parsed.c))
-      if rerr == null {
-        . = set!(., ["line"], replaced)
-      }
+      replaced = replace(value_str, r'(?P<a>\w+)-(?P<b>\d+)-(?P<c>\w+)', string!(parsed.a) + ":" + string!(parsed.b) + ":" + string!(parsed.c))
+      . = set!(., ["line"], replaced)
     }
   }
 }`, got)

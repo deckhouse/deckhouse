@@ -63,10 +63,8 @@ if err == null && value != null {
 {{- if .useNamedGroups }}
     parsed, perr = parse_regex(value_str, r'{{.sourceRegex}}')
     if perr == null {
-      replaced, rerr = replace(value_str, r'{{.sourceRegex}}', {{.replacementExpr}})
-      if rerr == null {
-        . = set!(., {{.pathArray}}, replaced)
-      }
+      replaced = replace(value_str, r'{{.sourceRegex}}', {{.replacementExpr}})
+      . = set!(., {{.pathArray}}, replaced)
     }
 {{- else }}
     replaced, rep_err = replace(value_str, r'{{.sourceRegex}}', {{.targetQuoted}})
@@ -92,8 +90,8 @@ b_{{.i}} = false
 if err_{{.i}} == null {
   if is_array(val_{{.i}}) {
     hit_{{.i}} = filter(array!(val_{{.i}})) -> |_idx_{{.i}}, el_{{.i}}| {
-{{- if eq .kind "regex" }}
       s_el_{{.i}}, err_el_{{.i}} = to_string(el_{{.i}})
+{{- if eq .kind "regex" }}
       if err_el_{{.i}} != null {
         false
       } else {
@@ -101,21 +99,19 @@ if err_{{.i}} == null {
         perr_{{.i}} == null
       }
 {{- else }}
-      s_el_{{.i}}, err_el_{{.i}} = to_string(el_{{.i}})
       err_el_{{.i}} == null && s_el_{{.i}} == {{.quotedValue}}
 {{- end }}
     }
     b_{{.i}} = {{ if .arrayWantAny }}length(hit_{{.i}}) > 0{{ else }}length(hit_{{.i}}) == 0{{ end }}
   } else {
-{{- if eq .kind "regex" }}
     s_{{.i}}, err_s_{{.i}} = to_string(val_{{.i}})
+{{- if eq .kind "regex" }}
     if err_s_{{.i}} == null {
       _, perr_{{.i}} = parse_regex(s_{{.i}}, r'{{.regex}}')
       b_{{.i}} = perr_{{.i}} {{.regexFindOp}} null
     }
 {{- else }}
-    s_{{.i}}, err_str_{{.i}} = to_string(val_{{.i}})
-    b_{{.i}} = err_str_{{.i}} == null && s_{{.i}} {{.cmpOp}} {{.quotedValue}}
+    b_{{.i}} = err_s_{{.i}} == null && s_{{.i}} {{.cmpOp}} {{.quotedValue}}
 {{- end }}
   }
 }
