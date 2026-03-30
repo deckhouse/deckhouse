@@ -190,10 +190,10 @@ type RuntimeValues struct {
 	Settings addonutils.Values `json:"Settings"`
 }
 
-// GetRuntimeValues returns values that are not part of schema.
+// getRuntimeValues returns values that are not part of schema.
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
-func (a *Application) GetRuntimeValues() RuntimeValues {
+func (a *Application) getRuntimeValues() RuntimeValues {
 	images := make(map[string]string, len(a.digests))
 	for name, tag := range a.digests {
 		image := fmt.Sprintf("%s/%s@%s", a.repository.Repository, a.definition.Name, tag)
@@ -217,7 +217,7 @@ func (a *Application) GetRuntimeValues() RuntimeValues {
 
 // GetValues returns runtime values in string format
 func (a *Application) GetValues() string {
-	runtimeValues := a.GetRuntimeValues()
+	runtimeValues := a.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
 	return fmt.Sprintf("Application=%s", marshalled)
