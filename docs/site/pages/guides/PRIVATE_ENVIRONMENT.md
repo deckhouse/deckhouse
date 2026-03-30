@@ -22,7 +22,7 @@ Key specifics:
   User applications (pods) do not receive these variables from the cluster configuration automatically. To give them Internet access via a proxy, you must set the environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, and, if needed, `NO_PROXY`) explicitly in manifests. Depending on corporate policy, application access may be arranged in other ways—for example, by allowing direct egress from nodes.
 * A container registry with DKP images is deployed separately with access from inside the perimeter, and the cluster is configured to use it with the required permissions.
 
-Cluster nodes are usually reached through a dedicated physical server or virtual machine—a bastion host. A proxy for access to external resources from the internal network is deployed according to your network policy and infrastructure architecture; depending on requirements, it may run on the bastion host or on a separate machine.
+Cluster nodes are usually accessed through a dedicated physical server or virtual machine called a bastion host. A proxy for access to external resources from the internal network is deployed according to your network policy and infrastructure architecture; depending on requirements, it may run on the bastion host or on a separate machine.
 A private container registry should preferably run on a separate VM or server in the internal network. Colocating the registry on the bastion host is not recommended for production. An exception may be lab or simplified stand-alone setups for limited use cases.
 
 {% alert level="info" %}
@@ -31,14 +31,14 @@ Depending on your organization’s security policies, access to external resourc
 
 Overall private environment diagram:
 
-<img src="/images/guides/install_to_private_environment/private_environment-scheme_ru.png" alt="Deckhouse Kubernetes Platform deployment diagram in a private environment">
+<img src="/images/guides/install_to_private_environment/private_environment-scheme.png" alt="Deckhouse Kubernetes Platform deployment diagram in a private environment">
 
 {% alert level="info" %}
 The diagram also shows an internal OS package repository. It is used to install packages on nodes when access to official repositories is not available even through a proxy.
 Many private environments already run internal OS package mirrors, and installation uses them—in that case, a proxy for package traffic is not required.
 A proxy server is used for other kinds of traffic:
-- pulling container images from the public DKP registry to the bastion host;
-- DKP components and nodes calling external resources (if allowed by policy);
+- pulling container images from the public DKP registry to the bastion host
+- DKP components and nodes calling external resources (if allowed by policy)
 - optionally, pod applications accessing external services.
 {% endalert %}
 
@@ -48,10 +48,10 @@ This guide describes deploying a cluster in a private environment consisting of 
 
 You will need:
 
-- a personal computer from which you run operations;
-- a dedicated physical server or virtual machine for the bastion host;
-- a dedicated physical server or virtual machine for the container registry;
-- optionally, a physical server or virtual machine for the proxy server;
+- a personal computer from which you run operations
+- a dedicated physical server or virtual machine for the bastion host
+- a dedicated physical server or virtual machine for the container registry
+- optionally, a physical server or virtual machine for the proxy server
 - two physical servers or two virtual machines for the cluster nodes.
 
 Server requirements:
@@ -230,9 +230,9 @@ cp harbor.yml.tmpl harbor.yml
 
 Update the following parameters in `harbor.yml`:
 
-* `hostname`: set to `harbor.example` (the certificates were generated for this name);
-* `certificate`: specify the path to the generated certificate in the `certs` directory (for example, `/home/ubuntu/harbor/certs/harbor.example.crt`);
-* `private_key`: specify the path to the private key (for example, `/home/ubuntu/harbor/certs/harbor.example.key`);
+* `hostname`: set to `harbor.example` (the certificates were generated for this name)
+* `certificate`: specify the path to the generated certificate in the `certs` directory (for example, `/home/ubuntu/harbor/certs/harbor.example.crt`)
+* `private_key`: specify the path to the private key (for example, `/home/ubuntu/harbor/certs/harbor.example.key`)
 * `harbor_admin_password`: set a password for accessing the web UI.
 
 Save the file.
@@ -650,7 +650,7 @@ Harbor installation is now complete! 🎉
 
 Create a project and credentials used to work with it.
 
-Open the Harbor web UI at `harbor.example`. Access to this UI from the public Internet is blocked by design; connect only from a host that can reach the internal network.
+Open the Harbor web UI at `harbor.example`. Access to this UI from the public Internet is intentionally blocked; connect only from a host that has access to the internal network.
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_main_page.png" alt="Harbor main page...">
@@ -713,7 +713,7 @@ Harbor configuration is now complete! 🎉
 The next step is to copy DKP component images from the public Deckhouse Kubernetes Platform registry to Harbor.
 
 {% alert level="info" %}
-The steps in this section require the Deckhouse CLI. Install it on the host from which you mirror images into the private registry—for this guide, the bastion host. See the [documentation](../documentation/v1/cli/d8/).
+The steps in this section require the Deckhouse CLI. Install it on the host from which you will mirror images to the private registry — in this guide, the bastion host. For installation instructions, see  [the Deckhouse CLI documentation](../documentation/v1/cli/d8/).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -765,10 +765,10 @@ d8 mirror pull \
 
 where:
 
-- `--source` — Deckhouse image registry address;
-- `<EDITION>` — DKP edition code (for example, `ee`, `se`, `se-plus`). The default is `ee` (Enterprise Edition), so `--source` may be omitted;
-- `--license` — Deckhouse Kubernetes Platform license key for authentication to the official registry;
-- `<LICENSE_KEY>` — your license key;
+- `--source` — DKP image registry address
+- `<EDITION>` — DKP edition code (for example, `ee`, `se`, `se-plus`). The default is `ee` (Enterprise Edition), so `--source` may be omitted
+- `--license` — DKP license key for authentication to the official registry
+- `<LICENSE_KEY>` — your license key
 - `/home/ubuntu/d8-bundle` — directory for downloaded image bundles (created automatically if missing).
 
 If the download is interrupted, run the command again to resume, as long as no more than 24 hours have passed since it stopped.
@@ -849,7 +849,7 @@ total 51G
 
 Push the downloaded images to the private registry. Substitute the DKP edition and Harbor robot account credentials:
 
-- `<ROBOT_ACCOUNT_NAME>` — robot account name;
+- `<ROBOT_ACCOUNT_NAME>` — robot account name
 - `<PASSWORD>` — token issued when the robot account was created.
 
 ```bash
@@ -925,7 +925,7 @@ During installation, `ContainerdV2` is used as the default container runtime on 
 - systemd version `244`;
 - support for the `erofs` kernel module.
 
-Some distributions (for example, Astra Linux 1.7.4) do not meet these requirements. Bring the node OS into compliance before installing Deckhouse Kubernetes Platform. For details, see the [documentation](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+Some distributions do not meet these requirements. Bring the node OS into compliance before installing Deckhouse Kubernetes Platform. For details, see the [documentation](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 {% endalert %}
 
 Servers intended for future cluster nodes must meet the following requirements:
@@ -935,19 +935,18 @@ Servers intended for future cluster nodes must meet the following requirements:
 - at least 60 GB of disk space on fast storage (400+ IOPS);
 - a [supported OS](../documentation/v1/reference/supported_versions.html#linux);
 - Linux kernel version `5.8` or later;
-- a **unique hostname** across all cluster servers (physical servers and virtual machines);
+- a **unique hostname** across all cluster servers (physical servers and virtual machines)
 - one of the package managers available (`apt`/`apt-get`, `yum`, or `rpm`).
 
-  **Note:** on RED OS, `yum` and `which` may be missing by default—install them beforehand;
-- Python installed;
-- access to the proxying registry or to the private container registry that holds Deckhouse images;
-- access to the standard OS package repositories for your distribution (via a proxy or an internal package mirror);
-- SSH access from the bastion host using a key;
-- network access from the bastion host on port <code>22/TCP</code>;
+- Python installed
+- access to the proxying registry or to the private container registry that holds Deckhouse images
+- access to the standard OS package repositories for your distribution (via a proxy or an internal package mirror)
+- SSH access from the bastion host using a key
+- network access from the bastion host on port `22/TCP`
 - no container runtime packages installed on the node (for example, no containerd or Docker).
 
 {% alert level="warning" %}
-For proper resource sizing, read the [production preparation guide](../guides/production.html) and the [hardware requirements](../guides/hardware-requirements.html) for node roles, node counts, and sizing based on workload and operations.
+For proper resource sizing, read [the production preparation guide](../guides/production.html) and [the hardware requirements](../guides/hardware-requirements.html) for node roles, node counts, and sizing based on workload and operations.
 {% endalert %}
 
 ### Mapping `harbor.example` to the Harbor VM
@@ -1028,7 +1027,7 @@ If the login succeeds, the user has been created correctly.
 ### Creating a user for the worker node
 
 {% alert level="info" %}
-The following prepares the node for Cluster API Provider Static (CAPS). If you prefer to add static nodes manually with the bootstrap script, you can skip this subsection and the later CAPS steps: create a `Static` NodeGroup, take the script from the Secret, and run it on the server as described in the [documentation (manual method)](../documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html).
+The following prepares the node for Cluster API Provider Static (CAPS). If you prefer to add static nodes manually with the bootstrap script, you can skip this subsection and the later CAPS steps: create a `Static` NodeGroup, take the script from the Secret, and run it on the server as described in [the documentation (manual method)](../documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html).
 {% endalert %}
 
 On the **master node**, generate an SSH key with an empty passphrase:
@@ -1052,7 +1051,7 @@ chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
 
-{% offtopic title="If you are using CentOS, Rocky Linux, ALT Linux, ROSA Server, RED OS, or MOS OS..." %}
+{% offtopic title="If you are using CentOS or Rocky Linux..." %}
 On RHEL-based systems, add the `caps` user to the `wheel` group:
 
 ```console
@@ -1121,7 +1120,7 @@ You should see a container named `squid` in the list.
 
 {% endofftopic %}
 
-* In `ClusterConfiguration`, set proxy parameters **if** the environment uses a proxy for external access:
+* In ClusterConfiguration, set proxy parameters **if** the environment uses a proxy for external access:
 
   ```yaml
   # Proxy server settings.
@@ -1132,7 +1131,7 @@ You should see a container named `squid` in the list.
   ```
 
   Here you specify:
-  * HTTP and HTTPS proxy addresses;
+  * HTTP and HTTPS proxy addresses
   * hostnames and IP addresses that **must not** use the proxy (internal names and internal IPs of your servers).
 
 * In `InitConfiguration`, add registry access settings:
@@ -1174,7 +1173,7 @@ You should see a container named `squid` in the list.
           clusterIssuerName: selfsigned
   ```
 
-  The `settings.modules.https` block in ModuleConfig/global supports several [modes](../documentation/v1/reference/api/global.html): `CertManager` (certificate from the chosen `ClusterIssuer`—not necessarily `selfsigned`; can be corporate CA, HashiCorp Vault, Venafi, etc., see the [certificate overview](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` (TLS Secret in `d8-system`); with an external TLS terminator, `OnlyInURI` is possible. Using `selfsigned` together with disabling Let's Encrypt below is a simple pattern for isolated environments without ACME.
+  The `settings.modules.https` block in ModuleConfig/global supports several [modes](../documentation/v1/reference/api/global.html): `CertManager` (certificate from the chosen `ClusterIssuer`— not necessarily `selfsigned`; can be corporate CA, HashiCorp Vault, Venafi, etc., see [the certificate overview](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` (TLS Secret in `d8-system`); with an external TLS terminator, `OnlyInURI` is possible. Using `selfsigned` together with disabling Let's Encrypt below is a simple pattern for isolated environments without ACME.
 
 * In the `user-authn` ModuleConfig, set [dexCAMode](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) to `FromIngressSecret`:
 
@@ -1184,7 +1183,7 @@ You should see a container named `squid` in the list.
       dexCAMode: FromIngressSecret
   ```
 
-* Enable [cert-manager](/modules/cert-manager/) and disable Let's Encrypt:
+* Enable [`cert-manager`](/modules/cert-manager/) and disable Let's Encrypt:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -1198,7 +1197,7 @@ You should see a container named `squid` in the list.
       disableLetsencrypt: true
   ```
 
-* In StaticClusterConfiguration, set [internalNetworkCIDRs](../documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs) to the subnet of the nodes’ internal IPs. For example:
+* In StaticClusterConfiguration, set [`internalNetworkCIDRs`](../documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs) to the subnet of the nodes’ internal IPs. For example:
 
   ```yaml
   internalNetworkCIDRs:
@@ -1588,7 +1587,7 @@ sudo -i d8 k create -f $PWD/user.yml
 
 ## Configuring DNS records
 
-To reach the cluster web UIs, make the hostnames below resolve to the master node’s internal IP address. Names must follow the [publicDomainTemplate](../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) you configured (here, `%s.test.local`). Replace `<MASTER_IP>` with the master’s internal IP before running:
+To reach the cluster web UIs, make the hostnames below resolve to the master node’s internal IP address. Names must follow the [`publicDomainTemplate`](../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) you configured (here, `%s.test.local`). Replace `<MASTER_IP>` with the master’s internal IP before running:
 
 ```text
 export PUBLIC_IP="<MASTER_IP>"
@@ -1629,9 +1628,9 @@ Everything is installed and running. You can use the web UIs to manage the clust
 
 ### Deploying your first application
 
-* **CI/CD access** — create a ServiceAccount for deployments and grant RBAC to obtain a kubeconfig for automation. See [CI/CD access](../documentation/v1/admin/configuration/access/authorization/ci_cd.html). URL: **kubeconfig.test.local**.
-* **Routing traffic to an app** — create a Service and Ingress. See [Ingress and incoming traffic](../documentation/v1/user/network/ingress/).
-* **Application monitoring** — add annotations `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` to the Service. See [Application and infrastructure monitoring](../documentation/v1/user/monitoring/).
+* **CI/CD access** — create a ServiceAccount for deployments and grant RBAC to obtain a kubeconfig for automation. See [CI/CD access](../documentation/v1/admin/configuration/access/authorization/ci_cd.html) section. URL: **kubeconfig.test.local**.
+* **Routing traffic to an app** — create a Service and Ingress. See [Ingress and incoming traffic](../documentation/v1/user/network/ingress/) section.
+* **Application monitoring** — add annotations `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` to the Service. See [Application and infrastructure monitoring](../documentation/v1/user/monitoring/) section.
 
 ### Learn more
 
