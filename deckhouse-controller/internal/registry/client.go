@@ -19,8 +19,9 @@ package registry
 import (
 	"context"
 
-	"github.com/deckhouse/deckhouse/pkg/registry"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+
+	"github.com/deckhouse/deckhouse/pkg/registry"
 )
 
 type Interface interface {
