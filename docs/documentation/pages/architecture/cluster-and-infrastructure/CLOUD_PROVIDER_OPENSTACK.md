@@ -52,7 +52,7 @@ The module consists of the following components:
 
 3. **CSI driver (openstack)**: It is an implementation of the CSI driver for OpenStack. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../infrastructure/csi-driver.html).
 
-   CSI driver (openstack) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter) sidecar container.
+   CSI driver (openstack) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) sidecar container.
 
 ## Module interactions
 
