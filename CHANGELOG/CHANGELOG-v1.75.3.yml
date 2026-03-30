@@ -1,0 +1,34 @@
+common:
+  fixes:
+    - summary: Fixed CVE-2026-33186 in the CoreDNS image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18656
+      impact: CoreDNS pods will undergo a rolling restart.
+deckhouse-controller:
+  fixes:
+    - summary: revert nelm to helm
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18779
+dhctl:
+  fixes:
+    - summary: Skip tmp lock for exporter and auto-converger.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18736
+docs:
+  features:
+    - summary: Add cloud-provider-yandex module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18692
+node-local-dns:
+  fixes:
+    - summary: Fix werf manifest
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18738
+    - summary: Adapt node-local-dns for air-gapped environments.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18643
+node-manager:
+  fixes:
+    - summary: >-
+        deploy capi controller and webhooks before basic resources to prevent race condition during
+        upgrades.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18754
+registrypackages:
+  fixes:
+    - summary: Added vex with CVE-2026-33186.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18680
+
