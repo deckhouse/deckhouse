@@ -128,18 +128,14 @@ jobs:
           fetch-depth: 0
       - name: Cherry pick
         id: cherry_pick_pr
-        uses: deckhouse/backport-action@fix-backport-milestones
+        uses: deckhouse/backport-action@v1.1.0
         env:
           RELEASE_BRANCH: ${{ steps.prepare.outputs.release_branch }}
           COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
           SOURCE_PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
         with:
-<<<<<<< HEAD
-          token: ${{ secrets.GITHUB_TOKEN }}
-=======
           token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
->>>>>>> 625f3c3dd7 (Change github job token to changelog token (#18785))
           branch: ${{ env.RELEASE_BRANCH }}
           commit: ${{ env.COMMIT_SHA }}
           labels: auto,backported
