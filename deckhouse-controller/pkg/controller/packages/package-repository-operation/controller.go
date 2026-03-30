@@ -535,7 +535,7 @@ func (r *reconciler) dequeuePackageWithError(ctx context.Context, operation *v1a
 	operation.Status.Packages.Failed = append(operation.Status.Packages.Failed, v1alpha1.PackageRepositoryOperationStatusFailedPackage{
 		Name: packageName,
 		Errors: []v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
-			{Error: processErr.Error()},
+			{Message: processErr.Error()},
 		},
 	})
 
@@ -565,7 +565,7 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, operation *v1
 	for _, fv := range result.Failed {
 		failedList = append(failedList, v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
 			Version: fv.Name,
-			Error:   fv.Error,
+			Message: fv.Error,
 		})
 	}
 	if len(failedList) > 0 {
