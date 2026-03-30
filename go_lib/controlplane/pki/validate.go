@@ -17,18 +17,22 @@ limitations under the License.
 package pki
 
 import (
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // validateCert checks whether an existing certificate is still fit for use
 // given the desired configuration. It returns a non-nil error if:
-//   - the certificate expires within the next 30 days, or
-//   - the certificate's Subject or SANs no longer match the desired config.
+//   - the certificate expires within the next 30 days
+//   - the certificate's Subject or SANs no longer match the desired config
+//   - the encryption algorithm no longer match the desired config
 func validateCert(oldCert *x509.Certificate, newCertCfg certConfig) error {
 	if certificateExpiresSoon(oldCert, 30*24*time.Hour) {
 		return fmt.Errorf("expired at %s", oldCert.NotAfter.UTC().Format(time.RFC3339))
@@ -36,6 +40,10 @@ func validateCert(oldCert *x509.Certificate, newCertCfg certConfig) error {
 
 	if !certificateSubjectAndSansIsEqual(oldCert, newCertCfg) {
 		return fmt.Errorf("subject or SANs mismatch")
+	}
+
+	if !certificateEncryptionAlgoIsEqual(oldCert, newCertCfg) {
+		return fmt.Errorf("encryption algorithm mismatch")
 	}
 
 	return nil
@@ -48,7 +56,7 @@ func certificateExpiresSoon(cert *x509.Certificate, durationLeft time.Duration) 
 // certificateSubjectAndSansIsEqual checks that the existing certificate contains
 // at least the Subject fields and SANs required by the desired configuration.
 //
-// The check is intentionally one-directional (subset, not equality):
+// The SAN check is intentionally one-directional (subset, not equality):
 // the existing cert may have more SANs than currently configured, and that is fine —
 // extra SANs do not break anything. What matters is that every SAN that is now required
 // is present in the cert. The same logic applies to Organization.
@@ -79,4 +87,36 @@ func certificateSubjectAndSansIsEqual(oldCert *x509.Certificate, newCertCfg cert
 	}
 
 	return true
+}
+
+func certificateEncryptionAlgoIsEqual(oldCert *x509.Certificate, newCertCfg certConfig) bool {
+
+	if detectEncryptionAlgorithm(oldCert) != newCertCfg.EncryptionAlgorithm {
+		return false
+	}
+
+	return true
+}
+
+func detectEncryptionAlgorithm(cert *x509.Certificate) constants.EncryptionAlgorithmType {
+	switch pub := cert.PublicKey.(type) {
+	case *rsa.PublicKey:
+		switch pub.N.BitLen() {
+		case 2048:
+			return constants.EncryptionAlgorithmRSA2048
+		case 3072:
+			return constants.EncryptionAlgorithmRSA3072
+		case 4096:
+			return constants.EncryptionAlgorithmRSA4096
+		}
+	case *ecdsa.PublicKey:
+		switch pub.Curve.Params().BitSize {
+		case 256:
+			return constants.EncryptionAlgorithmECDSAP256
+		case 384:
+			return constants.EncryptionAlgorithmECDSAP384
+		}
+	}
+
+	return ""
 }
