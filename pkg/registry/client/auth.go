@@ -40,6 +40,17 @@ func authFromDockerConfig(repo, dockerCfgBase64 string) (authn.Authenticator, er
 	}, nil
 }
 
+func AuthFromCredentials(login, password string) (authn.Authenticator, error) {
+	if login == "" {
+		return authn.Anonymous, nil
+	}
+
+	return &authn.Basic{
+		Username: login,
+		Password: password,
+	}, nil
+}
+
 // dockerConfig represents the structure of a Docker config JSON
 type dockerConfig struct {
 	Auths map[string]authn.AuthConfig `json:"auths"`

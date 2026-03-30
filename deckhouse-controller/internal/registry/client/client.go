@@ -21,21 +21,36 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"github.com/deckhouse/deckhouse/pkg/registry"
+	registryClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
 const (
 	tracerName = "registry-client"
 )
 
-type Client struct {
-	wrapped registry.Client
+type Interface interface {
+	WithSegment(segments ...string) Interface
+	GetRegistry() string
+	GetDigest(ctx context.Context, ref string) (*v1.Hash, error)
+	GetManifest(ctx context.Context, ref string) (registry.ManifestResult, error)
+	GetImageConfig(ctx context.Context, ref string) (*v1.ConfigFile, error)
+	CheckImageExists(ctx context.Context, ref string) error
+	GetImage(ctx context.Context, ref string, opts ...registry.ImageGetOption) (registry.Image, error)
+	PushImage(ctx context.Context, ref string, img v1.Image, opts ...registry.ImagePushOption) error
+	ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error)
+	ListRepositories(ctx context.Context, opts ...registry.ListRepositoriesOption) ([]string, error)
 }
 
-func NewClient(wrapped registry.Client) *Client {
+// Client is a wrapper around the underlying registry client, adding tracing support.
+type Client struct {
+	wrapped *registryClient.Client
+}
+
+func NewClient(wrapped *registryClient.Client) *Client {
 	return &Client{wrapped: wrapped}
 }
 
-func (c *Client) WithSegment(segments ...string) registry.Client {
+func (c *Client) WithSegment(segments ...string) Interface {
 	return &Client{wrapped: c.wrapped.WithSegment(segments...)}
 }
 
