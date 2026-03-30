@@ -31,6 +31,8 @@ type capiMachine struct {
 	machine *capi.Machine
 }
 
+var _ Machine = (*capiMachine)(nil)
+
 func (m *capiMachine) GetName() string {
 	return m.machine.GetName()
 }

@@ -45,6 +45,8 @@ type mcmMachine struct {
 	machine *mcmv1alpha1.Machine
 }
 
+var _ Machine = (*mcmMachine)(nil)
+
 func (m *mcmMachine) GetName() string {
 	return m.machine.GetName()
 }

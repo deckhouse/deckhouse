@@ -26,14 +26,11 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
 )
 
-// InstanceService provides reconcile logic for Instance objects.
-// It is stateless (no Setup/Reconcile loop) and is called by the top-level controller.
 type InstanceService struct {
 	client         client.Client
 	machineFactory machine.MachineFactory
 }
 
-// NewInstanceService creates an InstanceService with the given client and default machine factory.
 func NewInstanceService(c client.Client) *InstanceService {
 	return &InstanceService{
 		client:         c,
@@ -41,7 +38,6 @@ func NewInstanceService(c client.Client) *InstanceService {
 	}
 }
 
-// ReconcileHeartbeat refreshes the BashibleReady condition heartbeat based on elapsed time.
 func (s *InstanceService) ReconcileHeartbeat(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,
@@ -52,7 +48,6 @@ func (s *InstanceService) ReconcileHeartbeat(
 	return false, ctrl.Result{}, nil
 }
 
-// ReconcileBashibleStatus derives BashibleStatus and Message from current conditions.
 func (s *InstanceService) ReconcileBashibleStatus(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,
@@ -63,7 +58,6 @@ func (s *InstanceService) ReconcileBashibleStatus(
 	return false, ctrl.Result{}, nil
 }
 
-// ReconcileEnsureFinalizer ensures the controller finalizer is present on the Instance.
 func (s *InstanceService) ReconcileEnsureFinalizer(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,
@@ -75,7 +69,6 @@ func (s *InstanceService) ReconcileEnsureFinalizer(
 	return false, ctrl.Result{}, nil
 }
 
-// ReconcileSourceExistence deletes the Instance when both linked Machine and Node are gone.
 func (s *InstanceService) ReconcileSourceExistence(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,

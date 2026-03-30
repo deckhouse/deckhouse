@@ -33,57 +33,14 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
 )
 
-// MCMMachineService contains the reconcile logic for linking an MCM Machine to an Instance.
 type MCMMachineService struct {
 	machineFactory machine.MachineFactory
 }
 
-// NewMCMMachineService creates an MCMMachineService with the default machine factory.
 func NewMCMMachineService() *MCMMachineService {
 	return &MCMMachineService{
 		machineFactory: machine.NewMachineFactory(),
 	}
-}
-
-// ReconcileMachine fetches the MCM Machine by name and reconciles the linked Instance.
-// Returns (deleted, error): deleted=true means Instance was deleted because Machine is gone.
-func (s *MCMMachineService) ReconcileMachine(ctx context.Context, c client.Client, name types.NamespacedName) (bool, error) {
-	logger := log.FromContext(ctx).WithValues("mcmMachine", name.String())
-	logger.V(4).Info("tick", "op", "mcm.reconcile.start")
-
-	mcmMachine := &mcmv1alpha1.Machine{}
-	if err := c.Get(ctx, name, mcmMachine); err != nil {
-		if client.IgnoreNotFound(err) != nil {
-			return false, err
-		}
-		// Machine gone — delete linked Instance
-		deleted, err := deleteInstanceIfExists(ctx, c, name.Name)
-		if err != nil {
-			return false, err
-		}
-		logger.V(1).Info("machine not found, linked instance delete handled", "instance", name.Name, "deleted", deleted)
-		return deleted, nil
-	}
-
-	machineObj, err := s.machineFactory.NewMachine(mcmMachine)
-	if err != nil {
-		return false, fmt.Errorf("build reconcile data for mcm machine %q: %w", mcmMachine.Name, err)
-	}
-
-	data := mcmMachineReconcileData{
-		mcmMachine:    mcmMachine,
-		instanceName:  machineObj.GetName(),
-		machineRef:    machineObj.GetMachineRef(),
-		machineStatus: machineObj.GetStatus(),
-		nodeGroup:     machineObj.GetNodeGroup(),
-	}
-
-	if err := reconcileLinkedInstance(ctx, c, data); err != nil {
-		return false, err
-	}
-
-	logger.V(1).Info("reconcile complete", "status", data.machineStatus, "nodeGroup", data.nodeGroup)
-	return false, nil
 }
 
 func (s *MCMMachineService) EnsureInstanceFromMachine(
@@ -115,7 +72,6 @@ func (s *MCMMachineService) EnsureInstanceFromMachine(
 	return true, nil
 }
 
-// mcmMachineReconcileData holds computed data for one reconcile pass.
 type mcmMachineReconcileData struct {
 	mcmMachine    *mcmv1alpha1.Machine
 	instanceName  string
@@ -215,25 +171,6 @@ func ensureMachineDeletionForDeletingInstance(
 		}
 		return false, fmt.Errorf("delete mcm machine %q for deleting instance %q: %w", mcmMachine.Name, instance.Name, err)
 	}
-	return true, nil
-}
-
-func deleteInstanceIfExists(ctx context.Context, c client.Client, name string) (bool, error) {
-	log.FromContext(ctx).V(4).Info("tick", "op", "mcm.instance.delete")
-	instance := &deckhousev1alpha2.Instance{ObjectMeta: metav1.ObjectMeta{Name: name}}
-	if err := c.Delete(ctx, instance); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return false, nil
-		}
-		return false, fmt.Errorf("delete instance %q: %w", name, err)
-	}
-	log.FromContext(ctx).V(1).Info(
-		"instance deleted",
-		"instance", name,
-		"deletedBy", "mcm-machine-controller",
-		"reason", "linked-machine-not-found",
-	)
-
 	return true, nil
 }
 

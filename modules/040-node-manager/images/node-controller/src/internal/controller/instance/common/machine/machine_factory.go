@@ -30,6 +30,8 @@ import (
 
 type machineFactory struct{}
 
+var _ MachineFactory = (*machineFactory)(nil)
+
 func NewMachineFactory() MachineFactory {
 	return &machineFactory{}
 }

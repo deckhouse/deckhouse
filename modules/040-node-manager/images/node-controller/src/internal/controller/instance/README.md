@@ -89,32 +89,32 @@ InstanceController.Reconcile(ctx, req)
         ▼
  r.Client.Get(req.Name, &Instance)
         │
-        ├── NotFound ──────────────────────────────────────────────────────────┐
-        │                                                                       │
-        │                                              reconcileCreateFromSource│
-        │                                                       │               │
-        │                                  capiService.ReconcileMachine(name)   │
-        │                                          │                            │
-        │                                  CAPI Machine GET ──── NotFound       │
-        │                                          │ found                      │
-        │                                  EnsureInstanceExists ← return        │
-        │                                                  ↓ NotFound           │
-        │                                  mcmService.ReconcileMachine(name)    │
-        │                                          │                            │
-        │                                  MCM Machine GET ──── NotFound        │
-        │                                          │ found                      │
-        │                                  EnsureInstanceExists  ← return       │
-        │                                                  ↓ NotFound           │
-        │                                  node.ReconcileNode(name)             │
-        │                                          │                            │
-        │                                  Node GET ───── NotFound → return     │
-        │                                          │ found                      │
-        │                                  IsStaticNode?                        │
-        │                                          │ yes                        │
-        │                                  EnsureInstanceExists                 │
-        │                                  SetInstancePhase(Running) ← return   │
-        │                                                                       │
-        └── Found ─────────────────────────────────────────────────────────────┘
+        ├── NotFound ────────────────────────────────────────────────────────┐
+        │                                                                    │
+        │  reconcileCreateFromSource                                         │
+        │      │                                                             │
+        │      ├─ capiService.EnsureInstanceFromMachine(name)                │
+        │      │       │                                                     │
+        │      │       ├─ CAPI Machine GET ──── NotFound                     │
+        │      │       │                      found                          │
+        │      │       └─ EnsureInstanceExists ← return                      │
+        │      │                                                             │
+        │      ├─ mcmService.EnsureInstanceFromMachine(name)                 │
+        │      │       │                                                     │
+        │      │       ├─ MCM Machine GET ───── NotFound                     │
+        │      │       │                      found                          │
+        │      │       └─ EnsureInstanceExists ← return                      │
+        │      │                                                             │
+        │      └─ node.ReconcileNode(name)                                   │
+        │              │                                                     │
+        │              ├─ Node GET ───────── NotFound → return               │
+        │              │                   found                             │
+        │              ├─ IsStaticNode?                                      │
+        │              │            yes                                      │
+        │              ├─ EnsureInstanceExists                               │
+        │              └─ SetInstancePhase(Running) ← return                 │
+        │                                                                    │
+        └── Found ───────────────────────────────────────────────────────────┘
                 │
                 ▼
          ┌─────────────────────────────────────────────────────────────┐
@@ -124,7 +124,8 @@ InstanceController.Reconcile(ctx, req)
          │    elapsed >= 10m                → HeartBeat                 │
          │    WaitingApproval + elapsed >= 20m → WaitingApproval        │
          │    WaitingDisruption + elapsed >= 20m → WaitingDisruption    │
-         │  SSA-patch field owner: node-controller-instance-bashible-heartbeat │
+         │  SSA-patch field owner:                                     │
+         │    node-controller-instance-bashible-heartbeat              │
          └─────────────────────────────────────────────────────────────┘
                 │
                 ▼
@@ -132,12 +133,14 @@ InstanceController.Reconcile(ctx, req)
          │  STEP 2  ReconcileBashibleStatus                             │
          │  Derives Instance.Status.BashibleStatus from conditions:     │
          │    WaitingDisruptionApproval=True → WaitingApproval          │
-         │    WaitingApproval=True + UpdateApprovalTimeout → WaitingApproval │
+         │    WaitingApproval=True + UpdateApprovalTimeout             │
+         │      → WaitingApproval                                     │
          │    BashibleReady=True  → Ready                               │
          │    BashibleReady=False → Error                               │
          │    default             → Unknown                             │
          │  Also derives Instance.Status.Message from condition msgs.   │
-         │  SSA-patch field owner: node-controller-instance-bashible-status │
+         │  SSA-patch field owner:                                     │
+         │    node-controller-instance-bashible-status                 │
          └─────────────────────────────────────────────────────────────┘
                 │
                 ▼
@@ -168,8 +171,8 @@ InstanceController.Reconcile(ctx, req)
          │    machine.GetStatus() → MachineStatus{Phase, MachineStatus, │
          │                                        MachineReadyCondition}│
          │    SyncInstanceStatus:                                        │
-         │      compare current vs desired (preserve LastTransitionTime │
-         │      when type+status unchanged)                              │
+         │      compare current vs desired                              │
+         │      preserve LastTransitionTime when type+status unchanged  │
          │      if changed → SSA-patch field owner:                     │
          │        node-controller-instancestatus                        │
          │  If MachineRef == nil (static node) → skip                   │
@@ -179,9 +182,11 @@ InstanceController.Reconcile(ctx, req)
          ┌─────────────────────────────────────────────────────────────┐
          │  STEP 6  ReconcileSourceExistence                            │
          │  Garbage-collect orphaned instances:                         │
-         │    linkedMachineExists(MachineRef) → machineExists/NotFound  │
+         │    linkedMachineExists(MachineRef)                           │
+         │      → machineExists/NotFound                                │
          │    if machine exists → skip                                  │
-         │    linkedNodeExists(NodeRef.Name)  → nodeExists/NotFound     │
+         │    linkedNodeExists(NodeRef.Name)                            │
+         │      → nodeExists/NotFound                                   │
          │    if node exists   → skip                                   │
          │    if BOTH confirmed NotFound:                               │
          │      removeInstanceFinalizer (safety: no machine deletion)   │

@@ -33,59 +33,14 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
 )
 
-// CAPIMachineService contains the reconcile logic for linking a CAPI Machine to an Instance.
-// It is stateless and receives a client on each call.
 type CAPIMachineService struct {
 	machineFactory machine.MachineFactory
 }
 
-// NewCAPIMachineService creates a CAPIMachineService with the default machine factory.
 func NewCAPIMachineService() *CAPIMachineService {
 	return &CAPIMachineService{
 		machineFactory: machine.NewMachineFactory(),
 	}
-}
-
-// ReconcileMachine fetches the CAPI Machine by name and reconciles the linked Instance.
-// Returns (deleted, error): deleted=true means Instance was deleted because Machine is gone.
-func (s *CAPIMachineService) ReconcileMachine(ctx context.Context, c client.Client, name types.NamespacedName) (bool, error) {
-	logger := log.FromContext(ctx).WithValues("capiMachine", name.String())
-	logger.V(4).Info("tick", "op", "capi.reconcile.start")
-
-	capiMachine := &capiv1beta2.Machine{}
-	if err := c.Get(ctx, name, capiMachine); err != nil {
-		if client.IgnoreNotFound(err) != nil {
-			return false, err
-		}
-		// Machine gone — delete linked Instance
-		deleted, err := deleteInstanceIfExists(ctx, c, name.Name)
-		if err != nil {
-			return false, err
-		}
-		logger.V(1).Info("machine not found, linked instance delete handled", "instance", name.Name, "deleted", deleted)
-		return deleted, nil
-	}
-
-	machineObj, err := s.machineFactory.NewMachine(capiMachine)
-	if err != nil {
-		return false, fmt.Errorf("build reconcile data for capi machine %q: %w", capiMachine.Name, err)
-	}
-
-	data := capiMachineReconcileData{
-		capiMachine:   capiMachine,
-		instanceName:  machineObj.GetName(),
-		nodeName:      machineObj.GetNodeName(),
-		machineRef:    machineObj.GetMachineRef(),
-		machineStatus: machineObj.GetStatus(),
-		nodeGroup:     machineObj.GetNodeGroup(),
-	}
-
-	if err := reconcileLinkedInstance(ctx, c, data); err != nil {
-		return false, err
-	}
-
-	logger.V(1).Info("reconcile complete", "status", data.machineStatus, "nodeGroup", data.nodeGroup)
-	return false, nil
 }
 
 func (s *CAPIMachineService) EnsureInstanceFromMachine(
@@ -120,7 +75,6 @@ func (s *CAPIMachineService) EnsureInstanceFromMachine(
 	return true, nil
 }
 
-// capiMachineReconcileData holds computed data for one reconcile pass.
 type capiMachineReconcileData struct {
 	capiMachine   *capiv1beta2.Machine
 	instanceName  string
@@ -227,25 +181,6 @@ func ensureMachineDeletionForDeletingInstance(
 		}
 		return false, fmt.Errorf("delete capi machine %q for deleting instance %q: %w", capiMachine.Name, instance.Name, err)
 	}
-	return true, nil
-}
-
-func deleteInstanceIfExists(ctx context.Context, c client.Client, name string) (bool, error) {
-	log.FromContext(ctx).V(4).Info("tick", "op", "capi.instance.delete")
-	instance := &deckhousev1alpha2.Instance{ObjectMeta: metav1.ObjectMeta{Name: name}}
-	if err := c.Delete(ctx, instance); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return false, nil
-		}
-		return false, fmt.Errorf("delete instance %q: %w", name, err)
-	}
-	log.FromContext(ctx).V(1).Info(
-		"instance deleted",
-		"instance", name,
-		"deletedBy", "capi-machine-controller",
-		"reason", "linked-machine-not-found",
-	)
-
 	return true, nil
 }
 

@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -403,6 +404,36 @@ func TestReconcileBashibleStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReconcileConflictRequeues(t *testing.T) {
+	t.Parallel()
+
+	instance := existingInstanceWithFinalizer("conflict-machine-status", deckhousev1alpha2.InstanceSpec{
+		MachineRef: &deckhousev1alpha2.MachineRef{
+			Kind:       "Machine",
+			APIVersion: capiv1beta2.GroupVersion.String(),
+			Name:       "conflict-machine-status",
+			Namespace:  machine.MachineNamespace,
+		},
+	}, deckhousev1alpha2.InstancePhaseUnknown)
+
+	conflictErr := apierrors.NewConflict(
+		schema.GroupResource{Group: deckhousev1alpha2.GroupVersion.Group, Resource: "instances"},
+		instance.Name,
+		fmt.Errorf("simulated conflict"),
+	)
+
+	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
+	controller, _ := newTestInstanceController(t, func(base client.WithWatch) client.Client {
+		return conflictOnInstanceStatusPatchClient{Client: base, err: conflictErr}
+	}, capiMachineWithStatus("conflict-machine-status", capiv1beta2.MachineStatus{
+		Phase: string(capiv1beta2.MachinePhaseRunning),
+	}), instance)
+
+	result, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: instance.Name}})
+	require.NoError(t, err)
+	require.Equal(t, ctrl.Result{Requeue: true}, result)
 }
 
 func TestReconcileCreateFromSource(t *testing.T) {
@@ -857,4 +888,31 @@ func (c *switchingMCMGetClient) Get(ctx context.Context, key client.ObjectKey, o
 
 	machineObj.Status = *c.status
 	return nil
+}
+
+type conflictOnInstanceStatusPatchClient struct {
+	client.Client
+	err error
+}
+
+func (c conflictOnInstanceStatusPatchClient) Status() client.SubResourceWriter {
+	return conflictOnStatusWriter{SubResourceWriter: c.Client.Status(), err: c.err}
+}
+
+type conflictOnStatusWriter struct {
+	client.SubResourceWriter
+	err error
+}
+
+func (w conflictOnStatusWriter) Patch(
+	ctx context.Context,
+	obj client.Object,
+	patch client.Patch,
+	opts ...client.SubResourcePatchOption,
+) error {
+	if _, ok := obj.(*deckhousev1alpha2.Instance); ok {
+		return w.err
+	}
+
+	return w.SubResourceWriter.Patch(ctx, obj, patch, opts...)
 }
