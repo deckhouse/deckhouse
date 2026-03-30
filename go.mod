@@ -57,7 +57,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-20260330154455-dcdc1ded253e
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260330123855-eae1a3478bff

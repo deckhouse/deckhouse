@@ -10,7 +10,7 @@ toolchain go1.24.2
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/sprig/v3 v3.2.0
-	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-20260330154455-dcdc1ded253e
 	github.com/flant/kube-client v0.26.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0

@@ -5,7 +5,7 @@ go 1.25.0
 replace github.com/deckhouse/deckhouse/go_lib/registry => ../../../../../go_lib/registry
 
 require (
-	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-20260330154455-dcdc1ded253e
 	github.com/go-logr/logr v1.4.3
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	k8s.io/api v0.35.0
