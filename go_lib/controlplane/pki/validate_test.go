@@ -31,7 +31,10 @@ import (
 
 func TestValidateCert_PassesValid(t *testing.T) {
 	cert := makeCertForValidation(t, certutil.Config{CommonName: "test"})
-	err := validateCert(cert, certConfig{Config: certutil.Config{CommonName: "test"}})
+	err := validateCert(cert, certConfig{
+		Config:              certutil.Config{CommonName: "test"},
+		EncryptionAlgorithm: constants.EncryptionAlgorithmRSA2048,
+	})
 	assert.NoError(t, err)
 }
 
@@ -48,6 +51,16 @@ func TestValidateCert_FailsSubjectMismatch(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestValidateCert_FailsEncryptionAlgorithmMismatch(t *testing.T) {
+	// cert with RSA-2048
+	cert := makeCertForValidation(t, certutil.Config{CommonName: "test"})
+	err := validateCert(cert, certConfig{
+		Config:              certutil.Config{CommonName: "test"},
+		EncryptionAlgorithm: constants.EncryptionAlgorithmECDSAP384,
+	})
+	assert.Error(t, err)
+}
+
 func TestCertificateExpiresSoon(t *testing.T) {
 	expiresIn10Days := makeCertExpiringIn(t, 10*24*time.Hour)
 	expiresIn60Days := makeCertExpiringIn(t, 60*24*time.Hour)
@@ -59,7 +72,7 @@ func TestCertificateExpiresSoon(t *testing.T) {
 }
 
 func TestCertificateSubjectAndSansIsEqual(t *testing.T) {
-	// Base certificate: CN=base-cn, Org=org1, DNS=example.com+foo.example.com, IP=10.0.0.1
+	// Base certificate: CN=base-cn, Org=org1, DNS=example.com+foo.example.com, IP=10.0.0.1, RSA-2048
 	baseCert := makeCertForValidation(t, certutil.Config{
 		CommonName:   "base-cn",
 		Organization: []string{"org1"},
@@ -91,7 +104,7 @@ func TestCertificateSubjectAndSansIsEqual(t *testing.T) {
 			cfg: certConfig{Config: certutil.Config{
 				CommonName:   "base-cn",
 				Organization: []string{"org1"},
-				// requires only example.com; cert also has foo.example.com — that is fine
+				// requires only example.com; cert also has foo.example.com - that is fine
 				AltNames: certutil.AltNames{DNSNames: []string{"example.com"}},
 			}},
 			wantOk: true,
