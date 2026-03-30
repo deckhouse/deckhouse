@@ -1,8 +1,6 @@
 module github.com/deckhouse/deckhouse/dhctl
 
-go 1.24.0
-
-toolchain go1.24.6
+go 1.24.10
 
 require (
 	github.com/BurntSushi/toml v1.3.2
@@ -72,7 +70,7 @@ require (
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f // indirect
+	github.com/deckhouse/delivery-kit-sdk v1.1.0 // indirect
 	github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3 // indirect
 	github.com/docker/cli v28.0.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
