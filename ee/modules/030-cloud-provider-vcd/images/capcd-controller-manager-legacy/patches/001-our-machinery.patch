@@ -914,7 +914,8 @@ index 941086e0..c8d64174 100644
  		Network:                 ovdcNetwork,
  		NeedsCustomization:      false,
  		IsConnected:             true,
-		IPAddressAllocationMode: "POOL",
+-		IPAddressAllocationMode: "POOL",
++		IPAddressAllocationMode: "DHCP",
  		NetworkAdapterType:      "VMXNET3",
  	}
 +
