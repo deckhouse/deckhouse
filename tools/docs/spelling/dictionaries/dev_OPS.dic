@@ -1,4 +1,4 @@
-2569
+2573
 1GB
 2GB
 5XX
@@ -261,6 +261,7 @@ CNIPlugin
 CoC
 codec
 CODEOWNERS
+Colocating
 Colour
 comparations
 compatibilityFlag
@@ -606,6 +607,7 @@ HorizontalPodAutoscaler
 HorizontalPodAutoscaling
 hostIP
 hostname
+hostnames
 hostNetwork
 hostpath
 hostPath
@@ -1473,6 +1475,7 @@ UEFI
 UI
 uid
 UID
+UIs
 un
 uncordoned
 uninstall
@@ -1488,6 +1491,7 @@ uptick
 UPTODATE
 URIs
 urls
+URLs
 UsePAM
 username
 UserOperation
