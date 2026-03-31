@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	"golang.org/x/mod/semver"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
@@ -39,6 +38,7 @@ import (
 	"update-observer/cluster"
 	"update-observer/common"
 	v1 "update-observer/pkg/v1"
+	"update-observer/pkg/version"
 )
 
 const (
@@ -205,7 +205,7 @@ func determineReconcileTrigger(configMap *corev1.ConfigMap, clusterCfg *cluster.
 		return ReconcileTriggerInit
 	}
 
-	switch semver.Compare(previousVersion, clusterCfg.DesiredVersion) {
+	switch version.Compare(previousVersion, clusterCfg.DesiredVersion) {
 	case 1:
 		return ReconcileTriggerDowngradeK8s
 	case 0:
