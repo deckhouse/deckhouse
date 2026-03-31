@@ -174,7 +174,15 @@ spec:
 
 {{- define "trivy.provider.enabled" }}
   {{- $context := . }}
-  {{- if and ($context.Values.global.enabledModules | has "operator-trivy") ($context.Values.admissionPolicyEngine.denyVulnerableImages.enabled) }}
+  {{- $denyEnabled := false }}
+  {{- if hasKey $context.Values "operatorTrivy" }}
+    {{- if hasKey $context.Values.operatorTrivy "denyVulnerableImages" }}
+      {{- if hasKey $context.Values.operatorTrivy.denyVulnerableImages "enabled" }}
+        {{- $denyEnabled = $context.Values.operatorTrivy.denyVulnerableImages.enabled }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if and ($context.Values.global.enabledModules | has "operator-trivy") $denyEnabled }}
     {{- print "true" }}
   {{- end }}
   {{- print "" }}

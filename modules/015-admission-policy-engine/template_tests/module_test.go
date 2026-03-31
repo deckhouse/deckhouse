@@ -295,21 +295,21 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			f.HelmRender()
 		})
 
-		It("Should render without errors when operator-trivy is enabled", func() {
+		It("Should render without errors when operator-trivy is enabled but denyVulnerableImages is not configured", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 	})
 
-	Context("Cluster with operator-trivy module and denyVulnerableImages enabled", func() {
+	Context("Cluster with operator-trivy module and denyVulnerableImages enabled via operatorTrivy values", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "prometheus", "operator-prometheus", "operator-trivy"]`)
 			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
 			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources", `[{"apiGroups":[""],"resources":["pods"]}]`)
-			f.ValuesSet("admissionPolicyEngine.denyVulnerableImages.enabled", true)
+			f.ValuesSet("operatorTrivy.denyVulnerableImages.enabled", true)
 			f.HelmRender()
 		})
 
-		It("Should render without errors when denyVulnerableImages is enabled", func() {
+		It("Should render without errors when operatorTrivy.denyVulnerableImages.enabled is true", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 	})
