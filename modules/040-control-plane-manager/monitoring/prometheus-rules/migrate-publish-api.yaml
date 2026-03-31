@@ -21,17 +21,24 @@
         To complete the migration, follow the steps below:
 
         1. Review current settings for `publishAPI` in resource `modeleConfig user-authn`.
+        
         2. Update `moduleConfig control-plane-manager` spec to `spec.version: 3`, if the `mc` exists. This may require migrating `settings.apiserver.loadBalancer` to newer `settings.apiserver.publishAPI.loadBalancer` if it's set.
+       
         3. If `moduleConfig` does not exist, create it via `d8`: 
+
           ```
           d8 s module enable control-plane-manager
           ```
+
           And patch in the version:
+
           ```
           d8 k patch moduleconfig control-plane-manager --type merge \
           -p '{"spec":{"version":3}}'
           ```
+
         4. Patch settings into `moduleConfig control-plane-manager` from temporary configMap by executing the following script:
+
           ```bash
           d8 k patch moduleconfig control-plane-manager --type merge \
         -p "$(cat <<EOF
@@ -41,4 +48,5 @@
         EOF
         )"
           ```
+
         5. Remove obsolete `spec.settings.publishAPI` from `moduleConfig user-authn`
