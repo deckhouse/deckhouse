@@ -319,14 +319,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/se/modules/380-metallb/requirements
-  to: /deckhouse/modules/380-metallb/requirements
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/hooks/ee
   to: /deckhouse/modules/021-cni-cilium/hooks/ee
   excludePaths:

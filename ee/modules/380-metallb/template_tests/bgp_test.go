@@ -23,46 +23,48 @@ func Test(t *testing.T) {
 
 const (
 	bgpPeers = `
-- peer-address: 1.1.1.1
-  peer-asn: 65000
-  my-asn: 64000
-  hold-time: 3s
-- peer-address: 1.1.1.2
-  peer-asn: 65000
-  my-asn: 64000
-  hold-time: 3s
-  node-selector:
-    matchLabels:
+- name: bgp-peer-0
+  peerAddress: 1.1.1.1
+  peerASN: 65000
+  myASN: 64000
+  routerID: 10.0.0.254
+  holdTime: 3s
+- name: bgp-peer-1
+  peerAddress: 1.1.1.2
+  peerASN: 65000
+  myASN: 64000
+  holdTime: 3s
+  nodeSelectors:
+  - matchLabels:
       node: "metallb"
 `
 
-	addressPoolsBGP = `
+	addressPools = `
 - name: mypool1
-  protocol: bgp
-  auto-assign: true
-  avoid-buggy-ips: false
   addresses:
   - 192.168.0.0/24
 - name: mypool2
-  protocol: bgp
   addresses:
   - 192.68.1.1-192.168.1.255
-  auto-assign: false
-  avoid-buggy-ips: true
-  bgp-advertisements:
-  - aggregation-length: 32
-    localpref: 100
-    communities:
-    - comm1
-    - comm2
-  - aggregation-length: 32
-    localpref: 150
 `
 
-	bgpCommunities = `
-comm1: 65535:65282
-comm2: 1111:1111
-unusable: 2222:2222
+	bgpAdvertisements = `
+- name: mypool1-0
+  ipAddressPools:
+  - mypool1
+- name: mypool2-0
+  ipAddressPools:
+  - mypool2
+  aggregationLength: 32
+  localPref: 100
+  communities:
+  - "65535:65282"
+  - "1111:1111"
+- name: mypool2-1
+  ipAddressPools:
+  - mypool2
+  aggregationLength: 32
+  localPref: 150
 `
 
 	chartFile = "/deckhouse/ee/modules/380-metallb/Chart.yaml"
@@ -91,10 +93,11 @@ var _ = Describe("Module :: metallb :: helm template ::", func() {
 
 	Context("bgpPeers and addressPools in BGP mode are set", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("metallb.bgpPeers", bgpPeers)
-			f.ValuesSetFromYaml("metallb.addressPools", addressPoolsBGP)
-			f.ValuesSetFromYaml("metallb.bgpCommunities", bgpCommunities)
-			f.ValuesSetFromYaml("metallb.loadBalancerClass", "my-lb-class")
+			f.ValuesSetFromYaml("metallb.internal.bgpPeers", bgpPeers)
+			f.ValuesSetFromYaml("metallb.internal.addressPools", addressPools)
+			f.ValuesSetFromYaml("metallb.internal.bgpAdvertisements", bgpAdvertisements)
+			f.ValuesSetFromYaml("metallb.internal.secretsToCopy", "[]")
+			f.ValuesSetFromYaml("metallb.internal.speakerNodeAffinity", "{}")
 			f.HelmRender()
 		})
 
@@ -106,8 +109,6 @@ var _ = Describe("Module :: metallb :: helm template ::", func() {
 			Expect(ipAddressPool1.Field("spec").String()).To(MatchYAML(`
 addresses:
 - 192.168.0.0/24
-autoAssign: true
-avoidBuggyIPs: false
 `))
 
 			ipAddressPool2 := f.KubernetesResource("IPAddressPool", "d8-metallb", "mypool2")
@@ -115,8 +116,6 @@ avoidBuggyIPs: false
 			Expect(ipAddressPool2.Field("spec").String()).To(MatchYAML(`
 addresses:
 - 192.68.1.1-192.168.1.255
-autoAssign: false
-avoidBuggyIPs: true
 `))
 
 			bgpPeer0 := f.KubernetesResource("BGPPeer", "d8-metallb", "bgp-peer-0")
@@ -126,6 +125,7 @@ holdTime: 3s
 myASN: 64000
 peerASN: 65000
 peerAddress: 1.1.1.1
+routerID: 10.0.0.254
 `))
 
 			bgpPeer1 := f.KubernetesResource("BGPPeer", "d8-metallb", "bgp-peer-1")

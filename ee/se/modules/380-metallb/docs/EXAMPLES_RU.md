@@ -22,7 +22,7 @@ spec:
 
 Подготовьте приложение, которое хотите опубликовать:
 
-```shell
+```bash
 d8 k create deploy nginx --image=nginx
 ```
 
@@ -55,22 +55,22 @@ spec:
   type: LoadBalancer
   loadBalancerClass: ingress # имя MetalLoadBalancerClass
   ports:
-  - port: 8000
-    protocol: TCP
-    targetPort: 80
+    - port: 8000
+      protocol: TCP
+      targetPort: 80
   selector:
     app: nginx
 ```
 
 В результате, созданному сервису с типом `LoadBalancer` будут присвоены адреса в заданном количестве:
 
-```shell
+```bash
 d8 k get svc
 ```
 
 Пример вывода:
 
-```shell
+```bash
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
 nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
 ```
@@ -79,7 +79,7 @@ nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.10
 
 Полученные EXTERNAL-IP можно прописывать в качестве A-записей для прикладного домена:
 
-```shell
+```bash
 $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.100:8000
 200
 $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.101:8000
@@ -94,7 +94,7 @@ $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 
 {% raw %}
 
-Включите модуль и настройте все необходимые параметры<sup>*</sup>:
+Включите модуль и настройте все необходимые параметры<sup>\*</sup>:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -103,24 +103,41 @@ metadata:
   name: metallb
 spec:
   enabled: true
-  settings:
-    addressPools:
-    - addresses:
-      - 192.168.219.100-192.168.219.200
-      name: mypool
-      protocol: bgp
-    bgpPeers:
-    - hold-time: 3s
-      my-asn: 64600
-      peer-address: 172.18.18.10
-      peer-asn: 64601
-    speaker:
-      nodeSelector:
-        node-role.deckhouse.io/metallb: ""
-  version: 2
+  version: 3
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: MetalLoadBalancerPool
+metadata:
+  name: mypool
+spec:
+  addresses:
+    - 192.168.219.100-192.168.219.200
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: MetalLoadBalancerBGPPeer
+metadata:
+  name: myrouter
+spec:
+  peerAddress: 172.18.18.10
+  peerASN: 64601
+  myASN: 64600
+  holdTime: 3s
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: MetalLoadBalancerConfiguration
+metadata:
+  name: defaults
+spec:
+  mode: BGP
+  nodeSelector:
+    node-role.deckhouse.io/metallb: ""
+  bgp:
+    peerNames:
+      - myrouter
+  advertisements:
+    - poolNames:
+        - mypool
 ```
-
-<sup>*</sup> — в будущих версиях настройки режима BGP будут задаваться через ресурс MetalLoadBalancerClass.
 
 Настройте BGP-пиринг на сетевом оборудовании.
 
@@ -148,22 +165,22 @@ spec:
   type: LoadBalancer
   loadBalancerClass: ingress # имя MetalLoadBalancerClass
   ports:
-  - port: 8000
-    protocol: TCP
-    targetPort: 80
+    - port: 8000
+      protocol: TCP
+      targetPort: 80
   selector:
     app: nginx
 ```
 
 В результате, созданному сервису с типом `LoadBalancer` будут присвоены указанные адреса:
 
-```shell
+```bash
 d8 k get svc
 ```
 
 Пример вывода:
 
-```shell
+```bash
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
 nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.102,192.168.2.103,192.168.2.104   80:30544/TCP   11s
 ```
@@ -181,8 +198,8 @@ metadata:
     network.deckhouse.io/load-balancer-ips: 192.168.217.217
 spec:
   ports:
-  - port: 80
-    targetPort: 80
+    - port: 80
+      targetPort: 80
   selector:
     app: nginx
   type: LoadBalancer
@@ -238,7 +255,7 @@ spec:
 
 ### Создание сервиса и назначение ему IPAddressPools при использовании mettalb в режиме BGP LoadBalancer
 
-Создание Service и назначение ему IPAddressPools возможно в режиме BGP LoadBalancer через аннотацию `metallb.universe.tf`. Для режима L2 LoadBalancer необходимо использовать настройки MetalLoadBalancerClass (см. выше).
+Создание Service и назначение ему IPAddressPools возможно в режиме BGP LoadBalancer через аннотацию `network.deckhouse.io/load-balancer-pool`. Для режима L2 LoadBalancer необходимо использовать настройки MetalLoadBalancerClass (см. выше).
 
 ```yaml
 apiVersion: v1
@@ -246,11 +263,11 @@ kind: Service
 metadata:
   name: nginx
   annotations:
-    metallb.universe.tf/address-pool: production-public-ips
+    network.deckhouse.io/load-balancer-pool: production-public-ips
 spec:
   ports:
-  - port: 80
-    targetPort: 80
+    - port: 80
+      targetPort: 80
   selector:
     app: nginx
   type: LoadBalancer
