@@ -310,10 +310,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        {{- if eq $profile "etcd-arbiter" }}
-        - name: ETCD_ARBITER
-          value: "true"
-        {{- end }}
         - name: CLUSTER_DOMAIN
           value: {{ $.Values.global.clusterConfiguration.clusterDomain | quote }}
         - name: SERVICE_SUBNET_CIDR

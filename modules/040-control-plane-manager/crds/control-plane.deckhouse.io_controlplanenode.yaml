@@ -54,8 +54,7 @@ spec:
                 description: CAChecksum is the hash of d8-pki secret (CA certificates).
                 type: string
               components:
-                description: ComponentChecksums holds checksums for all control plane
-                  components.
+                description: Checksums per component
                 properties:
                   etcd:
                     description: ComponentChecksum holds checksums for a single control
@@ -117,32 +116,25 @@ spec:
                     required:
                     - configChecksum
                     type: object
-                required:
-                - etcd
-                - kube-apiserver
-                - kube-controller-manager
-                - kube-scheduler
                 type: object
               configVersion:
                 description: ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion
                   of pki secret]"
                 type: string
               hotReloadChecksum:
+                description: For reload mechanisms (e.g. in-place reload)
                 type: string
             required:
-            - caChecksum
-            - components
             - configVersion
-            - hotReloadChecksum
             type: object
           status:
             properties:
               caChecksum:
-                description: CAChecksum is the applied hash of d8-pki secret (CA certificates).
                 type: string
               components:
-                description: ComponentChecksums holds checksums for all control plane
-                  components.
+                description: |-
+                  ComponentChecksums holds checksums for all control plane components.
+                  Zero values are allowed for etcd-arbiter nodes(etcd only).
                 properties:
                   etcd:
                     description: ComponentChecksum holds checksums for a single control
@@ -204,11 +196,6 @@ spec:
                     required:
                     - configChecksum
                     type: object
-                required:
-                - etcd
-                - kube-apiserver
-                - kube-controller-manager
-                - kube-scheduler
                 type: object
               conditions:
                 items:
@@ -270,8 +257,8 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               configVersion:
-                description: ConfigVersion that is actually applied / running on the
-                  node cpm secret and pki secret resource versions.
+                description: 'ConfigVersion that is actually applied / running on
+                  the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"'
                 type: string
               hotReloadChecksum:
                 type: string

@@ -26,6 +26,7 @@ const (
 	ControlPlaneManagerConfigSecretName = "d8-control-plane-manager-config"
 	PkiSecretName                       = "d8-pki"
 	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"
+	EtcdArbiterNodeLabelKey             = "node.deckhouse.io/etcd-arbiter"
 	ControlPlaneNodeNameLabelKey        = "control-plane.deckhouse.io/node"
 	ControlPlaneComponentLabelKey       = "control-plane.deckhouse.io/component"
 	ConfigChecksumAnnotationKey         = "control-plane-manager.deckhouse.io/config-checksum"

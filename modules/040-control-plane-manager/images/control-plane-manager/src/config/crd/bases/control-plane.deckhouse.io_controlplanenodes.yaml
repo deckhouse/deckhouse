@@ -113,11 +113,6 @@ spec:
                     required:
                     - configChecksum
                     type: object
-                required:
-                - etcd
-                - kube-apiserver
-                - kube-controller-manager
-                - kube-scheduler
                 type: object
               configVersion:
                 description: ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion
@@ -127,18 +122,16 @@ spec:
                 description: For reload mechanisms (e.g. in-place reload)
                 type: string
             required:
-            - caChecksum
-            - components
             - configVersion
-            - hotReloadChecksum
             type: object
           status:
             properties:
               caChecksum:
                 type: string
               components:
-                description: ComponentChecksums holds checksums for all control plane
-                  components.
+                description: |-
+                  ComponentChecksums holds checksums for all control plane components.
+                  Zero values are allowed for etcd-arbiter nodes(etcd only).
                 properties:
                   etcd:
                     description: ComponentChecksum holds checksums for a single control
@@ -200,11 +193,6 @@ spec:
                     required:
                     - configChecksum
                     type: object
-                required:
-                - etcd
-                - kube-apiserver
-                - kube-controller-manager
-                - kube-scheduler
                 type: object
               conditions:
                 items:

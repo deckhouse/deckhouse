@@ -236,17 +236,31 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 }
 
 // reconcileUpdate handles Update command: write extra-files + manifest, wait for pod with matching config-checksum annotation.
-func (r *Reconciler) reconcileUpdate(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, secretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
+func (r *Reconciler) reconcileUpdate(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
 	component := op.Spec.Component
 
-	if err := writeExtraFiles(component, secretData, constants.ExtraFilesPath); err != nil {
+	// Etcd preflight: check if join is needed instead of normal update
+	if component == controlplanev1alpha1.OperationComponentEtcd {
+		needsJoin, err := etcdNeedsJoin(r.nodeName, constants.KubernetesPkiPath, kubeconfigDirPath())
+		if err != nil {
+			logger.Error("failed to check etcd join need", log.Err(err))
+			return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
+		}
+		if needsJoin {
+			logger.Info("etcd needs join, switching to join flow")
+			return r.reconcileEtcdJoin(ctx, op, cpmSecretData,
+				op.Spec.DesiredConfigChecksum, "", "", logger)
+		}
+	}
+
+	if err := writeExtraFiles(component, cpmSecretData, constants.ExtraFilesPath); err != nil {
 		logger.Error("failed to write extra-files", log.Err(err))
 		return reconcile.Result{}, r.setConditions(ctx, op,
 			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
 		)
 	}
 
-	if err := writeStaticPodManifest(component, secretData, op.Spec.DesiredConfigChecksum, "", "", constants.ManifestsPath); err != nil {
+	if err := writeStaticPodManifest(component, cpmSecretData, op.Spec.DesiredConfigChecksum, "", "", constants.ManifestsPath); err != nil {
 		logger.Error("failed to write manifest", log.Err(err))
 		return reconcile.Result{}, r.setConditions(ctx, op,
 			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
@@ -261,7 +275,7 @@ func (r *Reconciler) reconcileUpdate(ctx context.Context, op *controlplanev1alph
 		return reconcile.Result{}, err
 	}
 
-	return r.waitForPod(ctx, op, op.Spec.DesiredConfigChecksum, "", logger)
+	return r.waitForPod(ctx, op, op.Spec.DesiredConfigChecksum, "", "", logger)
 }
 
 // reconcileUpdatePKI handles UpdatePKI command: renew certs/kubeconfigs per component, update checksum annotations, wait for pod.
@@ -302,10 +316,8 @@ func (r *Reconciler) reconcileUpdatePKI(ctx context.Context, op *controlplanev1a
 		}
 	}
 
-	// trigger pod restart by updating checksum annotations
-	// TODO: DesiredCAChecksum is currently empty - CPN does not populate it yet.
-	// When CPN is updated to create UpdatePKI ops for all 4 components on CA change,
-	// it must set DesiredCAChecksum so ca-checksum annotation gets written here.
+	// Trigger pod restart by updating checksum annotations on the existing manifest.
+	// DesiredCAChecksum is set by CPN when CA changed — writes ca-checksum annotation.
 	if err := updateChecksumAnnotations(component, op.Spec.DesiredPKIChecksum, op.Spec.DesiredCAChecksum, constants.ManifestsPath); err != nil {
 		logger.Error("failed to update checksum annotations", log.Err(err))
 		return reconcile.Result{}, r.setConditions(ctx, op,
@@ -321,7 +333,7 @@ func (r *Reconciler) reconcileUpdatePKI(ctx context.Context, op *controlplanev1a
 		return reconcile.Result{}, err
 	}
 
-	return r.waitForPod(ctx, op, "", op.Spec.DesiredPKIChecksum, logger)
+	return r.waitForPod(ctx, op, "", op.Spec.DesiredPKIChecksum, op.Spec.DesiredCAChecksum, logger)
 }
 
 // reconcileUpdateWithPKI handles UpdateWithPKI command: renew certs/kubeconfigs + write manifest with all checksums, wait for pod.
@@ -346,6 +358,21 @@ func (r *Reconciler) reconcileUpdateWithPKI(ctx context.Context, op *controlplan
 			return reconcile.Result{}, r.setConditions(ctx, op,
 				failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
 			)
+		}
+	}
+
+	// Etcd preflight: after certs are renewed, check if join is needed
+	if component == controlplanev1alpha1.OperationComponentEtcd {
+		needsJoin, err := etcdNeedsJoin(r.nodeName, constants.KubernetesPkiPath, kubeconfigDirPath())
+		if err != nil {
+			logger.Error("failed to check etcd join need", log.Err(err))
+			return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
+		}
+		if needsJoin {
+			logger.Info("etcd needs join, switching to join flow")
+			return r.reconcileEtcdJoin(ctx, op, cpmSecretData,
+				op.Spec.DesiredConfigChecksum, op.Spec.DesiredPKIChecksum,
+				op.Spec.DesiredCAChecksum, logger)
 		}
 	}
 
@@ -387,7 +414,7 @@ func (r *Reconciler) reconcileUpdateWithPKI(ctx context.Context, op *controlplan
 		return reconcile.Result{}, err
 	}
 
-	return r.waitForPod(ctx, op, op.Spec.DesiredConfigChecksum, op.Spec.DesiredPKIChecksum, logger)
+	return r.waitForPod(ctx, op, op.Spec.DesiredConfigChecksum, op.Spec.DesiredPKIChecksum, op.Spec.DesiredCAChecksum, logger)
 }
 
 // reconcileCAs handles CA checksum changes.
@@ -424,7 +451,7 @@ func (r *Reconciler) reconcileHotReload(ctx context.Context, op *controlplanev1a
 }
 
 // waitForPod checks if the static pod is ready with the expected checksums annotations.
-func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, configChecksum, pkiChecksum string, logger *log.Logger) (reconcile.Result, error) {
+func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, configChecksum, pkiChecksum, caChecksum string, logger *log.Logger) (reconcile.Result, error) {
 	podName := fmt.Sprintf("%s-%s", op.Spec.Component.PodComponentName(), r.nodeName)
 	pod := &corev1.Pod{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: podName, Namespace: constants.KubeSystemNamespace}, pod); err != nil {
@@ -440,7 +467,7 @@ func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.Co
 		)
 	}
 
-	if !isPodReadyWithChecksums(pod, configChecksum, pkiChecksum) {
+	if !isPodReadyWithChecksums(pod, configChecksum, pkiChecksum, caChecksum) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
