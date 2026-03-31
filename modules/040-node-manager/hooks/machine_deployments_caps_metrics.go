@@ -108,12 +108,28 @@ func filterMachineDeploymentStatus(obj *unstructured.Unstructured) (go_hook.Filt
 		Phase = 5
 	}
 
+	var statusReplicas, readyReplicas, availableReplicas int32
+	if md.Status.Replicas != nil {
+		statusReplicas = *md.Status.Replicas
+	}
+	if md.Status.ReadyReplicas != nil {
+		readyReplicas = *md.Status.ReadyReplicas
+	}
+	if md.Status.AvailableReplicas != nil {
+		availableReplicas = *md.Status.AvailableReplicas
+	}
+
+	var unavailable int32
+	if statusReplicas > availableReplicas {
+		unavailable = statusReplicas - availableReplicas
+	}
+
 	return machineDeploymentStatus{
 		Name:        md.Name,
-		Replicas:    float64(md.Status.Replicas),
+		Replicas:    float64(statusReplicas),
 		Desired:     float64(replicas),
-		Ready:       float64(md.Status.ReadyReplicas),
-		Unavailable: float64(md.Status.UnavailableReplicas),
+		Ready:       float64(readyReplicas),
+		Unavailable: float64(unavailable),
 		Phase:       Phase,
 	}, nil
 }

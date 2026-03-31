@@ -114,15 +114,11 @@ func instanceClusterAPIMachineFilter(obj *unstructured.Unstructured) (go_hook.Fi
 
 	var nodeName string
 
-	if machine.Status.NodeRef != nil {
+	if machine.Status.NodeRef.Name != "" {
 		nodeName = machine.Status.NodeRef.Name
 	}
 
-	var lastUpdated metav1.Time
-
-	if machine.Status.LastUpdated != nil {
-		lastUpdated = *machine.Status.LastUpdated
-	}
+	lastUpdated := machine.Status.LastUpdated
 
 	return &machineForInstance{
 		APIVersion: machine.APIVersion,

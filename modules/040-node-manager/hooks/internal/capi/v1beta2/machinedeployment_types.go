@@ -24,27 +24,30 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// MachineDeploymentStrategyType defines the type of MachineDeployment rollout strategies.
-type MachineDeploymentStrategyType string
+// MachineDeploymentRolloutStrategyType defines the type of MachineDeployment rollout strategies.
+type MachineDeploymentRolloutStrategyType string
 
 const (
 	// RollingUpdateMachineDeploymentStrategyType replaces the old MachineSet by new one using rolling update.
-	RollingUpdateMachineDeploymentStrategyType MachineDeploymentStrategyType = "RollingUpdate"
+	RollingUpdateMachineDeploymentStrategyType MachineDeploymentRolloutStrategyType = "RollingUpdate"
 
 	// OnDeleteMachineDeploymentStrategyType replaces old MachineSets when the deletion of the associated machines are completed.
-	OnDeleteMachineDeploymentStrategyType MachineDeploymentStrategyType = "OnDelete"
+	OnDeleteMachineDeploymentStrategyType MachineDeploymentRolloutStrategyType = "OnDelete"
 )
 
-// MachineDeploymentDeletion contains configuration options for MachineDeployment deletion.
-type MachineDeploymentDeletion struct {
+// MachineSetDeletionOrder defines the order in which Machines are deleted when downscaling.
+type MachineSetDeletionOrder string
+
+// MachineDeploymentDeletionSpec contains configuration options for MachineDeployment deletion.
+type MachineDeploymentDeletionSpec struct {
 	// Order defines the order in which Machines are deleted when downscaling.
 	// Defaults to "Random". Valid values are "Random", "Newest", "Oldest".
 	// +optional
-	Order *string `json:"order,omitempty"`
+	Order MachineSetDeletionOrder `json:"order,omitempty"`
 }
 
-// MachineRollingUpdateDeployment is used to control the desired behavior of rolling update.
-type MachineRollingUpdateDeployment struct {
+// MachineDeploymentRolloutStrategyRollingUpdate is used to control the desired behavior of rolling update.
+type MachineDeploymentRolloutStrategyRollingUpdate struct {
 	// MaxUnavailable is the maximum number of machines that can be unavailable during the update.
 	// +optional
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
@@ -58,24 +61,24 @@ type MachineRollingUpdateDeployment struct {
 type MachineDeploymentRolloutStrategy struct {
 	// Type of rollout. Allowed values are RollingUpdate and OnDelete.
 	// Default is RollingUpdate.
-	Type MachineDeploymentStrategyType `json:"type"`
+	Type MachineDeploymentRolloutStrategyType `json:"type,omitempty"`
 
 	// RollingUpdate is the rolling update config params.
 	// Present only if type = RollingUpdate.
 	// +optional
-	RollingUpdate *MachineRollingUpdateDeployment `json:"rollingUpdate,omitempty"`
+	RollingUpdate MachineDeploymentRolloutStrategyRollingUpdate `json:"rollingUpdate,omitempty"`
 }
 
-// MachineDeploymentRollout allows you to configure the behaviour of rolling updates.
-type MachineDeploymentRollout struct {
+// MachineDeploymentRolloutSpec defines the rollout behavior.
+type MachineDeploymentRolloutSpec struct {
 	// After is a field to indicate a rollout should be performed
 	// after the specified time even if no changes have been made.
 	// +optional
-	After *metav1.Time `json:"after,omitempty"`
+	After metav1.Time `json:"after,omitempty"`
 
 	// Strategy specifies how to roll out machines.
 	// +optional
-	Strategy *MachineDeploymentRolloutStrategy `json:"strategy,omitempty"`
+	Strategy MachineDeploymentRolloutStrategy `json:"strategy,omitempty"`
 }
 
 // ObjectMeta is metadata that all persisted resources must have.
@@ -104,37 +107,37 @@ type MachineTemplateSpec struct {
 // MachineDeploymentSpec defines the desired state of MachineDeployment.
 type MachineDeploymentSpec struct {
 	// ClusterName is the name of the Cluster this object belongs to.
-	ClusterName string `json:"clusterName"`
+	ClusterName string `json:"clusterName,omitempty"`
 
 	// Replicas is the number of desired machines.
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Selector is the label selector for machines.
-	Selector metav1.LabelSelector `json:"selector"`
-
-	// Template describes the machines that will be created.
-	Template MachineTemplateSpec `json:"template"`
-
 	// Rollout allows you to configure the behaviour of rolling updates.
 	// +optional
-	Rollout *MachineDeploymentRollout `json:"rollout,omitempty"`
+	Rollout MachineDeploymentRolloutSpec `json:"rollout,omitempty"`
 
-	// Paused indicates that the deployment is paused.
-	// +optional
-	Paused bool `json:"paused,omitempty"`
+	// Selector is the label selector for machines.
+	Selector metav1.LabelSelector `json:"selector,omitempty"`
 
-	// Deletion contains configuration options for MachineDeployment deletion.
-	// +optional
-	Deletion *MachineDeploymentDeletion `json:"deletion,omitempty"`
+	// Template describes the machines that will be created.
+	Template MachineTemplateSpec `json:"template,omitempty"`
 
 	// Remediation controls how unhealthy Machines are remediated.
 	// +optional
-	Remediation *MachineDeploymentRemediation `json:"remediation,omitempty"`
+	Remediation MachineDeploymentRemediationSpec `json:"remediation,omitempty"`
+
+	// Deletion contains configuration options for MachineDeployment deletion.
+	// +optional
+	Deletion MachineDeploymentDeletionSpec `json:"deletion,omitempty"`
+
+	// Paused indicates that the deployment is paused.
+	// +optional
+	Paused *bool `json:"paused,omitempty"`
 }
 
-// MachineDeploymentRemediation controls how unhealthy Machines are remediated.
-type MachineDeploymentRemediation struct {
+// MachineDeploymentRemediationSpec controls how unhealthy Machines are remediated.
+type MachineDeploymentRemediationSpec struct {
 	// MaxInFlight determines how many in flight remediations should happen at the same time.
 	// +optional
 	MaxInFlight *intstr.IntOrString `json:"maxInFlight,omitempty"`
@@ -142,6 +145,10 @@ type MachineDeploymentRemediation struct {
 
 // MachineDeploymentStatus defines the observed state of MachineDeployment.
 type MachineDeploymentStatus struct {
+	// Conditions represents the observations of a MachineDeployment's current state.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
 	// ObservedGeneration is the generation observed by the deployment controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
@@ -152,32 +159,24 @@ type MachineDeploymentStatus struct {
 
 	// Replicas is the total number of non-terminated machines targeted by this deployment.
 	// +optional
-	Replicas int32 `json:"replicas"`
+	Replicas *int32 `json:"replicas,omitempty"`
 
 	// ReadyReplicas is the total number of ready machines targeted by this deployment.
 	// +optional
-	ReadyReplicas int32 `json:"readyReplicas"`
+	ReadyReplicas *int32 `json:"readyReplicas,omitempty"`
 
 	// AvailableReplicas is the total number of available machines targeted by this deployment.
 	// +optional
-	AvailableReplicas int32 `json:"availableReplicas"`
-
-	// UnavailableReplicas is the total number of unavailable machines targeted by this deployment.
-	// +optional
-	UnavailableReplicas int32 `json:"unavailableReplicas"`
+	AvailableReplicas *int32 `json:"availableReplicas,omitempty"`
 
 	// UpToDateReplicas is the total number of non-terminated machines targeted by this deployment
 	// that have the desired template spec. Replaces UpdatedReplicas from v1beta1.
 	// +optional
-	UpToDateReplicas int32 `json:"upToDateReplicas"`
+	UpToDateReplicas *int32 `json:"upToDateReplicas,omitempty"`
 
 	// Phase represents the current phase of a MachineDeployment.
 	// +optional
 	Phase string `json:"phase,omitempty"`
-
-	// Conditions represents the observations of a MachineDeployment's current state.
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // MachineDeploymentPhase indicates the progress of the machine deployment.

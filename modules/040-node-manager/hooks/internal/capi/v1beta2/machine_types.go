@@ -23,28 +23,35 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ResourceRef is a reference to a resource using apiGroup, kind, and name
-// (v1beta2 replaces corev1.ObjectReference with this pattern).
-type ResourceRef struct {
-	// APIGroup is the group of the resource being referenced.
-	APIGroup string `json:"apiGroup"`
-
+// ContractVersionedObjectReference is a reference to a resource for which the version
+// is inferred from contract labels (v1beta2 pattern replacing corev1.ObjectReference).
+type ContractVersionedObjectReference struct {
 	// Kind of the resource being referenced.
-	Kind string `json:"kind"`
+	Kind string `json:"kind,omitempty"`
 
 	// Name of the resource being referenced.
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
+
+	// APIGroup is the group of the resource being referenced.
+	APIGroup string `json:"apiGroup,omitempty"`
 }
 
-// MachineNodeRef is a simplified node reference in v1beta2.
-// Unlike v1beta1 which used corev1.ObjectReference, v1beta2 only stores the node name.
-type MachineNodeRef struct {
+// MachineNodeReference is a reference to the node running on the machine.
+type MachineNodeReference struct {
 	// Name of the node.
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 }
 
-// MachineDeletion contains configuration options for Machine deletion.
-type MachineDeletion struct {
+// IsDefined returns true if the MachineNodeReference is set.
+func (r *MachineNodeReference) IsDefined() bool {
+	if r == nil {
+		return false
+	}
+	return r.Name != ""
+}
+
+// MachineDeletionSpec contains configuration options for Machine deletion.
+type MachineDeletionSpec struct {
 	// NodeDrainTimeoutSeconds is the total amount of time in seconds that the controller
 	// will spend on draining a node.
 	// +optional
@@ -64,31 +71,31 @@ type MachineDeletion struct {
 // MachineSpec defines the desired state of Machine.
 type MachineSpec struct {
 	// ClusterName is the name of the Cluster this object belongs to.
-	ClusterName string `json:"clusterName"`
+	ClusterName string `json:"clusterName,omitempty"`
 
 	// Bootstrap is a reference to a local struct which encapsulates
 	// fields to configure the Machine's bootstrapping mechanism.
-	Bootstrap Bootstrap `json:"bootstrap"`
+	Bootstrap Bootstrap `json:"bootstrap,omitempty"`
 
 	// InfrastructureRef is a required reference to a custom resource
 	// offered by an infrastructure provider.
-	InfrastructureRef ResourceRef `json:"infrastructureRef"`
+	InfrastructureRef ContractVersionedObjectReference `json:"infrastructureRef,omitempty"`
 
 	// Version defines the desired Kubernetes version.
 	// +optional
-	Version *string `json:"version,omitempty"`
+	Version string `json:"version,omitempty"`
 
 	// ProviderID is the identification ID of the machine provided by the provider.
 	// +optional
-	ProviderID *string `json:"providerID,omitempty"`
+	ProviderID string `json:"providerID,omitempty"`
 
 	// FailureDomain is the failure domain the machine will be created in.
 	// +optional
-	FailureDomain *string `json:"failureDomain,omitempty"`
+	FailureDomain string `json:"failureDomain,omitempty"`
 
 	// Deletion contains configuration options for Machine deletion.
 	// +optional
-	Deletion *MachineDeletion `json:"deletion,omitempty"`
+	Deletion MachineDeletionSpec `json:"deletion,omitempty"`
 }
 
 // Bootstrap encapsulates fields to configure the Machine's bootstrapping mechanism.
@@ -96,7 +103,7 @@ type Bootstrap struct {
 	// ConfigRef is a reference to a bootstrap provider-specific resource
 	// that holds configuration details.
 	// +optional
-	ConfigRef *ResourceRef `json:"configRef,omitempty"`
+	ConfigRef ContractVersionedObjectReference `json:"configRef,omitempty"`
 
 	// DataSecretName is the name of the secret that stores the bootstrap data script.
 	// +optional
@@ -105,15 +112,15 @@ type Bootstrap struct {
 
 // MachineInitializationStatus provides observations of the Machine initialization process.
 type MachineInitializationStatus struct {
-	// BootstrapDataSecretCreated is true when the bootstrap provider reports
-	// that the Machine's bootstrap secret is created.
-	// +optional
-	BootstrapDataSecretCreated *bool `json:"bootstrapDataSecretCreated,omitempty"`
-
 	// InfrastructureProvisioned is true when the infrastructure provider reports
 	// that Machine's infrastructure is fully provisioned.
 	// +optional
 	InfrastructureProvisioned *bool `json:"infrastructureProvisioned,omitempty"`
+
+	// BootstrapDataSecretCreated is true when the bootstrap provider reports
+	// that the Machine's bootstrap secret is created.
+	// +optional
+	BootstrapDataSecretCreated *bool `json:"bootstrapDataSecretCreated,omitempty"`
 }
 
 // MachineDeprecatedStatus groups all the status fields that are deprecated
@@ -137,33 +144,33 @@ type MachineV1Beta1DeprecatedStatus struct {
 
 // MachineStatus defines the observed state of Machine.
 type MachineStatus struct {
-	// NodeRef will point to the corresponding Node if it exists.
-	// +optional
-	NodeRef *MachineNodeRef `json:"nodeRef,omitempty"`
-
-	// LastUpdated identifies when the phase of the Machine last transitioned.
-	// +optional
-	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
-
-	// Phase represents the current phase of machine actuation.
-	// +optional
-	Phase string `json:"phase,omitempty"`
-
 	// Conditions represents the observations of a Machine's current state.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// Initialization provides observations of the Machine initialization process.
 	// +optional
-	Initialization *MachineInitializationStatus `json:"initialization,omitempty"`
+	Initialization MachineInitializationStatus `json:"initialization,omitempty"`
 
-	// ObservedGeneration is the latest generation observed by the controller.
+	// NodeRef will point to the corresponding Node if it exists.
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	NodeRef MachineNodeReference `json:"nodeRef,omitempty"`
+
+	// LastUpdated identifies when the phase of the Machine last transitioned.
+	// +optional
+	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
 
 	// Addresses is a list of addresses assigned to the machine.
 	// +optional
 	Addresses MachineAddresses `json:"addresses,omitempty"`
+
+	// Phase represents the current phase of machine actuation.
+	// +optional
+	Phase string `json:"phase,omitempty"`
+
+	// ObservedGeneration is the latest generation observed by the controller.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Deprecated groups all the status fields that are deprecated.
 	// +optional
