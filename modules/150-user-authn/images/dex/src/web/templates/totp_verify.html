@@ -15,8 +15,9 @@
     {{ else }}
     Отсканируйте QR-код в приложении для аутентификации
     {{ end }}
-    <br/>
-    <img src="data:image/png;base64, {{ .QRCode }}" style="display: block; margin: 0 auto;" alt="QR code"/>
+    <div class="qr-code-container">
+      <img src="data:image/png;base64, {{ .QRCode }}" alt="QR code"/>
+    </div>
   </div>
   {{ else }}
   <div class="content-text">

@@ -333,3 +333,8 @@ body {
   row-gap: 16px;
   margin-top: 16px;
 }
+
+.qr-code-container {
+  display: flex;
+  justify-content: center;
+}
