@@ -29,11 +29,6 @@ status:
     status: "True"
     type: Completed
   packages:
-    failed:
-    - errors:
-      - error: no release images found for package "test-package" in /version path
-        version: unknown
-      name: test-package
     processed:
     - name: test-package
     processedOverall: 1

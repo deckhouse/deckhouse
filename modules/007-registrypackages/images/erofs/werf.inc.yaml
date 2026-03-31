@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -22,7 +22,7 @@ imageSpec:
     removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -31,7 +31,7 @@ git:
     setup:
     - '**/*'
 import:
-- image: tools/erofs-utils
+- from: {{ index $.Images "tools/erofs-utils" }}
   add: /usr/bin
   to: /
   includePaths:

@@ -25,16 +25,15 @@ type (
 	updateRegistrySettings func(*module_config.RegistrySettings)
 	updateLegacyMode       func() bool
 	updateMode             func() constant.ModeType
+	updateTTL              func() string
 )
 
 func ConfigBuilder(opts ...any) registry.Config {
 	var (
 		mode             = constant.ModeUnmanaged
 		legacyMode       = false
-		registrySettings = module_config.RegistrySettings{
-			ImagesRepo: constant.DefaultImagesRepo,
-			Scheme:     constant.DefaultScheme,
-		}
+		ttl              = ""
+		registrySettings = module_config.NewRegistrySettings()
 	)
 
 	for _, opt := range opts {
@@ -47,28 +46,43 @@ func ConfigBuilder(opts ...any) registry.Config {
 
 		case updateMode:
 			mode = fn()
+
+		case updateTTL:
+			ttl = fn()
 		}
 	}
 
-	var deckhouseSettings module_config.DeckhouseSettings
+	var userSettings module_config.DeckhouseSettings
 
 	switch mode {
 	case constant.ModeDirect:
-		deckhouseSettings = module_config.DeckhouseSettings{
+		userSettings = module_config.DeckhouseSettings{
 			Mode:   constant.ModeDirect,
 			Direct: &registrySettings,
 		}
 
+	case constant.ModeProxy:
+		userSettings = module_config.DeckhouseSettings{
+			Mode: constant.ModeProxy,
+			Proxy: &module_config.ProxySettings{
+				RegistrySettings: registrySettings,
+				TTL:              ttl,
+			},
+		}
+
 	default:
-		deckhouseSettings = module_config.DeckhouseSettings{
+		userSettings = module_config.DeckhouseSettings{
 			Mode:      constant.ModeUnmanaged,
 			Unmanaged: &registrySettings,
 		}
 	}
 
-	var config registry.Config
+	settings := module_config.
+		New(userSettings.Mode).
+		Merge(&userSettings)
 
-	if err := config.Process(deckhouseSettings, legacyMode); err != nil {
+	var config registry.Config
+	if err := config.Process(settings, legacyMode); err != nil {
 		panic(err)
 	}
 
@@ -112,6 +126,12 @@ func WithLicense(license string) updateRegistrySettings {
 	}
 }
 
+func WithTTL(ttl string) updateTTL {
+	return func() string {
+		return ttl
+	}
+}
+
 func WithModeDirect() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeDirect
@@ -121,6 +141,12 @@ func WithModeDirect() updateMode {
 func WithModeUnmanaged() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeUnmanaged
+	}
+}
+
+func WithModeProxy() updateMode {
+	return func() constant.ModeType {
+		return constant.ModeProxy
 	}
 }
 

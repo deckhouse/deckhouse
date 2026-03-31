@@ -31,11 +31,11 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/golang-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 final: false
 ---
 image: {{ .ModuleName }}/base-cilium-dev
-fromImage: builder/alt
+from: {{ index $.Images "builder/alt" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

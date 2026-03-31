@@ -7,7 +7,22 @@ metadata:
 data:
   cluster-configuration.yaml: |
     YXBpVmVyc2lvbjogZGVja2hvdXNlLmlvL3YxCmtpbmQ6IENsdXN0ZXJDb25maWd1cmF0aW9uCmt1YmVybmV0ZXNWZXJzaW9uOiBBdXRvbWF0aWM=
+  # v1.35
   deckhouseDefaultKubernetesVersion: djEuMzU=
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    cause: idle
+    lastReconciliationTime: '2026-01-01T00:00:00Z'
+    lastUpToDateTime: '2026-01-01T00:00:00Z'
+  labels:
+    heritage: deckhouse
+    k8s-version: "1.35"
+    max-k8s-version: "1.35"
+  name: d8-cluster-kubernetes
+  namespace: kube-system
 ---
 apiVersion: v1
 kind: Node

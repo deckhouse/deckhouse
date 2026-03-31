@@ -48,7 +48,7 @@ import:
   add: /src/deploy/crds
   to: /src/deploy/crds
   before: install
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: install
@@ -71,14 +71,14 @@ shell:
     cat /docs/README_RU.md | grep {{ $version }} || ( echo "ERROR: version v{{ $version }} not found in /docs/README_RU.md" && exit 1 )
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" ) }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src
   before: install
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: install

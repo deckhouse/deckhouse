@@ -44,7 +44,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/entrypoint
@@ -66,7 +66,7 @@ shell:
 ---
 image: {{ .ModuleName }}/openssl-artifact
 final: false
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/openssl
@@ -84,7 +84,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src

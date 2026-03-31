@@ -52,7 +52,7 @@ shell:
     - rm -rf .git docs
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" ) }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -75,7 +75,7 @@ shell:
     - chmod 0700 oauth2-proxy
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-url-exec-prober-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

@@ -165,9 +165,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 
 	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
 		DockerConfig: packageRepo.Spec.Registry.DockerCFG,
+		Login:        packageRepo.Spec.Registry.Login,
+		Password:     packageRepo.Spec.Registry.Password,
 		CA:           packageRepo.Spec.Registry.CA,
 		Scheme:       packageRepo.Spec.Registry.Scheme,
-		// UserAgent: ,
 	}, r.logger)
 
 	registryClient, err := r.dc.GetRegistryClient(registryPath, opts...)
@@ -185,6 +186,17 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		}
 
 		return fmt.Errorf("get registry client for %s: %w", apv.Name, err)
+	}
+
+	// Create go registry client for bundle image
+	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package:$version
+	bundleRegistryPath := path.Join(packageRepo.Spec.Registry.Repo, apv.Spec.PackageName)
+
+	logger.Debug("bundle registry path", slog.String("path", bundleRegistryPath))
+
+	bundleRegistryClient, err := r.dc.GetRegistryClient(bundleRegistryPath, opts...)
+	if err != nil {
+		return fmt.Errorf("get registry client for bundle image: %w", err)
 	}
 
 	// Get package.yaml from image
@@ -229,6 +241,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	// Patch the status
 	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
 
+	if apv.Status.PackageMetadata != nil {
+		apv.Status.PackageMetadata.Changelog = packageMeta.Changelog
+	}
+
 	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
 
 	logger.Debug("patch package version status")
@@ -237,9 +253,15 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, err)
 	}
 
-	// Delete label "draft" and patch the main object
 	original = apv.DeepCopy()
 
+	// check bundle image exists in registry
+	if _, err := bundleRegistryClient.Digest(ctx, apv.Spec.PackageVersion); err != nil {
+		logger.Warn("failed to get bundle image digest", log.Err(err))
+		apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "false"
+	}
+
+	// Delete label "draft" and patch the main object
 	delete(apv.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
 
 	err = r.client.Patch(ctx, apv, client.MergeFrom(original))
