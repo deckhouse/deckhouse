@@ -118,13 +118,13 @@ spec:
     - etcd
     - --initial-cluster=node1=https://1.1.1.1:2380
 `)
-	nodeName := "node1"
+	// nodeName := "node1"
 	initialCluster := []*etcdserverpb.Member{
 		{Name: "node1", PeerURLs: []string{"https://1.1.1.1:2380"}},
 		{Name: "node2", PeerURLs: []string{"https://2.2.2.2:2380"}},
 	}
 
-	err := prepareAndWriteEtcdStaticPod(podManifest, config, nodeName, initialCluster)
+	err := prepareAndWriteEtcdStaticPod(podManifest, config, initialCluster)
 	if err != nil {
 		t.Fatalf("prepareAndWriteEtcdStaticPod() failed: %v", err)
 	}

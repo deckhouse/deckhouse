@@ -30,7 +30,7 @@ func TestNewConfig_Defaults(t *testing.T) {
 	cfg, err := newConfig("node", "cluster.local", net.ParseIP("10.0.0.1"), "10.96.0.0/12")
 	require.NoError(t, err)
 
-	assert.Equal(t, constants.DefaultCertificatesDir, cfg.PKIDir)
+	assert.Equal(t, constants.DefaultCertificatesDir, cfg.pkiDir)
 	assert.Equal(t, constants.EncryptionAlgorithmRSA2048, cfg.EncryptionAlgorithmType)
 	assert.Equal(t, constants.CertificateValidityPeriod, cfg.CertValidityPeriod)
 	assert.Equal(t, constants.CACertificateValidityPeriod, cfg.CACertValidityPeriod)
@@ -113,16 +113,16 @@ func TestNewConfig_OptionsApplied(t *testing.T) {
 		"10.96.0.0/12",
 		WithPKIDir(dir),
 		WithControlPlaneEndpoint("my-lb.example.com:6443"),
-		WithApiServerCertSANs(customSANs),
+		WithAPIServerCertSANs(customSANs),
 		WithEncryptionAlgorithmType(constants.EncryptionAlgorithmECDSAP256),
 		WithCertValidityPeriod(30*24*time.Hour),
 		WithCACertValidityPeriod(5*365*24*time.Hour),
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, dir, cfg.PKIDir)
+	assert.Equal(t, dir, cfg.pkiDir)
 	assert.Equal(t, "my-lb.example.com:6443", cfg.ControlPlaneEndpoint)
-	assert.Equal(t, customSANs, cfg.ApiServerCertSANs)
+	assert.Equal(t, customSANs, cfg.APIServerCertSANs)
 	assert.Equal(t, constants.EncryptionAlgorithmECDSAP256, cfg.EncryptionAlgorithmType)
 	assert.Equal(t, 30*24*time.Hour, cfg.CertValidityPeriod)
 	assert.Equal(t, 5*365*24*time.Hour, cfg.CACertValidityPeriod)

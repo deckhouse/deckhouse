@@ -21,6 +21,6 @@ const (
 	DefaultOutDir                 = "/etc/kubernetes"
 	DefaultCertificatesDir        = "/etc/kubernetes/pki"
 	DefaultControlPlaneIP         = "127.0.0.1"
-	DefaultKubeApiServerPort      = "6443"
-	DefaultKubeApiProxyServerPort = "6445"
+	DefaultKubeAPIServerPort      = "6443"
+	DefaultKubeAPIProxyServerPort = "6445"
 )

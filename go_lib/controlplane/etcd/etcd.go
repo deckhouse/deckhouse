@@ -25,13 +25,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
-	kubeclient "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 
-	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
+	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
 
 var logger = log.Default().Named("etcd")
@@ -47,7 +47,7 @@ func InitCluster(podManifest []byte, nodeName string, options ...option) error {
 
 	logger.Info("Creating static Pod manifest during init cluster", slog.String("component", constants.Etcd))
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName, []*etcdserverpb.Member{}); err != nil {
+	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, []*etcdserverpb.Member{}); err != nil {
 		return err
 	}
 	return nil
@@ -56,7 +56,7 @@ func InitCluster(podManifest []byte, nodeName string, options ...option) error {
 func JoinCluster(podManifest []byte, ip string, nodeName string, options ...option) error {
 	opt := prepareOptions(options...)
 
-	kubeClient, err := kubeclient.MyNewKubernetesClient()
+	kubeClient, err := client.MyNewKubernetesClient()
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 	if err != nil {
 		return err
 	}
-
+	//nolint:sloglint
 	logger.Info("Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
 	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
 	clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), []string{etcdPeerAddress})
@@ -79,7 +79,7 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 
 	logger.Info("Creating static Pod manifest during join cluster", slog.String("component", constants.Etcd))
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName, clusterResponse.Members); err != nil {
+	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, clusterResponse.Members); err != nil {
 		return err
 	}
 
@@ -98,7 +98,7 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 	return nil
 }
 
-func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, nodeName string, initialCluster []*etcdserverpb.Member) error {
+func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, initialCluster []*etcdserverpb.Member) error {
 	if len(initialCluster) > 0 {
 		podManifest = addMembersToPodManifest(podManifest, initialCluster)
 	}
@@ -113,7 +113,7 @@ func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, nodeName
 
 func addMembersToPodManifest(podManifest []byte, initialCluster []*etcdserverpb.Member) []byte {
 	podManifestString := string(podManifest)
-	var endpoints []string
+	var endpoints []string //nolint:prealloc
 	for _, member := range initialCluster {
 		endpoints = append(endpoints, fmt.Sprintf("%s=%s", member.Name, member.PeerURLs[0]))
 	}
