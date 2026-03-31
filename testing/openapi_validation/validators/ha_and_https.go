@@ -23,8 +23,9 @@ import (
 
 var (
 	absoluteKeysExcludes = map[string]string{
-		"modules/150-user-authn/openapi/config-values.yaml": "properties.publishAPI.properties.https",
-		"global-hooks/openapi/config-values.yaml":           "properties.modules.properties.https",
+		"modules/150-user-authn/openapi/config-values.yaml":            "properties.publishAPI.properties.https",
+		"modules/040-control-plane-manager/openapi/config-values.yaml": "properties.apiserver.properties.publishAPI.properties.ingress.properties.https",
+		"global-hooks/openapi/config-values.yaml":                      "properties.modules.properties.https",
 	}
 )
 
