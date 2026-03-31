@@ -67,35 +67,61 @@ spec:
       automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
+      initContainers:
+      - name: self-signed-generator
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "selfSignedGenerator") }}
+        args:
+        - user-api.d8-{{ .Chart.Name }}
+        - user-api.d8-{{ .Chart.Name }}.svc
+        volumeMounts:
+        - name: tls
+          mountPath: /certs
+        resources:
+          requests:
+            cpu: 10m
+            memory: 10Mi
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          limits:
+            memory: 10Mi
       containers:
       - name: user-api
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "userApi") }}
         args:
         - --listen=:8443
         - --dex-url=https://dex.d8-user-authn.svc
+        - --tls-cert-file=/certs/tls.crt
+        - --tls-key-file=/certs/tls.key
         ports:
         - containerPort: 8443
           name: https
           protocol: TCP
+        volumeMounts:
+        - name: tls
+          mountPath: /certs
+          readOnly: true
         livenessProbe:
           httpGet:
             path: /healthz
             port: 8443
-            scheme: HTTP
+            scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /readyz
             port: 8443
-            scheme: HTTP
+            scheme: HTTPS
           initialDelaySeconds: 5
           periodSeconds: 5
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "user_api_resources" . | nindent 12 }}
-  {{- end }}
+{{- end }}
+      volumes:
+      - name: tls
+        emptyDir: {}
 {{- end }}
