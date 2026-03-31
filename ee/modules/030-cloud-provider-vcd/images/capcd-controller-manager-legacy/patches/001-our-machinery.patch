@@ -1,5 +1,5 @@
 diff --git a/controllers/cluster_scripts/cloud_init.tmpl b/controllers/cluster_scripts/cloud_init.tmpl
-index a0b49271..8692cde1 100644
+index a0b4927..8692cde 100644
 --- a/controllers/cluster_scripts/cloud_init.tmpl
 +++ b/controllers/cluster_scripts/cloud_init.tmpl
 @@ -1,166 +1 @@
@@ -170,7 +170,7 @@ index a0b49271..8692cde1 100644
 -hostname: "{{ .MachineName }}"
 -final_message: "The system is ready after $UPTIME seconds"
 diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_controller.go
-index c3972d22..c24f184c 100644
+index c3972d2..c24f184 100644
 --- a/controllers/vcdcluster_controller.go
 +++ b/controllers/vcdcluster_controller.go
 @@ -31,7 +31,7 @@ import (
@@ -466,7 +466,7 @@ index c3972d22..c24f184c 100644
  	if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", vcdCluster.Name); err != nil {
  		log.Error(err, "failed to remove RdeError from RDE", "rdeID", vcdCluster.Status.InfraId)
 diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
-index 941086e0..c8d64174 100644
+index 941086e..c6faf4d 100644
 --- a/controllers/vcdmachine_controller.go
 +++ b/controllers/vcdmachine_controller.go
 @@ -13,26 +13,24 @@ import (
@@ -895,7 +895,7 @@ index 941086e0..c8d64174 100644
  		err = vm.UpdateNetworkConnectionSection(connections)
  		if err != nil {
  			return errors.Wrapf(err, "failed to update networks of VM")
-@@ -1008,35 +1000,45 @@ OUTER:
+@@ -1008,35 +1000,47 @@ OUTER:
  	return true
  }
  
@@ -905,7 +905,9 @@ index 941086e0..c8d64174 100644
  	for _, existingConnection := range connections.NetworkConnection {
 +		log.Info(fmt.Sprintf("getNetworkConnection: try connection %+v", existingConnection))
  		if existingConnection.Network == ovdcNetwork {
-+			log.Info(fmt.Sprintf("getNetworkConnection: found connection %+v", existingConnection))
++			// Force POOL mode instead of DHCP to get IPv4 address
++			existingConnection.IPAddressAllocationMode = "POOL"
++			log.Info(fmt.Sprintf("getNetworkConnection: found connection, forced POOL mode %+v", existingConnection))
  			return existingConnection
  		}
  	}
@@ -944,7 +946,7 @@ index 941086e0..c8d64174 100644
  	_, err = vApp.AddOrgNetwork(&govcd.VappNetworkSettings{}, ovdcNetwork.OrgVDCNetwork, false)
  	if err != nil {
  		return fmt.Errorf("unable to add ovdc network [%v] to vApp [%s]: [%v]",
-@@ -1047,7 +1049,6 @@ func ensureNetworkIsAttachedToVApp(vdcManager *vcdsdk.VdcManager, vApp *govcd.VA
+@@ -1047,7 +1051,6 @@ func ensureNetworkIsAttachedToVApp(vdcManager *vcdsdk.VdcManager, vApp *govcd.VA
  }
  
  func (r *VCDMachineReconciler) getBootstrapData(ctx context.Context, machine *clusterv1.Machine) (string, error) {
@@ -952,7 +954,7 @@ index 941086e0..c8d64174 100644
  	if machine.Spec.Bootstrap.DataSecretName == nil {
  		return "", errors.New("error retrieving bootstrap data: linked Machine's bootstrap.dataSecretName is nil")
  	}
-@@ -1065,8 +1066,6 @@ func (r *VCDMachineReconciler) getBootstrapData(ctx context.Context, machine *cl
+@@ -1065,8 +1068,6 @@ func (r *VCDMachineReconciler) getBootstrapData(ctx context.Context, machine *cl
  		return "", errors.New("error retrieving bootstrap data: secret value key is missing")
  	}
  
@@ -961,7 +963,7 @@ index 941086e0..c8d64174 100644
  	return string(value), nil
  }
  
-@@ -1348,16 +1347,14 @@ func (r *VCDMachineReconciler) reconcileDelete(ctx context.Context, cluster *clu
+@@ -1348,16 +1349,14 @@ func (r *VCDMachineReconciler) reconcileDelete(ctx context.Context, cluster *clu
  	rdeManager := vcdsdk.NewRDEManager(workloadVCDClient, vcdCluster.Status.InfraId, capisdk.StatusComponentNameCAPVCD, release.Version)
  	err = rdeManager.RemoveFromVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VcdResourceTypeVM, machine.Name)
  	if err != nil {
@@ -981,7 +983,7 @@ index 941086e0..c8d64174 100644
  	err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", machine.Name)
  	if err != nil {
 diff --git a/main.go b/main.go
-index 16da954c..baf10097 100644
+index 16da954..baf1009 100644
 --- a/main.go
 +++ b/main.go
 @@ -10,15 +10,16 @@ import (
