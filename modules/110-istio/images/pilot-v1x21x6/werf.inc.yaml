@@ -24,6 +24,20 @@ import:
   owner: 64535
   group: 64535
   after: setup
+- from: {{ index $.Images "tools/bash" }}
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: setup
+- from: {{ index $.Images "tools/procps" }}
+  add: /bin/ps
+  to: /bin/ps
+  before: setup
+- from: {{ index $.Images "tools/coreutils" }}
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/*
+  before: setup
 git:
 {{- include "image mount points" . }}
 imageSpec:
