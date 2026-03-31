@@ -7,22 +7,36 @@ description: "Configuring VMware vSphere for Deckhouse cloud provider operation.
 
 ## Environment requirements
 
-* vSphere version: `7.x` or `8.x` with support for the [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) mechanism.
-* vCenter to which master nodes can connect to from within the cluster.
-* Datacenter with the following components:
-  1. VirtualMachine template.
-     * VM image should use `Virtual machines with hardware version 15 or later` (required for online resize to work).
-     * The following packages must be installed in the VM image: `open-vm-tools`, `cloud-init` and [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (if the `cloud-init` version lower than 21.3 is used).
-  1. The network must be available on all ESXi where VirtualMachines will be created.
-  1. One or more Datastores connected to all ESXi where VirtualMachines will be created.
-     * A tag from the tag category in [`zoneTagCategory`](./configuration.html#parameters-zonetagcategory) (`k8s-zone` by default) **must be added** to Datastores. This tag will indicate the **zone**.  All Clusters of a specific zone must have access to all Datastores within the same zone.
-  1. The cluster with the required ESXis.
-     * A tag from the tag category in [`zoneTagCategory`](./configuration.html#parameters-zonetagcategory) (`k8s-zone` by default) **must be added** to the Cluster. This tag will indicate the **zone**.
-  1. Folder for VirtualMachines to be created.
-     * An optional parameter. By default, the root vm folder is used.
-  1. Create a role with the appropriate [set of privileges](#list-of-required-privileges).
-  1. Create a user and assign the above role to it.
-* A tag from the tag category in [`regionTagCategory`](./configuration.html#parameters-regiontagcategory) (`k8s-region` by default) **must be added** to the Datacenter. This tag will indicate the **region**.
+The following prerequisites must be met for Deckhouse Kubernetes Platform to work correctly with VMware vSphere:
+
+- Access to vCenter;
+- A user account with the required set of privileges;
+- Tags and tag categories created in vSphere;
+- Networks with DHCP and Internet access;
+- Shared Datastore resources available on all ESXi hosts in use;
+- vSphere version `7.x` or `8.x` with support for [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion);
+- vCenter accessible from inside the cluster from the master nodes;
+- A configured Datacenter that includes the following objects:
+  1. VirtualMachine template:
+     - The virtual machine image must use `Virtual machines with hardware version 15 or later` — this is required for online resize support.
+     - The image must include the `open-vm-tools`, `cloud-init`, and [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) packages if the `cloud-init` version is lower than `21.3`.
+  1. Network:
+     - The network must be available on all ESXi hosts where virtual machines are planned to be created.
+  1. Datastore (one or more):
+     - The Datastore must be connected to all ESXi hosts where virtual machines are planned to be created.
+     - A tag from the category specified in the [`zoneTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-zonetagcategory) parameter must be assigned to the Datastore (default: `k8s-zone`). This tag defines the zone.
+     - All Cluster objects within the same zone must have access to all Datastore objects in that zone.
+  1. Cluster:
+     - All ESXi hosts in use must be added to the Cluster.
+     - A tag from the category specified in the [`zoneTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-zonetagcategory) parameter must be assigned to the Cluster (default: `k8s-zone`). This tag defines the zone.
+  1. Folder for the virtual machines being created:
+     - This parameter is optional.
+     - By default, the root virtual machine folder is used.
+  1. Role:
+     - The role must include the required [set of privileges](/modules/cloud-provider-vsphere/environment.html#список-необходимых-привилегий).
+  1. User:
+     - The user must be assigned the role specified in the previous item.
+- A tag from the category specified in the [`regionTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-regiontagcategory) parameter must be assigned to the created Datacenter (default: `k8s-region`). This tag defines the region.
 
 ## List of required vSphere resources
 
@@ -332,65 +346,65 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
 
 ## vSphere configuration
 
-### Configuration via vSphere Client
+### Configuration in vSphere Client
 
-#### Creating tags and tag categories
+#### Creating tags and tag categories in vSphere Client
 
-VMware vSphere does not have the concepts of "region" and "zone". In vSphere, a "region" is represented by a `Datacenter`, and a "zone" by a `Cluster`. Tags are used to establish this mapping.
+VMware vSphere does not have built-in concepts of a "region" or a "zone". In vSphere, a Datacenter acts as a region, and a Cluster acts as a zone. Tags are used to establish this mapping.
 
-1. Open vSphere Client and navigate to **Menu** → **Tags & Custom Attributes** → **Tags**.
+1. Open vSphere Client and go to "Menu" → "Tags & Custom Attributes" → "Tags".
 
-    ![Creating tags and tag categories, step 1](images/tags-categories-setup/Screenshot-1.png)
+   ![Creating tags and tag categories, step 1](images/tags-categories-setup/Screenshot-1.png)
 
-2. Open the **Categories** tab and click **NEW**. Create a category for regions (for example, `k8s-region`): set **Tags Per Object** to **One tag** and specify the associated object types, including **Datacenter**.
+1. Open the "Categories" tab and click "NEW". Create a category for regions (for example, `k8s-region`): set "Tags Per Object" to "One tag" and specify the applicable object types, including Datacenter.
 
    ![Creating tags and tag categories, step 2](images/tags-categories-setup/Screenshot-2.png)
 
-3. Create a second category for zones (for example, `k8s-zone`) with **Host**, **Cluster**, and **Datastore** as object types.
+1. Create a second category for zones (for example, `k8s-zone`) with the object types Host, Cluster, and Datastore.
 
    ![Creating tags and tag categories, step 3](images/tags-categories-setup/Screenshot-3.png)
 
-4. Go to the **Tags** tab and create at least one tag in the region category and one tag in the zone category (for example, `test-region`, `test-zone-1`).
+1. Go to the "Tags" tab and create at least one tag in the region category and one tag in the zone category (for example, `test-region`, `test-zone-1`).
 
    ![Creating tags and tag categories, step 4](images/tags-categories-setup/Screenshot-4.png)
 
-5. In the **Inventory** tab, select the target **Datacenter**, open the **Summary** panel, then choose **Actions** → **Tags & Custom Attributes** → **Assign Tag** and assign the region tag.
-   Repeat this for each **Cluster** where nodes will be placed, assigning the corresponding zone tags.
+1. In the "Inventory" tab, select the target Datacenter, open the "Summary" panel, then choose "Actions" → "Tags & Custom Attributes" → "Assign Tag" and assign the region tag.
+   Repeat this step for each Cluster that will host nodes, assigning the appropriate zone tags.
 
    ![Creating tags and tag categories, step 5.1](images/tags-categories-setup/Screenshot-5-1.png)
    ![Creating tags and tag categories, step 5.2](images/tags-categories-setup/Screenshot-5-2.png)
 
-##### Datastore configuration
+#### Configuring Datastore in vSphere Client
 
 {% alert level="warning" %}
-For dynamic `PersistentVolume` provisioning, a `Datastore` must be available on **each** ESXi host (shared datastore).
+For dynamic provisioning of PersistentVolume, the Datastore must be available on **every** ESXi host in the zone (shared datastore).
 {% endalert %}
 
-In the **Inventory** tab, select the **Datastore**, open the **Summary** panel, then choose **Actions** → **Tags & Custom Attributes** → **Assign Tag** and assign the same region tag as on the corresponding **Datacenter**, and the same zone tag as on the corresponding **Cluster**.
+In the "Inventory" tab, select the Datastore, open the "Summary" panel, then choose "Actions" → "Tags & Custom Attributes" → "Assign Tag". Assign the Datastore the same region tag as the corresponding Datacenter, and the same zone tag as the corresponding Cluster.
 
 ![Creating tags and tag categories, step 6](images/tags-categories-setup/Screenshot-6.png)
 
-#### Creating and assigning a role
+#### Creating and assigning a role in vSphere Client
 
-1. Navigate to **Menu** → **Administration** → **Access Control** → **Roles**.
+1. Go to "Menu" → "Administration" → "Access Control" → "Roles".
 
-    ![Creating and assigning a role, step 1](images/role-setup/Screenshot-1.png)
+   ![Creating and assigning a role, step 1](images/role-setup/Screenshot-1.png)
 
-2. Click **NEW**, enter a role name (for example, `deckhouse`), and add the privileges from the [list](#list-of-required-privileges).
+1. Click "NEW", enter a role name (for example, `deckhouse`), and add the privileges from the [list](#list-of-required-privileges).
 
-    ![Creating and assigning a role, step 2](images/role-setup/Screenshot-2.png)
+   ![Creating and assigning a role, step 2](images/role-setup/Screenshot-2.png)
 
-3. Assign the role to the Deckhouse account: in **Menu** → **Administration** → **Access Control** → **Global Permissions**, click **ADD** and select the user and the `deckhouse` role.
+1. Assign the role to the Deckhouse service account: go to "Menu" → "Administration" → "Access Control" → "Global Permissions", click "ADD", and select the user and the `deckhouse` role.
 
-    ![Creating and assigning a role, step 3](images/role-setup/Screenshot-3.png)
+   ![Creating and assigning a role, step 3](images/role-setup/Screenshot-3.png)
 
 ### Configuration via govc
 
 #### Installing govc
 
-You'll need the vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) — to proceed with the rest of the guide.
+To continue configuring vSphere, install the [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) CLI utility.
 
-After the installation is complete, set the environment variables required to work with vCenter:
+After installation, set the environment variables required to connect to `vCenter`:
 
 ```shell
 export GOVC_URL=example.com
@@ -399,18 +413,18 @@ export GOVC_PASSWORD=<password>
 export GOVC_INSECURE=1
 ```
 
-#### Creating tags and tag categories
+#### Creating tags and tag categories with govc
 
-Instead of "regions" and "zones", VMware vSphere provides `Datacenter` and `Cluster` objects. We will use tags to match them with "regions"/"zones". These tags fall into two categories: one for "regions" tags and the other for "zones" tags.
+VMware vSphere does not have built-in concepts of a "region" or a "zone". In vSphere, a Datacenter acts as a region, and a Cluster acts as a zone. Tags are used to establish this mapping.
 
-Create a tag category using the following commands:
+Create tag categories with the following commands:
 
 ```shell
 govc tags.category.create -d "Kubernetes Region" k8s-region
 govc tags.category.create -d "Kubernetes Zone" k8s-zone
 ```
 
-Create tags in each category. If you intend to use multiple "zones" (`Cluster`), create a tag for each one of them:
+Create tags in each category. If you intend to use multiple "zones" (Cluster), create a tag for each one of them:
 
 ```shell
 govc tags.create -d "Kubernetes Region" -c k8s-region test-region
@@ -418,26 +432,26 @@ govc tags.create -d "Kubernetes Zone Test 1" -c k8s-zone test-zone-1
 govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 ```
 
-Attach the "region" tag to `Datacenter`:
+Attach the "region" tag to Datacenter:
 
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>
 ```
 
-Attach "zone" tags to the `Cluster` objects:
+Attach "zone" tags to the Cluster objects:
 
 ```shell
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 ```
 
-##### Datastore configuration
+#### Datastore configuration with govc
 
 {% alert level="warning" %}
-For dynamic `PersistentVolume` provisioning, a `Datastore` must be available on **each** ESXi host (shared datastore).
+For dynamic PersistentVolume provisioning, a Datastore must be available on **each** ESXi host (shared datastore).
 {% endalert %}
 
-Assign the "region" and "zone" tags to the `Datastore` objects to automatically create a `StorageClass` in the Kubernetes cluster:
+Assign the "region" and "zone" tags to the Datastore objects to automatically create a StorageClass in the Kubernetes cluster:
 
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
@@ -447,12 +461,12 @@ govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<Datastor
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
 
-#### Creating and assigning a role
+#### Creating and assigning a role with govc
 
 {% alert %}
 We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 
-The role described below includes the privileges from the [List of required privileges](#list-of-required-privileges) section. If you need a more granular Role, please contact your Deckhouse support.
+The role described below includes the privileges from [the list of required privileges](#list-of-required-privileges) section. If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
 Create a role with the required privileges:
@@ -493,11 +507,15 @@ govc role.create deckhouse \
     VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
 
-Assign the role to a user on the `vCenter` object:
+Assign the role to a user on the vCenter object:
 
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
+
+{% alert level="info" %}
+For more detailed permission configuration, refer to [the official documentation](https://pkg.go.dev/github.com/vmware/govmomi).
+{% endalert %}
 
 ### VM image requirements
 

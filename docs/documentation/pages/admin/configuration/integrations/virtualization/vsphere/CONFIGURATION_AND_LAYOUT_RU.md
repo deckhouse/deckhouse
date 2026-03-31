@@ -79,7 +79,7 @@ zones:
 ## Список необходимых привилегий
 
 {% alert level="info" %}
-О том, как создать и назначить роль пользователю, читайте в [«Настройка через vSphere Client»](authorization.html#настройка-через-vsphere-client) и [«Настройка через govc»](authorization.html#настройка-через-govc).
+Подробнее о том, как создать и назначить роль пользователю можно ознакомиться в разделах[«Настройка через vSphere Client»](authorization.html#настройка-через-vsphere-client) и [«Настройка через govc»](authorization.html#настройка-через-govc).
 {% endalert %}
 
 **Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в vSphere:**
