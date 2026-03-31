@@ -466,7 +466,7 @@ index c3972d2..c24f184 100644
  	if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", vcdCluster.Name); err != nil {
  		log.Error(err, "failed to remove RdeError from RDE", "rdeID", vcdCluster.Status.InfraId)
 diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
-index 941086e..c6faf4d 100644
+index 941086e..dd32a1d 100644
 --- a/controllers/vcdmachine_controller.go
 +++ b/controllers/vcdmachine_controller.go
 @@ -13,26 +13,24 @@ import (
@@ -902,13 +902,16 @@ index 941086e..c6faf4d 100644
 -func getNetworkConnection(connections *types.NetworkConnectionSection, ovdcNetwork string) *types.NetworkConnection {
 +func getNetworkConnection(connections *types.NetworkConnectionSection, ovdcNetwork string, log logr.Logger) *types.NetworkConnection {
  
- 	for _, existingConnection := range connections.NetworkConnection {
-+		log.Info(fmt.Sprintf("getNetworkConnection: try connection %+v", existingConnection))
- 		if existingConnection.Network == ovdcNetwork {
+-	for _, existingConnection := range connections.NetworkConnection {
+-		if existingConnection.Network == ovdcNetwork {
+-			return existingConnection
++	for i := range connections.NetworkConnection {
++		log.Info(fmt.Sprintf("getNetworkConnection: try connection %+v", connections.NetworkConnection[i]))
++		if connections.NetworkConnection[i].Network == ovdcNetwork {
 +			// Force POOL mode instead of DHCP to get IPv4 address
-+			existingConnection.IPAddressAllocationMode = "POOL"
-+			log.Info(fmt.Sprintf("getNetworkConnection: found connection, forced POOL mode %+v", existingConnection))
- 			return existingConnection
++			connections.NetworkConnection[i].IPAddressAllocationMode = "POOL"
++			log.Info(fmt.Sprintf("getNetworkConnection: found connection, forced POOL mode %+v", connections.NetworkConnection[i]))
++			return connections.NetworkConnection[i]
  		}
  	}
  
