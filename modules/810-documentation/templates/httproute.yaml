@@ -2,7 +2,7 @@
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha1
+apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
