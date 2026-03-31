@@ -1,27 +1,40 @@
 {{- if eq .nodeGroup.name "master" }}
 
+# Terraform-only deterministic mode (no autodiscovery)
+
+kubernetes_data_device_id="$(cat /var/lib/bashible/kubernetes_data_device_path 2>/dev/null || true)"
+
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
   return 0
 fi
 
-if [ -f /var/lib/bashible/kubernetes-data-device-installed ]; then
-  return 0
+if [ -z "$kubernetes_data_device_id" ]; then
+  >&2 echo "kubernetes_data_device_path is not set. Provide it via Terraform/cloud-init."
+  return 1
 fi
 
-if ! grep "/dev" /var/lib/bashible/kubernetes_data_device_path >/dev/null; then
-  get_disks_by_lun_id="$(ls /dev/disk/azure/*/lun10 -l)"
+kubernetes_data_device_path=""
 
-  if [ "$(wc -l <<< "$get_disks_by_lun_id")" -ne 1 ]; then
-    >&2 echo "failed to discover kubernetes-data device"
+# Direct block device path (NVMe / by-id)
+if [ -b "$kubernetes_data_device_id" ]; then
+  kubernetes_data_device_path="$kubernetes_data_device_id"
+
+# Azure SCSI / udev-based LUN mapping (explicit only)
+elif [[ "$kubernetes_data_device_id" == lun* ]]; then
+  lun_number="${kubernetes_data_device_id#lun}"
+
+  kubernetes_data_device_path="$(ls -1 /dev/disk/azure/data-lun${lun_number} 2>/dev/null | head -n1 || true)"
+
+  if [ -z "$kubernetes_data_device_path" ]; then
+    >&2 echo "Azure disk for $kubernetes_data_device_id not found (/dev/disk/azure/data-lun${lun_number})"
     return 1
   fi
 
-  kubernetes_data_device_path="$(awk '{gsub("../../..", "/dev");print $11}' <<< "$get_disks_by_lun_id")"
 else
-  return 0
+  >&2 echo "Unsupported kubernetes_data_device_path format: $kubernetes_data_device_id"
+  return 1
 fi
 
 echo "kubernetes_data_device: $kubernetes_data_device_path"
 blkid
-echo "$kubernetes_data_device_path" > /var/lib/bashible/kubernetes_data_device_path
 {{- end }}
