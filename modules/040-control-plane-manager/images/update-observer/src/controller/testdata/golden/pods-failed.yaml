@@ -5,6 +5,16 @@ data:
     updateMode: Automatic
   status: |
     currentVersion: v1.35
+    supportedVersions:
+    - v1.31
+    - v1.32
+    - v1.33
+    - v1.34
+    - v1.35
+    availableVersions:
+    - v1.34
+    - v1.35
+    automaticVersion: v1.33
     phase: ControlPlaneUpdating
     progress: 77%
     controlPlane:
@@ -27,8 +37,9 @@ data:
       upToDateCount: 3
 metadata:
   annotations:
-    cause: init
-    lastReconciliationTime: "2000-01-01T03:00:30+03:00"
+    cause: idle
+    lastReconciliationTime: "2000-01-01T04:00:30+04:00"
+    lastUpToDateTime: "2026-01-01T00:00:00Z"
   labels:
     heritage: deckhouse
     k8s-version: v1.35

@@ -31,8 +31,7 @@ status:
   packages:
     failed:
     - errors:
-      - error: 'package has no type labels and no package.yaml, processed as the legacy
-          module (v1alpha1): test-package'
+      - message: 'version image has no type labels and no package.yaml: test-package'
         version: ""
       name: test-package
     processed:
