@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
-  "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -115,8 +115,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-03-04T12:01:35.102372Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: kubelet экспонирует gRPC-интерфейсы (CRI, device plugins) без использования path-based авторизационных интерцепторов с deny-правилами и fallback allow — авторизация выполняется через webhook к kube-apiserver. Кроме того, gRPC-сокеты kubelet доступны исключительно локально через Unix-сокеты, что исключает возможность отправки произвольных raw HTTP/2 фреймов сетевым атакующим.",
+      "timestamp": "2026-03-27T09:20:45.42252Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-03-04T12:01:35Z"
+  "last_updated": "2026-03-27T09:20:45Z"
 }
