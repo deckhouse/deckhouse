@@ -145,6 +145,9 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 		}
 		etcdEndpoint, ok := pod.ObjectMeta.Annotations[constants.EtcdAdvertiseClientUrlsAnnotationKey]
 		if !ok {
+			etcdEndpoint, ok = pod.ObjectMeta.Annotations[constants.LegacyEtcdAdvertiseClientUrlsAnnotationKey]
+		}
+		if !ok {
 			logger.Info("etcd Pod is missing the annotation; cannot infer etcd advertise client URL using the Pod annotation", slog.String("pod", pod.ObjectMeta.Name), slog.String("annotation", constants.EtcdAdvertiseClientUrlsAnnotationKey))
 			continue
 		}

@@ -29,6 +29,11 @@ type ComponentChecksum struct {
 	// PKIChecksum is the hash of PKI-related config keys (certSANs, encryption-algorithm)
 	// +optional
 	PKIChecksum string `json:"pkiChecksum,omitempty"`
+
+	// CAChecksum is the hash of CA certificates applied to this component.
+	// Set when the component's pod restarts with the new CA.
+	// +optional
+	CAChecksum string `json:"caChecksum,omitempty"`
 }
 
 // ComponentChecksums holds checksums for all control plane components.

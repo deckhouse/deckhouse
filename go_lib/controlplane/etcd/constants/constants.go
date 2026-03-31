@@ -41,6 +41,10 @@ const (
 	// advertise client URLs
 	EtcdAdvertiseClientUrlsAnnotationKey = "control-plane-manager.deckhouse.io/etcd.advertise-client-urls"
 
+	// LegacyEtcdAdvertiseClientUrlsAnnotationKey is the kubeadm-era annotation key.
+	// Used as fallback during migration from kubeadm-managed to CPM-managed manifests.
+	LegacyEtcdAdvertiseClientUrlsAnnotationKey = "kubeadm.kubernetes.io/etcd.advertise-client-urls"
+
 	// ControlPlaneTier is the value used in the tier label to identify control plane components
 	ControlPlaneTier = "control-plane"
 

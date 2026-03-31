@@ -60,6 +60,11 @@ spec:
                     description: ComponentChecksum holds checksums for a single control
                       plane component.
                     properties:
+                      caChecksum:
+                        description: |-
+                          CAChecksum is the hash of CA certificates applied to this component.
+                          Set when the component's pod restarts with the new CA.
+                        type: string
                       configChecksum:
                         description: ConfigChecksum is the hash of the component static
                           pod template and extra-files.
@@ -75,6 +80,11 @@ spec:
                     description: ComponentChecksum holds checksums for a single control
                       plane component.
                     properties:
+                      caChecksum:
+                        description: |-
+                          CAChecksum is the hash of CA certificates applied to this component.
+                          Set when the component's pod restarts with the new CA.
+                        type: string
                       configChecksum:
                         description: ConfigChecksum is the hash of the component static
                           pod template and extra-files.
@@ -90,6 +100,11 @@ spec:
                     description: ComponentChecksum holds checksums for a single control
                       plane component.
                     properties:
+                      caChecksum:
+                        description: |-
+                          CAChecksum is the hash of CA certificates applied to this component.
+                          Set when the component's pod restarts with the new CA.
+                        type: string
                       configChecksum:
                         description: ConfigChecksum is the hash of the component static
                           pod template and extra-files.
@@ -105,6 +120,11 @@ spec:
                     description: ComponentChecksum holds checksums for a single control
                       plane component.
                     properties:
+                      caChecksum:
+                        description: |-
+                          CAChecksum is the hash of CA certificates applied to this component.
+                          Set when the component's pod restarts with the new CA.
+                        type: string
                       configChecksum:
                         description: ConfigChecksum is the hash of the component static
                           pod template and extra-files.
@@ -140,6 +160,11 @@ spec:
                     description: ComponentChecksum holds checksums for a single control
                       plane component.
                     properties:
+                      caChecksum:
+                        description: |-
+                          CAChecksum is the hash of CA certificates applied to this component.
+                          Set when the component's pod restarts with the new CA.
+                        type: string
                       configChecksum:
                         description: ConfigChecksum is the hash of the component static
                           pod template and extra-files.
@@ -155,6 +180,11 @@ spec:
                     description: ComponentChecksum holds checksums for a single control
                       plane component.
                     properties:
+                      caChecksum:
+                        description: |-
+                          CAChecksum is the hash of CA certificates applied to this component.
+                          Set when the component's pod restarts with the new CA.
+                        type: string
                       configChecksum:
                         description: ConfigChecksum is the hash of the component static
                           pod template and extra-files.
@@ -170,6 +200,11 @@ spec:
                     description: ComponentChecksum holds checksums for a single control
                       plane component.
                     properties:
+                      caChecksum:
+                        description: |-
+                          CAChecksum is the hash of CA certificates applied to this component.
+                          Set when the component's pod restarts with the new CA.
+                        type: string
                       configChecksum:
                         description: ConfigChecksum is the hash of the component static
                           pod template and extra-files.
@@ -185,6 +220,11 @@ spec:
                     description: ComponentChecksum holds checksums for a single control
                       plane component.
                     properties:
+                      caChecksum:
+                        description: |-
+                          CAChecksum is the hash of CA certificates applied to this component.
+                          Set when the component's pod restarts with the new CA.
+                        type: string
                       configChecksum:
                         description: ConfigChecksum is the hash of the component static
                           pod template and extra-files.
