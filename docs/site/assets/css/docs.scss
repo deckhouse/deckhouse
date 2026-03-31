@@ -1026,37 +1026,24 @@ a.comparison-table__module-proprietaryOkmeter::after {
     }
 }
 
-/* Top-level CRD status block should be visibly collapsible. */
-
-.docs ul.resources > li.top-level-toggleable.closed {
-  background: linear-gradient(180deg, #f9efef 0%, #FFF 100%);
+/* Top-level CRD status block: use default expand/collapse visuals. */
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name {
+    cursor: pointer;
 }
 
-.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap {
-    &:hover {
-        background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%);
-        border-radius: 4px;
-    }
-
-    > .resources__prop_name {
-        cursor: pointer;
-    }
-
-    > .resources__prop_name > .minus-icon {
-        display: inline-block;
-    }
-
-    > .resources__prop_name > .plus-icon {
-        display: none;
-    }
-}
-
-.docs ul.resources > li.top-level-toggleable.closed > .resources__prop_wrap > .resources__prop_name > .minus-icon {
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name > .plus-icon {
     display: none;
-    
+}
+
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name > .minus-icon {
+    display: inline-block;
 }
 
 .docs ul.resources > li.top-level-toggleable.closed > .resources__prop_wrap > .resources__prop_name > .plus-icon {
+    display: inline-block;
+}
+
+.docs ul.resources > li.top-level-toggleable.closed > .resources__prop_wrap > .resources__prop_name > .minus-icon {
     display: none;
 }
 
