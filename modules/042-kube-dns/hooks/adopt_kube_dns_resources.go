@@ -41,7 +41,7 @@ var metadata = map[string]interface{}{
 	},
 }
 
-func kubeDnsServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func kubeDNSServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	service := &v1.Service{}
 	err := sdk.FromUnstructured(obj, service)
 	if err != nil {
@@ -107,7 +107,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			ExecuteHookOnEvents:          ptr.To(false),
 			ExecuteHookOnSynchronization: ptr.To(false),
-			FilterFunc:                   kubeDnsServiceFilter,
+			FilterFunc:                   kubeDNSServiceFilter,
 		},
 		{
 			Name:       "deckhouse_deployment",
