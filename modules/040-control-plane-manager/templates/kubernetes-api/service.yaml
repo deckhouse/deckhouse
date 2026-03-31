@@ -1,4 +1,4 @@
-{{- if .Values.controlPlaneManager.publishAPI.ingress.enabled }}
+{{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
 ---
 apiVersion: v1
 kind: Service
