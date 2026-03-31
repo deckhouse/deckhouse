@@ -1049,11 +1049,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/380-metallb/templates/_helper.tpl
-  to: /deckhouse/modules/380-metallb/templates/_helper.tpl
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/380-metallb/templates/controller
   to: /deckhouse/modules/380-metallb/templates/controller
   excludePaths:

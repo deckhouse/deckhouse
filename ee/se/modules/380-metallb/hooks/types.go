@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	keyAnnotationL2BalancerName   = "network.deckhouse.io/l2-load-balancer-name"
 	keyAnnotationExternalIPsCount = "network.deckhouse.io/l2-load-balancer-external-ips-count"
 	memberLabelKey                = "l2-load-balancer.network.deckhouse.io/member"
 	l2LoadBalancerIPsAnnotate     = "network.deckhouse.io/load-balancer-ips"

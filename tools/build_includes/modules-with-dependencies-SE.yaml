@@ -415,11 +415,3 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/se/modules/380-metallb/requirements
-  to: /deckhouse/modules/380-metallb/requirements
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
