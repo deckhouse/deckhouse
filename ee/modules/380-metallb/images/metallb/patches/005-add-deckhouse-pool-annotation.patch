@@ -1,0 +1,18 @@
+diff --git a/controller/service.go b/controller/service.go
+index 0246663d..1e4ebea6 100644
+--- a/controller/service.go
++++ b/controller/service.go
+@@ -363,6 +363,12 @@ func SharingKey(svc *v1.Service) string {
+ }
+ 
+ func valueForAnnotation(annotations map[string]string, stableAnnotation string, deprecatedAnnotation string) string {
++	if stableAnnotation == AnnotationAddressPool {
++		if value, ok := annotations["network.deckhouse.io/load-balancer-pool"]; ok {
++			return value
++		}
++	}
++
+ 	if value, ok := annotations[stableAnnotation]; ok {
+ 		return value
+ 	}
+ 
