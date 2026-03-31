@@ -94,9 +94,10 @@ func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook
 func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 	if input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Exists() {
 		input.Logger.Info("Publish API ingress settings are set in moduleconfig control-plane-manager, setting values from said moduleconfig")
+
 		mcValues := input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Value()
 
-		// Manually set defaults from OpenAPI because they are missing when patching post-factum from Value() data.
+		// Manually set defaults as in OpenAPI because they are missing when patching via hook from Value() data.
 		rootMap := mcValues.(map[string]interface{})
 		if _, exists := rootMap["enabled"]; !exists {
 			rootMap["enabled"] = false
@@ -109,7 +110,6 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 			httpsMap["mode"] = "SelfSigned"
 		}
 
-		fmt.Println(mcValues)
 		input.Values.Set("controlPlaneManager.apiserver.publishAPI.ingress", mcValues)
 		return nil
 	}
