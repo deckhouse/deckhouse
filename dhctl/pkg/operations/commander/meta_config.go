@@ -22,10 +22,31 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/name212/govalue"
 )
 
-func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, logger log.Logger) (*config.MetaConfig, error) {
-	clusterUUIDBytes, err := stateCache.Load("uuid")
+type PreparatorProviderConsumer func() config.MetaConfigPreparatorProvider
+
+type MetaConfigParser struct {
+	stateCache                 state.Cache
+	logger                     log.Logger
+	preparatorProviderConsumer PreparatorProviderConsumer
+}
+
+func NewMetaConfigParser(stateCache state.Cache, logger log.Logger) *MetaConfigParser {
+	return &MetaConfigParser{
+		stateCache: stateCache,
+		logger:     logger,
+	}
+}
+
+func (p *MetaConfigParser) WithPreparatorProviderConsumer(c PreparatorProviderConsumer) *MetaConfigParser {
+	p.preparatorProviderConsumer = c
+	return p
+}
+
+func (p *MetaConfigParser) Parse(ctx context.Context, params *CommanderModeParams) (*config.MetaConfig, error) {
+	clusterUUIDBytes, err := p.stateCache.Load("uuid")
 	if err != nil {
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: %w", err)
 	}
@@ -38,9 +59,7 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 	metaConfig, err := config.ParseConfigFromData(
 		ctx,
 		configData,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(logger),
-		),
+		p.getPreparatorProvider(),
 		config.ValidateOptionCommanderMode(true),
 		config.ValidateOptionStrictUnmarshal(true),
 		config.ValidateOptionValidateExtensions(true),
@@ -51,4 +70,14 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 	metaConfig.UUID = clusterUUID
 
 	return metaConfig, nil
+}
+
+func (p *MetaConfigParser) getPreparatorProvider() config.MetaConfigPreparatorProvider {
+	if !govalue.IsNil(p.preparatorProviderConsumer) {
+		return p.preparatorProviderConsumer()
+	}
+
+	return infrastructureprovider.MetaConfigPreparatorProvider(
+		infrastructureprovider.NewPreparatorProviderParams(p.logger),
+	)
 }

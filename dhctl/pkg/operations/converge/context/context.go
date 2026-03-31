@@ -56,6 +56,8 @@ type Context struct {
 	stateChecker          infrastructure.StateChecker
 	clientSwitcher        MultiMasterClientSwitcher
 
+	preparatorProviderConsumer commander.PreparatorProviderConsumer
+
 	providerGetter infrastructure.CloudProviderGetter
 
 	logger log.Logger
@@ -68,6 +70,8 @@ type Params struct {
 	ProviderGetter infrastructure.CloudProviderGetter
 	Logger         log.Logger
 	ClientSwitcher MultiMasterClientSwitcher
+
+	PreparatorProviderConsumer commander.PreparatorProviderConsumer
 }
 
 func newContext(ctx context.Context, params Params) *Context {
@@ -85,6 +89,8 @@ func newContext(ctx context.Context, params Params) *Context {
 		ctx:            ctx,
 		logger:         logger,
 		clientSwitcher: params.ClientSwitcher,
+
+		preparatorProviderConsumer: params.PreparatorProviderConsumer,
 
 		stateStore: newInSecretStateStore(),
 	}
@@ -196,7 +202,10 @@ func (c *Context) CompleteExecutionPhase(data any) error {
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 	if c.CommanderMode() {
-		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger)
+		parser := commander.NewMetaConfigParser(c.stateCache, c.logger).
+			WithPreparatorProviderConsumer(c.preparatorProviderConsumer)
+
+		metaConfig, err := parser.Parse(c.Ctx(), c.commanderParams)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}

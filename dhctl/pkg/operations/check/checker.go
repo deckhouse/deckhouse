@@ -119,14 +119,12 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		return nil, cleaner, err
 	}
 
-	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger)
+	parser := commander.NewMetaConfigParser(c.StateCache, c.logger).
+		WithPreparatorProviderConsumer(c.MetaConfigPreparatorProvider)
+
+	metaConfig, err := parser.Parse(ctx, c.Params.CommanderModeParams)
 	if err != nil {
 		return nil, cleaner, fmt.Errorf("Unable to parse meta configuration: %w", err)
-	}
-
-	metaConfig, err = c.prepareMetaConfig(ctx, metaConfig)
-	if err != nil {
-		return nil, cleaner, fmt.Errorf("Cannot prepare meta config: %w", err)
 	}
 
 	if !c.Embedded {
@@ -202,25 +200,6 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	res.HasTerraformState = hasTerraformState
 
 	return res, cleaner, nil
-}
-
-func (c *Checker) prepareMetaConfig(ctx context.Context, metaConfig *config.MetaConfig) (*config.MetaConfig, error) {
-	if govalue.IsNil(c.MetaConfigPreparatorProvider) {
-		return metaConfig, nil
-	}
-
-	preparatorProvider := c.MetaConfigPreparatorProvider()
-	if govalue.IsNil(preparatorProvider) {
-		return metaConfig, nil
-	}
-
-	var err error
-	metaConfig, err = metaConfig.Prepare(ctx, preparatorProvider)
-	if err != nil {
-		return nil, err
-	}
-
-	return metaConfig, nil
 }
 
 const (
