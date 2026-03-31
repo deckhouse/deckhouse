@@ -39,8 +39,7 @@ const (
 
 	// EtcdAdvertiseClientUrlsAnnotationKey is the annotation key on every etcd pod, describing the
 	// advertise client URLs
-	// CHANGE TO control-plane-manager.deckhouse.io/etcd.advertise-client-urls
-	EtcdAdvertiseClientUrlsAnnotationKey = "kubeadm.kubernetes.io/etcd.advertise-client-urls"
+	EtcdAdvertiseClientUrlsAnnotationKey = "control-plane-manager.deckhouse.io/etcd.advertise-client-urls"
 
 	// ControlPlaneTier is the value used in the tier label to identify control plane components
 	ControlPlaneTier = "control-plane"
