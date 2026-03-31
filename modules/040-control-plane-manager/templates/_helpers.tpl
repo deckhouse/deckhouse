@@ -16,7 +16,7 @@
 =======
 {{- /* We do not need to follow global logic of naming tls secrets if publish API mode is not global */ -}}
 {{- define "publish_api_certificate_name" }}
-  {{- if eq .Values.controlPlaneManager.publishAPI.ingress.https.mode "Global" }}
+  {{- if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global" }}
 {{- include "helm_lib_module_https_secret_name" (list . "kubernetes-tls") }}
   {{- else }}
 {{- printf "kubernetes-tls-selfsigned" }}
@@ -25,8 +25,8 @@
 
 
 {{- define "publish_api_deploy_certificate" }}
-  {{- if .Values.controlPlaneManager.publishAPI.ingress.enabled }}
-    {{- if eq .Values.controlPlaneManager.publishAPI.ingress.https.mode "Global" -}}
+  {{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
+    {{- if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global" -}}
       {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
       "not empty string"
       {{- end }}

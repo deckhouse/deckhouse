@@ -13,10 +13,10 @@ spec:
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "api") }}
   issuerRef:
-  {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
+  {{- if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global" }}
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
-  {{- else if eq .Values.userAuthn.publishAPI.https.mode "SelfSigned" }}
+  {{- else if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned" }}
     {{- if .Values.global.enabledModules | has "cert-manager" }}
     name: kubernetes-api
     kind: Issuer
