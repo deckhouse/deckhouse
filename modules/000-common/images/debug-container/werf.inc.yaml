@@ -2,7 +2,7 @@
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ index $.Images "builder/alpine" }}
+fromImage: builder/alpine
 final: false
 import:
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
@@ -27,15 +27,15 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
 import:
-- from: {{ index $.Images "libs/musl" }}
+- image: libs/musl
   add: /usr/lib/libc.so
   to: /usr/lib/libc.so
   before: install
-- from: {{ index $.Images "libs/musl" }}
+- image: libs/musl
   add: /lib/ld-musl-x86_64.so.1
   to: /lib/ld-musl-x86_64.so.1
   before: install
-- from: {{ index $.Images "tools/curl" }}
+- image: tools/curl
   add: /usr/bin/curl
   to: /usr/bin/curl
   before: install
