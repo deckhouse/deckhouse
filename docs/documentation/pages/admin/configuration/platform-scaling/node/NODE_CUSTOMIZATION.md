@@ -332,9 +332,8 @@ General information about preparing GPU nodes, installing drivers, and verifying
 
 {% alert level="warning" %}
 If DKP is deployed on a single node with a GPU and the `MIG` strategy is used, the MIG configuration must be reapplied manually after each node reboot.
-{% endalert %}
-
 This is due to the specifics of a single-node cluster deployment: after a reboot, the MIG configuration is not automatically restored to a working state, so several additional steps are required.
+{% endalert %}
 
 After each node reboot, perform the following steps:
 

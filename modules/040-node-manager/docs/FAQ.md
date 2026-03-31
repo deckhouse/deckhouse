@@ -1514,7 +1514,7 @@ Containerd on GPU nodes is configured automatically. Do not change its configura
 {% endalert %}
 
 {% alert level="info" %}
-If a GPU is used in a single-node cluster and the `MIG` strategy is selected, an additional manual procedure is required after each node reboot to reapply the MIG configuration. For details, see [“Using MIG in a single-node cluster”](../../admin/configuration/platform-scaling/node/node-customization.html#mig-in-a-single-node-cluster).
+If a GPU is used in a single-node cluster and the `MIG` strategy is selected, an additional manual procedure is required after each node reboot to reapply the MIG configuration. For details, see [“Using MIG in a single-node cluster”](/products/kubernetes-platform/documentation/admin/configuration/platform-scaling/node/node-customization.html#mig-in-a-single-node-cluster).
 {% endalert %}
 
 To add a GPU node to the cluster, perform the following steps:
