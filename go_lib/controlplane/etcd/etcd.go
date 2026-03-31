@@ -29,6 +29,8 @@ import (
 	kubeclient "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -40,6 +42,9 @@ const (
 	etcdHealthyCheckInterval = 5 * time.Second
 	etcdHealthyCheckRetries  = 8
 	KubernetesAPICallTimeout = 1 * time.Minute
+	// Learner must catch up the leader before MemberPromote; on large stores this can take many poll cycles.
+	memberPromoteMaxAttempts  = 30
+	memberPromoteRetryBackoff = 5 * time.Second
 )
 
 func InitCluster(podManifest []byte, nodeName string, options ...option) error {
@@ -83,11 +88,23 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), KubernetesAPICallTimeout)
-	defer cancel()
-	_, err = etcdClient.MemberPromote(ctx, clusterResponse.Member.ID)
-	if err != nil {
-		return err
+	memberID := clusterResponse.Member.ID
+	for attempt := 1; attempt <= memberPromoteMaxAttempts; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), KubernetesAPICallTimeout)
+		_, err = etcdClient.MemberPromote(ctx, memberID)
+		cancel()
+		if err == nil {
+			break
+		}
+		if attempt == memberPromoteMaxAttempts || !isLearnerNotYetSyncedPromoteError(err) {
+			return err
+		}
+		logger.Info("MemberPromote: learner not in sync with leader yet, retrying",
+			slog.Uint64("memberID", memberID),
+			slog.Int("attempt", attempt),
+			slog.Int("maxAttempts", memberPromoteMaxAttempts),
+			slog.Duration("nextRetryIn", memberPromoteRetryBackoff))
+		time.Sleep(memberPromoteRetryBackoff)
 	}
 
 	logger.Info("Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
@@ -96,6 +113,18 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 	}
 
 	return nil
+}
+
+func isLearnerNotYetSyncedPromoteError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if st, ok := status.FromError(err); ok {
+		if st.Code() == codes.FailedPrecondition && strings.Contains(st.Message(), "can only promote a learner member") {
+			return true
+		}
+	}
+	return strings.Contains(err.Error(), "can only promote a learner member which is in sync with leader")
 }
 
 func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, nodeName string, initialCluster []*etcdserverpb.Member) error {
