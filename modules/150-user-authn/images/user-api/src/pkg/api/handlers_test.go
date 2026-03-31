@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -111,13 +111,13 @@ func TestHandler_ResetPassword(t *testing.T) {
 	validBcryptHash := "$2a$10$fyCj7unkBxyxSrh6jULkTOwvUabNzdd81am02CT9tWTlb.y0Eptri"
 
 	tests := []struct {
-		name           string
-		authHeader     string
-		body           interface{}
-		verifier       *mockVerifier
-		k8sClient      *mockK8sClient
-		wantStatus     int
-		wantErrCode    string
+		name        string
+		authHeader  string
+		body        interface{}
+		verifier    *mockVerifier
+		k8sClient   *mockK8sClient
+		wantStatus  int
+		wantErrCode string
 	}{
 		{
 			name:       "successful password reset",

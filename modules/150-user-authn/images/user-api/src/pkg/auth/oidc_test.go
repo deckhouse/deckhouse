@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -49,10 +49,10 @@ func (m *MockVerifier) ExtractToken(r *http.Request) (string, error) {
 
 func TestExtractToken(t *testing.T) {
 	tests := []struct {
-		name        string
-		authHeader  string
-		wantToken   string
-		wantErr     error
+		name       string
+		authHeader string
+		wantToken  string
+		wantErr    error
 	}{
 		{
 			name:       "valid bearer token",
