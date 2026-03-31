@@ -55,6 +55,14 @@ spec:
                 ready:
                   description: Ready is true when the control plane is ready.
                   type: boolean
+                initialization:
+                  description: Initialization provides observations of the control plane initialization process.
+                  properties:
+                    controlPlaneInitialized:
+                      description: ControlPlaneInitialized is true when the control plane
+                        is functional enough to accept requests.
+                      type: boolean
+                  type: object
               type: object
           type: object
       served: true
