@@ -180,7 +180,7 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 			specPKIChecksum:      cpn.Spec.Components.Etcd.PKIChecksum,
 			statusPKIChecksum:    cpn.Status.Components.Etcd.PKIChecksum,
 			specCAChecksum:       cpn.Spec.CAChecksum,
-			statusCAChecksum:     cpn.Status.CAChecksum,
+			statusCAChecksum:     cpn.Status.Components.Etcd.CAChecksum,
 			hasPKI:               true,
 		},
 		{
@@ -191,7 +191,7 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 			specPKIChecksum:      cpn.Spec.Components.KubeAPIServer.PKIChecksum,
 			statusPKIChecksum:    cpn.Status.Components.KubeAPIServer.PKIChecksum,
 			specCAChecksum:       cpn.Spec.CAChecksum,
-			statusCAChecksum:     cpn.Status.CAChecksum,
+			statusCAChecksum:     cpn.Status.Components.KubeAPIServer.CAChecksum,
 			hasPKI:               true,
 		},
 		{
@@ -200,7 +200,7 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 			specConfigChecksum:   cpn.Spec.Components.KubeControllerManager.ConfigChecksum,
 			statusConfigChecksum: cpn.Status.Components.KubeControllerManager.ConfigChecksum,
 			specCAChecksum:       cpn.Spec.CAChecksum,
-			statusCAChecksum:     cpn.Status.CAChecksum,
+			statusCAChecksum:     cpn.Status.Components.KubeControllerManager.CAChecksum,
 			hasPKI:               false,
 		},
 		{
@@ -209,7 +209,7 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 			specConfigChecksum:   cpn.Spec.Components.KubeScheduler.ConfigChecksum,
 			statusConfigChecksum: cpn.Status.Components.KubeScheduler.ConfigChecksum,
 			specCAChecksum:       cpn.Spec.CAChecksum,
-			statusCAChecksum:     cpn.Status.CAChecksum,
+			statusCAChecksum:     cpn.Status.Components.KubeScheduler.CAChecksum,
 			hasPKI:               false,
 		},
 		{
@@ -403,9 +403,6 @@ func (r *Reconciler) updateStatusFromOperations(
 ) error {
 	original := cpn.DeepCopy()
 
-	// Track if all static pod components needing CA update have completed.
-	allCAComponentsSynced := true
-
 	for _, state := range states {
 		op := findOperationForState(ops, state, cpn.Spec.ConfigVersion)
 		cond := r.conditionForState(state, op, cpn)
@@ -414,17 +411,41 @@ func (r *Reconciler) updateStatusFromOperations(
 		if op != nil && isCompleted(op) {
 			applyOperationResult(cpn, op)
 		}
-
-		if state.specCAChecksum != "" && state.component != controlplanev1alpha1.OperationComponentCA {
-			if op == nil || !isCompleted(op) {
-				allCAComponentsSynced = false
-			}
-		}
 	}
 
-	// Update status.caChecksum only when all static pod components have restarted with the new CA.
-	if allCAComponentsSynced && cpn.Spec.CAChecksum != "" && cpn.Status.CAChecksum != cpn.Spec.CAChecksum {
-		cpn.Status.CAChecksum = cpn.Spec.CAChecksum
+	// Derive global status.CAChecksum - set when ALL static pod components have per component CAChecksum matching spec.
+	if cpn.Spec.CAChecksum != "" && cpn.Status.CAChecksum != cpn.Spec.CAChecksum {
+		allMatch := true
+		for _, state := range states {
+			if state.component == controlplanev1alpha1.OperationComponentCA ||
+				state.component == controlplanev1alpha1.OperationComponentHotReload {
+				continue
+			}
+			if state.specCAChecksum == "" {
+				continue
+			}
+			switch state.component {
+			case controlplanev1alpha1.OperationComponentEtcd:
+				if cpn.Status.Components.Etcd.CAChecksum != cpn.Spec.CAChecksum {
+					allMatch = false
+				}
+			case controlplanev1alpha1.OperationComponentKubeAPIServer:
+				if cpn.Status.Components.KubeAPIServer.CAChecksum != cpn.Spec.CAChecksum {
+					allMatch = false
+				}
+			case controlplanev1alpha1.OperationComponentKubeControllerManager:
+				if cpn.Status.Components.KubeControllerManager.CAChecksum != cpn.Spec.CAChecksum {
+					allMatch = false
+				}
+			case controlplanev1alpha1.OperationComponentKubeScheduler:
+				if cpn.Status.Components.KubeScheduler.CAChecksum != cpn.Spec.CAChecksum {
+					allMatch = false
+				}
+			}
+		}
+		if allMatch {
+			cpn.Status.CAChecksum = cpn.Spec.CAChecksum
+		}
 	}
 
 	if reflect.DeepEqual(original.Status, cpn.Status) {
@@ -454,10 +475,13 @@ func findOperationForState(ops []controlplanev1alpha1.ControlPlaneOperation, sta
 // matchesDesiredChecksums returns true if the operation targets the current spec checksums.
 func matchesDesiredChecksums(op *controlplanev1alpha1.ControlPlaneOperation, state componentState) bool {
 	// CA component matches on CA checksum only
-	if state.specCAChecksum != "" {
-		if op.Spec.DesiredCAChecksum != state.specCAChecksum {
-			return false
-		}
+	if state.component == controlplanev1alpha1.OperationComponentCA {
+		return op.Spec.DesiredCAChecksum == state.specCAChecksum
+	}
+
+	// For static pod components, check CA checksum if present in the operation
+	if op.Spec.DesiredCAChecksum != "" && op.Spec.DesiredCAChecksum != state.specCAChecksum {
+		return false
 	}
 
 	switch op.Spec.Command {
@@ -561,8 +585,11 @@ func applyOperationResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *contro
 		setPKIChecksum(cpn, op.Spec.Component, op.Spec.DesiredPKIChecksum)
 	}
 
-	// NOTE: status.caChecksum is NOT written here per-operation.
-	// It is updated in updateStatusFromOperations only when ALL static pod components with DesiredCAChecksum have completed (all pods restarted with new CA).
+	// Write per component CA checksum when the operation made a CA update
+	// The global status.CAChecksum is derived in updateStatusFromOperations when all components match.
+	if op.Spec.DesiredCAChecksum != "" {
+		setCAChecksum(cpn, op.Spec.Component, op.Spec.DesiredCAChecksum)
+	}
 }
 
 func setConfigChecksum(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent, checksum string) {
@@ -586,6 +613,19 @@ func setPKIChecksum(cpn *controlplanev1alpha1.ControlPlaneNode, component contro
 		cpn.Status.Components.Etcd.PKIChecksum = checksum
 	case controlplanev1alpha1.OperationComponentKubeAPIServer:
 		cpn.Status.Components.KubeAPIServer.PKIChecksum = checksum
+	}
+}
+
+func setCAChecksum(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent, checksum string) {
+	switch component {
+	case controlplanev1alpha1.OperationComponentEtcd:
+		cpn.Status.Components.Etcd.CAChecksum = checksum
+	case controlplanev1alpha1.OperationComponentKubeAPIServer:
+		cpn.Status.Components.KubeAPIServer.CAChecksum = checksum
+	case controlplanev1alpha1.OperationComponentKubeControllerManager:
+		cpn.Status.Components.KubeControllerManager.CAChecksum = checksum
+	case controlplanev1alpha1.OperationComponentKubeScheduler:
+		cpn.Status.Components.KubeScheduler.CAChecksum = checksum
 	}
 }
 
