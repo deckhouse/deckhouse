@@ -32,18 +32,19 @@ type ComponentChecksum struct {
 }
 
 // ComponentChecksums holds checksums for all control plane components.
+// Zero values are allowed for etcd-arbiter nodes(etcd only).
 type ComponentChecksums struct {
-	// +kubebuilder:validation:Required
-	Etcd ComponentChecksum `json:"etcd"`
+	// +optional
+	Etcd ComponentChecksum `json:"etcd,omitempty"`
 
-	// +kubebuilder:validation:Required
-	KubeAPIServer ComponentChecksum `json:"kube-apiserver"`
+	// +optional
+	KubeAPIServer ComponentChecksum `json:"kube-apiserver,omitempty"`
 
-	// +kubebuilder:validation:Required
-	KubeControllerManager ComponentChecksum `json:"kube-controller-manager"`
+	// +optional
+	KubeControllerManager ComponentChecksum `json:"kube-controller-manager,omitempty"`
 
-	// +kubebuilder:validation:Required
-	KubeScheduler ComponentChecksum `json:"kube-scheduler"`
+	// +optional
+	KubeScheduler ComponentChecksum `json:"kube-scheduler,omitempty"`
 }
 
 type ControlPlaneNodeSpec struct {
@@ -52,16 +53,16 @@ type ControlPlaneNodeSpec struct {
 	ConfigVersion string `json:"configVersion"`
 
 	// CAChecksum is the hash of d8-pki secret (CA certificates).
-	// +kubebuilder:validation:Required
-	CAChecksum string `json:"caChecksum"`
+	// +optional
+	CAChecksum string `json:"caChecksum,omitempty"`
 
 	// Checksums per component
-	// +kubebuilder:validation:Required
-	Components ComponentChecksums `json:"components"`
+	// +optional
+	Components ComponentChecksums `json:"components,omitempty"`
 
 	// For reload mechanisms (e.g. in-place reload)
-	// +kubebuilder:validation:Required
-	HotReloadChecksum string `json:"hotReloadChecksum"`
+	// +optional
+	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
 }
 
 type ControlPlaneNodeStatus struct {

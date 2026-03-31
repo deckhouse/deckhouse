@@ -30,23 +30,34 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// writeStaticPodManifest expands env vars in the template, sets checksum annotations and writes the manifest to manifestDir/<component>.yaml atomically.
-func writeStaticPodManifest(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, configChecksum, pkiChecksum, caChecksum, manifestDir string) error {
+// prepareManifestBytes expands env vars in the template and sets checksum annotations.
+// Returns raw manifest bytes
+func prepareManifestBytes(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, configChecksum, pkiChecksum, caChecksum string) ([]byte, error) {
 	key := component.SecretKey()
 	if key == "" {
-		return fmt.Errorf("no secret key for component %s", component)
+		return nil, fmt.Errorf("no secret key for component %s", component)
 	}
 
 	tpl, ok := secretData[key]
 	if !ok {
-		return fmt.Errorf("template key %q not found in secret", key)
+		return nil, fmt.Errorf("template key %q not found in secret", key)
 	}
 
 	expanded := os.ExpandEnv(string(tpl))
 
 	manifest, err := setChecksumAnnotations([]byte(expanded), configChecksum, pkiChecksum, caChecksum)
 	if err != nil {
-		return fmt.Errorf("set checksum annotations: %w", err)
+		return nil, fmt.Errorf("set checksum annotations: %w", err)
+	}
+
+	return manifest, nil
+}
+
+// writeStaticPodManifest expands env vars in the template, sets checksum annotations and writes the manifest to manifestDir/<component>.yaml atomically.
+func writeStaticPodManifest(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, configChecksum, pkiChecksum, caChecksum, manifestDir string) error {
+	manifest, err := prepareManifestBytes(component, secretData, configChecksum, pkiChecksum, caChecksum)
+	if err != nil {
+		return err
 	}
 
 	filename := filepath.Join(manifestDir, component.PodComponentName()+".yaml")
@@ -133,8 +144,8 @@ func writeHotReloadFiles(secretData map[string][]byte, extraFilesDir string) err
 }
 
 // isPodReadyWithChecksums returns true if the pod has the expected checksum annotations and is in Ready condition.
-// An empty string for either checksum - do not check that annotation.
-func isPodReadyWithChecksums(pod *corev1.Pod, configChecksum, pkiChecksum string) bool {
+// An empty string for any checksum — do not check that annotation.
+func isPodReadyWithChecksums(pod *corev1.Pod, configChecksum, pkiChecksum, caChecksum string) bool {
 	if pod == nil {
 		return false
 	}
@@ -143,6 +154,9 @@ func isPodReadyWithChecksums(pod *corev1.Pod, configChecksum, pkiChecksum string
 		return false
 	}
 	if pkiChecksum != "" && pod.Annotations[constants.PKIChecksumAnnotationKey] != pkiChecksum {
+		return false
+	}
+	if caChecksum != "" && pod.Annotations[constants.CAChecksumAnnotationKey] != caChecksum {
 		return false
 	}
 
