@@ -28,7 +28,7 @@
 
     {{- $content := printf "%s: <i data-tippy-content='%s'>%s</i>" (T "module_lifecycle_stage") (T (printf "module_alert_%s_long" $statusKey )) $moduleStage }}
     {{- if $hasRequirements }}
-      {{- $content = printf "%s; <br>%s" $content (printf (T "requirements_for_alert") $module) }}
+      {{- $content = printf "%s <br>%s" $content (printf (T "requirements_for_alert") $module) }}
     {{- end }}
     {{- partial "alert" ( dict "level" $alertLevel "content" $content ) }}
   {{- end }}
