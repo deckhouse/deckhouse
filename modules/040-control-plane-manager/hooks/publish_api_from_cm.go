@@ -92,6 +92,11 @@ func filterPublishAPIConfigMap(unstructured *unstructured.Unstructured) (go_hook
 }
 
 func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
+	if input.Values.Get("userAuthn.internal.selfSignedCA").Exists() {
+		selfSignedCAPair := input.Values.Get("userAuthn.internal.selfSignedCA").Value()
+		fmt.Println(selfSignedCAPair)
+	}
+
 	if input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Exists() {
 		input.Logger.Info("Publish API ingress settings are set in moduleconfig control-plane-manager, setting values from said moduleconfig")
 
