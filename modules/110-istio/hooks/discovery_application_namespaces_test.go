@@ -65,7 +65,7 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: ns-istio-defined-revision-b
+  name: ns-istio-defined-revision-b-with-injection
   labels:
     istio.io/rev: v1x14
     istio-injection: enabled
@@ -103,12 +103,12 @@ metadata:
     sidecar.istio.io/inject: "true"
 spec: {}
 ---
-# pod with definite revision
+# pod with definite revision on empty ns
 apiVersion: v1
 kind: Pod
 metadata:
   name: pod-2
-  namespace: ns-istio-injection-enabled
+  namespace: ns-without-labels-c
   labels:
     istio.io/rev: v1x11
 spec: {}
@@ -118,7 +118,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: pod-3
-  namespace: ns-istio-defined-revision-b
+  namespace: ns-istio-defined-revision-b-with-injection
   labels:
     istio.io/rev: v1x12
 spec: {}
@@ -129,7 +129,7 @@ spec: {}
 
 		It("Should count all pods namespaces properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-pod-1", "ns-pod-2"}))
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-istio-defined-revision-a", "ns-istio-defined-revision-b-with-injection", "ns-istio-injection-enabled", "ns-without-labels-b"}))
 		})
 	})
 
@@ -191,11 +191,9 @@ spec: {}
 		It("Should count all pods namespaces properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-0", "ns-1", "ns-2", "ns-3"}))
-			//Expect(f.ValuesGet("istio.internal.applicationNamespacesToMonitor").AsStringSlice()).To(Equal([]string{"ns-0", "ns-2"}))
 		})
 		It("Should count all pods namespaces to monitor properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			//Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-0", "ns-1", "ns-2", "ns-3"}))
 			Expect(f.ValuesGet("istio.internal.applicationNamespacesToMonitor").AsStringSlice()).To(Equal([]string{"ns-0", "ns-2"}))
 		})
 	})
