@@ -3,8 +3,8 @@
 {{- $satisfyAny := dig "auth" "satisfyAny" false .Values.deckhouseTools }}
 {{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 ---
-apiVersion: gateway.networking.x-k8s.io/v1alpha1
-kind: XListenerSet
+apiVersion: gateway.networking.k8s.io/v1alpha1
+kind: ListenerSet
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-tools")) | nindent 2 }}
   name: deckhouse-tools
@@ -73,8 +73,8 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "tools") }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: deckhouse-tools
     namespace: d8-system
     sectionName: tools
@@ -101,8 +101,8 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "tools") }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: deckhouse-tools
     namespace: d8-system
     sectionName: tools-redirect

@@ -1,8 +1,8 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if and $moduleGateway .Values.global.modules.publicDomainTemplate }}
-apiVersion: gateway.networking.x-k8s.io/v1alpha1
-kind: XListenerSet
+apiVersion: gateway.networking.k8s.io/v1alpha1
+kind: ListenerSet
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "istio")) | nindent 2 }}
   name: istio
@@ -73,8 +73,8 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "istio") }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: istio
     namespace: d8-{{ $.Chart.Name }}
     sectionName: istio
@@ -101,8 +101,8 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "istio") }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: istio
     namespace: d8-{{ $.Chart.Name }}
     sectionName: istio-redirect

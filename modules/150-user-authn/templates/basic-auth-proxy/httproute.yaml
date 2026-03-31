@@ -18,8 +18,8 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "api") }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: user-authn
     namespace: d8-{{ .Chart.Name }}
     sectionName: api
@@ -46,8 +46,8 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "api") }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: user-authn
     namespace: d8-{{ .Chart.Name }}
     sectionName: api-redirect

@@ -2,8 +2,8 @@
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 ---
-apiVersion: gateway.networking.x-k8s.io/v1alpha1
-kind: XListenerSet
+apiVersion: gateway.networking.k8s.io/v1alpha1
+kind: ListenerSet
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui")) | nindent 2 }}
   name: hubble
@@ -74,8 +74,8 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "hubble") }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: hubble
     namespace: d8-cni-cilium
     sectionName: hubble
@@ -102,8 +102,8 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "hubble") }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: hubble
     namespace: d8-cni-cilium
     sectionName: hubble-redirect

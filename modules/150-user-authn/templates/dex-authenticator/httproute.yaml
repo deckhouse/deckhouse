@@ -44,8 +44,8 @@ spec:
   hostnames:
   - {{ $app.domain }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: {{ $app.gatewayAPI.httpRouteListenerSetName }}
     {{- if $app.gatewayAPI.httpRouteListenerSetNamespace }}
     namespace: {{ $app.gatewayAPI.httpRouteListenerSetNamespace }}

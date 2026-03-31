@@ -30,8 +30,8 @@ spec:
   hostnames:
   - {{ $statusHost }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: upmeter
     namespace: d8-{{ .Chart.Name }}
     sectionName: status
@@ -73,14 +73,18 @@ spec:
   hostnames:
   - {{ $statusHost }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: upmeter
     namespace: d8-{{ .Chart.Name }}
     sectionName: status
   rules:
-  # TODO: add HTTPRoute CORS filter when the installed Gateway API schema exposes .spec.rules[].filters[].cors.
-  - backendRefs:
+  - filters:
+    - type: CORS
+      cors:
+        allowMethods:
+        - GET
+    backendRefs:
     - group: ""
       kind: Service
       name: upmeter
@@ -102,8 +106,8 @@ spec:
   hostnames:
   - {{ $statusHost }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: upmeter
     namespace: d8-{{ .Chart.Name }}
     sectionName: status-redirect

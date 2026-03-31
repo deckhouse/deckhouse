@@ -30,8 +30,8 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: prometheus
     namespace: d8-monitoring
     sectionName: grafana
@@ -80,8 +80,8 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
   parentRefs:
-  - group: gateway.networking.x-k8s.io
-    kind: XListenerSet
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
     name: prometheus
     namespace: d8-monitoring
     sectionName: grafana-redirect
