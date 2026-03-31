@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-57e11ecc2309351305cfcd34d5c47398777d3e8b09157140dbbab6f5a6b2f8de",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.57.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Образ Istio proxyv2 (Istio 1.19.x) запускает бинарник pilot-agent (/usr/local/bin/pilot-agent), собранный из официальных исходников; он использует google.golang.org/grpc указанной версии. Уязвимость CVE-2026-33186 проявляется только на gRPC-серверах с авторизацией на основе псевдо-заголовка :path (включая google.golang.org/grpc/authz), когда политика содержит явные deny для канонических путей и по умолчанию разрешает прочие запросы — тогда неканонический :path без ведущего «/» может не сопоставиться с deny. Для pilot-agent такая комбинация path-based interceptors и политики не используется, поэтому описанный сценарий обхода авторизации на исполняемом пути недоступен.",
+      "timestamp": "2026-03-30T11:50:41.793648205Z"
+    }
+  ],
+  "timestamp": "2026-03-30T11:53Z"
+}
