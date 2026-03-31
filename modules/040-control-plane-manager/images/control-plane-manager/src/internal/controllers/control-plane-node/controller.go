@@ -403,6 +403,9 @@ func (r *Reconciler) updateStatusFromOperations(
 ) error {
 	original := cpn.DeepCopy()
 
+	// Track if all static pod components needing CA update have completed.
+	allCAComponentsSynced := true
+
 	for _, state := range states {
 		op := findOperationForState(ops, state, cpn.Spec.ConfigVersion)
 		cond := r.conditionForState(state, op, cpn)
@@ -411,6 +414,17 @@ func (r *Reconciler) updateStatusFromOperations(
 		if op != nil && isCompleted(op) {
 			applyOperationResult(cpn, op)
 		}
+
+		if state.specCAChecksum != "" && state.component != controlplanev1alpha1.OperationComponentCA {
+			if op == nil || !isCompleted(op) {
+				allCAComponentsSynced = false
+			}
+		}
+	}
+
+	// Update status.caChecksum only when all static pod components have restarted with the new CA.
+	if allCAComponentsSynced && cpn.Spec.CAChecksum != "" && cpn.Status.CAChecksum != cpn.Spec.CAChecksum {
+		cpn.Status.CAChecksum = cpn.Spec.CAChecksum
 	}
 
 	if reflect.DeepEqual(original.Status, cpn.Status) {
@@ -487,6 +501,17 @@ func (r *Reconciler) conditionForState(
 	}
 
 	if isCompleted(op) {
+		// this condition reflects aggregate state: synced only when status.caChecksum matches (all pods restarted with new CA)
+		if state.component == controlplanev1alpha1.OperationComponentCA &&
+			state.specCAChecksum != state.statusCAChecksum {
+			return metav1.Condition{
+				Type:               state.conditionType,
+				Status:             metav1.ConditionFalse,
+				Reason:             constants.ReasonWaitingForComponents,
+				Message:            "CA files installed, waiting for all components to restart with new CA",
+				ObservedGeneration: gen,
+			}
+		}
 		return metav1.Condition{
 			Type:               state.conditionType,
 			Status:             metav1.ConditionTrue,
@@ -536,9 +561,8 @@ func applyOperationResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *contro
 		setPKIChecksum(cpn, op.Spec.Component, op.Spec.DesiredPKIChecksum)
 	}
 
-	if op.Spec.DesiredCAChecksum != "" {
-		cpn.Status.CAChecksum = op.Spec.DesiredCAChecksum
-	}
+	// NOTE: status.caChecksum is NOT written here per-operation.
+	// It is updated in updateStatusFromOperations only when ALL static pod components with DesiredCAChecksum have completed (all pods restarted with new CA).
 }
 
 func setConfigChecksum(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent, checksum string) {

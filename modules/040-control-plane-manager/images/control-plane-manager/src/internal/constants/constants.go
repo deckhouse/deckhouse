@@ -54,9 +54,10 @@ const (
 	ReasonSynced        = "Synced"
 	ReasonOutOfSync     = "OutOfSync"
 	ReasonUpdating      = "Updating"
-	ReasonPendingUpdate = "PendingUpdate"
-	ReasonUpdateFailed  = "UpdateFailed"
-	ReasonUnknown       = "Unknown"
+	ReasonPendingUpdate        = "PendingUpdate"
+	ReasonUpdateFailed         = "UpdateFailed"
+	ReasonWaitingForComponents = "WaitingForComponents"
+	ReasonUnknown              = "Unknown"
 
 	// ControlPlaneOperation conditions
 	ConditionApproved = "Approved"
