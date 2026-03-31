@@ -41,6 +41,8 @@ func provideMetaConfigPreparator(params *provideMetaConfigPreparatorParams) conf
 		return dvp.NewPreparatorAdditionalData(config), nil
 	})
 
+	params.logger.LogDebugF("Additional data func: %v in commander\n", preparatorParams.AdditionalDataProvider())
+
 	return infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams)
 }
 

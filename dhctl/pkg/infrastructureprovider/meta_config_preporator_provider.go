@@ -61,6 +61,10 @@ func (p *PreparatorProviderParams) WithAdditionalDataProvider(provider Preparato
 	p.additionalDataProvider = provider
 }
 
+func (p *PreparatorProviderParams) AdditionalDataProvider() PreparatorAdditionalDataProvider {
+	return p.additionalDataProvider
+}
+
 func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
 	p.PreflightChecks = checks
 }
@@ -84,6 +88,8 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 	if govalue.IsNil(logger) {
 		logger = log.NewSilentLogger()
 	}
+
+	logger.LogDebugF("Additional data func: %v in provider\n", params.additionalDataProvider)
 
 	return func(provider string) config.MetaConfigPreparator {
 		switch provider {
@@ -111,6 +117,8 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 
 func providePreparatorForDVP(params PreparatorProviderParams, logger log.Logger) config.MetaConfigPreparator {
 	prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
+
+	logger.LogDebugF("Additional data func: %v in creator\n", params.additionalDataProvider)
 
 	additionalData, err := extractAdditionalData(dvp.PreparatorAdditionalDataFromAny, &extractAdditionalDataParams{
 		providerName:     dvp.ProviderName,
@@ -157,6 +165,8 @@ func extractAdditionalData[T any](extractor func(any) (*T, error), params *extra
 	logger := params.logger
 	providerName := params.providerName
 	providerFunc := params.preparatorParams.additionalDataProvider
+
+	logger.LogDebugF("Additional data func: %v in extractor\n", params.preparatorParams.additionalDataProvider)
 
 	logSkip := func(msg string) (*T, error) {
 		logger.LogDebugF("Additional data %s for '%s'. Skip\n", msg, providerName)
