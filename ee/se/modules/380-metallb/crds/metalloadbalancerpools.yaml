@@ -1,0 +1,50 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    module: metallb
+    backup.deckhouse.io/cluster-config: "true"
+  name: metalloadbalancerpools.network.deckhouse.io
+spec:
+  group: network.deckhouse.io
+  names:
+    kind: MetalLoadBalancerPool
+    listKind: MetalLoadBalancerPoolList
+    plural: metalloadbalancerpools
+    singular: metalloadbalancerpool
+    shortNames:
+      - mlbp
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |-
+            Describes an IP address pool (MetalLoadBalancerPool) to be used by the load balancer in BGP mode.
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - addresses
+              properties:
+                addresses:
+                  items:
+                    type: string
+                  type: array
+                  description: |-
+                    An array of public IP address ranges. Each range can be specified using a CIDR notation or
+                    by directly specifying the range, for example, `10.10.10.1-10.10.10.100`.
+            status:
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

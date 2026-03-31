@@ -1,0 +1,138 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    module: metallb
+    backup.deckhouse.io/cluster-config: "true"
+  name: metalloadbalancerbgppeers.network.deckhouse.io
+spec:
+  group: network.deckhouse.io
+  names:
+    kind: MetalLoadBalancerBGPPeer
+    listKind: MetalLoadBalancerBGPPeerList
+    plural: metalloadbalancerbgppeers
+    singular: metalloadbalancerbgppeer
+    shortNames:
+      - mlbbp
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |-
+            Describes the settings of a BGP router (neighbor) and the parameters for establishing a session with it.
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - peerAddress
+                - peerASN
+                - myASN
+              properties:
+                peerAddress:
+                  type: string
+                  description: |-
+                    The IP address of the BGP peer.
+                peerPort:
+                  type: integer
+                  description: |-
+                    The port of the BGP peer.
+                peerASN:
+                  type: integer
+                  description: |-
+                    The Autonomous System Number (ASN) of the BGP peer.
+                myASN:
+                  type: integer
+                  description: |-
+                    The local Autonomous System Number (ASN) used for peering.
+                routerID:
+                  type: string
+                  description: |-
+                    BGP router ID to advertise to the peer.
+                holdTime:
+                  type: string
+                  description: |-
+                    The requested BGP hold time.
+                passwordSecretRef:
+                  description: |-
+                    Reference to the Secret containing the password for BGP session authentication.
+
+                    **Important:** the target Secret MUST have the label `network.deckhouse.io/metallb-bgp-password: "true"`.
+                  type: object
+                  properties:
+                    name:
+                      description: |-
+                        Name of the Secret.
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace of the Secret.
+                      type: string
+                  required:
+                    - name
+                    - namespace
+                sourceAddresses:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      nodeName:
+                        description: |-
+                          Name of the node.
+                        type: string
+                      address:
+                        description: |-
+                          IP address to peer from this node.
+                        type: string
+                    required:
+                      - nodeName
+                      - address
+                  description: |-
+                    Per-node override of the local IP address used for peering.
+                bfd:
+                  type: object
+                  properties:
+                    receiveInterval:
+                      description: |-
+                        The minimum interval (in milliseconds) between received BFD control packets.
+                      type: integer
+                    transmitInterval:
+                      description: |-
+                        The minimum interval (in milliseconds) between transmitted BFD control packets.
+                      type: integer
+                    detectMultiplier:
+                      description: |-
+                        The number of missed BFD packets to consider a session down.
+                      type: integer
+                    echoInterval:
+                      description: |-
+                        The minimum interval (in milliseconds) between transmitted BFD echo packets.
+                      type: integer
+                    echoMode:
+                      description: |-
+                        Enables or disables BFD echo mode.
+                      type: boolean
+                    passiveMode:
+                      description: |-
+                        Enables passive mode for BFD (does not attempt to bring up the session first).
+                      type: boolean
+                    minimumTtl:
+                      description: |-
+                        The minimum TTL (Time To Live) allowed for received BFD packets.
+                      type: integer
+                  description: |-
+                    BFD configuration for the BGP peer.
+            status:
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
