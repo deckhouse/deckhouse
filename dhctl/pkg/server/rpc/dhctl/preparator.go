@@ -31,17 +31,18 @@ type provideMetaConfigPreparatorParams struct {
 }
 
 func provideMetaConfigPreparator(params *provideMetaConfigPreparatorParams) config.MetaConfigPreparatorProvider {
-	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(params.logger)
+	logger := params.logger
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(logger)
 	preparatorParams.WithAdditionalDataProvider(func(provider string) (any, error) {
 		if provider != dvp.ProviderName {
+			logger.LogDebugF("Not dvp cloud provider. Returns nil additional preparator provider data\n")
 			return nil, nil
 		}
 
 		config := params.providerConfigProvider.GetProviderSpecificClusterConfig()
+		logger.LogDebugF("Got dvp cloud provider. Returns additional preparator provider data with config\n")
 		return dvp.NewPreparatorAdditionalData(config), nil
 	})
-
-	params.logger.LogDebugF("Additional data func: %v in commander\n", preparatorParams.AdditionalDataProvider())
 
 	return infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams)
 }

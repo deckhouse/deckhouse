@@ -274,6 +274,10 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 		Logger:                loggerFor,
 		IsDebug:               s.params.IsDebug,
 		Embedded:              true,
+
+		MetaConfigPreparatorProvider: func() config.MetaConfigPreparatorProvider {
+			return metaConfigPreparator
+		},
 	})
 
 	detacher := detach.NewDetacher(checker, sshClient, &detach.Params{

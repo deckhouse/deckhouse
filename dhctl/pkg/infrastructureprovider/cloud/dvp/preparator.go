@@ -197,6 +197,8 @@ func (p *MetaConfigPreparator) prepareSSHPublicKey(metaConfig *config.MetaConfig
 		return nil
 	}
 
+	p.logger.LogDebugF("SSH key prepared for cloud provider dvp\n")
+
 	return p.setSSHPublicKey(metaConfig, originalSSHPubKey)
 }
 
