@@ -100,7 +100,7 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 
 func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, nodeName string, initialCluster []*etcdserverpb.Member) error {
 	if len(initialCluster) > 0 {
-		podManifest = addMembersToPodManifest(podManifest, initialCluster)
+		podManifest = addMembersToPodManifest(podManifest, nodeName, initialCluster)
 	}
 
 	if err := writeStaticPodToDisk(podManifest, constants.Etcd, options.ManifestDir); err != nil {
@@ -111,11 +111,17 @@ func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, nodeName
 	return nil
 }
 
-func addMembersToPodManifest(podManifest []byte, initialCluster []*etcdserverpb.Member) []byte {
+func addMembersToPodManifest(podManifest []byte, nodeName string, initialCluster []*etcdserverpb.Member) []byte {
 	podManifestString := string(podManifest)
 	var endpoints []string
 	for _, member := range initialCluster {
-		endpoints = append(endpoints, fmt.Sprintf("%s=%s", member.Name, member.PeerURLs[0]))
+		name := member.Name
+		// etcd does not assign a name to a member until it starts
+		// newly added learners have an empty name - use nodeName instead.
+		if name == "" {
+			name = nodeName
+		}
+		endpoints = append(endpoints, fmt.Sprintf("%s=%s", name, member.PeerURLs[0]))
 	}
 	initialClusterString := strings.Join(endpoints, ",")
 
