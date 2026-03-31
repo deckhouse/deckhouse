@@ -26,7 +26,7 @@ import (
 
 const MachineDeploymentWith1Unavailable = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: caps-worker
@@ -65,7 +65,7 @@ status:
 
 const MachineDeploymentWith1Available = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: caps-worker

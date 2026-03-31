@@ -13,7 +13,7 @@
     {{- $machineDeploymentName = (printf "%s-%s" $instancePrefix $machineDeploymentSuffix) }}
   {{- end }}
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   namespace: d8-cloud-instance-manager
@@ -44,20 +44,21 @@ spec:
       bootstrap:
         dataSecretName: {{ $bootstrap_secret_name | quote }}
       infrastructureRef:
-        apiVersion: {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion | quote }}
+        apiGroup: {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateAPIGroup | quote }}
         kind:  {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateKind | quote }}
-        namespace: d8-cloud-instance-manager
         name: {{ $template_name }}
+      deletion:
   {{- if $ng.nodeDrainTimeoutSecond }}
-      nodeDrainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
+        nodeDrainTimeoutSeconds: {{ $ng.nodeDrainTimeoutSecond }}
   {{- else }}
-      nodeDrainTimeout: 10m
+        nodeDrainTimeoutSeconds: 600
   {{- end }}
-      nodeDeletionTimeout: 10m
-      nodeVolumeDetachTimeout: 10m
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: {{ $ng.cloudInstances.maxSurgePerZone | default "1" }}
-      maxUnavailable: {{ $ng.cloudInstances.maxUnavailablePerZone | default "0" }}
+        nodeDeletionTimeoutSeconds: 600
+        nodeVolumeDetachTimeoutSeconds: 600
+  rollout:
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: {{ $ng.cloudInstances.maxSurgePerZone | default "1" }}
+        maxUnavailable: {{ $ng.cloudInstances.maxUnavailablePerZone | default "0" }}
 {{- end }}

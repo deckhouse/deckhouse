@@ -107,7 +107,7 @@ spec:
 `
 		stateCAPIMDs = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: md-ng3-capi
@@ -119,7 +119,7 @@ spec:
 `
 		stateCapiMachines = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Machine
 metadata:
   name: machine-capi-ng3-aaa
@@ -134,7 +134,7 @@ spec:
         node.deckhouse.io/group: capi-ng3
         node.deckhouse.io/type: CloudEphemeral
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Machine
 metadata:
   name: machine-capi-ng3-bbb

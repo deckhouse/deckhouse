@@ -695,7 +695,7 @@ spec:
           node-group: worker
 `
 	nodeManagerStaticInstancesMachineDeployment = `
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   namespace: d8-cloud-instance-manager
@@ -708,11 +708,12 @@ metadata:
 spec:
   clusterName: static
   replicas: 0
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+  rollout:
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
   template:
     metadata:
       labels:
@@ -723,9 +724,8 @@ spec:
         dataSecretName: manual-bootstrap-for-worker
       clusterName: static
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: StaticMachineTemplate
-        namespace: d8-cloud-instance-manager
         name: worker
   selector:
     matchLabels:

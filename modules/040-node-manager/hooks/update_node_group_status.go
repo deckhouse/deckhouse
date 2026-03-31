@@ -38,7 +38,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
-	capiv1beta1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
+	capiv1beta2 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta2"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/conditions"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
@@ -99,7 +99,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "capi_mds",
-			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			ApiVersion:             "cluster.x-k8s.io/v1beta2",
 			Kind:                   "MachineDeployment",
 			WaitForSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
@@ -124,7 +124,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:                   "capi_instances",
 			WaitForSynchronization: ptr.To(false),
-			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			ApiVersion:             "cluster.x-k8s.io/v1beta2",
 			Kind:                   "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
@@ -177,7 +177,7 @@ func updStatusFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 }
 
 func updStatusFilterCapiMD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var md capiv1beta1.MachineDeployment
+	var md capiv1beta2.MachineDeployment
 
 	err := sdk.FromUnstructured(obj, &md)
 	if err != nil {
@@ -264,7 +264,7 @@ func updStatusFilterMachine(obj *unstructured.Unstructured) (go_hook.FilterResul
 }
 
 func updStatusFilterCapiMachine(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	machine := capiv1beta1.Machine{}
+	machine := capiv1beta2.Machine{}
 	err := sdk.FromUnstructured(obj, &machine)
 	if err != nil {
 		return nil, err

@@ -31,7 +31,7 @@ import (
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta2"
 )
 
 const (
@@ -57,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                   "machinedeployment_status",
-			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			ApiVersion:             "cluster.x-k8s.io/v1beta2",
 			Kind:                   "MachineDeployment",
 			WaitForSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
@@ -82,7 +82,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleMachineDeploymentStatus)
 
 func filterMachineDeploymentStatus(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var md v1beta1.MachineDeployment
+	var md v1beta2.MachineDeployment
 
 	err := sdk.FromUnstructured(obj, &md)
 	if err != nil {
