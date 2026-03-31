@@ -420,7 +420,7 @@ apiVersions:
         description: |
           A list of CIDRs allowed to access public endpoints of the cluster.
 
-          **Caution!** AWS limits the number of inbound and outbound rules per security group to 60 each. If you need to specify more CIDRs, request a quota increase via AWS Support.
+          **Caution.** AWS limits the number of inbound and outbound rules per security group to 60 each. If you need to specify more CIDRs, request a quota increase via AWS Support.
       tags:
         type: object
         additionalProperties:
