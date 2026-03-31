@@ -176,7 +176,7 @@ In the "Inventory" tab, select the Datastore, open the "Summary" panel, then cho
 
    ![Creating and assigning a role, step 1](/modules/cloud-provider-vsphere/images/role-setup/Screenshot-1.png)
 
-1. Click "NEW", enter a role name (for example, `deckhouse`), and add the privileges from the [list](environment.html#list-of-required-privileges).
+1. Click "NEW", enter a role name (for example, `deckhouse`), and add the privileges from the [list](/modules/cloud-provider-vsphere/environment.htmllist-of-required-privileges).
 
    ![Creating and assigning a role, step 2](/modules/cloud-provider-vsphere/images/role-setup/Screenshot-2.png)
 

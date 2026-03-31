@@ -18,7 +18,7 @@ Deckhouse uses the `ens192` interface as the default interface for virtual machi
 ## vSphere configuration
 
 {% alert level="info" %}
-To configure tags, datastore tagging, and the Deckhouse service role through the **VMware vSphere Client** UI, follow [Configuration via vSphere Client](/modules/cloud-provider-vsphere/environment.html#configuration-via-vsphere-client) in the module documentation. The steps below use **`govc` only**.
+To configure tags, datastore tagging, and the Deckhouse service role through the **VMware vSphere Client** UI, follow [Configuration via vSphere Client](/modules/cloud-provider-vsphere/environment.html#configuration-in-vsphere-client) in the module documentation. The steps below use **`govc` only**.
 {% endalert %}
 
 ### Installing govc
@@ -87,7 +87,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 {% alert %}
 We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 
-The role that you are asked to create next includes the privileges from the section ["List of required privileges"](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
+The role that you are asked to create next includes the privileges from the section [List of required privileges](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
 Create a role with the required privileges:

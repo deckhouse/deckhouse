@@ -33,7 +33,7 @@ The following prerequisites must be met for Deckhouse Kubernetes Platform to wor
      - This parameter is optional.
      - By default, the root virtual machine folder is used.
   1. Role:
-     - The role must include the required [set of privileges](/modules/cloud-provider-vsphere/environment.html#список-необходимых-привилегий).
+     - The role must include the required [set of privileges](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges).
   1. User:
      - The user must be assigned the role specified in the previous item.
 - A tag from the category specified in the [`regionTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-regiontagcategory) parameter must be assigned to the created Datacenter (default: `k8s-region`). This tag defines the region.
@@ -49,7 +49,7 @@ The following prerequisites must be met for Deckhouse Kubernetes Platform to wor
 
 ## List of required privileges
 
-> Read the ["Configuration via vSphere Client"](#configuration-via-vsphere-client) and ["Configuration via govc"](#configuration-via-govc) sections for details on how to create and assign a role to a user.
+> Read the [Configuration via vSphere Client](#configuration-via-vsphere-client) and [Configuration via govc](#configuration-via-govc) sections for details on how to create and assign a role to a user.
 
 A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:
 

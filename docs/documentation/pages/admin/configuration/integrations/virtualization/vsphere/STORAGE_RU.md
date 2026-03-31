@@ -81,7 +81,7 @@ Deckhouse Kubernetes Platform поддерживает Online Resize PersistentV
 ## Настройка Datastore
 
 {% alert %}
-Pазметку **Datastore** также можно сделать через **vSphere Client** по инструкции [«Настройка через vSphere Client»](authorization.html#настройка-datastore). Ниже описана настройка через **`govc`**.
+Pазметку **Datastore** также можно сделать через **vSphere Client** по инструкции [«Настройка через vSphere Client»](authorization.html#настройка-datastore-с-использованием-vsphere-client). Ниже описана настройка через **`govc`**.
 {% endalert %}
 
 Для корректной работы PersistentVolume необходимо, чтобы datastore был доступен на всех ESXi.

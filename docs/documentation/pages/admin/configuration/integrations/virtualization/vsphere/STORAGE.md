@@ -89,7 +89,7 @@ Due to [specifics](https://github.com/kubernetes-csi/external-resizer/issues/44)
 ## Datastore configuration
 
 {% alert %}
-You can also tag **Datastore** objects through the **VMware vSphere Client** — follow [Datastore configuration](authorization.html#datastore-configuration) in the connection and authorization guide. The steps below use **`govc` only**.
+You can also tag **Datastore** objects through the **VMware vSphere Client** — follow [Datastore configuration](authorization.html#configuring-datastore-in-vsphere-client) in the connection and authorization guide. The steps below use **`govc` only**.
 {% endalert %}
 
 {% alert level="warning" %}
