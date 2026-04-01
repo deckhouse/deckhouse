@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package startup
+package enable
 
 import (
 	"context"
@@ -97,7 +97,7 @@ func NewTask(pkg packageI, nelm nelmI, queueService queueService, status statusS
 }
 
 func (t *task) String() string {
-	return "Startup"
+	return "Enable"
 }
 
 // Execute performs the three-step startup sequence:
