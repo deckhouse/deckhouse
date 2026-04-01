@@ -25,9 +25,9 @@ spec:
       jsonPath: .spec.component
       name: Component
       type: string
-    - description: Operation command
-      jsonPath: .spec.command
-      name: Command
+    - description: Operation commands
+      jsonPath: .spec.commands
+      name: Commands
       type: string
     - description: Approved for execution
       jsonPath: .spec.approved
@@ -69,13 +69,23 @@ spec:
                   Approved indicates whether this operation is allowed to proceed.
                   Only one operation per node may be approved at a time.
                 type: boolean
-              command:
-                description: Command defines what action to perform on the component.
-                enum:
-                - Update
-                - UpdatePKI
-                - UpdateWithPKI
-                type: string
+              commands:
+                description: Commands defines the ordered list of actions to perform
+                  on the component.
+                items:
+                  description: CommandName defines a single unit of work in the operation
+                    pipeline.
+                  enum:
+                  - SyncCA
+                  - RenewPKICerts
+                  - RenewKubeconfigs
+                  - SyncManifests
+                  - JoinEtcdCluster
+                  - WaitPodReady
+                  - SyncHotReload
+                  type: string
+                minItems: 1
+                type: array
               component:
                 description: Component is the control plane component this operation
                   targets.
@@ -113,7 +123,7 @@ spec:
                 type: string
             required:
             - approved
-            - command
+            - commands
             - component
             - configVersion
             - nodeName
