@@ -241,17 +241,17 @@
 {{- range $_, $edition := $context.Editions }}
   {{- if $edition.terraformProviders }}
     {{- range $_, $tfProvider := $edition.terraformProviders }}
-      {{- $providerModuleName := printf "cloud-provider-%s" $tfProvider }}
+      {{- $tf := index $context.TF $tfProvider }}
+      {{- $providerModuleName := lower (printf "cloud-provider-%s" $tf.cloudName) }}
       {{- if and $hasTargetAvailableModules (not (hasKey $targetAvailableModules $providerModuleName)) }}
         {{- continue }}
       {{- end }}
-      {{- $tf := index $context.TF $tfProvider }}
 
         {{- if not $tf.useOpentofu  }}
           {{- continue }}
         {{- end }}
 
-        {{- if eq $tf.type "vcd" }}
+        {{- if $tf.versions }}
           {{- range $version := $tf.versions }}
 - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}-v{{ $version }}
@@ -302,17 +302,17 @@
 {{- range $_, $edition := $context.Editions }}
   {{- if $edition.terraformProviders }}
     {{- range $_, $tfProvider := $edition.terraformProviders }}
-      {{- $providerModuleName := printf "cloud-provider-%s" $tfProvider }}
-      {{- if and $hasTargetAvailableModules (not (hasKey $targetAvailableModules $providerModuleName)) }}
-        {{- continue }}
-      {{- end }}
       {{- $tf := index $context.TF $tfProvider }}
+        {{- $providerModuleName := lower (printf "cloud-provider-%s" $tf.cloudName) }}
+        {{- if and $hasTargetAvailableModules (not (hasKey $targetAvailableModules $providerModuleName)) }}
+          {{- continue }}
+        {{- end }}
 
         {{- if $tf.useOpentofu  }}
           {{- continue }}
         {{- end }}
 
-        {{- if eq $tf.type "vcd" }}
+        {{- if $tf.versions }}
           {{- range $version := $tf.versions }}
 - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}-v{{ $version }}

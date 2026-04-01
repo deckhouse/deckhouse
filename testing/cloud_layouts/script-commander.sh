@@ -460,7 +460,6 @@ function get_opentofu() {
   docker cp "${CONTAINER_ID}:/plugins" $cwd/
   docker rm "$CONTAINER_ID"
   chmod +x $cwd/opentofu
-  mkdir -p $cwd/plugins/registry.opentofu.org
   cp -r $cwd/plugins/registry.terraform.io/terraform-provider-openstack $cwd/plugins/registry.opentofu.org/terraform-provider-openstack
   cp -r $cwd/plugins/registry.terraform.io/vmware $cwd/plugins/registry.opentofu.org/vmware
 }
