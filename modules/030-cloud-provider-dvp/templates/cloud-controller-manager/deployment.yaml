@@ -58,6 +58,7 @@ spec:
     metadata:
       labels:
         app: cloud-controller-manager
+        security.deckhouse.io/security-policy-exception: cloud-controller-manager
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
     spec:
