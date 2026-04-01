@@ -993,7 +993,13 @@ Transformed result:
 
 ## Sending logs to Elasticsearch with transformations
 
-This `ClusterLogDestination` example for Elasticsearch parses JSON from `message` into the event root (`targetLabel: "."`), replaces dots with underscores in `pod_labels` keys (often safer for index field names), then drops the `message` field.
+The following is an example of a ClusterLogDestination resource for sending logs to Elasticsearch.
+
+In this example:
+
+- JSON from the `message` field is parsed and moved into the event root (`targetLabel: "."`).
+- Dots are replaced with underscores in `pod_labels` key names.
+- The source `message` field is deleted.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
