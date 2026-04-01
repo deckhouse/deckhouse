@@ -1028,7 +1028,7 @@ spec:
           - .message
 ```
 
-Пример записи: приложение на Java пишет структурированный JSON в stdout, а в поле `message` события попадает эта строка; поле `msg` внутри JSON — текст программного лога.
+Пример исходной записи: приложение на Java пишет структурированный JSON в stdout, поэтому в поле `message` события попадает JSON-строка. Поле `msg` внутри этой строки содержит текст программного лога.
 
 ```text
 {... "namespace": "prod", "pod_labels": {"app.kubernetes.io/name": "orders", "app": "api"}, "message": "{\"@timestamp\":\"2025-03-25T10:15:00.123Z\",\"level\":\"INFO\",\"logger\":\"com.example.OrderService\",\"msg\":\"Order id=42 created; user=1001\"}"}
