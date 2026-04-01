@@ -1,0 +1,54 @@
+diff --git a/promql/parser/printer.go b/promql/parser/printer.go
+--- a/promql/parser/printer.go
++++ b/promql/parser/printer.go
+@@ -62,23 +62,40 @@ func (es Expressions) String() (s string) {
+ }
+ 
+ func (node *AggregateExpr) String() string {
+-	aggrString := node.Op.String()
++	var aggrString strings.Builder
++	if node.Op.IsOPTop() {
++		_, _ = aggrString.WriteString(node.Op.String())
++		_, _ = aggrString.WriteString("(")
+ 
+-	if node.Without {
+-		aggrString += fmt.Sprintf(" without(%s) ", strings.Join(node.Grouping, ", "))
+-	} else {
+-		if len(node.Grouping) > 0 {
+-			aggrString += fmt.Sprintf(" by(%s) ", strings.Join(node.Grouping, ", "))
++		// op_top(limit, arg1, ..., expr) — Param is the limit, Grouping holds middle args
++		_, _ = aggrString.WriteString(node.Param.String())
++		for _, g := range node.Grouping {
++			_, _ = aggrString.WriteString(", ")
++			_, _ = aggrString.WriteString(g)
+ 		}
++
++		_, _ = aggrString.WriteString(", ")
++		_, _ = aggrString.WriteString(node.Expr.String())
++		_, _ = aggrString.WriteString(")")
++
++		return aggrString.String()
+ 	}
+ 
+-	aggrString += "("
++	_, _ = aggrString.WriteString(node.Op.String())
++	if node.Without {
++		_, _ = aggrString.WriteString(fmt.Sprintf(" without(%s) ", strings.Join(node.Grouping, ", ")))
++	} else if len(node.Grouping) > 0 {
++		_, _ = aggrString.WriteString(fmt.Sprintf(" by(%s) ", strings.Join(node.Grouping, ", ")))
++	}
++	_, _ = aggrString.WriteString("(")
+ 	if node.Op.IsAggregatorWithParam() {
+-		aggrString += fmt.Sprintf("%s, ", node.Param)
++		_, _ = aggrString.WriteString(node.Param.String())
++		_, _ = aggrString.WriteString(", ")
+ 	}
+-	aggrString += fmt.Sprintf("%s)", node.Expr)
++	_, _ = aggrString.WriteString(node.Expr.String())
++	_, _ = aggrString.WriteString(")")
+ 
+-	return aggrString
++	return aggrString.String()
+ }
+ 
+ func (node *BinaryExpr) String() string {
