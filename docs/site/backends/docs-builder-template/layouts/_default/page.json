@@ -16,7 +16,7 @@
             {{- if not $first -}},{{- end -}}
             {{- $first = false -}}
             { "title": {{ .Title | jsonify }},
-              "url": {{ .RelPermalink | replaceRE "/(readme.html?|index.html?)$" "/" |jsonify }},
+              "url": {{ $relPermalinkWithoutLang | replaceRE "/(readme.html?|index.html?)$" "/" |jsonify }},
               {{- $keywords := slice -}}
               {{- if and $moduleData $moduleData.tags -}}
                 {{- $keywords = $keywords | append $moduleData.tags -}}

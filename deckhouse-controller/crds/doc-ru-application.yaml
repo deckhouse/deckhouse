@@ -55,7 +55,7 @@ spec:
                           Статус условия, один из True, False, Unknown.
                       type:
                         description: |
-                          Тип условия приложения.
+                          Тип условия приложения в CamelCase или в foo.example.com/CamelCase.
                 currentVersion:
                   description: |
                     Информация о текущей установленной версии.

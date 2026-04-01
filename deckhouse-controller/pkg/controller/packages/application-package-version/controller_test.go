@@ -252,7 +252,8 @@ stage: Preview
 type: Application
 version: "1.0.0"
 `,
-					"version.json": `{"version": "1.0.0"}`,
+					"version.json":  `{"version": "1.0.0"}`,
+					"changelog.yaml": "features:\n- Added new feature\nfixes:\n- Fixed a bug\n",
 				}}}, nil
 			},
 		}, nil)
