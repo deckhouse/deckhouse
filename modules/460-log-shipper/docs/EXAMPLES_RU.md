@@ -925,7 +925,7 @@ spec:
           .source_app: "{{ .pod_labels.app }}"
 ```
 
-Результат преобразования (условно, для события в пространстве имён `production` с лейблом пода `app=api`):
+Результат преобразования для события в неймспейсе `production` с лейблом пода `app=api`:
 
 ```json
 {..."namespace": "production", "pod_labels": { "app": "api" } "env": "prod", "source_app": "api", ...
