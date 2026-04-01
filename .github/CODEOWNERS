@@ -1,24 +1,24 @@
 .github/                                                       @Nikolay1224 @himax1991
 000-common/                                                    @sprait
-000-common/images/alt-p11                                      @name212 @090809
+000-common/images/alt-p11/                                     @name212 @090809
 002-deckhouse/                                                 @ldmonster
 007-registrypackages/                                          @RomanenkoDenys @sprait
-007-registrypackages/images/d8-ca-updater                      @name212 @090809
-007-registrypackages/images/d8-curl                            @name212 @090809
-007-registrypackages/images/e2fsprogs                          @name212 @090809
-007-registrypackages/images/erofs                              @name212 @090809
-007-registrypackages/images/growpart                           @name212 @090809
-007-registrypackages/images/jq                                 @name212 @090809
-007-registrypackages/images/lsblk                              @name212 @090809
-007-registrypackages/images/netcat                             @name212 @090809
-007-registrypackages/images/nfs-mount                          @name212 @090809
-007-registrypackages/images/nvme-cli                           @name212 @090809
-007-registrypackages/images/socat                              @name212 @090809
-007-registrypackages/images/systemctl-power-commands-wrapper   @name212 @090809
-007-registrypackages/images/toml-merge                         @name212 @090809
-007-registrypackages/images/virt-what                          @name212 @090809
-007-registrypackages/images/which                              @name212 @090809
-007-registrypackages/images/yq                                 @name212 @090809
+007-registrypackages/images/d8-ca-updater/                     @name212 @090809
+007-registrypackages/images/d8-curl/                           @name212 @090809
+007-registrypackages/images/e2fsprogs/                         @name212 @090809
+007-registrypackages/images/erofs/                             @name212 @090809
+007-registrypackages/images/growpart/                          @name212 @090809
+007-registrypackages/images/jq/                                @name212 @090809
+007-registrypackages/images/lsblk/                             @name212 @090809
+007-registrypackages/images/netcat/                            @name212 @090809
+007-registrypackages/images/nfs-mount/                         @name212 @090809
+007-registrypackages/images/nvme-cli/                          @name212 @090809
+007-registrypackages/images/socat/                             @name212 @090809
+007-registrypackages/images/systemctl-power-commands-wrapper/  @name212 @090809
+007-registrypackages/images/toml-merge/                        @name212 @090809
+007-registrypackages/images/virt-what/                         @name212 @090809
+007-registrypackages/images/which/                             @name212 @090809
+007-registrypackages/images/yq/                                @name212 @090809
 015-admission-policy-engine/                                   @nabokihms @AlwxSin
 021-cni-cilium/                                                @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                    @AndreyPavlovFlant @apolovov
@@ -31,16 +31,24 @@
 039-registry-packages-proxy/                                   @name212 @090809
 040-control-plane-manager/                                     @sprait
 040-node-manager/                                              @name212 @090809
+040-node-manager/images/builder-cuda/                          @serg-su
+040-node-manager/images/nvidia-container-toolkit/              @serg-su
+040-node-manager/images/nvidia-dcgm/                           @serg-su
+040-node-manager/images/nvidia-dcgm-exporter/                  @serg-su
+040-node-manager/images/nvidia-device-plugin/                  @serg-su
+040-node-manager/images/nvidia-mig-manager/                    @serg-su
 040-node-manager/images/fencing-agent/**                       @yalosev
 040-node-manager/images/cluster-autoscaler/**                  @yalosev
-040-node-manager/images/bashible-apiserver                     @name212 @090809 @sprait
+040-node-manager/images/bashible-apiserver/                    @name212 @090809 @sprait
 040-node-manager/templates/fencing-agent/**                    @yalosev
 040-node-manager/templates/cluster-autoscaler/**               @yalosev
+040-node-manager/monitoring/grafana-dashboards/nvidia-gpu/     @serg-su
+040-node-manager/templates/nvidia-gpu/                         @serg-su
 040-terraform-manager/                                         @name212 @090809
-040-terraform-manager/images                                   @aleksey-su
-040-terraform-manager/images/base-terraform-manager            @name212 @090809
-040-terraform-manager/images/base-terraform                    @name212 @090809
-040-terraform-manager/images/base-opentofu                     @name212 @090809
+040-terraform-manager/images/                                  @aleksey-su
+040-terraform-manager/images/base-terraform-manager/           @name212 @090809
+040-terraform-manager/images/base-terraform/                   @name212 @090809
+040-terraform-manager/images/base-opentofu/                    @name212 @090809
 042-kube-dns/                                                  @AndreyPavlovFlant @apolovov
 050-network-policy-engine/                                     @AndreyPavlovFlant @apolovov
 101-cert-manager/                                              @Suselz @AlwxSin
