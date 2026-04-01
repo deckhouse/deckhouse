@@ -152,6 +152,11 @@ func writeSections(settings writeSettings) {
 		if strings.Contains(file, "ee/modules/000-common") {
 			return
 		}
+		// remove 098_upd_tfadm.sh.tpl in CSE
+		if strings.Contains(file, "/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl") && settings.Edition == "CSE" {
+			return
+		}
+
 
 		hooksPathRegex := regexp.MustCompile(`\d+-[\w\-]+\/hooks`)
 		// we do not want to add hooks to the modules-with-exclude include
