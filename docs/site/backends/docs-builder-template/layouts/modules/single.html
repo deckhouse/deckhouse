@@ -85,11 +85,11 @@
 
       <div class="post-content">
 
-        {{- partial "module-stage-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel "stageFallBackLegacy" $moduleStageFallBackLegacy) }}
-
         {{- if and $currentModuleName (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
          {{- partial "module-editions" (dict "moduleName" $currentModuleName "lang" .Language.Lang ) }}
         {{- end }}
+
+        {{- partial "module-stage-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel "stageFallBackLegacy" $moduleStageFallBackLegacy) }}
 
         {{.Content}}
 

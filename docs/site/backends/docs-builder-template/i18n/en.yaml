@@ -114,6 +114,7 @@ tags_filter_all_selected: All tags
 core: core
 community_edition_en: community edition
 commercial_editions_en: commercial editions
+requirements_for_alert: The module has [requirements](/modules/%s/configuration.html#requirements) for installation
 requirements_title: Requirements
 requirements_deckhouse_title: To the Deckhouse version
 requirements_kubernetes_title: To the Kubernetes version
