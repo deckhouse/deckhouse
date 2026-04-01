@@ -863,7 +863,7 @@ Transformed result:
 
 ### Replacing substrings in string fields
 
-You can use the `ReplaceValue` transformation to replace matches of a regular expression in scalar string fields. The `target` string can be a literal or use `{{ name }}` for named capture groups from `source`.
+You can use the `ReplaceValue` transformation to replace matches of a regular expression (`source`) in scalar string fields. The `target` string can be a literal or use `{{ name }}` for named capture groups from `source`.
 
 > Apply `ParseMessage` first if you need to run replacement on a field inside a structured `message`.
 
