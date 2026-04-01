@@ -1037,7 +1037,11 @@ Example log line: a Java app emits structured JSON to stdout; the collector stor
 {... "namespace": "prod", "pod_labels": {"app.kubernetes.io/name": "orders", "app": "api"}, "message": "{\"@timestamp\":\"2025-03-25T10:15:00.123Z\",\"level\":\"INFO\",\"logger\":\"com.example.OrderService\",\"msg\":\"Order id=42 created; user=1001\"}"}
 ```
 
-After the transformations, JSON fields are merged into the event root, dots in `pod_labels` keys are replaced with underscores, and `message` is removed.
+Transformation result:
+
+- JSON fields are moved into the event root.
+- Dots in `pod_labels` key names are replaced with underscores.
+- The `message` field is removed.
 
 ```json
 {... "namespace": "prod",
