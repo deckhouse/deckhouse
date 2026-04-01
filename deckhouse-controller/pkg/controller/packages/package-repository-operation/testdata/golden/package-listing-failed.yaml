@@ -2,6 +2,8 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
+  annotations:
+    packages.deckhouse.io/retry-count: "5"
   creationTimestamp: null
   labels:
     packages.deckhouse.io/operation-trigger: manual
@@ -14,7 +16,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "5"
+  resourceVersion: "10"
 spec:
   packageRepositoryName: deckhouse
   type: Update

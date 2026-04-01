@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -47,7 +49,33 @@ const (
 
 	// cleanupOldOperationsCount is the number of operations to keep for the same repository, older operations will be deleted
 	cleanupOldOperationsCount = 10
+
+	// maxRetries is the number of retry attempts before marking operation as failed
+	maxRetries = 5
+
+	// retryInterval is the delay between retry attempts
+	retryInterval = 30 * time.Second
+
+	// retryCountAnnotation tracks the number of retry attempts
+	retryCountAnnotation = "packages.deckhouse.io/retry-count"
 )
+
+func getRetryCount(op *v1alpha1.PackageRepositoryOperation) int {
+	if op.Annotations == nil {
+		return 0
+	}
+	count, _ := strconv.Atoi(op.Annotations[retryCountAnnotation])
+	return count
+}
+
+func (r *reconciler) incrementRetryCount(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
+	original := operation.DeepCopy()
+	if operation.Annotations == nil {
+		operation.Annotations = make(map[string]string)
+	}
+	operation.Annotations[retryCountAnnotation] = strconv.Itoa(getRetryCount(operation) + 1)
+	return r.client.Patch(ctx, operation, client.MergeFrom(original))
+}
 
 type reconciler struct {
 	client client.Client
@@ -271,7 +299,19 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
-		// Handle specific error cases with status updates
+		retryCount := getRetryCount(operation)
+		if retryCount < maxRetries {
+			if patchErr := r.incrementRetryCount(ctx, operation); patchErr != nil {
+				return ctrl.Result{}, patchErr
+			}
+			logger.Warn("operation failed, retrying",
+				slog.Int("retry", retryCount+1),
+				slog.Int("maxRetries", maxRetries),
+				slog.String("error", err.Error()))
+			return ctrl.Result{RequeueAfter: retryInterval}, nil
+		}
+
+		// Max retries exceeded - mark as completed (failed)
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
@@ -312,13 +352,25 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			logger.Warn("failed to update package repository condition", log.Err(updateErr))
 		}
 
-		logger.Warn("operation failed", slog.String("message", message))
+		logger.Warn("operation failed after retries", slog.String("message", message))
 		return ctrl.Result{}, nil
 	}
 
 	discovered, err := opService.DiscoverPackage(ctx)
 	if err != nil {
-		// Handle package listing failure
+		retryCount := getRetryCount(operation)
+		if retryCount < maxRetries {
+			if patchErr := r.incrementRetryCount(ctx, operation); patchErr != nil {
+				return ctrl.Result{}, patchErr
+			}
+			logger.Warn("package listing failed, retrying",
+				slog.Int("retry", retryCount+1),
+				slog.Int("maxRetries", maxRetries),
+				slog.String("error", err.Error()))
+			return ctrl.Result{RequeueAfter: retryInterval}, nil
+		}
+
+		// Max retries exceeded - mark as completed (failed)
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
@@ -370,7 +422,19 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
-		// Handle specific error cases with status updates
+		retryCount := getRetryCount(operation)
+		if retryCount < maxRetries {
+			if patchErr := r.incrementRetryCount(ctx, operation); patchErr != nil {
+				return ctrl.Result{}, patchErr
+			}
+			logger.Warn("operation service creation failed, retrying",
+				slog.Int("retry", retryCount+1),
+				slog.Int("maxRetries", maxRetries),
+				slog.String("error", err.Error()))
+			return ctrl.Result{RequeueAfter: retryInterval}, nil
+		}
+
+		// Max retries exceeded - mark as completed (failed)
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
