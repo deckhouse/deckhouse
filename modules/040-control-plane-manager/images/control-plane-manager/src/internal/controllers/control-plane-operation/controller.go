@@ -184,7 +184,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	logger.Info("reconciling operation",
 		slog.String("component", string(op.Spec.Component)),
-		slog.String("command", string(op.Spec.Command)))
+		slog.Any("commands", op.Spec.Commands))
 
 	cpmSecret := &corev1.Secret{}
 	if err := r.client.Get(ctx, client.ObjectKey{
@@ -214,26 +214,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 				fmt.Sprintf("configVersion mismatch: operation has %s, current is %s", op.Spec.ConfigVersion, currentConfigVersion)))
 	}
 
-	//TODO: move to reconcileCA and reconcileHotReload to common reconcilePipeline
-	switch op.Spec.Component {
-	case controlplanev1alpha1.OperationComponentCA:
-		return r.reconcileCAs(ctx, op, pkiSecret.Data, logger)
-	case controlplanev1alpha1.OperationComponentHotReload:
-		return r.reconcileHotReload(ctx, op, cpmSecret.Data, logger)
-	default:
-		return r.reconcilePipeline(ctx, op, cpmSecret.Data, pkiSecret.Data, logger)
-	}
+	return r.reconcilePipeline(ctx, op, cpmSecret.Data, pkiSecret.Data, logger)
 }
 
-// reconcilePipeline executes the step-based pipeline for static pod component operations.
-// Each command maps to a fixed sequence of steps. All steps are re-executed on every reconcile (idempotent)
+// reconcilePipeline executes the command-based pipeline for component operations.
+// All commands are re-executed on every reconcile (idempotent convergence to desired state).
 func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData, pkiSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
-	steps := stepsForCommand(op.Spec.Command)
-	if steps == nil {
-		return reconcile.Result{}, fmt.Errorf("unknown command: %s", op.Spec.Command)
+	commands, err := resolveCommands(op.Spec.Commands)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
-	sc := &stepContext{
+	cc := &commandContext{
 		r:              r,
 		op:             op,
 		component:      op.Spec.Component,
@@ -244,64 +236,41 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1al
 		caChecksum:     op.Spec.DesiredCAChecksum,
 	}
 
-	for _, step := range steps {
-		logger.Info("executing step", slog.String("step", string(step.Name)))
+	for _, cmd := range commands {
+		logger.Info("executing command", slog.String("command", string(cmd.Name)))
 
 		_ = r.setConditions(ctx, op,
-			stepCondition(step.Name, metav1.ConditionFalse, constants.ReasonStepInProgress, ""),
-			readyCondition(metav1.ConditionFalse, step.ReadyReason,
-				fmt.Sprintf("executing step %s", step.Name)))
+			commandCondition(cmd.Name, metav1.ConditionFalse, constants.ReasonCommandInProgress, ""),
+			readyCondition(metav1.ConditionFalse, cmd.ReadyReason,
+				fmt.Sprintf("executing command %s", cmd.Name)))
 
-		result, err := step.Exec(ctx, sc, logger)
+		result, err := cmd.Exec(ctx, cc, logger)
 		if err != nil {
 			_ = r.setConditions(ctx, op,
-				stepCondition(step.Name, metav1.ConditionFalse, constants.ReasonStepFailed, err.Error()))
+				commandCondition(cmd.Name, metav1.ConditionFalse, constants.ReasonCommandFailed, err.Error()))
 			return result, err
 		}
 
 		_ = r.setConditions(ctx, op,
-			stepCondition(step.Name, metav1.ConditionTrue, constants.ReasonStepCompleted, ""))
+			commandCondition(cmd.Name, metav1.ConditionTrue, constants.ReasonCommandCompleted, ""))
 
-		// Step wants requeue (waitForPod, etcdJoin) — stop pipeline, resume on next reconcile.
+		// Command wants requeue (waitForPod, etcdJoin) — stop pipeline, resume on next reconcile.
 		if result.Requeue || result.RequeueAfter > 0 {
 			return result, nil
 		}
 	}
 
+	// All commands completed successfully — mark operation as ready.
+	// For static pod components this is typically done by WaitPodReady,
+	// but for CA/HotReload the pipeline may not include WaitPodReady.
+	if !isCompleted(op) {
+		return reconcile.Result{}, r.setConditions(ctx, op,
+			readyCondition(metav1.ConditionTrue, constants.ReasonOperationSucceeded, "operation completed"),
+			failedCondition(metav1.ConditionFalse, constants.ReasonNoFailure, ""),
+		)
+	}
+
 	return reconcile.Result{}, nil
-}
-
-// reconcileCAs handles CA checksum changes.
-// TODO: advanced CA rotation logic
-func (r *Reconciler) reconcileCAs(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, pkiSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
-	logger.Info("installing CA files from secret")
-	if err := installCAsFromSecret(pkiSecretData, constants.KubernetesPkiPath); err != nil {
-		logger.Error("failed to install CAs", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
-
-	return reconcile.Result{}, r.setConditions(ctx, op,
-		readyCondition(metav1.ConditionTrue, constants.ReasonOperationSucceeded, "PKI synced"),
-		failedCondition(metav1.ConditionFalse, constants.ReasonNoFailure, ""),
-	)
-}
-
-// reconcileHotReload handles HotReload component operations.
-func (r *Reconciler) reconcileHotReload(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, secretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
-	logger.Info("writing hot-reload files")
-	if err := writeHotReloadFiles(secretData, constants.ExtraFilesPath); err != nil {
-		logger.Error("failed to write hot-reload files", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
-
-	return reconcile.Result{}, r.setConditions(ctx, op,
-		readyCondition(metav1.ConditionTrue, constants.ReasonOperationSucceeded, "hot-reload files synced"),
-		failedCondition(metav1.ConditionFalse, constants.ReasonNoFailure, ""),
-	)
 }
 
 // waitForPod checks if the static pod is ready with the expected checksums annotations.
@@ -389,7 +358,7 @@ func readyCondition(status metav1.ConditionStatus, reason, message string) metav
 	}
 }
 
-func stepCondition(name StepName, status metav1.ConditionStatus, reason, message string) metav1.Condition {
+func commandCondition(name controlplanev1alpha1.CommandName, status metav1.ConditionStatus, reason, message string) metav1.Condition {
 	return metav1.Condition{
 		Type:    string(name),
 		Status:  status,

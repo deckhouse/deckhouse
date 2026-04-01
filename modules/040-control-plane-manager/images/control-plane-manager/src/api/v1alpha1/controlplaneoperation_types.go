@@ -20,19 +20,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// OperationCommand defines the action to perform on a control plane component.
-// +kubebuilder:validation:Enum=Update;UpdatePKI;UpdateWithPKI
-type OperationCommand string
+// CommandName defines a single unit of work in the operation pipeline.
+// +kubebuilder:validation:Enum=SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;SyncHotReload
+type CommandName string
 
 const (
-	// OperationCommandUpdate updates the component static pod manifest (if only configChecksum changed).
-	OperationCommandUpdate OperationCommand = "Update"
-
-	// OperationCommandUpdatePKI renews leaf certificates and restarts the component (if pkiChecksum changed).
-	OperationCommandUpdatePKI OperationCommand = "UpdatePKI"
-
-	// OperationCommandUpdateWithPKI renews leaf certificates and updates the manifest (configChecksum and pkiChecksum changed).
-	OperationCommandUpdateWithPKI OperationCommand = "UpdateWithPKI"
+	CommandSyncCA           CommandName = "SyncCA"
+	CommandRenewPKICerts    CommandName = "RenewPKICerts"
+	CommandRenewKubeconfigs CommandName = "RenewKubeconfigs"
+	CommandSyncManifests    CommandName = "SyncManifests"
+	CommandJoinEtcdCluster  CommandName = "JoinEtcdCluster"
+	CommandWaitPodReady     CommandName = "WaitPodReady"
+	CommandSyncHotReload    CommandName = "SyncHotReload"
 )
 
 // OperationComponent identifies a control plane component targeted by the operation.
@@ -108,9 +107,10 @@ type ControlPlaneOperationSpec struct {
 	// +kubebuilder:validation:Required
 	Component OperationComponent `json:"component"`
 
-	// Command defines what action to perform on the component.
+	// Commands defines the ordered list of actions to perform on the component.
 	// +kubebuilder:validation:Required
-	Command OperationCommand `json:"command"`
+	// +kubebuilder:validation:MinItems=1
+	Commands []CommandName `json:"commands"`
 
 	// DesiredConfigChecksum is the expected configChecksum after the operation completed.
 	// Present for Update and UpdateWithPKI commands.
@@ -148,7 +148,7 @@ type ControlPlaneOperationStatus struct {
 // +kubebuilder:resource:scope=Cluster,shortName=cpo
 // +kubebuilder:printcolumn:name="Node",type="string",JSONPath=".spec.nodeName",description="Target node"
 // +kubebuilder:printcolumn:name="Component",type="string",JSONPath=".spec.component",description="Target component"
-// +kubebuilder:printcolumn:name="Command",type="string",JSONPath=".spec.command",description="Operation command"
+// +kubebuilder:printcolumn:name="Commands",type="string",JSONPath=".spec.commands",description="Operation commands"
 // +kubebuilder:printcolumn:name="Approved",type="boolean",JSONPath=".spec.approved",description="Approved for execution"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 

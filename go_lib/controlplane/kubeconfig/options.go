@@ -97,6 +97,7 @@ func prepareOptions(opts ...option) (*options, error) {
 	return opt, nil
 }
 
+//nolint:unused
 func (opt *options) ensureNodeNameProvided() error {
 	if opt.NodeName == "" {
 		name, err := os.ReadFile(constants.DiscoveredNodeNamePath)

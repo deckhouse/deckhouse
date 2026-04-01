@@ -122,7 +122,7 @@ func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.Le
 				params.NodeName, params.ClusterDomain, ip, params.ServiceSubnetCIDR,
 				pki.WithPKIDir(params.PKIDir),
 				pki.WithControlPlaneEndpoint(constants.LocalControlPlaneEndpoint),
-				pki.WithApiServerCertSANs(params.ApiServerCertSANs),
+				pki.WithAPIServerCertSANs(params.ApiServerCertSANs),
 				pki.WithCertTreeScheme(certTree),
 			)
 		}
@@ -130,7 +130,7 @@ func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.Le
 			params.NodeName, params.ClusterDomain, ip, params.ServiceSubnetCIDR,
 			pki.WithPKIDir(params.PKIDir),
 			pki.WithControlPlaneEndpoint(constants.LocalControlPlaneEndpoint),
-			pki.WithApiServerCertSANs(params.ApiServerCertSANs),
+			pki.WithAPIServerCertSANs(params.ApiServerCertSANs),
 		)
 	}
 
@@ -139,7 +139,7 @@ func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.Le
 			params.NodeName, params.ClusterDomain, ip, params.ServiceSubnetCIDR,
 			pki.WithPKIDir(params.PKIDir),
 			pki.WithControlPlaneEndpoint(constants.LocalControlPlaneEndpoint),
-			pki.WithApiServerCertSANs(params.ApiServerCertSANs),
+			pki.WithAPIServerCertSANs(params.ApiServerCertSANs),
 			pki.WithEncryptionAlgorithmType(pkiconstants.EncryptionAlgorithmType(params.EncryptionAlgorithm)),
 			pki.WithCertTreeScheme(certTree),
 		)
@@ -148,7 +148,7 @@ func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.Le
 		params.NodeName, params.ClusterDomain, ip, params.ServiceSubnetCIDR,
 		pki.WithPKIDir(params.PKIDir),
 		pki.WithControlPlaneEndpoint(constants.LocalControlPlaneEndpoint),
-		pki.WithApiServerCertSANs(params.ApiServerCertSANs),
+		pki.WithAPIServerCertSANs(params.ApiServerCertSANs),
 		pki.WithEncryptionAlgorithmType(pkiconstants.EncryptionAlgorithmType(params.EncryptionAlgorithm)),
 	)
 }
