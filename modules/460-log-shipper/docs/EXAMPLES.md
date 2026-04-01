@@ -900,7 +900,7 @@ Transformed result:
 
 You can use the `AddLabels` transformation to add fields using static values or templates such as `{{ .pod_labels.app }}`. Transformations run after applying `extraLabels`. If label names overlap, the value from `AddLabels` has priority.
 
-The optional `when` field is a list of conditions combined with logical AND. The left-hand side is a path to a field on the log event: a leading dot and dot-separated segments (e.g. `.namespace`, `.pod_labels.app`, `.message.level`). Each list item can be:
+The `when` field is an optional list of conditions combined with logical AND. The left-hand side of a condition is a path to a field on the log event: a leading dot and dot-separated segments (for example, `.namespace`, `.pod_labels.app`, `.message.level`). Each list item can be one of the following types:
 
 - a comparison: e.g. `.namespace == "production"`; allowed operators are `==`, `!=`, `=~`, and `!=~`;
 - an existence check: only a path with no operator, e.g. `.pod_labels.team` (field must exist);
