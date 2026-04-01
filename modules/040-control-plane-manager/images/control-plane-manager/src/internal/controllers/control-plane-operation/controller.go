@@ -214,207 +214,61 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 				fmt.Sprintf("configVersion mismatch: operation has %s, current is %s", op.Spec.ConfigVersion, currentConfigVersion)))
 	}
 
-	// TODO: Future commands RotateCA will be dispatched here
+	//TODO: move to reconcileCA and reconcileHotReload to common reconcilePipeline
 	switch op.Spec.Component {
 	case controlplanev1alpha1.OperationComponentCA:
 		return r.reconcileCAs(ctx, op, pkiSecret.Data, logger)
 	case controlplanev1alpha1.OperationComponentHotReload:
 		return r.reconcileHotReload(ctx, op, cpmSecret.Data, logger)
 	default:
-		switch op.Spec.Command {
-		case controlplanev1alpha1.OperationCommandUpdate:
-			return r.reconcileUpdate(ctx, op, cpmSecret.Data, logger)
-		case controlplanev1alpha1.OperationCommandUpdatePKI:
-			return r.reconcileUpdatePKI(ctx, op, cpmSecret.Data, pkiSecret.Data, logger)
-		case controlplanev1alpha1.OperationCommandUpdateWithPKI:
-			return r.reconcileUpdateWithPKI(ctx, op, cpmSecret.Data, pkiSecret.Data, logger)
-		default:
-			return reconcile.Result{}, fmt.Errorf("unknown component/command combination: %s/%s",
-				op.Spec.Component, op.Spec.Command)
-		}
+		return r.reconcilePipeline(ctx, op, cpmSecret.Data, pkiSecret.Data, logger)
 	}
 }
 
-// reconcileUpdate handles Update command: write extra-files + manifest, wait for pod with matching config-checksum annotation.
-func (r *Reconciler) reconcileUpdate(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
-	component := op.Spec.Component
+// reconcilePipeline executes the step-based pipeline for static pod component operations.
+// Each command maps to a fixed sequence of steps. All steps are re-executed on every reconcile (idempotent)
+func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData, pkiSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
+	steps := stepsForCommand(op.Spec.Command)
+	if steps == nil {
+		return reconcile.Result{}, fmt.Errorf("unknown command: %s", op.Spec.Command)
+	}
 
-	// Etcd preflight: check if join is needed instead of normal update
-	if component == controlplanev1alpha1.OperationComponentEtcd {
-		needsJoin, err := etcdNeedsJoin(r.nodeName, constants.KubernetesPkiPath, kubeconfigDirPath())
+	sc := &stepContext{
+		r:              r,
+		op:             op,
+		component:      op.Spec.Component,
+		cpmSecretData:  cpmSecretData,
+		pkiSecretData:  pkiSecretData,
+		configChecksum: op.Spec.DesiredConfigChecksum,
+		pkiChecksum:    op.Spec.DesiredPKIChecksum,
+		caChecksum:     op.Spec.DesiredCAChecksum,
+	}
+
+	for _, step := range steps {
+		logger.Info("executing step", slog.String("step", string(step.Name)))
+
+		_ = r.setConditions(ctx, op,
+			stepCondition(step.Name, metav1.ConditionFalse, constants.ReasonStepInProgress, ""),
+			readyCondition(metav1.ConditionFalse, step.ReadyReason,
+				fmt.Sprintf("executing step %s", step.Name)))
+
+		result, err := step.Exec(ctx, sc, logger)
 		if err != nil {
-			logger.Error("failed to check etcd join need", log.Err(err))
-			return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
+			_ = r.setConditions(ctx, op,
+				stepCondition(step.Name, metav1.ConditionFalse, constants.ReasonStepFailed, err.Error()))
+			return result, err
 		}
-		if needsJoin {
-			logger.Info("etcd needs join, switching to join flow")
-			return r.reconcileEtcdJoin(ctx, op, cpmSecretData,
-				op.Spec.DesiredConfigChecksum, "", "", logger)
-		}
-	}
 
-	if err := writeExtraFiles(component, cpmSecretData, constants.ExtraFilesPath); err != nil {
-		logger.Error("failed to write extra-files", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
+		_ = r.setConditions(ctx, op,
+			stepCondition(step.Name, metav1.ConditionTrue, constants.ReasonStepCompleted, ""))
 
-	if err := writeStaticPodManifest(component, cpmSecretData, op.Spec.DesiredConfigChecksum, "", "", constants.ManifestsPath); err != nil {
-		logger.Error("failed to write manifest", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
-
-	if err := r.setConditions(ctx, op,
-		readyCondition(metav1.ConditionFalse, constants.ReasonWaitingForPod,
-			fmt.Sprintf("waiting for %s pod with config-checksum %s",
-				component.PodComponentName(), shortChecksum(op.Spec.DesiredConfigChecksum))),
-	); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return r.waitForPod(ctx, op, op.Spec.DesiredConfigChecksum, "", "", logger)
-}
-
-// reconcileUpdatePKI handles UpdatePKI command: renew certs/kubeconfigs per component, update checksum annotations, wait for pod.
-func (r *Reconciler) reconcileUpdatePKI(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData, pkiSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
-	component := op.Spec.Component
-
-	logger.Info("installing CA files from secret")
-	if err := installCAsFromSecret(pkiSecretData, constants.KubernetesPkiPath); err != nil {
-		logger.Error("failed to install CAs", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
-
-	// Per-component: renew only leaf certs belonging to this component (nil for KCM/Scheduler)
-	certTree := certTreeForComponent(component)
-	if certTree != nil {
-		logger.Info("renewing leaf certificates if needed")
-		params := parsePKIParams(constants.KubernetesPkiPath, cpmSecretData)
-		if err := renewCertsIfNeeded(params, certTree); err != nil {
-			logger.Error("failed to renew certs", log.Err(err))
-			return reconcile.Result{}, r.setConditions(ctx, op,
-				failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-			)
+		// Step wants requeue (waitForPod, etcdJoin) — stop pipeline, resume on next reconcile.
+		if result.Requeue || result.RequeueAfter > 0 {
+			return result, nil
 		}
 	}
 
-	kubeconfigDir := kubeconfigDirPath()
-	if err := renewKubeconfigsForComponent(component, cpmSecretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
-		logger.Error("failed to renew kubeconfigs", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
-	if needsRootKubeconfig(component) {
-		if err := updateRootKubeconfig(kubeconfigDir); err != nil {
-			logger.Error("failed to update root kubeconfig symlink", log.Err(err))
-		}
-	}
-
-	// Trigger pod restart by updating checksum annotations on the existing manifest.
-	// DesiredCAChecksum is set by CPN when CA changed — writes ca-checksum annotation.
-	if err := updateChecksumAnnotations(component, op.Spec.DesiredPKIChecksum, op.Spec.DesiredCAChecksum, constants.ManifestsPath); err != nil {
-		logger.Error("failed to update checksum annotations", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
-
-	if err := r.setConditions(ctx, op,
-		readyCondition(metav1.ConditionFalse, constants.ReasonWaitingForPod,
-			fmt.Sprintf("waiting for %s pod with pki-checksum %s",
-				component.PodComponentName(), shortChecksum(op.Spec.DesiredPKIChecksum))),
-	); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return r.waitForPod(ctx, op, "", op.Spec.DesiredPKIChecksum, op.Spec.DesiredCAChecksum, logger)
-}
-
-// reconcileUpdateWithPKI handles UpdateWithPKI command: renew certs/kubeconfigs + write manifest with all checksums, wait for pod.
-func (r *Reconciler) reconcileUpdateWithPKI(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData, pkiSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
-	component := op.Spec.Component
-
-	logger.Info("installing CA files from secret")
-	if err := installCAsFromSecret(pkiSecretData, constants.KubernetesPkiPath); err != nil {
-		logger.Error("failed to install CAs", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
-
-	// Per-component: renew only leaf certs belonging to this component (nil for KCM/Scheduler)
-	certTree := certTreeForComponent(component)
-	if certTree != nil {
-		logger.Info("renewing leaf certificates if needed")
-		params := parsePKIParams(constants.KubernetesPkiPath, cpmSecretData)
-		if err := renewCertsIfNeeded(params, certTree); err != nil {
-			logger.Error("failed to renew certs", log.Err(err))
-			return reconcile.Result{}, r.setConditions(ctx, op,
-				failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-			)
-		}
-	}
-
-	// Etcd preflight: after certs are renewed, check if join is needed
-	if component == controlplanev1alpha1.OperationComponentEtcd {
-		needsJoin, err := etcdNeedsJoin(r.nodeName, constants.KubernetesPkiPath, kubeconfigDirPath())
-		if err != nil {
-			logger.Error("failed to check etcd join need", log.Err(err))
-			return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
-		}
-		if needsJoin {
-			logger.Info("etcd needs join, switching to join flow")
-			return r.reconcileEtcdJoin(ctx, op, cpmSecretData,
-				op.Spec.DesiredConfigChecksum, op.Spec.DesiredPKIChecksum,
-				op.Spec.DesiredCAChecksum, logger)
-		}
-	}
-
-	kubeconfigDir := kubeconfigDirPath()
-	if err := renewKubeconfigsForComponent(component, cpmSecretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
-		logger.Error("failed to renew kubeconfigs", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
-	if needsRootKubeconfig(component) {
-		if err := updateRootKubeconfig(kubeconfigDir); err != nil {
-			logger.Error("failed to update root kubeconfig symlink", log.Err(err))
-		}
-	}
-
-	if err := writeExtraFiles(component, cpmSecretData, constants.ExtraFilesPath); err != nil {
-		logger.Error("failed to write extra-files", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
-
-	if err := writeStaticPodManifest(component, cpmSecretData,
-		op.Spec.DesiredConfigChecksum, op.Spec.DesiredPKIChecksum, op.Spec.DesiredCAChecksum, constants.ManifestsPath); err != nil {
-		logger.Error("failed to write manifest", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()),
-		)
-	}
-
-	if err := r.setConditions(ctx, op,
-		readyCondition(metav1.ConditionFalse, constants.ReasonWaitingForPod,
-			fmt.Sprintf("waiting for %s pod with config-checksum %s pki-checksum %s",
-				component.PodComponentName(),
-				shortChecksum(op.Spec.DesiredConfigChecksum),
-				shortChecksum(op.Spec.DesiredPKIChecksum))),
-	); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return r.waitForPod(ctx, op, op.Spec.DesiredConfigChecksum, op.Spec.DesiredPKIChecksum, op.Spec.DesiredCAChecksum, logger)
+	return reconcile.Result{}, nil
 }
 
 // reconcileCAs handles CA checksum changes.
@@ -529,6 +383,15 @@ func kubeconfigDirPath() string {
 func readyCondition(status metav1.ConditionStatus, reason, message string) metav1.Condition {
 	return metav1.Condition{
 		Type:    constants.ConditionReady,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
+	}
+}
+
+func stepCondition(name StepName, status metav1.ConditionStatus, reason, message string) metav1.Condition {
+	return metav1.Condition{
+		Type:    string(name),
 		Status:  status,
 		Reason:  reason,
 		Message: message,
