@@ -460,6 +460,8 @@ function get_opentofu() {
   docker cp "${CONTAINER_ID}:/plugins" $cwd/
   docker rm "$CONTAINER_ID"
   chmod +x $cwd/opentofu
+  ls -la $cwd/plugins/*
+  mkdir -p $cwd/plugins/registry.opentofu.org
   cp -r $cwd/plugins/registry.terraform.io/terraform-provider-openstack $cwd/plugins/registry.opentofu.org/terraform-provider-openstack
   cp -r $cwd/plugins/registry.terraform.io/vmware $cwd/plugins/registry.opentofu.org/vmware
 }
@@ -480,6 +482,7 @@ function bootstrap_static() {
   get_opentofu
 
   if [[ ${PROVIDER} == "Static" ]]; then
+    ls -la $cwd/plugins/*
     $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
   elif [[ ${PROVIDER} == "Static-cse" ]]; then
     $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
