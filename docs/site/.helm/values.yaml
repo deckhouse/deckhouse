@@ -57,6 +57,20 @@ resources:
     memory:
       _default: 32M
       web-production: 150M
+  limits:
+    memory:
+      moduleslibrary:
+        web:
+          _default: 512Mi
+          web-production: 1536Mi
+          web-test: 1536Mi
+          web-test2: 1536Mi
+
+        builder:
+          _default: 512Mi
+          web-production: 1536Mi
+          web-test: 1536Mi
+          web-test2: 1536Mi
 
 vrouter:
   defaultGroup: "v1"

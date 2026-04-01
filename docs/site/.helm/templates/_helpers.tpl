@@ -4,6 +4,22 @@ resources:
     memory: {{ pluck .Values.web.env .Values.resources.requests.memory | first | default .Values.resources.requests.memory._default }}
 {{- end }}
 
+{{- define "resources-moduleslibrary-builder" }}
+resources:
+  requests:
+    memory: {{ pluck .Values.web.env .Values.resources.requests.memory | first | default .Values.resources.requests.memory._default }}
+  limits:
+    memory: {{ pluck .Values.web.env .Values.resources.limits.memory.moduleslibrary.builder | first | default .Values.resources.limits.memory.moduleslibrary.builder._default }}
+{{- end}}
+
+{{- define "resources-moduleslibrary-web" }}
+resources:
+  requests:
+    memory: {{ pluck .Values.web.env .Values.resources.requests.memory | first | default .Values.resources.requests.memory._default }}
+  limits:
+    memory: {{ pluck .Values.web.env .Values.resources.limits.memory.moduleslibrary.web | first | default .Values.resources.limits.memory.moduleslibrary.web._default }}
+{{- end}}
+
 {{- define "vrouter_envs" }}
 - name: VROUTER_DEFAULT_GROUP
   value: {{ .Values.vrouter.defaultGroup | quote }}
