@@ -1034,7 +1034,11 @@ spec:
 {... "namespace": "prod", "pod_labels": {"app.kubernetes.io/name": "orders", "app": "api"}, "message": "{\"@timestamp\":\"2025-03-25T10:15:00.123Z\",\"level\":\"INFO\",\"logger\":\"com.example.OrderService\",\"msg\":\"Order id=42 created; user=1001\"}"}
 ```
 
-Результат после преобразований: поля из JSON оказываются в корне события, в `pod_labels` точки в именах ключей заменены на подчёркивания, поле `message` удалено.
+Результат после преобразований:
+
+- поля из JSON перенесены в корень события;
+- в `pod_labels` точки в именах ключей заменены на подчёркивания;
+- поле `message` удалено.
 
 ```json
 {... "namespace": "prod",
