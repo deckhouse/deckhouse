@@ -525,7 +525,7 @@ In a ClusterLogDestination resource, you can chain transformations in order. The
 
 You can use the `ParseMessage` transformation
 to convert a string in the `message` field into a structured object.
-For `sourceFormat: String`, provide a regular expression with named capture groups and a `setLabels` map; output keys are filled from `{{ group_name }}` templates.
+For `sourceFormat: String`, provide a regular expression with named capture groups and a `setLabels` map. Output keys are filled from `{{ group_name }}` templates.
 If multiple `ParseMessage` transformations are used, the one that parses the string must be applied last.
 
 You cannot set `parseMessage.targetLabel` to `.parsed_data`.
