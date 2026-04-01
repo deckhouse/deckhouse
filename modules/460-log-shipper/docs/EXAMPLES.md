@@ -519,7 +519,7 @@ If you need logs from only one or from a small group of a Pods, try to use the k
 
 ## Log transformations
 
-On a `ClusterLogDestination`, you can chain transformations in order. Supported actions are `ParseMessage`, `ReplaceKeys`, `ReplaceValue`, `AddLabels`, and `DropLabels`.
+In a ClusterLogDestination resource, you can chain transformations in order. The following actions are supported: `ParseMessage`, `ReplaceKeys`, `ReplaceValue`, `AddLabels`, and `DropLabels`.
 
 ### Transforming logs into a structured object
 
