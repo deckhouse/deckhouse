@@ -323,13 +323,15 @@ func (r *DeckhouseMachineReconciler) handleVMStopped(
 ) (ctrl.Result, error) {
 	// VM is stopped, this is unexpected as we use "AlwaysOn" run policy for VM's here.
 	// Let's wait and see what happens as this may be a part of migration process or this is a bug in the DVP VM controller.
-	logger.Info("VM is in Stopped state, waiting for DVP to bring it back up", "state", vm.Status.Phase)
 	dvpMachine.Status.Initialization.Provisioned = ptr.To(false)
 
+	resourceStatus := r.collectOwnedResourcesStatus(ctx, dvpMachine)
 	message := "VM is in Stopped state, waiting for DVP to bring it back up"
-	if resourceStatus := r.collectOwnedResourcesStatus(ctx, dvpMachine); resourceStatus != "" {
+	if resourceStatus != "" {
 		message = fmt.Sprintf("%s. Resources: %s", message, resourceStatus)
 	}
+
+	logger.Info("VM is in Stopped state, waiting for DVP to bring it back up", "state", vm.Status.Phase, "resources", resourceStatus)
 
 	conditions.Set(dvpMachine, metav1.Condition{
 		Type:               string(infrastructurev1a1.VMReadyCondition),
@@ -401,13 +403,15 @@ func (r *DeckhouseMachineReconciler) handleVMNotReady(
 ) (ctrl.Result, error) {
 	// The other states are normal (for example, migration or shutdown) but we don't want to proceed until it's up
 	// due to potential conflict or unexpected actions
-	logger.Info("Waiting for VM state to become Running", "state", vm.Status.Phase)
 	dvpMachine.Status.Initialization.Provisioned = ptr.To(false)
 
+	resourceStatus := r.collectOwnedResourcesStatus(ctx, dvpMachine)
 	message := fmt.Sprintf("VM is not ready, state is %s", vm.Status.Phase)
-	if resourceStatus := r.collectOwnedResourcesStatus(ctx, dvpMachine); resourceStatus != "" {
+	if resourceStatus != "" {
 		message = fmt.Sprintf("%s. Resources: %s", message, resourceStatus)
 	}
+
+	logger.Info("Waiting for VM state to become Running", "state", vm.Status.Phase, "resources", resourceStatus)
 
 	conditions.Set(dvpMachine, metav1.Condition{
 		Type:               string(infrastructurev1a1.VMReadyCondition),
@@ -444,7 +448,8 @@ func (r *DeckhouseMachineReconciler) collectOwnedResourcesStatus(
 	}
 
 	bootDiskName := dvpMachine.Name + "-boot"
-	diskNames := []string{bootDiskName}
+	diskNames := make([]string, 0, 1+len(dvpMachine.Spec.AdditionalDisks))
+	diskNames = append(diskNames, bootDiskName)
 	for i := range dvpMachine.Spec.AdditionalDisks {
 		diskNames = append(diskNames, fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i))
 	}
@@ -645,14 +650,6 @@ func (r *DeckhouseMachineReconciler) ensureVM(
 	machine *clusterv1b2.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 ) (*v1alpha2.VirtualMachine, error) {
-	existing, err := r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
-	if err == nil {
-		return existing, nil
-	}
-	if !errors.Is(err, cloudprovider.InstanceNotFound) {
-		return nil, fmt.Errorf("cannot get VirtualMachine: %w", err)
-	}
-
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
 	blockDeviceRefs := r.buildBlockDeviceRefs(dvpMachine)
 	runPolicy := r.resolveRunPolicy(dvpMachine)
@@ -694,6 +691,9 @@ func (r *DeckhouseMachineReconciler) ensureVM(
 		},
 	})
 	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
+		}
 		return nil, r.wrapVMCreationError(ctx, dvpMachine, err)
 	}
 
