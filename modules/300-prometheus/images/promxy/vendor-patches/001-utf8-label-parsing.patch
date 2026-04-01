@@ -1,3 +1,45 @@
+diff --git a/vendor/github.com/prometheus/prometheus/model/labels/matcher.go b/vendor/github.com/prometheus/prometheus/model/labels/matcher.go
+index f299c40..4061bad 100644
+--- a/vendor/github.com/prometheus/prometheus/model/labels/matcher.go
++++ b/vendor/github.com/prometheus/prometheus/model/labels/matcher.go
+@@ -14,7 +14,8 @@
+ package labels
+ 
+ import (
+-	"fmt"
++	"bytes"
++	"strconv"
+ )
+ 
+ // MatchType is an enum for label matching types.
+@@ -78,7 +79,26 @@ func MustNewMatcher(mt MatchType, name, val string) *Matcher {
+ }
+ 
+ func (m *Matcher) String() string {
+-	return fmt.Sprintf("%s%s%q", m.Name, m.Type, m.Value)
++	var bytea [1024]byte
++	b := bytes.NewBuffer(bytea[:0])
++	if m.shouldQuoteName() {
++		b.Write(strconv.AppendQuote(b.AvailableBuffer(), m.Name))
++	} else {
++		b.WriteString(m.Name)
++	}
++	b.WriteString(m.Type.String())
++	b.Write(strconv.AppendQuote(b.AvailableBuffer(), m.Value))
++	return b.String()
++}
++
++func (m *Matcher) shouldQuoteName() bool {
++	for i, c := range m.Name {
++		if c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (i > 0 && c >= '0' && c <= '9') {
++			continue
++		}
++		return true
++	}
++	return false
+ }
+ 
+ // Matches returns whether the matcher matches the given string value.
 diff --git a/vendor/github.com/prometheus/prometheus/promql/parser/generated_parser.y b/vendor/github.com/prometheus/prometheus/promql/parser/generated_parser.y
 index 433f452..24b49fa 100644
 --- a/vendor/github.com/prometheus/prometheus/promql/parser/generated_parser.y
