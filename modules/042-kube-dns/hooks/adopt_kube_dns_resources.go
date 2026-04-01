@@ -140,8 +140,9 @@ func adoptKubeDNSResources(_ context.Context, input *go_hook.HookInput) error {
 	// Deployment coredns must always be removed
 	input.PatchCollector.DeleteNonCascading("apps/v1", "Deployment", "kube-system", "coredns")
 
-	// If NELM is disabled — stop here (no adoption)
+	// If NELM is disabled — delete Service kube-dns
 	if !useNelm {
+		input.PatchCollector.Delete("v1", "Service", "kube-system", "kube-dns")
 		return nil
 	}
 
