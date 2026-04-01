@@ -1,6 +1,12 @@
 @use "components/common/_variables.scss";
 @use 'components/common/_breakpoints.scss';
 
+div[data-tippy-root] {
+    @include breakpoints.max-w(l) {
+        z-index: 1 !important;
+    }
+}
+
 .tippy-box[data-theme~='custom'] {
     background-color: #000;
 }
@@ -33,6 +39,16 @@
             font-size: 10px;
             max-width: 115px !important;
         }
+
+        ul {
+            @include breakpoints.max-w(m) {
+                font-size: 12px;
+            }
+
+            @include breakpoints.max-w(xxs) {
+                font-size: 10px;
+            }
+        }
     }
 }
 
@@ -43,6 +59,4 @@
             max-width: 250px !important;
         }
     }
-
 }
-
