@@ -2647,6 +2647,10 @@ select#contact-select {
     @include breakpoints.max-w(m) {
       padding: 14px;
     }
+
+    @include breakpoints.max-w(xxs) {
+      padding: 8px;
+    }
   }
 
   .tippy-content code {

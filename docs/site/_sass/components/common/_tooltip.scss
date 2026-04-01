@@ -27,4 +27,9 @@
         font-size: 12px;
         max-width: 170px !important;
     }
+
+    @include breakpoints.max-w(xxs) {
+        font-size: 9px;
+        max-width: 115px !important;
+    }
 }
