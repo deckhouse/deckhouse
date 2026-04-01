@@ -41,31 +41,40 @@ function get_data_device_secret() {
 function discover_device_path() {
   cloud_disk_name="$1"
 
-  # 1) Prefer stable by-id links (BEST PRACTICE)
-  if [ -n "$cloud_disk_name" ] && [ -d /dev/disk/by-id ]; then
+  if [ -z "$cloud_disk_name" ]; then
+    >&2 echo "ERROR: empty cloud_disk_name"
+    return 1
+  fi
+
+  # 1. by-id resolution
+  if [ -d /dev/disk/by-id ]; then
     byid_match="$(ls -1 /dev/disk/by-id/ 2>/dev/null | grep -F "$cloud_disk_name" | head -n1)"
-    if [ -n "$byid_match" ] && [ -e "/dev/disk/by-id/$byid_match" ]; then
-      echo "$(readlink -f "/dev/disk/by-id/$byid_match")"
-      return 0
+    if [ -n "$byid_match" ]; then
+      dev="$(readlink -f "/dev/disk/by-id/$byid_match")"
+      if [ -b "$dev" ]; then
+        echo "$dev"
+        return 0
+      fi
     fi
   fi
 
-  # 2) Safe SERIAL fallback (strict match)
+  # 2. serial match (no fuzzy matching)
   device_name="$(lsblk -dn -o NAME,SERIAL 2>/dev/null | awk -v id="$cloud_disk_name" '$2==id {print $1; exit}')"
   if [ -n "$device_name" ]; then
     echo "/dev/$device_name"
     return 0
   fi
 
-  # 3) Azure fallback (robust LUN scan)
+  # 3. azure fallback (safe, last resort)
   if [ -d /dev/disk/azure ]; then
-    azure_device="$(readlink -f /dev/disk/azure/scsi*/* 2>/dev/null | head -n1)"
+    azure_device="$(readlink -f /dev/disk/azure/scsi*/lun* 2>/dev/null | head -n1)"
     if [ -n "$azure_device" ]; then
       echo "$azure_device"
       return 0
     fi
   fi
 
+  >&2 echo "ERROR: failed to resolve kubernetes data disk: $cloud_disk_name"
   return 1
 }
 
@@ -87,47 +96,13 @@ else
   cloud_disk_name="$(get_data_device_secret | jq -re --arg hostname "$(bb-d8-node-name)" '.data[$hostname]' | base64 -d)"
 fi
 
->&2 echo "discover_device_path: resolving disk for: $cloud_disk_name"
+resolved_device="$(discover_device_path "$cloud_disk_name")"
 
-# Robust root disk detection (works with LVM, mapper, NVMe, cloud images)
-root_src="$(findmnt -n -o SOURCE / 2>/dev/null)"
-root_dev="$(lsblk -no PKNAME "$root_src" 2>/dev/null)"
-
-# fallback if PKNAME fails (LVM/mapper cases)
-if [ -z "$root_dev" ]; then
-  root_dev="$(lsblk -ln -o NAME,MOUNTPOINT 2>/dev/null | awk '$2=="/" {print $1; exit}')"
+if [ -z "$resolved_device" ]; then
+  >&2 echo "FATAL: no data disk resolved"
+  return 1
 fi
 
-# build candidate list safely (exclude system disks early)
-candidates="$(lsblk -dn -o NAME,TYPE 2>/dev/null | awk '$2=="disk"{print "/dev/"$1}')"
-
-for disk in $candidates; do
-  [ -e "$disk" ] || continue
-
-  # Skip root disk completely
-  base_disk="$(basename "$disk" 2>/dev/null | sed 's/p[0-9]*$//')"
-  if [ -n "$root_dev" ] && [ "$base_disk" = "$root_dev" ]; then
-    continue
-  fi
-
-  # skip disks with any mountpoints
-  if lsblk -no MOUNTPOINT "$disk" 2>/dev/null | grep -q "/"; then
-    continue
-  fi
-
-  # skip OS-like partitions
-  part_types="$(lsblk -no PARTTYPE "$disk" 2>/dev/null | tr '\n' ' ')"
-  if echo "$part_types" | grep -Eqi "efi|swap|linux_raid|linux_lvm"; then
-    continue
-  fi
-
-  echo "$disk"
-  return 0
-done
-
->&2 echo "FAILED: no safe data disk found (system disks excluded)"
-return 1
-
-echo "$(discover_device_path "$cloud_disk_name")" > /var/lib/bashible/kubernetes_data_device_path
+echo "$resolved_device" > /var/lib/bashible/kubernetes_data_device_path
 
 {{- end }}
