@@ -47,7 +47,7 @@ import:
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   after: setup
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup

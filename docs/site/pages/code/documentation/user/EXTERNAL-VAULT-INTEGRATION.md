@@ -355,3 +355,229 @@ If the integration is configured correctly:
 - The secret is retrieved and printed to the log.
 
 In the job output, you will see the value of the `DATABASE_PASSWORD` field loaded directly from Vault.
+
+## Deckhouse Stronghold integration
+
+[Deckhouse Stronghold](/products/stronghold/) is an enterprise secrets management solution built on top of HashiCorp Vault. Integrating Stronghold with Deckhouse Code allows you to securely use secrets in CI/CD pipelines without storing them in project variables.
+
+### Interaction flow
+
+![Stronghold and Deckhouse Code integration](/images/code/stronghold_code_en.png)
+
+Integration benefits:
+
+- **Centralized secrets management** — all secrets are stored in one place with access auditing.
+- **Automatic rotation** — secrets can be automatically rotated without modifying pipelines.
+- **Granular access control** — access to secrets is restricted based on project, branch, environment, and other parameters.
+- **No secrets in the repository** — secrets never end up in the code or CI variables.
+
+### Usage examples
+
+This section provides common scenarios for using Vault secrets in CI/CD pipelines.
+
+#### Deploying an application with database credentials
+
+Example of retrieving PostgreSQL credentials during deployment:
+
+```yaml
+stages:
+  - deploy
+
+deploy-production:
+  stage: deploy
+  image: alpine/k8s:1.28.0
+  environment:
+    name: production
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    DB_HOST:
+      vault: apps/myapp/production/DB_HOST@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_USER:
+      vault: apps/myapp/production/DB_USER@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_PASSWORD:
+      vault: apps/myapp/production/DB_PASSWORD@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - kubectl create secret generic db-credentials \
+        --from-literal=host=$DB_HOST \
+        --from-literal=username=$DB_USER \
+        --from-literal=password=$DB_PASSWORD \
+        --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl rollout restart deployment/myapp
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+```
+
+#### Using API keys for external services
+
+Example of integration with external APIs (Slack, Telegram, S3):
+
+```yaml
+stages:
+  - notify
+  - backup
+
+notify-slack:
+  stage: notify
+  image: curlimages/curl:latest
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    SLACK_WEBHOOK_URL:
+      vault: integrations/slack/WEBHOOK_URL@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - |
+      curl -X POST "$SLACK_WEBHOOK_URL" \
+        -H "Content-Type: application/json" \
+        -d "{\"text\": \"Deployment completed for $CI_PROJECT_NAME\"}"
+
+backup-to-s3:
+  stage: backup
+  image: amazon/aws-cli:latest
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    AWS_ACCESS_KEY_ID:
+      vault: cloud/aws/backup-user/ACCESS_KEY_ID@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    AWS_SECRET_ACCESS_KEY:
+      vault: cloud/aws/backup-user/SECRET_ACCESS_KEY@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - aws s3 sync ./artifacts s3://my-backup-bucket/$CI_PROJECT_NAME/$CI_COMMIT_SHA/
+```
+
+#### Signing Docker images with Cosign
+
+Example of using a private key from Vault to sign images:
+
+```yaml
+stages:
+  - build
+  - sign
+
+build-image:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
+sign-image:
+  stage: sign
+  image: bitnami/cosign:latest
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    COSIGN_PRIVATE_KEY:
+      vault: signing/cosign/PRIVATE_KEY@kv
+      token: $VAULT_ID_TOKEN
+      file: true
+  script:
+    - cosign sign --key $COSIGN_PRIVATE_KEY $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+```
+
+#### Branch-based access control
+
+Example of configuring different secrets for `develop` and `main` branches using bound claims on branch (`ref`):
+
+```yaml
+stages:
+  - deploy
+
+.deploy-template:
+  image: alpine/k8s:1.28.0
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  script:
+    - echo "Deploying from branch $CI_COMMIT_BRANCH with database $DB_HOST"
+    - kubectl set env deployment/myapp DB_HOST=$DB_HOST DB_PASSWORD=$DB_PASSWORD
+
+deploy-develop:
+  extends: .deploy-template
+  stage: deploy
+  variables:
+    VAULT_AUTH_ROLE: myapp-develop
+  secrets:
+    DB_HOST:
+      vault: apps/myapp/develop/DB_HOST@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_PASSWORD:
+      vault: apps/myapp/develop/DB_PASSWORD@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+deploy-main:
+  extends: .deploy-template
+  stage: deploy
+  variables:
+    VAULT_AUTH_ROLE: myapp-main
+  secrets:
+    DB_HOST:
+      vault: apps/myapp/main/DB_HOST@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_PASSWORD:
+      vault: apps/myapp/main/DB_PASSWORD@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+```
+
+Example of configuring a Vault role with bound claims based on branch for access control:
+
+```bash
+# Role for `develop` — access only from `develop` branch.
+vault write auth/jwt/role/myapp-develop - <<EOF
+{
+  "role_type": "jwt",
+  "user_claim": "sub",
+  "bound_audiences": ["vault"],
+  "bound_claims": {
+    "project_path": "myteam/myapp",
+    "ref": "develop",
+    "ref_type": "branch"
+  },
+  "policies": ["myapp-develop-policy"],
+  "ttl": "1h"
+}
+EOF
+
+# Role for `main` — access only from `main` branch (protected).
+vault write auth/jwt/role/myapp-main - <<EOF
+{
+  "role_type": "jwt",
+  "user_claim": "sub",
+  "bound_audiences": ["vault"],
+  "bound_claims": {
+    "project_path": "myteam/myapp",
+    "ref": "main",
+    "ref_type": "branch",
+    "ref_protected": "true"
+  },
+  "policies": ["myapp-main-policy"],
+  "ttl": "1h"
+}
+EOF
+```

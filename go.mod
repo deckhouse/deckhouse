@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/flant/addon-operator v1.19.6
+	github.com/flant/addon-operator v1.20.1
 	github.com/flant/kube-client v1.6.0
-	github.com/flant/shell-operator v1.14.2
+	github.com/flant/shell-operator v1.15.1
 	github.com/go-openapi/spec v0.22.0
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
@@ -60,8 +60,8 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
-	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20251128160944-41d73224a0c9
-	github.com/deckhouse/module-sdk v0.10.2
+	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260330123855-eae1a3478bff
+	github.com/deckhouse/module-sdk v0.10.4
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.0+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
@@ -180,7 +180,7 @@ require (
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.3.6 // indirect
-	github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f // indirect
+	github.com/deckhouse/delivery-kit-sdk v1.1.0 // indirect
 	github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
@@ -318,7 +318,7 @@ require (
 	github.com/werf/kubedog v0.13.1-0.20260115171811-304218f24308 // indirect
 	github.com/werf/lockgate v0.1.1 // indirect
 	github.com/werf/logboek v0.6.1 // indirect
-	github.com/werf/nelm v1.23.0
+	github.com/werf/nelm v1.23.1
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect

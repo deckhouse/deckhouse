@@ -349,3 +349,8 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/modules/500-upmeter/templates/webui
+  to: /deckhouse/modules/500-upmeter/templates/webui
+  stageDependencies:
+    install:
+        - '**/*'

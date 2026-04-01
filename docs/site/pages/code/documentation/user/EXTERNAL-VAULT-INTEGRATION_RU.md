@@ -349,3 +349,229 @@ EOF
 - секрет будет считан и выведен в лог.
 
 В выводе вы увидите значение поля `DATABASE_PASSWORD`, загруженное напрямую из Vault.
+
+## Интеграция с Deckhouse Stronghold
+
+[Deckhouse Stronghold](/products/stronghold/) — это enterprise-решение для управления секретами, построенное на базе HashiCorp Vault. Интеграция Stronghold с Deckhouse Code позволяет безопасно использовать секреты в CI/CD-пайплайнах без необходимости хранить их в переменных проекта.
+
+### Схема взаимодействия
+
+![Схема интеграции Stronghold и Deckhouse Code](/images/code/stronghold_code_ru.png)
+
+Преимущества интеграции:
+
+- **Централизованное управление секретами** — все секреты хранятся в одном месте с аудитом доступа.
+- **Автоматическая ротация** — секреты могут обновляться автоматически без необходимости изменения CI/CD-пайплайнов.
+- **Гранулярный контроль доступа** — доступ к секретам ограничивается на основе проекта, ветки, окружения и других параметров.
+- **Отсутствие секретов в репозитории** — секреты не хранятся в коде и не передаются через переменные CI.
+
+### Примеры использования
+
+В этом разделе приведены типовые сценарии использования секретов из Vault в CI/CD-пайплайнах.
+
+#### Развёртывание приложения с учётными данными базы данных
+
+Пример получения данных для аутентификации (credentials) для подключения к PostgreSQL во время развётывания:
+
+```yaml
+stages:
+  - deploy
+
+deploy-production:
+  stage: deploy
+  image: alpine/k8s:1.28.0
+  environment:
+    name: production
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    DB_HOST:
+      vault: apps/myapp/production/DB_HOST@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_USER:
+      vault: apps/myapp/production/DB_USER@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_PASSWORD:
+      vault: apps/myapp/production/DB_PASSWORD@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - kubectl create secret generic db-credentials \
+        --from-literal=host=$DB_HOST \
+        --from-literal=username=$DB_USER \
+        --from-literal=password=$DB_PASSWORD \
+        --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl rollout restart deployment/myapp
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+```
+
+#### Использование API-ключей для внешних сервисов
+
+Пример интеграции с внешними API (Slack, Telegram, S3):
+
+```yaml
+stages:
+  - notify
+  - backup
+
+notify-slack:
+  stage: notify
+  image: curlimages/curl:latest
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    SLACK_WEBHOOK_URL:
+      vault: integrations/slack/WEBHOOK_URL@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - |
+      curl -X POST "$SLACK_WEBHOOK_URL" \
+        -H "Content-Type: application/json" \
+        -d "{\"text\": \"Deployment completed for $CI_PROJECT_NAME\"}"
+
+backup-to-s3:
+  stage: backup
+  image: amazon/aws-cli:latest
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    AWS_ACCESS_KEY_ID:
+      vault: cloud/aws/backup-user/ACCESS_KEY_ID@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    AWS_SECRET_ACCESS_KEY:
+      vault: cloud/aws/backup-user/SECRET_ACCESS_KEY@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - aws s3 sync ./artifacts s3://my-backup-bucket/$CI_PROJECT_NAME/$CI_COMMIT_SHA/
+```
+
+#### Подписание Docker-образов с помощью Cosign
+
+Пример использования приватного ключа из Vault для подписания образов:
+
+```yaml
+stages:
+  - build
+  - sign
+
+build-image:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
+sign-image:
+  stage: sign
+  image: bitnami/cosign:latest
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    COSIGN_PRIVATE_KEY:
+      vault: signing/cosign/PRIVATE_KEY@kv
+      token: $VAULT_ID_TOKEN
+      file: true
+  script:
+    - cosign sign --key $COSIGN_PRIVATE_KEY $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+```
+
+#### Разграничение доступа по веткам
+
+Пример настройки различных секретов для веток `develop` и `main` с использованием bound claims по ветке (`ref`):
+
+```yaml
+stages:
+  - deploy
+
+.deploy-template:
+  image: alpine/k8s:1.28.0
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  script:
+    - echo "Deploying from branch $CI_COMMIT_BRANCH with database $DB_HOST"
+    - kubectl set env deployment/myapp DB_HOST=$DB_HOST DB_PASSWORD=$DB_PASSWORD
+
+deploy-develop:
+  extends: .deploy-template
+  stage: deploy
+  variables:
+    VAULT_AUTH_ROLE: myapp-develop
+  secrets:
+    DB_HOST:
+      vault: apps/myapp/develop/DB_HOST@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_PASSWORD:
+      vault: apps/myapp/develop/DB_PASSWORD@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+deploy-main:
+  extends: .deploy-template
+  stage: deploy
+  variables:
+    VAULT_AUTH_ROLE: myapp-main
+  secrets:
+    DB_HOST:
+      vault: apps/myapp/main/DB_HOST@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_PASSWORD:
+      vault: apps/myapp/main/DB_PASSWORD@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+```
+
+Пример настройки роли в Vault с bound claims по ветке для разграничения доступа:
+
+```bash
+# Роль для `develop` — доступ только с ветки `develop`.
+vault write auth/jwt/role/myapp-develop - <<EOF
+{
+  "role_type": "jwt",
+  "user_claim": "sub",
+  "bound_audiences": ["vault"],
+  "bound_claims": {
+    "project_path": "myteam/myapp",
+    "ref": "develop",
+    "ref_type": "branch"
+  },
+  "policies": ["myapp-develop-policy"],
+  "ttl": "1h"
+}
+EOF
+
+# Роль для `main` — доступ только с ветки `main` (защищённой).
+vault write auth/jwt/role/myapp-main - <<EOF
+{
+  "role_type": "jwt",
+  "user_claim": "sub",
+  "bound_audiences": ["vault"],
+  "bound_claims": {
+    "project_path": "myteam/myapp",
+    "ref": "main",
+    "ref_type": "branch",
+    "ref_protected": "true"
+  },
+  "policies": ["myapp-main-policy"],
+  "ttl": "1h"
+}
+EOF
+```
