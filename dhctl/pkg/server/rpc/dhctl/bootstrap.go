@@ -174,6 +174,8 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 
 	loggerFor := initDhctlLogger(ctx, p)
 
+	loggerFor.LogDebugF("Got Provider config:\n%s\n", p.request.ProviderSpecificClusterConfig)
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.SetCacheDir(s.params.CacheDir)

@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	gcmp "github.com/google/go-cmp/cmp"
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
 
@@ -348,6 +349,26 @@ func (m *MetaConfig) ProviderClusterConfigYAML() ([]byte, error) {
 		return []byte{}, nil
 	}
 	return yaml.Marshal(m.ProviderClusterConfig)
+}
+
+func (m *MetaConfig) ClusterConfigAsMap() (map[string]any, error) {
+	return asMapAny(m.ClusterConfig)
+}
+
+func (m *MetaConfig) ProviderClusterConfigAsMap() (map[string]any, error) {
+	return asMapAny(m.ProviderClusterConfig)
+}
+
+func (m *MetaConfig) StaticClusterConfigAsMap() (map[string]any, error) {
+	return asMapAny(m.StaticClusterConfig)
+}
+
+func (m *MetaConfig) ProviderSpecificClusterConfigAsMap() (map[string]any, error) {
+	if m.ClusterType == StaticClusterType {
+		return m.StaticClusterConfigAsMap()
+	}
+
+	return m.ProviderClusterConfigAsMap()
 }
 
 func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
@@ -729,4 +750,79 @@ func GetIndexFromNodeName(name string) (int, error) {
 		return 0, err
 	}
 	return index, nil
+}
+
+type configAsMapProvider func(*MetaConfig) (map[string]any, error)
+
+func CompareProviderClusterConfigs(first, second *MetaConfig) string {
+	return compareConfigs("provider cluster config", first, second, func(mc *MetaConfig) (map[string]any, error) {
+		return mc.ProviderSpecificClusterConfigAsMap()
+	})
+}
+
+func CompareClusterConfigs(first, second *MetaConfig) string {
+	return compareConfigs("cluster config", first, second, func(mc *MetaConfig) (map[string]any, error) {
+		return mc.ClusterConfigAsMap()
+	})
+}
+
+func CompareConfigs(first, second *MetaConfig) string {
+	clusterDiff := CompareClusterConfigs(first, second)
+	providerDiff := CompareProviderClusterConfigs(first, second)
+
+	return fmt.Sprintf("Cluster:\n%s\n---\nProvider:\n%s\n---\n", clusterDiff, providerDiff)
+}
+
+func compareConfigs(source string, first, second *MetaConfig, provider configAsMapProvider) string {
+	firstMap := map[string]any{
+		"NOT_PROVIDED": "first",
+		"source":       source,
+	}
+
+	var err error
+
+	if first != nil {
+		firstMap, err = provider(first)
+		if err != nil {
+			return fmt.Sprintf("Cannot get as map first for %s: %v", source, err)
+		}
+	}
+
+	secondMap := map[string]any{
+		"NOT_PROVIDED": "second",
+		"source":       source,
+	}
+
+	if second != nil {
+		secondMap, err = provider(second)
+		if err != nil {
+			return fmt.Sprintf("Cannot get as map second for %s: %v", source, err)
+		}
+	}
+
+	return diffMaps(firstMap, secondMap)
+}
+
+func diffMaps(first, second map[string]any) string {
+	diff := gcmp.Diff(first, second)
+
+	if diff != "" {
+		return diff
+	}
+
+	return "equal"
+}
+
+func asMapAny(input map[string]json.RawMessage) (map[string]any, error) {
+	res := make(map[string]any)
+	for k, vJSON := range input {
+		var v any
+		err := json.Unmarshal(vJSON, &v)
+		if err != nil {
+			return nil, fmt.Errorf("cannot unmarshal key %s: %w", k, err)
+		}
+
+		res[k] = v
+	}
+	return res, nil
 }

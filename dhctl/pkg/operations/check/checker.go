@@ -63,6 +63,8 @@ type Params struct {
 	TmpDir  string
 	Logger  log.Logger
 	IsDebug bool
+
+	MetaConfigPreparatorProvider func() config.MetaConfigPreparatorProvider
 }
 
 type Cleaner func() error
@@ -117,9 +119,12 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		return nil, cleaner, err
 	}
 
-	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger)
+	parser := commander.NewMetaConfigParser(c.StateCache, c.logger).
+		WithPreparatorProviderConsumer(c.MetaConfigPreparatorProvider)
+
+	metaConfig, err := parser.Parse(ctx, c.Params.CommanderModeParams)
 	if err != nil {
-		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
+		return nil, cleaner, fmt.Errorf("Unable to parse meta configuration: %w", err)
 	}
 
 	if !c.Embedded {
@@ -269,6 +274,7 @@ func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClien
 		CheckStateOptions{
 			CommanderMode: c.CommanderMode,
 			StateCache:    c.StateCache,
+			Logger:        c.logger,
 		},
 		false,
 	)

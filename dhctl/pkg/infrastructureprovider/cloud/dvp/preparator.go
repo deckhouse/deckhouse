@@ -17,6 +17,7 @@ package dvp
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -35,6 +36,7 @@ type MetaConfigPreparator struct {
 	validateKubeConfig bool
 	validateKubeAPI    bool
 	logger             log.Logger
+	additionalData     *PreparatorAdditionalData
 }
 
 func NewMetaConfigPreparator() *MetaConfigPreparator {
@@ -47,6 +49,12 @@ func (p *MetaConfigPreparator) WithLogger(logger log.Logger) *MetaConfigPreparat
 	if !govalue.IsNil(logger) {
 		p.logger = logger
 	}
+
+	return p
+}
+
+func (p *MetaConfigPreparator) WithAdditionalData(data *PreparatorAdditionalData) *MetaConfigPreparator {
+	p.additionalData = data
 
 	return p
 }
@@ -75,7 +83,12 @@ func (p *MetaConfigPreparator) Validate(ctx context.Context, metaConfig *config.
 }
 
 func (p *MetaConfigPreparator) Prepare(_ context.Context, metaConfig *config.MetaConfig) error {
-	return nil
+	if govalue.IsNil(p.additionalData) {
+		p.logSkipPrepare("Additional data for cloud provider dvp not provided")
+		return nil
+	}
+
+	return p.prepareSSHPublicKey(metaConfig, p.additionalData)
 }
 
 func (p *MetaConfigPreparator) KubeconfigDataBase64(metaConfig *config.MetaConfig) (*kubernetes.Clientset, error) {
@@ -135,6 +148,91 @@ Please note that the kubeconfig from provider.kubeconfigDataBase64 must be attac
 			"kubeconfig from provider.kubeconfigDataBase64 must be attached to system:serviceaccounts, but got: %s", response.Status.UserInfo.Username,
 		)
 	}
+
+	return nil
+}
+
+func (p *MetaConfigPreparator) logSkipPrepare(msg string, args ...any) {
+	m := fmt.Sprintf(msg, args...)
+	p.logger.LogDebugF("%s. Skip prepare\n", m)
+}
+
+func (p *MetaConfigPreparator) prepareSSHPublicKey(metaConfig *config.MetaConfig, data *PreparatorAdditionalData) error {
+	metaConfigSSHPubKey, err := p.getSSHPublicKey(metaConfig)
+	if err != nil {
+		return err
+	}
+
+	if metaConfigSSHPubKey == "" {
+		// log in getSSHPublicKey
+		return nil
+	}
+
+	const processSuffix = "\n"
+
+	if strings.HasSuffix(metaConfigSSHPubKey, processSuffix) {
+		p.logSkipPrepare("Meta config ssh pub key already contains new line")
+		return nil
+	}
+
+	originalSSHPubKey, err := data.extractSSHPubKey(p.logger)
+	if err != nil {
+		return err
+	}
+
+	if originalSSHPubKey == "" {
+		// log in extractSSHPubKey
+		return nil
+	}
+
+	if originalSSHPubKey == metaConfigSSHPubKey {
+		p.logSkipPrepare("Meta config ssh pub key equals to original ssh pub key")
+		return nil
+	}
+
+	originalSSHPubKeyTrimmed := strings.TrimSuffix(originalSSHPubKey, processSuffix)
+
+	if originalSSHPubKeyTrimmed != metaConfigSSHPubKey {
+		p.logSkipPrepare("Original trimmed ssh key not equal to meta config ssh pub key. Probably new key: %s", originalSSHPubKey)
+		return nil
+	}
+
+	p.logger.LogDebugF("SSH key prepared for cloud provider dvp\n")
+
+	return p.setSSHPublicKey(metaConfig, originalSSHPubKey)
+}
+
+const sshPublicKeyConfigKey = "sshPublicKey"
+
+func (p *MetaConfigPreparator) getSSHPublicKey(metaConfig *config.MetaConfig) (string, error) {
+	providerConfig := metaConfig.ProviderClusterConfig
+	if len(providerConfig) == 0 {
+		p.logSkipPrepare("Provider cluster config not provided")
+		return "", nil
+	}
+
+	sshPubKeyJSON, ok := providerConfig[sshPublicKeyConfigKey]
+	if !ok {
+		p.logSkipPrepare("Meta config not provide key %s", sshPublicKeyConfigKey)
+		return "", nil
+	}
+
+	var sshPubKey string
+	err := json.Unmarshal(sshPubKeyJSON, &sshPubKey)
+	if err != nil {
+		return "", fmt.Errorf("Cannot unmarshal ssh pub key for getting from meta config: %w", err)
+	}
+
+	return sshPubKey, nil
+}
+
+func (p *MetaConfigPreparator) setSSHPublicKey(metaConfig *config.MetaConfig, key string) error {
+	keyForStore, err := json.Marshal(key)
+	if err != nil {
+		return fmt.Errorf("Cannot marshal ssh pub key for set to provider cluster config after prepare")
+	}
+
+	metaConfig.ProviderClusterConfig[sshPublicKeyConfigKey] = json.RawMessage(keyForStore)
 
 	return nil
 }

@@ -162,14 +162,17 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
 
+	metaConfigPreparator := provideMetaConfigPreparator(&provideMetaConfigPreparatorParams{
+		providerConfigProvider: p.request,
+		logger:                 loggerFor,
+	})
+
 	var metaConfig *config.MetaConfig
 	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
-			),
+			metaConfigPreparator,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -234,6 +237,9 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		TmpDir:                s.params.TmpDir,
 		OnPhaseFunc:           func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
 		OnProgressFunc:        p.sendProgress,
+		MetaConfigPreparatorProvider: func() config.MetaConfigPreparatorProvider {
+			return metaConfigPreparator
+		},
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{

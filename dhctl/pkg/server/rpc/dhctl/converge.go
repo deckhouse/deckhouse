@@ -187,14 +187,17 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
 
+	metaConfigPreparator := provideMetaConfigPreparator(&provideMetaConfigPreparatorParams{
+		providerConfigProvider: p.request,
+		logger:                 loggerFor,
+	})
+
 	var metaConfig *config.MetaConfig
 	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
-			),
+			metaConfigPreparator,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -249,6 +252,10 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		}
 	}
 
+	preparatorConsumer := func() config.MetaConfigPreparatorProvider {
+		return metaConfigPreparator
+	}
+
 	checkParams := &check.Params{
 		StateCache:    cache.Global(),
 		CommanderMode: p.request.Options.CommanderMode,
@@ -257,11 +264,12 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		Embedded:              true,
-		IsDebug:               s.params.IsDebug,
-		TmpDir:                tmpDir,
-		Logger:                loggerFor,
-		InfrastructureContext: infrastructureContext,
+		Embedded:                     true,
+		IsDebug:                      s.params.IsDebug,
+		TmpDir:                       tmpDir,
+		Logger:                       loggerFor,
+		InfrastructureContext:        infrastructureContext,
+		MetaConfigPreparatorProvider: preparatorConsumer,
 	}
 
 	convergeParams := &converge.Params{
@@ -290,6 +298,8 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		TmpDir:                     tmpDir,
 		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
+
+		PreparatorProviderConsumer: preparatorConsumer,
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{

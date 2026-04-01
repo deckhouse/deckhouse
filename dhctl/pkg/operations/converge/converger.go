@@ -66,6 +66,8 @@ type Params struct {
 
 	NoSwitchToNodeUser bool
 
+	PreparatorProviderConsumer commander.PreparatorProviderConsumer
+
 	CheckHasTerraformStateBeforeMigration bool
 }
 
@@ -201,6 +203,8 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			ChangeParams:   c.Params.ChangesSettings,
 			ProviderGetter: c.Params.ProviderGetter,
 			Logger:         c.Logger,
+
+			PreparatorProviderConsumer: c.Params.PreparatorProviderConsumer,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
@@ -335,6 +339,8 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			ChangeParams:   c.Params.ChangesSettings,
 			ProviderGetter: c.ProviderGetter,
 			Logger:         c.Logger,
+
+			PreparatorProviderConsumer: c.Params.PreparatorProviderConsumer,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{

@@ -119,7 +119,10 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
 		// }
 
-		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, params.logger)
+		// do not need preparator, because all will be destroyed
+		parser := commander.NewMetaConfigParser(params.stateCache, params.logger)
+
+		metaConfig, err := parser.Parse(ctx, params.commanderParams)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
 		}
