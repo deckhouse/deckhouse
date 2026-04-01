@@ -993,7 +993,13 @@ spec:
 
 ## Отправка логов в Elasticsearch с трансформациями
 
-Пример `ClusterLogDestination` для Elasticsearch: JSON из поля `message` сливается в корень события (`targetLabel: "."`), затем в `pod_labels` точки в именах ключей заменяются на подчёркивания, после чего поле `message` удаляется.
+Ниже приведён пример ресурса ClusterLogDestination для отправки логов в Elasticsearch.
+
+В этом примере:
+
+- JSON из поля `message` разбирается и переносится в корень события (`targetLabel: "."`);
+- в именах ключей в `pod_labels` точки заменяются на подчёркивания;
+- исходное поле `message` удаляется.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
