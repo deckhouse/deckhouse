@@ -99,7 +99,7 @@ spec:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := addMembersToPodManifest([]byte(tt.podManifest), tt.initialCluster)
+			got := addMembersToPodManifest([]byte(tt.podManifest), t.Name(), tt.initialCluster)
 			if string(got) != tt.want {
 				t.Errorf("addMembersToPodManifest() = %v, want %v", string(got), tt.want)
 			}

@@ -23,29 +23,16 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
+
+	"go.etcd.io/etcd/api/v3/etcdserverpb"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
-	kubeclient "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
-	"go.etcd.io/etcd/api/v3/etcdserverpb"
-	clientv3 "go.etcd.io/etcd/client/v3"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
-	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
 
 var logger = log.Default().Named("etcd")
-
-const (
-	etcdHealthyCheckInterval = 5 * time.Second
-	etcdHealthyCheckRetries  = 8
-	KubernetesAPICallTimeout = 1 * time.Minute
-	// Learner must catch up the leader before MemberPromote; on large stores this can take many poll cycles.
-	memberPromoteMaxAttempts  = 30
-	memberPromoteRetryBackoff = 5 * time.Second
-)
 
 func InitCluster(podManifest []byte, nodeName string, options ...option) error {
 	opt := prepareOptions(options...)
@@ -61,22 +48,23 @@ func InitCluster(podManifest []byte, nodeName string, options ...option) error {
 func JoinCluster(podManifest []byte, ip string, nodeName string, options ...option) error {
 	opt := prepareOptions(options...)
 
-	kubeClient, err := kubeclient.MyNewKubernetesClient()
+	kubeClient, err := client.NewKubernetesClient()
 	if err != nil {
 		return err
 	}
 
 	etcdPeerAddress := GetPeerURL(ip)
 
-	var etcdClient *clientv3.Client
+	var etcdClient client.Interface
 
 	etcdClient, err = client.New(kubeClient, opt.CertificatesDir)
 	if err != nil {
 		return err
 	}
+	defer etcdClient.Close()
 
+	//nolint:sloglint
 	logger.Info("Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
-	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
 	clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), []string{etcdPeerAddress})
 	if err != nil {
 		return err
@@ -88,43 +76,19 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 		return err
 	}
 
-	memberID := clusterResponse.Member.ID
-	for attempt := 1; attempt <= memberPromoteMaxAttempts; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), KubernetesAPICallTimeout)
-		_, err = etcdClient.MemberPromote(ctx, memberID)
-		cancel()
-		if err == nil {
-			break
-		}
-		if attempt == memberPromoteMaxAttempts || !isLearnerNotYetSyncedPromoteError(err) {
-			return err
-		}
-		logger.Info("MemberPromote: learner not in sync with leader yet, retrying",
-			slog.Uint64("memberID", memberID),
-			slog.Int("attempt", attempt),
-			slog.Int("maxAttempts", memberPromoteMaxAttempts),
-			slog.Duration("nextRetryIn", memberPromoteRetryBackoff))
-		time.Sleep(memberPromoteRetryBackoff)
+	ctx, cancel := context.WithTimeout(context.Background(), constants.KubernetesAPICallTimeout)
+	defer cancel()
+	_, err = etcdClient.MemberPromote(ctx, clusterResponse.Member.ID)
+	if err != nil {
+		return err
 	}
 
-	logger.Info("Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
-	if _, err := client.WaitForClusterAvailable(etcdClient, etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
+	logger.Info("Waiting for the new etcd member to join the cluster", slog.Duration("timeout", constants.EtcdHealthyCheckInterval*constants.EtcdHealthyCheckRetries))
+	if _, err := etcdClient.WaitForClusterAvailable(constants.EtcdHealthyCheckRetries, constants.EtcdHealthyCheckInterval); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func isLearnerNotYetSyncedPromoteError(err error) bool {
-	if err == nil {
-		return false
-	}
-	if st, ok := status.FromError(err); ok {
-		if st.Code() == codes.FailedPrecondition && strings.Contains(st.Message(), "can only promote a learner member") {
-			return true
-		}
-	}
-	return strings.Contains(err.Error(), "can only promote a learner member which is in sync with leader")
 }
 
 func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, nodeName string, initialCluster []*etcdserverpb.Member) error {
@@ -142,7 +106,7 @@ func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, nodeName
 
 func addMembersToPodManifest(podManifest []byte, nodeName string, initialCluster []*etcdserverpb.Member) []byte {
 	podManifestString := string(podManifest)
-	var endpoints []string
+	var endpoints []string //nolint:prealloc
 	for _, member := range initialCluster {
 		name := member.Name
 		// etcd does not assign a name to a member until it starts

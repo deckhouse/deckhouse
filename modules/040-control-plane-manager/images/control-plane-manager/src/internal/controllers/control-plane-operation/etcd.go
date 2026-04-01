@@ -84,10 +84,15 @@ func checkEtcdMemberExists(nodeName, pkiDir, kubeconfigDir string) (bool, error)
 	}
 	defer etcdCli.Close()
 
+	rawCli, ok := etcdCli.(*etcdclient.Client)
+	if !ok {
+		return false, fmt.Errorf("unexpected etcd client type: %T", etcdCli)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), etcdMemberListTimeout)
 	defer cancel()
 
-	resp, err := etcdCli.MemberList(ctx)
+	resp, err := rawCli.Raw().MemberList(ctx)
 	if err != nil {
 		return false, fmt.Errorf("etcd member list: %w", err)
 	}

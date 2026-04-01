@@ -37,19 +37,19 @@ import (
 // used by kube-controller-manager to sign ServiceAccount JWT tokens (sa.key) and by
 // kube-apiserver to verify them (sa.pub).
 func createSAKeysIfNotExists(cfg config) error {
-	key, err := pkiutil.LoadKey(keyPath(cfg.PKIDir, "sa"))
+	key, err := pkiutil.LoadKey(keyPath(cfg.pkiDir, "sa"))
 	if err != nil && !isNotExistError(err) {
 		return fmt.Errorf("failed to load SA private key: %w", err)
 	}
 
 	if err == nil {
 		// sa.key exists — ensure sa.pub is also present.
-		pubPath := filepath.Join(cfg.PKIDir, "sa.pub")
+		pubPath := filepath.Join(cfg.pkiDir, "sa.pub")
 		if _, statErr := os.Stat(pubPath); statErr == nil {
 			return nil
 		}
 		// sa.pub is missing — restore it from the existing key.
-		return writeSAPublicKey(cfg.PKIDir, key)
+		return writeSAPublicKey(cfg.pkiDir, key)
 	}
 
 	// sa.key does not exist — create a new key pair.
@@ -58,9 +58,9 @@ func createSAKeysIfNotExists(cfg config) error {
 		return fmt.Errorf("failed to generate SA private key: %w", err)
 	}
 
-	if err := writeKey(cfg.PKIDir, "sa", key); err != nil {
+	if err := writeKey(cfg.pkiDir, "sa", key); err != nil {
 		return fmt.Errorf("failed to write SA private key: %w", err)
 	}
 
-	return writeSAPublicKey(cfg.PKIDir, key)
+	return writeSAPublicKey(cfg.pkiDir, key)
 }

@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
 
 // ToClientSet converts a KubeConfig object to a client
@@ -51,7 +52,7 @@ func ClientSetFromFile(path string) (clientset.Interface, error) {
 }
 
 // Client returns the Client for accessing the cluster with the identity defined in admin.conf.
-func MyNewKubernetesClient() (clientset.Interface, error) {
+func NewKubernetesClient() (clientset.Interface, error) {
 	pathAdmin := filepath.Join(constants.KubernetesDir, constants.AdminKubeConfigFileName)
 
 	client, err := ClientSetFromFile(pathAdmin)

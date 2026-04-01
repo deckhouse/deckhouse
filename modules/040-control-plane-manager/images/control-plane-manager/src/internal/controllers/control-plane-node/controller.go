@@ -265,8 +265,8 @@ func (r *Reconciler) ensureOperationsExist(
 			continue
 		}
 
-		command := determineCommand(configChanged, pkiChanged, caChanged)
-		operationName := operationNameForNode(cpn.Name, state, command)
+		commands := determineCommands(state, configChanged, pkiChanged, caChanged)
+		operationName := operationNameForNode(cpn.Name, state)
 
 		if ownerUID, exists := existingOwners[operationName]; exists && ownerUID == cpn.UID {
 			logger.Debug("ControlPlaneOperation already exists, skipping",
@@ -275,66 +275,67 @@ func (r *Reconciler) ensureOperationsExist(
 			continue
 		}
 
-		op := newControlPlaneOperation(cpn, operationName, state, command)
+		op := newControlPlaneOperation(cpn, operationName, state, commands)
 		if err := r.client.Create(ctx, op); err != nil {
 			return fmt.Errorf("create ControlPlaneOperation %s: %w", operationName, err)
 		}
 		logger.Info("ControlPlaneOperation created",
 			slog.String("operation", operationName),
 			slog.String("component", string(state.component)),
-			slog.String("command", string(command)))
+			slog.Any("commands", commands))
 	}
 
 	return nil
 }
 
-// determineCommand returns the appropriate OperationCommand based on what changed.
-// CA change is treated as a PKI-level change — it triggers cert renewal and pod restart.
-func determineCommand(configChanged, pkiChanged, caChanged bool) controlplanev1alpha1.OperationCommand {
-	switch {
-	case configChanged && (pkiChanged || caChanged):
-		return controlplanev1alpha1.OperationCommandUpdateWithPKI
-	case pkiChanged || caChanged:
-		return controlplanev1alpha1.OperationCommandUpdatePKI
+// determineCommands returns the list of commands to execute based on what changed and the component type.
+func determineCommands(state componentState, configChanged, pkiChanged, caChanged bool) []controlplanev1alpha1.CommandName {
+	switch state.component {
+	case controlplanev1alpha1.OperationComponentCA:
+		return []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandSyncCA}
+	case controlplanev1alpha1.OperationComponentHotReload:
+		return []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandSyncHotReload}
 	default:
-		return controlplanev1alpha1.OperationCommandUpdate
+		var commands []controlplanev1alpha1.CommandName
+		if caChanged || pkiChanged {
+			commands = append(commands,
+				controlplanev1alpha1.CommandSyncCA,
+				controlplanev1alpha1.CommandRenewPKICerts,
+				controlplanev1alpha1.CommandRenewKubeconfigs,
+			)
+		}
+		if state.component == controlplanev1alpha1.OperationComponentEtcd {
+			commands = append(commands, controlplanev1alpha1.CommandJoinEtcdCluster)
+		}
+		commands = append(commands,
+			controlplanev1alpha1.CommandSyncManifests,
+			controlplanev1alpha1.CommandWaitPodReady,
+		)
+		return commands
 	}
 }
 
 // operationNameForNode returns a deterministic k8s-compatible name for a ControlPlaneOperation.
-func operationNameForNode(
-	nodeName string,
-	state componentState,
-	command controlplanev1alpha1.OperationCommand,
-) string {
+// The name encodes all non-empty checksums so that a new operation is created when any checksum changes.
+func operationNameForNode(nodeName string, state componentState) string {
 	sanitized := strings.ReplaceAll(nodeName, ".", "-")
 	compName := strings.ToLower(string(state.component))
 
-	//TODO: better naming for this part (CA component uses CA checksum as its identity)
-	configChecksum := state.specConfigChecksum
-	if state.specCAChecksum != "" && configChecksum == "" {
-		configChecksum = state.specCAChecksum
+	var parts []string
+	if state.specConfigChecksum != "" {
+		parts = append(parts, short(state.specConfigChecksum))
 	}
-
-	var pkiPart string
 	if state.specPKIChecksum != "" {
-		pkiPart += short(state.specPKIChecksum)
+		parts = append(parts, short(state.specPKIChecksum))
 	}
 	if state.specCAChecksum != "" {
-		if pkiPart != "" {
-			pkiPart += "-"
-		}
-		pkiPart += short(state.specCAChecksum)
+		parts = append(parts, short(state.specCAChecksum))
 	}
 
-	switch command {
-	case controlplanev1alpha1.OperationCommandUpdatePKI:
-		return fmt.Sprintf("%s-%s-%s", sanitized, compName, pkiPart)
-	case controlplanev1alpha1.OperationCommandUpdateWithPKI:
-		return fmt.Sprintf("%s-%s-%s-%s", sanitized, compName, short(configChecksum), pkiPart)
-	default:
-		return fmt.Sprintf("%s-%s-%s", sanitized, compName, short(configChecksum))
+	if len(parts) == 0 {
+		return fmt.Sprintf("%s-%s", sanitized, compName)
 	}
+	return fmt.Sprintf("%s-%s-%s", sanitized, compName, strings.Join(parts, "-"))
 }
 
 func short(s string) string {
@@ -348,28 +349,17 @@ func newControlPlaneOperation(
 	cpn *controlplanev1alpha1.ControlPlaneNode,
 	name string,
 	state componentState,
-	command controlplanev1alpha1.OperationCommand,
+	commands []controlplanev1alpha1.CommandName,
 ) *controlplanev1alpha1.ControlPlaneOperation {
 	spec := controlplanev1alpha1.ControlPlaneOperationSpec{
-		ConfigVersion: cpn.Spec.ConfigVersion,
-		NodeName:      cpn.Name,
-		Component:     state.component,
-		Command:       command,
-		Approved:      false,
-	}
-
-	switch command {
-	case controlplanev1alpha1.OperationCommandUpdate:
-		spec.DesiredConfigChecksum = state.specConfigChecksum
-	case controlplanev1alpha1.OperationCommandUpdatePKI:
-		spec.DesiredPKIChecksum = state.specPKIChecksum
-	case controlplanev1alpha1.OperationCommandUpdateWithPKI:
-		spec.DesiredConfigChecksum = state.specConfigChecksum
-		spec.DesiredPKIChecksum = state.specPKIChecksum
-	}
-
-	if state.specCAChecksum != "" {
-		spec.DesiredCAChecksum = state.specCAChecksum
+		ConfigVersion:         cpn.Spec.ConfigVersion,
+		NodeName:              cpn.Name,
+		Component:             state.component,
+		Commands:              commands,
+		DesiredConfigChecksum: state.specConfigChecksum,
+		DesiredPKIChecksum:    state.specPKIChecksum,
+		DesiredCAChecksum:     state.specCAChecksum,
+		Approved:              false,
 	}
 
 	return &controlplanev1alpha1.ControlPlaneOperation{
@@ -474,27 +464,9 @@ func findOperationForState(ops []controlplanev1alpha1.ControlPlaneOperation, sta
 
 // matchesDesiredChecksums returns true if the operation targets the current spec checksums.
 func matchesDesiredChecksums(op *controlplanev1alpha1.ControlPlaneOperation, state componentState) bool {
-	// CA component matches on CA checksum only
-	if state.component == controlplanev1alpha1.OperationComponentCA {
-		return op.Spec.DesiredCAChecksum == state.specCAChecksum
-	}
-
-	// For static pod components, check CA checksum if present in the operation
-	if op.Spec.DesiredCAChecksum != "" && op.Spec.DesiredCAChecksum != state.specCAChecksum {
-		return false
-	}
-
-	switch op.Spec.Command {
-	case controlplanev1alpha1.OperationCommandUpdate:
-		return op.Spec.DesiredConfigChecksum == state.specConfigChecksum
-	case controlplanev1alpha1.OperationCommandUpdatePKI:
-		return op.Spec.DesiredPKIChecksum == state.specPKIChecksum
-	case controlplanev1alpha1.OperationCommandUpdateWithPKI:
-		return op.Spec.DesiredConfigChecksum == state.specConfigChecksum &&
-			op.Spec.DesiredPKIChecksum == state.specPKIChecksum
-	default:
-		return op.Spec.DesiredConfigChecksum == state.specConfigChecksum
-	}
+	return op.Spec.DesiredConfigChecksum == state.specConfigChecksum &&
+		op.Spec.DesiredPKIChecksum == state.specPKIChecksum &&
+		op.Spec.DesiredCAChecksum == state.specCAChecksum
 }
 
 func (r *Reconciler) conditionForState(
@@ -574,19 +546,14 @@ func (r *Reconciler) conditionForState(
 }
 
 // applyOperationResult updates CPN status checksums based on a completed operation.
+// All non-empty desired checksums are applied - no need to switch on command type.
 func applyOperationResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *controlplanev1alpha1.ControlPlaneOperation) {
-	switch op.Spec.Command {
-	case controlplanev1alpha1.OperationCommandUpdate:
+	if op.Spec.DesiredConfigChecksum != "" {
 		setConfigChecksum(cpn, op.Spec.Component, op.Spec.DesiredConfigChecksum)
-	case controlplanev1alpha1.OperationCommandUpdatePKI:
-		setPKIChecksum(cpn, op.Spec.Component, op.Spec.DesiredPKIChecksum)
-	case controlplanev1alpha1.OperationCommandUpdateWithPKI:
-		setConfigChecksum(cpn, op.Spec.Component, op.Spec.DesiredConfigChecksum)
+	}
+	if op.Spec.DesiredPKIChecksum != "" {
 		setPKIChecksum(cpn, op.Spec.Component, op.Spec.DesiredPKIChecksum)
 	}
-
-	// Write per component CA checksum when the operation made a CA update
-	// The global status.CAChecksum is derived in updateStatusFromOperations when all components match.
 	if op.Spec.DesiredCAChecksum != "" {
 		setCAChecksum(cpn, op.Spec.Component, op.Spec.DesiredCAChecksum)
 	}

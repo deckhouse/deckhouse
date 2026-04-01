@@ -58,19 +58,19 @@ type config struct {
 	// nil falls back to defaultCertTreeScheme (full set including etcd).
 	CertTreeScheme map[RootCertName][]LeafCertName
 
-	// PKIDir is the directory where certificates and keys are written.
+	// pkiDir is the directory where certificates and keys are written.
 	// Default: constants.DefaultCertificatesDir (/etc/kubernetes/pki).
-	PKIDir string
+	pkiDir string
 
 	// ControlPlaneEndpoint is the external HA endpoint of the cluster ("hostname:port" or "IP:port").
 	// The host part is extracted and added as a SAN to the apiserver certificate.
 	// kubeadm equivalent: ClusterConfiguration.ControlPlaneEndpoint
 	ControlPlaneEndpoint string
 
-	// ApiServerCertSANs is a list of additional Subject Alternative Names for the apiserver certificate.
+	// APIServerCertSANs is a list of additional Subject Alternative Names for the apiserver certificate.
 	// Each entry is automatically classified as an IP address or a DNS name.
 	// kubeadm equivalent: ClusterConfiguration.APIServer.CertSANs
-	ApiServerCertSANs []string
+	APIServerCertSANs []string
 
 	// EtcdServerCertSANs is a list of additional SANs for the etcd/server certificate.
 	// kubeadm equivalent: InitConfiguration.Etcd.Local.ServerCertSANs
@@ -141,8 +141,8 @@ func newConfig(
 		cfg.CertTreeScheme = defaultCertTreeScheme
 	}
 
-	if cfg.PKIDir == "" {
-		cfg.PKIDir = constants.DefaultCertificatesDir
+	if cfg.pkiDir == "" {
+		cfg.pkiDir = constants.DefaultCertificatesDir
 	}
 
 	if cfg.EncryptionAlgorithmType == "" {
@@ -180,9 +180,9 @@ func WithCertTreeScheme(certTreeScheme map[RootCertName][]LeafCertName) configOp
 
 // WithPKIDir overrides the directory where certificates and keys are written.
 // Useful in tests or when using a non-standard PKI location.
-func WithPKIDir(PKIDir string) configOption {
+func WithPKIDir(pkiDir string) configOption {
 	return func(c *config) {
-		c.PKIDir = PKIDir
+		c.pkiDir = pkiDir
 	}
 }
 
@@ -194,10 +194,10 @@ func WithControlPlaneEndpoint(endpoint string) configOption {
 	}
 }
 
-// WithApiServerCertSANs sets additional SANs for the kube-apiserver certificate.
-func WithApiServerCertSANs(sans []string) configOption {
+// WithAPIServerCertSANs sets additional SANs for the kube-apiserver certificate.
+func WithAPIServerCertSANs(sans []string) configOption {
 	return func(c *config) {
-		c.ApiServerCertSANs = sans
+		c.APIServerCertSANs = sans
 	}
 }
 

@@ -22,8 +22,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
 
 // createCertTree creates all CA and leaf certificates defined by cfg.CertTreeScheme.
@@ -55,12 +56,12 @@ func createCertTree(cfg config) error {
 // CA certificates are never silently regenerated because doing so would invalidate all leaf
 // certificates signed by that CA, requiring a full cluster PKI rotation.
 func createRootCertIfNotExists(cfg config, spec rootCertSpec) (*x509.Certificate, crypto.Signer, error) {
-	oldCert, oldKey, err := readCertAndKey(cfg.PKIDir, string(spec.BaseName))
+	oldCert, oldKey, err := readCertAndKey(cfg.pkiDir, spec.BaseName)
 	newCertCfg := spec.BuildConfig(cfg)
 	if err == nil {
 		if err := validateCert(oldCert, newCertCfg); err != nil {
 			return nil, nil, &CertValidationError{
-				BaseName: string(spec.BaseName),
+				BaseName: spec.BaseName,
 				Reason:   err.Error(),
 			}
 		}
@@ -81,7 +82,7 @@ func createRootCertIfNotExists(cfg config, spec rootCertSpec) (*x509.Certificate
 		return nil, nil, fmt.Errorf("failed to generate CA %q: %w", spec.BaseName, err)
 	}
 
-	if err := writeCertAndKey(cfg.PKIDir, string(spec.BaseName), newCert, newKey); err != nil {
+	if err := writeCertAndKey(cfg.pkiDir, spec.BaseName, newCert, newKey); err != nil {
 		return nil, nil, fmt.Errorf("failed to write CA %q: %w", spec.BaseName, err)
 	}
 
@@ -98,7 +99,7 @@ func createRootCertIfNotExists(cfg config, spec rootCertSpec) (*x509.Certificate
 // (the certificate is regenerated). This is intentional: a corrupted cert file should not
 // block PKI initialization.
 func createLeafCertIfNotExists(cfg config, spec certSpec[LeafCertName], caCert *x509.Certificate, caKey crypto.Signer) error {
-	oldCert, _, err := readCertAndKey(cfg.PKIDir, string(spec.BaseName))
+	oldCert, _, err := readCertAndKey(cfg.pkiDir, spec.BaseName)
 	newCertCfg := spec.BuildConfig(cfg)
 	if err == nil {
 		if err := validateCert(oldCert, newCertCfg); err == nil {
@@ -118,7 +119,7 @@ func createLeafCertIfNotExists(cfg config, spec certSpec[LeafCertName], caCert *
 		return fmt.Errorf("failed to generate cert %q: %w", spec.BaseName, err)
 	}
 
-	if err := writeCertAndKey(cfg.PKIDir, string(spec.BaseName), newCert, newKey); err != nil {
+	if err := writeCertAndKey(cfg.pkiDir, spec.BaseName, newCert, newKey); err != nil {
 		return fmt.Errorf("failed to write cert %q: %w", spec.BaseName, err)
 	}
 

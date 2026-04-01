@@ -64,12 +64,14 @@ const (
 	ConditionReady    = "Ready"
 	ConditionFailed   = "Failed"
 
-	// Pipeline step condition types (observability)
-	ConditionStepSyncCA        = "SyncCA"
-	ConditionStepRenewPKICerts = "RenewPKICerts"
-	ConditionStepRenewKubeconfigs = "RenewKubeconfigs"
-	ConditionStepSyncManifests   = "SyncManifests"
-	ConditionStepWaitPodReady    = "WaitPodReady"
+	// Pipeline command condition types (observability)
+	ConditionCommandSyncCA           = "SyncCA"
+	ConditionCommandRenewPKICerts    = "RenewPKICerts"
+	ConditionCommandRenewKubeconfigs = "RenewKubeconfigs"
+	ConditionCommandSyncManifests    = "SyncManifests"
+	ConditionCommandJoinEtcdCluster  = "JoinEtcdCluster"
+	ConditionCommandWaitPodReady     = "WaitPodReady"
+	ConditionCommandSyncHotReload    = "SyncHotReload"
 
 	// Approved condition reasons
 	ReasonApproved             = "Approved"
@@ -77,10 +79,10 @@ const (
 	ReasonWaitingForDependency = "WaitingForDependency"
 	ReasonWaitingForFIFO       = "WaitingForFIFO"
 
-	// Step condition reasons
-	ReasonStepCompleted  = "Completed"
-	ReasonStepInProgress = "InProgress"
-	ReasonStepFailed     = "Failed"
+	// Command condition reasons
+	ReasonCommandCompleted  = "Completed"
+	ReasonCommandInProgress = "InProgress"
+	ReasonCommandFailed     = "Failed"
 
 	// Ready condition reasons
 	ReasonOperationSucceeded = "OperationSucceeded"
@@ -89,7 +91,9 @@ const (
 	ReasonRenewingPKI         = "RenewingPKI"
 	ReasonRenewingKubeconfigs = "RenewingKubeconfigs"
 	ReasonSyncingManifests    = "SyncingManifests"
+	ReasonJoiningEtcd        = "JoiningEtcd"
 	ReasonWaitingForPod      = "WaitingForPod"
+	ReasonSyncingHotReload   = "SyncingHotReload"
 	ReasonCancelled          = "Cancelled"
 
 	// Failed condition reasons

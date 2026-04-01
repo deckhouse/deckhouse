@@ -24,9 +24,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/util/keyutil"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
 
 // readCertAndKey loads a certificate and its corresponding private key from pkiDir.

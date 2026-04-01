@@ -29,8 +29,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	certutil "k8s.io/client-go/util/cert"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 )
 
 // CertConfig holds parameters for generating a single certificate.

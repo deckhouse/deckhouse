@@ -177,7 +177,7 @@ func getLeafCertSpec(name LeafCertName) certSpec[LeafCertName] {
 					}
 				}
 
-				for _, san := range cfg.ApiServerCertSANs {
+				for _, san := range cfg.APIServerCertSANs {
 					if ip := net.ParseIP(san); ip != nil {
 						altNames.IPs = append(altNames.IPs, ip)
 					} else {

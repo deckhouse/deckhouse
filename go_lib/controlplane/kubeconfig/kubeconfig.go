@@ -27,13 +27,15 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/keyutil"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
 
 var logger = log.Default().Named("kubeconfig")

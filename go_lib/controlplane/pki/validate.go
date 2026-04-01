@@ -23,9 +23,10 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // validateCert checks whether an existing certificate is still fit for use
@@ -90,12 +91,7 @@ func certificateSubjectAndSansIsEqual(oldCert *x509.Certificate, newCertCfg cert
 }
 
 func certificateEncryptionAlgoIsEqual(oldCert *x509.Certificate, newCertCfg certConfig) bool {
-
-	if detectEncryptionAlgorithm(oldCert) != newCertCfg.EncryptionAlgorithm {
-		return false
-	}
-
-	return true
+	return detectEncryptionAlgorithm(oldCert) == newCertCfg.EncryptionAlgorithm
 }
 
 func detectEncryptionAlgorithm(cert *x509.Certificate) constants.EncryptionAlgorithmType {
