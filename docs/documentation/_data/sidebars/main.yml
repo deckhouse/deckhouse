@@ -1279,6 +1279,10 @@ entries:
                     ru: Модуль cloud-provider-huaweicloud
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-huaweicloud.html
                 - title:
+                    en: Cloud-provider-openstack module
+                    ru: Модуль cloud-provider-openstack
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-openstack.html
+                - title:
                     en: Cloud-provider-yandex module
                     ru: Модуль cloud-provider-yandex
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html
