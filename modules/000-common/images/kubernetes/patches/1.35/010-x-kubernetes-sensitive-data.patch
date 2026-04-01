@@ -1,0 +1,3377 @@
+diff --git a/pkg/controlplane/apiserver/apiextensions.go b/pkg/controlplane/apiserver/apiextensions.go
+index 06b7828fada..ad5f575acef 100644
+--- a/pkg/controlplane/apiserver/apiextensions.go
++++ b/pkg/controlplane/apiserver/apiextensions.go
+@@ -21,10 +21,13 @@ import (
+ 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+ 	apiextensionsapiserver "k8s.io/apiextensions-apiserver/pkg/apiserver"
+ 	apiextensionsoptions "k8s.io/apiextensions-apiserver/pkg/cmd/server/options"
++	apiextensionsfeatures "k8s.io/apiextensions-apiserver/pkg/features"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/apimachinery/pkg/runtime/schema"
+ 	"k8s.io/apiserver/pkg/admission"
+ 	"k8s.io/apiserver/pkg/server"
++	storagevalue "k8s.io/apiserver/pkg/storage/value"
++	utilfeature "k8s.io/apiserver/pkg/util/feature"
+ 	"k8s.io/apiserver/pkg/util/webhook"
+ 	"k8s.io/client-go/informers"
+ 
+@@ -66,17 +69,22 @@ func CreateAPIExtensionsConfig(
+ 		apiextensionsapiserver.Scheme); err != nil {
+ 		return nil, err
+ 	}
++	extraConfig := apiextensionsapiserver.ExtraConfig{
++		CRDRESTOptionsGetter: apiextensionsoptions.NewCRDRESTOptionsGetter(etcdOptions, genericConfig.ResourceTransformers, genericConfig.StorageObjectCountTracker),
++		MasterCount:          masterCount,
++		AuthResolverWrapper:  authResolverWrapper,
++		ServiceResolver:      serviceResolver,
++	}
++	if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData) {
++		extraConfig.SensitiveResourceRegistrar = getSensitiveRegistrar(genericConfig.ResourceTransformers)
++	}
++
+ 	apiextensionsConfig := &apiextensionsapiserver.Config{
+ 		GenericConfig: &server.RecommendedConfig{
+ 			Config:                genericConfig,
+ 			SharedInformerFactory: kubeInformers,
+ 		},
+-		ExtraConfig: apiextensionsapiserver.ExtraConfig{
+-			CRDRESTOptionsGetter: apiextensionsoptions.NewCRDRESTOptionsGetter(etcdOptions, genericConfig.ResourceTransformers, genericConfig.StorageObjectCountTracker),
+-			MasterCount:          masterCount,
+-			AuthResolverWrapper:  authResolverWrapper,
+-			ServiceResolver:      serviceResolver,
+-		},
++		ExtraConfig: extraConfig,
+ 	}
+ 
+ 	// we need to clear the poststarthooks so we don't add them multiple times to all the servers (that fails)
+@@ -84,3 +92,10 @@ func CreateAPIExtensionsConfig(
+ 
+ 	return apiextensionsConfig, nil
+ }
++
++func getSensitiveRegistrar(rt storagevalue.ResourceTransformers) storagevalue.SensitiveResourceRegistrar {
++	if srr, ok := rt.(storagevalue.SensitiveResourceRegistrar); ok {
++		return srr
++	}
++	return nil
++}
+diff --git a/pkg/generated/openapi/zz_generated.openapi.go b/pkg/generated/openapi/zz_generated.openapi.go
+index 9b4f5c04533..0c44f94c75c 100644
+--- a/pkg/generated/openapi/zz_generated.openapi.go
++++ b/pkg/generated/openapi/zz_generated.openapi.go
+@@ -59714,6 +59714,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
+ 							},
+ 						},
+ 					},
++					"x-kubernetes-sensitive-data": {
++						SchemaProps: spec.SchemaProps{
++							Description: "x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys). When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets) hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource and unconditionally mask the value in audit logs.",
++							Type:        []string{"boolean"},
++							Format:      "",
++						},
++					},
+ 				},
+ 			},
+ 		},
+@@ -61283,6 +61290,13 @@ func schema_pkg_apis_apiextensions_v1beta1_JSONSchemaProps(ref common.ReferenceC
+ 							},
+ 						},
+ 					},
++					"x-kubernetes-sensitive-data": {
++						SchemaProps: spec.SchemaProps{
++							Description: "x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys). When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets) hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource and unconditionally mask the value in audit logs.",
++							Type:        []string{"boolean"},
++							Format:      "",
++						},
++					},
+ 				},
+ 			},
+ 		},
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
+index 61efeae69ca..30b55c8ab95 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
+@@ -149,6 +149,13 @@ type JSONSchemaProps struct {
+ 	// +listType=map
+ 	// +listMapKey=rule
+ 	XValidations ValidationRules
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++	XSensitiveData bool
+ }
+ 
+ // ValidationRules describes a list of validation rules written in the CEL expression language.
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.pb.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.pb.go
+index cf9d745a9fd..0e142a5929d 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.pb.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.pb.go
+@@ -1019,6 +1019,16 @@ func (m *JSONSchemaProps) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+ 	_ = i
+ 	var l int
+ 	_ = l
++	i--
++	if m.XSensitiveData {
++		dAtA[i] = 1
++	} else {
++		dAtA[i] = 0
++	}
++	i--
++	dAtA[i] = 0x2
++	i--
++	dAtA[i] = 0xe8
+ 	if len(m.XValidations) > 0 {
+ 		for iNdEx := len(m.XValidations) - 1; iNdEx >= 0; iNdEx-- {
+ 			{
+@@ -2418,6 +2428,7 @@ func (m *JSONSchemaProps) Size() (n int) {
+ 			n += 2 + l + sovGenerated(uint64(l))
+ 		}
+ 	}
++	n += 3
+ 	return n
+ }
+ 
+@@ -2946,6 +2957,7 @@ func (this *JSONSchemaProps) String() string {
+ 		`XListType:` + valueToStringGenerated(this.XListType) + `,`,
+ 		`XMapType:` + valueToStringGenerated(this.XMapType) + `,`,
+ 		`XValidations:` + repeatedStringForXValidations + `,`,
++		`XSensitiveData:` + fmt.Sprintf("%v", this.XSensitiveData) + `,`,
+ 		`}`,
+ 	}, "")
+ 	return s
+@@ -7535,6 +7547,26 @@ func (m *JSONSchemaProps) Unmarshal(dAtA []byte) error {
+ 				return err
+ 			}
+ 			iNdEx = postIndex
++		case 45:
++			if wireType != 0 {
++				return fmt.Errorf("proto: wrong wireType = %d for field XSensitiveData", wireType)
++			}
++			var v int
++			for shift := uint(0); ; shift += 7 {
++				if shift >= 64 {
++					return ErrIntOverflowGenerated
++				}
++				if iNdEx >= l {
++					return io.ErrUnexpectedEOF
++				}
++				b := dAtA[iNdEx]
++				iNdEx++
++				v |= int(b&0x7F) << shift
++				if b < 0x80 {
++					break
++				}
++			}
++			m.XSensitiveData = bool(v != 0)
+ 		default:
+ 			iNdEx = preIndex
+ 			skippy, err := skipGenerated(dAtA[iNdEx:])
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
+index 83b50127c71..d9154acb9ad 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
+@@ -590,6 +590,13 @@ message JSONSchemaProps {
+   // +listType=map
+   // +listMapKey=rule
+   repeated ValidationRule xKubernetesValidations = 44;
++
++  // x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++  // When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++  // hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++  // and unconditionally mask the value in audit logs.
++  // +featureGate=CRDSensitiveData
++  optional bool xKubernetesSensitiveData = 45;
+ }
+ 
+ // JSONSchemaPropsOrArray represents a value that can either be a JSONSchemaProps
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
+index 197bd1b7a88..cdcaaf84c5c 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
+@@ -194,6 +194,13 @@ type JSONSchemaProps struct {
+ 	// +listType=map
+ 	// +listMapKey=rule
+ 	XValidations ValidationRules `json:"x-kubernetes-validations,omitempty" patchStrategy:"merge" patchMergeKey:"rule" protobuf:"bytes,44,rep,name=xKubernetesValidations"`
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++	XSensitiveData bool `json:"x-kubernetes-sensitive-data,omitempty" protobuf:"bytes,45,opt,name=xKubernetesSensitiveData"`
+ }
+ 
+ // ValidationRules describes a list of validation rules written in the CEL expression language.
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
+index 4d02c8df03d..e310d318f07 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
+@@ -916,6 +916,7 @@ func autoConvert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(in *JSONSch
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*apiextensions.ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+@@ -1105,6 +1106,7 @@ func autoConvert_apiextensions_JSONSchemaProps_To_v1_JSONSchemaProps(in *apiexte
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.pb.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.pb.go
+index ef4fba85053..b5dd8dfff16 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.pb.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.pb.go
+@@ -1085,6 +1085,16 @@ func (m *JSONSchemaProps) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+ 	_ = i
+ 	var l int
+ 	_ = l
++	i--
++	if m.XSensitiveData {
++		dAtA[i] = 1
++	} else {
++		dAtA[i] = 0
++	}
++	i--
++	dAtA[i] = 0x2
++	i--
++	dAtA[i] = 0xe8
+ 	if len(m.XValidations) > 0 {
+ 		for iNdEx := len(m.XValidations) - 1; iNdEx >= 0; iNdEx-- {
+ 			{
+@@ -2470,6 +2480,7 @@ func (m *JSONSchemaProps) Size() (n int) {
+ 			n += 2 + l + sovGenerated(uint64(l))
+ 		}
+ 	}
++	n += 3
+ 	return n
+ }
+ 
+@@ -2995,6 +3006,7 @@ func (this *JSONSchemaProps) String() string {
+ 		`XListType:` + valueToStringGenerated(this.XListType) + `,`,
+ 		`XMapType:` + valueToStringGenerated(this.XMapType) + `,`,
+ 		`XValidations:` + repeatedStringForXValidations + `,`,
++		`XSensitiveData:` + fmt.Sprintf("%v", this.XSensitiveData) + `,`,
+ 		`}`,
+ 	}, "")
+ 	return s
+@@ -7778,6 +7790,26 @@ func (m *JSONSchemaProps) Unmarshal(dAtA []byte) error {
+ 				return err
+ 			}
+ 			iNdEx = postIndex
++		case 45:
++			if wireType != 0 {
++				return fmt.Errorf("proto: wrong wireType = %d for field XSensitiveData", wireType)
++			}
++			var v int
++			for shift := uint(0); ; shift += 7 {
++				if shift >= 64 {
++					return ErrIntOverflowGenerated
++				}
++				if iNdEx >= l {
++					return io.ErrUnexpectedEOF
++				}
++				b := dAtA[iNdEx]
++				iNdEx++
++				v |= int(b&0x7F) << shift
++				if b < 0x80 {
++					break
++				}
++			}
++			m.XSensitiveData = bool(v != 0)
+ 		default:
+ 			iNdEx = preIndex
+ 			skippy, err := skipGenerated(dAtA[iNdEx:])
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
+index bc9594992fe..5171a54546f 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
+@@ -651,6 +651,13 @@ message JSONSchemaProps {
+   // +listType=map
+   // +listMapKey=rule
+   repeated ValidationRule xKubernetesValidations = 44;
++
++  // x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++  // When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++  // hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++  // and unconditionally mask the value in audit logs.
++  // +featureGate=CRDSensitiveData
++  optional bool xKubernetesSensitiveData = 45;
+ }
+ 
+ // JSONSchemaPropsOrArray represents a value that can either be a JSONSchemaProps
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
+index 3ed584dd9de..b723c134253 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
+@@ -194,6 +194,13 @@ type JSONSchemaProps struct {
+ 	// +listType=map
+ 	// +listMapKey=rule
+ 	XValidations ValidationRules `json:"x-kubernetes-validations,omitempty" patchStrategy:"merge" patchMergeKey:"rule" protobuf:"bytes,44,rep,name=xKubernetesValidations"`
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++	XSensitiveData bool `json:"x-kubernetes-sensitive-data,omitempty" protobuf:"bytes,45,opt,name=xKubernetesSensitiveData"`
+ }
+ 
+ // ValidationRules describes a list of validation rules written in the CEL expression language.
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
+index 5e388dc69bb..b856801c2c5 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
+@@ -965,6 +965,7 @@ func autoConvert_v1beta1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(in *JS
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*apiextensions.ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+@@ -1154,6 +1155,7 @@ func autoConvert_apiextensions_JSONSchemaProps_To_v1beta1_JSONSchemaProps(in *ap
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/sensitive_data_validation_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/sensitive_data_validation_test.go
+new file mode 100644
+index 00000000000..52e3e6830f1
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/sensitive_data_validation_test.go
+@@ -0,0 +1,446 @@
++/*
++Copyright 2024 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package validation
++
++import (
++	"context"
++	"testing"
++
++	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
++	apiextensionsfeatures "k8s.io/apiextensions-apiserver/pkg/features"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	utilfeature "k8s.io/apiserver/pkg/util/feature"
++	featuregatetesting "k8s.io/component-base/featuregate/testing"
++	"k8s.io/utils/ptr"
++)
++
++// makeSensitiveCRD creates a minimal valid CRD with the provided root schema.
++func makeSensitiveCRD(schema *apiextensions.JSONSchemaProps) *apiextensions.CustomResourceDefinition {
++	return &apiextensions.CustomResourceDefinition{
++		ObjectMeta: metav1.ObjectMeta{Name: "plural.group.com"},
++		Spec: apiextensions.CustomResourceDefinitionSpec{
++			Group: "group.com",
++			Scope: apiextensions.NamespaceScoped,
++			Names: apiextensions.CustomResourceDefinitionNames{
++				Plural:   "plural",
++				Singular: "singular",
++				Kind:     "Plural",
++				ListKind: "PluralList",
++			},
++			Versions: []apiextensions.CustomResourceDefinitionVersion{
++				{Name: "v1", Served: true, Storage: true},
++			},
++			Validation: &apiextensions.CustomResourceValidation{
++				OpenAPIV3Schema: schema,
++			},
++			PreserveUnknownFields: ptr.To(false),
++		},
++		Status: apiextensions.CustomResourceDefinitionStatus{
++			StoredVersions: []string{"v1"},
++		},
++	}
++}
++
++// TestSensitiveDataValidation verifies the validation rules for x-kubernetes-sensitive-data marker.
++func TestSensitiveDataValidation(t *testing.T) {
++	tests := []struct {
++		name          string
++		gateEnabled   bool
++		schema        *apiextensions.JSONSchemaProps
++		expectErrors  []validationMatch
++		expectNoError bool
++	}{
++		// --- feature gate disabled ---
++		{
++			name:        "feature gate disabled: XSensitiveData on string field is rejected",
++			gateEnabled: false,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"password": {Type: "string", XSensitiveData: true},
++				},
++			},
++			expectErrors: []validationMatch{
++				forbidden("spec", "validation", "openAPIV3Schema", "properties[password]", "x-kubernetes-sensitive-data"),
++			},
++		},
++		{
++			name:        "feature gate disabled: XSensitiveData on nested field is rejected",
++			gateEnabled: false,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"spec": {
++						Type: "object",
++						Properties: map[string]apiextensions.JSONSchemaProps{
++							"token": {Type: "string", XSensitiveData: true},
++						},
++					},
++				},
++			},
++			expectErrors: []validationMatch{
++				forbidden("spec", "validation", "openAPIV3Schema", "properties[spec]", "properties[token]", "x-kubernetes-sensitive-data"),
++			},
++		},
++		// --- feature gate enabled: forbidden cases ---
++		{
++			name:        "feature gate enabled: XSensitiveData on root schema is rejected",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type:           "object",
++				XSensitiveData: true,
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"password": {Type: "string"},
++				},
++			},
++			expectErrors: []validationMatch{
++				forbidden("spec", "validation", "openAPIV3Schema", "x-kubernetes-sensitive-data"),
++			},
++		},
++		// --- feature gate enabled: allowed cases ---
++		{
++			name:        "feature gate enabled: XSensitiveData on string field is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"password": {Type: "string", XSensitiveData: true},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate enabled: XSensitiveData on integer field is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"pin": {Type: "integer", XSensitiveData: true},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate enabled: XSensitiveData on number field is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"coefficient": {Type: "number", XSensitiveData: true},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate enabled: XSensitiveData on boolean field is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"enabled": {Type: "boolean", XSensitiveData: true},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate enabled: XSensitiveData on object field (subtree) is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"credentials": {
++						Type:           "object",
++						XSensitiveData: true,
++						Properties: map[string]apiextensions.JSONSchemaProps{
++							"user":     {Type: "string"},
++							"password": {Type: "string"},
++						},
++					},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate enabled: XSensitiveData on array field (subtree) is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"keys": {
++						Type:           "array",
++						XSensitiveData: true,
++						Items: &apiextensions.JSONSchemaPropsOrArray{
++							Schema: &apiextensions.JSONSchemaProps{Type: "string"},
++						},
++					},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate enabled: XSensitiveData on nested string field is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"spec": {
++						Type: "object",
++						Properties: map[string]apiextensions.JSONSchemaProps{
++							"password": {Type: "string", XSensitiveData: true},
++							"apiKey":   {Type: "string", XSensitiveData: true},
++						},
++					},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate enabled: XSensitiveData on multiple fields at different depths is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"password": {Type: "string", XSensitiveData: true},
++					"tls": {
++						Type: "object",
++						Properties: map[string]apiextensions.JSONSchemaProps{
++							"key": {Type: "string", XSensitiveData: true},
++						},
++					},
++				},
++			},
++			expectNoError: true,
++		},
++		// --- anyOf cases ---
++		{
++			name:        "feature gate enabled: XSensitiveData on nested string field with anyOf is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"spec": {
++						Type: "object",
++						Properties: map[string]apiextensions.JSONSchemaProps{
++							"token": {
++								Type:           "string",
++								XSensitiveData: true,
++								AnyOf: []apiextensions.JSONSchemaProps{
++									{MinLength: func() *int64 { v := int64(16); return &v }()},
++								},
++							},
++						},
++					},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate disabled: XSensitiveData on anyOf field is rejected",
++			gateEnabled: false,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"password": {
++						Type:           "string",
++						XSensitiveData: true,
++						AnyOf: []apiextensions.JSONSchemaProps{
++							{MinLength: func() *int64 { v := int64(8); return &v }()},
++						},
++					},
++				},
++			},
++			expectErrors: []validationMatch{
++				forbidden("spec", "validation", "openAPIV3Schema", "properties[password]", "x-kubernetes-sensitive-data"),
++			},
++		},
++		{
++			name:        "feature gate enabled: XSensitiveData inside anyOf branch is rejected",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"password": {
++						Type: "string",
++						AnyOf: []apiextensions.JSONSchemaProps{
++							{XSensitiveData: true},
++						},
++					},
++				},
++			},
++			expectErrors: []validationMatch{
++				forbidden("spec", "validation", "openAPIV3Schema", "properties[password]", "anyOf[0]", "x-kubernetes-sensitive-data"),
++			},
++		},
++		// --- x-kubernetes-int-or-string cases ---
++		{
++			// x-kubernetes-int-or-string is the one structural-schema exception where type IS
++			// allowed inside anyOf. Combined with XSensitiveData the field should be accepted.
++			name:        "feature gate enabled: XSensitiveData on int-or-string field with anyOf pattern is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"portOrName": {
++						XIntOrString:   true,
++						XSensitiveData: true,
++						AnyOf: []apiextensions.JSONSchemaProps{
++							{Type: "integer"},
++							{Type: "string"},
++						},
++					},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			// x-kubernetes-int-or-string without anyOf is also valid structurally.
++			name:        "feature gate enabled: XSensitiveData on int-or-string field without anyOf is valid",
++			gateEnabled: true,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"portOrName": {
++						XIntOrString:   true,
++						XSensitiveData: true,
++					},
++				},
++			},
++			expectNoError: true,
++		},
++		{
++			name:        "feature gate disabled: XSensitiveData on int-or-string field is rejected",
++			gateEnabled: false,
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"portOrName": {
++						XIntOrString:   true,
++						XSensitiveData: true,
++						AnyOf: []apiextensions.JSONSchemaProps{
++							{Type: "integer"},
++							{Type: "string"},
++						},
++					},
++				},
++			},
++			expectErrors: []validationMatch{
++				forbidden("spec", "validation", "openAPIV3Schema", "properties[portOrName]", "x-kubernetes-sensitive-data"),
++			},
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			featuregatetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, apiextensionsfeatures.CRDSensitiveData, tc.gateEnabled)
++
++			crd := makeSensitiveCRD(tc.schema)
++			errs := ValidateCustomResourceDefinition(context.TODO(), crd)
++
++			if tc.expectNoError {
++				if len(errs) > 0 {
++					t.Errorf("expected no errors, got: %v", errs)
++				}
++				return
++			}
++
++			seenErrs := make([]bool, len(errs))
++			for _, expectedError := range tc.expectErrors {
++				found := false
++				for i, err := range errs {
++					if expectedError.matches(err) && !seenErrs[i] {
++						found = true
++						seenErrs[i] = true
++						break
++					}
++				}
++				if !found {
++					t.Errorf("expected %v at %v, got %v", expectedError.errorType, expectedError.path.String(), errs)
++				}
++			}
++			for i, seen := range seenErrs {
++				if !seen {
++					t.Errorf("unexpected error: %v", errs[i])
++				}
++			}
++		})
++	}
++}
++
++// TestSchemaHasKubernetesExtensionsWithSensitiveData verifies that schemaHasKubernetesExtensions
++// correctly detects XSensitiveData.
++func TestSchemaHasKubernetesExtensionsWithSensitiveData(t *testing.T) {
++	tests := []struct {
++		name   string
++		schema *apiextensions.JSONSchemaProps
++		want   bool
++	}{
++		{
++			name: "schema without XSensitiveData returns false",
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"foo": {Type: "string"},
++				},
++			},
++			want: false,
++		},
++		{
++			name: "schema with XSensitiveData on a property returns true",
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"password": {Type: "string", XSensitiveData: true},
++				},
++			},
++			want: true,
++		},
++		{
++			name: "schema with XSensitiveData deep in the tree returns true",
++			schema: &apiextensions.JSONSchemaProps{
++				Type: "object",
++				Properties: map[string]apiextensions.JSONSchemaProps{
++					"spec": {
++						Type: "object",
++						Properties: map[string]apiextensions.JSONSchemaProps{
++							"nested": {
++								Type: "object",
++								Properties: map[string]apiextensions.JSONSchemaProps{
++									"secret": {Type: "string", XSensitiveData: true},
++								},
++							},
++						},
++					},
++				},
++			},
++			want: true,
++		},
++		{
++			name:   "nil schema returns false",
++			schema: nil,
++			want:   false,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			got := schemaHasKubernetesExtensions(tc.schema)
++			if got != tc.want {
++				t.Errorf("schemaHasKubernetesExtensions() = %v, want %v", got, tc.want)
++			}
++		})
++	}
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go
+index 89051e2af76..f6fd6e7abec 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go
+@@ -37,6 +37,7 @@ import (
+ 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
+ 	structuraldefaulting "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
+ 	apiservervalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
++	apiextensionsfeatures "k8s.io/apiextensions-apiserver/pkg/features"
+ 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+ 	genericvalidation "k8s.io/apimachinery/pkg/api/validation"
+ 	"k8s.io/apimachinery/pkg/util/sets"
+@@ -45,6 +46,7 @@ import (
+ 	celconfig "k8s.io/apiserver/pkg/apis/cel"
+ 	apiservercel "k8s.io/apiserver/pkg/cel"
+ 	"k8s.io/apiserver/pkg/cel/environment"
++	utilfeature "k8s.io/apiserver/pkg/util/feature"
+ 	"k8s.io/apiserver/pkg/util/webhook"
+ )
+ 
+@@ -1318,6 +1320,16 @@ func ValidateCustomResourceDefinitionOpenAPISchema(schema *apiextensions.JSONSch
+ 		}
+ 	}
+ 
++	if schema.XSensitiveData {
++		if !utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData) {
++			allErrs.SchemaErrors = append(allErrs.SchemaErrors, field.Forbidden(fldPath.Child("x-kubernetes-sensitive-data"), "x-kubernetes-sensitive-data is not allowed: feature gate CRDSensitiveData must be enabled"))
++		} else if isRoot {
++			allErrs.SchemaErrors = append(allErrs.SchemaErrors, field.Forbidden(fldPath.Child("x-kubernetes-sensitive-data"), "x-kubernetes-sensitive-data must not be used at the root of the schema"))
++		} else if len(schema.Type) > 0 && !openapiV3Types.Has(schema.Type) {
++			allErrs.SchemaErrors = append(allErrs.SchemaErrors, field.NotSupported(fldPath.Child("x-kubernetes-sensitive-data"), schema.Type, openapiV3Types.List()))
++		}
++	}
++
+ 	return allErrs
+ }
+ 
+@@ -1741,7 +1753,7 @@ func specHasKubernetesExtensions(spec *apiextensions.CustomResourceDefinitionSpe
+ 
+ func schemaHasKubernetesExtensions(s *apiextensions.JSONSchemaProps) bool {
+ 	return SchemaHas(s, func(s *apiextensions.JSONSchemaProps) bool {
+-		return s.XEmbeddedResource || s.XPreserveUnknownFields != nil || s.XIntOrString || len(s.XListMapKeys) > 0 || s.XListType != nil || len(s.XValidations) > 0
++		return s.XEmbeddedResource || s.XPreserveUnknownFields != nil || s.XIntOrString || len(s.XListMapKeys) > 0 || s.XListType != nil || len(s.XValidations) > 0 || s.XSensitiveData
+ 	})
+ }
+ 
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
+index e27495de54e..d55c21a95e8 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
+@@ -47,6 +47,7 @@ import (
+ 	"k8s.io/apiserver/pkg/registry/rest"
+ 	genericapiserver "k8s.io/apiserver/pkg/server"
+ 	serverstorage "k8s.io/apiserver/pkg/server/storage"
++	storagevalue "k8s.io/apiserver/pkg/storage/value"
+ 	"k8s.io/apiserver/pkg/util/webhook"
+ 	"k8s.io/klog/v2"
+ )
+@@ -87,6 +88,11 @@ type ExtraConfig struct {
+ 	ServiceResolver webhook.ServiceResolver
+ 	// AuthResolverWrapper is used in CR webhook converters
+ 	AuthResolverWrapper webhook.AuthenticationInfoResolverWrapper
++
++	// SensitiveResourceRegistrar is used to dynamically register CRD resources
++	// containing x-kubernetes-sensitive-data fields for encryption at rest.
++	// nil when encryption is not configured or the CRDSensitiveData feature gate is disabled.
++	SensitiveResourceRegistrar storagevalue.SensitiveResourceRegistrar
+ }
+ 
+ type Config struct {
+@@ -199,6 +205,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
+ 		time.Duration(c.GenericConfig.MinRequestTimeout)*time.Second,
+ 		apiGroupInfo.StaticOpenAPISpec,
+ 		c.GenericConfig.MaxRequestBodyBytes,
++		c.ExtraConfig.SensitiveResourceRegistrar,
+ 	)
+ 	if err != nil {
+ 		return nil, err
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive.go
+new file mode 100644
+index 00000000000..2e2101a7e96
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive.go
+@@ -0,0 +1,226 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package apiserver
++
++import (
++	"encoding/json"
++	"strings"
++
++	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apiserver/pkg/audit"
++	"k8s.io/klog/v2"
++	"sigs.k8s.io/yaml"
++)
++
++// newSensitiveMaskingTransformer returns an ObjectTransformer that masks sensitive fields
++// in Unstructured objects using the provided structural schema.
++func newSensitiveMaskingTransformer(schema *structuralschema.Structural) audit.ObjectTransformer {
++	return func(obj runtime.Object) runtime.Object {
++		defer func() {
++			if r := recover(); r != nil {
++				klog.Errorf("Recovered from panic in sensitive masking transformer: %v", r)
++			}
++		}()
++
++		obj = obj.DeepCopyObject()
++
++		switch t := obj.(type) {
++		case *unstructured.Unstructured:
++			sensitive.MaskSensitiveFields(t.Object, schema, true)
++			maskLastAppliedConfigAnnotation(t.Object, []*structuralschema.Structural{schema})
++		case *unstructured.UnstructuredList:
++			for i := range t.Items {
++				sensitive.MaskSensitiveFields(t.Items[i].Object, schema, true)
++				maskLastAppliedConfigAnnotation(t.Items[i].Object, []*structuralschema.Structural{schema})
++			}
++		}
++		return obj
++	}
++}
++
++const lastAppliedConfigAnnotation = "kubectl.kubernetes.io/last-applied-configuration"
++
++// maskLastAppliedConfigAnnotation parses the last-applied-configuration annotation,
++// applies MaskSensitiveFields for each schema, and writes the masked JSON back.
++func maskLastAppliedConfigAnnotation(obj map[string]interface{}, schemas []*structuralschema.Structural) {
++	metadata, ok := obj["metadata"].(map[string]interface{})
++	if !ok {
++		return
++	}
++	annotations, ok := metadata["annotations"].(map[string]interface{})
++	if !ok {
++		return
++	}
++	raw, ok := annotations[lastAppliedConfigAnnotation].(string)
++	if !ok || raw == "" {
++		return
++	}
++
++	var parsed map[string]interface{}
++	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
++		return
++	}
++
++	for _, s := range schemas {
++		sensitive.MaskSensitiveFields(parsed, s, true)
++	}
++
++	masked, err := json.Marshal(parsed)
++	if err != nil {
++		return
++	}
++	annotations[lastAppliedConfigAnnotation] = string(masked)
++}
++
++// newSensitivePatchTransformer returns a PatchTransformer that masks sensitive fields
++// in patch payloads using the provided structural schema.
++func newSensitivePatchTransformer(schema *structuralschema.Structural) audit.PatchTransformer {
++	sensitivePaths := sensitive.CollectSensitivePaths(schema)
++
++	return func(patchBytes []byte, contentType string) []byte {
++		defer func() {
++			if r := recover(); r != nil {
++				klog.Errorf("Recovered from panic in sensitive patch transformer: %v", r)
++			}
++		}()
++
++		switch contentType {
++		case "application/json-patch+json":
++			return maskJSONPatch(patchBytes, sensitivePaths)
++		case "application/merge-patch+json":
++			return maskMergePatch(patchBytes, schema)
++		case "application/apply-patch+yaml":
++			return maskSSAPatchYAML(patchBytes, schema)
++		case "application/apply-patch+cbor":
++			return maskSSAPatchCBOR(patchBytes, schema)
++		default:
++			// Unknown content type, attempt merge-patch masking as fallback
++			return maskMergePatch(patchBytes, schema)
++		}
++	}
++}
++
++// maskJSONPatch masks values in JSON Patch operations whose paths target sensitive fields.
++func maskJSONPatch(patchBytes []byte, sensitivePaths []string) []byte {
++	var ops []map[string]interface{}
++	if err := json.Unmarshal(patchBytes, &ops); err != nil {
++		return redactedPatchBytes()
++	}
++
++	// Build a set of sensitive JSON Pointer prefixes from the dot-notation paths.
++	sensitivePointers := make(map[string]bool, len(sensitivePaths))
++	for _, p := range sensitivePaths {
++		pointer := dotPathToJSONPointer(p)
++		sensitivePointers[pointer] = true
++	}
++
++	modified := false
++	for i, op := range ops {
++		path, ok := op["path"].(string)
++		if !ok {
++			continue
++		}
++		if isSensitiveJSONPointer(path, sensitivePointers) {
++			if _, hasValue := op["value"]; hasValue {
++				ops[i]["value"] = sensitive.MaskedValue
++				modified = true
++			}
++		}
++	}
++
++	if !modified {
++		return patchBytes
++	}
++
++	result, err := json.Marshal(ops)
++	if err != nil {
++		return redactedPatchBytes()
++	}
++	return result
++}
++
++// maskMergePatch masks sensitive fields in a JSON merge patch.
++func maskMergePatch(patchBytes []byte, schema *structuralschema.Structural) []byte {
++	var patch map[string]interface{}
++	if err := json.Unmarshal(patchBytes, &patch); err != nil {
++		return redactedPatchBytes()
++	}
++
++	sensitive.MaskSensitiveFields(patch, schema, true)
++
++	result, err := json.Marshal(patch)
++	if err != nil {
++		return redactedPatchBytes()
++	}
++	return result
++}
++
++// maskSSAPatchYAML masks sensitive fields in an SSA (server-side apply) YAML patch.
++func maskSSAPatchYAML(patchBytes []byte, schema *structuralschema.Structural) []byte {
++	var patch map[string]interface{}
++	if err := yaml.Unmarshal(patchBytes, &patch); err != nil {
++		return redactedPatchBytes()
++	}
++
++	sensitive.MaskSensitiveFields(patch, schema, true)
++
++	result, err := json.Marshal(patch)
++	if err != nil {
++		return redactedPatchBytes()
++	}
++	return result
++}
++
++// maskSSAPatchCBOR masks sensitive fields in an SSA (server-side apply) CBOR patch.
++// CBOR decoding requires specific handling, so we redact the patch entirely.
++// CBOR patches in audit are rare; for safety, redact them entirely
++// rather than introducing a CBOR dependency here.
++func maskSSAPatchCBOR(patchBytes []byte, schema *structuralschema.Structural) []byte {
++	return redactedPatchBytes()
++}
++
++// redactedPatchBytes returns a JSON fallback indicating the patch was redacted.
++func redactedPatchBytes() []byte {
++	return []byte(`{"redacted":"patch contains sensitive fields"}`)
++}
++
++// dotPathToJSONPointer converts a dot-notation path to a JSON Pointer
++func dotPathToJSONPointer(dotPath string) string {
++	dotPath = strings.TrimPrefix(dotPath, ".")
++	if dotPath == "" {
++		return "/" // root
++	}
++	return "/" + strings.ReplaceAll(dotPath, ".", "/") // e.g. .spec.password -> /spec/password
++}
++
++// isSensitiveJSONPointer checks if the given JSON Pointer targets a sensitive field.
++// It checks both exact match and prefix match (for nested operations).
++func isSensitiveJSONPointer(pointer string, sensitivePointers map[string]bool) bool {
++	if sensitivePointers[pointer] {
++		return true
++	}
++	// Check if the pointer is a child of a sensitive path
++	for sp := range sensitivePointers {
++		if strings.HasPrefix(pointer, sp+"/") {
++			return true
++		}
++	}
++	return false
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive_test.go
+new file mode 100644
+index 00000000000..90094074c07
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive_test.go
+@@ -0,0 +1,432 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package apiserver
++
++import (
++	"encoding/json"
++	"reflect"
++	"testing"
++
++	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	"k8s.io/apimachinery/pkg/runtime"
++)
++
++func testSchemaWithSensitive() *structuralschema.Structural {
++	return &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"password": {
++						Extensions: structuralschema.Extensions{XSensitiveData: true},
++					},
++					"name": {},
++				},
++			},
++		},
++	}
++}
++
++func testSchemaNoSensitive() *structuralschema.Structural {
++	return &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"name": {},
++				},
++			},
++		},
++	}
++}
++
++func TestNewSensitiveMaskingTransformer_SingleObject(t *testing.T) {
++	schema := testSchemaWithSensitive()
++	transformer := newSensitiveMaskingTransformer(schema)
++
++	obj := &unstructured.Unstructured{
++		Object: map[string]interface{}{
++			"apiVersion": "example.com/v1",
++			"kind":       "MyCustomResource",
++			"spec": map[string]interface{}{
++				"password": "mysecret",
++				"name":     "myname",
++			},
++		},
++	}
++
++	result := transformer(obj)
++	u := result.(*unstructured.Unstructured)
++	spec := u.Object["spec"].(map[string]interface{})
++
++	if spec["password"] != sensitive.MaskedValue {
++		t.Errorf("expected password to be masked, got %v", spec["password"])
++	}
++	if spec["name"] != "myname" {
++		t.Errorf("expected name to remain unchanged, got %v", spec["name"])
++	}
++}
++
++func TestNewSensitiveMaskingTransformer_UnstructuredList(t *testing.T) {
++	schema := testSchemaWithSensitive()
++	transformer := newSensitiveMaskingTransformer(schema)
++
++	list := &unstructured.UnstructuredList{
++		Items: []unstructured.Unstructured{
++			{
++				Object: map[string]interface{}{
++					"spec": map[string]interface{}{
++						"password": "secret1",
++						"name":     "name1",
++					},
++				},
++			},
++			{
++				Object: map[string]interface{}{
++					"spec": map[string]interface{}{
++						"password": "secret2",
++						"name":     "name2",
++					},
++				},
++			},
++		},
++	}
++
++	result := transformer(list)
++	ul := result.(*unstructured.UnstructuredList)
++
++	for i, item := range ul.Items {
++		spec := item.Object["spec"].(map[string]interface{})
++		if spec["password"] != sensitive.MaskedValue {
++			t.Errorf("item %d: expected password to be masked, got %v", i, spec["password"])
++		}
++	}
++}
++
++func TestNewSensitiveMaskingTransformer_DeepCopy(t *testing.T) {
++	schema := testSchemaWithSensitive()
++	transformer := newSensitiveMaskingTransformer(schema)
++
++	original := &unstructured.Unstructured{
++		Object: map[string]interface{}{
++			"spec": map[string]interface{}{
++				"password": "mysecret",
++				"name":     "myname",
++			},
++		},
++	}
++
++	_ = transformer(original)
++
++	// Original should not be modified
++	spec := original.Object["spec"].(map[string]interface{})
++	if spec["password"] != "mysecret" {
++		t.Errorf("original should not be mutated, got password=%v", spec["password"])
++	}
++}
++
++func TestNewSensitiveMaskingTransformer_NoSensitiveFields(t *testing.T) {
++	schema := testSchemaNoSensitive()
++	transformer := newSensitiveMaskingTransformer(schema)
++
++	obj := &unstructured.Unstructured{
++		Object: map[string]interface{}{
++			"spec": map[string]interface{}{
++				"name": "myname",
++			},
++		},
++	}
++
++	result := transformer(obj)
++	u := result.(*unstructured.Unstructured)
++	spec := u.Object["spec"].(map[string]interface{})
++
++	if spec["name"] != "myname" {
++		t.Errorf("expected name to remain unchanged, got %v", spec["name"])
++	}
++}
++
++func TestNewSensitivePatchTransformer_JSONPatch(t *testing.T) {
++	schema := testSchemaWithSensitive()
++	transformer := newSensitivePatchTransformer(schema)
++
++	patch := []byte(`[{"op":"replace","path":"/spec/password","value":"newsecret"},{"op":"replace","path":"/spec/name","value":"newname"}]`)
++
++	result := transformer(patch, "application/json-patch+json")
++
++	var ops []map[string]interface{}
++	if err := json.Unmarshal(result, &ops); err != nil {
++		t.Fatalf("failed to unmarshal result: %v", err)
++	}
++
++	if len(ops) != 2 {
++		t.Fatalf("expected 2 operations, got %d", len(ops))
++	}
++
++	if ops[0]["value"] != sensitive.MaskedValue {
++		t.Errorf("expected password value to be masked, got %v", ops[0]["value"])
++	}
++	if ops[1]["value"] != "newname" {
++		t.Errorf("expected name value to remain unchanged, got %v", ops[1]["value"])
++	}
++}
++
++func TestNewSensitivePatchTransformer_MergePatch(t *testing.T) {
++	schema := testSchemaWithSensitive()
++	transformer := newSensitivePatchTransformer(schema)
++
++	patch := []byte(`{"spec":{"password":"newsecret","name":"newname"}}`)
++
++	result := transformer(patch, "application/merge-patch+json")
++
++	var obj map[string]interface{}
++	if err := json.Unmarshal(result, &obj); err != nil {
++		t.Fatalf("failed to unmarshal result: %v", err)
++	}
++
++	spec := obj["spec"].(map[string]interface{})
++	if spec["password"] != sensitive.MaskedValue {
++		t.Errorf("expected password to be masked, got %v", spec["password"])
++	}
++	if spec["name"] != "newname" {
++		t.Errorf("expected name to remain unchanged, got %v", spec["name"])
++	}
++}
++
++func TestNewSensitivePatchTransformer_SSAYaml(t *testing.T) {
++	schema := testSchemaWithSensitive()
++	transformer := newSensitivePatchTransformer(schema)
++
++	patch := []byte("spec:\n  password: newsecret\n  name: newname\n")
++
++	result := transformer(patch, "application/apply-patch+yaml")
++
++	var obj map[string]interface{}
++	if err := json.Unmarshal(result, &obj); err != nil {
++		t.Fatalf("failed to unmarshal result: %v", err)
++	}
++
++	spec := obj["spec"].(map[string]interface{})
++	if spec["password"] != sensitive.MaskedValue {
++		t.Errorf("expected password to be masked, got %v", spec["password"])
++	}
++	if spec["name"] != "newname" {
++		t.Errorf("expected name to remain unchanged, got %v", spec["name"])
++	}
++}
++
++func TestNewSensitivePatchTransformer_ParseError(t *testing.T) {
++	schema := testSchemaWithSensitive()
++	transformer := newSensitivePatchTransformer(schema)
++
++	patch := []byte(`not valid json`)
++
++	result := transformer(patch, "application/merge-patch+json")
++
++	var obj map[string]interface{}
++	if err := json.Unmarshal(result, &obj); err != nil {
++		t.Fatalf("expected valid JSON fallback, got error: %v", err)
++	}
++
++	if _, ok := obj["redacted"]; !ok {
++		t.Errorf("expected redacted fallback, got %v", obj)
++	}
++}
++
++func TestNewSensitivePatchTransformer_NilSchema(t *testing.T) {
++	// With no sensitive fields, the transformer should not modify the patch
++	schema := testSchemaNoSensitive()
++	transformer := newSensitivePatchTransformer(schema)
++
++	patch := []byte(`{"spec":{"name":"newname"}}`)
++
++	result := transformer(patch, "application/merge-patch+json")
++
++	var obj map[string]interface{}
++	if err := json.Unmarshal(result, &obj); err != nil {
++		t.Fatalf("failed to unmarshal result: %v", err)
++	}
++
++	spec := obj["spec"].(map[string]interface{})
++	if spec["name"] != "newname" {
++		t.Errorf("expected name to remain unchanged, got %v", spec["name"])
++	}
++}
++
++func TestDotPathToJSONPointer(t *testing.T) {
++	tests := []struct {
++		input    string
++		expected string
++	}{
++		{".spec.password", "/spec/password"},
++		{".spec.tls.key", "/spec/tls/key"},
++		{".", "/"},
++		{"", "/"},
++	}
++
++	for _, tt := range tests {
++		result := dotPathToJSONPointer(tt.input)
++		if result != tt.expected {
++			t.Errorf("dotPathToJSONPointer(%q) = %q, want %q", tt.input, result, tt.expected)
++		}
++	}
++}
++
++func TestIsSensitiveJSONPointer(t *testing.T) {
++	sensitivePointers := map[string]bool{
++		"/spec/password": true,
++		"/spec/tls/key":  true,
++	}
++
++	tests := []struct {
++		pointer  string
++		expected bool
++	}{
++		{"/spec/password", true},
++		{"/spec/tls/key", true},
++		{"/spec/tls/key/data", true}, // child of sensitive
++		{"/spec/name", false},
++		{"/spec/passwordExtra", false},
++	}
++
++	for _, tt := range tests {
++		result := isSensitiveJSONPointer(tt.pointer, sensitivePointers)
++		if result != tt.expected {
++			t.Errorf("isSensitiveJSONPointer(%q) = %v, want %v", tt.pointer, result, tt.expected)
++		}
++	}
++}
++
++func TestNewSensitiveMaskingTransformer_LastAppliedConfig(t *testing.T) {
++	schema := testSchemaWithSensitive()
++	transformer := newSensitiveMaskingTransformer(schema)
++
++	lastApplied := `{"apiVersion":"example.com/v1","kind":"MyCustomResource","spec":{"password":"mysecret","name":"myname"}}`
++
++	obj := &unstructured.Unstructured{
++		Object: map[string]interface{}{
++			"apiVersion": "example.com/v1",
++			"kind":       "MyCustomResource",
++			"metadata": map[string]interface{}{
++				"annotations": map[string]interface{}{
++					"kubectl.kubernetes.io/last-applied-configuration": lastApplied,
++				},
++			},
++			"spec": map[string]interface{}{
++				"password": "mysecret",
++				"name":     "myname",
++			},
++		},
++	}
++
++	result := transformer(obj)
++	u := result.(*unstructured.Unstructured)
++
++	// Verify spec-level masking
++	spec := u.Object["spec"].(map[string]interface{})
++	if spec["password"] != sensitive.MaskedValue {
++		t.Errorf("expected spec.password to be masked, got %v", spec["password"])
++	}
++
++	// Verify annotation masking
++	metadata := u.Object["metadata"].(map[string]interface{})
++	annotations := metadata["annotations"].(map[string]interface{})
++	maskedAnnotation := annotations["kubectl.kubernetes.io/last-applied-configuration"].(string)
++
++	var parsed map[string]interface{}
++	if err := json.Unmarshal([]byte(maskedAnnotation), &parsed); err != nil {
++		t.Fatalf("failed to parse masked annotation JSON: %v", err)
++	}
++
++	parsedSpec := parsed["spec"].(map[string]interface{})
++	if parsedSpec["password"] != sensitive.MaskedValue {
++		t.Errorf("expected annotation spec.password to be masked, got %v", parsedSpec["password"])
++	}
++	if parsedSpec["name"] != "myname" {
++		t.Errorf("expected annotation spec.name to remain unchanged, got %v", parsedSpec["name"])
++	}
++}
++
++func TestNewSensitiveMaskingTransformer_LastAppliedConfig_List(t *testing.T) {
++	schema := testSchemaWithSensitive()
++	transformer := newSensitiveMaskingTransformer(schema)
++
++	lastApplied := `{"spec":{"password":"secret1","name":"name1"}}`
++
++	list := &unstructured.UnstructuredList{
++		Items: []unstructured.Unstructured{
++			{
++				Object: map[string]interface{}{
++					"metadata": map[string]interface{}{
++						"annotations": map[string]interface{}{
++							"kubectl.kubernetes.io/last-applied-configuration": lastApplied,
++						},
++					},
++					"spec": map[string]interface{}{
++						"password": "secret1",
++						"name":     "name1",
++					},
++				},
++			},
++			{
++				Object: map[string]interface{}{
++					"spec": map[string]interface{}{
++						"password": "secret2",
++						"name":     "name2",
++					},
++				},
++			},
++		},
++	}
++
++	result := transformer(list)
++	ul := result.(*unstructured.UnstructuredList)
++
++	// First item should have masked annotation
++	metadata := ul.Items[0].Object["metadata"].(map[string]interface{})
++	annotations := metadata["annotations"].(map[string]interface{})
++	maskedAnnotation := annotations["kubectl.kubernetes.io/last-applied-configuration"].(string)
++
++	var parsed map[string]interface{}
++	if err := json.Unmarshal([]byte(maskedAnnotation), &parsed); err != nil {
++		t.Fatalf("failed to parse masked annotation JSON: %v", err)
++	}
++
++	parsedSpec := parsed["spec"].(map[string]interface{})
++	if parsedSpec["password"] != sensitive.MaskedValue {
++		t.Errorf("expected annotation password to be masked, got %v", parsedSpec["password"])
++	}
++
++	// Second item has no annotation - should still work fine
++	spec := ul.Items[1].Object["spec"].(map[string]interface{})
++	if spec["password"] != sensitive.MaskedValue {
++		t.Errorf("expected spec.password to be masked, got %v", spec["password"])
++	}
++}
++
++func TestNewSensitiveMaskingTransformer_NonUnstructured(t *testing.T) {
++	schema := testSchemaWithSensitive()
++	transformer := newSensitiveMaskingTransformer(schema)
++
++	// Pass a non-unstructured object — should be returned unchanged
++	obj := &runtime.Unknown{Raw: []byte(`{}`)}
++	result := transformer(obj)
++
++	if !reflect.DeepEqual(obj, result) {
++		t.Errorf("non-unstructured object should pass through unchanged")
++	}
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
+index c252e7fe75b..858fe6a7dbd 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
+@@ -37,6 +37,7 @@ import (
+ 	structuraldefaulting "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
+ 	schemaobjectmeta "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/objectmeta"
+ 	structuralpruning "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/pruning"
++	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive"
+ 	apiservervalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
+ 	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1"
+ 	listers "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
+@@ -44,6 +45,7 @@ import (
+ 	"k8s.io/apiextensions-apiserver/pkg/controller/finalizer"
+ 	"k8s.io/apiextensions-apiserver/pkg/controller/openapi/builder"
+ 	"k8s.io/apiextensions-apiserver/pkg/crdserverscheme"
++	apiextensionsfeatures "k8s.io/apiextensions-apiserver/pkg/features"
+ 	"k8s.io/apiextensions-apiserver/pkg/registry/customresource"
+ 	"k8s.io/apiextensions-apiserver/pkg/registry/customresource/tableconvertor"
+ 
+@@ -67,6 +69,7 @@ import (
+ 	utilwaitgroup "k8s.io/apimachinery/pkg/util/waitgroup"
+ 	"k8s.io/apimachinery/pkg/version"
+ 	"k8s.io/apiserver/pkg/admission"
++	"k8s.io/apiserver/pkg/audit"
+ 	"k8s.io/apiserver/pkg/authorization/authorizer"
+ 	"k8s.io/apiserver/pkg/endpoints/handlers"
+ 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
+@@ -75,6 +78,7 @@ import (
+ 	"k8s.io/apiserver/pkg/features"
+ 	"k8s.io/apiserver/pkg/registry/generic"
+ 	genericfilters "k8s.io/apiserver/pkg/server/filters"
++	storagevalue "k8s.io/apiserver/pkg/storage/value"
+ 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+ 	"k8s.io/apiserver/pkg/util/webhook"
+ 	"k8s.io/apiserver/pkg/warning"
+@@ -130,6 +134,10 @@ type crdHandler struct {
+ 	// The limit on the request size that would be accepted and decoded in a write request
+ 	// 0 means no limit.
+ 	maxRequestBodyBytes int64
++
++	// sensitiveRegistrar registers CRD resources with sensitive fields for encryption at rest.
++	// nil when encryption is not configured or CRDSensitiveData feature gate is disabled.
++	sensitiveRegistrar storagevalue.SensitiveResourceRegistrar
+ }
+ 
+ // crdInfo stores enough information to serve the storage for the custom resource
+@@ -160,6 +168,12 @@ type crdInfo struct {
+ 	// storageVersion is the CRD version used when storing the object in etcd.
+ 	storageVersion string
+ 
++	// hasSensitiveFields indicates whether any version of this CRD has sensitive fields.
++	hasSensitiveFields bool
++	// sensitiveSchemas maps version names to their structural schemas, but only
++	// for versions that contain sensitive fields (x-kubernetes-sensitive-data).
++	sensitiveSchemas map[string]*structuralschema.Structural
++
+ 	waitGroup *utilwaitgroup.SafeWaitGroup
+ }
+ 
+@@ -181,7 +195,9 @@ func NewCustomResourceDefinitionHandler(
+ 	requestTimeout time.Duration,
+ 	minRequestTimeout time.Duration,
+ 	staticOpenAPISpec map[string]*spec.Schema,
+-	maxRequestBodyBytes int64) (*crdHandler, error) {
++	maxRequestBodyBytes int64,
++	sensitiveRegistrar storagevalue.SensitiveResourceRegistrar,
++) (*crdHandler, error) {
+ 	ret := &crdHandler{
+ 		versionDiscoveryHandler: versionDiscoveryHandler,
+ 		groupDiscoveryHandler:   groupDiscoveryHandler,
+@@ -197,6 +213,7 @@ func NewCustomResourceDefinitionHandler(
+ 		minRequestTimeout:       minRequestTimeout,
+ 		staticOpenAPISpec:       staticOpenAPISpec,
+ 		maxRequestBodyBytes:     maxRequestBodyBytes,
++		sensitiveRegistrar:      sensitiveRegistrar,
+ 	}
+ 	crdInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+ 		AddFunc:    ret.createCustomResourceDefinition,
+@@ -315,6 +332,16 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+ 		return
+ 	}
+ 
++	if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData) && crdInfo.hasSensitiveFields {
++		if ac := audit.AuditContextFrom(req.Context()); ac != nil {
++			version := requestInfo.APIVersion
++			if schema, ok := crdInfo.sensitiveSchemas[version]; ok && schema != nil {
++				ac.SetObjectTransformer(newSensitiveMaskingTransformer(schema))
++				ac.SetPatchTransformer(newSensitivePatchTransformer(schema))
++			}
++		}
++	}
++
+ 	deprecated := crdInfo.deprecated[requestInfo.APIVersion]
+ 	for _, w := range crdInfo.warnings[requestInfo.APIVersion] {
+ 		warning.AddWarning(req.Context(), "", w)
+@@ -369,14 +396,34 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+ 	requestScope := crdInfo.requestScopes[requestInfo.APIVersion]
+ 	storage := crdInfo.storages[requestInfo.APIVersion].CustomResource
+ 
++	// Stripping is required when the CRD has sensitive fields and the caller
++	// does not hold the resource/sensitive RBAC subresource permission.
++	needsStripping := r.checkNeedsStripping(req.Context(), requestInfo, crdInfo)
++
++	var sensitiveSchemaSlice []*structuralschema.Structural
++	if needsStripping {
++		for _, s := range crdInfo.sensitiveSchemas {
++			sensitiveSchemaSlice = append(sensitiveSchemaSlice, s)
++		}
++	}
++
+ 	switch requestInfo.Verb {
+ 	case "get":
++		if needsStripping {
++			return handlers.GetResource(&strippingGetter{Getter: storage, schemas: sensitiveSchemaSlice}, requestScope)
++		}
+ 		return handlers.GetResource(storage, requestScope)
+ 	case "list":
+ 		forceWatch := false
++		if needsStripping {
++			return handlers.ListResource(&strippingLister{Lister: storage, schemas: sensitiveSchemaSlice}, storage, requestScope, forceWatch, r.minRequestTimeout)
++		}
+ 		return handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
+ 	case "watch":
+ 		forceWatch := true
++		if needsStripping {
++			return handlers.ListResource(storage, &strippingWatcher{Watcher: storage, schemas: sensitiveSchemaSlice}, requestScope, forceWatch, r.minRequestTimeout)
++		}
+ 		return handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
+ 	case "create":
+ 		// we want to track recently created CRDs so that in HA environments we don't have server A allow a create and server B
+@@ -415,6 +462,37 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+ 	}
+ }
+ 
++// checkNeedsStripping returns true when sensitive fields must be stripped from
++// the response. Stripping is needed when the CRD has sensitive fields, the
++// CRDSensitiveData feature gate is enabled, and the caller does not hold the
++// resource/sensitive RBAC subresource permission.
++func (r *crdHandler) checkNeedsStripping(ctx context.Context, requestInfo *apirequest.RequestInfo, crdInfo *crdInfo) bool {
++	if !utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData) || !crdInfo.hasSensitiveFields {
++		return false
++	}
++	userInfo, ok := apirequest.UserFrom(ctx)
++	if !ok {
++		klog.V(4).InfoS("No user info in context, stripping sensitive fields by default")
++		return true
++	}
++	attrs := authorizer.AttributesRecord{
++		User:            userInfo,
++		Verb:            requestInfo.Verb,
++		Resource:        requestInfo.Resource,
++		Subresource:     "sensitive",
++		APIGroup:        requestInfo.APIGroup,
++		APIVersion:      requestInfo.APIVersion,
++		Namespace:       requestInfo.Namespace,
++		Name:            requestInfo.Name,
++		ResourceRequest: true,
++	}
++	klog.V(4).InfoS("RBAC check for sensitive subresource", "user", userInfo.GetName(), "groups", userInfo.GetGroups(), "verb", requestInfo.Verb, "resource", requestInfo.Resource, "subresource", "sensitive", "namespace", requestInfo.Namespace)
++	decision, reason, _ := r.authorizer.Authorize(ctx, attrs)
++	needsStripping := decision != authorizer.DecisionAllow
++	klog.V(4).InfoS("RBAC decision for sensitive subresource", "decision", decision, "reason", reason, "needsStripping", needsStripping, "user", userInfo.GetName())
++	return needsStripping
++}
++
+ func (r *crdHandler) serveStatus(w http.ResponseWriter, req *http.Request, requestInfo *apirequest.RequestInfo, crdInfo *crdInfo, terminating bool, supportedTypes []string) http.HandlerFunc {
+ 	requestScope := crdInfo.statusRequestScopes[requestInfo.APIVersion]
+ 	storage := crdInfo.storages[requestInfo.APIVersion].Status
+@@ -519,6 +597,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
+ func (r *crdHandler) removeStorage_locked(uid types.UID) {
+ 	storageMap := r.customStorage.Load().(crdStorageMap)
+ 	if oldInfo, ok := storageMap[uid]; ok {
++		if r.sensitiveRegistrar != nil && oldInfo.hasSensitiveFields {
++			r.sensitiveRegistrar.UnregisterSensitiveResource(
++				schema.GroupResource{
++					Group:    oldInfo.spec.Group,
++					Resource: oldInfo.acceptedNames.Plural,
++				},
++			)
++		}
++
+ 		// Copy because we cannot write to storageMap without a race
+ 		// as it is used without locking elsewhere.
+ 		storageMap2 := storageMap.clone()
+@@ -556,6 +643,14 @@ func (r *crdHandler) removeDeadStorage() {
+ 	for uid, crdInfo := range storageMap {
+ 		if _, ok := storageMap2[uid]; !ok {
+ 			klog.V(4).Infof("Removing dead CRD storage for %s/%s", crdInfo.spec.Group, crdInfo.spec.Names.Kind)
++			if r.sensitiveRegistrar != nil && crdInfo.hasSensitiveFields {
++				r.sensitiveRegistrar.UnregisterSensitiveResource(
++					schema.GroupResource{
++						Group:    crdInfo.spec.Group,
++						Resource: crdInfo.acceptedNames.Plural,
++					},
++				)
++			}
+ 			go r.tearDown(crdInfo)
+ 		}
+ 	}
+@@ -592,6 +687,14 @@ func (r *crdHandler) destroy() {
+ 
+ 	storageMap := r.customStorage.Load().(crdStorageMap)
+ 	for _, crdInfo := range storageMap {
++		if r.sensitiveRegistrar != nil && crdInfo.hasSensitiveFields {
++			r.sensitiveRegistrar.UnregisterSensitiveResource(
++				schema.GroupResource{
++					Group:    crdInfo.spec.Group,
++					Resource: crdInfo.acceptedNames.Plural,
++				},
++			)
++		}
+ 		for _, storage := range crdInfo.storages {
+ 			// DestroyFunc have to be implemented in idempotent way,
+ 			// so the potential race with r.tearDown() (being called
+@@ -684,6 +787,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+ 		structuralSchemas[v.Name] = s
+ 	}
+ 
++	hasSensitive := false
++	sensitiveSchemas := map[string]*structuralschema.Structural{}
++	if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData) {
++		for vName, s := range structuralSchemas {
++			if sensitive.HasSensitiveFields(s) {
++				hasSensitive = true
++				sensitiveSchemas[vName] = s
++			}
++		}
++	}
++
+ 	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
+ 	if err != nil {
+ 		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
+@@ -1065,9 +1179,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+ 		deprecated:          deprecated,
+ 		warnings:            warnings,
+ 		storageVersion:      storageVersion,
++		hasSensitiveFields:  hasSensitive,
++		sensitiveSchemas:    sensitiveSchemas,
+ 		waitGroup:           &utilwaitgroup.SafeWaitGroup{},
+ 	}
+ 
++	if r.sensitiveRegistrar != nil && hasSensitive {
++		r.sensitiveRegistrar.RegisterSensitiveResource(
++			schema.GroupResource{
++				Group:    crd.Spec.Group,
++				Resource: crd.Status.AcceptedNames.Plural,
++			},
++		)
++	}
++
+ 	// Copy because we cannot write to storageMap without a race
+ 	// as it is used without locking elsewhere.
+ 	storageMap2 := storageMap.clone()
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go
+index 12b6f7c896a..8fbe1c80db9 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go
+@@ -514,7 +514,9 @@ func testHandlerConversion(t *testing.T, enableWatchCache bool) {
+ 		func(r webhook.AuthenticationInfoResolver) webhook.AuthenticationInfoResolver { return r },
+ 		1,
+ 		dummyAuthorizerImpl{},
+-		time.Minute, time.Minute, nil, 3*1024*1024)
++		time.Minute, time.Minute, nil, 3*1024*1024,
++		nil,
++	)
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
+new file mode 100644
+index 00000000000..991000d71d7
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
+@@ -0,0 +1,116 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package apiserver
++
++import (
++	"context"
++
++	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive"
++	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/watch"
++	"k8s.io/apiserver/pkg/registry/rest"
++)
++
++// stripWithAllSchemas applies StripSensitiveFields and maskLastAppliedConfigAnnotation
++// for every schema in the slice.
++// (e.g. a v2 object accessed through the v1 endpoint, with unknown fields preserved by
++// x-kubernetes-preserve-unknown-fields).
++func stripWithAllSchemas(obj map[string]interface{}, schemas []*structuralschema.Structural) {
++	for _, s := range schemas {
++		sensitive.StripSensitiveFields(obj, s, true)
++	}
++	maskLastAppliedConfigAnnotation(obj, schemas)
++}
++
++// strippingGetter embeds a rest.Getter and overrides Get to strip sensitive fields from
++// results returned to callers that lack the resource/sensitive RBAC subresource permission.
++type strippingGetter struct {
++	rest.Getter
++	schemas []*structuralschema.Structural
++}
++
++func (s *strippingGetter) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
++	obj, err := s.Getter.Get(ctx, name, options)
++	if err != nil {
++		return nil, err
++	}
++	obj = obj.DeepCopyObject()
++	if u, ok := obj.(*unstructured.Unstructured); ok {
++		stripWithAllSchemas(u.Object, s.schemas)
++	}
++	return obj, nil
++}
++
++// strippingLister embeds a rest.Lister and overrides List to strip sensitive fields from
++// every item in results returned to callers that lack the resource/sensitive RBAC subresource permission.
++type strippingLister struct {
++	rest.Lister
++	schemas []*structuralschema.Structural
++}
++
++func (s *strippingLister) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
++	obj, err := s.Lister.List(ctx, options)
++	if err != nil {
++		return nil, err
++	}
++	obj = obj.DeepCopyObject()
++	if list, ok := obj.(*unstructured.UnstructuredList); ok {
++		for i := range list.Items {
++			stripWithAllSchemas(list.Items[i].Object, s.schemas)
++		}
++	}
++	return obj, nil
++}
++
++// strippingWatcher embeds a rest.Watcher and overrides Watch to strip sensitive fields from
++// every event delivered to callers that lack the resource/sensitive RBAC subresource permission.
++// BOOKMARK and ERROR events pass through unchanged per the watch spec.
++type strippingWatcher struct {
++	rest.Watcher
++	schemas []*structuralschema.Structural
++}
++
++func (s *strippingWatcher) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
++	w, err := s.Watcher.Watch(ctx, options)
++	if err != nil {
++		return nil, err
++	}
++	return watch.Filter(w, func(event watch.Event) (watch.Event, bool) {
++		if event.Type == watch.Bookmark || event.Type == watch.Error {
++			return event, true
++		}
++		if event.Object == nil {
++			return event, false
++		}
++
++		plainObj := event.Object
++		if co, ok := event.Object.(runtime.CacheableObject); ok {
++			plainObj = co.GetObject()
++		} else {
++			plainObj = event.Object.DeepCopyObject()
++		}
++		if u, ok := plainObj.(*unstructured.Unstructured); ok {
++			stripWithAllSchemas(u.Object, s.schemas)
++		}
++		event.Object = plainObj
++		return event, true
++	}), nil
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
+index 78350c135fc..01c1f3bfd3f 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
+@@ -272,6 +272,7 @@ func newExtensions(s *apiextensions.JSONSchemaProps) (*Extensions, error) {
+ 		XListMapKeys:      s.XListMapKeys,
+ 		XListType:         s.XListType,
+ 		XMapType:          s.XMapType,
++		XSensitiveData:    s.XSensitiveData,
+ 	}
+ 
+ 	if s.XPreserveUnknownFields != nil {
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
+index df78ba77e61..56e0c94ca95 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
+@@ -87,6 +87,9 @@ func (x *Extensions) toKubeOpenAPI(ret *spec.Schema) {
+ 	if x.XMapType != nil {
+ 		ret.VendorExtensible.AddExtension("x-kubernetes-map-type", *x.XMapType)
+ 	}
++	if x.XSensitiveData {
++		ret.VendorExtensible.AddExtension("x-kubernetes-sensitive-data", true)
++	}
+ }
+ 
+ func (x *ValidationExtensions) toKubeOpenAPI(ret *spec.Schema) {
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
+new file mode 100644
+index 00000000000..c5f23df2b1a
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
+@@ -0,0 +1,175 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package sensitive
++
++import (
++	"sort"
++
++	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++)
++
++// MaskedValue is the replacement string used by MaskSensitiveFields.
++const MaskedValue = "******"
++
++var metaFields = map[string]bool{
++	"apiVersion": true,
++	"kind":       true,
++	"metadata":   true,
++}
++
++// HasSensitiveFields returns true if the schema contains at least one field
++// with XSensitiveData == true anywhere in the tree.
++func HasSensitiveFields(s *structuralschema.Structural) bool {
++	if s == nil {
++		return false
++	}
++	if s.XSensitiveData {
++		return true
++	}
++	if s.Items != nil && HasSensitiveFields(s.Items) {
++		return true
++	}
++	for _, prop := range s.Properties {
++		if HasSensitiveFields(&prop) {
++			return true
++		}
++	}
++	if s.AdditionalProperties != nil && s.AdditionalProperties.Structural != nil {
++		if HasSensitiveFields(s.AdditionalProperties.Structural) {
++			return true
++		}
++	}
++	return false
++}
++
++// CollectSensitivePaths returns a sorted list of JSON paths for all fields in the
++// schema that have XSensitiveData == true (e.g. ".spec.password", ".spec.tls.key").
++func CollectSensitivePaths(s *structuralschema.Structural) []string {
++	paths := collectSensitivePaths(s, "")
++	sort.Strings(paths)
++	return paths
++}
++
++// StripSensitiveFields removes all sensitive fields from the unstructured object in-place.
++// It skips TypeMeta and ObjectMeta fields if XEmbeddedResource is set to true, or for the
++// root if isResourceRoot=true, following the same convention as pruning.Prune.
++func StripSensitiveFields(obj interface{}, s *structuralschema.Structural, isResourceRoot bool) {
++	s = withResourceRoot(s, isResourceRoot)
++	processSensitive(obj, s, true)
++}
++
++// MaskSensitiveFields replaces all sensitive field values with MaskedValue ("******") in-place.
++// It skips TypeMeta and ObjectMeta fields if XEmbeddedResource is set to true, or for the
++// root if isResourceRoot=true, following the same convention as pruning.Prune.
++func MaskSensitiveFields(obj interface{}, s *structuralschema.Structural, isResourceRoot bool) {
++	s = withResourceRoot(s, isResourceRoot)
++	processSensitive(obj, s, false)
++}
++
++// withResourceRoot normalizes isResourceRoot into XEmbeddedResource on the schema,
++// following the same pattern as pruning.PruneWithOptions.
++func withResourceRoot(s *structuralschema.Structural, isResourceRoot bool) *structuralschema.Structural {
++	if !isResourceRoot {
++		return s
++	}
++	if s == nil {
++		s = &structuralschema.Structural{}
++	}
++	if !s.XEmbeddedResource {
++		clone := *s
++		clone.XEmbeddedResource = true
++		s = &clone
++	}
++	return s
++}
++
++func collectSensitivePaths(s *structuralschema.Structural, path string) []string {
++	if s == nil {
++		return nil
++	}
++	var paths []string
++	if s.XSensitiveData {
++		if path == "" {
++			paths = append(paths, ".")
++		} else {
++			paths = append(paths, path)
++		}
++	}
++	for name, prop := range s.Properties {
++		paths = append(paths, collectSensitivePaths(&prop, path+"."+name)...)
++	}
++	if s.Items != nil {
++		paths = append(paths, collectSensitivePaths(s.Items, path+"[]")...)
++	}
++	if s.AdditionalProperties != nil && s.AdditionalProperties.Structural != nil {
++		paths = append(paths, collectSensitivePaths(s.AdditionalProperties.Structural, path+"[*]")...)
++	}
++	return paths
++}
++
++func processSensitive(obj interface{}, s *structuralschema.Structural, strip bool) {
++	if s == nil || obj == nil {
++		return
++	}
++	switch x := obj.(type) {
++	case map[string]interface{}:
++		for k, v := range x {
++			if s.XEmbeddedResource && metaFields[k] {
++				continue
++			}
++			if prop, ok := s.Properties[k]; ok {
++				if prop.XSensitiveData {
++					if strip {
++						delete(x, k)
++					} else {
++						x[k] = MaskedValue
++					}
++					continue
++				}
++				processSensitive(v, &prop, strip)
++			} else if s.AdditionalProperties != nil && s.AdditionalProperties.Structural != nil {
++				ap := s.AdditionalProperties.Structural
++				if ap.XSensitiveData {
++					if strip {
++						delete(x, k)
++					} else {
++						x[k] = MaskedValue
++					}
++					continue
++				}
++				processSensitive(v, ap, strip)
++			}
++		}
++	case []interface{}:
++		if s.Items == nil {
++			return
++		}
++		if s.Items.XSensitiveData {
++			for i := range x {
++				if strip {
++					x[i] = nil
++				} else {
++					x[i] = MaskedValue
++				}
++			}
++			return
++		}
++		for _, v := range x {
++			processSensitive(v, s.Items, strip)
++		}
++	}
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
+new file mode 100644
+index 00000000000..52ff4cbc20a
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
+@@ -0,0 +1,684 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package sensitive
++
++import (
++	"reflect"
++	"testing"
++
++	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++)
++
++func TestHasSensitiveFields(t *testing.T) {
++	tests := []struct {
++		name     string
++		schema   *structuralschema.Structural
++		expected bool
++	}{
++		{
++			name:     "nil schema",
++			schema:   nil,
++			expected: false,
++		},
++		{
++			name:     "empty schema",
++			schema:   &structuralschema.Structural{},
++			expected: false,
++		},
++		{
++			name: "root marked sensitive",
++			schema: &structuralschema.Structural{
++				Extensions: structuralschema.Extensions{XSensitiveData: true},
++			},
++			expected: true,
++		},
++		{
++			name: "sensitive property",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++					"name":     {Generic: structuralschema.Generic{Type: "string"}},
++				},
++			},
++			expected: true,
++		},
++		{
++			name: "no sensitive properties",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"name": {Generic: structuralschema.Generic{Type: "string"}},
++				},
++			},
++			expected: false,
++		},
++		{
++			name: "sensitive in items",
++			schema: &structuralschema.Structural{
++				Items: &structuralschema.Structural{
++					Extensions: structuralschema.Extensions{XSensitiveData: true},
++				},
++			},
++			expected: true,
++		},
++		{
++			name: "sensitive in additionalProperties",
++			schema: &structuralschema.Structural{
++				AdditionalProperties: &structuralschema.StructuralOrBool{
++					Structural: &structuralschema.Structural{
++						Extensions: structuralschema.Extensions{XSensitiveData: true},
++					},
++				},
++			},
++			expected: true,
++		},
++		{
++			name: "sensitive deeply nested",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"spec": {
++						Properties: map[string]structuralschema.Structural{
++							"tls": {
++								Properties: map[string]structuralschema.Structural{
++									"key": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++								},
++							},
++						},
++					},
++				},
++			},
++			expected: true,
++		},
++		{
++			name: "sensitive in nested items properties",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"list": {
++						Items: &structuralschema.Structural{
++							Properties: map[string]structuralschema.Structural{
++								"token": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++			expected: true,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			if got := HasSensitiveFields(tt.schema); got != tt.expected {
++				t.Errorf("HasSensitiveFields() = %v, want %v", got, tt.expected)
++			}
++		})
++	}
++}
++
++func TestCollectSensitivePaths(t *testing.T) {
++	tests := []struct {
++		name     string
++		schema   *structuralschema.Structural
++		expected []string
++	}{
++		{
++			name:     "nil schema",
++			schema:   nil,
++			expected: nil,
++		},
++		{
++			name:     "no sensitive fields",
++			schema:   &structuralschema.Structural{},
++			expected: nil,
++		},
++		{
++			name: "root marked sensitive",
++			schema: &structuralschema.Structural{
++				Extensions: structuralschema.Extensions{XSensitiveData: true},
++			},
++			expected: []string{"."},
++		},
++		{
++			name: "flat properties",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++					"name":     {Generic: structuralschema.Generic{Type: "string"}},
++					"token":    {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++				},
++			},
++			expected: []string{".password", ".token"},
++		},
++		{
++			name: "nested properties",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"spec": {
++						Properties: map[string]structuralschema.Structural{
++							"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							"tls": {
++								Properties: map[string]structuralschema.Structural{
++									"key": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++								},
++							},
++						},
++					},
++				},
++			},
++			expected: []string{".spec.password", ".spec.tls.key"},
++		},
++		{
++			name: "sensitive array items",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"secrets": {
++						Items: &structuralschema.Structural{
++							Properties: map[string]structuralschema.Structural{
++								"value": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++			expected: []string{".secrets[].value"},
++		},
++		{
++			name: "sensitive additionalProperties",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"data": {
++						AdditionalProperties: &structuralschema.StructuralOrBool{
++							Structural: &structuralschema.Structural{
++								Extensions: structuralschema.Extensions{XSensitiveData: true},
++							},
++						},
++					},
++				},
++			},
++			expected: []string{".data[*]"},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			got := CollectSensitivePaths(tt.schema)
++			if !reflect.DeepEqual(got, tt.expected) {
++				t.Errorf("CollectSensitivePaths() = %v, want %v", got, tt.expected)
++			}
++		})
++	}
++}
++
++func TestStripSensitiveFields(t *testing.T) {
++	tests := []struct {
++		name           string
++		obj            interface{}
++		schema         *structuralschema.Structural
++		isResourceRoot bool
++		expected       interface{}
++	}{
++		{
++			name:     "nil object",
++			obj:      nil,
++			schema:   &structuralschema.Structural{},
++			expected: nil,
++		},
++		{
++			name:     "nil schema",
++			obj:      map[string]interface{}{"a": "b"},
++			schema:   nil,
++			expected: map[string]interface{}{"a": "b"},
++		},
++		{
++			name: "strip flat property",
++			obj: map[string]interface{}{
++				"password": "secret",
++				"name":     "public",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++					"name":     {Generic: structuralschema.Generic{Type: "string"}},
++				},
++			},
++			expected: map[string]interface{}{
++				"name": "public",
++			},
++		},
++		{
++			name: "strip nested property",
++			obj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"token":  "abc-def",
++					"normal": "value",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"spec": {
++						Properties: map[string]structuralschema.Structural{
++							"token":  {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							"normal": {Generic: structuralschema.Generic{Type: "string"}},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"normal": "value",
++				},
++			},
++		},
++		{
++			name: "preserves meta fields at resource root",
++			obj: map[string]interface{}{
++				"apiVersion": "v1",
++				"kind":       "Foo",
++				"metadata":   map[string]interface{}{"name": "test"},
++				"password":   "secret",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++				},
++			},
++			isResourceRoot: true,
++			expected: map[string]interface{}{
++				"apiVersion": "v1",
++				"kind":       "Foo",
++				"metadata":   map[string]interface{}{"name": "test"},
++			},
++		},
++		{
++			name: "preserves meta fields in embedded resource",
++			obj: map[string]interface{}{
++				"embedded": map[string]interface{}{
++					"apiVersion": "v1",
++					"kind":       "Bar",
++					"metadata":   map[string]interface{}{"name": "inner"},
++					"secret":     "hidden",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"embedded": {
++						Extensions: structuralschema.Extensions{XEmbeddedResource: true},
++						Properties: map[string]structuralschema.Structural{
++							"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"embedded": map[string]interface{}{
++					"apiVersion": "v1",
++					"kind":       "Bar",
++					"metadata":   map[string]interface{}{"name": "inner"},
++				},
++			},
++		},
++		{
++			name: "strip additionalProperties values",
++			obj: map[string]interface{}{
++				"data": map[string]interface{}{
++					"key1": "secret1",
++					"key2": "secret2",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"data": {
++						AdditionalProperties: &structuralschema.StructuralOrBool{
++							Structural: &structuralschema.Structural{
++								Extensions: structuralschema.Extensions{XSensitiveData: true},
++							},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"data": map[string]interface{}{},
++			},
++		},
++		{
++			name: "strip sensitive array items replaces with nil",
++			obj: map[string]interface{}{
++				"tokens": []interface{}{"token1", "token2"},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"tokens": {
++						Items: &structuralschema.Structural{
++							Extensions: structuralschema.Extensions{XSensitiveData: true},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"tokens": []interface{}{nil, nil},
++			},
++		},
++		{
++			name: "strip sensitive fields inside array objects",
++			obj: map[string]interface{}{
++				"items": []interface{}{
++					map[string]interface{}{"name": "a", "secret": "s1"},
++					map[string]interface{}{"name": "b", "secret": "s2"},
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"items": {
++						Items: &structuralschema.Structural{
++							Properties: map[string]structuralschema.Structural{
++								"name":   {Generic: structuralschema.Generic{Type: "string"}},
++								"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"items": []interface{}{
++					map[string]interface{}{"name": "a"},
++					map[string]interface{}{"name": "b"},
++				},
++			},
++		},
++		{
++			name: "fields not in schema are left untouched",
++			obj: map[string]interface{}{
++				"password": "secret",
++				"unknown":  "value",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++				},
++			},
++			expected: map[string]interface{}{
++				"unknown": "value",
++			},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			StripSensitiveFields(tt.obj, tt.schema, tt.isResourceRoot)
++			if !reflect.DeepEqual(tt.obj, tt.expected) {
++				t.Errorf("StripSensitiveFields() result = %v, want %v", tt.obj, tt.expected)
++			}
++		})
++	}
++}
++
++func TestMaskSensitiveFields(t *testing.T) {
++	tests := []struct {
++		name           string
++		obj            interface{}
++		schema         *structuralschema.Structural
++		isResourceRoot bool
++		expected       interface{}
++	}{
++		{
++			name:     "nil object",
++			obj:      nil,
++			schema:   &structuralschema.Structural{},
++			expected: nil,
++		},
++		{
++			name:     "nil schema",
++			obj:      map[string]interface{}{"a": "b"},
++			schema:   nil,
++			expected: map[string]interface{}{"a": "b"},
++		},
++		{
++			name: "mask flat property",
++			obj: map[string]interface{}{
++				"password": "secret",
++				"name":     "public",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++					"name":     {Generic: structuralschema.Generic{Type: "string"}},
++				},
++			},
++			expected: map[string]interface{}{
++				"password": MaskedValue,
++				"name":     "public",
++			},
++		},
++		{
++			name: "mask nested property",
++			obj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"token":  "abc-def",
++					"normal": "value",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"spec": {
++						Properties: map[string]structuralschema.Structural{
++							"token":  {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							"normal": {Generic: structuralschema.Generic{Type: "string"}},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"token":  MaskedValue,
++					"normal": "value",
++				},
++			},
++		},
++		{
++			name: "preserves meta fields at resource root",
++			obj: map[string]interface{}{
++				"apiVersion": "v1",
++				"kind":       "Foo",
++				"metadata":   map[string]interface{}{"name": "test"},
++				"password":   "secret",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++				},
++			},
++			isResourceRoot: true,
++			expected: map[string]interface{}{
++				"apiVersion": "v1",
++				"kind":       "Foo",
++				"metadata":   map[string]interface{}{"name": "test"},
++				"password":   MaskedValue,
++			},
++		},
++		{
++			name: "preserves meta fields in embedded resource",
++			obj: map[string]interface{}{
++				"embedded": map[string]interface{}{
++					"apiVersion": "v1",
++					"kind":       "Bar",
++					"metadata":   map[string]interface{}{"name": "inner"},
++					"secret":     "hidden",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"embedded": {
++						Extensions: structuralschema.Extensions{XEmbeddedResource: true},
++						Properties: map[string]structuralschema.Structural{
++							"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"embedded": map[string]interface{}{
++					"apiVersion": "v1",
++					"kind":       "Bar",
++					"metadata":   map[string]interface{}{"name": "inner"},
++					"secret":     MaskedValue,
++				},
++			},
++		},
++		{
++			name: "mask additionalProperties values",
++			obj: map[string]interface{}{
++				"data": map[string]interface{}{
++					"key1": "secret1",
++					"key2": "secret2",
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"data": {
++						AdditionalProperties: &structuralschema.StructuralOrBool{
++							Structural: &structuralschema.Structural{
++								Extensions: structuralschema.Extensions{XSensitiveData: true},
++							},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"data": map[string]interface{}{
++					"key1": MaskedValue,
++					"key2": MaskedValue,
++				},
++			},
++		},
++		{
++			name: "mask sensitive array items",
++			obj: map[string]interface{}{
++				"tokens": []interface{}{"token1", "token2"},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"tokens": {
++						Items: &structuralschema.Structural{
++							Extensions: structuralschema.Extensions{XSensitiveData: true},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"tokens": []interface{}{MaskedValue, MaskedValue},
++			},
++		},
++		{
++			name: "mask sensitive fields inside array objects",
++			obj: map[string]interface{}{
++				"items": []interface{}{
++					map[string]interface{}{"name": "a", "secret": "s1"},
++					map[string]interface{}{"name": "b", "secret": "s2"},
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"items": {
++						Items: &structuralschema.Structural{
++							Properties: map[string]structuralschema.Structural{
++								"name":   {Generic: structuralschema.Generic{Type: "string"}},
++								"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"items": []interface{}{
++					map[string]interface{}{"name": "a", "secret": MaskedValue},
++					map[string]interface{}{"name": "b", "secret": MaskedValue},
++				},
++			},
++		},
++		{
++			name: "deeply nested three levels",
++			obj: map[string]interface{}{
++				"level1": map[string]interface{}{
++					"level2": map[string]interface{}{
++						"level3": map[string]interface{}{
++							"secret": "deep-value",
++							"public": "visible",
++						},
++					},
++				},
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"level1": {
++						Properties: map[string]structuralschema.Structural{
++							"level2": {
++								Properties: map[string]structuralschema.Structural{
++									"level3": {
++										Properties: map[string]structuralschema.Structural{
++											"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++											"public": {Generic: structuralschema.Generic{Type: "string"}},
++										},
++									},
++								},
++							},
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"level1": map[string]interface{}{
++					"level2": map[string]interface{}{
++						"level3": map[string]interface{}{
++							"secret": MaskedValue,
++							"public": "visible",
++						},
++					},
++				},
++			},
++		},
++		{
++			name: "fields not in schema are left untouched",
++			obj: map[string]interface{}{
++				"password": "secret",
++				"unknown":  "value",
++			},
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"password": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++				},
++			},
++			expected: map[string]interface{}{
++				"password": MaskedValue,
++				"unknown":  "value",
++			},
++		},
++		{
++			name:     "empty map with nil schema",
++			obj:      map[string]interface{}{},
++			schema:   nil,
++			expected: map[string]interface{}{},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			MaskSensitiveFields(tt.obj, tt.schema, tt.isResourceRoot)
++			if !reflect.DeepEqual(tt.obj, tt.expected) {
++				t.Errorf("MaskSensitiveFields() result = %v, want %v", tt.obj, tt.expected)
++			}
++		})
++	}
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
+index 5688c2ac40b..24eff61025a 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
+@@ -129,6 +129,12 @@ type Extensions struct {
+ 	//      Atomic maps will be entirely replaced when updated.
+ 	// +optional
+ 	XMapType *string
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	XSensitiveData bool
+ }
+ 
+ // +k8s:deepcopy-gen=true
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/validation.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/validation.go
+index a9caddb38d7..7978147fee2 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/validation.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/validation.go
+@@ -359,6 +359,9 @@ func validateNestedValueValidation(v *NestedValueValidation, skipAnyOf, skipAllO
+ 	if v.ForbiddenExtensions.XMapType != nil {
+ 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("x-kubernetes-map-type"), "must be undefined to be structural"))
+ 	}
++	if v.ForbiddenExtensions.XSensitiveData {
++		allErrs = append(allErrs, field.Forbidden(fldPath.Child("x-kubernetes-sensitive-data"), "must be false to be structural"))
++	}
+ 	if len(v.ValidationExtensions.XValidations) > 0 && !opts.AllowNestedXValidations {
+ 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("x-kubernetes-validations"), "must be empty to be structural"))
+ 	}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
+index a11f1617538..0ceaf2a1cb8 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
+@@ -401,6 +401,9 @@ func ConvertJSONSchemaPropsWithPostProcess(in *apiextensions.JSONSchemaProps, ou
+ 	if in.XMapType != nil {
+ 		out.VendorExtensible.AddExtension("x-kubernetes-map-type", *in.XMapType)
+ 	}
++	if in.XSensitiveData {
++		out.VendorExtensible.AddExtension("x-kubernetes-sensitive-data", true)
++	}
+ 	if len(in.XValidations) != 0 {
+ 		var serializationValidationRules apiextensionsv1.ValidationRules
+ 		if err := apiextensionsv1.Convert_apiextensions_ValidationRules_To_v1_ValidationRules(&in.XValidations, &serializationValidationRules, nil); err != nil {
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go
+index 37f0e31cea9..088cde620bc 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go
+@@ -28,6 +28,7 @@ import (
+ 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+ 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+ 	"k8s.io/apiextensions-apiserver/pkg/apiserver"
++	apiextensionsfeatures "k8s.io/apiextensions-apiserver/pkg/features"
+ 	generatedopenapi "k8s.io/apiextensions-apiserver/pkg/generated/openapi"
+ 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+ 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
+@@ -120,13 +121,20 @@ func (o CustomResourceDefinitionsServerOptions) Config() (*apiserver.Config, err
+ 	}
+ 
+ 	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(openapi.GetOpenAPIDefinitionsWithoutDisabledFeatures(generatedopenapi.GetOpenAPIDefinitions), openapinamer.NewDefinitionNamer(apiserver.Scheme, scheme.Scheme))
++	extraConfig := apiserver.ExtraConfig{
++		CRDRESTOptionsGetter: NewCRDRESTOptionsGetter(*o.RecommendedOptions.Etcd, serverConfig.ResourceTransformers, serverConfig.StorageObjectCountTracker),
++		ServiceResolver:      &serviceResolver{serverConfig.SharedInformerFactory.Core().V1().Services().Lister()},
++		AuthResolverWrapper:  webhook.NewDefaultAuthenticationInfoResolverWrapper(nil, nil, serverConfig.LoopbackClientConfig, noopoteltrace.NewTracerProvider()),
++	}
++	if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CRDSensitiveData) {
++		if srr, ok := serverConfig.ResourceTransformers.(storagevalue.SensitiveResourceRegistrar); ok {
++			extraConfig.SensitiveResourceRegistrar = srr
++		}
++	}
++
+ 	config := &apiserver.Config{
+ 		GenericConfig: serverConfig,
+-		ExtraConfig: apiserver.ExtraConfig{
+-			CRDRESTOptionsGetter: NewCRDRESTOptionsGetter(*o.RecommendedOptions.Etcd, serverConfig.ResourceTransformers, serverConfig.StorageObjectCountTracker),
+-			ServiceResolver:      &serviceResolver{serverConfig.SharedInformerFactory.Core().V1().Services().Lister()},
+-			AuthResolverWrapper:  webhook.NewDefaultAuthenticationInfoResolverWrapper(nil, nil, serverConfig.LoopbackClientConfig, noopoteltrace.NewTracerProvider()),
+-		},
++		ExtraConfig:   extraConfig,
+ 	}
+ 	return config, nil
+ }
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
+index e59d6213f61..f0006c4e53d 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
+@@ -50,6 +50,11 @@ const (
+ 	// CustomResourceDefinitions may include SelectableFields to declare which fields
+ 	// may be used as field selectors.
+ 	CustomResourceFieldSelectors featuregate.Feature = "CustomResourceFieldSelectors"
++
++	// owner: @team-deckhouse-kubernetes
++	//
++	// Hide and protect sensitive data fields in etcd for CRDs marked as x-kubernetes-sensitive-data
++	CRDSensitiveData featuregate.Feature = "CRDSensitiveData"
+ )
+ 
+ func init() {
+@@ -76,4 +81,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
+ 		{Version: version.MustParse("1.31"), Default: true, PreRelease: featuregate.Beta},
+ 		{Version: version.MustParse("1.32"), Default: true, LockToDefault: true, PreRelease: featuregate.GA},
+ 	},
++	CRDSensitiveData: {
++		{Version: version.MustParse("1.31"), Default: false, PreRelease: featuregate.Alpha},
++	},
+ }
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
+index 065019b5ebe..818d4bed4af 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
+@@ -2333,6 +2333,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
+ 							},
+ 						},
+ 					},
++					"x-kubernetes-sensitive-data": {
++						SchemaProps: spec.SchemaProps{
++							Description: "x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys). When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets) hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource and unconditionally mask the value in audit logs.",
++							Type:        []string{"boolean"},
++							Format:      "",
++						},
++					},
+ 				},
+ 			},
+ 		},
+@@ -3902,6 +3909,13 @@ func schema_pkg_apis_apiextensions_v1beta1_JSONSchemaProps(ref common.ReferenceC
+ 							},
+ 						},
+ 					},
++					"x-kubernetes-sensitive-data": {
++						SchemaProps: spec.SchemaProps{
++							Description: "x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys). When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets) hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource and unconditionally mask the value in audit logs.",
++							Type:        []string{"boolean"},
++							Format:      "",
++						},
++					},
+ 				},
+ 			},
+ 		},
+diff --git a/staging/src/k8s.io/apiserver/pkg/audit/context.go b/staging/src/k8s.io/apiserver/pkg/audit/context.go
+index 61d6ff5ef93..8e2b4cb8c36 100644
+--- a/staging/src/k8s.io/apiserver/pkg/audit/context.go
++++ b/staging/src/k8s.io/apiserver/pkg/audit/context.go
+@@ -34,6 +34,14 @@ import (
+ 	"k8s.io/klog/v2"
+ )
+ 
++// ObjectTransformer is a function that transforms a runtime.Object before it is
++// recorded in an audit event (e.g. to mask sensitive fields).
++type ObjectTransformer func(obj runtime.Object) runtime.Object
++
++// PatchTransformer is a function that transforms patch bytes before they are
++// recorded in an audit event (e.g. to mask sensitive fields in the patch payload).
++type PatchTransformer func(patchBytes []byte, contentType string) []byte
++
+ // The key type is unexported to prevent collisions
+ type key int
+ 
+@@ -62,6 +70,13 @@ type AuditContext struct {
+ 
+ 	// unguarded copy of auditID from the event
+ 	auditID atomic.Value
++
++	// objectTransformer, if set, is applied to request/response objects before
++	// they are encoded into audit events.
++	objectTransformer ObjectTransformer
++	// patchTransformer, if set, is applied to patch bytes before they are
++	// recorded into audit events.
++	patchTransformer PatchTransformer
+ }
+ 
+ // Enabled checks whether auditing is enabled for this audit context.
+@@ -287,6 +302,34 @@ func (ac *AuditContext) GetEventAnnotations() map[string]string {
+ 	return annotations
+ }
+ 
++// SetObjectTransformer sets the transformer that will be applied to request/response
++// objects before they are encoded into audit events.
++func (ac *AuditContext) SetObjectTransformer(fn ObjectTransformer) {
++	ac.objectTransformer = fn
++}
++
++// SetPatchTransformer sets the transformer that will be applied to patch bytes
++// before they are recorded into audit events.
++func (ac *AuditContext) SetPatchTransformer(fn PatchTransformer) {
++	ac.patchTransformer = fn
++}
++
++// TransformObject applies the objectTransformer if set, otherwise returns obj unchanged.
++func (ac *AuditContext) TransformObject(obj runtime.Object) runtime.Object {
++	if ac.objectTransformer != nil {
++		return ac.objectTransformer(obj)
++	}
++	return obj
++}
++
++// TransformPatch applies the patchTransformer if set, otherwise returns patchBytes unchanged.
++func (ac *AuditContext) TransformPatch(patchBytes []byte, contentType string) []byte {
++	if ac.patchTransformer != nil {
++		return ac.patchTransformer(patchBytes, contentType)
++	}
++	return patchBytes
++}
++
+ // AddAuditAnnotation sets the audit annotation for the given key, value pair.
+ // It is safe to call at most parts of request flow that come after WithAuditAnnotations.
+ // The notable exception being that this function must not be called via a
+diff --git a/staging/src/k8s.io/apiserver/pkg/audit/request.go b/staging/src/k8s.io/apiserver/pkg/audit/request.go
+index 4b076b09067..0917e4534fc 100644
+--- a/staging/src/k8s.io/apiserver/pkg/audit/request.go
++++ b/staging/src/k8s.io/apiserver/pkg/audit/request.go
+@@ -113,6 +113,10 @@ func LogRequestObject(ctx context.Context, obj runtime.Object, objGV schema.Grou
+ 		}
+ 	}
+ 
++	if ac := AuditContextFrom(ctx); ac != nil {
++		obj = ac.TransformObject(obj)
++	}
++
+ 	// TODO(audit): hook into the serializer to avoid double conversion
+ 	requestObject, err := encodeObject(obj, objGV, s)
+ 	if err != nil {
+@@ -159,11 +163,17 @@ func LogRequestObject(ctx context.Context, obj runtime.Object, objGV schema.Grou
+ }
+ 
+ // LogRequestPatch fills in the given patch as the request object into an audit event.
+-func LogRequestPatch(ctx context.Context, patch []byte) {
++// contentType is type of the patch content (e.g. "application/json-patch+json") for TransformPatch function.
++func LogRequestPatch(ctx context.Context, patch []byte, contentType string) {
+ 	ac := AuditContextFrom(ctx)
+ 	if ac.GetEventLevel().Less(auditinternal.LevelRequest) {
+ 		return
+ 	}
++
++	if ac != nil {
++		patch = ac.TransformPatch(patch, contentType)
++	}
++
+ 	ac.LogRequestPatch(patch)
+ }
+ 
+@@ -189,6 +199,10 @@ func LogResponseObject(ctx context.Context, obj runtime.Object, gv schema.GroupV
+ 		}
+ 	}
+ 
++	if ac := AuditContextFrom(ctx); ac != nil {
++		obj = ac.TransformObject(obj)
++	}
++
+ 	// TODO(audit): hook into the serializer to avoid double conversion
+ 	var err error
+ 	responseObject, err := encodeObject(obj, gv, s)
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
+index 060c7cc3023..7aa3d724307 100644
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
+@@ -130,7 +130,7 @@ func PatchResource(r rest.Patcher, scope *RequestScope, admit admission.Interfac
+ 
+ 		admit = admission.WithAudit(admit)
+ 
+-		audit.LogRequestPatch(req.Context(), patchBytes)
++		audit.LogRequestPatch(req.Context(), patchBytes, string(patchType))
+ 		span.AddEvent("Recorded the audit event")
+ 
+ 		var baseContentType string
+diff --git a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
+index e340c9d2ce5..0cc2cbaabda 100644
+--- a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
++++ b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
+@@ -915,12 +915,17 @@ func computeEncryptionConfigHash(data []byte) string {
+ }
+ 
+ var _ storagevalue.ResourceTransformers = &DynamicTransformers{}
++var _ storagevalue.SensitiveResourceRegistrar = &DynamicTransformers{}
+ var _ healthz.HealthChecker = &DynamicTransformers{}
+ 
+ // DynamicTransformers holds transformers that may be dynamically updated via a single external actor, likely a controller.
+ // This struct must avoid locks (even read write locks) as it is inline to all calls to storage.
+ type DynamicTransformers struct {
+ 	transformTracker *atomic.Value
++	// sensitiveResources tracks GroupResources that should be encrypted using the
++	// same transformer as Secrets. Managed by CRD handler via Register/Unregister.
++	// sync.Map is used for lock-free reads on the hot path.
++	sensitiveResources sync.Map
+ }
+ 
+ type transformTracker struct {
+@@ -965,8 +970,9 @@ func (d *DynamicTransformers) Name() string {
+ // TransformerForResource returns the transformer for the given resource.
+ func (d *DynamicTransformers) TransformerForResource(resource schema.GroupResource) storagevalue.Transformer {
+ 	return &resourceTransformer{
+-		resource:         resource,
+-		transformTracker: d.transformTracker,
++		resource:           resource,
++		transformTracker:   d.transformTracker,
++		sensitiveResources: &d.sensitiveResources,
+ 	}
+ }
+ 
+@@ -997,11 +1003,25 @@ func (d *DynamicTransformers) Set(
+ 	}()
+ }
+ 
++// RegisterSensitiveResource marks a GroupResource as sensitive so that it will
++// be encrypted using the same transformer as Secrets.
++func (d *DynamicTransformers) RegisterSensitiveResource(gr schema.GroupResource) {
++	klog.V(4).Infof("Registering sensitive resource %s for encryption at rest", gr)
++	d.sensitiveResources.Store(gr, struct{}{})
++}
++
++// UnregisterSensitiveResource removes the sensitive mark from a GroupResource.
++func (d *DynamicTransformers) UnregisterSensitiveResource(gr schema.GroupResource) {
++	klog.V(4).Infof("Unregistering sensitive resource %s from encryption at rest", gr)
++	d.sensitiveResources.Delete(gr)
++}
++
+ var _ storagevalue.Transformer = &resourceTransformer{}
+ 
+ type resourceTransformer struct {
+-	resource         schema.GroupResource
+-	transformTracker *atomic.Value
++	resource           schema.GroupResource
++	transformTracker   *atomic.Value
++	sensitiveResources *sync.Map
+ }
+ 
+ func (r *resourceTransformer) TransformFromStorage(ctx context.Context, data []byte, dataCtx storagevalue.Context) ([]byte, bool, error) {
+@@ -1013,7 +1033,7 @@ func (r *resourceTransformer) TransformToStorage(ctx context.Context, data []byt
+ }
+ 
+ func (r *resourceTransformer) transformer() storagevalue.Transformer {
+-	return transformerFromOverrides(r.transformTracker.Load().(*transformTracker).transformerOverrides, r.resource)
++	return transformerFromOverrides(r.transformTracker.Load().(*transformTracker).transformerOverrides, r.resource, r.sensitiveResources)
+ }
+ 
+ var _ storagevalue.ResourceTransformers = &StaticTransformers{}
+@@ -1021,7 +1041,7 @@ var _ storagevalue.ResourceTransformers = &StaticTransformers{}
+ type StaticTransformers map[schema.GroupResource]storagevalue.Transformer
+ 
+ func (s StaticTransformers) TransformerForResource(resource schema.GroupResource) storagevalue.Transformer {
+-	return transformerFromOverrides(s, resource)
++	return transformerFromOverrides(s, resource, nil)
+ }
+ 
+ var anyGroupAnyResource = schema.GroupResource{
+@@ -1029,7 +1049,9 @@ var anyGroupAnyResource = schema.GroupResource{
+ 	Resource: "*",
+ }
+ 
+-func transformerFromOverrides(transformerOverrides map[schema.GroupResource]storagevalue.Transformer, resource schema.GroupResource) (out storagevalue.Transformer) {
++var secretsGroupResource = schema.GroupResource{Group: "", Resource: "secrets"}
++
++func transformerFromOverrides(transformerOverrides map[schema.GroupResource]storagevalue.Transformer, resource schema.GroupResource, sensitiveResources *sync.Map) (out storagevalue.Transformer) {
+ 	defer func() { out = newRequestInfoTransformer(resource, out) }()
+ 
+ 	if transformer := transformerOverrides[resource]; transformer != nil {
+@@ -1047,6 +1069,14 @@ func transformerFromOverrides(transformerOverrides map[schema.GroupResource]stor
+ 		return transformer
+ 	}
+ 
++	if sensitiveResources != nil {
++		if _, ok := sensitiveResources.Load(resource); ok {
++			if transformer := transformerOverrides[secretsGroupResource]; transformer != nil {
++				return transformer
++			}
++		}
++	}
++
+ 	return identity.NewEncryptCheckTransformer()
+ }
+ 
+diff --git a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go
+index f509b989660..b6dbcc54957 100644
+--- a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go
++++ b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go
+@@ -1422,7 +1422,7 @@ func TestWildcardStructure(t *testing.T) {
+ 
+ 			// check if expectedResourceTransformers are present
+ 			for resource, expectedTransformerName := range tc.expectedResourceTransformers {
+-				transformer := transformerFromOverrides(transformers, schema.ParseGroupResource(resource))
++				transformer := transformerFromOverrides(transformers, schema.ParseGroupResource(resource), nil)
+ 				transformerName := string(
+ 					reflect.ValueOf(transformer).
+ 						Elem().
+@@ -2244,3 +2244,137 @@ func TestGetEncryptionConfigHash(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestDynamicTransformersRegisterSensitiveResource(t *testing.T) {
++	secretsGR := schema.GroupResource{Group: "", Resource: "secrets"}
++	crdGR := schema.GroupResource{Group: "example.com", Resource: "databases"}
++
++	secretsTransformer := value.PrefixTransformer{Prefix: []byte("k8s:enc:test:"), Transformer: &identityTransformer{}}
++	overrides := map[schema.GroupResource]value.Transformer{
++		secretsGR: value.NewPrefixTransformers(nil, secretsTransformer),
++	}
++
++	dt := NewDynamicTransformers(overrides, nil, func() {}, 0)
++
++	t.Run("unregistered sensitive resource falls through to identity", func(t *testing.T) {
++		transformer := dt.TransformerForResource(crdGR)
++		out, err := transformer.TransformToStorage(context.Background(), []byte("data"), value.DefaultContext(nil))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if !bytes.Equal(out, []byte("data")) {
++			t.Errorf("expected identity (no-op) transformer, got output %q", string(out))
++		}
++	})
++
++	t.Run("registered sensitive resource uses secrets transformer", func(t *testing.T) {
++		dt.RegisterSensitiveResource(crdGR)
++
++		transformer := dt.TransformerForResource(crdGR)
++		out, err := transformer.TransformToStorage(context.Background(), []byte("data"), value.DefaultContext(nil))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if !bytes.HasPrefix(out, []byte("k8s:enc:test:")) {
++			t.Errorf("expected secrets transformer prefix, got output %q", string(out))
++		}
++	})
++
++	t.Run("unregistered sensitive resource reverts to identity", func(t *testing.T) {
++		dt.UnregisterSensitiveResource(crdGR)
++
++		transformer := dt.TransformerForResource(crdGR)
++		out, err := transformer.TransformToStorage(context.Background(), []byte("data"), value.DefaultContext(nil))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if !bytes.Equal(out, []byte("data")) {
++			t.Errorf("expected identity transformer after unregister, got output %q", string(out))
++		}
++	})
++}
++
++func TestTransformerFromOverridesWithSensitiveResources(t *testing.T) {
++	secretsGR := schema.GroupResource{Group: "", Resource: "secrets"}
++	crdGR := schema.GroupResource{Group: "example.com", Resource: "databases"}
++	explicitGR := schema.GroupResource{Group: "example.com", Resource: "configs"}
++
++	secretsTransformer := value.PrefixTransformer{Prefix: []byte("k8s:enc:secrets:"), Transformer: &identityTransformer{}}
++	explicitTransformer := value.PrefixTransformer{Prefix: []byte("k8s:enc:explicit:"), Transformer: &identityTransformer{}}
++
++	overrides := map[schema.GroupResource]value.Transformer{
++		secretsGR:  value.NewPrefixTransformers(nil, secretsTransformer),
++		explicitGR: value.NewPrefixTransformers(nil, explicitTransformer),
++	}
++
++	sensitiveResources := &sync.Map{}
++	sensitiveResources.Store(crdGR, struct{}{})
++	sensitiveResources.Store(explicitGR, struct{}{})
++
++	t.Run("sensitive resource with no explicit override gets secrets transformer", func(t *testing.T) {
++		transformer := transformerFromOverrides(overrides, crdGR, sensitiveResources)
++		out, err := transformer.TransformToStorage(context.Background(), []byte("data"), value.DefaultContext(nil))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if !bytes.HasPrefix(out, []byte("k8s:enc:secrets:")) {
++			t.Errorf("expected secrets transformer, got %q", string(out))
++		}
++	})
++
++	t.Run("explicit override takes precedence over sensitive registration", func(t *testing.T) {
++		transformer := transformerFromOverrides(overrides, explicitGR, sensitiveResources)
++		out, err := transformer.TransformToStorage(context.Background(), []byte("data"), value.DefaultContext(nil))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if !bytes.HasPrefix(out, []byte("k8s:enc:explicit:")) {
++			t.Errorf("expected explicit transformer, got %q", string(out))
++		}
++	})
++
++	t.Run("non-sensitive resource without override gets identity", func(t *testing.T) {
++		otherGR := schema.GroupResource{Group: "other.io", Resource: "things"}
++		transformer := transformerFromOverrides(overrides, otherGR, sensitiveResources)
++		out, err := transformer.TransformToStorage(context.Background(), []byte("data"), value.DefaultContext(nil))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if !bytes.Equal(out, []byte("data")) {
++			t.Errorf("expected identity transformer, got %q", string(out))
++		}
++	})
++
++	t.Run("nil sensitiveResources is safe", func(t *testing.T) {
++		transformer := transformerFromOverrides(overrides, crdGR, nil)
++		out, err := transformer.TransformToStorage(context.Background(), []byte("data"), value.DefaultContext(nil))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if !bytes.Equal(out, []byte("data")) {
++			t.Errorf("expected identity transformer with nil sensitiveResources, got %q", string(out))
++		}
++	})
++
++	t.Run("sensitive resource without secrets config gets identity", func(t *testing.T) {
++		emptyOverrides := map[schema.GroupResource]value.Transformer{}
++		transformer := transformerFromOverrides(emptyOverrides, crdGR, sensitiveResources)
++		out, err := transformer.TransformToStorage(context.Background(), []byte("data"), value.DefaultContext(nil))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if !bytes.Equal(out, []byte("data")) {
++			t.Errorf("expected identity when secrets not configured, got %q", string(out))
++		}
++	})
++}
++
++type identityTransformer struct{}
++
++func (t *identityTransformer) TransformFromStorage(ctx context.Context, data []byte, dataCtx value.Context) ([]byte, bool, error) {
++	return data, false, nil
++}
++
++func (t *identityTransformer) TransformToStorage(ctx context.Context, data []byte, dataCtx value.Context) ([]byte, error) {
++	return data, nil
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/storage/value/transformer.go b/staging/src/k8s.io/apiserver/pkg/storage/value/transformer.go
+index eab90b3fa3b..eff7f068cac 100644
+--- a/staging/src/k8s.io/apiserver/pkg/storage/value/transformer.go
++++ b/staging/src/k8s.io/apiserver/pkg/storage/value/transformer.go
+@@ -66,6 +66,14 @@ type ResourceTransformers interface {
+ 	TransformerForResource(resource schema.GroupResource) Transformer
+ }
+ 
++// SensitiveResourceRegistrar allows dynamic registration of resources that
++// should be encrypted at rest using the same transformer as Secrets.
++// DynamicTransformers implements this interface; StaticTransformers does not.
++type SensitiveResourceRegistrar interface {
++	RegisterSensitiveResource(gr schema.GroupResource)
++	UnregisterSensitiveResource(gr schema.GroupResource)
++}
++
+ // DefaultContext is a simple implementation of Context for a slice of bytes.
+ type DefaultContext []byte
+ 
