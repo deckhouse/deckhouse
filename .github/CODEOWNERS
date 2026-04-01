@@ -2,7 +2,6 @@
 000-common/                                                    @sprait
 000-common/images/alt-p11/                                     @name212 @090809
 002-deckhouse/                                                 @ldmonster
-007-registrypackages/                                          @RomanenkoDenys @sprait
 007-registrypackages/images/d8-ca-updater/                     @name212 @090809
 007-registrypackages/images/d8-curl/                           @name212 @090809
 007-registrypackages/images/e2fsprogs/                         @name212 @090809
@@ -19,6 +18,7 @@
 007-registrypackages/images/virt-what/                         @name212 @090809
 007-registrypackages/images/which/                             @name212 @090809
 007-registrypackages/images/yq/                                @name212 @090809
+007-registrypackages/                                          @RomanenkoDenys @sprait
 015-admission-policy-engine/                                   @nabokihms @AlwxSin
 021-cni-cilium/                                                @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                    @AndreyPavlovFlant @apolovov
@@ -30,7 +30,6 @@
 038-registry/                                                  @RaveNoX
 039-registry-packages-proxy/                                   @name212 @090809
 040-control-plane-manager/                                     @sprait
-040-node-manager/                                              @name212 @090809
 040-node-manager/images/builder-cuda/                          @serg-su
 040-node-manager/images/nvidia-container-toolkit/              @serg-su
 040-node-manager/images/nvidia-dcgm/                           @serg-su
@@ -45,11 +44,12 @@
 040-node-manager/monitoring/grafana-dashboards/nvidia-gpu/     @serg-su
 040-node-manager/templates/nvidia-gpu/                         @serg-su
 040-node-manager/hooks/fencing**                               @yalosev @ergoz
-040-terraform-manager/                                         @name212 @090809
-040-terraform-manager/images/                                  @aleksey-su @pabateman
+040-node-manager/                                              @name212 @090809
 040-terraform-manager/images/base-terraform-manager/           @name212 @090809
 040-terraform-manager/images/base-terraform/                   @name212 @090809
 040-terraform-manager/images/base-opentofu/                    @name212 @090809
+040-terraform-manager/images/                                  @aleksey-su @pabateman
+040-terraform-manager/                                         @name212 @090809
 042-kube-dns/                                                  @AndreyPavlovFlant @apolovov
 050-network-policy-engine/                                     @AndreyPavlovFlant @apolovov
 101-cert-manager/                                              @Suselz @AlwxSin
