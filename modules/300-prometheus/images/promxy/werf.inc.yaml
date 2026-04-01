@@ -10,11 +10,6 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/vendor-patches
-  to: /vendor-patches
-  stageDependencies:
-    install:
-    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -23,8 +18,8 @@ shell:
     - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
     - cd /src
-    - git apply /patches/*.patch --verbose
-    - cp -r /vendor-patches /src/.vendor-patches
+    - git apply /patches/001-*.patch --verbose
+    - mkdir -p /src/.vendor-patches && cp /patches/002-*.patch /src/.vendor-patches/ 2>/dev/null || true
     - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
