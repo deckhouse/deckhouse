@@ -24,10 +24,7 @@
     }
 
     @include breakpoints.max-w(m) {
-        max-width: 220px !important;
-    }
-
-    @include breakpoints.max-w(xxs) {
+        font-size: 12px;
         max-width: 170px !important;
     }
 }
