@@ -934,7 +934,7 @@ Transformed result for an event in namespace `production` with pod label `app=ap
 
 ### Removing labels
 
-You can use the `DropLabels` transformation to remove specific labels from log records. If `keepOnly` is set, each entry in `labels` is a path to an **object**; inside that object, every nested key not listed in `keepOnly` is removed (key names without a leading dot). If `keepOnly` is unset, each listed path is removed entirely.
+You can use the `DropLabels` transformation to remove specific labels from log records. If `keepOnly` is set, each entry in `labels` is a path to an **object**. Inside that object, every nested key not listed in `keepOnly` is removed (key names without a leading dot). If `keepOnly` is unset, each listed path in `labels` is removed entirely.
 
 > To apply the `DropLabels` transformation to the `message` field or its nested fields,
 > the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
