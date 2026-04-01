@@ -1,4 +1,28 @@
-@use "components/common/_breakpoints";
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+.supported_versions {
+    @include breakpoints.max-w(l) {
+        font-size: 14px !important;
+    }
+
+    thead {
+        th {
+            @include breakpoints.max-w(l) {
+                padding: 12px !important;
+            }
+        }
+    }
+
+    tbody {
+        td {
+            @include breakpoints.max-w(l) {
+                padding: 0 12px !important;
+            }
+        }
+    }
+}
 
 .supported_versions, .table-wrapper__shadow {
     width: auto;

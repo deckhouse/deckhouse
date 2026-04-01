@@ -1797,7 +1797,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs .tippy-content ul li {
-    color: white;
+    color: #00122c;
 }
 
 .docs table {
@@ -2643,6 +2643,10 @@ select#contact-select {
     text-align: start;
     padding: 24px 24px 32px;
     color: #00122C;
+
+    @include breakpoints.max-w(m) {
+      padding: 14px;
+    }
   }
 
   .tippy-content code {
