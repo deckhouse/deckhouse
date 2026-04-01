@@ -898,7 +898,7 @@ Transformed result:
 
 ### Adding labels from literals and templates
 
-You can use the `AddLabels` transformation to add fields using static values or templates such as `{{ .pod_labels.app }}`. Transformations run after `extraLabels`; on label key conflicts, the value from `AddLabels` is used.
+You can use the `AddLabels` transformation to add fields using static values or templates such as `{{ .pod_labels.app }}`. Transformations run after applying `extraLabels`. If label names overlap, the value from `AddLabels` has priority.
 
 The optional `when` field is a list of conditions combined with logical AND. The left-hand side is a path to a field on the log event: a leading dot and dot-separated segments (e.g. `.namespace`, `.pod_labels.app`, `.message.level`). Each list item can be:
 
