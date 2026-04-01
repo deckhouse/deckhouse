@@ -1,6 +1,6 @@
 .github/                                                         @Nikolay1224 @himax1991
 000-common/                                                      @sprait
-000-common/images/alt-p11/                                       @name212 @090809
+**/000-common/images/alt-p11/                                    @name212 @090809
 002-deckhouse/                                                   @ldmonster
 007-registrypackages/                                            @RomanenkoDenys @sprait
 **/007-registrypackages/images/d8-ca-updater                     @name212 @090809
