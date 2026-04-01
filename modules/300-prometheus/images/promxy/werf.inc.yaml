@@ -10,6 +10,11 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/vendor-patches
+  to: /vendor-patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -19,6 +24,7 @@ shell:
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
     - cd /src
     - git apply /patches/*.patch --verbose
+    - cp -r /vendor-patches /src/.vendor-patches
     - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -38,6 +44,7 @@ shell:
   - cd /src
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - if [ -d /src/.vendor-patches ] && ls /src/.vendor-patches/*.patch 1>/dev/null 2>&1; then for p in /src/.vendor-patches/*.patch; do patch -p1 < "$p"; done; fi
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
