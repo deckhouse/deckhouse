@@ -150,8 +150,8 @@ for item in {{ join " " $providers }}; do
   if [ -d /deckhouse/modules/030-cloud-provider-${item}/capi ]; then
     ln -s /deckhouse/modules/030-cloud-provider-${item}/capi /deckhouse/modules/040-node-manager/capi/${item}
   fi
-  if [ -d /deckhouse/modules/30-cloud-provider-${item}/cloud-instance-manager ]; then
-    ln -s /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager /deckhouse/modules/040-node-manager/cloud-providers/${item}
+  if [ -d /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager ]; then
+    ln -s /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager/ /deckhouse/modules/040-node-manager/cloud-providers/${item}
   fi
 done
 {{- end }}
