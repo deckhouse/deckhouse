@@ -109,7 +109,7 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 		return nil, fmt.Errorf("load hooks: %w", err)
 	}
 
-	appDef, err := def.ToApplication()
+	appDef, err := def.Convert()
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("convert app definition: %w", err)
@@ -182,7 +182,7 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 		return nil, fmt.Errorf("load hooks: %w", err)
 	}
 
-	moduleDef, err := def.ToModule()
+	moduleDef, err := def.Convert()
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("convert module definition: %w", err)
@@ -284,7 +284,7 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		return nil, fmt.Errorf("load hooks: %w", err)
 	}
 
-	moduleDef, err := def.ToModule()
+	moduleDef, err := def.Convert()
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("convert module definition: %w", err)
@@ -355,8 +355,8 @@ func LoadGlobalConf(ctx context.Context, logger *log.Logger) (*global.Config, er
 	}, nil
 }
 
-// readPackageFile reads raw content of package.yaml from the given directory.
-func readPackageFile(packageDir string) ([]byte, error) {
+// loadAppPackageDefinition loads ApplicationDefinition from package.yaml, validating type: Application.
+func loadAppPackageDefinition(packageDir string) (*dto.ApplicationDefinition, error) {
 	definitionPath := filepath.Join(packageDir, dto.DefinitionFile)
 
 	content, err := os.ReadFile(definitionPath)
@@ -364,28 +364,13 @@ func readPackageFile(packageDir string) ([]byte, error) {
 		return nil, fmt.Errorf("read file '%s': %w", definitionPath, err)
 	}
 
-	return content, nil
-}
-
-// loadAppPackageDefinition loads ApplicationDefinition from package.yaml, validating type: Application.
-func loadAppPackageDefinition(packageDir string) (*dto.ApplicationDefinition, error) {
-	content, err := readPackageFile(packageDir)
-	if err != nil {
-		return nil, err
-	}
-
-	var ot dto.ObjectType
-	if err = yaml.Unmarshal(content, &ot); err != nil {
-		return nil, fmt.Errorf("unmarshal object type: %w", err)
-	}
-
-	if ot.Type != dto.KindApplication {
-		return nil, fmt.Errorf("expected type %q, got %q", dto.KindApplication, ot.Type)
-	}
-
 	def := new(dto.ApplicationDefinition)
 	if err = yaml.Unmarshal(content, def); err != nil {
 		return nil, fmt.Errorf("unmarshal application definition: %w", err)
+	}
+
+	if def.Type != dto.TypeApplication {
+		return nil, fmt.Errorf("expected type %q, got %q", dto.TypeApplication, def.Type)
 	}
 
 	return def, nil
@@ -394,27 +379,24 @@ func loadAppPackageDefinition(packageDir string) (*dto.ApplicationDefinition, er
 // loadModulePackageDefinition loads ModuleDefinition from package.yaml, validating type: Module.
 // Falls back to legacy module.yaml if package.yaml doesn't exist.
 func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, error) {
-	content, err := readPackageFile(packageDir)
+	definitionPath := filepath.Join(packageDir, dto.DefinitionFile)
+
+	content, err := os.ReadFile(definitionPath)
 	if err == nil {
-		var ot dto.ObjectType
-		if err = yaml.Unmarshal(content, &ot); err != nil {
-			return nil, fmt.Errorf("unmarshal object type: %w", err)
-		}
-
-		if ot.Type != "" && ot.Type != dto.KindModule {
-			return nil, fmt.Errorf("expected type %q, got %q", dto.KindModule, ot.Type)
-		}
-
 		def := new(dto.ModuleDefinition)
 		if err = yaml.Unmarshal(content, def); err != nil {
 			return nil, fmt.Errorf("unmarshal module definition: %w", err)
+		}
+
+		if def.Type != "" && def.Type != dto.TypeModule {
+			return nil, fmt.Errorf("expected type %q, got %q", dto.TypeModule, def.Type)
 		}
 
 		return def, nil
 	}
 
 	if !errors.Is(err, os.ErrNotExist) {
-		return nil, err
+		return nil, fmt.Errorf("read file '%s': %w", definitionPath, err)
 	}
 
 	// fallback to module.yaml
@@ -455,10 +437,8 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 			Requirements:   requirements,
 			DisableOptions: disableOpts,
 		},
-		Module: dto.DefinitionModule{
-			Weight:   int(def.Weight),
-			Critical: def.Critical,
-		},
+		Weight:   int(def.Weight),
+		Critical: def.Critical,
 	}, nil
 }
 

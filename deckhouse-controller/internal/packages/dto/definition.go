@@ -28,12 +28,12 @@ const (
 	// DefinitionFile is the filename for package metadata
 	DefinitionFile = "package.yaml"
 
-	KindModule      = "Module"
-	KindApplication = "Application"
+	TypeModule      = "Module"
+	TypeApplication = "Application"
 )
 
-// ObjectType represents apiVersion/type header for determining the package type.
-type ObjectType struct {
+// TypeMeta represents apiVersion/type header for determining the package type.
+type TypeMeta struct {
 	APIVersion string `yaml:"apiVersion" json:"apiVersion"`
 	Type       string `yaml:"type" json:"type"`
 }
@@ -51,18 +51,15 @@ type Definition struct {
 
 // ApplicationDefinition extends Definition for application packages.
 type ApplicationDefinition struct {
+	TypeMeta   `yaml:",inline"`
 	Definition `yaml:",inline"`
 }
 
 // ModuleDefinition extends Definition with module-specific fields.
 type ModuleDefinition struct {
+	TypeMeta   `yaml:",inline"`
 	Definition `yaml:",inline"`
 
-	Module DefinitionModule `yaml:"module,omitempty" json:"module,omitempty"`
-}
-
-// DefinitionModule specifies module specific fields
-type DefinitionModule struct {
 	Weight   int  `yaml:"weight" json:"weight"`
 	Critical bool `yaml:"critical,omitempty" json:"critical,omitempty"`
 }
@@ -86,8 +83,8 @@ type DisableOptions struct {
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }
 
-// ToApplication converts application definition to application domain model
-func (d *ApplicationDefinition) ToApplication() (apps.Definition, error) {
+// Convert converts application definition to application domain model
+func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
 	var err error
 
 	var kubernetesConstraint *semver.Constraints
@@ -134,8 +131,8 @@ func (d *ApplicationDefinition) ToApplication() (apps.Definition, error) {
 	}, nil
 }
 
-// ToModule converts module definition to module domain model
-func (d *ModuleDefinition) ToModule() (modules.Definition, error) {
+// Convert converts module definition to module domain model
+func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 	var err error
 
 	var kubernetesConstraint *semver.Constraints
@@ -169,8 +166,8 @@ func (d *ModuleDefinition) ToModule() (modules.Definition, error) {
 	return modules.Definition{
 		Name:     d.Name,
 		Version:  d.Version,
-		Critical: d.Module.Critical,
-		Weight:   uint32(d.Module.Weight),
+		Critical: d.Critical,
+		Weight:   uint32(d.Weight),
 		Stage:    d.Stage,
 		DisableOptions: modules.DisableOptions{
 			Confirmation: d.DisableOptions.Confirmation,
