@@ -82,7 +82,7 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 		return nil, ErrPackageNotFound
 	}
 
-	def, err := loadPackageDefinition(appDir)
+	def, err := loadAppPackageDefinition(appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", appDir, err)
@@ -162,7 +162,7 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 	}
 
 	// Load package definition (package.yaml/module.yaml)
-	def, err := loadPackageDefinition(moduleDir)
+	def, err := loadModulePackageDefinition(moduleDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", moduleDir, err)
@@ -257,7 +257,7 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		return nil, ErrPackageNotFound
 	}
 
-	def, err := loadPackageDefinition(moduleDir)
+	def, err := loadModulePackageDefinition(moduleDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", moduleDir, err)
@@ -355,26 +355,69 @@ func LoadGlobalConf(ctx context.Context, logger *log.Logger) (*global.Config, er
 	}, nil
 }
 
-// loadPackageDefinition reads the package definition from the given directory.
-// It first tries package.yaml (new format). If that file doesn't exist, it falls back
-// to module.yaml (legacy format) and converts it to a dto.Definition
-func loadPackageDefinition(packageDir string) (*dto.Definition, error) {
+// readPackageFile reads raw content of package.yaml from the given directory.
+func readPackageFile(packageDir string) ([]byte, error) {
 	definitionPath := filepath.Join(packageDir, dto.DefinitionFile)
 
 	content, err := os.ReadFile(definitionPath)
+	if err != nil {
+		return nil, fmt.Errorf("read file '%s': %w", definitionPath, err)
+	}
+
+	return content, nil
+}
+
+// loadAppPackageDefinition loads ApplicationDefinition from package.yaml, validating kind: Application.
+func loadAppPackageDefinition(packageDir string) (*dto.ApplicationDefinition, error) {
+	content, err := readPackageFile(packageDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var ot dto.ObjectType
+	if err = yaml.Unmarshal(content, &ot); err != nil {
+		return nil, fmt.Errorf("unmarshal object type: %w", err)
+	}
+
+	if ot.Type != dto.KindApplication {
+		return nil, fmt.Errorf("expected kind %q, got %q", dto.KindApplication, ot.Type)
+	}
+
+	def := new(dto.ApplicationDefinition)
+	if err = yaml.Unmarshal(content, def); err != nil {
+		return nil, fmt.Errorf("unmarshal application definition: %w", err)
+	}
+
+	return def, nil
+}
+
+// loadModulePackageDefinition loads ModuleDefinition from package.yaml, validating kind: Module.
+// Falls back to legacy module.yaml if package.yaml doesn't exist.
+func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, error) {
+	content, err := readPackageFile(packageDir)
 	if err == nil {
-		def := new(dto.Definition)
+		var ot dto.ObjectType
+		if err = yaml.Unmarshal(content, &ot); err != nil {
+			return nil, fmt.Errorf("unmarshal object type: %w", err)
+		}
+
+		if ot.Type != "" && ot.Type != dto.KindModule {
+			return nil, fmt.Errorf("expected kind %q, got %q", dto.KindModule, ot.Type)
+		}
+
+		def := new(dto.ModuleDefinition)
 		if err = yaml.Unmarshal(content, def); err != nil {
-			return nil, fmt.Errorf("unmarshal file '%s': %w", definitionPath, err)
+			return nil, fmt.Errorf("unmarshal module definition: %w", err)
 		}
 
 		return def, nil
 	}
 
-	if !os.IsNotExist(err) {
-		return nil, fmt.Errorf("read file '%s': %w", definitionPath, err)
+	if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
 	}
 
+	// fallback to module.yaml
 	def, err := loadModuleDefinition(packageDir)
 	if err != nil {
 		return nil, fmt.Errorf("load module definition: %w", err)
@@ -404,13 +447,14 @@ func loadPackageDefinition(packageDir string) (*dto.Definition, error) {
 		}
 	}
 
-	return &dto.Definition{
-		Name:           def.Name,
-		Type:           "Module",
-		Stage:          def.Stage,
-		Descriptions:   descriptions,
-		Requirements:   requirements,
-		DisableOptions: disableOpts,
+	return &dto.ModuleDefinition{
+		Definition: dto.Definition{
+			Name:           def.Name,
+			Stage:          def.Stage,
+			Descriptions:   descriptions,
+			Requirements:   requirements,
+			DisableOptions: disableOpts,
+		},
 		Module: dto.DefinitionModule{
 			Weight:   int(def.Weight),
 			Critical: def.Critical,

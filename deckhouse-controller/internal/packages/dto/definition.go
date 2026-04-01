@@ -27,19 +27,36 @@ import (
 const (
 	// DefinitionFile is the filename for package metadata
 	DefinitionFile = "package.yaml"
+
+	KindModule      = "Module"
+	KindApplication = "Application"
 )
 
-// Definition represents package metadata loaded from package.yaml.
-// It contains package identification, descriptions, requirements, and configuration options.
+// ObjectType represents apiVersion/kind header for determining the package kind.
+type ObjectType struct {
+	APIVersion string `yaml:"apiVersion" json:"apiVersion"`
+	Type       string `yaml:"type" json:"type"`
+}
+
+// Definition represents common package metadata loaded from package.yaml.
 type Definition struct {
 	Name    string `yaml:"name" json:"name"`
-	Type    string `yaml:"type" json:"type"`
 	Version string `yaml:"version" json:"version"`
 	Stage   string `yaml:"stage" json:"stage"`
 
 	Descriptions   Descriptions   `yaml:"descriptions,omitempty" json:"descriptions,omitempty"`
 	Requirements   Requirements   `yaml:"requirements,omitempty" json:"requirements,omitempty"`
 	DisableOptions DisableOptions `yaml:"disable,omitempty" json:"disable,omitempty"`
+}
+
+// ApplicationDefinition extends Definition for application packages.
+type ApplicationDefinition struct {
+	Definition `yaml:",inline"`
+}
+
+// ModuleDefinition extends Definition with module-specific fields.
+type ModuleDefinition struct {
+	Definition `yaml:",inline"`
 
 	Module DefinitionModule `yaml:"module,omitempty" json:"module,omitempty"`
 }
@@ -69,8 +86,8 @@ type DisableOptions struct {
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }
 
-// ToApplication converts package definition to application definition
-func (d *Definition) ToApplication() (apps.Definition, error) {
+// ToApplication converts application definition to application domain model
+func (d *ApplicationDefinition) ToApplication() (apps.Definition, error) {
 	var err error
 
 	var kubernetesConstraint *semver.Constraints
@@ -117,8 +134,8 @@ func (d *Definition) ToApplication() (apps.Definition, error) {
 	}, nil
 }
 
-// ToModule converts package definition to module definition
-func (d *Definition) ToModule() (modules.Definition, error) {
+// ToModule converts module definition to module definition
+func (d *ModuleDefinition) ToModule() (modules.Definition, error) {
 	var err error
 
 	var kubernetesConstraint *semver.Constraints
