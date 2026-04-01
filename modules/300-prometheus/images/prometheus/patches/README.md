@@ -2,7 +2,7 @@
 
 ### 001-sample_limit_annotation.patch
 
-Limit the number of metrics which Prometheus scrapes from a target.  
+Limit the number of metrics which Prometheus scrapes from a target.
 
 ```yaml
 metadata:
@@ -12,7 +12,7 @@ metadata:
 
 ### 002-successfully_sent_metric.patch
 
-Exports gauge metric with the count of successfully sent alerts. 
+Exports gauge metric with the count of successfully sent alerts.
 
 ### 003-fix-cve.patch
 
@@ -27,3 +27,10 @@ Add loading chunk snapshots in remote-write to solve problem with unknown series
 ### 005-op_functions.patch
 
 Added op functions (op_top, op_defined, op_replace_nan, op_smoothie, op_zero_if_none)
+
+### 006-printer-op-top-aggregate-string.patch
+
+Applied to vendored `github.com/prometheus/prometheus` after `go mod vendor`.
+
+Patches existing vendored Prometheus files to:
+- Add to the `String` method of the `AggregateExpr` struct to print the expression with the `op_top` function
