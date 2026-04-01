@@ -31,14 +31,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const activeNavMobile = document.querySelector('li.active-mobile');
         if (activeNavMobile) {
-            navTrigger.textContent = getNavItemTitle(activeNavMobile);
+            if(navTrigger) {
+                navTrigger.textContent = getNavItemTitle(activeNavMobile);
+            }
             return activeNavMobile;
         }
 
         const activeNav = document.querySelector('.header__navigation-item.active');
         activeNav.classList.remove('active');
         activeNav.classList.add('active-mobile');
-        navTrigger.textContent = getNavItemTitle(activeNav);
+        if(navTrigger) {
+            navTrigger.textContent = getNavItemTitle(activeNav);
+        }
         return activeNav;
     }
 
