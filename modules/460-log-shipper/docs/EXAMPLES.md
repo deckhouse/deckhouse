@@ -906,7 +906,10 @@ The optional `when` field is a list of conditions combined with logical AND. The
 - an existence check: only a path with no operator, e.g. `.pod_labels.team` (field must exist);
 - absence: e.g. `!.pod_labels.legacy`.
 
-If the value at a path is an array, `==` and `=~` are true when at least one element matches; `!=` and `!=~` are true when no element matches.
+If the value at a set path is an array, the conditions work as follows:
+
+- `==` and `=~` are true when at least one element matches.
+- `!=` and `!=~` are true when no element matches.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
