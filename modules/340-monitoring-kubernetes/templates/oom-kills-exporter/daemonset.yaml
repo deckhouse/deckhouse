@@ -53,11 +53,11 @@ spec:
       automountServiceAccountToken: true
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list . "oomKillsExporter") }}
         name: oom-kills-exporter
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYSLOG")) | nindent 8 }}
         args:
           - -logtostderr
           - -v=2
