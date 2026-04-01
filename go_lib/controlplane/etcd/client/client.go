@@ -57,8 +57,9 @@ type Interface interface {
 // Client wraps clientv3.Client so package-level methods can grow custom logic
 // without exposing the raw etcd client as the primary API.
 type Client struct {
-	client        *clientv3.Client
-	newEtcdClient func(endpoints []string) (Interface, error)
+	client            *clientv3.Client
+	newEtcdClient     func(endpoints []string) (Interface, error)
+	endpointsOverride []string // used in tests to avoid a real clientv3 connection
 }
 
 var _ Interface = (*Client)(nil)
@@ -73,6 +74,9 @@ func (c *Client) Raw() *clientv3.Client {
 }
 
 func (c *Client) Endpoints() []string {
+	if len(c.endpointsOverride) > 0 {
+		return c.endpointsOverride
+	}
 	return c.client.Endpoints()
 }
 

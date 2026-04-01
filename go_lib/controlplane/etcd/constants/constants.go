@@ -46,8 +46,6 @@ const (
 	// advertise client URLs
 	EtcdAdvertiseClientUrlsAnnotationKey = "control-plane-manager.deckhouse.io/etcd.advertise-client-urls"
 
-	KubernetesAPICallTimeout = 1 * time.Minute
-
 	// EtcdAPICallRetryInterval defines how long etcd should wait before retrying a failed API operation
 	EtcdAPICallRetryInterval = 500 * time.Millisecond
 
@@ -60,3 +58,7 @@ const (
 	// AdminKubeConfigFileName defines name for the kubeconfig aimed to be used by the admin of the cluster
 	AdminKubeConfigFileName = "admin.conf"
 )
+
+// KubernetesAPICallTimeout is the maximum time to wait for a Kubernetes API call to complete.
+// Declared as a variable (not const) so tests can override it with a shorter duration.
+var KubernetesAPICallTimeout = 1 * time.Minute
