@@ -258,10 +258,11 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	}
 	dvpMachine.Spec.ProviderID = ProviderIDPrefix + vm.Name
 
-	return r.reconcileVMPhase(logger, machine, dvpMachine, vm)
+	return r.reconcileVMPhase(ctx, logger, machine, dvpMachine, vm)
 }
 
 func (r *DeckhouseMachineReconciler) reconcileVMPhase(
+	ctx context.Context,
 	logger logr.Logger,
 	machine *clusterv1b2.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
@@ -271,11 +272,11 @@ func (r *DeckhouseMachineReconciler) reconcileVMPhase(
 	case v1alpha2.MachineRunning:
 		return r.handleVMRunning(logger, dvpMachine, vm)
 	case v1alpha2.MachineStopped:
-		return r.handleVMStopped(logger, dvpMachine, vm)
+		return r.handleVMStopped(ctx, logger, dvpMachine, vm)
 	case v1alpha2.MachineDegraded:
 		return r.handleVMDegraded(logger, machine, dvpMachine, vm)
 	default:
-		return r.handleVMNotReady(logger, dvpMachine, vm)
+		return r.handleVMNotReady(ctx, logger, dvpMachine, vm)
 	}
 }
 
@@ -315,6 +316,7 @@ func (r *DeckhouseMachineReconciler) handleVMRunning(
 }
 
 func (r *DeckhouseMachineReconciler) handleVMStopped(
+	ctx context.Context,
 	logger logr.Logger,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 	vm *v1alpha2.VirtualMachine,
@@ -324,11 +326,16 @@ func (r *DeckhouseMachineReconciler) handleVMStopped(
 	logger.Info("VM is in Stopped state, waiting for DVP to bring it back up", "state", vm.Status.Phase)
 	dvpMachine.Status.Initialization.Provisioned = ptr.To(false)
 
+	message := "VM is in Stopped state, waiting for DVP to bring it back up"
+	if resourceStatus := r.collectOwnedResourcesStatus(ctx, dvpMachine); resourceStatus != "" {
+		message = fmt.Sprintf("%s. Resources: %s", message, resourceStatus)
+	}
+
 	conditions.Set(dvpMachine, metav1.Condition{
 		Type:               string(infrastructurev1a1.VMReadyCondition),
 		Status:             metav1.ConditionFalse,
 		Reason:             infrastructurev1a1.VMInStoppedStateReason,
-		Message:            "VM is in Stopped state, waiting for DVP to bring it back up",
+		Message:            message,
 		LastTransitionTime: metav1.Now(),
 	})
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -387,6 +394,7 @@ func (r *DeckhouseMachineReconciler) handleVMDegraded(
 }
 
 func (r *DeckhouseMachineReconciler) handleVMNotReady(
+	ctx context.Context,
 	logger logr.Logger,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 	vm *v1alpha2.VirtualMachine,
@@ -395,14 +403,76 @@ func (r *DeckhouseMachineReconciler) handleVMNotReady(
 	// due to potential conflict or unexpected actions
 	logger.Info("Waiting for VM state to become Running", "state", vm.Status.Phase)
 	dvpMachine.Status.Initialization.Provisioned = ptr.To(false)
+
+	message := fmt.Sprintf("VM is not ready, state is %s", vm.Status.Phase)
+	if resourceStatus := r.collectOwnedResourcesStatus(ctx, dvpMachine); resourceStatus != "" {
+		message = fmt.Sprintf("%s. Resources: %s", message, resourceStatus)
+	}
+
 	conditions.Set(dvpMachine, metav1.Condition{
 		Type:               string(infrastructurev1a1.VMReadyCondition),
 		Status:             metav1.ConditionUnknown,
 		Reason:             infrastructurev1a1.VMNotReadyReason,
-		Message:            fmt.Sprintf("VM is not ready, state is %s", vm.Status.Phase),
+		Message:            message,
 		LastTransitionTime: metav1.Now(),
 	})
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+}
+
+func (r *DeckhouseMachineReconciler) collectOwnedResourcesStatus(
+	ctx context.Context,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+) string {
+	logger := log.FromContext(ctx)
+	var parts []string
+
+	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
+	secret := &corev1.Secret{}
+	err := r.DVP.Service.GetClient().Get(ctx, client.ObjectKey{
+		Namespace: r.DVP.ProjectNamespace(),
+		Name:      cloudInitSecretName,
+	}, secret)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			parts = append(parts, fmt.Sprintf("secret %s: not found", cloudInitSecretName))
+		} else {
+			logger.V(1).Info("Cannot get cloud-init secret status", "secretName", cloudInitSecretName, "error", err)
+			parts = append(parts, fmt.Sprintf("secret %s: unknown", cloudInitSecretName))
+		}
+	} else {
+		parts = append(parts, fmt.Sprintf("secret %s: exists", cloudInitSecretName))
+	}
+
+	bootDiskName := dvpMachine.Name + "-boot"
+	diskNames := []string{bootDiskName}
+	for i := range dvpMachine.Spec.AdditionalDisks {
+		diskNames = append(diskNames, fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i))
+	}
+
+	for _, diskName := range diskNames {
+		disk, err := r.DVP.DiskService.GetDiskByName(ctx, diskName)
+		if err != nil {
+			if errors.Is(err, cloudprovider.InstanceNotFound) {
+				parts = append(parts, fmt.Sprintf("disk %s: not found", diskName))
+			} else {
+				logger.V(1).Info("Cannot get VirtualDisk status", "diskName", diskName, "error", err)
+				parts = append(parts, fmt.Sprintf("disk %s: unknown", diskName))
+			}
+			continue
+		}
+		status := fmt.Sprintf("disk %s: phase=%s", diskName, disk.Status.Phase)
+		if disk.Status.Progress != "" {
+			status += fmt.Sprintf(" progress=%s", disk.Status.Progress)
+		}
+		for _, c := range disk.Status.Conditions {
+			if c.Status != metav1.ConditionTrue {
+				status += fmt.Sprintf(" (%s: %s)", c.Type, c.Message)
+			}
+		}
+		parts = append(parts, status)
+	}
+
+	return strings.Join(parts, "; ")
 }
 
 func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
