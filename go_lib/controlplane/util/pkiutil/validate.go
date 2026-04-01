@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kubeconfig
+package pkiutil
 
-const (
-	DefaultClusterName            = "kubernetes"
-	DefaultOutDir                 = "/etc/kubernetes"
-	DefaultCertificatesDir        = "/etc/kubernetes/pki"
-	DefaultControlPlaneIP         = "127.0.0.1"
-	DefaultKubeAPIServerPort      = "6443"
-	DefaultKubeAPIProxyServerPort = "6445"
+import (
+	"crypto/x509"
+	"time"
 )
+
+// CertificateExpiresSoon returns true if cert will expire within the given threshold duration.
+func CertificateExpiresSoon(cert *x509.Certificate, threshold time.Duration) bool {
+	return time.Until(cert.NotAfter) < threshold
+}
