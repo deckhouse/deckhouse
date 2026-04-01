@@ -1031,7 +1031,7 @@ spec:
           - .message
 ```
 
-Example log line: a Java app emits structured JSON to stdout; the collector stores that line in the `message` field. The `msg` field inside the JSON holds the human-readable program log text.
+Example source log line: a Java app emits structured JSON to stdout, therefore the JSON line is stored in the `message` field of the event. The `msg` field inside that line holds the program log text.
 
 ```text
 {... "namespace": "prod", "pod_labels": {"app.kubernetes.io/name": "orders", "app": "api"}, "message": "{\"@timestamp\":\"2025-03-25T10:15:00.123Z\",\"level\":\"INFO\",\"logger\":\"com.example.OrderService\",\"msg\":\"Order id=42 created; user=1001\"}"}
