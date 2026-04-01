@@ -330,11 +330,9 @@ After the configurations are applied, bootstrap and reboot the nodes to apply th
 General information about preparing GPU nodes, installing drivers, and verifying GPU operation is provided in the [How do I work with GPU nodes](/modules/node-manager/faq.html#how-do-i-work-with-gpu-nodes) section.
 {% endalert %}
 
-{% alert level="warning" %}
 In a single-node cluster that uses the `MIG` strategy, the MIG configuration must be reapplied manually after each node reboot.
 
 This limitation applies to the current MIG implementation, which uses the `nvidia-mig-manager` component.
-{% endalert %}
 
 After each node reboot, perform the following steps:
 
