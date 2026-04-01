@@ -46,6 +46,7 @@ shell:
   - cp /patches/op_func.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_func.go
   - cp /patches/op_top.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_top.go
   - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/002-op-functions.patch
+  - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/003-printer-op-top-aggregate-string.patch
   - cd /src/vendor/github.com/prometheus/prometheus/promql/parser && goyacc -l -o generated_parser.y.go generated_parser.y
   - cd /src
   - |
