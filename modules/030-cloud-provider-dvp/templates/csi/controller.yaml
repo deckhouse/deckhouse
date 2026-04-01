@@ -77,6 +77,7 @@
   {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
   {{- $_ := set $csiControllerConfig "resizerEnabled" true }}
   {{- $_ := set $csiControllerConfig "topologyEnabled" false }}
+  {{- $_ := set $csiControllerConfig "securityPolicyExceptionEnabled" true }}
   {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
@@ -89,6 +90,7 @@
   {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
   {{- $_ := set $csiNodeConfig "driverFQDN" "csi.dvp.deckhouse.io" }}
   {{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
+  {{- $_ := set $csiNodeConfig "securityPolicyExceptionEnabled" true }}
   {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
