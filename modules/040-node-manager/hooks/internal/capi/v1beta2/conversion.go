@@ -16,7 +16,7 @@ limitations under the License.
 
 package v1beta2
 
-func (m *Machine) Hub()               {}
-func (in *MachineList) Hub()          {}
-func (m *MachineDeployment) Hub()     {}
+func (m *Machine) Hub()                {}
+func (in *MachineList) Hub()           {}
+func (m *MachineDeployment) Hub()      {}
 func (in *MachineDeploymentList) Hub() {}
