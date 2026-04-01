@@ -27,7 +27,7 @@ The Level 2 C4 architecture of the [`cloud-provider-openstack`](/modules/cloud-p
 
 The module consists of the following components:
 
-1. **Cloud-controller-manager**: It is an implementation of [Cloud controller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) for OpenStack. It provides interaction with the OpenStack cloud and performs the following functions:
+1. **Cloud-controller-manager**: [Kubernetes external cloud provider for OpenStack](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md), an implementation of [Cloud controller manager](https://kubernetes.io/docs/concepts/architecture/cloud-controller/) for OpenStack. It provides interaction with the OpenStack cloud and performs the following functions:
 
    * Implements a 1:1 relationship between a Node resource in Kubernetes and a VM in a cloud provider. To do this:
 
