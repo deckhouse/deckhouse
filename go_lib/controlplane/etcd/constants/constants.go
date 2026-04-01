@@ -16,6 +16,8 @@ limitations under the License.
 
 package constants
 
+import "time"
+
 const (
 	// Etcd defines variable used internally when referring to etcd component
 	Etcd = "etcd"
@@ -37,10 +39,20 @@ const (
 	// EtcdHealthcheckClientKeyName defines etcd's healthcheck client key name
 	EtcdHealthcheckClientKeyName = "etcd/healthcheck-client.key"
 
+	EtcdHealthyCheckInterval = 5 * time.Second
+	EtcdHealthyCheckRetries  = 8
+
 	// EtcdAdvertiseClientUrlsAnnotationKey is the annotation key on every etcd pod, describing the
 	// advertise client URLs
-	// CHANGE TO control-plane-manager.deckhouse.io/etcd.advertise-client-urls
-	EtcdAdvertiseClientUrlsAnnotationKey = "kubeadm.kubernetes.io/etcd.advertise-client-urls"
+	EtcdAdvertiseClientUrlsAnnotationKey = "control-plane-manager.deckhouse.io/etcd.advertise-client-urls"
+
+	KubernetesAPICallTimeout = 1 * time.Minute
+
+	// EtcdAPICallRetryInterval defines how long etcd should wait before retrying a failed API operation
+	EtcdAPICallRetryInterval = 500 * time.Millisecond
+
+	// KubernetesAPICallRetryInterval defines how long kubeadm should wait before retrying a failed API operation
+	KubernetesAPICallRetryInterval = 500 * time.Millisecond
 
 	// ControlPlaneTier is the value used in the tier label to identify control plane components
 	ControlPlaneTier = "control-plane"

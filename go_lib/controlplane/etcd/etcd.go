@@ -23,31 +23,23 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
-	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
-	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
 
 var logger = log.Default().Named("etcd")
-
-const (
-	etcdHealthyCheckInterval = 5 * time.Second
-	etcdHealthyCheckRetries  = 8
-	KubernetesAPICallTimeout = 1 * time.Minute
-)
 
 func InitCluster(podManifest []byte, nodeName string, options ...option) error {
 	opt := prepareOptions(options...)
 
 	logger.Info("Creating static Pod manifest during init cluster", slog.String("component", constants.Etcd))
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, []*etcdserverpb.Member{}); err != nil {
+	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName, []*etcdserverpb.Member{}); err != nil {
 		return err
 	}
 	return nil
@@ -56,22 +48,23 @@ func InitCluster(podManifest []byte, nodeName string, options ...option) error {
 func JoinCluster(podManifest []byte, ip string, nodeName string, options ...option) error {
 	opt := prepareOptions(options...)
 
-	kubeClient, err := client.MyNewKubernetesClient()
+	kubeClient, err := client.NewKubernetesClient()
 	if err != nil {
 		return err
 	}
 
 	etcdPeerAddress := GetPeerURL(ip)
 
-	var etcdClient *clientv3.Client
+	var etcdClient client.Interface
 
 	etcdClient, err = client.New(kubeClient, opt.CertificatesDir)
 	if err != nil {
 		return err
 	}
+	defer etcdClient.Close()
+
 	//nolint:sloglint
 	logger.Info("Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
-	// cluster, err = etcdClient.AddMemberAsLearner(nodeName, etcdPeerAddress)
 	clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), []string{etcdPeerAddress})
 	if err != nil {
 		return err
@@ -79,28 +72,28 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 
 	logger.Info("Creating static Pod manifest during join cluster", slog.String("component", constants.Etcd))
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, clusterResponse.Members); err != nil {
+	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName, clusterResponse.Members); err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), KubernetesAPICallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), constants.KubernetesAPICallTimeout)
 	defer cancel()
 	_, err = etcdClient.MemberPromote(ctx, clusterResponse.Member.ID)
 	if err != nil {
 		return err
 	}
 
-	logger.Info("Waiting for the new etcd member to join the cluster", slog.Duration("timeout", etcdHealthyCheckInterval*etcdHealthyCheckRetries))
-	if _, err := client.WaitForClusterAvailable(etcdClient, etcdHealthyCheckRetries, etcdHealthyCheckInterval); err != nil {
+	logger.Info("Waiting for the new etcd member to join the cluster", slog.Duration("timeout", constants.EtcdHealthyCheckInterval*constants.EtcdHealthyCheckRetries))
+	if _, err := etcdClient.WaitForClusterAvailable(constants.EtcdHealthyCheckRetries, constants.EtcdHealthyCheckInterval); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, initialCluster []*etcdserverpb.Member) error {
+func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, nodeName string, initialCluster []*etcdserverpb.Member) error {
 	if len(initialCluster) > 0 {
-		podManifest = addMembersToPodManifest(podManifest, initialCluster)
+		podManifest = addMembersToPodManifest(podManifest, nodeName, initialCluster)
 	}
 
 	if err := writeStaticPodToDisk(podManifest, constants.Etcd, options.ManifestDir); err != nil {
@@ -111,11 +104,17 @@ func prepareAndWriteEtcdStaticPod(podManifest []byte, options *options, initialC
 	return nil
 }
 
-func addMembersToPodManifest(podManifest []byte, initialCluster []*etcdserverpb.Member) []byte {
+func addMembersToPodManifest(podManifest []byte, nodeName string, initialCluster []*etcdserverpb.Member) []byte {
 	podManifestString := string(podManifest)
 	var endpoints []string //nolint:prealloc
 	for _, member := range initialCluster {
-		endpoints = append(endpoints, fmt.Sprintf("%s=%s", member.Name, member.PeerURLs[0]))
+		name := member.Name
+		// etcd does not assign a name to a member until it starts
+		// newly added learners have an empty name - use nodeName instead.
+		if name == "" {
+			name = nodeName
+		}
+		endpoints = append(endpoints, fmt.Sprintf("%s=%s", name, member.PeerURLs[0]))
 	}
 	initialClusterString := strings.Join(endpoints, ",")
 
