@@ -32,7 +32,7 @@ const (
 	KindApplication = "Application"
 )
 
-// ObjectType represents apiVersion/kind header for determining the package kind.
+// ObjectType represents apiVersion/type header for determining the package type.
 type ObjectType struct {
 	APIVersion string `yaml:"apiVersion" json:"apiVersion"`
 	Type       string `yaml:"type" json:"type"`
@@ -134,7 +134,7 @@ func (d *ApplicationDefinition) ToApplication() (apps.Definition, error) {
 	}, nil
 }
 
-// ToModule converts module definition to module definition
+// ToModule converts module definition to module domain model
 func (d *ModuleDefinition) ToModule() (modules.Definition, error) {
 	var err error
 

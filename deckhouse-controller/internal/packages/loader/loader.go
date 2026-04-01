@@ -367,7 +367,7 @@ func readPackageFile(packageDir string) ([]byte, error) {
 	return content, nil
 }
 
-// loadAppPackageDefinition loads ApplicationDefinition from package.yaml, validating kind: Application.
+// loadAppPackageDefinition loads ApplicationDefinition from package.yaml, validating type: Application.
 func loadAppPackageDefinition(packageDir string) (*dto.ApplicationDefinition, error) {
 	content, err := readPackageFile(packageDir)
 	if err != nil {
@@ -380,7 +380,7 @@ func loadAppPackageDefinition(packageDir string) (*dto.ApplicationDefinition, er
 	}
 
 	if ot.Type != dto.KindApplication {
-		return nil, fmt.Errorf("expected kind %q, got %q", dto.KindApplication, ot.Type)
+		return nil, fmt.Errorf("expected type %q, got %q", dto.KindApplication, ot.Type)
 	}
 
 	def := new(dto.ApplicationDefinition)
@@ -391,7 +391,7 @@ func loadAppPackageDefinition(packageDir string) (*dto.ApplicationDefinition, er
 	return def, nil
 }
 
-// loadModulePackageDefinition loads ModuleDefinition from package.yaml, validating kind: Module.
+// loadModulePackageDefinition loads ModuleDefinition from package.yaml, validating type: Module.
 // Falls back to legacy module.yaml if package.yaml doesn't exist.
 func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, error) {
 	content, err := readPackageFile(packageDir)
@@ -402,7 +402,7 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 		}
 
 		if ot.Type != "" && ot.Type != dto.KindModule {
-			return nil, fmt.Errorf("expected kind %q, got %q", dto.KindModule, ot.Type)
+			return nil, fmt.Errorf("expected type %q, got %q", dto.KindModule, ot.Type)
 		}
 
 		def := new(dto.ModuleDefinition)
