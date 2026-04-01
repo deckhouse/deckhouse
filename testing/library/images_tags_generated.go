@@ -474,7 +474,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"dockerDistribution": "imageHash-registry-dockerDistribution",
 	},
 	"registryPackagesProxy": map[string]interface{}{
-		"registryPackagesProxy": "imageHash-registryPackagesProxy-registryPackagesProxy",
+		"registryPackagesProxy":            "imageHash-registryPackagesProxy-registryPackagesProxy",
+		"registryPackagesProxyVexArtifact": "imageHash-registryPackagesProxy-registryPackagesProxyVexArtifact",
 	},
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":               "imageHash-registrypackages-amazonEc2Utils220",

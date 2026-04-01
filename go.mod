@@ -108,7 +108,6 @@ require (
 	github.com/name212/govalue v1.0.1 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/sigstore/sigstore v1.8.8 // indirect
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.8 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 )
