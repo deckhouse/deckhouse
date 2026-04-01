@@ -29,6 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -90,6 +91,7 @@ func operationCtx(server grpc.ServerStream) (context.Context, context.CancelFunc
 	}()
 
 	opCtx, cancel := context.WithCancel(ctx)
+	opCtx = infraexec.ContextWithForceStop(opCtx)
 
 	return logger.ToContext(
 		opCtx,
