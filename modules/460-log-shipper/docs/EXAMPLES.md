@@ -925,7 +925,7 @@ spec:
           .source_app: "{{ .pod_labels.app }}"
 ```
 
-Transformed result (conceptually, for an event in namespace `production` with pod label `app=api`):
+Transformed result for an event in namespace `production` with pod label `app=api`:
 
 ```json
 {..."namespace": "production", "pod_labels": { "app": "api" } "env": "prod", "source_app": "api", ...
