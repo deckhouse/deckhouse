@@ -127,3 +127,31 @@ git:
     install:
     - "**/*"
 {{- end }}
+
+#  render create ln part of setup script
+# . is dict with keys:
+#   TF - $.TF
+#   Editions - $.Editions
+{{- define "dev_prebuild_setup_ln_node_manager" }}
+{{- $context := . -}}
+# Add capi and cloud-providers
+{{- $providers := list }}
+{{- range $_, $edition := $context.Editions }}
+  {{- if $edition.terraformProviders }}
+    {{- range $_, $tfProvider := $edition.terraformProviders }}
+      {{- $tf := index $context.TF $tfProvider }}
+        {{- $cloudName := lower $tf.cloudName }}
+        {{- $providers = append $providers $cloudName }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+mkdir -p /deckhouse/modules/040-node-manager/capi /deckhouse/modules/040-node-manager/cloud-providers
+for item in {{ join " " $providers }}; do
+  if [ -d /deckhouse/modules/030-cloud-provider-${item}/capi ]; then
+    ln -s /deckhouse/modules/030-cloud-provider-${item}/capi /deckhouse/modules/040-node-manager/capi/${item}
+  fi
+  if [ -d /deckhouse/modules/30-cloud-provider-${item}/cloud-instance-manager ]; then
+    ln -s /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager /deckhouse/modules/040-node-manager/cloud-providers/${item}
+  fi
+done
+{{- end }}

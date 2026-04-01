@@ -33,27 +33,7 @@ shell:
     EOD
 {{- end }}
 
-    # Add capi and cloud-providers
-{{- $providers := list }}
-{{- range $_, $edition := $.Editions }}
-  {{- if $edition.terraformProviders }}
-    {{- range $_, $tfProvider := $edition.terraformProviders }}
-      {{- $tf := index $.TF $tfProvider }}
-        {{- $cloudName := lower $tf.cloudName }}
-        {{- $providers = append $providers $cloudName }}
-    {{- end }}
-  {{- end }}
-{{- end }}
-    mkdir -p /deckhouse/modules/040-node-manager/capi /deckhouse/modules/040-node-manager/cloud-providers
-    for item in {{ join " " $providers }}; do
-      if [ -d /deckhouse/modules/030-cloud-provider-${item}/capi ]; then
-        ln -s /deckhouse/modules/030-cloud-provider-${item}/capi /deckhouse/modules/040-node-manager/capi/${item}
-      fi
-      if [ -d /deckhouse/modules/30-cloud-provider-${item}/cloud-instance-manager ]; then
-        ln -s /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager /deckhouse/modules/040-node-manager/cloud-providers/${item}
-      fi
-    done
-
+    {{ include "dev_prebuild_setup_ln_node_manager" (dict "TF" .TF "Editions" .Editions) | nindent 4}}
     {{ include "dev_prebuild_setup_script_general_part" (dict "Env" .Env "CI_COMMIT_TAG" .CI_COMMIT_TAG) | nindent 4}}
 
 {{ include "dev_prebuild_docker_properties" . }}
