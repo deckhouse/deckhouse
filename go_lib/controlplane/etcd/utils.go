@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
 
 // GetPeerURL creates an HTTPS URL that uses the configured advertise

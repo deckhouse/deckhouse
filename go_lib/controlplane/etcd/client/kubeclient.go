@@ -52,7 +52,7 @@ func ClientSetFromFile(path string) (clientset.Interface, error) {
 }
 
 // Client returns the Client for accessing the cluster with the identity defined in admin.conf.
-func MyNewKubernetesClient() (clientset.Interface, error) {
+func NewKubernetesClient() (clientset.Interface, error) {
 	pathAdmin := filepath.Join(constants.KubernetesDir, constants.AdminKubeConfigFileName)
 
 	client, err := ClientSetFromFile(pathAdmin)

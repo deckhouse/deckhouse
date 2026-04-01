@@ -24,9 +24,11 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
+	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,26 +36,125 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
 
+const etcdTimeout = 2 * time.Second
+
+// Interface describes the etcd client surface used by controlplane code.
+// It allows tests to stub promotion-related flows without a real clientv3 connection.
+type Interface interface {
+	Endpoints() []string
+	Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error)
+	WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error)
+	MemberAddAsLearner(ctx context.Context, peerAddrs []string) (*clientv3.MemberAddResponse, error)
+	MemberPromote(ctx context.Context, id uint64) (*clientv3.MemberPromoteResponse, error)
+	Close() error
+}
+
+// Client wraps clientv3.Client so package-level methods can grow custom logic
+// without exposing the raw etcd client as the primary API.
+type Client struct {
+	client        *clientv3.Client
+	newEtcdClient func(endpoints []string) (Interface, error)
+}
+
+var _ Interface = (*Client)(nil)
+
+func wrap(etcdClient *clientv3.Client) *Client {
+	return &Client{client: etcdClient}
+}
+
+// Raw returns the underlying etcd client when direct access is required.
+func (c *Client) Raw() *clientv3.Client {
+	return c.client
+}
+
+func (c *Client) Endpoints() []string {
+	return c.client.Endpoints()
+}
+
+func (c *Client) Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error) {
+	return c.client.Status(ctx, endpoint)
+}
+
+func (c *Client) getMemberStatus(ctx context.Context, memberID uint64) (isLearner bool, started bool, err error) {
+	//todo newClient?
+	resp, err := c.client.MemberList(ctx)
+	if err != nil {
+		return false, false, err
+	}
+
+	var m *etcdserverpb.Member
+	for _, member := range resp.Members {
+		if member.ID == memberID {
+			m = member
+			break
+		}
+	}
+	if m == nil {
+		return false, false, fmt.Errorf("member %s not found", strconv.FormatUint(memberID, 16))
+	}
+
+	started = true
+	// There is no field for "started".
+	// If the member is not started, the Name and ClientURLs fields are set to their respective zero values.
+	if len(m.Name) == 0 {
+		started = false
+	}
+
+	return m.IsLearner, started, nil
+}
+
+func (c *Client) MemberAddAsLearner(ctx context.Context, peerAddrs []string) (*clientv3.MemberAddResponse, error) {
+	return c.client.MemberAddAsLearner(ctx, peerAddrs)
+}
+
+// MemberPromote is the extension point for extra promotion logic around clientv3.
+func (c *Client) MemberPromote(ctx context.Context, id uint64) (*clientv3.MemberPromoteResponse, error) {
+	var (
+		lastError     error
+		learnerIDUint = strconv.FormatUint(id, 16)
+	)
+	logger.Info("etcd] Waiting for a learner to start", slog.String("learnerID", learnerIDUint))
+
+	err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, constants.KubernetesAPICallTimeout,
+		true, func(pollCtx context.Context) (bool, error) {
+			isLearner, started, err := c.getMemberStatus(pollCtx, id)
+			if err != nil {
+				lastError = errors.WithMessagef(err, "failed to get member %s status", learnerIDUint)
+				return false, nil
+			}
+			if !isLearner {
+				logger.Info("member was already promoted.", slog.Any("memberID", learnerIDUint))
+				return true, nil
+			}
+			if !started {
+				logger.Info("member is not started yet. Waiting for it to be started.", slog.String("memberID", learnerIDUint))
+				lastError = errors.Errorf("the etcd member %s is not started", learnerIDUint)
+				return false, nil
+			}
+			return true, nil
+		})
+	if err != nil {
+		return nil, lastError
+	}
+
+	return c.client.MemberPromote(ctx, id)
+}
+
+func (c *Client) Close() error {
+	return c.client.Close()
+}
+
 var logger = log.Default().Named("etcd-client")
 
-const (
-	KubernetesAPICallTimeout = 1 * time.Minute
-
-	// EtcdAPICallRetryInterval defines how long etcd should wait before retrying a failed API operation
-	EtcdAPICallRetryInterval = 500 * time.Millisecond
-
-	// KubernetesAPICallRetryInterval defines how long kubeadm should wait before retrying a failed API operation
-	KubernetesAPICallRetryInterval = 500 * time.Millisecond
-)
-
-// New creates an etcd client for the etcd endpoints present in etcd member list. In order to compose this information,
+// New creates an etcd client wrapper for the etcd endpoints present in etcd member list. In order to compose this information,
 // it will first discover at least one etcd endpoint to connect to. Once created, the client synchronizes client's endpoints with
 // the known endpoints from the etcd membership API, since it is the authoritative source of truth for the list of available members.
-func New(client clientset.Interface, certificatesDir string) (*clientv3.Client, error) {
+func New(client clientset.Interface, certificatesDir string) (Interface, error) {
 	// Discover at least one etcd endpoint to connect to by inspecting the existing etcd pods
 
 	// Get the list of etcd endpoints
@@ -74,7 +175,7 @@ func New(client clientset.Interface, certificatesDir string) (*clientv3.Client, 
 	caPool := x509.NewCertPool()
 	caPool.AppendCertsFromPEM(caData)
 
-	etcdClient, err := clientv3.New(clientv3.Config{
+	rawClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: 5 * time.Second,
 		TLS: &tls.Config{
@@ -86,7 +187,7 @@ func New(client clientset.Interface, certificatesDir string) (*clientv3.Client, 
 		return nil, err
 	}
 
-	return etcdClient, nil
+	return wrap(rawClient), nil
 }
 
 // getEtcdEndpoints returns the list of etcd endpoints.
@@ -95,7 +196,7 @@ func getEtcdEndpoints(client clientset.Interface) ([]string, error) {
 	var lastErr error
 	// Let's tolerate some unexpected transient failures from the API server or load balancers. Also, if
 	// static pods were not yet mirrored into the API server we want to wait for this propagation.
-	err := wait.PollUntilContextTimeout(context.Background(), KubernetesAPICallRetryInterval, KubernetesAPICallTimeout, true,
+	err := wait.PollUntilContextTimeout(context.Background(), constants.KubernetesAPICallRetryInterval, constants.KubernetesAPICallTimeout, true,
 		func(_ context.Context) (bool, error) {
 			var overallEtcdPodCount int
 			if etcdEndpoints, overallEtcdPodCount, lastErr = getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client); lastErr != nil {
@@ -154,22 +255,56 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 	return etcdEndpoints, len(podList.Items), nil
 }
 
-// WaitForClusterAvailable returns true if all endpoints in the cluster are available after retry attempts, an error is returned otherwise
-func WaitForClusterAvailable(c *clientv3.Client, retries int, retryInterval time.Duration) (bool, error) {
+func (c *Client) getClusterStatus() (map[string]*clientv3.StatusResponse, error) {
+	clusterStatus := make(map[string]*clientv3.StatusResponse)
+	for _, ep := range c.Endpoints() {
+		// Gets the member status
+		var lastError error
+		var resp *clientv3.StatusResponse
+		err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, constants.KubernetesAPICallTimeout,
+			true, func(_ context.Context) (bool, error) {
+				cli, err := c.newEtcdClient(c.Endpoints())
+				if err != nil {
+					lastError = err
+					return false, nil
+				}
+				defer func() { _ = cli.Close() }()
+
+				ctx, cancel := context.WithTimeout(context.Background(), etcdTimeout)
+				resp, err = cli.Status(ctx, ep)
+				cancel()
+				if err == nil {
+					return true, nil
+				}
+				logger.Error("Failed to get etcd status for", slog.Any("endpoint", ep), log.Err(err))
+				lastError = err
+				return false, nil
+			})
+		if err != nil {
+			return nil, lastError
+		}
+
+		clusterStatus[ep] = resp
+	}
+	return clusterStatus, nil
+}
+
+func (c *Client) WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error) {
 	for i := 0; i < retries; i++ {
 		if i > 0 {
 			// nolint:sloglint
 			logger.Info("Waiting until next retry", slog.Duration("retryInterval", retryInterval))
 			time.Sleep(retryInterval)
 		}
-		logger.Info("attempting to see if all cluster endpoints are available", slog.Any("endpoints", c.Endpoints), slog.Int("attempt", i+1), slog.Int("retries", retries))
-		_, err := c.Status(context.Background(), c.Endpoints()[0])
+		endpoints := c.Endpoints()
+		logger.Info("attempting to see if all cluster endpoints are available", slog.Any("endpoints", endpoints), slog.Int("attempt", i+1), slog.Int("retries", retries))
+		_, err := c.getClusterStatus()
 		if err != nil {
 			switch err {
 			case context.DeadlineExceeded:
-				logger.Info("Attempt timed out")
+				logger.Warn("Attempt timed out")
 			default:
-				logger.Info("Attempt failed with error", slog.Any("error", err))
+				logger.Warn("Attempt failed with error", slog.Any("error", err))
 			}
 			continue
 		}
