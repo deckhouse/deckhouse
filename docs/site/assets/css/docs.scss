@@ -1827,6 +1827,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
         table {
             th, td {
                 padding: 1em 1.2em;
+
+                @include breakpoints.max-w(s) {
+                    padding: 12px;
+                }
             }
         }
     }

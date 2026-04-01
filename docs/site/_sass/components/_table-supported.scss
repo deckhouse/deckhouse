@@ -2,7 +2,7 @@
 @use 'components/common/_mixins.scss';
 @use 'components/common/_breakpoints.scss';
 
-.supported_versions {
+.supported_versions:not(.table__small) {
     @include breakpoints.max-w(l) {
         font-size: 14px !important;
     }
