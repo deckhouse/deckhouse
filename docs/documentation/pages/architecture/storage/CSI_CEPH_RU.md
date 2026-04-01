@@ -42,11 +42,11 @@ description: Архитектура модуля csi-ceph в Deckhouse Kubernete
    * **controller** — основной контейнер;
    * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов CephClusterAuthentication, CephClusterConnection, CephMetadataBackup и CephStorageClass.
 
-2. **CSI-драйвер (rbd/cephfs)** — реализация CSI-драйвера для `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` provisioner.
+2. **CSI-драйвер (rbd/cephfs)** — реализация CSI-драйвера для `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` provisioner. Выбор CSI-драйвера выполняется путём задания storage-класса в кастомном ресурсе CephStorageClass.
 
 CSI-драйвер (cephfs) реализован по типовой архитектуре CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
-CSI-драйвер (rbd) реализован по отличной от типовой архитектуры CSI-драйвера.
+CSI-драйвер (rbd) реализован по отличной от типовой архитектуры CSI-драйвера, которая приведена далее по тексту.
 
 ### Архитектура CSI-драйвера (rbd)
 
