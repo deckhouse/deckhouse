@@ -22,6 +22,13 @@ No engine changes are needed since Mimir does not evaluate PromQL locally.
 
 The parser is regenerated from the `.y` grammar using `goyacc` during the build.
 
+### 003-printer-op-top-aggregate-string.patch
+
+Applied to vendored `github.com/prometheus/prometheus` after `go mod vendor`.
+
+Patches existing vendored Prometheus files to:
+- Add to the `String` method of the `AggregateExpr` struct to print the expression with the `op_top` function
+
 ### op_parser_init.go.tpl
 
 Copied into vendored `github.com/prometheus/prometheus/promql/` after `go mod vendor`.
