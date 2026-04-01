@@ -64,16 +64,31 @@ const (
 	ConditionReady    = "Ready"
 	ConditionFailed   = "Failed"
 
+	// Pipeline step condition types (observability)
+	ConditionStepSyncCA        = "SyncCA"
+	ConditionStepRenewPKICerts = "RenewPKICerts"
+	ConditionStepRenewKubeconfigs = "RenewKubeconfigs"
+	ConditionStepSyncManifests   = "SyncManifests"
+	ConditionStepWaitPodReady    = "WaitPodReady"
+
 	// Approved condition reasons
 	ReasonApproved             = "Approved"
 	ReasonWaitingForSlot       = "WaitingForSlot"
 	ReasonWaitingForDependency = "WaitingForDependency"
 	ReasonWaitingForFIFO       = "WaitingForFIFO"
 
+	// Step condition reasons
+	ReasonStepCompleted  = "Completed"
+	ReasonStepInProgress = "InProgress"
+	ReasonStepFailed     = "Failed"
+
 	// Ready condition reasons
 	ReasonOperationSucceeded = "OperationSucceeded"
 	ReasonWaitingForApproval = "WaitingForApproval"
-	ReasonWritingManifest    = "WritingManifest"
+	ReasonSyncingCA          = "SyncingCA"
+	ReasonRenewingPKI         = "RenewingPKI"
+	ReasonRenewingKubeconfigs = "RenewingKubeconfigs"
+	ReasonSyncingManifests    = "SyncingManifests"
 	ReasonWaitingForPod      = "WaitingForPod"
 	ReasonCancelled          = "Cancelled"
 
