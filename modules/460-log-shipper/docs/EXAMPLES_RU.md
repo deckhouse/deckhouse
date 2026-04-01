@@ -519,7 +519,7 @@ spec:
 
 ## Преобразование логов
 
-В `ClusterLogDestination` можно задать цепочку трансформаций по порядку. Доступны действия: `ParseMessage`, `ReplaceKeys`, `ReplaceValue`, `AddLabels`, `DropLabels`.
+В ресурсе ClusterLogDestination можно задать цепочку трансформаций по порядку. Поддерживаются следующие действия: `ParseMessage`, `ReplaceKeys`, `ReplaceValue`, `AddLabels`, `DropLabels`.
 
 ### Преобразование логов в структурированный объект
 
