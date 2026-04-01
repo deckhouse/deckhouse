@@ -2,7 +2,7 @@
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/relocate-artifact
+fromImage: builder/alpine
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -34,17 +34,16 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
 import:
-- image: common-base-python-artifact
-  add: /
-  to: /
-  before: setup
-  includePaths:
-  - usr/bin/python*
-  - usr/lib/python*
-  - usr/lib/libc.so
-  - lib/ld-musl-x86_64.so.1
-- image: registrypackages/d8-curl-artifact-8-9-1
-  add: /d8-curl
+- image: libs/musl
+  add: /usr/lib/libc.so
+  to: /usr/lib/libc.so
+  before: install
+- image: libs/musl
+  add: /lib/ld-musl-x86_64.so.1
+  to: /lib/ld-musl-x86_64.so.1
+  before: install
+- image: tools/curl
+  add: /usr/bin/curl
   to: /usr/bin/curl
   before: install
 - image: tools/bash
