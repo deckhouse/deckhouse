@@ -14,13 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kubeconfig
+package pkiutil
 
-const (
-	DefaultClusterName            = "kubernetes"
-	DefaultOutDir                 = "/etc/kubernetes"
-	DefaultCertificatesDir        = "/etc/kubernetes/pki"
-	DefaultControlPlaneIP         = "127.0.0.1"
-	DefaultKubeAPIServerPort      = "6443"
-	DefaultKubeAPIProxyServerPort = "6445"
+import (
+	"crypto/x509"
+	"encoding/pem"
 )
+
+const certificateBlockType = "CERTIFICATE"
+
+// EncodeCertificate returns the PEM-encoded representation of cert.
+func EncodeCertificate(cert *x509.Certificate) []byte {
+	block := pem.Block{
+		Type:  certificateBlockType,
+		Bytes: cert.Raw,
+	}
+	return pem.EncodeToMemory(&block)
+}

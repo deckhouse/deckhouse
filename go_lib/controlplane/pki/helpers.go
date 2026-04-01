@@ -17,15 +17,27 @@ limitations under the License.
 package pki
 
 import (
-	"time"
-
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
-	certutil "k8s.io/client-go/util/cert"
+	"fmt"
+	"net"
 )
 
-// CertConfig is a wrapper around certutil.Config extending it with EncryptionAlgorithm.
-type CertConfig struct {
-	certutil.Config
-	NotAfter            time.Time
-	EncryptionAlgorithm constants.EncryptionAlgorithmType
+func firstIPInCIDR(cidr string) (net.IP, error) {
+	_, network, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse service CIDR %q: %w", cidr, err)
+	}
+
+	ip := make(net.IP, len(network.IP))
+	copy(ip, network.IP)
+	ip[len(ip)-1]++
+
+	return ip, nil
+}
+
+func stripPort(hostport string) string {
+	host, _, err := net.SplitHostPort(hostport)
+	if err != nil {
+		return hostport
+	}
+	return host
 }

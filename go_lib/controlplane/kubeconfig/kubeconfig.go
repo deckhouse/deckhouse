@@ -27,13 +27,15 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/keyutil"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
 
 var logger = log.Default().Named("kubeconfig")
@@ -149,7 +151,7 @@ func getFileSpec(kind File, opt *options) (*fileSpec, error) {
 func buildConfig(spec *fileSpec) (*clientcmdapi.Config, error) {
 	clientCertConfig := newClientCertConfig(spec)
 
-	clientCert, clientKey, err := pki.NewCertAndKey(spec.CACert, spec.CAKey, &clientCertConfig)
+	clientCert, clientKey, err := pkiutil.NewCertAndKey(spec.CACert, spec.CAKey, clientCertConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failure while creating %q client certificate: %w", spec.ClientName, err)
 	}
@@ -163,7 +165,7 @@ func buildConfig(spec *fileSpec) (*clientcmdapi.Config, error) {
 		Clusters: map[string]*clientcmdapi.Cluster{
 			spec.ClusterName: {
 				Server:                   spec.APIServer,
-				CertificateAuthorityData: pki.EncodeCertificate(spec.CACert),
+				CertificateAuthorityData: pkiutil.EncodeCertificate(spec.CACert),
 			},
 		},
 		Contexts: map[string]*clientcmdapi.Context{
@@ -174,7 +176,7 @@ func buildConfig(spec *fileSpec) (*clientcmdapi.Config, error) {
 		},
 		AuthInfos: map[string]*clientcmdapi.AuthInfo{
 			spec.ClientName: {
-				ClientCertificateData: pki.EncodeCertificate(clientCert),
+				ClientCertificateData: pkiutil.EncodeCertificate(clientCert),
 				ClientKeyData:         encodedClientKey,
 			},
 		},
@@ -184,8 +186,8 @@ func buildConfig(spec *fileSpec) (*clientcmdapi.Config, error) {
 	return config, nil
 }
 
-func newClientCertConfig(spec *fileSpec) pki.CertConfig {
-	return pki.CertConfig{
+func newClientCertConfig(spec *fileSpec) pkiutil.CertConfig {
+	return pkiutil.CertConfig{
 		Config: certutil.Config{
 			CommonName:   spec.ClientName,
 			Organization: spec.ClientCertOrganizations,
@@ -263,13 +265,9 @@ func validateCurrentKubeConfig(kubeConfigFilePath string, desiredConfig *clientc
 		return fmt.Errorf("cannot parse certificate from client-certificate-data: %w", err)
 	}
 
-	if certificateExpiresSoon(cert, 30*24*time.Hour) {
+	if pkiutil.CertificateExpiresSoon(cert, 30*24*time.Hour) {
 		return fmt.Errorf("client certificate is expiring in less than 30 days")
 	}
 
 	return nil
-}
-
-func certificateExpiresSoon(cert *x509.Certificate, threshold time.Duration) bool {
-	return time.Now().Add(threshold).After(cert.NotAfter)
 }

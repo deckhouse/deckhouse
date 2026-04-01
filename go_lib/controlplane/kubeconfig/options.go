@@ -22,13 +22,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
-	"strings"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
 
 type options struct {
@@ -66,7 +66,7 @@ func prepareOptions(opts ...option) (*options, error) {
 	}
 
 	if opt.ControlPlaneEndpoint == "" {
-		opt.ControlPlaneEndpoint = fmt.Sprintf("https://%s:%s", DefaultControlPlaneIP, DefaultKubeApiProxyServerPort)
+		opt.ControlPlaneEndpoint = fmt.Sprintf("https://%s:%s", DefaultControlPlaneIP, DefaultKubeAPIProxyServerPort)
 	}
 
 	if opt.LocalAPIEndpoint == "" {
@@ -75,7 +75,7 @@ func prepareOptions(opts ...option) (*options, error) {
 			return nil, fmt.Errorf("failed to read %q file: %w", constants.DiscoveredNodeIPPath, err)
 		}
 
-		opt.LocalAPIEndpoint = fmt.Sprintf("https://%s:%s", strings.TrimSpace(string(discoveredNodeIP)), DefaultKubeApiServerPort)
+		opt.LocalAPIEndpoint = fmt.Sprintf("https://%s:%s", strings.TrimSpace(string(discoveredNodeIP)), DefaultKubeAPIServerPort)
 	}
 
 	if opt.CertificateValidityPeriod == nil {
@@ -97,6 +97,7 @@ func prepareOptions(opts ...option) (*options, error) {
 	return opt, nil
 }
 
+//nolint:unused
 func (opt *options) ensureNodeNameProvided() error {
 	if opt.NodeName == "" {
 		name, err := os.ReadFile(constants.DiscoveredNodeNamePath)
@@ -135,14 +136,14 @@ func WithCertificatesDir(certificatesDir string) option {
 // WithLocalAPIEndpoint is an option to set the local API endpoint.
 func WithLocalAPIEndpoint(nodeIP string) option {
 	return func(o *options) {
-		o.LocalAPIEndpoint = fmt.Sprintf("https://%s:%s", strings.TrimSpace(string(nodeIP)), DefaultKubeApiServerPort)
+		o.LocalAPIEndpoint = fmt.Sprintf("https://%s:%s", strings.TrimSpace(nodeIP), DefaultKubeAPIServerPort)
 	}
 }
 
 // WithControlPlaneEndpoint is an option to set the control plane endpoint.
 func WithControlPlaneEndpoint(controlPlaneIP string) option {
 	return func(o *options) {
-		o.ControlPlaneEndpoint = fmt.Sprintf("https://%s:%s", strings.TrimSpace(string(controlPlaneIP)), DefaultKubeApiProxyServerPort)
+		o.ControlPlaneEndpoint = fmt.Sprintf("https://%s:%s", strings.TrimSpace(controlPlaneIP), DefaultKubeAPIProxyServerPort)
 	}
 }
 
@@ -188,7 +189,7 @@ type defaultCertProvider struct {
 }
 
 func newDefaultCertProvider(certificatesDir string, validityPeriod *metav1.Duration) (*defaultCertProvider, error) {
-	caCert, caKey, err := pki.TryLoadCertAndKeyFromDisk(certificatesDir, constants.CACertAndKeyBaseName)
+	caCert, caKey, err := pkiutil.LoadCertAndKey(certificatesDir, constants.CACertAndKeyBaseName)
 	if os.IsNotExist(errors.Unwrap(err)) {
 		return nil, fmt.Errorf("the CA files do not exist in %s: %w", certificatesDir, err)
 	}
