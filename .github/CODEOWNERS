@@ -3,8 +3,8 @@
 000-common/images/alt-p11/                                     @name212 @090809
 002-deckhouse/                                                 @ldmonster
 007-registrypackages/                                          @RomanenkoDenys @sprait
-007-registrypackages/images/d8-ca-updater                      @name212 @090809
-007-registrypackages/images/d8-curl                            @name212 @090809
+007-registrypackages/images/d8-ca-updater/                     @name212 @090809
+007-registrypackages/images/d8-curl/                           @name212 @090809
 007-registrypackages/images/e2fsprogs                          @name212 @090809
 007-registrypackages/images/erofs                              @name212 @090809
 007-registrypackages/images/growpart                           @name212 @090809
