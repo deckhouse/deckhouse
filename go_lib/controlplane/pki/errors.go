@@ -14,13 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kubeconfig
+package pki
 
-const (
-	DefaultClusterName            = "kubernetes"
-	DefaultOutDir                 = "/etc/kubernetes"
-	DefaultCertificatesDir        = "/etc/kubernetes/pki"
-	DefaultControlPlaneIP         = "127.0.0.1"
-	DefaultKubeAPIServerPort      = "6443"
-	DefaultKubeAPIProxyServerPort = "6445"
-)
+import "fmt"
+
+// CertValidationError is returned by createRootCertIfNotExists when an existing CA
+// certificate does not satisfy the current configuration. The caller should treat
+// this as a hard error — CA certificates are never auto-regenerated.
+type CertValidationError struct {
+	BaseName string
+	Reason   string
+}
+
+func (e *CertValidationError) Error() string {
+	return fmt.Sprintf("certificate %q are not valid: %s", e.BaseName, e.Reason)
+}

@@ -27,15 +27,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
 
 var logger = log.Default().Named("etcd-client")
@@ -102,6 +102,7 @@ func getEtcdEndpoints(client clientset.Interface) ([]string, error) {
 				return false, nil
 			}
 			if len(etcdEndpoints) == 0 || overallEtcdPodCount != len(etcdEndpoints) {
+				//nolint:sloglint
 				logger.Info("found etcd pods and endpoints; retrying", slog.Int("etcdPodCount", overallEtcdPodCount), slog.Any("endpoints", etcdEndpoints))
 				return false, nil
 			}
@@ -157,6 +158,7 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 func WaitForClusterAvailable(c *clientv3.Client, retries int, retryInterval time.Duration) (bool, error) {
 	for i := 0; i < retries; i++ {
 		if i > 0 {
+			// nolint:sloglint
 			logger.Info("Waiting until next retry", slog.Duration("retryInterval", retryInterval))
 			time.Sleep(retryInterval)
 		}
