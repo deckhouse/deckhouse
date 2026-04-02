@@ -165,9 +165,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 
 	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
 		DockerConfig: packageRepo.Spec.Registry.DockerCFG,
+		Login:        packageRepo.Spec.Registry.Login,
+		Password:     packageRepo.Spec.Registry.Password,
 		CA:           packageRepo.Spec.Registry.CA,
 		Scheme:       packageRepo.Spec.Registry.Scheme,
-		// UserAgent: ,
 	}, r.logger)
 
 	registryClient, err := r.dc.GetRegistryClient(registryPath, opts...)
@@ -239,6 +240,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 
 	// Patch the status
 	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
+
+	if apv.Status.PackageMetadata != nil {
+		apv.Status.PackageMetadata.Changelog = packageMeta.Changelog
+	}
 
 	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
 

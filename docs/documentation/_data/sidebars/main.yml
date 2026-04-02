@@ -1279,6 +1279,10 @@ entries:
                     ru: Модуль cloud-provider-huaweicloud
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-huaweicloud.html
                 - title:
+                    en: Cloud-provider-openstack module
+                    ru: Модуль cloud-provider-openstack
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-openstack.html
+                - title:
                     en: Cloud-provider-yandex module
                     ru: Модуль cloud-provider-yandex
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html
@@ -1371,21 +1375,25 @@ entries:
                 ru: Обзор
               url: /architecture/storage/
             - title:
+                en: Csi-nfs module
+                ru: Модуль csi-nfs
+              url: /architecture/storage/csi-nfs.html
+            - title:
                 en: Local-path-provisioner module
                 ru: Модуль local-path-provisioner
               url: /architecture/storage/local-path-provisioner.html
             - title:
                 en: Snapshot-controller module
                 ru: Модуль snapshot-controller
-              url: /architecture/storage/snapshot-controller.html          
+              url: /architecture/storage/snapshot-controller.html
             - title:
                 en: Sds-local-volume module
                 ru: Модуль sds-local-volume
-              url: /architecture/storage/sds-local-volume.html  
+              url: /architecture/storage/sds-local-volume.html      
             - title:
-                en: Csi-nfs module
-                ru: Модуль csi-nfs
-              url: /architecture/storage/csi-nfs.html
+                en: Sds-node-configurator module
+                ru: Модуль sds-node-configurator
+              url: /architecture/storage/sds-node-configurator.html
             - title:
                 en: CSI drivers
                 ru: CSI-драйверы

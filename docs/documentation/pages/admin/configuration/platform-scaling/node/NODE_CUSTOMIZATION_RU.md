@@ -323,6 +323,50 @@ spec:
 
 После того как конфигурации будут применены, проведите бутстрап и перезагрузите узлы, чтобы применить настройки и установить драйвера.
 
+### Особенности использования MIG в кластере из одного узла
+
+{% alert level="info" %}
+Общая информация о подготовке GPU-узлов, установке драйверов и проверке работы GPU приведена в разделе [«Как работать с GPU-узлами»](/modules/node-manager/faq.html#как-работать-с-gpu-узлами).
+{% endalert %}
+
+В одноузловом кластере при использовании стратегии `MIG` после перезагрузки узла требуется вручную повторно применить MIG-конфигурацию.
+
+Это ограничение относится к текущей реализации MIG, в которой используется компонент `nvidia-mig-manager`.
+
+После каждой перезагрузки узла выполните следующие шаги:
+
+1. Пометьте узел служебной аннотацией:
+
+   ```bash
+   d8 k annotate node <node_name> update.node.deckhouse.io/drained=""
+   ```
+
+1. Перезапустите компонент `nvidia-mig-manager`:
+
+   ```bash
+   d8 k -n d8-nvidia-gpu delete pod -l component=nvidia-mig-manager
+   ```
+
+1. Дождитесь повторного применения MIG-конфигурации по логам `nvidia-mig-manager`:
+
+   ```bash
+   d8 k -n d8-nvidia-gpu logs -f -l component=nvidia-mig-manager
+   ```
+
+   Успешное применение конфигурации подтверждается записью вида:
+
+   ```console
+   Successfully updated to MIG config: <partedConfig>
+   ```
+
+   где `<partedConfig>` — значение параметра [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) в NodeGroup (например, `all-1g.10gb`).
+
+1. После успешного применения MIG-конфигурации верните узел в рабочее состояние:
+
+   ```bash
+   d8 k uncordon <node_name>
+   ```
+
 ### Проверка успешности установки
 
 Создайте в кластере Job:

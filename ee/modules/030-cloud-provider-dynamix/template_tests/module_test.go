@@ -7,6 +7,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -19,6 +20,12 @@ func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
+
+const providerID = "dynamix"
+const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
+const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
+const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
+const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 
 // fake *-crd modules are required for backward compatibility with lib_helm library
 // TODO: remove fake crd modules
@@ -156,9 +163,32 @@ var _ = Describe("Module :: cloud-provider-dynamix :: helm template ::", func() 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-			Expect(regSecret.Exists()).To(BeTrue())
-			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dynamix"))))
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerRegistrationSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(providerID))))
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-node-manager-cloud-provider-%s", providerID))
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificRegistrationSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(providerID))))
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+
+			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
+			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+			Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", ephemeralNodesTemplatesLabelKey)).String()).To(Equal("capi"))
+			Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
+			Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificCAPISecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
+
+			providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
+			Expect(providerSpecificBashibleStepsSecret.Exists()).To(BeFalse())
+
+			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
+			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
 
 			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-dynamix", "cloud-controller-manager")
 			Expect(ccmDeployment.Exists()).To(BeTrue())
