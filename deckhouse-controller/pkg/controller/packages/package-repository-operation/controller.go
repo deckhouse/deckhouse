@@ -84,7 +84,8 @@ func (r *reconciler) incrementRetryCount(ctx context.Context, operation *v1alpha
 	return r.client.Status().Patch(ctx, operation, client.MergeFrom(original))
 }
 
-func classifyOpServiceError(err error) (reason, message string) {
+func classifyOpServiceError(err error) (string, string) {
+	var reason, message string
 	switch {
 	case apierrors.IsNotFound(err):
 		reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
