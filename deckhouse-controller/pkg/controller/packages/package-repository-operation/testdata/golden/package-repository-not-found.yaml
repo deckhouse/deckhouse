@@ -14,7 +14,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "15"
+  resourceVersion: "10"
 spec:
   packageRepositoryName: deckhouse
   type: Update

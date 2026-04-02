@@ -70,8 +70,7 @@ func getLastRetryTime(operation *v1alpha1.PackageRepositoryOperation) time.Time 
 	return time.Time{}
 }
 
-func (r *reconciler) incrementRetryCount(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, errMsg string) error {
-	original := operation.DeepCopy()
+func (r *reconciler) incrementRetryCount(operation *v1alpha1.PackageRepositoryOperation, errMsg string) {
 	if operation.Status.RetryPolicy == nil {
 		operation.Status.RetryPolicy = &v1alpha1.PackageRepositoryOperationRetryPolicy{
 			MaxRetries: int32(maxRetries),
@@ -81,7 +80,6 @@ func (r *reconciler) incrementRetryCount(ctx context.Context, operation *v1alpha
 	now := metav1.NewTime(r.dc.GetClock().Now())
 	operation.Status.RetryPolicy.LastRetryTime = &now
 	operation.Status.RetryPolicy.LastMessage = errMsg
-	return r.client.Status().Patch(ctx, operation, client.MergeFrom(original))
 }
 
 func classifyOpServiceError(err error) (string, string) {
@@ -334,12 +332,8 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			if lastRetry := getLastRetryTime(operation); !lastRetry.IsZero() && time.Since(lastRetry) < retryInterval {
 				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
 			}
-			if patchErr := r.incrementRetryCount(ctx, operation, err.Error()); patchErr != nil {
-				return ctrl.Result{}, patchErr
-			}
-
-			// Set Completed=False so MSG is visible in kubectl get
 			original := operation.DeepCopy()
+			r.incrementRetryCount(operation, err.Error())
 			r.SetConditionFalse(operation, v1alpha1.PackageRepositoryOperationConditionCompleted, reason, message)
 			if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 				return ctrl.Result{}, patchErr
@@ -390,12 +384,8 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			if lastRetry := getLastRetryTime(operation); !lastRetry.IsZero() && time.Since(lastRetry) < retryInterval {
 				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
 			}
-			if patchErr := r.incrementRetryCount(ctx, operation, err.Error()); patchErr != nil {
-				return ctrl.Result{}, patchErr
-			}
-
-			// Set Completed=False so MSG is visible in kubectl get pro
 			original := operation.DeepCopy()
+			r.incrementRetryCount(operation, err.Error())
 			r.SetConditionFalse(operation, v1alpha1.PackageRepositoryOperationConditionCompleted, v1alpha1.PackageRepositoryOperationReasonPackageListingFailed, message)
 			if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 				return ctrl.Result{}, patchErr
@@ -468,12 +458,8 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 			if lastRetry := getLastRetryTime(operation); !lastRetry.IsZero() && time.Since(lastRetry) < retryInterval {
 				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
 			}
-			if patchErr := r.incrementRetryCount(ctx, operation, err.Error()); patchErr != nil {
-				return ctrl.Result{}, patchErr
-			}
-
-			// Set Completed=False so MSG is visible in kubectl get pro
 			original := operation.DeepCopy()
+			r.incrementRetryCount(operation, err.Error())
 			r.SetConditionFalse(operation, v1alpha1.PackageRepositoryOperationConditionCompleted, reason, message)
 			if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 				return ctrl.Result{}, patchErr
