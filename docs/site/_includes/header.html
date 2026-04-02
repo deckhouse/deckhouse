@@ -1,10 +1,6 @@
 {% assign topnav = site.data[page.topnav].topnav[page.lang] %}
 <!--noindex-->
-{%- if site.mode == "module" %}
-<div class="header-container header-container--module">
-{%- else %}
-<div class="header-container">
-{%- endif %}
+<div class='header-container {%- if site.mode == "module" %} header-container--module{%- endif %}'>
   <header class="header {%- if page.lang == 'ru' %} header_float{%- endif %}">
     <div class="header__content container">
       <div class="header__left-box">
