@@ -44,11 +44,19 @@ const (
 
 // etcdNeedsJoin checks if the etcd member needs to join the cluster:
 //
-//	/var/lib/etcd/member does not exist -> fresh node, needs join
-//	exists but node not in member list -> orphan, needs join (caller must cleanup)
-//	exists and node in member list -> normal update, no join needed
+//	member in cluster (by name or peer URL) -> no join needed
+//	/var/lib/etcd/member does not exist and not in cluster -> fresh node, needs join
+//	data dir exists but not in cluster -> orphan, needs join (cleanup)
 func etcdNeedsJoin(nodeName, pkiDir, kubeconfigDir string) (bool, error) {
-	_, err := os.Stat(etcdDataDir)
+	peerURL := etcd.GetPeerURL(os.Getenv("MY_IP"))
+	exists, err := checkEtcdMemberExists(nodeName, peerURL, pkiDir, kubeconfigDir)
+	if err != nil {
+		return false, fmt.Errorf("check etcd membership: %w", err)
+	}
+	if exists {
+		return false, nil
+	}
+	_, err = os.Stat(etcdDataDir)
 	if os.IsNotExist(err) {
 		return true, nil
 	}
@@ -56,13 +64,8 @@ func etcdNeedsJoin(nodeName, pkiDir, kubeconfigDir string) (bool, error) {
 		return false, fmt.Errorf("stat etcd data dir: %w", err)
 	}
 
-	// Data dir exists — check if member is actually in cluster
-	exists, err := checkEtcdMemberExists(nodeName, pkiDir, kubeconfigDir)
-	if err != nil {
-		return false, fmt.Errorf("check etcd membership: %w", err)
-	}
-
-	return !exists, nil
+	// Data dir exists but member not in cluster - orphan node, needs rejoin
+	return true, nil
 }
 
 // cleanupEtcdDataDir removes stale etcd data directory for orphaned nodes.
@@ -70,8 +73,8 @@ func cleanupEtcdDataDir() error {
 	return os.RemoveAll(etcdDataDir)
 }
 
-// checkEtcdMemberExists connects to the etcd cluster and checks if nodeName is in the member list.
-func checkEtcdMemberExists(nodeName, pkiDir, kubeconfigDir string) (bool, error) {
+// checkEtcdMemberExists connects to the etcd cluster and checks by name first, if name is empty (learner not yet started), falls back to peer URL match
+func checkEtcdMemberExists(nodeName, peerURL, pkiDir, kubeconfigDir string) (bool, error) {
 	adminConfPath := filepath.Join(kubeconfigDir, "admin.conf")
 	kubeClient, err := etcdclient.ClientSetFromFile(adminConfPath)
 	if err != nil {
@@ -100,6 +103,13 @@ func checkEtcdMemberExists(nodeName, pkiDir, kubeconfigDir string) (bool, error)
 	for _, m := range resp.Members {
 		if m.Name == nodeName {
 			return true, nil
+		}
+		if peerURL != "" {
+			for _, u := range m.PeerURLs {
+				if u == peerURL {
+					return true, nil
+				}
+			}
 		}
 	}
 
