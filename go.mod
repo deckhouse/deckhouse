@@ -377,6 +377,8 @@ replace github.com/deckhouse/deckhouse/go_lib/dependency/vsphere => ./go_lib/dep
 
 replace github.com/deckhouse/deckhouse/go_lib/registry => ./go_lib/registry
 
+replace github.com/deckhouse/deckhouse/pkg/registry => ./pkg/registry
+
 // Pin docker to v28.3.3 for oras.land/oras-go v1.2.x compatibility (AuthConfig type)
 replace github.com/docker/docker => github.com/docker/docker v28.3.3+incompatible
 
