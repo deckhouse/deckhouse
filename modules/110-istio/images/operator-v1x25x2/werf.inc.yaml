@@ -20,20 +20,6 @@ import:
   add: /src/operator/resources
   to: /var/lib/sail-operator/resources
   after: setup
-- from: {{ index $.Images "tools/bash" }}
-  add: /usr/bin/bash
-  to: /bin/bash
-  before: setup
-- from: {{ index $.Images "tools/procps" }}
-  add: /bin/ps
-  to: /bin/ps
-  before: setup
-- from: {{ index $.Images "tools/coreutils" }}
-  add: /
-  to: /
-  includePaths:
-  - usr/bin/*
-  before: setup
 imageSpec:
   config:
     user: "64535:64535"

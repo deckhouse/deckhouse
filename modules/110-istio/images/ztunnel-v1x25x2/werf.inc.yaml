@@ -29,20 +29,6 @@ import:
     add: /usr/lib/libgcc_s.so.1
     to: /lib64/libgcc_s.so.1
     before: install
-  - from: {{ index $.Images "tools/bash" }}
-    add: /usr/bin/bash
-    to: /bin/bash
-    before: setup
-  - from: {{ index $.Images "tools/procps" }}
-    add: /bin/ps
-    to: /bin/ps
-    before: setup
-  - from: {{ index $.Images "tools/coreutils" }}
-    add: /
-    to: /
-    includePaths:
-    - usr/bin/*
-    before: setup
 imageSpec:
   config:
     user: "64535:64535"
