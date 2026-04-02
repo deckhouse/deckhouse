@@ -1022,17 +1022,13 @@ html {
 
 .header-container--module + .header__sidebar {
     padding-top: 55px;
+    height: auto;
 
     @include breakpoints.min-w(xl) {
         padding-top: 55px;
     }
 
     .header__navigation-item {
-
-        > a {
-            font-size:  16px;
-        }
-
         &.active-mobile {
             position: relative;
             width: 100%;
@@ -1127,7 +1123,6 @@ html {
 
         > a {
             position: relative;
-            font-size: 12px;
         }
     }
 
