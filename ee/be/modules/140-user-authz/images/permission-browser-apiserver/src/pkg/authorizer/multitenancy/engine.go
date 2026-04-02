@@ -98,6 +98,15 @@ func (e *Engine) Authorize(ctx context.Context, attrs authorizer.Attributes) (au
 
 	dirEntriesAffected := e.affectedDirs(user.GetName(), user.GetGroups())
 	if len(dirEntriesAffected) == 0 {
+		// NOTE: We intentionally return NoOpinion here (not Deny) even for users without CAR.
+		// This method is part of the Kubernetes authorizer chain for API requests.
+		// NoOpinion means "I have no opinion, let RBAC decide".
+		// If we returned Deny here, users without CAR couldn't do ANYTHING,
+		// even with valid RBAC permissions (RoleBindings).
+		//
+		// The deny-by-default logic is applied only in IsNamespaceAllowed/GetAllowedNamespaces,
+		// which are used for filtering the accessiblenamespaces API response (data filtering),
+		// not for API request authorization.
 		return authorizer.DecisionNoOpinion, "", nil
 	}
 
@@ -538,18 +547,15 @@ func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
 	return allowed
 }
 
-// GetAllowedNamespaces returns a list of all namespaces the user is allowed to access
-// according to multi-tenancy rules. If mtEngine has no restrictions for the user,
-// returns nil (meaning all namespaces are allowed from MT perspective).
-// This is used by the namespace resolver for optimization.
+// GetNamespaceAccessType evaluates the user's namespace access and returns:
+//   - accessType: AllNamespacesAllowed, NoNamespacesAllowed, or FilteredAccess
+//   - filter: the combined directory entry for filtering (only valid when accessType == FilteredAccess)
 //
-// Return values:
-//   - (nil, false): all namespaces allowed (privileged user or no filters)
-//   - (nil, true): user has restrictions, caller must filter using IsNamespaceAllowed
-//   - ([]string{}, true): no namespaces allowed (non-privileged user without CAR)
-func (e *Engine) GetAllowedNamespaces(userInfo user.Info) ([]string, bool) {
+// This method computes affectedDirs once and returns the filter for reuse,
+// avoiding redundant lookups when filtering multiple namespaces.
+func (e *Engine) GetNamespaceAccessType(userInfo user.Info) (accessType NamespaceAccessType, filter *DirectoryEntry) {
 	if userInfo == nil {
-		return nil, false
+		return AllNamespacesAllowed, nil
 	}
 
 	dirEntriesAffected := e.affectedDirs(userInfo.GetName(), userInfo.GetGroups())
@@ -557,19 +563,81 @@ func (e *Engine) GetAllowedNamespaces(userInfo user.Info) ([]string, bool) {
 		// No ClusterAuthorizationRules apply to this user.
 		// Privileged users (system:masters, etc.) bypass MT restrictions.
 		if isPrivilegedUser(userInfo.GetGroups()) {
-			klog.V(4).Infof("GetAllowedNamespaces: user=%s is privileged, all namespaces allowed", userInfo.GetName())
-			return nil, false // All namespaces allowed
+			klog.V(4).Infof("GetNamespaceAccessType: user=%s is privileged, all namespaces allowed", userInfo.GetName())
+			return AllNamespacesAllowed, nil
 		}
 		// Non-privileged users without CAR get no access (deny-by-default).
-		klog.V(4).Infof("GetAllowedNamespaces: user=%s has no CAR and is not privileged, returning empty list (deny-by-default)", userInfo.GetName())
-		return []string{}, true // Empty list, has restrictions
+		klog.V(4).Infof("GetNamespaceAccessType: user=%s has no CAR and is not privileged (deny-by-default)", userInfo.GetName())
+		return NoNamespacesAllowed, nil
 	}
 
 	combinedDir := e.combineDirEntries(dirEntriesAffected)
 	if !hasAnyFilters(&combinedDir) {
-		return nil, false
+		return AllNamespacesAllowed, nil
 	}
 
-	// User has restrictions - we need to filter
-	return nil, true
+	// User has restrictions - caller must filter each namespace
+	return FilteredAccess, &combinedDir
+}
+
+// IsNamespaceAllowedWithFilter checks if a namespace is allowed using a pre-computed filter.
+// Use this with the filter returned by GetNamespaceAccessType to avoid redundant affectedDirs lookups.
+func (e *Engine) IsNamespaceAllowedWithFilter(namespace string, filter *DirectoryEntry) bool {
+	if filter == nil {
+		return true
+	}
+
+	allowed := true
+
+	// Check limitNamespaces patterns
+	if !filter.NamespaceFiltersAbsent {
+		allowed = false
+		for _, pattern := range filter.LimitNamespaces {
+			if pattern.MatchString(namespace) {
+				allowed = true
+				break
+			}
+		}
+	}
+
+	// Check system namespaces restriction
+	if allowed && !filter.AllowAccessToSystemNamespaces {
+		for _, pattern := range systemNamespacesRegex {
+			if pattern.MatchString(namespace) {
+				allowed = false
+				break
+			}
+		}
+	}
+
+	// Check namespace selectors if denied by patterns
+	if !allowed && len(filter.NamespaceSelectors) > 0 {
+		match, err := e.namespaceLabelsMatchSelector(namespace, filter.NamespaceSelectors)
+		if err == nil && match {
+			allowed = true
+		}
+	}
+
+	return allowed
+}
+
+// GetAllowedNamespaces is a convenience wrapper around GetNamespaceAccessType.
+// Deprecated: Use GetNamespaceAccessType for better clarity and to get the filter for reuse.
+//
+// Return values:
+//   - (nil, false): all namespaces allowed (privileged user or no filters)
+//   - (nil, true): user has restrictions, caller must filter using IsNamespaceAllowed
+//   - ([]string{}, true): no namespaces allowed (non-privileged user without CAR)
+func (e *Engine) GetAllowedNamespaces(userInfo user.Info) ([]string, bool) {
+	accessType, _ := e.GetNamespaceAccessType(userInfo)
+	switch accessType {
+	case AllNamespacesAllowed:
+		return nil, false
+	case NoNamespacesAllowed:
+		return []string{}, true
+	case FilteredAccess:
+		return nil, true
+	default:
+		return nil, false
+	}
 }

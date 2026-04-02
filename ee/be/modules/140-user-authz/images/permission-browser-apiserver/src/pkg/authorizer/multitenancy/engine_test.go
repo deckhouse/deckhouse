@@ -663,6 +663,87 @@ func TestIsPrivilegedUser(t *testing.T) {
 	}
 }
 
+func TestEngine_GetNamespaceAccessType(t *testing.T) {
+	e := &Engine{
+		directory: map[string]map[string]DirectoryEntry{
+			"User": {
+				"restricted-user": {
+					LimitNamespaces: []*regexp.Regexp{
+						regexp.MustCompile("^allowed-ns$"),
+					},
+					NamespaceFiltersAbsent: false,
+				},
+				"unrestricted-user": {
+					AllowAccessToSystemNamespaces: true,
+					NamespaceFiltersAbsent:        true,
+				},
+			},
+			"Group":          {},
+			"ServiceAccount": {},
+		},
+	}
+
+	tests := []struct {
+		name               string
+		userInfo           *mockUserInfo
+		expectedAccessType NamespaceAccessType
+		expectFilter       bool
+	}{
+		{
+			name:               "nil user - all allowed",
+			userInfo:           nil,
+			expectedAccessType: AllNamespacesAllowed,
+			expectFilter:       false,
+		},
+		{
+			name:               "system:masters without CAR - all allowed (privileged bypass)",
+			userInfo:           &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
+			expectedAccessType: AllNamespacesAllowed,
+			expectFilter:       false,
+		},
+		{
+			name:               "superadmins without CAR - all allowed (privileged bypass)",
+			userInfo:           &mockUserInfo{name: "super", groups: []string{"superadmins"}},
+			expectedAccessType: AllNamespacesAllowed,
+			expectFilter:       false,
+		},
+		{
+			name:               "unknown user without CAR - denied (deny-by-default)",
+			userInfo:           &mockUserInfo{name: "unknown-user", groups: []string{"system:authenticated"}},
+			expectedAccessType: NoNamespacesAllowed,
+			expectFilter:       false,
+		},
+		{
+			name:               "restricted user with CAR - filtered access",
+			userInfo:           &mockUserInfo{name: "restricted-user"},
+			expectedAccessType: FilteredAccess,
+			expectFilter:       true,
+		},
+		{
+			name:               "unrestricted user with CAR (no filters) - all allowed",
+			userInfo:           &mockUserInfo{name: "unrestricted-user"},
+			expectedAccessType: AllNamespacesAllowed,
+			expectFilter:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var userInfo user.Info
+			if tt.userInfo != nil {
+				userInfo = tt.userInfo
+			}
+			accessType, filter := e.GetNamespaceAccessType(userInfo)
+			assert.Equal(t, tt.expectedAccessType, accessType, "unexpected accessType for %s", tt.name)
+			if tt.expectFilter {
+				assert.NotNil(t, filter, "expected filter for %s", tt.name)
+			} else {
+				assert.Nil(t, filter, "expected no filter for %s", tt.name)
+			}
+		})
+	}
+}
+
 func TestEngine_GetAllowedNamespaces(t *testing.T) {
 	e := &Engine{
 		directory: map[string]map[string]DirectoryEntry{
