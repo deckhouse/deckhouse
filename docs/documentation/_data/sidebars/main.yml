@@ -1381,7 +1381,19 @@ entries:
             - title:
                 en: Sds-local-volume module
                 ru: Модуль sds-local-volume
-              url: /architecture/storage/sds-local-volume.html      
+              url: /architecture/storage/sds-local-volume.html  
+            - title:
+                en: Csi-nfs module
+                ru: Модуль csi-nfs
+              url: /architecture/storage/csi-nfs.html
+            - title:
+                en: CSI drivers
+                ru: CSI-драйверы
+              folders:
+                - title:
+                    en: CSI driver (csi-nfs)
+                    ru: CSI-драйвер csi-nfs
+                  url: /architecture/storage/csi-drivers/csi-driver-nfs.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability

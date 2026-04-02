@@ -31,16 +31,12 @@ The module consists of the following components:
 
    It consists of the following containers:
 
-   * **wait-rpcbind**: Init-containter. It waits for `rpcbind` is ready and accept connections.
-   * **ktls-enabler**: Init-container. It loads and checks kernel modules on the node for RPC-with-TLS support.
-   * **net-handshake-checker**: Init-container. It runs [tlshd](https://github.com/oracle/ktls-utils) one time to check kernel TLS handshake support.
    * **controller**: Main container.
-   * **tlshd**: A side container that provides an RPC-with-TLS connection. 
    * **webhook**: A sidecar container that implements a webhook server for validating NFSStorageClass custom resources, StorageClass resources.
 
 2. **Sds-local-volume-scheduler-extender**: It consists of a single container. It is a kube-scheduler extender, which implements a scheduling logic specific for pods using NFS-based volumes. When planning, the rules of selecting nodes in NFSStorageClass are taken into account.
 
-3. **CSI driver (`csi-nfs`)**: It is an implementation of the CSI driver for `nfs.csi.k8s.io` ([NFS CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs)). To study the CSI driver typical architecture used in DKP, refer to [the CSI-driver architecture documentation section](../cluster-and-infrastructure/infrastructure/csi-driver.html).
+3. **CSI driver (`csi-nfs`)**: It is an implementation of the CSI driver for `nfs.csi.k8s.io` ([NFS CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs)). To study the CSI driver (`csi-nfs`) architecture used in DKP, refer to [the CSI-driver architecture documentation section](../storage/csi-drivers/csi-driver-nfs.html).
 
 ## Module interactions
 

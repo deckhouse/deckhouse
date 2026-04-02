@@ -32,16 +32,12 @@ description: Архитектура модуля csi-nfs в Deckhouse Kubernetes
 
    Состоит из следующих контейнеров:
 
-   * **wait-rpcbind** — init-контейнер, ожидает готовности `rpcbind`;
-   * **ktls-enabler** — init-контейнер, выполняет загрузку и проверку модулей ядра на узле для работы RPC-with-TLS;
-   * **net-handshake-checker** — init-контейнер, выполняет однократный запуск [tlshd](https://github.com/oracle/ktls-utils) для проверки работоспособности `TLS handshake` на уровне ядра ОС;
    * **controller** — основной контейнер;
-   * **tlshd** — сайдкар-контейнер, обеспечивающий работу RPC-with-TLS;
    * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов NFSStorageClass и ресурсов StorageClass.
 
 2. **Csi-nfs-scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler, реализует специфичную для подов логику размещения при использовании NFS-томов. При планировании учитываются заданные в NFSStorageClass селекторы узлов.
 
-3. **CSI-драйвер (`csi-nfs`)** — реализация CSI-драйвера для `nfs.csi.k8s.io` provisioner ([NFS CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs)). С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html).
+3. **CSI-драйвер (`csi-nfs`)** — реализация CSI-драйвера для `nfs.csi.k8s.io` provisioner ([NFS CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs)). С архитектурой CSI-драйвера (`csi-nfs`), используемого в DKP, можно ознакомиться [в разделе документации CSI-драйвера](../storage/csi-drivers/csi-driver-nfs.html).
 
 ## Взаимодействия модуля
 
