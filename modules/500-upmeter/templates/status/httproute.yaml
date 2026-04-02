@@ -13,17 +13,17 @@ metadata:
     web.deckhouse.io/export-icon: "/public/img/heart.ico"
   {{- if not .Values.upmeter.statusPageAuthDisabled }}
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.status.externalAuthentication }}
-    alb-gateway.network.deckhouse.io/auth-signin: {{ replace "$host" $statusHost .Values.upmeter.auth.status.externalAuthentication.authSignInURL | quote }}
-    alb-gateway.network.deckhouse.io/auth-url: {{ .Values.upmeter.auth.status.externalAuthentication.authURL | quote }}
+    alb.network.deckhouse.io/auth-signin: {{ replace "$host" $statusHost .Values.upmeter.auth.status.externalAuthentication.authSignInURL | quote }}
+    alb.network.deckhouse.io/auth-url: {{ .Values.upmeter.auth.status.externalAuthentication.authURL | quote }}
     {{- else }}
-    alb-gateway.network.deckhouse.io/basic-auth-secret: d8-{{ .Chart.Name }}/basic-auth-status
+    alb.network.deckhouse.io/basic-auth-secret: d8-{{ .Chart.Name }}/basic-auth-status
     {{- end }}
   {{- end }}
   {{- if .Values.upmeter.auth.status.whitelistSourceRanges }}
-    alb-gateway.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.status.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.status.whitelistSourceRanges | join "," }}
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
 spec:
@@ -53,20 +53,20 @@ metadata:
   name: upmeter-api-status
   namespace: d8-{{ .Chart.Name }}
   annotations:
-    alb-gateway.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
+    alb.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
   {{- if not .Values.upmeter.statusPageAuthDisabled }}
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.status.externalAuthentication }}
-    alb-gateway.network.deckhouse.io/auth-signin: {{ replace "$host" $statusHost .Values.upmeter.auth.status.externalAuthentication.authSignInURL | quote }}
-    alb-gateway.network.deckhouse.io/auth-url: {{ .Values.upmeter.auth.status.externalAuthentication.authURL | quote }}
+    alb.network.deckhouse.io/auth-signin: {{ replace "$host" $statusHost .Values.upmeter.auth.status.externalAuthentication.authSignInURL | quote }}
+    alb.network.deckhouse.io/auth-url: {{ .Values.upmeter.auth.status.externalAuthentication.authURL | quote }}
     {{- else }}
-    alb-gateway.network.deckhouse.io/basic-auth-secret: d8-{{ .Chart.Name }}/basic-auth-status
+    alb.network.deckhouse.io/basic-auth-secret: d8-{{ .Chart.Name }}/basic-auth-status
     {{- end }}
   {{- end }}
   {{- if .Values.upmeter.auth.status.whitelistSourceRanges }}
-    alb-gateway.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.status.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.status.whitelistSourceRanges | join "," }}
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
 spec:

@@ -8,10 +8,10 @@ metadata:
   name: basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
   annotations:
-    alb-gateway.network.deckhouse.io/rewrite-target: /\2
-    alb-gateway.network.deckhouse.io/buffer-max-request-bytes: "10485760"
+    alb.network.deckhouse.io/rewrite-target: /\2
+    alb.network.deckhouse.io/buffer-max-request-bytes: "10485760"
   {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
-    alb-gateway.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
   {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:

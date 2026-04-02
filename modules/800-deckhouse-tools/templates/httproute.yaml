@@ -58,16 +58,16 @@ metadata:
     web.deckhouse.io/export-name: "tools"
     web.deckhouse.io/export-icon: "/public/img/tools.ico"
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.deckhouseTools.auth.externalAuthentication }}
-    alb-gateway.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "tools")) .Values.deckhouseTools.auth.externalAuthentication.authSignInURL | quote }}
-    alb-gateway.network.deckhouse.io/auth-url: {{ .Values.deckhouseTools.auth.externalAuthentication.authURL | quote }}
+    alb.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "tools")) .Values.deckhouseTools.auth.externalAuthentication.authSignInURL | quote }}
+    alb.network.deckhouse.io/auth-url: {{ .Values.deckhouseTools.auth.externalAuthentication.authURL | quote }}
     {{- if $satisfyAny }}
-    alb-gateway.network.deckhouse.io/satisfy: "any"
+    alb.network.deckhouse.io/satisfy: "any"
     {{- end }}
   {{- else }}
-    alb-gateway.network.deckhouse.io/basic-auth-secret: d8-system/tools-basic-auth
+    alb.network.deckhouse.io/basic-auth-secret: d8-system/tools-basic-auth
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
 spec:
   hostnames:

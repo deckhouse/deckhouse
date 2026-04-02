@@ -55,13 +55,13 @@ metadata:
   namespace: d8-system
   annotations:
     registry.deckhouse.io/config-hash: {{ $orchestrator.hash | quote }}
-    alb-gateway.network.deckhouse.io/hash-key: source-ip
-    alb-gateway.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
+    alb.network.deckhouse.io/hash-key: source-ip
+    alb.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
   {{- if .Values.registry.whitelistSourceRanges }}
-    alb-gateway.network.deckhouse.io/whitelist-source-range: {{ .Values.registry.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.registry.whitelistSourceRanges | join "," }}
   {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry")) | nindent 2 }}
 spec:

@@ -10,12 +10,12 @@ metadata:
   name: kubernetes-api-basic-auth
   namespace: d8-{{ .Chart.Name }}
   annotations:
-    alb-gateway.network.deckhouse.io/buffer-max-request-bytes: "10485760"
+    alb.network.deckhouse.io/buffer-max-request-bytes: "10485760"
   {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
-    alb-gateway.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
@@ -92,13 +92,13 @@ metadata:
   name: kubernetes-api
   namespace: d8-{{ .Chart.Name }}
   annotations:
-    alb-gateway.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
-    alb-gateway.network.deckhouse.io/buffer-max-request-bytes: "10485760"
+    alb.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
+    alb.network.deckhouse.io/buffer-max-request-bytes: "10485760"
   {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
-    alb-gateway.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:

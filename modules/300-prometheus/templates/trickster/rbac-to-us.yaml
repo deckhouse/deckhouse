@@ -25,7 +25,7 @@ subjects:
 - kind: Group
   name: ingress-nginx:auth
 - kind: Group
-  name: alb-gateway:auth
+  name: alb:auth
 - kind: Group
   name: prometheus:auth
 - kind: ServiceAccount

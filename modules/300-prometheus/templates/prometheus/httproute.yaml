@@ -5,23 +5,23 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   annotations:
-    alb-gateway.network.deckhouse.io/rewrite-target: /\2
-    alb-gateway.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
+    alb.network.deckhouse.io/rewrite-target: /\2
+    alb.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
-    alb-gateway.network.deckhouse.io/session-affinity: '{"mode": "cookie", "path": "/", "ttl": 0}'
+    alb.network.deckhouse.io/session-affinity: '{"mode": "cookie", "path": "/", "ttl": 0}'
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.auth.externalAuthentication }}
-    alb-gateway.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "grafana")) .Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
-    alb-gateway.network.deckhouse.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | quote }}
+    alb.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "grafana")) .Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
+    alb.network.deckhouse.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | quote }}
     {{- if .Values.prometheus.auth.satisfyAny }}
-    alb-gateway.network.deckhouse.io/satisfy: "any"
+    alb.network.deckhouse.io/satisfy: "any"
     {{- end }}
   {{- else }}
-    alb-gateway.network.deckhouse.io/basic-auth-secret: d8-monitoring/basic-auth
+    alb.network.deckhouse.io/basic-auth-secret: d8-monitoring/basic-auth
   {{- end }}
   {{- if .Values.prometheus.auth.whitelistSourceRanges }}
-    alb-gateway.network.deckhouse.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," }}
   {{- end }}
   name: prometheus-rewrite
   namespace: d8-monitoring
@@ -74,22 +74,22 @@ kind: HTTPRoute
 metadata:
   annotations:
   {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
-    alb-gateway.network.deckhouse.io/tls-disable-protocol: http2
+    alb.network.deckhouse.io/tls-disable-protocol: http2
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.auth.externalAuthentication }}
-    alb-gateway.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "grafana")) .Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
-    alb-gateway.network.deckhouse.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | quote }}
+    alb.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "grafana")) .Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
+    alb.network.deckhouse.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | quote }}
     {{- if .Values.prometheus.auth.satisfyAny }}
-    alb-gateway.network.deckhouse.io/satisfy: "any"
+    alb.network.deckhouse.io/satisfy: "any"
     {{- end }}
   {{- else }}
-    alb-gateway.network.deckhouse.io/basic-auth-secret: d8-monitoring/basic-auth
+    alb.network.deckhouse.io/basic-auth-secret: d8-monitoring/basic-auth
   {{- end }}
   {{- if .Values.prometheus.auth.whitelistSourceRanges }}
-    alb-gateway.network.deckhouse.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," }}
   {{- end }}
   name: prometheus-redirect-to-grafana
   namespace: d8-monitoring
