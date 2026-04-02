@@ -19,20 +19,13 @@ Available only in DKP Enterprise Edition (EE).
   > it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly defined as `cluster.local`
   > (for details, refer to the [Istio documentation](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 
-* Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the ClusterConfiguration resource must be unique for each federation member.
+* There are no requirements for unique subnets of modules and services in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) when clusters are operating in a federation.
 
   > When analyzing traffic, Istio uses:
   > - For HTTP and HTTPS requests — headers.
   > - For TCP requests — destination IP address and port number.
   >
-  > If the IP addresses of services or pods in different clusters match,
-  > requests from other pods in other clusters may mistakenly fall under the istio's rules.
-  > The intersection of subnets of services and pods is strictly prohibited in single-network mode,
-  > and is acceptable but not recommended in multi-networks mode.
-  > For details, refer to the [Istio documentation](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network).
-  >
-  > - In the single-network mode, pods from different clusters can communicate with each other directly.
-  > - In the multi-networks mode, pods from different clusters can only communicate with each other if they use the Istio-gateway.
+  > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
 
 ### General principles of federation
 
