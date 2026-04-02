@@ -129,7 +129,7 @@ func execJoinEtcdCluster(ctx context.Context, cc *commandContext, logger *log.Lo
 		return reconcile.Result{}, nil
 	}
 	logger.Info("etcd needs join, executing join flow")
-	return cc.r.reconcileEtcdJoin(ctx, cc.op, cc.cpmSecretData,
+	return cc.r.reconcileEtcdJoin(cc.op, cc.cpmSecretData,
 		cc.configChecksum, cc.pkiChecksum, cc.caChecksum, logger)
 }
 
