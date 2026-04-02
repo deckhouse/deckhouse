@@ -134,8 +134,10 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 		return ctrl.Result{}, fmt.Errorf("sync registry settings: %w", err)
 	}
 
-	if err := r.checkPaginationSupport(ctx, packageRepository); err != nil {
-		logger.Warn("failed to check pagination support", log.Err(err))
+	if r.psm != nil {
+		if err := r.checkPaginationSupport(ctx, packageRepository); err != nil {
+			logger.Warn("failed to check pagination support", log.Err(err))
+		}
 	}
 
 	scanInterval := defaultScanInterval
