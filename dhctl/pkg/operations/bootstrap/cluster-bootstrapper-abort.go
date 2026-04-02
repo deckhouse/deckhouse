@@ -21,6 +21,8 @@ import (
 
 	"github.com/name212/govalue"
 
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -36,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -187,6 +188,26 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		if err != nil {
 			return err
 		}
+
+		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			mastersIPs, err := state.GetMasterHostsIPs(stateCache)
+			if err != nil {
+				return err
+			}
+			var sshHosts []sshconfig.Host
+			if len(mastersIPs) > 0 {
+				for _, h := range mastersIPs {
+					sshHosts = append(sshHosts, sshconfig.Host{Host: h.Host})
+				}
+			}
+			b.SSHProviderInitializer.SetAdditionalHosts(sshHosts)
+
+			// error checking is not mandatory here: simple abort could be performed w/o ssh client, just a terraform destroy from local cache
+			sshProvider, _ = b.SSHProviderInitializer.GetSSHProvider(ctx)
+			b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
+		}
+
 		log.DebugF("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache)
 		if !ok || forceAbortFromCache {
 			destroyer, err = destroy.GetAbortDestroyer(ctx, &destroy.GetAbortDestroyerParams{
@@ -195,7 +216,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				InfrastructureContext:  b.InfrastructureContext,
 				PhasedExecutionContext: b.PhasedExecutionContext,
 
-				SSHClientProvider: sshclient.NewDefaultSSHProviderWithFunc(staticSSHClientProvider).WithLoggerProvider(loggerProvider),
+				SSHClientProvider: sshProvider,
 				LoggerProvider:    loggerProvider,
 
 				TmpDir:        b.TmpDir,
@@ -225,12 +246,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		}
 
 		destroyParams := &destroy.Params{
-			NodeInterface:          b.NodeInterface,
 			StateCache:             cache.Global(),
 			PhasedExecutionContext: b.PhasedExecutionContext,
 			SkipResources:          app.SkipResources,
 			InfrastructureContext:  b.InfrastructureContext,
 			DirectoryConfig:        b.DirectoryConfig,
+			SSHProvider:            sshProvider,
+			KubeProvider:           b.KubeProvider,
 		}
 
 		if b.CommanderMode {

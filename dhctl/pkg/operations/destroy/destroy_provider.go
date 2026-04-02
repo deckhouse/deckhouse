@@ -20,6 +20,8 @@ import (
 
 	"github.com/name212/govalue"
 
+	"github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -28,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type infraDestroyerProvider struct {
@@ -41,7 +42,7 @@ type infraDestroyerProvider struct {
 	skipResources      bool
 	cloudStateProvider func() (controller.StateLoader, cloud.ClusterInfraDestroyer, error)
 
-	sshClientProvider sshclient.SSHProvider
+	sshClientProvider pkg.SSHProvider
 	tmpDir            string
 	staticLoopsParams static.LoopsParams
 }

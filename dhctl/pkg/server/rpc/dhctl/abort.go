@@ -26,6 +26,8 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
@@ -38,6 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type abortParams struct {
@@ -229,6 +232,8 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 		return &pb.AbortResult{Err: err.Error()}
 	}
 
+	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+	var kubeProvider pkg.KubeProvider
 	var sshClient node.SSHClient
 	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
 		connectionConfig, err := config.ParseConnectionConfig(
@@ -247,6 +252,11 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		if err != nil {
+			return fmt.Errorf("preparing providers: %w", err)
+		}
+		cleanuper.Add(cleanup)
 
 		return nil
 	})
@@ -263,22 +273,24 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 	}
 
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		ConfigPaths:       configPaths,
-		InitialState:      initialState,
-		NodeInterface:     ssh.NewNodeInterfaceWrapper(sshClient),
-		UseTfCache:        ptr.To(true),
-		AutoApprove:       ptr.To(true),
-		ResourcesTimeout:  p.request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:  p.request.Options.DeckhouseTimeout.AsDuration(),
-		ResetInitialState: true,
-		OnPhaseFunc:       p.switchPhase,
-		OnProgressFunc:    p.sendProgress,
-		CommanderMode:     p.request.Options.CommanderMode,
-		CommanderUUID:     commanderUUID,
-		Logger:            loggerFor,
-		IsDebug:           s.params.IsDebug,
-		TmpDir:            s.params.TmpDir,
-		DirectoryConfig:   s.params.DownloadDirConfig,
+		ConfigPaths:            configPaths,
+		InitialState:           initialState,
+		NodeInterface:          ssh.NewNodeInterfaceWrapper(sshClient),
+		UseTfCache:             ptr.To(true),
+		AutoApprove:            ptr.To(true),
+		ResourcesTimeout:       p.request.Options.ResourcesTimeout.AsDuration(),
+		DeckhouseTimeout:       p.request.Options.DeckhouseTimeout.AsDuration(),
+		ResetInitialState:      true,
+		OnPhaseFunc:            p.switchPhase,
+		OnProgressFunc:         p.sendProgress,
+		CommanderMode:          p.request.Options.CommanderMode,
+		CommanderUUID:          commanderUUID,
+		Logger:                 loggerFor,
+		IsDebug:                s.params.IsDebug,
+		TmpDir:                 s.params.TmpDir,
+		SSHProviderInitializer: sshProviderInitializer,
+		KubeProvider:           kubeProvider,
+		DirectoryConfig:        s.params.DownloadDirConfig,
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)

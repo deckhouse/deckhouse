@@ -16,8 +16,11 @@ package bootstrap
 
 import (
 	"fmt"
+	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -145,12 +148,22 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.(*log.TeeLogger).GetLogger().(*log.ExternalLogger).GetLogger())
+		sshProviderInitializer, kubeProvider, err := app.GetProviders(ctx, loggerProvider)
+		if err != nil {
+			if !strings.Contains(err.Error(), "no hosts for ssh passed") {
+				return err
+			}
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:          app.TmpDirName,
-			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
-			Logger:          logger,
-			IsDebug:         app.IsDebug,
-			DirectoryConfig: app.GetDirConfig(),
+			TmpDir:                 app.TmpDirName,
+			NodeInterface:          ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:                 logger,
+			IsDebug:                app.IsDebug,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
+			DirectoryConfig:        app.GetDirConfig(),
 		})
 
 		if err = bootstraper.Abort(ctx, app.ForceAbortFromCache); err != nil {

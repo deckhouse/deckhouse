@@ -19,15 +19,14 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	tmp "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -55,6 +54,11 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.(*log.TeeLogger).GetLogger().(*log.ExternalLogger).GetLogger())
+		sshProviderInitializer, kubeProvider, err := app.GetProviders(ctx, loggerProvider)
+		if err != nil {
+			return err
+		}
 
 		if !app.SanityCheck {
 			logger.LogWarnLn(destroyApprovalsMessage)
@@ -63,14 +67,12 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			}
 		}
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
+		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
 			return err
 		}
 
-		sshClient, err := sshclient.NewClientFromFlags(ctx)
+		sshClient, err := sshProvider.Client(ctx)
 		if err != nil {
 			return err
 		}
@@ -80,7 +82,8 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(ctx, &destroy.Params{
-			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
+			SSHProvider:     sshProvider,
+			KubeProvider:    kubeProvider,
 			StateCache:      cache.Global(),
 			SkipResources:   app.SkipResources,
 			LoggerProvider:  log.SimpleLoggerProvider(logger),

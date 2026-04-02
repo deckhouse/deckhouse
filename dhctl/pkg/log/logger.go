@@ -15,9 +15,13 @@
 package log
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"sync"
+	"time"
 
 	external "github.com/deckhouse/lib-dhctl/pkg/log"
 
@@ -371,5 +375,309 @@ func GetSilentLogger() Logger {
 		return emptyLogger
 	case *external.TeeLogger:
 		return ext.NewSilentLogger()
+	case *TeeLogger:
+		return defaultLogger.NewSilentLogger()
+	}
+}
+
+type SilentLogger struct {
+	t *TeeLogger
+}
+
+func NewSilentLogger() *SilentLogger {
+	return &SilentLogger{
+		t: nil,
+	}
+}
+
+func (d *SilentLogger) ProcessLogger() ProcessLogger {
+	return newWrappedProcessLogger(d)
+}
+
+func (d *SilentLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
+}
+
+func (d *SilentLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return d
+}
+
+func (d *SilentLogger) LogProcess(_, t string, run func() error) error {
+	err := run()
+	return err
+}
+
+func (d *SilentLogger) FlushAndClose() error {
+	return nil
+}
+
+func (d *SilentLogger) LogInfoF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
+}
+
+func (d *SilentLogger) LogInfoLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
+}
+
+func (d *SilentLogger) LogErrorF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
+}
+
+func (d *SilentLogger) LogErrorLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
+}
+
+func (d *SilentLogger) LogDebugF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
+}
+
+func (d *SilentLogger) LogDebugLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
+}
+
+func (d *SilentLogger) LogSuccess(l string) {
+	if d.t != nil {
+		d.t.writeToFile(l)
+	}
+}
+
+func (d *SilentLogger) LogFail(l string) {
+	if d.t != nil {
+		d.t.writeToFile(l)
+	}
+}
+
+func (d *SilentLogger) LogFailRetry(l string) {
+	if d.t != nil {
+		d.t.writeToFile(l)
+	}
+}
+
+func (d *SilentLogger) LogWarnLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
+}
+
+func (d *SilentLogger) LogWarnF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
+}
+
+func (d *SilentLogger) LogJSON(content []byte) {
+	if d.t != nil {
+		d.t.writeToFile(string(content))
+	}
+}
+
+func (d *SilentLogger) Write(content []byte) (int, error) {
+	if d.t != nil {
+		d.t.writeToFile(string(content))
+	}
+	return len(content), nil
+}
+
+type TeeLogger struct {
+	l      Logger
+	closed bool
+
+	bufMutex sync.Mutex
+	buf      *bufio.Writer
+	out      io.WriteCloser
+}
+
+func (d *TeeLogger) GetLogger() Logger {
+	return d.l
+}
+
+func NewTeeLogger(l Logger, writer io.WriteCloser, bufferSize int) (*TeeLogger, error) {
+	buf := bufio.NewWriterSize(writer, bufferSize)
+
+	return &TeeLogger{
+		l:   l,
+		buf: buf,
+		out: writer,
+	}, nil
+}
+
+func (d *TeeLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	var l Logger
+	switch d.l.(type) {
+	case *PrettyLogger:
+		l = NewPrettyLogger(LoggerOptions{OutStream: buffer})
+	case *SimpleLogger:
+		l = NewJSONLogger(LoggerOptions{OutStream: buffer})
+	default:
+		l = d.l
+	}
+
+	buf := bufio.NewWriterSize(d.out, 4096) // 1024 bytes may not be enough when executing in parallel
+
+	return &TeeLogger{
+		l:   l,
+		buf: buf,
+		out: d.out,
+	}
+}
+
+func (d *TeeLogger) FlushAndClose() error {
+	if d.closed {
+		return nil
+	}
+
+	d.bufMutex.Lock()
+	defer d.bufMutex.Unlock()
+
+	err := d.buf.Flush()
+	if err != nil {
+		d.l.LogWarnF("Cannot flush TeeLogger: %v \n", err)
+		return err
+	}
+
+	d.buf = nil
+
+	err = d.out.Close()
+	if err != nil {
+		d.l.LogWarnF("Cannot close TeeLogger file: %v \n", err)
+		return err
+	}
+
+	d.closed = true
+	return nil
+}
+
+func (d *TeeLogger) ProcessLogger() ProcessLogger {
+	return d.l.ProcessLogger()
+}
+
+func (d *TeeLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{
+		t: d,
+	}
+}
+
+func (d *TeeLogger) LogProcess(msg, t string, run func() error) error {
+	d.writeToFile(fmt.Sprintf("Start process %s\n", t))
+
+	err := d.l.LogProcess(msg, t, run)
+
+	d.writeToFile(fmt.Sprintf("End process %s\n", t))
+
+	return err
+}
+
+func (d *TeeLogger) LogInfoF(format string, a ...interface{}) {
+	d.l.LogInfoF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogInfoLn(a ...interface{}) {
+	d.l.LogInfoLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogErrorF(format string, a ...interface{}) {
+	d.l.LogErrorF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogErrorLn(a ...interface{}) {
+	d.l.LogErrorLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogDebugF(format string, a ...interface{}) {
+	d.l.LogDebugF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogDebugLn(a ...interface{}) {
+	d.l.LogDebugLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogSuccess(l string) {
+	d.l.LogSuccess(l)
+
+	d.writeToFile(l)
+}
+
+func (d *TeeLogger) LogFail(l string) {
+	d.l.LogFail(l)
+
+	d.writeToFile(l)
+}
+
+func (d *TeeLogger) LogFailRetry(l string) {
+	d.l.LogFailRetry(l)
+
+	d.writeToFile(l)
+}
+
+func (d *TeeLogger) LogWarnLn(a ...interface{}) {
+	d.l.LogWarnLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogWarnF(format string, a ...interface{}) {
+	d.l.LogWarnF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogJSON(content []byte) {
+	d.l.LogJSON(content)
+
+	d.writeToFile(string(content))
+}
+
+func (d *TeeLogger) Write(content []byte) (int, error) {
+	ln, err := d.l.Write(content)
+	if err != nil {
+		d.l.LogDebugF("Cannot write to log: %v", err)
+	}
+
+	d.writeToFile(string(content))
+
+	return ln, err
+}
+
+func (d *TeeLogger) writeToFile(content string) {
+	if d.closed {
+		return
+	}
+
+	d.bufMutex.Lock()
+	defer d.bufMutex.Unlock()
+
+	if d.buf == nil {
+		return
+	}
+
+	timestamp := time.Now().Format(time.DateTime)
+	contentWithTimestamp := fmt.Sprintf("%s - %s", timestamp, content)
+
+	if _, err := d.buf.Write([]byte(contentWithTimestamp)); err != nil {
+		d.l.LogDebugF("Cannot write to TeeLog: %v", err)
 	}
 }
