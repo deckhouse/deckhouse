@@ -239,3 +239,9 @@ For synchronization to work correctly, all required user DNs must be present dir
 If nested groups must be taken into account, this must be implemented on the LDAP server side. For example, the `submember` attribute can be populated with the full list of transitive members.
 
 This approach simplifies synchronization and avoids issues related to recursive group processing.
+
+## Frequently asked questions
+
+### Can I create local accounts when LDAP synchronization is enabled?
+
+Yes, you can create local accounts even when LDAP synchronization is enabled. Password-based login must be allowed for this to work.
