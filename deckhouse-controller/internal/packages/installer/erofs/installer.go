@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -41,9 +42,11 @@ const (
 // Installer handles package lifecycle using erofs images with dm-verity integrity.
 // Operations are serialized via mutex to prevent concurrent mount/unmount conflicts.
 type Installer struct {
-	mtx      sync.Mutex
-	registry registryService
-	logger   *log.Logger
+	mu         sync.Mutex
+	downloaded map[string]struct{}
+	deployed   map[string]struct{}
+	registry   registryService
+	logger     *log.Logger
 }
 
 type registryService interface {
@@ -53,8 +56,10 @@ type registryService interface {
 
 func NewInstaller(registry registryService, logger *log.Logger) *Installer {
 	return &Installer{
-		registry: registry,
-		logger:   logger.Named("erofs-installer"),
+		downloaded: make(map[string]struct{}),
+		deployed:   make(map[string]struct{}),
+		registry:   registry,
+		logger:     logger.Named("erofs-installer"),
 	}
 }
 
@@ -86,15 +91,11 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	default:
 	}
 
-	i.mtx.Lock()
-	defer i.mtx.Unlock()
+	i.mu.Lock()
+	defer i.mu.Unlock()
 
 	// <downloaded>/<version>.erofs
 	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
-	if err := os.MkdirAll(filepath.Dir(imagePath), 0755); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return newCreatePackageDirErr(err)
-	}
 
 	rootHash, err := i.registry.GetImageRootHash(ctx, repo, name, version)
 	if err != nil {
@@ -107,6 +108,7 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	if err = i.verifyImage(ctx, imagePath, rootHash); err == nil {
 		logger.Debug("package image verified")
 
+		i.downloaded[imagePath] = struct{}{}
 		return nil
 	}
 
@@ -126,6 +128,7 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 		return newImageByTarErr(err)
 	}
 
+	i.downloaded[imagePath] = struct{}{}
 	return nil
 }
 
@@ -155,8 +158,8 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 	default:
 	}
 
-	i.mtx.Lock()
-	defer i.mtx.Unlock()
+	i.mu.Lock()
+	defer i.mu.Unlock()
 
 	// <downloaded>/<version>.erofs
 	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
@@ -195,6 +198,7 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 		return newMountErr(err)
 	}
 
+	i.deployed[filepath.Join(deployed, name)] = struct{}{}
 	return nil
 }
 
@@ -232,8 +236,8 @@ func (i *Installer) Uninstall(ctx context.Context, downloaded, deployed, name st
 	}()
 
 	// mounts should not be executed simultaneously
-	i.mtx.Lock()
-	defer i.mtx.Unlock()
+	i.mu.Lock()
+	defer i.mu.Unlock()
 
 	logger.Debug("unmount erofs image", slog.String("path", deployed))
 	if err := verity.Unmount(ctx, deployed); err != nil {
@@ -249,6 +253,14 @@ func (i *Installer) Uninstall(ctx context.Context, downloaded, deployed, name st
 
 	logger.Debug("package uninstalled")
 
+	// Remove from tracking maps so cleanup won't protect stale entries.
+	delete(i.deployed, filepath.Join(deployed, name))
+	for path := range i.downloaded {
+		if strings.HasPrefix(path, downloaded+string(filepath.Separator)) {
+			delete(i.downloaded, path)
+		}
+	}
+
 	return nil
 }
 
@@ -261,4 +273,108 @@ func (i *Installer) verifyImage(_ context.Context, imagePath, _ string) error {
 	// TODO(ipaqsa): before implementing verify mechanism wait until all packages have root hash
 
 	return nil
+}
+
+// Cleanup unmounts stale erofs mounts from deployed and removes stale
+// .erofs/.erofs.verity files and empty directories from downloaded.
+// Both parameters must be root directories (not package-level).
+// Handles both module (<downloaded>/<package>/<version>.erofs) and
+// application (<downloaded>/<registry>/<package>/<version>.erofs) layouts.
+func (i *Installer) Cleanup(ctx context.Context, downloaded, deployed string, exclude ...string) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "Cleanup")
+	defer span.End()
+
+	i.cleanupDeployed(ctx, deployed)
+
+	skip := make(map[string]struct{}, len(exclude)+1)
+	skip[deployed] = struct{}{}
+	for _, path := range exclude {
+		skip[path] = struct{}{}
+	}
+
+	i.cleanDownloaded(downloaded, skip)
+}
+
+// cleanupDeployed unmounts erofs mounts and closes device mappers
+// not tracked in i.deployed.
+func (i *Installer) cleanupDeployed(ctx context.Context, deployed string) {
+	logger := i.logger.With(slog.String("deployed", deployed))
+
+	mounts, err := os.ReadDir(deployed)
+	if err != nil {
+		return
+	}
+
+	for _, mount := range mounts {
+		mountPath := filepath.Join(deployed, mount.Name())
+		if _, ok := i.deployed[mountPath]; ok {
+			continue
+		}
+
+		name := mount.Name()
+
+		logger.Info("unmount stale mount", slog.String("path", mountPath))
+		if err = verity.Unmount(ctx, mountPath); err != nil {
+			logger.Warn("failed to unmount", slog.String("path", mountPath), log.Err(err))
+		}
+
+		if err = verity.CloseMapper(ctx, name); err != nil {
+			logger.Warn("failed to close device mapper", slog.String("name", name), log.Err(err))
+		}
+	}
+}
+
+// cleanDownloaded walks the downloaded tree and removes any path not on the way
+// to a tracked .erofs file. Prunes stale registries, packages, version files,
+// and foreign files in a single pass.
+// Paths in skip are preserved (e.g. deployed dir, sibling roots).
+func (i *Installer) cleanDownloaded(downloaded string, skip map[string]struct{}) {
+	logger := i.logger.With(slog.String("downloaded", downloaded))
+
+	// Build ancestor set: version prefix (without .erofs) + all parent dirs up to root.
+	keep := make(map[string]struct{}, len(i.downloaded)*3)
+	for path := range i.downloaded {
+		prefix := strings.TrimSuffix(path, ".erofs")
+		for prefix != downloaded {
+			keep[prefix] = struct{}{}
+			prefix = filepath.Dir(prefix)
+		}
+	}
+
+	_ = filepath.WalkDir(downloaded, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if path == downloaded {
+			return nil
+		}
+		if _, ok := skip[path]; ok {
+			return filepath.SkipDir
+		}
+
+		// Directories: keep if ancestor of a tracked version, remove otherwise.
+		if d.IsDir() {
+			if _, ok := keep[path]; ok {
+				return nil
+			}
+			logger.Info("remove stale dir", slog.String("path", path))
+			if err = os.RemoveAll(path); err != nil {
+				logger.Warn("failed to remove dir", slog.String("path", path), log.Err(err))
+			}
+			return filepath.SkipDir
+		}
+
+		// Files: strip .erofs.verity / .erofs to get version prefix, check keep set.
+		prefix := strings.TrimSuffix(path, ".verity")
+		prefix = strings.TrimSuffix(prefix, ".erofs")
+		if _, ok := keep[prefix]; ok {
+			return nil
+		}
+
+		logger.Info("remove stale file", slog.String("path", path))
+		if err = os.Remove(path); err != nil {
+			logger.Warn("failed to remove file", slog.String("path", path), log.Err(err))
+		}
+		return nil
+	})
 }

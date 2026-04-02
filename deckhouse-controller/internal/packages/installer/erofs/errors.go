@@ -23,10 +23,9 @@ import (
 )
 
 const (
-	ConditionReasonCreatePackageDir status.ConditionReason = "CreatePackageDir"
-	ConditionReasonGetRootHash      status.ConditionReason = "GetRootHash"
-	ConditionReasonGetImageReader   status.ConditionReason = "GetImageReader"
-	ConditionReasonImageByTar       status.ConditionReason = "ImageByTar"
+	ConditionReasonGetRootHash    status.ConditionReason = "GetRootHash"
+	ConditionReasonGetImageReader status.ConditionReason = "GetImageReader"
+	ConditionReasonImageByTar     status.ConditionReason = "ImageByTar"
 
 	ConditionReasonUnmount            status.ConditionReason = "Unmount"
 	ConditionReasonCloseDeviceMapper  status.ConditionReason = "CloseDeviceMapper"
@@ -34,20 +33,6 @@ const (
 	ConditionReasonCreateDeviceMapper status.ConditionReason = "CreateDeviceMapper"
 	ConditionReasonMount              status.ConditionReason = "Mount"
 )
-
-func newCreatePackageDirErr(err error) error {
-	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionDownloaded,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonCreatePackageDir,
-				Message: err.Error(),
-			},
-		},
-	}
-}
 
 func newGetRootHashErr(err error) error {
 	return &status.Error{

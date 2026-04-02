@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"go.opentelemetry.io/otel"
@@ -93,6 +94,10 @@ func CreateImage(ctx context.Context, modulePath, imagePath string) error {
 func CreateImageByTar(ctx context.Context, rc io.ReadCloser, imagePath string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "CreateImageByTar")
 	defer span.End()
+
+	if err := os.Mkdir(filepath.Dir(imagePath), 0755); err != nil {
+		return fmt.Errorf("create erofs image dir: %w", err)
+	}
 
 	span.SetAttributes(attribute.String("imagePath", imagePath))
 

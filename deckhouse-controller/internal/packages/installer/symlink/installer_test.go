@@ -325,6 +325,199 @@ func TestUninstall(t *testing.T) {
 	}
 }
 
+func TestCleanup(t *testing.T) {
+	t.Run("removes_stale_versions_and_symlinks", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		downloaded := filepath.Join(tmpDir, "downloaded")
+		deployed := filepath.Join(tmpDir, "deployed")
+
+		// Create active package with stale + active versions
+		pkgDir := filepath.Join(downloaded, "reg.io", "my-app")
+		setupVersionDir(t, pkgDir, "0.9.0", "old")
+		setupVersionDir(t, pkgDir, "1.0.0", "current")
+
+		// Create stale symlink + active symlink
+		setupSymlink(t, filepath.Join(deployed, "stale-app"), filepath.Join(pkgDir, "0.9.0"))
+		setupSymlink(t, filepath.Join(deployed, "my-app"), filepath.Join(pkgDir, "1.0.0"))
+
+		inst := symlink.NewInstaller(new(mockDownloader), log.NewNop())
+		repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+		ctx := context.Background()
+
+		// Download + Install only v1.0.0
+		require.NoError(t, inst.Download(ctx, repo, pkgDir, "my-app", "1.0.0"))
+		require.NoError(t, inst.Install(ctx, pkgDir, filepath.Join(deployed, "my-app"), "my-app", "1.0.0"))
+
+		// Cleanup from root
+		inst.Cleanup(ctx, downloaded, deployed)
+
+		assert.DirExists(t, filepath.Join(pkgDir, "1.0.0"), "active version kept")
+		assert.NoDirExists(t, filepath.Join(pkgDir, "0.9.0"), "stale version removed")
+		_, err := os.Lstat(filepath.Join(deployed, "my-app"))
+		assert.NoError(t, err, "active symlink kept")
+		_, err = os.Lstat(filepath.Join(deployed, "stale-app"))
+		assert.True(t, os.IsNotExist(err), "stale symlink removed")
+	})
+
+	t.Run("removes_stale_packages_and_registries", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		downloaded := filepath.Join(tmpDir, "downloaded")
+		deployed := filepath.Join(tmpDir, "deployed")
+		require.NoError(t, os.MkdirAll(deployed, 0755))
+
+		// Active: reg.io/my-app/1.0.0
+		activePkg := filepath.Join(downloaded, "reg.io", "my-app")
+		setupVersionDir(t, activePkg, "1.0.0", "")
+
+		// Stale: reg.io/old-app/1.0.0
+		setupVersionDir(t, filepath.Join(downloaded, "reg.io", "old-app"), "1.0.0", "")
+
+		// Stale: decomissioned.io/some-app/2.0.0
+		setupVersionDir(t, filepath.Join(downloaded, "decomissioned.io", "some-app"), "2.0.0", "")
+
+		inst := symlink.NewInstaller(new(mockDownloader), log.NewNop())
+		repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+		ctx := context.Background()
+
+		require.NoError(t, inst.Download(ctx, repo, activePkg, "my-app", "1.0.0"))
+		require.NoError(t, inst.Install(ctx, activePkg, filepath.Join(deployed, "my-app"), "my-app", "1.0.0"))
+
+		inst.Cleanup(ctx, downloaded, deployed)
+
+		assert.DirExists(t, filepath.Join(activePkg, "1.0.0"), "active version kept")
+		assert.NoDirExists(t, filepath.Join(downloaded, "reg.io", "old-app"), "stale package removed")
+		assert.NoDirExists(t, filepath.Join(downloaded, "decomissioned.io"), "stale registry removed")
+	})
+
+	t.Run("handles_mixed_modules_and_apps", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		downloaded := filepath.Join(tmpDir, "downloaded")
+		deployed := filepath.Join(tmpDir, "deployed")
+		require.NoError(t, os.MkdirAll(deployed, 0755))
+
+		// Module: downloaded/cert-manager/1.0.0 (2 levels)
+		modulePkg := filepath.Join(downloaded, "cert-manager")
+		setupVersionDir(t, modulePkg, "1.0.0", "")
+
+		// App: downloaded/reg.io/my-app/2.0.0 (3 levels)
+		appPkg := filepath.Join(downloaded, "reg.io", "my-app")
+		setupVersionDir(t, appPkg, "2.0.0", "")
+
+		// Stale module
+		setupVersionDir(t, filepath.Join(downloaded, "old-module"), "0.1.0", "")
+
+		inst := symlink.NewInstaller(new(mockDownloader), log.NewNop())
+		repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+		ctx := context.Background()
+
+		require.NoError(t, inst.Download(ctx, repo, modulePkg, "cert-manager", "1.0.0"))
+		require.NoError(t, inst.Download(ctx, repo, appPkg, "my-app", "2.0.0"))
+
+		inst.Cleanup(ctx, downloaded, deployed)
+
+		assert.DirExists(t, filepath.Join(modulePkg, "1.0.0"), "module version kept")
+		assert.DirExists(t, filepath.Join(appPkg, "2.0.0"), "app version kept")
+		assert.NoDirExists(t, filepath.Join(downloaded, "old-module"), "stale module removed")
+	})
+
+	t.Run("preserves_deployed_dir_inside_downloaded", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		// Real layout: deployed lives inside downloaded
+		downloaded := filepath.Join(tmpDir, "apps")
+		deployed := filepath.Join(downloaded, "deployed")
+
+		// Active app
+		pkgDir := filepath.Join(downloaded, "reg.io", "my-app")
+		setupVersionDir(t, pkgDir, "1.0.0", "")
+
+		// Deployed symlink inside downloaded/deployed/
+		setupSymlink(t, filepath.Join(deployed, "my-app"), filepath.Join(pkgDir, "1.0.0"))
+
+		inst := symlink.NewInstaller(new(mockDownloader), log.NewNop())
+		repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+		ctx := context.Background()
+
+		require.NoError(t, inst.Download(ctx, repo, pkgDir, "my-app", "1.0.0"))
+		require.NoError(t, inst.Install(ctx, pkgDir, filepath.Join(deployed, "my-app"), "my-app", "1.0.0"))
+
+		inst.Cleanup(ctx, downloaded, deployed)
+
+		// Deployed dir must survive
+		assert.DirExists(t, deployed, "deployed dir must be preserved")
+		_, err := os.Lstat(filepath.Join(deployed, "my-app"))
+		assert.NoError(t, err, "active symlink kept")
+		assert.DirExists(t, filepath.Join(pkgDir, "1.0.0"), "active version kept")
+	})
+
+	t.Run("preserves_excluded_sibling_dirs", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		// Real layout: <base>/ contains modules, modules/, and apps/
+		base := filepath.Join(tmpDir, "base")
+		modulesDeployed := filepath.Join(base, "modules")
+		appsDir := filepath.Join(base, "apps")
+
+		// Module: base/cert-manager/1.0.0
+		modulePkg := filepath.Join(base, "cert-manager")
+		setupVersionDir(t, modulePkg, "1.0.0", "")
+
+		// Apps dir with content (would be cleaned by modules cleanup without exclude)
+		setupVersionDir(t, filepath.Join(appsDir, "reg.io", "my-app"), "2.0.0", "")
+
+		// Deployed modules
+		require.NoError(t, os.MkdirAll(modulesDeployed, 0755))
+
+		inst := symlink.NewInstaller(new(mockDownloader), log.NewNop())
+		repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+		ctx := context.Background()
+
+		require.NoError(t, inst.Download(ctx, repo, modulePkg, "cert-manager", "1.0.0"))
+
+		// Cleanup modules root, excluding apps dir
+		inst.Cleanup(ctx, base, modulesDeployed, appsDir)
+
+		assert.DirExists(t, filepath.Join(modulePkg, "1.0.0"), "module version kept")
+		assert.DirExists(t, appsDir, "apps dir preserved via exclude")
+		assert.DirExists(t, filepath.Join(appsDir, "reg.io", "my-app", "2.0.0"), "apps content untouched")
+	})
+
+	t.Run("noop_when_dirs_do_not_exist", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		downloaded := filepath.Join(tmpDir, "downloaded")
+		deployed := filepath.Join(tmpDir, "deployed")
+
+		inst := symlink.NewInstaller(new(mockDownloader), log.NewNop())
+
+		// Should not panic or error
+		inst.Cleanup(context.Background(), downloaded, deployed)
+	})
+
+	t.Run("uninstall_clears_tracking_for_cleanup", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		downloaded := filepath.Join(tmpDir, "downloaded")
+		deployed := filepath.Join(tmpDir, "deployed")
+		require.NoError(t, os.MkdirAll(deployed, 0755))
+
+		pkgDir := filepath.Join(downloaded, "reg.io", "my-app")
+		inst := symlink.NewInstaller(new(mockDownloader), log.NewNop())
+		repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+		ctx := context.Background()
+
+		// Download, install, then uninstall with keep=true
+		require.NoError(t, inst.Download(ctx, repo, pkgDir, "my-app", "1.0.0"))
+		require.NoError(t, inst.Install(ctx, pkgDir, filepath.Join(deployed, "my-app"), "my-app", "1.0.0"))
+		require.NoError(t, inst.Uninstall(ctx, pkgDir, filepath.Join(deployed, "my-app"), "my-app", true))
+
+		// Files still on disk but untracked
+		assert.DirExists(t, filepath.Join(pkgDir, "1.0.0"))
+
+		// Cleanup should remove the untracked version and its parents
+		inst.Cleanup(ctx, downloaded, deployed)
+
+		assert.NoDirExists(t, filepath.Join(pkgDir, "1.0.0"), "untracked version removed")
+		assert.NoDirExists(t, filepath.Join(downloaded, "reg.io"), "empty registry dir removed")
+	})
+}
+
 func TestLifecycle(t *testing.T) {
 	tests := []struct {
 		name     string

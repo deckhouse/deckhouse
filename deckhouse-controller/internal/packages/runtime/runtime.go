@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	addonapp "github.com/flant/addon-operator/pkg/app"
@@ -45,7 +46,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
-	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
+	cleanuptask "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/cleanup"
+	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
@@ -105,6 +107,7 @@ type Runtime struct {
 
 // installerI abstracts package image operations (download, mount, unmount).
 type installerI interface {
+	Cleanup(ctx context.Context, downloaded, deployed string, exclude ...string)
 	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
 	Install(ctx context.Context, downloaded, deployed, name, version string) error
 	Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error
@@ -489,6 +492,12 @@ func (r *Runtime) Run() {
 			}
 		}
 	}()
+
+	go func() {
+		for range time.NewTicker(time.Hour).C {
+			r.queueService.Enqueue(context.Background(), "cleanup", cleanuptask.NewTask(r.installer, r.logger))
+		}
+	}()
 }
 
 // schedulePackage handles scheduler enable events by enqueueing
@@ -521,13 +530,13 @@ func (r *Runtime) schedulePackage(name string) {
 	settings := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
 	}
