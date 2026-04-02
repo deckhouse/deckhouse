@@ -58,6 +58,9 @@ const (
 
 	// retryCountAnnotation tracks the number of retry attempts
 	retryCountAnnotation = "packages.deckhouse.io/retry-count"
+
+	// lastRetryTimeAnnotation stores the timestamp of the last retry attempt
+	lastRetryTimeAnnotation = "packages.deckhouse.io/last-retry-time"
 )
 
 func getRetryCount(op *v1alpha1.PackageRepositoryOperation) int {
@@ -68,12 +71,21 @@ func getRetryCount(op *v1alpha1.PackageRepositoryOperation) int {
 	return count
 }
 
+func getLastRetryTime(op *v1alpha1.PackageRepositoryOperation) time.Time {
+	if op.Annotations == nil {
+		return time.Time{}
+	}
+	t, _ := time.Parse(time.RFC3339, op.Annotations[lastRetryTimeAnnotation])
+	return t
+}
+
 func (r *reconciler) incrementRetryCount(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
 	original := operation.DeepCopy()
 	if operation.Annotations == nil {
 		operation.Annotations = make(map[string]string)
 	}
 	operation.Annotations[retryCountAnnotation] = strconv.Itoa(getRetryCount(operation) + 1)
+	operation.Annotations[lastRetryTimeAnnotation] = r.dc.GetClock().Now().UTC().Format(time.RFC3339)
 	return r.client.Patch(ctx, operation, client.MergeFrom(original))
 }
 
@@ -301,6 +313,9 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 	if err != nil {
 		retryCount := getRetryCount(operation)
 		if retryCount < maxRetries {
+			if lastRetry := getLastRetryTime(operation); !lastRetry.IsZero() && time.Since(lastRetry) < retryInterval {
+				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
+			}
 			if patchErr := r.incrementRetryCount(ctx, operation); patchErr != nil {
 				return ctrl.Result{}, patchErr
 			}
@@ -360,6 +375,9 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 	if err != nil {
 		retryCount := getRetryCount(operation)
 		if retryCount < maxRetries {
+			if lastRetry := getLastRetryTime(operation); !lastRetry.IsZero() && time.Since(lastRetry) < retryInterval {
+				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
+			}
 			if patchErr := r.incrementRetryCount(ctx, operation); patchErr != nil {
 				return ctrl.Result{}, patchErr
 			}
@@ -424,6 +442,9 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 	if err != nil {
 		retryCount := getRetryCount(operation)
 		if retryCount < maxRetries {
+			if lastRetry := getLastRetryTime(operation); !lastRetry.IsZero() && time.Since(lastRetry) < retryInterval {
+				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
+			}
 			if patchErr := r.incrementRetryCount(ctx, operation); patchErr != nil {
 				return ctrl.Result{}, patchErr
 			}
