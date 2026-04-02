@@ -421,12 +421,16 @@ class ModuleSearch {
     }
   }
 
+  getCacheLanguage() {
+    return this.currentLang === 'ru' ? 'ru' : 'en';
+  }
+
   // Generate cache key from a single search index path using a hash function
-  generateCacheKey(indexPath) {
+  generateCacheKey(indexPath, lang = this.getCacheLanguage()) {
     // Use a hash function (djb2-like) to create a unique key from the path
-    // This ensures different index paths get different cache entries without collisions
+    // This ensures different index paths and languages get different cache entries without collisions
     let hash = 5381; // djb2 initial value
-    const str = indexPath;
+    const str = `${indexPath}|${lang}`;
     for (let i = 0; i < str.length; i++) {
       hash = ((hash << 5) + hash) + str.charCodeAt(i);
       hash = hash | 0; // Convert to 32-bit integer
@@ -785,6 +789,10 @@ class ModuleSearch {
     }
 
     try {
+      // Refresh language before reading cache to keep entries separated by page language.
+      this.refreshLanguageDetection();
+      const cacheLang = this.getCacheLanguage();
+
       // Only show loading UI if not loading in background
       if (!this.isLoadingInBackground) {
         this.showLoading();
@@ -797,7 +805,7 @@ class ModuleSearch {
       const loadedIndexes = await Promise.all(
         indexConfigs.map(async (config) => {
           // Generate cache key for this specific index file
-          const cacheKey = this.generateCacheKey(config.path);
+          const cacheKey = this.generateCacheKey(config.path, cacheLang);
 
           // Convert cache time from minutes to milliseconds
           const cacheExpirationMs = config.cacheTimeMinutes * 60 * 1000;
