@@ -25,6 +25,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -52,48 +53,48 @@ type packageChangelog struct {
 // metadataReader buffers the raw content of each metadata file extracted from the tar.
 // Each buffer may remain empty if the corresponding file is absent from the archive.
 type metadataReader struct {
-	versionReader   *bytes.Buffer
-	changelogReader *bytes.Buffer
-	packageReader   *bytes.Buffer
+	definitionReader *bytes.Buffer
+	versionReader    *bytes.Buffer
+	changelogReader  *bytes.Buffer
 }
 
 // parseVersionMetadataByImage extracts package metadata from a tar-formatted image reader.
 // It looks for three files: version.json, package.yaml (definition), and changelog.yaml.
 // All files are optional — missing files result in zero-value fields in the returned metadata.
-func parseVersionMetadataByImage(_ context.Context, img io.Reader) (*packageMetadata, error) {
+func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reader) (*packageMetadata, error) {
 	meta := new(packageMetadata)
 
-	r := &metadataReader{
-		versionReader:   bytes.NewBuffer(nil),
-		changelogReader: bytes.NewBuffer(nil),
-		packageReader:   bytes.NewBuffer(nil),
+	mr := &metadataReader{
+		versionReader:    bytes.NewBuffer(nil),
+		changelogReader:  bytes.NewBuffer(nil),
+		definitionReader: bytes.NewBuffer(nil),
 	}
 
-	if err := r.untarMetadata(img); err != nil {
+	if err := mr.untarMetadata(img); err != nil {
 		return nil, fmt.Errorf("untar metadata: %w", err)
 	}
 
-	if r.versionReader.Len() > 0 {
+	if mr.versionReader.Len() > 0 {
 		version := struct {
 			Version string `json:"version"`
 		}{}
 
-		if err := json.NewDecoder(r.versionReader).Decode(&version); err != nil {
+		if err := json.NewDecoder(mr.versionReader).Decode(&version); err != nil {
 			return nil, fmt.Errorf("unmarshal version file: %w", err)
 		}
 
 		meta.version = version.Version
 	}
 
-	if r.packageReader.Len() > 0 {
-		if err := yaml.NewDecoder(r.packageReader).Decode(&meta.definition); err != nil {
+	if mr.definitionReader.Len() > 0 {
+		if err := yaml.NewDecoder(mr.definitionReader).Decode(&meta.definition); err != nil {
 			return nil, fmt.Errorf("unmarshal package definition: %w", err)
 		}
 	}
 
-	if r.changelogReader.Len() > 0 {
-		if err := yaml.NewDecoder(r.changelogReader).Decode(&meta.changelog); err != nil {
-			return nil, fmt.Errorf("unmarshal changelog file: %w", err)
+	if mr.changelogReader.Len() > 0 {
+		if err := yaml.NewDecoder(mr.changelogReader).Decode(&meta.changelog); err != nil {
+			r.logger.Warn("unmarshal package changelog", log.Err(err))
 		}
 	}
 
@@ -124,7 +125,7 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 				return err
 			}
 		case dto.DefinitionFile:
-			if _, err = io.Copy(r.packageReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
+			if _, err = io.Copy(r.definitionReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}
 		default:
@@ -132,7 +133,7 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 		}
 
 		// All metadata files found — skip remaining tar entries.
-		if r.versionReader.Len() > 0 && r.changelogReader.Len() > 0 && r.packageReader.Len() > 0 {
+		if r.versionReader.Len() > 0 && r.changelogReader.Len() > 0 && r.definitionReader.Len() > 0 {
 			return nil
 		}
 	}
