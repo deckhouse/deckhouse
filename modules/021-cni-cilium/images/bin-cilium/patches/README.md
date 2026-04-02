@@ -84,3 +84,7 @@ Add import/export conntrack http endpoints. See usage example here modules/021-c
 ## 017-bpf-lb-generate-icmp-reply.patch
 
 An ICMP echo reply feature has been added to reply on LoadBalancer's service IP
+
+## 018-add-hubble-multitanancy.patch
+
+Added multitenancy

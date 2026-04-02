@@ -1,5 +1,5 @@
 diff --git a/hubble/cmd/common/config/flags.go b/hubble/cmd/common/config/flags.go
-index e1edd62d1f..2220518e63 100644
+index e1edd62d1f..687784aa19 100644
 --- a/hubble/cmd/common/config/flags.go
 +++ b/hubble/cmd/common/config/flags.go
 @@ -33,6 +33,8 @@ const (
@@ -23,7 +23,7 @@ index e1edd62d1f..2220518e63 100644
 +	ServerFlags.Bool(
 +		KeyKubeAuth,
 +		false,
-+		"Use credentials from the kubeconfig as the bearer token for Relay.",
++		"Use credentials from the kubeconfig (same as kubectl) as the bearer token for Relay.",
 +	)
  }
 diff --git a/hubble/cmd/common/conn/auth.go b/hubble/cmd/common/conn/auth.go
@@ -55,7 +55,7 @@ index be0a3e6857..fb83293f6b 100644
 +	return false
 +}
 diff --git a/hubble/cmd/common/conn/conn.go b/hubble/cmd/common/conn/conn.go
-index ade67f33f9..155128edae 100644
+index ade67f33f9..b32a08a8ff 100644
 --- a/hubble/cmd/common/conn/conn.go
 +++ b/hubble/cmd/common/conn/conn.go
 @@ -31,6 +31,7 @@ func init() {
@@ -66,7 +66,7 @@ index ade67f33f9..155128edae 100644
  	)
  }
  
-@@ -48,11 +49,33 @@ func Init(vp *viper.Viper) error {
+@@ -48,11 +49,31 @@ func Init(vp *viper.Viper) error {
  		if err != nil {
  			return err
  		}
@@ -82,11 +82,9 @@ index ade67f33f9..155128edae 100644
 +	if t := vp.GetString(config.KeyBearerToken); t != "" {
 +		return WithBearerToken(t), nil
 +	}
-+
 +	if !vp.GetBool(config.KeyKubeAuth) && !vp.GetBool(config.KeyPortForward) {
 +		return nil, nil
 +	}
-+
 +	t, err := kubeBearerTokenFromConfig(vp)
 +	if err != nil {
 +		if vp.GetBool(config.KeyKubeAuth) {
@@ -101,3 +99,800 @@ index ade67f33f9..155128edae 100644
  // New creates a new gRPC client connection to the target.
  func New(target string) (*grpc.ClientConn, error) {
  	t := strings.TrimPrefix(target, defaults.TargetTLSPrefix)
+diff --git a/hubble/cmd/common/conn/kube_token.go b/hubble/cmd/common/conn/kube_token.go
+new file mode 100644
+index 0000000000..a09e8518d5
+--- /dev/null
++++ b/hubble/cmd/common/conn/kube_token.go
+@@ -0,0 +1,66 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Hubble
++
++package conn
++
++import (
++	"fmt"
++	"net/http"
++	"os"
++	"strings"
++
++	"github.com/spf13/viper"
++	"k8s.io/client-go/tools/clientcmd"
++	"k8s.io/client-go/transport"
++
++	"github.com/cilium/cilium/hubble/cmd/common/config"
++)
++
++// kubeBearerTokenFromConfig returns a bearer token using the current kubeconfig (static token,
++// token file, or exec auth plugins).
++func kubeBearerTokenFromConfig(vp *viper.Viper) (string, error) {
++	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
++	if p := vp.GetString(config.KeyKubeconfig); p != "" {
++		loadingRules.ExplicitPath = p
++	}
++	overrides := &clientcmd.ConfigOverrides{}
++	if ctx := vp.GetString(config.KeyKubeContext); ctx != "" {
++		overrides.CurrentContext = ctx
++	}
++	clientcfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, overrides)
++	cfg, err := clientcfg.ClientConfig()
++	if err != nil {
++		return "", err
++	}
++	if cfg.BearerToken != "" {
++		return cfg.BearerToken, nil
++	}
++	if cfg.BearerTokenFile != "" {
++		b, err := os.ReadFile(cfg.BearerTokenFile)
++		if err != nil {
++			return "", err
++		}
++		return strings.TrimSpace(string(b)), nil
++	}
++	tc, err := cfg.TransportConfig()
++	if err != nil {
++		return "", err
++	}
++	rt, err := transport.New(tc)
++	if err != nil {
++		return "", err
++	}
++	req, err := http.NewRequest(http.MethodGet, strings.TrimRight(cfg.Host, "/")+"/version", nil)
++	if err != nil {
++		return "", err
++	}
++	_, err = rt.RoundTrip(req)
++	if err != nil {
++		return "", fmt.Errorf("kube exec auth: %w", err)
++	}
++	auth := strings.TrimSpace(req.Header.Get("Authorization"))
++	if len(auth) > 7 && strings.EqualFold(auth[:7], "bearer ") {
++		return strings.TrimSpace(auth[7:]), nil
++	}
++	return "", fmt.Errorf("kubeconfig: no bearer token could be resolved (use --bearer-token)")
++}
+diff --git a/pkg/hubble/relay/authz/authorizer.go b/pkg/hubble/relay/authz/authorizer.go
+new file mode 100644
+index 0000000000..5077f5d895
+--- /dev/null
++++ b/pkg/hubble/relay/authz/authorizer.go
+@@ -0,0 +1,149 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package authz
++
++import (
++	"context"
++	"fmt"
++	"sync"
++	"time"
++
++	authenticationv1 "k8s.io/api/authentication/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/client-go/kubernetes"
++	"k8s.io/client-go/rest"
++)
++
++// AuthResult holds authorization outcome for a client token.
++type AuthResult struct {
++	UserInfo          *authenticationv1.UserInfo
++	AllowedNamespaces map[string]struct{}
++	IsAdmin           bool
++}
++
++// Authorizer performs TokenReview, cluster-admin detection, and per-namespace SAR with caching.
++type Authorizer struct {
++	restCfg   *rest.Config
++	relayKube kubernetes.Interface
++	sarCache  *sarCache
++	ttl       time.Duration
++
++	mu          sync.Mutex
++	fullResults map[string]fullResultEntry
++}
++
++type fullResultEntry struct {
++	res     AuthResult
++	expires time.Time
++}
++
++// NewAuthorizer builds an Authorizer. relayCfg is the in-cluster (relay SA) REST config;
++// relayKube must be built from relayCfg.
++func NewAuthorizer(relayCfg *rest.Config, relayKube kubernetes.Interface, ttl time.Duration) *Authorizer {
++	if ttl <= 0 {
++		ttl = 30 * time.Second
++	}
++	return &Authorizer{
++		restCfg:     relayCfg,
++		relayKube:   relayKube,
++		sarCache:    newSARCache(ttl),
++		ttl:         ttl,
++		fullResults: make(map[string]fullResultEntry),
++	}
++}
++
++// Stop releases background resources.
++func (a *Authorizer) Stop() {
++	if a.sarCache != nil {
++		a.sarCache.Stop()
++	}
++}
++
++func (a *Authorizer) userClient(token string) (*kubernetes.Clientset, error) {
++	cfg := rest.CopyConfig(a.restCfg)
++	cfg.BearerToken = token
++	cfg.BearerTokenFile = ""
++	cfg.ExecProvider = nil
++	cfg.AuthProvider = nil
++	cfg.Username = ""
++	cfg.Password = ""
++	return kubernetes.NewForConfig(cfg)
++}
++
++// Authorize validates the token and returns allowed namespaces (or full access for admins).
++func (a *Authorizer) Authorize(ctx context.Context, token string) (AuthResult, error) {
++	th := HashToken(token)
++	if r, ok := a.cachedFull(th); ok {
++		return r, nil
++	}
++
++	userInfo, err := Authenticate(ctx, a.relayKube, token)
++	if err != nil {
++		return AuthResult{}, fmt.Errorf("token review: %w", err)
++	}
++
++	userKube, err := a.userClient(token)
++	if err != nil {
++		return AuthResult{}, fmt.Errorf("user client: %w", err)
++	}
++
++	admin, err := CheckClusterAdmin(ctx, userKube)
++	if err != nil {
++		return AuthResult{}, fmt.Errorf("cluster admin check: %w", err)
++	}
++	if admin {
++		res := AuthResult{UserInfo: userInfo, IsAdmin: true, AllowedNamespaces: nil}
++		a.storeFull(th, res)
++		return res, nil
++	}
++
++	nsList, err := a.relayKube.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
++	if err != nil {
++		return AuthResult{}, fmt.Errorf("list namespaces: %w", err)
++	}
++
++	allowed := make(map[string]struct{})
++	for _, ns := range nsList.Items {
++		name := ns.Name
++		cacheKey := th + ":" + name
++		if ok, hit := a.sarCache.Get(cacheKey); hit {
++			if ok {
++				allowed[name] = struct{}{}
++			}
++			continue
++		}
++		ok, err := CheckNamespaceAccess(ctx, userKube, name)
++		if err != nil {
++			return AuthResult{}, fmt.Errorf("sar namespace %s: %w", name, err)
++		}
++		a.sarCache.Set(cacheKey, ok)
++		if ok {
++			allowed[name] = struct{}{}
++		}
++	}
++
++	res := AuthResult{
++		UserInfo:          userInfo,
++		IsAdmin:           false,
++		AllowedNamespaces: allowed,
++	}
++	a.storeFull(th, res)
++	return res, nil
++}
++
++func (a *Authorizer) cachedFull(tokenHash string) (AuthResult, bool) {
++	a.mu.Lock()
++	defer a.mu.Unlock()
++	e, ok := a.fullResults[tokenHash]
++	if !ok || time.Now().After(e.expires) {
++		return AuthResult{}, false
++	}
++	return e.res, true
++}
++
++func (a *Authorizer) storeFull(tokenHash string, res AuthResult) {
++	a.mu.Lock()
++	defer a.mu.Unlock()
++	a.fullResults[tokenHash] = fullResultEntry{res: res, expires: time.Now().Add(a.ttl)}
++}
+diff --git a/pkg/hubble/relay/authz/authz.go b/pkg/hubble/relay/authz/authz.go
+new file mode 100644
+index 0000000000..7ddca8911e
+--- /dev/null
++++ b/pkg/hubble/relay/authz/authz.go
+@@ -0,0 +1,101 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package authz
++
++import (
++	"context"
++	"crypto/sha256"
++	"encoding/hex"
++	"fmt"
++	"strings"
++
++	authenticationv1 "k8s.io/api/authentication/v1"
++	authorizationv1 "k8s.io/api/authorization/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/client-go/kubernetes"
++)
++
++// HashToken returns a SHA-256 hex digest of the token (for cache keys; never log).
++func HashToken(token string) string {
++	sum := sha256.Sum256([]byte(token))
++	return hex.EncodeToString(sum[:])
++}
++
++// ExtractBearerToken returns the bearer token from gRPC metadata map (keys are lower-case).
++func ExtractBearerToken(md map[string][]string) (string, bool) {
++	for k, vals := range md {
++		if !strings.EqualFold(k, "authorization") || len(vals) == 0 {
++			continue
++		}
++		return parseBearer(vals[0])
++	}
++	return "", false
++}
++
++func parseBearer(v string) (string, bool) {
++	v = strings.TrimSpace(v)
++	const prefix = "Bearer "
++	if len(v) <= len(prefix) || !strings.EqualFold(v[:len(prefix)], prefix) {
++		return "", false
++	}
++	t := strings.TrimSpace(v[len(prefix):])
++	if t == "" {
++		return "", false
++	}
++	return t, true
++}
++
++// Authenticate validates the token using TokenReview (must use the relay service account).
++func Authenticate(ctx context.Context, relayKube kubernetes.Interface, token string) (*authenticationv1.UserInfo, error) {
++	tr, err := relayKube.AuthenticationV1().TokenReviews().Create(ctx, &authenticationv1.TokenReview{
++		Spec: authenticationv1.TokenReviewSpec{
++			Token: token,
++		},
++	}, metav1.CreateOptions{})
++	if err != nil {
++		return nil, err
++	}
++	if !tr.Status.Authenticated {
++		return nil, fmt.Errorf("token not authenticated")
++	}
++	return &tr.Status.User, nil
++}
++
++// CheckNamespaceAccess reports whether the current identity (from the REST client's credentials)
++// may list pods in the given namespace.
++func CheckNamespaceAccess(ctx context.Context, userKube kubernetes.Interface, namespace string) (bool, error) {
++	sar, err := userKube.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, &authorizationv1.SelfSubjectAccessReview{
++		Spec: authorizationv1.SelfSubjectAccessReviewSpec{
++			ResourceAttributes: &authorizationv1.ResourceAttributes{
++				Namespace: namespace,
++				Verb:      "list",
++				Group:     "",
++				Resource:  "pods",
++				Version:   "v1",
++			},
++		},
++	}, metav1.CreateOptions{})
++	if err != nil {
++		return false, err
++	}
++	return sar.Status.Allowed, nil
++}
++
++// CheckClusterAdmin reports whether the identity can list pods cluster-wide (all namespaces).
++func CheckClusterAdmin(ctx context.Context, userKube kubernetes.Interface) (bool, error) {
++	sar, err := userKube.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, &authorizationv1.SelfSubjectAccessReview{
++		Spec: authorizationv1.SelfSubjectAccessReviewSpec{
++			ResourceAttributes: &authorizationv1.ResourceAttributes{
++				Verb:     "list",
++				Group:    "",
++				Resource: "pods",
++				Version:  "v1",
++			},
++		},
++	}, metav1.CreateOptions{})
++	if err != nil {
++		return false, err
++	}
++	return sar.Status.Allowed, nil
++}
+diff --git a/pkg/hubble/relay/authz/authz_test.go b/pkg/hubble/relay/authz/authz_test.go
+new file mode 100644
+index 0000000000..9f90f8b921
+--- /dev/null
++++ b/pkg/hubble/relay/authz/authz_test.go
+@@ -0,0 +1,29 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package authz
++
++import (
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestExtractBearerToken(t *testing.T) {
++	md := map[string][]string{
++		"authorization": {"Bearer secret-token"},
++	}
++	tok, ok := ExtractBearerToken(md)
++	require.True(t, ok)
++	require.Equal(t, "secret-token", tok)
++
++	md2 := map[string][]string{
++		"Authorization": {"bearer lower"},
++	}
++	tok2, ok2 := ExtractBearerToken(md2)
++	require.True(t, ok2)
++	require.Equal(t, "lower", tok2)
++
++	_, ok3 := ExtractBearerToken(map[string][]string{"authorization": {"Basic x"}})
++	require.False(t, ok3)
++}
+diff --git a/pkg/hubble/relay/authz/cache.go b/pkg/hubble/relay/authz/cache.go
+new file mode 100644
+index 0000000000..14356aa41e
+--- /dev/null
++++ b/pkg/hubble/relay/authz/cache.go
+@@ -0,0 +1,77 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package authz
++
++import (
++	"sync"
++	"time"
++)
++
++// sarCache caches SubjectAccessReview outcomes per (token hash, namespace).
++type sarCache struct {
++	mu       sync.RWMutex
++	entries  map[string]sarEntry
++	ttl      time.Duration
++	stopOnce sync.Once
++	stopCh   chan struct{}
++}
++
++type sarEntry struct {
++	allowed bool
++	expiry  time.Time
++}
++
++func newSARCache(ttl time.Duration) *sarCache {
++	c := &sarCache{
++		entries: make(map[string]sarEntry),
++		ttl:     ttl,
++		stopCh:  make(chan struct{}),
++	}
++	go c.backgroundCleanup()
++	return c
++}
++
++func (c *sarCache) Stop() {
++	c.stopOnce.Do(func() { close(c.stopCh) })
++}
++
++func (c *sarCache) Get(key string) (allowed bool, ok bool) {
++	c.mu.RLock()
++	defer c.mu.RUnlock()
++	e, exists := c.entries[key]
++	if !exists || time.Now().After(e.expiry) {
++		return false, false
++	}
++	return e.allowed, true
++}
++
++func (c *sarCache) Set(key string, allowed bool) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	c.entries[key] = sarEntry{allowed: allowed, expiry: time.Now().Add(c.ttl)}
++}
++
++func (c *sarCache) backgroundCleanup() {
++	ticker := time.NewTicker(c.ttl / 2)
++	defer ticker.Stop()
++	for {
++		select {
++		case <-c.stopCh:
++			return
++		case <-ticker.C:
++			c.evictExpired()
++		}
++	}
++}
++
++func (c *sarCache) evictExpired() {
++	now := time.Now()
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	for k, e := range c.entries {
++		if now.After(e.expiry) {
++			delete(c.entries, k)
++		}
++	}
++}
+diff --git a/pkg/hubble/relay/server/auth_filter.go b/pkg/hubble/relay/server/auth_filter.go
+new file mode 100644
+index 0000000000..f520663709
+--- /dev/null
++++ b/pkg/hubble/relay/server/auth_filter.go
+@@ -0,0 +1,51 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package server
++
++import (
++	observerpb "github.com/cilium/cilium/api/v1/observer"
++	"github.com/cilium/cilium/pkg/hubble/relay/authz"
++)
++
++func filterNamespacesResponse(resp *observerpb.GetNamespacesResponse, ar authz.AuthResult) *observerpb.GetNamespacesResponse {
++	if ar.IsAdmin || resp == nil {
++		return resp
++	}
++	filtered := make([]*observerpb.Namespace, 0, len(resp.GetNamespaces()))
++	for _, n := range resp.GetNamespaces() {
++		ns := n.GetNamespace()
++		if ns == "" {
++			continue
++		}
++		if _, ok := ar.AllowedNamespaces[ns]; ok {
++			filtered = append(filtered, n)
++		}
++	}
++	resp.Namespaces = filtered
++	return resp
++}
++
++func flowResponseAllowed(resp *observerpb.GetFlowsResponse, ar authz.AuthResult) bool {
++	if ar.IsAdmin {
++		return true
++	}
++	if resp == nil {
++		return true
++	}
++	f := resp.GetFlow()
++	if f == nil {
++		return true
++	}
++	src := f.GetSource().GetNamespace()
++	dst := f.GetDestination().GetNamespace()
++	return namespaceAllowed(src, ar) || namespaceAllowed(dst, ar)
++}
++
++func namespaceAllowed(ns string, ar authz.AuthResult) bool {
++	if ns == "" {
++		return false
++	}
++	_, ok := ar.AllowedNamespaces[ns]
++	return ok
++}
+diff --git a/pkg/hubble/relay/server/auth_interceptor.go b/pkg/hubble/relay/server/auth_interceptor.go
+new file mode 100644
+index 0000000000..74b415a73a
+--- /dev/null
++++ b/pkg/hubble/relay/server/auth_interceptor.go
+@@ -0,0 +1,177 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package server
++
++import (
++	"context"
++	"os"
++	"strings"
++	"sync"
++
++	observerpb "github.com/cilium/cilium/api/v1/observer"
++	"github.com/cilium/cilium/pkg/hubble/relay/authz"
++	"google.golang.org/grpc"
++	"google.golang.org/grpc/codes"
++	"google.golang.org/grpc/metadata"
++	"google.golang.org/grpc/status"
++	"k8s.io/client-go/kubernetes"
++	"k8s.io/client-go/rest"
++)
++
++const envAuthEnabled = "HUBBLE_RELAY_AUTH_ENABLED"
++
++var (
++	authRelayOnce sync.Once
++	authRelay     *authz.Authorizer
++	authRelayErr  error
++)
++
++func authEnabled() bool {
++	return os.Getenv(envAuthEnabled) == "true"
++}
++
++func relayAuthorizer() (*authz.Authorizer, error) {
++	authRelayOnce.Do(func() {
++		cfg, err := rest.InClusterConfig()
++		if err != nil {
++			authRelayErr = err
++			return
++		}
++		kube, err := kubernetes.NewForConfig(cfg)
++		if err != nil {
++			authRelayErr = err
++			return
++		}
++		authRelay = authz.NewAuthorizer(cfg, kube, 0)
++	})
++	if authRelayErr != nil {
++		return nil, authRelayErr
++	}
++	return authRelay, nil
++}
++
++func init() {
++	if !authEnabled() {
++		return
++	}
++	DefaultOptions = append(DefaultOptions,
++		WithGRPCUnaryInterceptor(authUnaryInterceptor),
++		WithGRPCStreamInterceptor(authStreamInterceptor),
++	)
++}
++
++func authUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
++	if !authEnabled() {
++		return handler(ctx, req)
++	}
++	if !strings.HasPrefix(info.FullMethod, "/observer.Observer/") {
++		return handler(ctx, req)
++	}
++	md, _ := metadata.FromIncomingContext(ctx)
++	token, ok := authz.ExtractBearerToken(md)
++	if !ok || token == "" {
++		return nil, status.Error(codes.Unauthenticated, "missing bearer token")
++	}
++	a, err := relayAuthorizer()
++	if err != nil {
++		return nil, status.Errorf(codes.Internal, "relay auth initialization: %v", err)
++	}
++	ar, err := a.Authorize(ctx, token)
++	if err != nil {
++		return nil, status.Errorf(codes.Unauthenticated, "authorize: %v", err)
++	}
++	switch info.FullMethod {
++	case observerpb.Observer_GetNodes_FullMethodName, observerpb.Observer_ServerStatus_FullMethodName:
++		if !ar.IsAdmin {
++			return nil, status.Error(codes.PermissionDenied, "admin only")
++		}
++		return handler(ctx, req)
++	case observerpb.Observer_GetNamespaces_FullMethodName:
++		if ar.IsAdmin {
++			return handler(ctx, req)
++		}
++		resp, err := handler(ctx, req)
++		if err != nil {
++			return nil, err
++		}
++		nsResp, ok := resp.(*observerpb.GetNamespacesResponse)
++		if !ok {
++			return resp, nil
++		}
++		return filterNamespacesResponse(nsResp, ar), nil
++	default:
++		return handler(ctx, req)
++	}
++}
++
++func authStreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
++	if !authEnabled() {
++		return handler(srv, ss)
++	}
++	if !strings.HasPrefix(info.FullMethod, "/observer.Observer/") {
++		return handler(srv, ss)
++	}
++	md, _ := metadata.FromIncomingContext(ss.Context())
++	token, ok := authz.ExtractBearerToken(md)
++	if !ok || token == "" {
++		return status.Error(codes.Unauthenticated, "missing bearer token")
++	}
++	a, err := relayAuthorizer()
++	if err != nil {
++		return status.Errorf(codes.Internal, "relay auth initialization: %v", err)
++	}
++	ar, err := a.Authorize(ss.Context(), token)
++	if err != nil {
++		return status.Errorf(codes.Unauthenticated, "authorize: %v", err)
++	}
++	switch info.FullMethod {
++	case observerpb.Observer_GetFlows_FullMethodName:
++		if ar.IsAdmin {
++			return handler(srv, ss)
++		}
++		return handler(srv, newGetFlowsAuthStream(ss, ar))
++	case observerpb.Observer_GetAgentEvents_FullMethodName, observerpb.Observer_GetDebugEvents_FullMethodName:
++		if !ar.IsAdmin {
++			return status.Error(codes.PermissionDenied, "admin only")
++		}
++		return handler(srv, ss)
++	default:
++		return handler(srv, ss)
++	}
++}
++
++// getFlowsAuthStream validates/injects the first GetFlowsRequest and filters outbound flows.
++type getFlowsAuthStream struct {
++	grpc.ServerStream
++	ar       authz.AuthResult
++	recvDone bool
++}
++
++func newGetFlowsAuthStream(inner grpc.ServerStream, ar authz.AuthResult) *getFlowsAuthStream {
++	return &getFlowsAuthStream{ServerStream: inner, ar: ar}
++}
++
++func (s *getFlowsAuthStream) RecvMsg(m interface{}) error {
++	if s.recvDone {
++		return s.ServerStream.RecvMsg(m)
++	}
++	s.recvDone = true
++	if err := s.ServerStream.RecvMsg(m); err != nil {
++		return err
++	}
++	req, ok := m.(*observerpb.GetFlowsRequest)
++	if !ok {
++		return nil
++	}
++	return validateAndInjectGetFlowsRequest(req, s.ar)
++}
++
++func (s *getFlowsAuthStream) SendMsg(m interface{}) error {
++	if resp, ok := m.(*observerpb.GetFlowsResponse); ok {
++		if !flowResponseAllowed(resp, s.ar) {
++			return nil
++		}
++	}
++	return s.ServerStream.SendMsg(m)
++}
+diff --git a/pkg/hubble/relay/server/auth_request_filter.go b/pkg/hubble/relay/server/auth_request_filter.go
+new file mode 100644
+index 0000000000..f8fee4391b
+--- /dev/null
++++ b/pkg/hubble/relay/server/auth_request_filter.go
+@@ -0,0 +1,79 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package server
++
++import (
++	flowpb "github.com/cilium/cilium/api/v1/flow"
++	observerpb "github.com/cilium/cilium/api/v1/observer"
++	"github.com/cilium/cilium/pkg/hubble/k8s"
++	"github.com/cilium/cilium/pkg/hubble/relay/authz"
++	"google.golang.org/grpc/codes"
++	"google.golang.org/grpc/status"
++)
++
++// validateAndInjectGetFlowsRequest enforces namespace access on user-supplied filters and, when
++// there are no namespace-scoped pod filters, appends whitelist entries for allowed namespaces.
++func validateAndInjectGetFlowsRequest(req *observerpb.GetFlowsRequest, ar authz.AuthResult) error {
++	if ar.IsAdmin {
++		return nil
++	}
++
++	referenced := namespacesReferencedFromFlowFilters(req.GetBlacklist())
++	referenced = append(referenced, namespacesReferencedFromFlowFilters(req.GetWhitelist())...)
++	for _, ns := range referenced {
++		if ns == "" {
++			continue
++		}
++		if _, ok := ar.AllowedNamespaces[ns]; !ok {
++			return status.Errorf(codes.PermissionDenied, "not allowed to access namespace %q", ns)
++		}
++	}
++
++	if len(referenced) > 0 {
++		return nil
++	}
++
++	prefixes := namespacePrefixes(ar)
++	for _, w := range namespaceWhitelistEntries(prefixes) {
++		req.Whitelist = append(req.Whitelist, w)
++	}
++	return nil
++}
++
++func namespacesReferencedFromFlowFilters(filters []*flowpb.FlowFilter) []string {
++	var out []string
++	for _, f := range filters {
++		for _, sp := range f.GetSourcePod() {
++			ns, _ := k8s.ParseNamespaceName(sp)
++			if ns != "" {
++				out = append(out, ns)
++			}
++		}
++		for _, dp := range f.GetDestinationPod() {
++			ns, _ := k8s.ParseNamespaceName(dp)
++			if ns != "" {
++				out = append(out, ns)
++			}
++		}
++	}
++	return out
++}
++
++func namespacePrefixes(ar authz.AuthResult) []string {
++	prefixes := make([]string, 0, len(ar.AllowedNamespaces))
++	for ns := range ar.AllowedNamespaces {
++		prefixes = append(prefixes, ns+"/")
++	}
++	return prefixes
++}
++
++func namespaceWhitelistEntries(prefixes []string) []*flowpb.FlowFilter {
++	if len(prefixes) == 0 {
++		return nil
++	}
++	return []*flowpb.FlowFilter{
++		{SourcePod: append([]string(nil), prefixes...)},
++		{DestinationPod: append([]string(nil), prefixes...)},
++	}
++}
+diff --git a/pkg/hubble/relay/server/server.go b/pkg/hubble/relay/server/server.go
+index e50fddeb40..b8ed49c7db 100644
+--- a/pkg/hubble/relay/server/server.go
++++ b/pkg/hubble/relay/server/server.go
+@@ -97,11 +97,11 @@ func New(options ...Option) (*Server, error) {
+ 
+ 	var serverOpts []grpc.ServerOption
+ 
+-	for _, interceptor := range opts.grpcUnaryInterceptors {
+-		serverOpts = append(serverOpts, grpc.UnaryInterceptor(interceptor))
++	if len(opts.grpcUnaryInterceptors) > 0 {
++		serverOpts = append(serverOpts, grpc.ChainUnaryInterceptor(opts.grpcUnaryInterceptors...))
+ 	}
+-	for _, interceptor := range opts.grpcStreamInterceptors {
+-		serverOpts = append(serverOpts, grpc.StreamInterceptor(interceptor))
++	if len(opts.grpcStreamInterceptors) > 0 {
++		serverOpts = append(serverOpts, grpc.ChainStreamInterceptor(opts.grpcStreamInterceptors...))
+ 	}
+ 
+ 	if opts.serverTLSConfig != nil {
