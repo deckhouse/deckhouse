@@ -23,7 +23,7 @@ The parser is regenerated from the `.y` grammar using `goyacc` during the build.
 Applied to vendored `github.com/prometheus/prometheus` after `go mod vendor`.
 
 Patches existing vendored Prometheus files to:
-- Add to the `String` method of the `AggregateExpr` struct to print the expression with the `op_top` function
+- Add to the `String` method of the `AggregateExpr` struct to print the expression with the `op_top` function;
 
 ### op_func.go.tpl, op_top.go.tpl
 
