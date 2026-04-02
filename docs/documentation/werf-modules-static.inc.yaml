@@ -148,7 +148,6 @@ git:
     - documentation/*.svg
     - documentation/site.webmanifest
   stageDependencies:
-    install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
 {{ if eq .ModuleName "documentation" }}
 - add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
