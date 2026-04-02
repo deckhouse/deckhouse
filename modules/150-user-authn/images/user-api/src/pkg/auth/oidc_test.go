@@ -37,17 +37,60 @@ func (m *MockVerifier) Verify(_ context.Context, _ string) (*Claims, error) {
 }
 
 func (m *MockVerifier) ExtractToken(r *http.Request) (string, error) {
+	// Use the same case-insensitive logic as OIDCVerifier
+	return extractBearerToken(r)
+}
+
+// extractBearerToken extracts Bearer token from Authorization header (shared logic)
+func extractBearerToken(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return "", ErrNoAuthHeader
 	}
-	if len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	parts := splitN(authHeader, " ", 2)
+	if len(parts) != 2 || !equalFold(parts[0], "Bearer") {
 		return "", ErrInvalidAuthType
 	}
-	return authHeader[7:], nil
+	return parts[1], nil
 }
 
-func TestExtractToken(t *testing.T) {
+func splitN(s, sep string, n int) []string {
+	idx := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == sep[0] {
+			idx = i
+			break
+		}
+	}
+	if idx == 0 {
+		return []string{s}
+	}
+	return []string{s[:idx], s[idx+1:]}
+}
+
+func equalFold(a, b string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range len(a) {
+		ca, cb := a[i], b[i]
+		if ca >= 'A' && ca <= 'Z' {
+			ca += 'a' - 'A'
+		}
+		if cb >= 'A' && cb <= 'Z' {
+			cb += 'a' - 'A'
+		}
+		if ca != cb {
+			return false
+		}
+	}
+	return true
+}
+
+func TestOIDCVerifier_ExtractToken(t *testing.T) {
+	// Test the real OIDCVerifier.ExtractToken method
+	verifier := &OIDCVerifier{}
+
 	tests := []struct {
 		name       string
 		authHeader string
@@ -73,14 +116,18 @@ func TestExtractToken(t *testing.T) {
 			wantErr:    ErrInvalidAuthType,
 		},
 		{
-			name:       "bearer lowercase",
+			name:       "bearer lowercase - should work (case insensitive)",
 			authHeader: "bearer mytoken",
-			wantToken:  "",
-			wantErr:    ErrInvalidAuthType,
+			wantToken:  "mytoken",
+			wantErr:    nil,
+		},
+		{
+			name:       "BEARER uppercase - should work (case insensitive)",
+			authHeader: "BEARER mytoken",
+			wantToken:  "mytoken",
+			wantErr:    nil,
 		},
 	}
-
-	verifier := &MockVerifier{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

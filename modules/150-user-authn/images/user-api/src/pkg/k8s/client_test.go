@@ -18,7 +18,10 @@ package k8s
 
 import (
 	"context"
+	"log/slog"
+	"os"
 	"testing"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -27,8 +30,18 @@ import (
 	"k8s.io/client-go/dynamic/fake"
 )
 
-func TestK8sClient_IsLocalUser(t *testing.T) {
+func testLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+}
+
+func TestPasswordCache(t *testing.T) {
 	scheme := runtime.NewScheme()
+
+	passwordGVR := schema.GroupVersionResource{
+		Group:    "dex.coreos.com",
+		Version:  "v1",
+		Resource: "passwords",
+	}
 
 	existingPassword := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -48,7 +61,17 @@ func TestK8sClient_IsLocalUser(t *testing.T) {
 	}
 
 	dynamicClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind, existingPassword)
-	client := NewClientWithDynamic(dynamicClient)
+	logger := testLogger()
+
+	cache := NewPasswordCache(dynamicClient, logger)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := cache.Start(ctx); err != nil {
+		t.Fatalf("Failed to start password cache: %v", err)
+	}
+	defer cache.Stop()
 
 	tests := []struct {
 		name     string
@@ -69,15 +92,19 @@ func TestK8sClient_IsLocalUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := client.IsLocalUser(context.Background(), tt.username)
-			if err != nil {
-				t.Errorf("IsLocalUser() unexpected error: %v", err)
-				return
-			}
+			got := cache.IsLocalUser(tt.username)
 			if got != tt.want {
 				t.Errorf("IsLocalUser(%q) = %v, want %v", tt.username, got, tt.want)
 			}
 		})
+	}
+
+	if !cache.IsSynced() {
+		t.Error("Cache should be synced")
+	}
+
+	if cache.Count() != 1 {
+		t.Errorf("Cache count = %d, want 1", cache.Count())
 	}
 }
 
@@ -89,7 +116,8 @@ func TestK8sClient_CreatePasswordResetOperation(t *testing.T) {
 	}
 
 	dynamicClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind)
-	client := NewClientWithDynamic(dynamicClient)
+	logger := testLogger()
+	client := NewClientWithDynamic(dynamicClient, logger)
 
 	_, err := client.CreatePasswordResetOperation(
 		context.Background(),
@@ -135,5 +163,29 @@ func TestK8sClient_CreatePasswordResetOperation(t *testing.T) {
 
 	if resetPassword["newPasswordHash"] != "$2y$10$testHash" {
 		t.Errorf("UserOperation newPasswordHash = %v, want $2y$10$testHash", resetPassword["newPasswordHash"])
+	}
+}
+
+func TestK8sClient_IsLocalUser_CacheNotSynced(t *testing.T) {
+	scheme := runtime.NewScheme()
+
+	passwordGVR := schema.GroupVersionResource{
+		Group:    "dex.coreos.com",
+		Version:  "v1",
+		Resource: "passwords",
+	}
+
+	gvrToListKind := map[schema.GroupVersionResource]string{
+		passwordGVR: "PasswordList",
+	}
+
+	dynamicClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind)
+	logger := testLogger()
+	client := NewClientWithDynamic(dynamicClient, logger)
+
+	// Don't start the cache, so it's not synced
+	_, err := client.IsLocalUser(context.Background(), "admin")
+	if err != ErrCacheNotSynced {
+		t.Errorf("IsLocalUser() error = %v, want %v", err, ErrCacheNotSynced)
 	}
 }

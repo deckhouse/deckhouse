@@ -90,7 +90,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "userApi") }}
         args:
         - --listen=:8443
-        - --dex-url=https://dex.d8-user-authn.svc
+        - --dex-url=https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
         - --tls-cert-file=/certs/tls.crt
         - --tls-key-file=/certs/tls.key
         ports:

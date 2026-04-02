@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -36,30 +37,29 @@ var (
 	ErrUserNotFound    = errors.New("user not found")
 	ErrNotLocalUser    = errors.New("user is not a local user")
 	ErrOperationFailed = errors.New("failed to create user operation")
+	ErrCacheNotSynced  = errors.New("password cache not synced")
 
 	userOperationGVR = schema.GroupVersionResource{
 		Group:    "deckhouse.io",
 		Version:  "v1",
 		Resource: "useroperations",
 	}
-
-	passwordGVR = schema.GroupVersionResource{
-		Group:    "dex.coreos.com",
-		Version:  "v1",
-		Resource: "passwords",
-	}
 )
 
 type Client interface {
 	IsLocalUser(ctx context.Context, username string) (bool, error)
 	CreatePasswordResetOperation(ctx context.Context, username, newPasswordHash string) (string, error)
+	Start(ctx context.Context) error
+	Stop()
 }
 
 type K8sClient struct {
 	dynamicClient dynamic.Interface
+	passwordCache *PasswordCache
+	logger        *slog.Logger
 }
 
-func NewClient() (*K8sClient, error) {
+func NewClient(logger *slog.Logger) (*K8sClient, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get in-cluster config: %w", err)
@@ -70,31 +70,40 @@ func NewClient() (*K8sClient, error) {
 		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
+	passwordCache := NewPasswordCache(dynamicClient, logger)
+
 	return &K8sClient{
 		dynamicClient: dynamicClient,
+		passwordCache: passwordCache,
+		logger:        logger,
 	}, nil
 }
 
-func NewClientWithDynamic(dynamicClient dynamic.Interface) *K8sClient {
+func NewClientWithDynamic(dynamicClient dynamic.Interface, logger *slog.Logger) *K8sClient {
 	return &K8sClient{
 		dynamicClient: dynamicClient,
+		passwordCache: NewPasswordCache(dynamicClient, logger),
+		logger:        logger,
 	}
 }
 
-func (c *K8sClient) IsLocalUser(ctx context.Context, username string) (bool, error) {
-	passwords, err := c.dynamicClient.Resource(passwordGVR).Namespace(dexNamespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return false, fmt.Errorf("failed to list passwords: %w", err)
-	}
+// Start initializes the password cache informer and waits for sync.
+func (c *K8sClient) Start(ctx context.Context) error {
+	return c.passwordCache.Start(ctx)
+}
 
-	for _, pw := range passwords.Items {
-		pwUsername, found, _ := unstructured.NestedString(pw.Object, "username")
-		if found && pwUsername == username {
-			return true, nil
-		}
-	}
+// Stop stops the password cache informer.
+func (c *K8sClient) Stop() {
+	c.passwordCache.Stop()
+}
 
-	return false, nil
+// IsLocalUser checks if a user is a local Dex user using the cached Password CRDs.
+// Uses informer-based cache for O(1) lookups instead of API calls.
+func (c *K8sClient) IsLocalUser(_ context.Context, username string) (bool, error) {
+	if !c.passwordCache.IsSynced() {
+		return false, ErrCacheNotSynced
+	}
+	return c.passwordCache.IsLocalUser(username), nil
 }
 
 func (c *K8sClient) CreatePasswordResetOperation(ctx context.Context, username, newPasswordHash string) (string, error) {

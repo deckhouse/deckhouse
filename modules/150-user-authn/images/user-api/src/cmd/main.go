@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/time/rate"
 
 	"user-api/pkg/api"
 	"user-api/pkg/auth"
@@ -82,18 +83,27 @@ func run(cfg *Config) error {
 		return fmt.Errorf("failed to create OIDC verifier: %w", err)
 	}
 
-	k8sClient, err := k8s.NewClient()
+	k8sClient, err := k8s.NewClient(logger)
 	if err != nil {
 		return fmt.Errorf("failed to create K8s client: %w", err)
 	}
 
+	// Start the password cache informer
+	if err := k8sClient.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start K8s client: %w", err)
+	}
+	defer k8sClient.Stop()
+
 	handler := api.NewHandler(oidcVerifier, k8sClient, logger)
+
+	// Rate limiter: 10 requests per second with burst of 20
+	resetLimiter := rate.NewLimiter(rate.Limit(10), 20)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handler.Healthz)
 	mux.HandleFunc("GET /readyz", handler.Readyz)
 	mux.HandleFunc("GET /metrics", handler.Metrics)
-	mux.HandleFunc("POST /api/v1/password/reset", handler.ResetPassword)
+	mux.HandleFunc("POST /api/v1/password/reset", rateLimitMiddleware(resetLimiter, handler.ResetPassword))
 
 	server := &http.Server{
 		Addr:              cfg.ListenAddress,
@@ -131,4 +141,16 @@ func run(cfg *Config) error {
 	}
 
 	return nil
+}
+
+func rateLimitMiddleware(limiter *rate.Limiter, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !limiter.Allow() {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"error":"rate_limit_exceeded","message":"Too many requests, please try again later"}`))
+			return
+		}
+		next(w, r)
+	}
 }

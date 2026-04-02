@@ -53,6 +53,13 @@ type OIDCVerifier struct {
 }
 
 func NewOIDCVerifier(ctx context.Context, issuerURL string) (*OIDCVerifier, error) {
+	// Skip TLS verification for Dex connection. This follows the same pattern
+	// as dex-authenticator (--ssl-insecure-skip-verify=true).
+	// The public Dex URL goes through Ingress with a certificate that may use
+	// different CAs depending on the HTTPS mode (CertManager, CustomCertificate, etc).
+	// Since this is internal cluster communication and the URL is resolved via DNS,
+	// skipping verification is acceptable and more robust than trying to handle
+	// all possible CA configurations.
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
@@ -65,7 +72,7 @@ func NewOIDCVerifier(ctx context.Context, issuerURL string) (*OIDCVerifier, erro
 			IdleConnTimeout:       30 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
 		},
 	}
 
@@ -75,6 +82,10 @@ func NewOIDCVerifier(ctx context.Context, issuerURL string) (*OIDCVerifier, erro
 		return nil, fmt.Errorf("failed to create OIDC provider: %w", err)
 	}
 
+	// user-api validates tokens issued by Dex but doesn't have its own
+	// client_id registered in Dex. Tokens are issued to other clients
+	// (e.g., kubeconfig-generator, dex-authenticator) and we only need
+	// to verify the signature and extract user claims.
 	verifier := provider.Verifier(&oidc.Config{
 		SkipClientIDCheck: true,
 	})

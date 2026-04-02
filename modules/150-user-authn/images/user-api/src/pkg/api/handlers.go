@@ -57,6 +57,8 @@ type ErrorResponse struct {
 	Message string `json:"message,omitempty"`
 }
 
+const maxRequestBodySize = 1 << 20 // 1 MB
+
 func NewHandler(verifier auth.Verifier, k8sClient k8s.Client, logger *slog.Logger) *Handler {
 	registry := prometheus.NewRegistry()
 
@@ -121,6 +123,8 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Info("Password reset request", "username", claims.Username, "remote_addr", r.RemoteAddr)
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
+
 	var req PasswordResetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Failed to decode request body", "error", err, "username", claims.Username)
@@ -176,9 +180,9 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.logger.Info("Password reset operation created", "username", claims.Username, "operation_name", operationName)
-	h.reqCounter.WithLabelValues("/api/v1/password/reset", "200").Inc()
+	h.reqCounter.WithLabelValues("/api/v1/password/reset", "202").Inc()
 
-	h.writeJSON(w, http.StatusOK, PasswordResetResponse{
+	h.writeJSON(w, http.StatusAccepted, PasswordResetResponse{
 		Status:        "accepted",
 		OperationName: operationName,
 		Message:       "Password reset operation created successfully",

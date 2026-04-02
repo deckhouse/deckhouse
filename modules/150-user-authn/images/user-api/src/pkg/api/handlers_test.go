@@ -72,6 +72,12 @@ func (m *mockK8sClient) CreatePasswordResetOperation(_ context.Context, _, _ str
 	return m.operationName, nil
 }
 
+func (m *mockK8sClient) Start(_ context.Context) error {
+	return nil
+}
+
+func (m *mockK8sClient) Stop() {}
+
 func newTestHandler(verifier auth.Verifier, k8sClient k8s.Client) *Handler {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	return NewHandler(verifier, k8sClient, logger)
@@ -130,7 +136,7 @@ func TestHandler_ResetPassword(t *testing.T) {
 				isLocal:       true,
 				operationName: "self-password-reset-abc123",
 			},
-			wantStatus: http.StatusOK,
+			wantStatus: http.StatusAccepted,
 		},
 		{
 			name:       "missing auth header",
@@ -251,7 +257,7 @@ func TestHandler_ResetPassword(t *testing.T) {
 				}
 			}
 
-			if tt.wantStatus == http.StatusOK {
+			if tt.wantStatus == http.StatusAccepted {
 				var resp PasswordResetResponse
 				if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 					t.Fatalf("Failed to decode success response: %v", err)
