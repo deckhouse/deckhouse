@@ -1,15 +1,15 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-fc1d5deddaa81550dea7f4a50b3975a7c18832da2d65abd5642934472389651d",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "author": "Deckhouse <contact@deckhouse.io>",
   "version": 1,
   "statements": [
     {
       "vulnerability": {
         "@id": "https://bdu.fstec.ru/vul/2025-09312",
-        "description": "a vulnerability in the firewalld daemon, part of the moby containerization framework, is related to improper resource initialization. exploitation of this vulnerability could allow an attacker to gain unauthorized access to protected information.",
-        "name": "cve-2025-54410",
-        "aliases": [ "bdu:2025-09312" ]
+        "description": "A vulnerability in the firewalld daemon, part of the Moby containerization framework, is related to improper resource initialization. Exploitation of this vulnerability could allow an attacker to gain unauthorized access to protected information.",
+        "name": "CVE-2025-54410",
+        "aliases": [ "BDU:2025-09312" ]
       },
       "products": [
         {
@@ -18,7 +18,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "moby is an open source container framework developed by docker inc. that is distributed as docker engine, mirantis container runtime, and various other downstream projects/products. a firewalld firewall controller daemon vulnerability affects moby releases before 28.0.0. when firewalld reloads, docker fails to re-create iptables rules that isolate bridge networks, allowing any container to access all ports on any other container across different bridge networks on the same host. deckhouse kubernetes platform is not vulnerable as it does not use this functionality for container isolation.",
+      "impact_statement": "Moby is an open source container framework developed by Docker inc. that is distributed as docker engine, mirantis container runtime, and various other downstream projects/products. A firewalld firewall controller daemon vulnerability affects moby releases before 28.0.0. when firewalld reloads, docker fails to re-create iptables rules that isolate bridge networks, allowing any container to access all ports on any other container across different bridge networks on the same host. Deckhouse Kubernetes Platform is not vulnerable as it does not use this functionality for container isolation.",
       "timestamp": "2025-10-14t11:19:11.56805z"
     },
 
@@ -26,7 +26,7 @@
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-22703",
         "description": "Verification accepts any valid Rekor entry under certain conditions",
-        "name": "cve-2026-22703",
+        "name": "CVE-2026-22703",
         "aliases": [ "GHSA-whqx-f9j3-ch6m" ]
       },
       "products": [
@@ -44,7 +44,7 @@
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-24137",
         "description": "Legacy TUF client allows for arbitrary file writes with target cache path traversal",
-        "name": "cve-2026-24137",
+        "name": "CVE-2026-24137",
         "aliases": [ "GHSA-fcv2-xgw5-pqxf" ]
       },
       "products": [
@@ -62,7 +62,7 @@
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-24117",
         "description": "Server-Side Request Forgery (SSRF) via provided public key URL",
-        "name": "cve-2026-24117",
+        "name": "CVE-2026-24117",
         "aliases": [ "GHSA-4c4x-jm2x-pf9j" ]
       },
       "products": [
@@ -73,6 +73,24 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "In versions 1.4.3 and below, attackers can trigger SSRF to arbitrary internal services because /api/v1/index/retrieve supports retrieving a public key via user-provided URL. Since the SSRF only can trigger GET requests, the request cannot mutate state. The response from the GET request is not returned to the caller so data exfiltration is not possible. A malicious actor could attempt to probe an internal network through Blind SSRF. The issue has been fixed in version 1.5.0. Deckhouse Kubernetes Platform is not affected since it does not utilize rekor.",
+      "timestamp": "2026-04-01t14:34:03z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2025-66564",
+        "description": "Excessive memory allocation during request parsing",
+        "name": "CVE-2025-66564",
+        "aliases": [ "GHSA-4qg8-fj49-pxjh" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/timestamp-authority@v1.2.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Prior to 2.0.3, Function api.ParseJSONRequest currently splits (via a call to strings.Split) an optionally-provided OID (which is untrusted data) on periods. Similarly, function api.getContentType splits the Content-Type header (which is also untrusted data) on an application string. As a result, in the face of a malicious request with either an excessively long OID in the payload containing many period characters or a malformed Content-Type header, a call to api.ParseJSONRequest or api.getContentType incurs allocations of O(n) bytes (where n stands for the length of the function's argument). Deckhouse Kubernetes Platform is not affected by this since it does not implement or rely on timestamp verification using this package.",
       "timestamp": "2026-04-01t14:34:03z"
     }
   ],
