@@ -97,10 +97,8 @@ const (
 	ReasonCancelled          = "Cancelled"
 
 	// Failed condition reasons
-	ReasonNoFailure          = "NoFailure"
-	ReasonManifestWriteError = "ManifestWriteError"
-	ReasonPodCrashLooping    = "PodCrashLooping"
-	ReasonHealthCheckFailed  = "HealthCheckFailed"
+	ReasonNoFailure         = "NoFailure"
+	ReasonHealthCheckFailed = "HealthCheckFailed"
 	ReasonTimeout            = "Timeout"
 
 	// Built-in k8s label on static pods with the component name
