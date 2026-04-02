@@ -97,32 +97,30 @@ spec:
                   required:
                   - applicationHTTPRouteListenerSetName
                   description: |-
-                    A set of parameters to use in HTTPRoute resource.
+                    A set of parameters to use in HTTPRoute object.
                     
-                    **Warning.** Only applicable in clusters with Gateway API support.
+                    > **Warning.** Only applicable in clusters with Gateway API support.
                     
-                    **Warning.** Must define the same ListenerSet resource which is used to publish the application domain. 
+                    > **Warning.** Define the same ListenerSet object which is used to publish the application domain. 
                   properties:
                     applicationHTTPRouteListenerSetName:
                       type: string
                       description: |
-                        The name of the Gateway API ListenerSet resource to be refered to from the HTTPRoute resource.
+                        Name of the ListenerSet object from the Gateway API to be referred to from the HTTPRoute.
                       x-doc-examples: ['default-listenerset']
                       pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       maxLength: 253
                     applicationHTTPRouteListenerSetNamespace:
                       type: string
                       description: |
-                        The namespace where the Gateway API ListenerSet resource is deployed to be refered to from the HTTPRoute resource.
-
-                        If not set, the namespace of the `DeAuthenticator` is used.
+                        Namespace where the ListenerSet object from the Gateway API is deployed to be referred to from the HTTPRoute.
                       x-doc-examples: ['default']
                       pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       maxLength: 63
                     applicationHTTPRouteListenerSetSectionName:
                       type: string
                       description: |
-                        The listener name in the Gateway API ListenerSet resource the HTTPRoute resource refers to.
+                        Section name from the ListenerSet object in the Gateway API the HTTPRoute refers to.
                       x-doc-examples: ['default-listener']
                       pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       maxLength: 
@@ -370,23 +368,23 @@ spec:
                         required:
                         - httpRouteListenerSetName
                         description: |-
-                          A set of parameters to use in HTTPRoute resource.
+                          A set of parameters to use in HTTPRoute object.
                     
-                          **Warning.** Only applicable in clusters with Gateway API support.
+                          > **Warning.** Only applicable in clusters with Gateway API support.
 
-                          **Warning.** Must define the same ListenerSet resource which is used to publish the application domain.
+                          > **Warning.** Define the same ListenerSet object which is used to publish the application domain.
                         properties:
                           httpRouteListenerSetName:
                             type: string
                             description: |
-                              The name of the Gateway API ListenerSet resource to be refered to from the HTTPRoute resource.
+                              Name of the ListenerSet object from the Gateway API to be referred to from the HTTPRoute.
                             x-doc-examples: ['default-listener-set']
                             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                             maxLength: 253
                           httpRouteListenerSetNamespace:
                             type: string
                             description: |
-                              The namespace where the Gateway API ListenerSet resource is deployed to be refered to from the HTTPRoute resource.
+                              Namespace where the ListenerSet object from the Gateway API is deployed to be referred to from the HTTPRoute.
 
                               If not set, the namespace of the `DeAuthenticator` is used.
                             x-doc-examples: ['default']
@@ -395,7 +393,7 @@ spec:
                           httpRouteListenerSetSectionName:
                             type: string
                             description: |
-                              The listener name in the Gateway API ListenerSet resource the HTTPRoute resource refers to.
+                              Section name from the ListenerSet object in the Gateway API the HTTPRoute refers to.
                             x-doc-examples: ['web-listener']
                             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                             maxLength: 253
