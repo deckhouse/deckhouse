@@ -127,12 +127,15 @@ func (v *OIDCVerifier) Verify(ctx context.Context, token string) (*Claims, error
 		return nil, fmt.Errorf("failed to parse claims: %w", err)
 	}
 
+	// Priority: preferred_username > name > email
+	// For local Dex users, 'name' matches the Password CRD username.
+	// 'email' is a fallback for external providers that don't set name/preferred_username.
 	username := claims.PreferredUsername
 	if username == "" {
-		username = claims.Email
+		username = claims.Name
 	}
 	if username == "" {
-		username = claims.Name
+		username = claims.Email
 	}
 	if username == "" {
 		return nil, ErrMissingUsername
