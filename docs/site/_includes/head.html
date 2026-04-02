@@ -28,7 +28,15 @@
 {%- endif -%}
 {%- endfor %}
 
-{%- assign title_parts = title_parts | push: page.title -%}
+{%- assign page_title_for_head = page.title -%}
+{%- if page.title contains ':' -%}
+  {%- assign _suffix = page.title | regex_replace_once: '^[^:]+:\s*', '' | strip -%}
+  {%- if _suffix != '' -%}
+    {%- assign page_title_for_head = _suffix | capitalize -%}
+  {%- endif -%}
+{%- endif -%}
+
+{%- assign title_parts = title_parts | push: page_title_for_head -%}
 
 {%- if page_url_without_lang.size > 1 and is_directory %}
 {%- assign page_url_without_lang = page_url_without_lang | append: '/' %}
@@ -36,6 +44,12 @@
 
 {%- if page.title_gen -%}
   {%- assign generated_title = page.title_gen -%}
+  {%- if page.title_gen contains ':' -%}
+    {%- assign _gt_suffix = page.title_gen | regex_replace_once: '^[^:]+:\s*', '' | strip -%}
+    {%- if _gt_suffix != '' -%}
+      {%- assign generated_title = _gt_suffix | capitalize -%}
+    {%- endif -%}
+  {%- endif -%}
 {%- else -%}
   {%- assign generated_title = title_parts | reverse | join: "" -%}
 {%- endif -%}
@@ -50,7 +64,19 @@
     {%- assign additional_title = additional_title | append: " " | append: capitalized_word -%}
   {%- endif -%}
 {%- endfor -%}
-<title>{{ generated_title }} | {{ site.site_title }} {{ additional_title }}</title>
+
+{%- if page.sidebar == 'embedded-modules' and page['module-kebab-name'] and page['module-kebab-name'] != 'global' %}
+  {%- assign module_primary_title = page_title_for_head -%}
+  {%- if page.title_gen -%}
+    {%- assign module_primary_title = generated_title -%}
+  {%- endif -%}
+  {%- capture html_title %}{{ module_primary_title }} | {{ page['module-kebab-name'] }} | {{ site.site_title }}{% endcapture %}
+  {%- assign meta_title = html_title -%}
+{%- else %}
+  {%- capture html_title %}{{ generated_title }} | {{ site.site_title }} {{ additional_title }}{% endcapture %}
+  {%- capture meta_title %}{{ generated_title }} | {{ site.site_title }}{% endcapture %}
+{%- endif -%}
+<title>{{ html_title }}</title>
 
 {%- if page.description %}
     {%- assign raw_description = page.description | strip_html | strip_newlines | strip %}
@@ -101,14 +127,14 @@
 
 <!-- Primary Meta Tags -->
 <link rel="canonical" href="{{ site.urls[page.lang] }}{{ page_meta_url }}" />
-<meta name="title" content="{{ generated_title }} | {{ site.site_title }}">
+<meta name="title" content="{{ meta_title }}">
 <meta name="description" content="{{ description }}">
 <meta name="keywords" content="{{page.tags}}{% if page.tags %}, {% endif %}{% if page.keywords %}{{page.keywords}}, {% endif %}{% if page.search %}{{page.search}}{% endif %}">
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="article">
 <meta property="og:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
-<meta property="og:title" content="{{ generated_title }} | {{ site.site_title }}">
+<meta property="og:title" content="{{ meta_title }}">
 <meta property="og:description" content="{{ description }}">
 
 {%- if page.product_code == 'stronghold' or page.product_code == "virtualization-platform" or page.product_code == "code" or page.product_code == "delivery-kit" or page.product_code == "kubernetes-platform" or page.product_code == "observability-platform" or page.product_code == "prompp" %}

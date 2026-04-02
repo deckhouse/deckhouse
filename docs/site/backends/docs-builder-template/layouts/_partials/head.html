@@ -11,15 +11,36 @@
   {{- $canonicalURL = printf "%s%s" site.BaseURL (strings.TrimLeft "/" $canonicalURL) -}}
 {{- end -}}
 
-<title>{{ .Title }} | {{ .Site.Title }}</title>
+{{- $pageTitleForHead := .Title -}}
+{{- if strings.Contains $pageTitleForHead ":" -}}
+  {{- $parts := split $pageTitleForHead ":" -}}
+  {{- if gt (len $parts) 1 -}}
+    {{- $suffix := strings.TrimSpace (delimit (after 1 $parts) ":") -}}
+    {{- if $suffix -}}
+      {{- $pageTitleForHead = strings.FirstUpper $suffix -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $documentTitle := printf "%s | %s" $pageTitleForHead .Site.Title }}
+{{- $modulePathMatch := findRESubmatch `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 }}
+{{- if $modulePathMatch }}
+  {{- $captures := index $modulePathMatch 0 }}
+  {{- if ge (len $captures) 2 }}
+    {{- $moduleKebabName := index $captures 1 }}
+    {{- $documentTitle = printf "%s | %s | Deckhouse" $pageTitleForHead $moduleKebabName }}
+  {{- end }}
+{{- end }}
+
+<title>{{ $documentTitle }}</title>
 <link rel="canonical" href="{{ $canonicalURL }}" />
 <meta name="description" content="{{  $description }}">
-<meta name="title" content="{{ .Title }} | {{ .Site.Title }}">
+<meta name="title" content="{{ $documentTitle }}">
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="article">
 <meta property="og:url" content="{{ strings.TrimSuffix "readme.html" .Permalink  }}">
-<meta property="og:title" content="{{ .Title }} | {{ .Site.Title }}">
+<meta property="og:title" content="{{ $documentTitle }}">
 <meta property="og:description" content="{{ $description }}">
 <meta property="og:image" content="{{ if eq site.Params.mode "module" }}/{{ else }}{{ site.BaseURL }}{{ end }}images/og/kubernetes-platform.png">
 <meta property="og:image:width" content="1200">
