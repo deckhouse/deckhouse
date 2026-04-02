@@ -19,7 +19,7 @@ status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: ""
-    reason: ""
+    reason: Succeeded
     status: "True"
     type: MetadataLoaded
 ---
