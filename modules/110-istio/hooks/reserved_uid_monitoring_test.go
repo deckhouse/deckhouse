@@ -38,9 +38,9 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 		})
 	})
 
-	Context("Pod with app container running as UID 1337 and istio-proxy present", func() {
+	Context("Pod with app container running as UID 64535 and istio-proxy present", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(podAppUser1337WithProxy))
+			f.BindingContexts.Set(f.KubeStateSet(podAppUser64535WithProxy))
 			f.RunHook()
 		})
 
@@ -57,9 +57,9 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 		})
 	})
 
-	Context("Pod with only istio-proxy running as UID 1337, app has normal UID", func() {
+	Context("Pod with only istio-proxy running as UID 64535, app has normal UID", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(podOnlyProxyUser1337))
+			f.BindingContexts.Set(f.KubeStateSet(podOnlyProxyUser64535))
 			f.RunHook()
 		})
 
@@ -70,9 +70,9 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 		})
 	})
 
-	Context("Pod without istio canonical-name label, app running as UID 1337", func() {
+	Context("Pod without istio canonical-name label, app running as UID 64535", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(podUser1337NoProxy))
+			f.BindingContexts.Set(f.KubeStateSet(podUser64535NoProxy))
 			f.RunHook()
 		})
 
@@ -83,9 +83,9 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 		})
 	})
 
-	Context("Pod with pod-level runAsUser 1337 and istio-proxy present", func() {
+	Context("Pod with pod-level runAsUser 64535 and istio-proxy present", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(podPodLevelUser1337WithProxy))
+			f.BindingContexts.Set(f.KubeStateSet(podPodLevelUser64535WithProxy))
 			f.RunHook()
 		})
 
@@ -102,7 +102,7 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 		})
 	})
 
-	Context("Pod with pod-level runAsUser 1337, container overrides to different UID, istio-proxy present", func() {
+	Context("Pod with pod-level runAsUser 64535, container overrides to different UID, istio-proxy present", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(podOverriddenUserWithProxy))
 			f.RunHook()
@@ -115,9 +115,9 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 		})
 	})
 
-	Context("Multiple app containers with UID 1337 in one pod with istio-proxy", func() {
+	Context("Multiple app containers with UID 64535 in one pod with istio-proxy", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(podMultipleContainers1337))
+			f.BindingContexts.Set(f.KubeStateSet(podMultipleContainers64535))
 			f.RunHook()
 		})
 
@@ -133,7 +133,7 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 })
 
 const (
-	podAppUser1337WithProxy = `
+	podAppUser64535WithProxy = `
 ---
 apiVersion: v1
 kind: Pod
@@ -147,14 +147,14 @@ spec:
   - name: app
     image: app:latest
     securityContext:
-      runAsUser: 1337
+      runAsUser: 64535
   - name: istio-proxy
     image: istio/proxyv2:latest
     securityContext:
-      runAsUser: 1337
+      runAsUser: 64535
 `
 
-	podOnlyProxyUser1337 = `
+	podOnlyProxyUser64535 = `
 ---
 apiVersion: v1
 kind: Pod
@@ -172,10 +172,10 @@ spec:
   - name: istio-proxy
     image: istio/proxyv2:latest
     securityContext:
-      runAsUser: 1337
+      runAsUser: 64535
 `
 
-	podUser1337NoProxy = `
+	podUser64535NoProxy = `
 ---
 apiVersion: v1
 kind: Pod
@@ -187,10 +187,10 @@ spec:
   - name: app
     image: app:latest
     securityContext:
-      runAsUser: 1337
+      runAsUser: 64535
 `
 
-	podPodLevelUser1337WithProxy = `
+	podPodLevelUser64535WithProxy = `
 ---
 apiVersion: v1
 kind: Pod
@@ -201,7 +201,7 @@ metadata:
     service.istio.io/canonical-name: pod-level-uid
 spec:
   securityContext:
-    runAsUser: 1337
+    runAsUser: 64535
   containers:
   - name: app
     image: app:latest
@@ -220,7 +220,7 @@ metadata:
     service.istio.io/canonical-name: overridden-pod
 spec:
   securityContext:
-    runAsUser: 1337
+    runAsUser: 64535
   containers:
   - name: app
     image: app:latest
@@ -230,7 +230,7 @@ spec:
     image: istio/proxyv2:latest
 `
 
-	podMultipleContainers1337 = `
+	podMultipleContainers64535 = `
 ---
 apiVersion: v1
 kind: Pod
@@ -244,15 +244,14 @@ spec:
   - name: app
     image: app:latest
     securityContext:
-      runAsUser: 1337
+      runAsUser: 64535
   - name: sidecar
     image: sidecar:latest
     securityContext:
-      runAsUser: 1337
+      runAsUser: 64535
   - name: istio-proxy
     image: istio/proxyv2:latest
     securityContext:
-      runAsUser: 1337
+      runAsUser: 64535
 `
-
 )
