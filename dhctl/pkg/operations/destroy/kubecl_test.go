@@ -20,12 +20,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/lib-connection/pkg/kube"
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 func TestCleanupsDoesNotPanic(t *testing.T) {

@@ -37,6 +37,9 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis"
 	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta1"
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
@@ -49,9 +52,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-
-	"github.com/deckhouse/lib-connection/pkg/ssh/session"
-	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 )
 
 const (
