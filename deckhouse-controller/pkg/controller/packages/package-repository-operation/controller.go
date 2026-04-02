@@ -23,8 +23,8 @@ import (
 	"sort"
 	"strings"
 
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -297,7 +297,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			message = fmt.Sprintf("Failed to create operation service: %v", err)
 		}
 
-		apimeta.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+		metautils.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
 			Type:               v1alpha1.PackageRepositoryOperationConditionCompleted,
 			Status:             metav1.ConditionTrue,
 			Reason:             reason,
@@ -326,7 +326,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 		message := fmt.Sprintf("Failed to list packages: %v", err)
 
-		apimeta.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+		metautils.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
 			Type:               v1alpha1.PackageRepositoryOperationConditionCompleted,
 			Status:             metav1.ConditionTrue,
 			Reason:             v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
@@ -398,7 +398,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 			message = fmt.Sprintf("Failed to create operation service: %v", err)
 		}
 
-		apimeta.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+		metautils.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
 			Type:               v1alpha1.PackageRepositoryOperationConditionCompleted,
 			Status:             metav1.ConditionTrue,
 			Reason:             reason,
@@ -435,7 +435,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
 
-		apimeta.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+		metautils.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
 			Type:               v1alpha1.PackageRepositoryOperationConditionCompleted,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Succeeded",
