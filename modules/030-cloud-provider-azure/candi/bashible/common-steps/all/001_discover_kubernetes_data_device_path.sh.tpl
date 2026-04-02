@@ -28,12 +28,16 @@ elif [[ "$kubernetes_data_device_id" == lun* ]] || [[ "$kubernetes_data_device_i
     lun_number="$kubernetes_data_device_id"
   fi
 
-  # Method 1: Try Azure SCSI udev path (works on SCSI VMs)
-  kubernetes_data_device_path="$(ls -1 /dev/disk/azure/data-lun${lun_number} /dev/disk/azure/scsi*/lun${lun_number} 2>/dev/null | head -n1 || true)"
+  # Method 1: Try new Azure udev rules (works on both SCSI and NVMe VMs with 80-azure-disk.rules)
+  kubernetes_data_device_path="$(ls -1 /dev/disk/azure/data/by-lun/${lun_number} 2>/dev/null | head -n1 || true)"
 
-  # Method 2: Try NVMe by-path (works on NVMe VMs)
+  # Method 2: Try legacy Azure SCSI udev path (works on older SCSI VMs)
+  if [ -z "$kubernetes_data_device_path" ]; then
+    kubernetes_data_device_path="$(ls -1 /dev/disk/azure/data-lun${lun_number} /dev/disk/azure/scsi*/lun${lun_number} 2>/dev/null | head -n1 || true)"
+  fi
+
+  # Method 3: Try NVMe by-path fallback (works on NVMe VMs without udev rules)
   # Azure NVMe namespace mapping: LUN N typically maps to namespace N+2 (e.g., LUN 10 → ns 12)
-  # Search for any nvme device in by-path that could be our LUN
   if [ -z "$kubernetes_data_device_path" ]; then
     # Try common namespace patterns: LUN+2, LUN+1, LUN itself
     for ns_offset in 2 1 0; do
@@ -48,7 +52,7 @@ elif [[ "$kubernetes_data_device_id" == lun* ]] || [[ "$kubernetes_data_device_i
 
   if [ -z "$kubernetes_data_device_path" ]; then
     >&2 echo "Azure disk for $kubernetes_data_device_id (LUN ${lun_number}) not found"
-    >&2 echo "Tried: /dev/disk/azure/*lun${lun_number}, /dev/disk/by-path/*nvme-*"
+    >&2 echo "Tried: /dev/disk/azure/data/by-lun/${lun_number}, /dev/disk/azure/*lun${lun_number}, /dev/disk/by-path/*nvme-*"
     return 1
   fi
 
