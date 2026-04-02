@@ -48,6 +48,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+    "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
     "external": "true",
     "path": "/modules/code/stable/"
   },
