@@ -1044,7 +1044,7 @@ html {
                 &::after {
                     content: '';
                     position: absolute;
-                    right: 0;
+                    right: -15px;
                     top: 5px;
                     width: 8px;
                     height: 5px;
@@ -1092,7 +1092,7 @@ html {
                             top: 9px;
                             width: 7px;
                             height: 5px;
-                            right: 0;
+                            right: -15px;
                         }
                     }
 
