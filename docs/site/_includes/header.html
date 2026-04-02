@@ -1,6 +1,6 @@
 {% assign topnav = site.data[page.topnav].topnav[page.lang] %}
 <!--noindex-->
-{%- if site.mode == "module" %} 
+{%- if site.mode == "module" %}
 <div class="header-container header-container--module">
 {%- else %}
 <div class="header-container">
@@ -307,5 +307,5 @@
     {%- endunless %}
   </header>
 </div>
-{% include header-l2-menu_mobile.liquid %}
+{% include header-mobile.liquid %}
 <!--/noindex-->
