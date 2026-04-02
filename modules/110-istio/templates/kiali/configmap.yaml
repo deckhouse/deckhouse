@@ -65,7 +65,7 @@ data:
         exclude:
         # https://www.formauri.es/personal/pgimeno/misc/non-match-regex/?word=ingress
         # excludes any d8-.* namespace except for d8-ingress-nginx and d8-alb
-        - ^d8-(?:.{0,2}|(?:[^a]..|a[^l].|al[^b])|.{4,13}|(?:[^i].{12}|i[^n].{11}|in[^g].{10}|ing[^r].{9}|ingr[^e].{8}|ingre[^s].{7}|ingres[^s].{6}|ingress[^-].{5}|ingress-[^n].{4}|ingress-n[^g].{3}|ingress-ng[^i].{2}|ingress-ngi[^n].|ingress-ngin[^x])|.{15,})$
+        - ^d8-(?:.{0,2}|(?:[^a]..|a[^l].|al[^b])|.{4,12}|(?:[^i].{12}|i[^n].{11}|in[^g].{10}|ing[^r].{9}|ingr[^e].{8}|ingre[^s].{7}|ingres[^s].{6}|ingress[^-].{5}|ingress-[^n].{4}|ingress-n[^g].{3}|ingress-ng[^i].{2}|ingress-ngi[^n].|ingress-ngin[^x])|.{14,})$
         - ^kube-system$
         - ^upmeter-probe-namespace-.+$
     server:
