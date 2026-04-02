@@ -107,7 +107,7 @@ spec:
 `
 		stateCAPIMDs = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: md-ng3-capi
@@ -119,7 +119,7 @@ spec:
 `
 		stateCapiMachines = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Machine
 metadata:
   name: machine-capi-ng3-aaa
@@ -134,7 +134,7 @@ spec:
         node.deckhouse.io/group: capi-ng3
         node.deckhouse.io/type: CloudEphemeral
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Machine
 metadata:
   name: machine-capi-ng3-bbb
@@ -356,8 +356,8 @@ status:
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
-	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachineDeployment", true)
-	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Machine", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta2", "MachineDeployment", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta2", "Machine", true)
 
 	const nowTime = "2023-03-03T16:49:52Z"
 	err := os.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", nowTime)

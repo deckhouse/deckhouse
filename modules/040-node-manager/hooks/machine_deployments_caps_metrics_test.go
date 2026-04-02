@@ -26,7 +26,7 @@ import (
 
 const MachineDeploymentWith1Unavailable = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: caps-worker
@@ -65,7 +65,7 @@ status:
 
 const MachineDeploymentWith1Available = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: caps-worker
@@ -94,7 +94,7 @@ status:
 
 var _ = Describe("Modules :: node-manager :: hooks :: machine_deployments_caps_metrics_test ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachineDeployment", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta2", "MachineDeployment", true)
 
 	assertMetric := func(f *HookExecutionConfig, name string, expected float64) {
 		metrics := f.MetricsCollector.CollectedMetrics()
