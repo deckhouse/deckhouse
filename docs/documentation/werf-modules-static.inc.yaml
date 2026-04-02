@@ -129,6 +129,7 @@ git:
     - site/_includes/head.html
 {{ if eq .ModuleName "documentation" }}
     - site/_includes/header.html
+    - site/_includes/header-mobile.html
 {{ end }}
     - documentation
   excludePaths:
