@@ -1,0 +1,103 @@
+diff --git a/hubble/cmd/common/config/flags.go b/hubble/cmd/common/config/flags.go
+index e1edd62d1f..2220518e63 100644
+--- a/hubble/cmd/common/config/flags.go
++++ b/hubble/cmd/common/config/flags.go
+@@ -33,6 +33,8 @@ const (
+ 	KeyKubeContext       = "kube-context"         // string
+ 	KeyKubeNamespace     = "kube-namespace"       // string
+ 	KeyKubeconfig        = "kubeconfig"           // string
++	KeyBearerToken       = "bearer-token"         // string
++	KeyKubeAuth          = "kube-auth"            // bool
+ )
+ 
+ // GlobalFlags are flags that apply to any command.
+@@ -127,4 +129,14 @@ func initServerFlags() {
+ 		"",
+ 		"Path to the kubeconfig file. This option is only considered when --port-forward is set.",
+ 	)
++	ServerFlags.String(
++		KeyBearerToken,
++		"",
++		"Kubernetes bearer token for authenticating to Hubble Relay (Authorization: Bearer).",
++	)
++	ServerFlags.Bool(
++		KeyKubeAuth,
++		false,
++		"Use credentials from the kubeconfig as the bearer token for Relay.",
++	)
+ }
+diff --git a/hubble/cmd/common/conn/auth.go b/hubble/cmd/common/conn/auth.go
+index be0a3e6857..fb83293f6b 100644
+--- a/hubble/cmd/common/conn/auth.go
++++ b/hubble/cmd/common/conn/auth.go
+@@ -33,3 +33,23 @@ func basicAuth(username, password string) string {
+ 	auth := username + ":" + password
+ 	return base64.StdEncoding.EncodeToString([]byte(auth))
+ }
++
++// WithBearerToken configures a Kubernetes bearer token for the connection (sent as
++// Authorization: Bearer <token> on each gRPC request).
++func WithBearerToken(token string) grpc.DialOption {
++	return grpc.WithPerRPCCredentials(bearerTokenCredentials{token: token})
++}
++
++type bearerTokenCredentials struct {
++	token string
++}
++
++func (c bearerTokenCredentials) GetRequestMetadata(_ context.Context, _ ...string) (map[string]string, error) {
++	return map[string]string{
++		"authorization": "Bearer " + c.token,
++	}, nil
++}
++
++func (c bearerTokenCredentials) RequireTransportSecurity() bool {
++	return false
++}
+diff --git a/hubble/cmd/common/conn/conn.go b/hubble/cmd/common/conn/conn.go
+index ade67f33f9..155128edae 100644
+--- a/hubble/cmd/common/conn/conn.go
++++ b/hubble/cmd/common/conn/conn.go
+@@ -31,6 +31,7 @@ func init() {
+ 		GRPCOptionFuncs,
+ 		grpcInterceptors,
+ 		grpcOptionTLS,
++		grpcBearerAuth,
+ 	)
+ }
+ 
+@@ -48,11 +49,33 @@ func Init(vp *viper.Viper) error {
+ 		if err != nil {
+ 			return err
+ 		}
+-		grpcDialOptions = append(grpcDialOptions, dialOpt)
++		if dialOpt != nil {
++			grpcDialOptions = append(grpcDialOptions, dialOpt)
++		}
+ 	}
+ 	return nil
+ }
+ 
++func grpcBearerAuth(vp *viper.Viper) (grpc.DialOption, error) {
++	if t := vp.GetString(config.KeyBearerToken); t != "" {
++		return WithBearerToken(t), nil
++	}
++
++	if !vp.GetBool(config.KeyKubeAuth) && !vp.GetBool(config.KeyPortForward) {
++		return nil, nil
++	}
++
++	t, err := kubeBearerTokenFromConfig(vp)
++	if err != nil {
++		if vp.GetBool(config.KeyKubeAuth) {
++			return nil, err
++		}
++		logger.Logger.Debug("could not load kube token for gRPC metadata", "error", err)
++		return nil, nil
++	}
++	return WithBearerToken(t), nil
++}
++
+ // New creates a new gRPC client connection to the target.
+ func New(target string) (*grpc.ClientConn, error) {
+ 	t := strings.TrimPrefix(target, defaults.TargetTLSPrefix)
