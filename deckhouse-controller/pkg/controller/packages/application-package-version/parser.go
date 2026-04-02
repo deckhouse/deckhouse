@@ -45,8 +45,8 @@ type packageMetadata struct {
 
 // packageChangelog represents user-facing release notes for a package version.
 type packageChangelog struct {
-	Features []string `json:"features,omitempty"`
-	Fixes    []string `json:"fixes,omitempty"`
+	Features []string `yaml:"features,omitempty"`
+	Fixes    []string `yaml:"fixes,omitempty"`
 }
 
 // metadataReader buffers the raw content of each metadata file extracted from the tar.
