@@ -16,15 +16,19 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -55,6 +59,9 @@ type Client struct {
 	constructedSegmentsOnce sync.Once
 	// remote options for go-containerregistry
 	options []remote.Option
+	// auth is the authenticator for registry access, stored separately for
+	// building custom HTTP transports (e.g., listTagsPage).
+	auth authn.Authenticator
 	// insecure flag for HTTP connections
 	insecure bool
 
@@ -95,6 +102,7 @@ func NewClientWithOptions(host string, opts *Options) *Client {
 	return &Client{
 		registryHost: host,
 		options:      buildRemoteOptions(opts, logger),
+		auth:         opts.Auth,
 		timeout:      opts.Timeout,
 		logger:       logger,
 		insecure:     opts.Insecure,
@@ -141,6 +149,7 @@ func (c *Client) WithSegment(segments ...string) *Client {
 		registryHost: c.registryHost,
 		segments:     append(append([]string(nil), c.segments...), segments...),
 		options:      c.options,
+		auth:         c.auth,
 		logger:       c.logger,
 		insecure:     c.insecure,
 		timeout:      c.timeout,
@@ -377,75 +386,149 @@ func (w *withTagsLimit) ApplyToListTags(opts *registry.ListTagsOptions) {
 	opts.N = w.n
 }
 
-// ListTags lists tags for the current scope.
-// The repository is determined by the chained WithSegment() calls.
-// When N > 0 or Last is set, only a single page of results is returned
-// (analogous to CatalogPage for repositories). Otherwise all tags are fetched.
+// ListTags returns tags for the repository built by WithSegment calls.
+//
+// Without options, all tags are returned. WithTagsLimit(n) returns at most one page
+// of n tags. WithTagsLast(tag) returns tags lexicographically after tag.
+// Both options can be combined.
 func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 	listOptions := &registry.ListTagsOptions{}
-
 	for _, opt := range opts {
 		opt.ApplyToListTags(listOptions)
 	}
 
-	fullRegistry := c.GetRegistry()
-
-	logentry := c.logger.With(
+	c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
 		slog.Int("limit", listOptions.N),
 		slog.String("last", listOptions.Last),
-	)
+	).Debug("Listing tags")
 
-	logentry.Debug("Listing tags")
-
-	ref, err := name.ParseReference(fullRegistry, c.nameOptions()...)
+	ref, err := name.ParseReference(c.GetRegistry(), c.nameOptions()...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse reference: %w", err)
+		return nil, fmt.Errorf("parse reference: %w", err)
 	}
 
-	repo := ref.Context()
-	remoteOpts := append([]remote.Option{}, c.options...)
-	remoteOpts = append(remoteOpts, c.withContext(ctx))
+	return c.listTagsPage(ctx, ref.Context(), listOptions.Last, listOptions.N)
+}
 
-	// Single-page mode: when N > 0, return only one page of results
-	// using Puller/Lister (like CatalogPage for repositories).
-	if listOptions.N > 0 {
-		remoteOpts = append(remoteOpts, remote.WithPageSize(listOptions.N))
-
-		puller, err := remote.NewPuller(remoteOpts...)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create puller: %w", err)
-		}
-
-		lister, err := puller.Lister(ctx, repo)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list tags page: %w", err)
-		}
-
-		page, err := lister.Next(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get tags page: %w", err)
-		}
-
-		logentry.Debug("Tags page retrieved", slog.Int("returned_count", len(page.Tags)))
-
-		return page.Tags, nil
-	}
-
-	// Full listing: iterate all pages with optional Last filter.
-	if listOptions.Last != "" {
-		remoteOpts = append(remoteOpts, remote.WithFilter("last", listOptions.Last))
-	}
-
-	tags, err := remote.List(repo, remoteOpts...)
+// listTagsPage fetches tags with ?last= and ?n= query parameters via direct HTTP.
+// When pageSize > 0, only one page is returned. Otherwise all remaining pages are collected.
+func (c *Client) listTagsPage(ctx context.Context, repo name.Repository, last string, pageSize int) ([]string, error) {
+	httpClient, err := c.registryHTTPClient(ctx, repo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list tags: %w", err)
+		return nil, fmt.Errorf("create registry client: %w", err)
 	}
 
-	logentry.Debug("Tags retrieved", slog.Int("returned_count", len(tags)))
+	nextURL := tagsURL(repo, last, pageSize)
+	var allTags []string
 
-	return tags, nil
+	for nextURL != "" {
+		tags, next, err := c.fetchTagsPage(ctx, httpClient, nextURL)
+		if err != nil {
+			return nil, err
+		}
+		allTags = append(allTags, tags...)
+
+		if pageSize > 0 {
+			return allTags, nil
+		}
+		nextURL = next
+	}
+
+	return allTags, nil
+}
+
+// registryHTTPClient creates an HTTP client with OCI registry authentication.
+func (c *Client) registryHTTPClient(ctx context.Context, repo name.Repository) (*http.Client, error) {
+	auth := c.auth
+	if auth == nil {
+		auth = authn.Anonymous
+	}
+
+	rt, err := transport.NewWithContext(ctx, repo.Registry, auth, http.DefaultTransport, []string{repo.Scope(transport.PullScope)})
+	if err != nil {
+		return nil, fmt.Errorf("build transport: %w", err)
+	}
+
+	return &http.Client{Transport: rt}, nil
+}
+
+// tagsURL builds /v2/<repo>/tags/list with optional last and n query parameters.
+func tagsURL(repo name.Repository, last string, pageSize int) string {
+	uri := &url.URL{
+		Scheme: repo.Scheme(),
+		Host:   repo.RegistryStr(),
+		Path:   fmt.Sprintf("/v2/%s/tags/list", repo.RepositoryStr()),
+	}
+
+	q := url.Values{}
+	if last != "" {
+		q.Set("last", last)
+	}
+	if pageSize > 0 {
+		q.Set("n", strconv.Itoa(pageSize))
+	}
+	uri.RawQuery = q.Encode()
+
+	return uri.String()
+}
+
+// tagsResponse is the JSON body returned by GET /v2/<repo>/tags/list.
+type tagsResponse struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
+}
+
+// fetchTagsPage performs a single GET to pageURL and returns the decoded tags
+// together with the next-page URL extracted from the Link header (empty if last page).
+func (c *Client) fetchTagsPage(ctx context.Context, httpClient *http.Client, pageURL string) ([]string, string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pageURL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("create request: %w", err)
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := transport.CheckError(resp, http.StatusOK); err != nil {
+		return nil, "", err
+	}
+
+	var parsed tagsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, "", fmt.Errorf("decode response: %w", err)
+	}
+
+	return parsed.Tags, nextPageURL(resp), nil
+}
+
+// nextPageURL extracts the URL from a Link: <url>; rel="next" header.
+// Returns empty string when no next page exists.
+func nextPageURL(resp *http.Response) string {
+	link := resp.Header.Get("Link")
+	if link == "" || link[0] != '<' {
+		return ""
+	}
+
+	end := strings.Index(link, ">")
+	if end == -1 {
+		return ""
+	}
+
+	linkURL, err := url.Parse(link[1:end])
+	if err != nil {
+		return ""
+	}
+
+	if resp.Request != nil && resp.Request.URL != nil {
+		linkURL = resp.Request.URL.ResolveReference(linkURL)
+	}
+
+	return linkURL.String()
 }
 
 // WithReposLast sets the pagination continuation token for repositories

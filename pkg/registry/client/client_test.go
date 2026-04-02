@@ -407,6 +407,52 @@ func TestClient_ListTags(t *testing.T) {
 
 		assert.Greater(t, len(allTags), len(pagedTags), "full list should have more tags than single page")
 	})
+
+	t.Run("last returns tags after specified tag", func(t *testing.T) {
+		_, c := newTestServer(t)
+		for _, tag := range []string{"a", "b", "c", "d"} {
+			pushRandomImage(t, c, "last-test", tag)
+		}
+
+		tags, err := c.WithSegment("last-test").ListTags(context.Background(), WithTagsLast("b"))
+		require.NoError(t, err)
+		assert.NotContains(t, tags, "a", "should not contain tags before 'last'")
+		assert.NotContains(t, tags, "b", "should not contain the 'last' tag itself")
+		assert.Subset(t, []string{"c", "d"}, tags, "should contain tags after 'last'")
+	})
+
+	t.Run("last with limit returns single page after specified tag", func(t *testing.T) {
+		_, c := newTestServer(t)
+		for _, tag := range []string{"a", "b", "c", "d", "e"} {
+			pushRandomImage(t, c, "last-limit", tag)
+		}
+
+		tags, err := c.WithSegment("last-limit").ListTags(context.Background(), WithTagsLast("b"), WithTagsLimit(1))
+		require.NoError(t, err)
+		assert.Len(t, tags, 1, "should return only one tag")
+		assert.NotContains(t, tags, "a")
+		assert.NotContains(t, tags, "b")
+	})
+
+	t.Run("empty repository returns error", func(t *testing.T) {
+		_, c := newTestServer(t)
+
+		_, err := c.WithSegment("empty-repo").ListTags(context.Background())
+		require.Error(t, err)
+	})
+
+	t.Run("last pointing to nonexistent tag returns all tags after it lexicographically", func(t *testing.T) {
+		_, c := newTestServer(t)
+		for _, tag := range []string{"a", "c", "e"} {
+			pushRandomImage(t, c, "last-nonexistent", tag)
+		}
+
+		tags, err := c.WithSegment("last-nonexistent").ListTags(context.Background(), WithTagsLast("b"))
+		require.NoError(t, err)
+		assert.NotContains(t, tags, "a")
+		assert.Contains(t, tags, "c")
+		assert.Contains(t, tags, "e")
+	})
 }
 
 // ---- DeleteTag ----
