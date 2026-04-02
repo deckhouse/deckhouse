@@ -377,10 +377,8 @@ func (w *withTagsLimit) ApplyToListTags(opts *registry.ListTagsOptions) {
 	opts.N = w.n
 }
 
-// ListTags lists tags for the current scope with pagination.
-// The repository is determined by the chained WithSegment() calls.
-// When N > 0 or Last is set, only a single page of results is returned
-// (analogous to CatalogPage for repositories). Otherwise all tags are fetched.
+// ListTags lists tags for the current scope with pagination
+// The repository is determined by the chained WithSegment() calls
 func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 	listOptions := &registry.ListTagsOptions{}
 
@@ -408,34 +406,15 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 	remoteOpts := append([]remote.Option{}, c.options...)
 	remoteOpts = append(remoteOpts, c.withContext(ctx))
 
-	// Single-page mode: return only one page of results (like CatalogPage for repos).
-	if listOptions.N > 0 || listOptions.Last != "" {
-		if listOptions.N > 0 {
-			remoteOpts = append(remoteOpts, remote.WithPageSize(listOptions.N))
-		}
-
-		puller, err := remote.NewPuller(remoteOpts...)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create puller: %w", err)
-		}
-
-		lister, err := puller.Lister(ctx, repo)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list tags page: %w", err)
-		}
-
-		// Lister fetches the first page on creation; just read its tags.
-		page, err := lister.Next(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get tags page: %w", err)
-		}
-
-		logentry.Debug("Tags page retrieved", slog.Int("returned_count", len(page.Tags)))
-
-		return page.Tags, nil
+	// Add pagination options
+	if listOptions.N > 0 {
+		remoteOpts = append(remoteOpts, remote.WithPageSize(listOptions.N))
+	}
+	if listOptions.Last != "" {
+		remoteOpts = append(remoteOpts, remote.WithFilter("last", listOptions.Last))
 	}
 
-	// Full listing: iterate all pages.
+	// Get tags with server-side pagination
 	tags, err := remote.List(repo, remoteOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tags: %w", err)
