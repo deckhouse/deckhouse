@@ -33,7 +33,7 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	capiv1beta2 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta2"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/clusterapi"
 	mcmv1alpha1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	d8v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha1"
@@ -72,7 +72,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "cluster_api_machines",
-			ApiVersion: "cluster.x-k8s.io/v1beta2",
+			ApiVersion: "cluster.x-k8s.io/v1beta1",
 			Kind:       "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
@@ -105,7 +105,7 @@ func instanceMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 func instanceClusterAPIMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var machine capiv1beta2.Machine
+	var machine clusterapi.Machine
 
 	err := sdk.FromUnstructured(obj, &machine)
 	if err != nil {
@@ -114,11 +114,15 @@ func instanceClusterAPIMachineFilter(obj *unstructured.Unstructured) (go_hook.Fi
 
 	var nodeName string
 
-	if machine.Status.NodeRef.Name != "" {
+	if machine.Status.NodeRef != nil {
 		nodeName = machine.Status.NodeRef.Name
 	}
 
-	lastUpdated := machine.Status.LastUpdated
+	var lastUpdated metav1.Time
+
+	if machine.Status.LastUpdated != nil {
+		lastUpdated = *machine.Status.LastUpdated
+	}
 
 	return &machineForInstance{
 		APIVersion: machine.APIVersion,
@@ -310,7 +314,7 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 
 				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
 					// delete in background, because machine has finalizer
-					input.PatchCollector.DeleteInBackground("cluster.x-k8s.io/v1beta2", "Machine", "d8-cloud-instance-manager", machine.Name)
+					input.PatchCollector.DeleteInBackground("cluster.x-k8s.io/v1beta1", "Machine", "d8-cloud-instance-manager", machine.Name)
 				}
 			}
 		} else {

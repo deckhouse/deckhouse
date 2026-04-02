@@ -31,7 +31,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: instance_controller ::", f
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Instance", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
-	f.RegisterCRD("cluster.x-k8s.io", "v1beta2", "Machine", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Machine", true)
 
 	const ng = `
 ---
@@ -849,7 +849,7 @@ spec:
 		Expect(ic.Field("status.machineRef.kind").String()).To(Equal("Machine"))
 
 		Expect(ic.Field("status.machineRef.apiVersion").Exists()).To(BeTrue())
-		Expect(ic.Field("status.machineRef.apiVersion").String()).To(Equal("cluster.x-k8s.io/v1beta2"))
+		Expect(ic.Field("status.machineRef.apiVersion").String()).To(Equal("cluster.x-k8s.io/v1beta1"))
 
 		Expect(ic.Field("status.machineRef.namespace").Exists()).To(BeTrue())
 		Expect(ic.Field("status.machineRef.namespace").String()).To(Equal("d8-cloud-instance-manager"))
@@ -873,7 +873,7 @@ status: {}
 `
 				machine1 = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Machine
 metadata:
   name: worker-ac32h
@@ -886,7 +886,7 @@ status: {}
 
 				machine2 = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Machine
 metadata:
   name: worker-fac21
@@ -965,7 +965,7 @@ status:
     phase: Pending
   machineRef:
     kind: Machine
-    apiVersion: cluster.x-k8s.io/v1beta2
+    apiVersion: cluster.x-k8s.io/v1beta1
     namespace: d8-cloud-instance-manager
     name: worker-dde21
   bootstrapStatus:
@@ -974,7 +974,7 @@ status:
 `
 					machine1 = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Machine
 metadata:
   name: worker-dde21
@@ -1004,7 +1004,7 @@ status:
     phase: Pending
   machineRef:
     kind: Machine
-    apiVersion: cluster.x-k8s.io/v1beta2
+    apiVersion: cluster.x-k8s.io/v1beta1
     namespace: d8-cloud-instance-manager
     name: worker-ac32h
   bootstrapStatus:
@@ -1013,7 +1013,7 @@ status:
 `
 					machine2 = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Machine
 metadata:
   name: worker-ac32h
@@ -1072,13 +1072,13 @@ status:
     phase: Pending
   machineRef:
     kind: Machine
-    apiVersion: cluster.x-k8s.io/v1beta2
+    apiVersion: cluster.x-k8s.io/v1beta1
     namespace: d8-cloud-instance-manager
     name: worker-dde21
 `
 					machine1 = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Machine
 metadata:
   name: worker-dde21
@@ -1095,7 +1095,7 @@ status:
 
 					machine2 = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Machine
 metadata:
   name: worker-ac32h
@@ -1125,7 +1125,7 @@ status:
     phase: Pending
   machineRef:
     kind: Machine
-    apiVersion: cluster.x-k8s.io/v1beta2
+    apiVersion: cluster.x-k8s.io/v1beta1
     namespace: d8-cloud-instance-manager
     name: worker-ac32h
   bootstrapStatus:
@@ -1198,13 +1198,13 @@ status:
     phase: Pending
   machineRef:
     kind: Machine
-    apiVersion: cluster.x-k8s.io/v1beta2
+    apiVersion: cluster.x-k8s.io/v1beta1
     namespace: d8-cloud-instance-manager
     name: worker-dde21
 `
 					machine1 = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Machine
 metadata:
   name: worker-dde21
@@ -1254,7 +1254,7 @@ metadata:
 `
 				machine = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Machine
 metadata:
   name: worker-ac32h
@@ -1345,7 +1345,7 @@ metadata:
 `
 						machine2 = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Machine
 metadata:
   name: worker-bg11u
