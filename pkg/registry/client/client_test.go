@@ -369,6 +369,44 @@ func TestClient_ListTags(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, tags, 2)
 	})
+
+	t.Run("limit 1 returns single tag when multiple exist", func(t *testing.T) {
+		_, c := newTestServer(t)
+		for _, tag := range []string{"v1", "v2", "v3"} {
+			pushRandomImage(t, c, "single-page", tag)
+		}
+
+		tags, err := c.WithSegment("single-page").ListTags(context.Background(), WithTagsLimit(1))
+		require.NoError(t, err)
+		assert.Len(t, tags, 1)
+	})
+
+	t.Run("without limit returns all tags", func(t *testing.T) {
+		_, c := newTestServer(t)
+		for _, tag := range []string{"v1", "v2", "v3"} {
+			pushRandomImage(t, c, "full-list", tag)
+		}
+
+		tags, err := c.WithSegment("full-list").ListTags(context.Background())
+		require.NoError(t, err)
+		assert.Len(t, tags, 3)
+		assert.ElementsMatch(t, []string{"v1", "v2", "v3"}, tags)
+	})
+
+	t.Run("limit returns fewer tags than full list", func(t *testing.T) {
+		_, c := newTestServer(t)
+		for _, tag := range []string{"v1", "v2", "v3", "v4", "v5"} {
+			pushRandomImage(t, c, "compare", tag)
+		}
+
+		allTags, err := c.WithSegment("compare").ListTags(context.Background())
+		require.NoError(t, err)
+
+		pagedTags, err := c.WithSegment("compare").ListTags(context.Background(), WithTagsLimit(1))
+		require.NoError(t, err)
+
+		assert.Greater(t, len(allTags), len(pagedTags), "full list should have more tags than single page")
+	})
 }
 
 // ---- DeleteTag ----

@@ -408,11 +408,10 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 	remoteOpts := append([]remote.Option{}, c.options...)
 	remoteOpts = append(remoteOpts, c.withContext(ctx))
 
-	// Single-page mode: return only one page of results (like CatalogPage for repos).
-	if listOptions.N > 0 || listOptions.Last != "" {
-		if listOptions.N > 0 {
-			remoteOpts = append(remoteOpts, remote.WithPageSize(listOptions.N))
-		}
+	// Single-page mode: when N > 0, return only one page of results
+	// using Puller/Lister (like CatalogPage for repositories).
+	if listOptions.N > 0 {
+		remoteOpts = append(remoteOpts, remote.WithPageSize(listOptions.N))
 
 		puller, err := remote.NewPuller(remoteOpts...)
 		if err != nil {
@@ -434,7 +433,11 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 		return page.Tags, nil
 	}
 
-	// Full listing: iterate all pages.
+	// Full listing: iterate all pages with optional Last filter.
+	if listOptions.Last != "" {
+		remoteOpts = append(remoteOpts, remote.WithFilter("last", listOptions.Last))
+	}
+
 	tags, err := remote.List(repo, remoteOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tags: %w", err)
