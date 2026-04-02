@@ -1150,6 +1150,120 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("retry policy is tracked in operation status", func() {
+		emptyPSM := registryService.NewPackageServiceManager(log.NewNop())
+		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(emptyPSM))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		// Run enough reconciles to exhaust retries (initial + pending + discover + 5 retries + completed transition)
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+		require.NoError(suite.T(), err)
+
+		// Verify operation state
+		var op v1alpha1.PackageRepositoryOperation
+		require.NoError(suite.T(), suite.kubeClient.Get(ctx, k8stypes.NamespacedName{Name: operation.Name}, &op))
+
+		// Phase must be Completed
+		assert.Equal(suite.T(), v1alpha1.PackageRepositoryOperationPhaseCompleted, op.Status.Phase)
+
+		// RetryPolicy must be set with correct values
+		require.NotNil(suite.T(), op.Status.RetryPolicy)
+		assert.Equal(suite.T(), int32(5), op.Status.RetryPolicy.RetryCount)
+		assert.Equal(suite.T(), int32(5), op.Status.RetryPolicy.MaxRetries)
+		assert.NotEmpty(suite.T(), op.Status.RetryPolicy.LastMessage)
+		assert.NotNil(suite.T(), op.Status.RetryPolicy.LastRetryTime)
+
+		// Completed condition must be True (operation is done)
+		var completedCond *v1alpha1.PackageRepositoryOperationStatusCondition
+		for i := range op.Status.Conditions {
+			if op.Status.Conditions[i].Type == v1alpha1.PackageRepositoryOperationConditionCompleted {
+				completedCond = &op.Status.Conditions[i]
+				break
+			}
+		}
+		require.NotNil(suite.T(), completedCond)
+		assert.Equal(suite.T(), "True", string(completedCond.Status))
+		assert.Equal(suite.T(), v1alpha1.PackageRepositoryOperationReasonRetriesExhausted, completedCond.Reason)
+		assert.Contains(suite.T(), completedCond.Message, "Failed to create registry client")
+	})
+
+	suite.Run("retry policy is propagated to package repository", func() {
+		emptyPSM := registryService.NewPackageServiceManager(log.NewNop())
+		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(emptyPSM))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+		require.NoError(suite.T(), err)
+
+		// Verify PackageRepository has retryPolicy
+		var repo v1alpha1.PackageRepository
+		require.NoError(suite.T(), suite.kubeClient.Get(ctx, k8stypes.NamespacedName{Name: "deckhouse"}, &repo))
+
+		require.NotNil(suite.T(), repo.Status.RetryPolicy)
+		assert.Equal(suite.T(), int32(5), repo.Status.RetryPolicy.RetryCount)
+		assert.Equal(suite.T(), int32(5), repo.Status.RetryPolicy.MaxRetries)
+		assert.NotEmpty(suite.T(), repo.Status.RetryPolicy.LastMessage)
+
+		// PackageRepository condition should be False (scan failed)
+		var scanCond *metav1.Condition
+		for i := range repo.Status.Conditions {
+			if repo.Status.Conditions[i].Type == v1alpha1.PackageRepositoryConditionLastOperationScanFinished {
+				scanCond = &repo.Status.Conditions[i]
+				break
+			}
+		}
+		require.NotNil(suite.T(), scanCond)
+		assert.Equal(suite.T(), metav1.ConditionFalse, scanCond.Status)
+		assert.Equal(suite.T(), v1alpha1.PackageRepositoryOperationReasonRetriesExhausted, scanCond.Reason)
+		assert.Contains(suite.T(), scanCond.Message, "Failed to create registry client")
+	})
+
+	suite.Run("package listing retry exhaustion", func() {
+		mockClient := &mockRegistryClient{
+			listTagsFunc: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return nil, assert.AnError
+			},
+		}
+		psm := createMockPSM(mockClient)
+
+		suite.setupController("package-listing-failed.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+		require.NoError(suite.T(), err)
+
+		var op v1alpha1.PackageRepositoryOperation
+		require.NoError(suite.T(), suite.kubeClient.Get(ctx, k8stypes.NamespacedName{Name: operation.Name}, &op))
+
+		assert.Equal(suite.T(), v1alpha1.PackageRepositoryOperationPhaseCompleted, op.Status.Phase)
+		require.NotNil(suite.T(), op.Status.RetryPolicy)
+		assert.Equal(suite.T(), int32(5), op.Status.RetryPolicy.RetryCount)
+
+		// Completed condition True with message containing prefix
+		for _, cond := range op.Status.Conditions {
+			if cond.Type == v1alpha1.PackageRepositoryOperationConditionCompleted {
+				assert.Equal(suite.T(), "True", string(cond.Status))
+				assert.Contains(suite.T(), cond.Message, "Failed to list packages")
+				break
+			}
+		}
+	})
 }
 
 // nolint:unparam

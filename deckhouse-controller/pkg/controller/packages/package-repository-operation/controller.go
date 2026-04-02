@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -55,38 +54,54 @@ const (
 
 	// retryInterval is the delay between retry attempts
 	retryInterval = 30 * time.Second
-
-	// retryCountAnnotation tracks the number of retry attempts
-	retryCountAnnotation = "packages.deckhouse.io/retry-count"
-
-	// lastRetryTimeAnnotation stores the timestamp of the last retry attempt
-	lastRetryTimeAnnotation = "packages.deckhouse.io/last-retry-time"
 )
 
-func getRetryCount(op *v1alpha1.PackageRepositoryOperation) int {
-	if op.Annotations == nil {
+func getRetryCount(operation *v1alpha1.PackageRepositoryOperation) int {
+	if operation.Status.RetryPolicy == nil {
 		return 0
 	}
-	count, _ := strconv.Atoi(op.Annotations[retryCountAnnotation])
-	return count
+	return int(operation.Status.RetryPolicy.RetryCount)
 }
 
-func getLastRetryTime(op *v1alpha1.PackageRepositoryOperation) time.Time {
-	if op.Annotations == nil {
-		return time.Time{}
+func getLastRetryTime(operation *v1alpha1.PackageRepositoryOperation) time.Time {
+	if operation.Status.RetryPolicy != nil && operation.Status.RetryPolicy.LastRetryTime != nil {
+		return operation.Status.RetryPolicy.LastRetryTime.Time
 	}
-	t, _ := time.Parse(time.RFC3339, op.Annotations[lastRetryTimeAnnotation])
-	return t
+	return time.Time{}
 }
 
-func (r *reconciler) incrementRetryCount(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
+func (r *reconciler) incrementRetryCount(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, errMsg string) error {
 	original := operation.DeepCopy()
-	if operation.Annotations == nil {
-		operation.Annotations = make(map[string]string)
+	if operation.Status.RetryPolicy == nil {
+		operation.Status.RetryPolicy = &v1alpha1.PackageRepositoryOperationRetryPolicy{
+			MaxRetries: int32(maxRetries),
+		}
 	}
-	operation.Annotations[retryCountAnnotation] = strconv.Itoa(getRetryCount(operation) + 1)
-	operation.Annotations[lastRetryTimeAnnotation] = r.dc.GetClock().Now().UTC().Format(time.RFC3339)
-	return r.client.Patch(ctx, operation, client.MergeFrom(original))
+	operation.Status.RetryPolicy.RetryCount++
+	now := metav1.NewTime(r.dc.GetClock().Now())
+	operation.Status.RetryPolicy.LastRetryTime = &now
+	operation.Status.RetryPolicy.LastMessage = errMsg
+	return r.client.Status().Patch(ctx, operation, client.MergeFrom(original))
+}
+
+func classifyOpServiceError(err error) (reason, message string) {
+	switch {
+	case apierrors.IsNotFound(err):
+		reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
+		var statusErr *apierrors.StatusError
+		if errors.As(err, &statusErr) {
+			message = fmt.Sprintf("PackageRepository not found: %v", statusErr)
+		} else {
+			message = fmt.Sprintf("PackageRepository not found: %v", err)
+		}
+	case strings.Contains(err.Error(), "create package service"):
+		reason = v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed
+		message = fmt.Sprintf("Failed to create registry client: %v", err)
+	default:
+		reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
+		message = fmt.Sprintf("Failed to create operation service: %v", err)
+	}
+	return reason, message
 }
 
 type reconciler struct {
@@ -311,14 +326,21 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
+		reason, message := classifyOpServiceError(err)
+
 		retryCount := getRetryCount(operation)
 		if retryCount < maxRetries {
 			if lastRetry := getLastRetryTime(operation); !lastRetry.IsZero() && time.Since(lastRetry) < retryInterval {
 				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
 			}
-			if patchErr := r.incrementRetryCount(ctx, operation); patchErr != nil {
+			if patchErr := r.incrementRetryCount(ctx, operation, err.Error()); patchErr != nil {
 				return ctrl.Result{}, patchErr
 			}
+
+			if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, reason, message, operation.Status.RetryPolicy); updateErr != nil {
+				logger.Warn("failed to update package repository condition", log.Err(updateErr))
+			}
+
 			logger.Warn("operation failed, retrying",
 				slog.Int("retry", retryCount+1),
 				slog.Int("maxRetries", maxRetries),
@@ -326,36 +348,16 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			return ctrl.Result{RequeueAfter: retryInterval}, nil
 		}
 
-		// Max retries exceeded - mark as completed (failed)
+		// Max retries exceeded - mark as completed
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
 		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 
-		var reason, message string
-		// Check if the underlying error is NotFound (works with wrapped errors)
-		switch {
-		case apierrors.IsNotFound(err):
-			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
-			// Extract the root cause error for cleaner message
-			var statusErr *apierrors.StatusError
-			if errors.As(err, &statusErr) {
-				message = fmt.Sprintf("PackageRepository not found: %v", statusErr)
-			} else {
-				message = fmt.Sprintf("PackageRepository not found: %v", err)
-			}
-		case strings.Contains(err.Error(), "create package service"):
-			reason = v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed
-			message = fmt.Sprintf("Failed to create registry client: %v", err)
-		default:
-			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
-			message = fmt.Sprintf("Failed to create operation service: %v", err)
-		}
-
-		r.SetConditionFalse(
+		r.SetConditionTrueWithMessage(
 			operation,
 			v1alpha1.PackageRepositoryOperationConditionCompleted,
-			reason,
+			v1alpha1.PackageRepositoryOperationReasonRetriesExhausted,
 			message,
 		)
 
@@ -363,7 +365,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			return ctrl.Result{}, patchErr
 		}
 
-		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, reason, message); updateErr != nil {
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, v1alpha1.PackageRepositoryOperationReasonRetriesExhausted, message, operation.Status.RetryPolicy); updateErr != nil {
 			logger.Warn("failed to update package repository condition", log.Err(updateErr))
 		}
 
@@ -373,14 +375,21 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 	discovered, err := opService.DiscoverPackage(ctx)
 	if err != nil {
+		message := fmt.Sprintf("Failed to list packages: %v", err)
+
 		retryCount := getRetryCount(operation)
 		if retryCount < maxRetries {
 			if lastRetry := getLastRetryTime(operation); !lastRetry.IsZero() && time.Since(lastRetry) < retryInterval {
 				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
 			}
-			if patchErr := r.incrementRetryCount(ctx, operation); patchErr != nil {
+			if patchErr := r.incrementRetryCount(ctx, operation, err.Error()); patchErr != nil {
 				return ctrl.Result{}, patchErr
 			}
+
+			if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, v1alpha1.PackageRepositoryOperationReasonPackageListingFailed, message, operation.Status.RetryPolicy); updateErr != nil {
+				logger.Warn("failed to update package repository condition", log.Err(updateErr))
+			}
+
 			logger.Warn("package listing failed, retrying",
 				slog.Int("retry", retryCount+1),
 				slog.Int("maxRetries", maxRetries),
@@ -388,17 +397,16 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			return ctrl.Result{RequeueAfter: retryInterval}, nil
 		}
 
-		// Max retries exceeded - mark as completed (failed)
+		// Max retries exceeded - mark as completed
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
 		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
-		message := fmt.Sprintf("Failed to list packages: %v", err)
 
-		r.SetConditionFalse(
+		r.SetConditionTrueWithMessage(
 			operation,
 			v1alpha1.PackageRepositoryOperationConditionCompleted,
-			v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
+			v1alpha1.PackageRepositoryOperationReasonRetriesExhausted,
 			message,
 		)
 
@@ -406,11 +414,11 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			return ctrl.Result{}, patchErr
 		}
 
-		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, v1alpha1.PackageRepositoryOperationReasonPackageListingFailed, message); updateErr != nil {
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, v1alpha1.PackageRepositoryOperationReasonRetriesExhausted, message, operation.Status.RetryPolicy); updateErr != nil {
 			logger.Warn("failed to update package repository condition", log.Err(updateErr))
 		}
 
-		logger.Warn("operation failed", slog.String("message", message))
+		logger.Warn("operation failed after retries", slog.String("message", message))
 		return ctrl.Result{}, nil
 	}
 
@@ -440,14 +448,21 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
+		reason, message := classifyOpServiceError(err)
+
 		retryCount := getRetryCount(operation)
 		if retryCount < maxRetries {
 			if lastRetry := getLastRetryTime(operation); !lastRetry.IsZero() && time.Since(lastRetry) < retryInterval {
 				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
 			}
-			if patchErr := r.incrementRetryCount(ctx, operation); patchErr != nil {
+			if patchErr := r.incrementRetryCount(ctx, operation, err.Error()); patchErr != nil {
 				return ctrl.Result{}, patchErr
 			}
+
+			if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, reason, message, operation.Status.RetryPolicy); updateErr != nil {
+				logger.Warn("failed to update package repository condition", log.Err(updateErr))
+			}
+
 			logger.Warn("operation service creation failed, retrying",
 				slog.Int("retry", retryCount+1),
 				slog.Int("maxRetries", maxRetries),
@@ -455,36 +470,16 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 			return ctrl.Result{RequeueAfter: retryInterval}, nil
 		}
 
-		// Max retries exceeded - mark as completed (failed)
+		// Max retries exceeded - mark as completed
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
 		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 
-		var reason, message string
-		// Check if the underlying error is NotFound (works with wrapped errors)
-		switch {
-		case apierrors.IsNotFound(err):
-			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
-			// Extract the root cause error for cleaner message
-			var statusErr *apierrors.StatusError
-			if errors.As(err, &statusErr) {
-				message = fmt.Sprintf("PackageRepository not found: %v", statusErr)
-			} else {
-				message = fmt.Sprintf("PackageRepository not found: %v", err)
-			}
-		case strings.Contains(err.Error(), "create package service"):
-			reason = v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed
-			message = fmt.Sprintf("Failed to create registry client: %v", err)
-		default:
-			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
-			message = fmt.Sprintf("Failed to create operation service: %v", err)
-		}
-
-		r.SetConditionFalse(
+		r.SetConditionTrueWithMessage(
 			operation,
 			v1alpha1.PackageRepositoryOperationConditionCompleted,
-			reason,
+			v1alpha1.PackageRepositoryOperationReasonRetriesExhausted,
 			message,
 		)
 
@@ -492,11 +487,11 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 			return ctrl.Result{}, patchErr
 		}
 
-		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, reason, message); updateErr != nil {
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, v1alpha1.PackageRepositoryOperationReasonRetriesExhausted, message, operation.Status.RetryPolicy); updateErr != nil {
 			logger.Warn("failed to update package repository condition", log.Err(updateErr))
 		}
 
-		logger.Warn("operation failed", slog.String("message", message))
+		logger.Warn("operation failed after retries", slog.String("message", message))
 		return ctrl.Result{}, nil
 	}
 
@@ -527,7 +522,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		}
 
 		successMessage := fmt.Sprintf("Successfully scanned repository, found %d package(s)", operation.Status.Packages.Total)
-		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, true, "", successMessage); updateErr != nil {
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, true, "", successMessage, nil); updateErr != nil {
 			logger.Warn("failed to update package repository condition", log.Err(updateErr))
 		}
 
@@ -733,6 +728,36 @@ func (r *reconciler) SetConditionTrue(operation *v1alpha1.PackageRepositoryOpera
 	return operation
 }
 
+func (r *reconciler) SetConditionTrueWithMessage(operation *v1alpha1.PackageRepositoryOperation, condType string, reason string, message string) *v1alpha1.PackageRepositoryOperation {
+	time := metav1.NewTime(r.dc.GetClock().Now())
+
+	for idx, cond := range operation.Status.Conditions {
+		if cond.Type == condType {
+			operation.Status.Conditions[idx].LastProbeTime = time
+			if cond.Status != corev1.ConditionTrue {
+				operation.Status.Conditions[idx].LastTransitionTime = time
+				operation.Status.Conditions[idx].Status = corev1.ConditionTrue
+			}
+
+			operation.Status.Conditions[idx].Reason = reason
+			operation.Status.Conditions[idx].Message = message
+
+			return operation
+		}
+	}
+
+	operation.Status.Conditions = append(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationStatusCondition{
+		Type:               condType,
+		Status:             corev1.ConditionTrue,
+		Reason:             reason,
+		Message:            message,
+		LastProbeTime:      time,
+		LastTransitionTime: time,
+	})
+
+	return operation
+}
+
 func (r *reconciler) SetConditionFalse(operation *v1alpha1.PackageRepositoryOperation, condType string, reason string, message string) *v1alpha1.PackageRepositoryOperation {
 	time := metav1.NewTime(r.dc.GetClock().Now())
 
@@ -763,7 +788,7 @@ func (r *reconciler) SetConditionFalse(operation *v1alpha1.PackageRepositoryOper
 	return operation
 }
 
-func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoName string, success bool, reason, message string) error {
+func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoName string, success bool, reason, message string, retryPolicy *v1alpha1.PackageRepositoryOperationRetryPolicy) error {
 	repo := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: repoName}, repo); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -804,6 +829,13 @@ func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoN
 			Message:            message,
 			LastTransitionTime: now,
 		})
+	}
+
+	// Set or clear retryPolicy on the PackageRepository
+	if success {
+		repo.Status.RetryPolicy = nil
+	} else {
+		repo.Status.RetryPolicy = retryPolicy
 	}
 
 	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {

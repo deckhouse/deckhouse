@@ -2,9 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
-  annotations:
-    packages.deckhouse.io/last-retry-time: "2019-10-17T15:33:00Z"
-    packages.deckhouse.io/retry-count: "5"
   creationTimestamp: null
   labels:
     packages.deckhouse.io/operation-trigger: manual
@@ -31,10 +28,16 @@ status:
     lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'PackageRepository not found: packagerepositories.deckhouse.io "deckhouse"
       not found'
-    reason: PackageRepositoryNotFound
-    status: "False"
+    reason: RetriesExhausted
+    status: "True"
     type: Completed
   phase: Completed
+  retryPolicy:
+    lastMessage: 'get package repository: packagerepositories.deckhouse.io "deckhouse"
+      not found'
+    lastRetryTime: "2019-10-17T15:33:00Z"
+    maxRetries: 5
+    retryCount: 5
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1

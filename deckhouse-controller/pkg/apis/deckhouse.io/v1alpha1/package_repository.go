@@ -137,6 +137,10 @@ type PackageRepositoryStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// RetryPolicy tracks retry state from the last failed operation.
+	// +optional
+	RetryPolicy *PackageRepositoryOperationRetryPolicy `json:"retryPolicy,omitempty"`
 }
 
 type PackageRepositoryStatusPackage struct {
