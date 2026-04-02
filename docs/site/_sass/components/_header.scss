@@ -1034,18 +1034,38 @@ html {
             width: 100%;
             cursor: pointer;
 
-            > a:first-child {
+            > a:first-child  {
                 font-weight: 700;
 
-                &::after {
-                    content: "";
+                &[href*="documentation"]::after {
+                    content: '';
                     position: absolute;
                     right: 0;
                     top: 5px;
                     width: 8px;
                     height: 5px;
-                    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=) bottom / contain no-repeat;
+                    background:url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") bottom / contain no-repeat ;
                     transition: .15s;
+                }
+            }
+
+            &.header__navigation-item--open {
+                > a:first-child {
+                    margin-bottom: 16px;
+                }
+
+                a {
+                    &:not(:last-of-type) {
+                        margin-bottom: 20px;
+                    }
+
+                    &::after {
+                        transform: rotate(-180deg);
+                    }
+                }
+
+                .sidebar__submenu-title {
+                    white-space: pre-line;
                 }
             }
 
