@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +37,6 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
@@ -84,8 +84,9 @@ func (c *Client) Status(ctx context.Context, endpoint string) (*clientv3.StatusR
 	return c.client.Status(ctx, endpoint)
 }
 
+//nolint:nonamedreturns
 func (c *Client) getMemberStatus(ctx context.Context, memberID uint64) (isLearner bool, started bool, err error) {
-	//todo newClient?
+	// todo newClient?
 	resp, err := c.client.MemberList(ctx)
 	if err != nil {
 		return false, false, err
@@ -117,12 +118,14 @@ func (c *Client) MemberAddAsLearner(ctx context.Context, peerAddrs []string) (*c
 }
 
 // MemberPromote is the extension point for extra promotion logic around clientv3.
+//
+//nolint:sloglint
 func (c *Client) MemberPromote(ctx context.Context, id uint64) (*clientv3.MemberPromoteResponse, error) {
 	var (
 		lastError     error
 		learnerIDUint = strconv.FormatUint(id, 16)
 	)
-	logger.Info("etcd] Waiting for a learner to start", slog.String("learnerID", learnerIDUint))
+	logger.Info("waiting for a learner to start", slog.String("learnerID", learnerIDUint))
 
 	err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, constants.KubernetesAPICallTimeout,
 		true, func(pollCtx context.Context) (bool, error) {
@@ -250,6 +253,10 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 			logger.Info("etcd pod is not ready", slog.String("pod", pod.ObjectMeta.Name))
 		}
 		etcdEndpoint, ok := pod.ObjectMeta.Annotations[constants.EtcdAdvertiseClientUrlsAnnotationKey]
+		if !ok {
+			etcdEndpoint, ok = pod.ObjectMeta.Annotations[constants.LegacyEtcdAdvertiseClientUrlsAnnotationKey]
+		}
+
 		if !ok {
 			logger.Info("etcd Pod is missing the annotation; cannot infer etcd advertise client URL using the Pod annotation", slog.String("pod", pod.ObjectMeta.Name), slog.String("annotation", constants.EtcdAdvertiseClientUrlsAnnotationKey))
 			continue
