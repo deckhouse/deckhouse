@@ -33,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -144,7 +143,6 @@ func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir s
 // reconcileEtcdJoin handles etcd join for a fresh or orphaned node.
 // Flow: ensureAdminKubeconfig -> prepare manifest with annotations -> JoinCluster -> waitForPod
 func (r *Reconciler) reconcileEtcdJoin(
-	ctx context.Context,
 	op *controlplanev1alpha1.ControlPlaneOperation,
 	secretData map[string][]byte,
 	configChecksum, pkiChecksum, caChecksum string,
@@ -189,12 +187,5 @@ func (r *Reconciler) reconcileEtcdJoin(
 		return reconcile.Result{}, fmt.Errorf("etcd join cluster: %w", err)
 	}
 
-	if err := r.setConditions(ctx, op,
-		readyCondition(metav1.ConditionFalse, constants.ReasonWaitingForPod,
-			fmt.Sprintf("waiting for etcd pod after join with config-checksum %s", shortChecksum(configChecksum))),
-	); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return r.waitForPod(ctx, op, configChecksum, pkiChecksum, caChecksum, logger)
+	return reconcile.Result{}, nil
 }

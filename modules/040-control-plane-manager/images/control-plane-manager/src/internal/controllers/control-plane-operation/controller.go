@@ -264,13 +264,12 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1al
 			return result, err
 		}
 
-		_ = r.setConditions(ctx, op,
-			commandCondition(cmd.Name, metav1.ConditionTrue, constants.ReasonCommandCompleted, ""))
-
-		// Command wants requeue (waitForPod, etcdJoin) — stop pipeline, resume on next reconcile.
 		if result.Requeue || result.RequeueAfter > 0 {
 			return result, nil
 		}
+
+		_ = r.setConditions(ctx, op,
+			commandCondition(cmd.Name, metav1.ConditionTrue, constants.ReasonCommandCompleted, ""))
 	}
 
 	// All commands completed successfully — mark operation as ready.
