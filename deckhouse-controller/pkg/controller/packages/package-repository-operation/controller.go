@@ -180,19 +180,6 @@ func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.Pac
 		}
 	}
 
-	// Warn if manual operation requests partial scan on a registry that doesn't support it
-	if op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger] == v1alpha1.PackagesRepositoryTriggerManual &&
-		op.Spec.Update != nil && !op.Spec.Update.FullScan {
-		repo := new(v1alpha1.PackageRepository)
-		if err := r.client.Get(ctx, client.ObjectKey{Name: op.Spec.PackageRepositoryName}, repo); err == nil {
-			if !repo.Status.PartialScanAvailable {
-				r.logger.Warn("your container registry can't handle partial tag listing",
-					slog.String("operation", op.Name),
-					slog.String("repository", op.Spec.PackageRepositoryName))
-			}
-		}
-	}
-
 	if update {
 		if err := r.client.Patch(ctx, op, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("patch operation labels: %w", err)

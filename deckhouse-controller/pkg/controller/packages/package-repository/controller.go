@@ -180,8 +180,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 
 	// Determine if we should do a full scan or incremental scan
 	// fullScan = true if this is the first operation ever (no operations at all)
-	// or if the registry does not support pagination
-	fullScan := len(operationList.Items) == 0 || !packageRepository.Status.PartialScanAvailable
+	fullScan := len(operationList.Items) == 0
 
 	// Create a new PackageRepositoryOperation
 	operationName := fmt.Sprintf("%s-scan-%d", packageRepository.Name, r.dc.GetClock().Now().Unix())
