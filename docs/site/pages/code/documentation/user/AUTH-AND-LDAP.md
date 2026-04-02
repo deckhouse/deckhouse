@@ -244,4 +244,4 @@ This approach simplifies synchronization and avoids issues related to recursive 
 
 ### Can I create local accounts when LDAP synchronization is enabled?
 
-Yes, you can create local accounts even when LDAP synchronization is enabled. Password-based login must be allowed for this to work.
+Yes, you can create local accounts even when LDAP synchronization is enabled. For these users to sign in via the web interface, the [Allow password and passkey authentication for the web interface](https://docs.gitlab.com/administration/settings/sign_in_restrictions/#password-and-passkey-authentication) setting must be enabled.
