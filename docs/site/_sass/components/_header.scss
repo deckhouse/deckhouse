@@ -107,7 +107,7 @@ html {
                 > a:first-child  {
                     font-weight: 700;
 
-                    &::after {
+                    &[href*="documentation"]::after {
                         content: '';
                         position: absolute;
                         right: 0;
@@ -1028,6 +1028,11 @@ html {
     }
 
     .header__navigation-item {
+
+        > a {
+            font-size:  16px;
+        }
+
         &.active-mobile {
             position: relative;
             width: 100%;
@@ -1036,7 +1041,7 @@ html {
             > a:first-child  {
                 font-weight: 700;
 
-                &[href*="documentation"]::after {
+                &::after {
                     content: '';
                     position: absolute;
                     right: 0;
