@@ -24,8 +24,7 @@ spec:
 status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'Failed to list packages: failed to list packages: failed to list tags:
       assert.AnError general error for testing'
     reason: PackageListingFailed

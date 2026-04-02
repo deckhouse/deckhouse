@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -135,7 +134,7 @@ type PackageRepositoryOperationStatus struct {
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions []PackageRepositoryOperationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type PackageRepositoryOperationStatusPackages struct {
@@ -194,29 +193,6 @@ type PackageRepositoryOperationStatusPackage struct {
 	FoundVersions int `json:"foundVersions,omitempty"`
 }
 
-type PackageRepositoryOperationStatusCondition struct {
-	// Type of operation condition.
-	Type string `json:"type"`
-
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-
-	// Programmatic identifier indicating the reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
-	// Human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Last time the condition was probed.
-	// +optional
-	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-
-	// Last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-}
 
 // +kubebuilder:object:root=true
 
