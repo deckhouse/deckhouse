@@ -5,6 +5,7 @@
   {%- include getting_started/global/partials/NOTICES.liquid %}
 {% endif %}
 <script type="text/javascript" src='{% javascript_asset_tag getting-started-install %}[_assets/js/getting-started-install.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag dvp-cluster-setup %}[_assets/js/dvp/getting-started-cluster-setup.js]{% endjavascript_asset_tag %}'></script>
 <script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
 
@@ -102,6 +103,10 @@ $(document).ready(function() {
 
   generate_password(true);
   replace_snippet_password();
+  /* DOMContentLoaded уже вызвал dvp_config_update; replace_snippet_password правит только snippetcut__raw — обновляем видимую подсветку и dhctl. */
+  if (typeof dvp_refresh_visible_snippets === 'function') {
+    dvp_refresh_visible_snippets();
+  }
   sessionStorage.setItem('dhctl-revision','{% if page.ee_only == true %}ee{% else %}ce{% endif %}');
 });
 </script>

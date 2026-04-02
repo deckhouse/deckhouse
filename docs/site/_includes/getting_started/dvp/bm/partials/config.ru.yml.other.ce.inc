@@ -160,7 +160,7 @@ spec:
   email: <USER_NAME>@deckhouse.io
   # [<en>] bcrypt hash of the password. Example for password '7sxgcc2tqn': echo -n '7sxgcc2tqn' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo. Generate your own or use this one for testing only.
   # [<ru>] Хэш пароля (bcrypt). Пример для пароля '7sxgcc2tqn': echo -n '7sxgcc2tqn' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo. Сгенерируйте свой или используйте этот только для тестирования.
-  password: 'JDJhJDEwJE5yTlMuNWlLQndyRi9ncTEwWnpDZmVwdHJrTUFxa0JRTnFFbDl5U1lCV1JHMC5STTNvNmVT'
+  password: '<GENERATED_PASSWORD_HASH>'
 ---
 # [<en>] Binds the ClusterRole to the user in the project namespace (grants admin rights within test-project).
 # [<en>] https://deckhouse.io/modules/user-authn/cr.html#user
