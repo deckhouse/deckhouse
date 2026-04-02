@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const headerSidebar = document.querySelector('.header__sidebar');
     const navTrigger = document.querySelector('div .nav__trigger');
     const headerNavList = document.querySelector('ul#bottom-header-nav.nav.header__nav');
+    const moduleSidebarNavList = document.querySelector('.header__sidebar .header__sidebar--nav');
     const burgerOverlay = document.createElement('div');
 
     let burgerInited = false;
@@ -26,10 +27,17 @@ document.addEventListener('DOMContentLoaded', function () {
         return item.textContent.trim();
     }
 
+    function getMobileNavList() {
+        if (moduleSidebarNavList) return moduleSidebarNavList;
+        return headerNavList;
+    }
+
     function activeMobileItem() {
         if (window.innerWidth >= 1024) return null;
+        const mobileNavList = getMobileNavList();
+        if (!mobileNavList) return null;
 
-        const activeNavMobile = document.querySelector('li.active-mobile');
+        const activeNavMobile = mobileNavList.querySelector('li.active-mobile');
         if (activeNavMobile) {
             if(navTrigger) {
                 navTrigger.textContent = getNavItemTitle(activeNavMobile);
@@ -37,7 +45,8 @@ document.addEventListener('DOMContentLoaded', function () {
             return activeNavMobile;
         }
 
-        const activeNav = document.querySelector('.header__navigation-item.active');
+        const activeNav = mobileNavList.querySelector('.header__navigation-item.active') || mobileNavList.querySelector('.header__navigation-item');
+        if (!activeNav) return null;
         activeNav.classList.remove('active');
         activeNav.classList.add('active-mobile');
         if(navTrigger) {
@@ -273,13 +282,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 cloneSidebar.setAttribute('aria-hidden', !isOpening);
                 if (isOpening) {
                     activeNavMobile.classList.add('header__navigation-item--open');
-                    headerNavList.classList.add('header__nav--doc-modal');
+                    if (headerNavList) headerNavList.classList.add('header__nav--doc-modal');
                     body.classList.add('sidebar-opened');
                     ensureOverlay();
                     window.requestAnimationFrame(scrollMobileSidebarToActive);
                 } else {
                     activeNavMobile.classList.remove('header__navigation-item--open');
-                    headerNavList.classList.remove('header__nav--doc-modal');
+                    if (headerNavList) headerNavList.classList.remove('header__nav--doc-modal');
                     body.classList.remove('sidebar-opened');
                 }
             });
