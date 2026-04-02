@@ -41,7 +41,7 @@ const (
 type packageMetadata struct {
 	version    string
 	changelog  packageChangelog
-	definition dto.Definition
+	definition dto.ApplicationDefinition
 }
 
 // packageChangelog represents user-facing release notes for a package version.
