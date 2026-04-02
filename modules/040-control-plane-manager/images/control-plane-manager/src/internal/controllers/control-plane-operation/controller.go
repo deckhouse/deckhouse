@@ -218,7 +218,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 }
 
 // reconcilePipeline executes the command-based pipeline for component operations.
-// All commands are re-executed on every reconcile (idempotent convergence to desired state).
+// Completed commands (condition=True) are skipped on requeue
+// On command failure the failed command condition stays False, so it re-executes on next reconcile.
 func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData, pkiSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
 	commands, err := resolveCommands(op.Spec.Commands)
 	if err != nil {
@@ -236,15 +237,22 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1al
 		caChecksum:     op.Spec.DesiredCAChecksum,
 	}
 
+	//Skip already completed commands here (testing purposes)
 	for _, cmd := range commands {
-		logger.Info("executing command", slog.String("command", string(cmd.Name)))
+		if meta.IsStatusConditionTrue(op.Status.Conditions, string(cmd.Name)) {
+			logger.Info("command already completed, skipping", slog.String("command", string(cmd.Name)))
+			continue
+		}
+
+		cmdLogger := logger.With(slog.String("command", string(cmd.Name)))
+		cmdLogger.Info("executing command")
 
 		_ = r.setConditions(ctx, op,
 			commandCondition(cmd.Name, metav1.ConditionFalse, constants.ReasonCommandInProgress, ""),
 			readyCondition(metav1.ConditionFalse, cmd.ReadyReason,
 				fmt.Sprintf("executing command %s", cmd.Name)))
 
-		result, err := cmd.Exec(ctx, cc, logger)
+		result, err := cmd.Exec(ctx, cc, cmdLogger)
 		if err != nil {
 			_ = r.setConditions(ctx, op,
 				commandCondition(cmd.Name, metav1.ConditionFalse, constants.ReasonCommandFailed, err.Error()))
