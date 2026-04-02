@@ -81,6 +81,9 @@ spec:
                 packagesCount:
                   description: |
                     Общее количество пакетов в этом репозитории.
+                partialScanAvailable:
+                  description: |
+                    Указывает, поддерживает ли реестр пагинацию при листинге тегов.
                 phase:
                   description: |
                     Текущая фаза репозитория.
