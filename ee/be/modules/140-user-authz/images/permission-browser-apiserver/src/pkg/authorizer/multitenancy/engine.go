@@ -553,7 +553,7 @@ func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
 //
 // This method computes affectedDirs once and returns the filter for reuse,
 // avoiding redundant lookups when filtering multiple namespaces.
-func (e *Engine) GetNamespaceAccessType(userInfo user.Info) (accessType NamespaceAccessType, filter *DirectoryEntry) {
+func (e *Engine) GetNamespaceAccessType(userInfo user.Info) (NamespaceAccessType, *DirectoryEntry) {
 	if userInfo == nil {
 		return AllNamespacesAllowed, nil
 	}
@@ -622,6 +622,7 @@ func (e *Engine) IsNamespaceAllowedWithFilter(namespace string, filter *Director
 }
 
 // GetAllowedNamespaces is a convenience wrapper around GetNamespaceAccessType.
+//
 // Deprecated: Use GetNamespaceAccessType for better clarity and to get the filter for reuse.
 //
 // Return values:
