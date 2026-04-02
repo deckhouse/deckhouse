@@ -14,7 +14,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "10"
+  resourceVersion: "5"
 spec:
   packageRepositoryName: deckhouse
   type: Update
@@ -28,16 +28,10 @@ status:
     lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'Failed to list packages: failed to list packages: failed to list tags:
       assert.AnError general error for testing'
-    reason: RetriesExhausted
+    reason: PackageListingFailed
     status: "True"
     type: Completed
   phase: Completed
-  retryPolicy:
-    lastMessage: 'failed to list packages: failed to list tags: assert.AnError general
-      error for testing'
-    lastRetryTime: "2019-10-17T15:33:00Z"
-    maxRetries: 5
-    retryCount: 5
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -45,7 +39,7 @@ kind: PackageRepository
 metadata:
   creationTimestamp: null
   name: deckhouse
-  resourceVersion: "7"
+  resourceVersion: "2"
 spec:
   registry:
     repo: registry.example.com/test
@@ -54,13 +48,7 @@ status:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'Failed to list packages: failed to list packages: failed to list tags:
       assert.AnError general error for testing'
-    reason: RetriesExhausted
+    reason: PackageListingFailed
     status: "False"
     type: LastOperationScanFinished
-  retryPolicy:
-    lastMessage: 'failed to list packages: failed to list tags: assert.AnError general
-      error for testing'
-    lastRetryTime: "2019-10-17T15:33:00Z"
-    maxRetries: 5
-    retryCount: 5
   syncTime: null

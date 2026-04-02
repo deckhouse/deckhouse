@@ -174,28 +174,6 @@ spec:
               phase:
                 description: Current phase of the repository.
                 type: string
-              retryPolicy:
-                description: RetryPolicy tracks retry state from the last failed operation.
-                properties:
-                  lastMessage:
-                    description: Error message from the last retry attempt.
-                    type: string
-                  lastRetryTime:
-                    description: Time of the last retry attempt.
-                    format: date-time
-                    type: string
-                  maxRetries:
-                    description: Maximum number of retry attempts allowed.
-                    format: int32
-                    type: integer
-                  retryCount:
-                    description: Number of retry attempts made.
-                    format: int32
-                    type: integer
-                required:
-                - maxRetries
-                - retryCount
-                type: object
               syncTime:
                 description: Last time the repository was synchronized.
                 format: date-time

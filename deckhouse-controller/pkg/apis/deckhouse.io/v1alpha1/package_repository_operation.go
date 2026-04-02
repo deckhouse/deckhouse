@@ -39,7 +39,6 @@ const (
 	PackageRepositoryOperationReasonPackageRepositoryNotFound    = "PackageRepositoryNotFound"
 	PackageRepositoryOperationReasonRegistryClientCreationFailed = "RegistryClientCreationFailed"
 	PackageRepositoryOperationReasonPackageListingFailed         = "PackageListingFailed"
-	PackageRepositoryOperationReasonRetriesExhausted             = "RetriesExhausted"
 
 	// PackagesRepositoryOperationLabelRepository is the label used to identify PackageRepositoryOperations
 	// that belong to a specific PackageRepository
@@ -137,27 +136,6 @@ type PackageRepositoryOperationStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions []PackageRepositoryOperationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-
-	// RetryPolicy tracks retry state for failed operations.
-	// +optional
-	RetryPolicy *PackageRepositoryOperationRetryPolicy `json:"retryPolicy,omitempty"`
-}
-
-// PackageRepositoryOperationRetryPolicy holds retry state for an operation.
-type PackageRepositoryOperationRetryPolicy struct {
-	// Number of retry attempts made.
-	RetryCount int32 `json:"retryCount"`
-
-	// Maximum number of retry attempts allowed.
-	MaxRetries int32 `json:"maxRetries"`
-
-	// Time of the last retry attempt.
-	// +optional
-	LastRetryTime *metav1.Time `json:"lastRetryTime,omitempty"`
-
-	// Error message from the last retry attempt.
-	// +optional
-	LastMessage string `json:"lastMessage,omitempty"`
 }
 
 type PackageRepositoryOperationStatusPackages struct {
