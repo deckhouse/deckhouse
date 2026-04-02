@@ -25,28 +25,63 @@ import (
 
 var _ = Describe("Istio hooks :: discovery_application_namespaces ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{"internal":{}}}`, "")
-	/*
-		Context("Empty cluster and minimal settings", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(``))
-				f.RunHook()
-			})
 
-			It("Hook must execute successfully", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
-
-				Expect(f.ValuesGet("istio.internal.applicationNamespaces").Array()).To(BeEmpty())
-			})
+	Context("Empty cluster and minimal settings", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
 		})
-	*/
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
+
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").Array()).To(BeEmpty())
+		})
+	})
+
 	Context("Application namespaces with labels but pods with labels", func() {
 		BeforeEach(func() {
-			//f.KubeStateSet("")
-			//_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-02"}}, metav1.CreateOptions{})
-			//_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-13"}}, metav1.CreateOptions{})
-			//_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-24"}}, metav1.CreateOptions{})
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSet(applicationNamespacesWithLabeledPods))
+			f.RunHook()
+		})
+
+		It("Should count all pods namespaces properly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-istio-defined-revision-a", "ns-istio-defined-revision-b-with-injection", "ns-istio-injection-enabled", "ns-without-labels-b"}))
+		})
+	})
+
+	Context("Application namespaces with and without discard-metrics labels", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(applicationNamespacesWithDiscardMetrics))
+			f.RunHook()
+		})
+
+		It("Should count all pods namespaces properly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-0", "ns-1", "ns-2", "ns-3"}))
+		})
+		It("Should count all pods namespaces to monitor properly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.applicationNamespacesToMonitor").AsStringSlice()).To(Equal([]string{"ns-0", "ns-2"}))
+		})
+	})
+
+	Context("Application namespaces with labels and IstioOperator", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(applicationNamespacesRevisionAndPrefixes))
+			f.RunHook()
+		})
+		It("Should count all namespaces properly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"d8-ns6", "d8-ns7", "kube-ns8", "kube-ns9", "ns1", "ns2", "ns3", "ns4", "ns5"}))
+		})
+	})
+})
+
+const (
+	applicationNamespacesWithLabeledPods = `
 ---
 apiVersion: v1
 kind: Namespace
@@ -122,21 +157,9 @@ metadata:
   labels:
     istio.io/rev: v1x12
 spec: {}
-`))
+`
 
-			f.RunHook()
-		})
-
-		It("Should count all pods namespaces properly", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-istio-defined-revision-a", "ns-istio-defined-revision-b-with-injection", "ns-istio-injection-enabled", "ns-without-labels-b"}))
-		})
-	})
-
-	Context("Application namespaces with and without discard-metrics labels", func() {
-		BeforeEach(func() {
-			//f.KubeStateSet("")
-			f.BindingContexts.Set(f.KubeStateSet(`
+	applicationNamespacesWithDiscardMetrics = `
 ---
 apiVersion: v1
 kind: Namespace
@@ -183,24 +206,9 @@ metadata:
   labels:
     sidecar.istio.io/inject: "true"
 spec: {}
-`))
+`
 
-			f.RunHook()
-		})
-
-		It("Should count all pods namespaces properly", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-0", "ns-1", "ns-2", "ns-3"}))
-		})
-		It("Should count all pods namespaces to monitor properly", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespacesToMonitor").AsStringSlice()).To(Equal([]string{"ns-0", "ns-2"}))
-		})
-	})
-
-	Context("Application namespaces with labels and IstioOperator", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+	applicationNamespacesRevisionAndPrefixes = `
 ---
 # regular ns
 apiVersion: v1
@@ -290,12 +298,5 @@ metadata:
     deletionTimestamp: "2020-10-22T21:30:34Z"
   labels:
     istio-injection: enabled
-`))
-			f.RunHook()
-		})
-		It("Should count all namespaces properly", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"d8-ns6", "d8-ns7", "kube-ns8", "kube-ns9", "ns1", "ns2", "ns3", "ns4", "ns5"}))
-		})
-	})
-})
+`
+)
