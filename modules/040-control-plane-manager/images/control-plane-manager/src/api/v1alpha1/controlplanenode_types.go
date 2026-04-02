@@ -34,6 +34,11 @@ type ComponentChecksum struct {
 	// Set when the component's pod restarts with the new CA.
 	// +optional
 	CAChecksum string `json:"caChecksum,omitempty"`
+
+	// CertificatesExpiration maps cert file names to their NotAfter timestamps.
+	// Only populated in status via Observe operation. Absent in spec.
+	// +optional
+	CertificatesExpiration map[string]metav1.Time `json:"certificatesExpiration,omitempty"`
 }
 
 // ComponentChecksums holds checksums for all control plane components.
@@ -83,6 +88,10 @@ type ControlPlaneNodeStatus struct {
 
 	// +optional
 	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
+
+	// LastObservedAt is the timestamp of the last completed Observe operation.
+	// +optional
+	LastObservedAt *metav1.Time `json:"lastObservedAt,omitempty"`
 
 	// +optional
 	// +listMapKey=type

@@ -116,3 +116,18 @@ spec:
     - SyncCA
   desiredCaChecksum: b69a6eefae92af11da29871fc3c214e1482f5dce2851a98b4cb79a50d7b54558
   approved: false
+---
+apiVersion: control-plane.deckhouse.io/v1alpha1
+kind: ControlPlaneOperation
+metadata:
+  name: master-1-observe
+  labels:
+    control-plane.deckhouse.io/node: master-1
+    control-plane.deckhouse.io/component: Observer
+spec:
+  configVersion: "999.999"
+  nodeName: master-1
+  component: Observer
+  commands:
+    - Observe
+  approved: false

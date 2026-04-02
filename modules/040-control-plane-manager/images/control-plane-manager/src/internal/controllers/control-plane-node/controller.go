@@ -150,6 +150,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
+	if err := r.ensureObserveExists(ctx, cpn, ops.Items, logger); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if err := r.updateStatusFromOperations(ctx, cpn, states, ops.Items); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -403,6 +407,18 @@ func (r *Reconciler) updateStatusFromOperations(
 		}
 	}
 
+	// Consume completed Observe operation and delete it for free the name (for next periodic run)
+	for i := range ops {
+		op := &ops[i]
+		if op.Spec.Component == controlplanev1alpha1.OperationComponentObserver && isCompleted(op) {
+			applyObserveResult(cpn, op)
+			if err := r.client.Delete(ctx, op); err != nil {
+				return fmt.Errorf("delete completed Observe operation %s: %w", op.Name, err)
+			}
+			break
+		}
+	}
+
 	// Derive global status.CAChecksum - set when ALL static pod components have per component CAChecksum matching spec.
 	if cpn.Spec.CAChecksum != "" && cpn.Status.CAChecksum != cpn.Spec.CAChecksum {
 		allMatch := true
@@ -611,4 +627,103 @@ func failureMessage(op *controlplanev1alpha1.ControlPlaneOperation) string {
 		}
 	}
 	return ""
+}
+
+// ensureObserveExists creates an Observe CPO if needed (bootstrap or periodic).
+func (r *Reconciler) ensureObserveExists(
+	ctx context.Context,
+	cpn *controlplanev1alpha1.ControlPlaneNode,
+	ops []controlplanev1alpha1.ControlPlaneOperation,
+	logger *log.Logger,
+) error {
+	for i := range ops {
+		if ops[i].Spec.Component == controlplanev1alpha1.OperationComponentObserver && !isCompleted(&ops[i]) {
+			return nil
+		}
+	}
+
+	for i := range ops {
+		if ops[i].Spec.Component != controlplanev1alpha1.OperationComponentObserver &&
+			ops[i].Spec.Approved && !isCompleted(&ops[i]) && !isFailed(&ops[i]) {
+			return nil
+		}
+	}
+
+	needsObserve := false
+
+	if cpn.Status.LastObservedAt == nil {
+		needsObserve = true
+	}
+
+	if cpn.Status.LastObservedAt != nil && time.Since(cpn.Status.LastObservedAt.Time) > constants.ObserveInterval {
+		needsObserve = true
+	}
+
+	if !needsObserve {
+		return nil
+	}
+
+	opName := fmt.Sprintf("%s-observe", cpn.Name)
+
+	for i := range ops {
+		if ops[i].Name == opName {
+			return nil
+		}
+	}
+
+	op := &controlplanev1alpha1.ControlPlaneOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: opName,
+			Labels: map[string]string{
+				constants.ControlPlaneNodeNameLabelKey:  cpn.Name,
+				constants.ControlPlaneComponentLabelKey: string(controlplanev1alpha1.OperationComponentObserver),
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         controlplanev1alpha1.GroupVersion.String(),
+					Kind:               "ControlPlaneNode",
+					Name:               cpn.Name,
+					UID:                cpn.UID,
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(false),
+				},
+			},
+		},
+		Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
+			ConfigVersion: cpn.Spec.ConfigVersion,
+			NodeName:      cpn.Name,
+			Component:     controlplanev1alpha1.OperationComponentObserver,
+			Commands:      []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandObserve},
+			Approved:      false,
+		},
+	}
+
+	if err := r.client.Create(ctx, op); err != nil {
+		return fmt.Errorf("create Observe operation %s: %w", opName, err)
+	}
+	logger.Info("Observe operation created", slog.String("operation", opName))
+	return nil
+}
+
+// applyObserveResult copies certificate expiration from completed Observe CPO into CPN status.
+func applyObserveResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *controlplanev1alpha1.ControlPlaneOperation) {
+	if op.Status.ObservedState == nil {
+		return
+	}
+
+	if observed, ok := op.Status.ObservedState["etcd"]; ok && len(observed.CertificatesExpiration) > 0 {
+		cpn.Status.Components.Etcd.CertificatesExpiration = observed.CertificatesExpiration
+	}
+	if observed, ok := op.Status.ObservedState["kube-apiserver"]; ok && len(observed.CertificatesExpiration) > 0 {
+		cpn.Status.Components.KubeAPIServer.CertificatesExpiration = observed.CertificatesExpiration
+	}
+	if observed, ok := op.Status.ObservedState["kube-controller-manager"]; ok && len(observed.CertificatesExpiration) > 0 {
+		cpn.Status.Components.KubeControllerManager.CertificatesExpiration = observed.CertificatesExpiration
+	}
+	if observed, ok := op.Status.ObservedState["kube-scheduler"]; ok && len(observed.CertificatesExpiration) > 0 {
+		cpn.Status.Components.KubeScheduler.CertificatesExpiration = observed.CertificatesExpiration
+	}
+
+	now := metav1.Now()
+	cpn.Status.LastObservedAt = &now
 }
