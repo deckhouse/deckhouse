@@ -45,9 +45,21 @@ document.addEventListener('DOMContentLoaded', function () {
             return activeNavMobile;
         }
 
-        const activeNav = mobileNavList.querySelector('.header__navigation-item.active') || mobileNavList.querySelector('.header__navigation-item');
+        const activeNav =
+            mobileNavList.querySelector('.header__navigation-item.header__navigation-item_active') ||
+            mobileNavList.querySelector('.header__navigation-item.active') ||
+            mobileNavList.querySelector('.header__navigation-item');
         if (!activeNav) return null;
-        activeNav.classList.remove('active');
+
+        let originActiveClass = 'active';
+        if (activeNav.classList.contains('header__navigation-item_active')) {
+            originActiveClass = 'header__navigation-item_active';
+        } else if (activeNav.classList.contains('active')) {
+            originActiveClass = 'active';
+        }
+
+        activeNav.dataset.mobileActiveOrigin = originActiveClass;
+        activeNav.classList.remove('active', 'header__navigation-item_active');
         activeNav.classList.add('active-mobile');
         if(navTrigger) {
             navTrigger.textContent = getNavItemTitle(activeNav);
@@ -59,7 +71,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const mobileActiveItems = document.querySelectorAll('.header__navigation-item.active-mobile');
         mobileActiveItems.forEach(function (item) {
             item.classList.remove('active-mobile');
-            item.classList.add('active');
+            item.classList.remove('active', 'header__navigation-item_active');
+
+            const originActiveClass = item.dataset.mobileActiveOrigin;
+            if (originActiveClass === 'header__navigation-item_active') {
+                item.classList.add('header__navigation-item_active');
+            } else {
+                item.classList.add('active');
+            }
+            delete item.dataset.mobileActiveOrigin;
         });
     }
 
@@ -275,7 +295,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (activeNavMobile && cloneSidebar) {
-            activeNavMobile.addEventListener('click', function (e) {
+            const activeNavMobileLink = activeNavMobile.querySelector(':scope > a');
+            const sidebarToggleTarget = activeNavMobileLink || activeNavMobile;
+
+            sidebarToggleTarget.addEventListener('click', function (e) {
                 e.preventDefault();
                 const isOpening = !cloneSidebar.classList.contains('header__sidebar-nav--show');
                 cloneSidebar.classList.toggle('header__sidebar-nav--show');

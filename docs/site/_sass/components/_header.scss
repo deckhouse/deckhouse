@@ -13,7 +13,6 @@ html {
 }
 
 .header-container--module + .header__sidebar {
-    height: 240px;
     padding-top: 55px;
 
     @include breakpoints.min-w(xl) {
