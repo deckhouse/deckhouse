@@ -110,6 +110,22 @@ spec:
                 phase:
                   description: |
                     Текущая фаза операции.
+                retryPolicy:
+                  description: |
+                    Состояние повторных попыток для неудачных операций.
+                  properties:
+                    retryCount:
+                      description: |
+                        Количество выполненных повторных попыток.
+                    maxRetries:
+                      description: |
+                        Максимальное количество допустимых повторных попыток.
+                    lastRetryTime:
+                      description: |
+                        Время последней повторной попытки.
+                    lastMessage:
+                      description: |
+                        Сообщение об ошибке последней повторной попытки.
                 startTime:
                   description: |
                     Время начала операции.
