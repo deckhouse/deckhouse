@@ -281,6 +281,7 @@ func (r *reconciler) setConditionTrue(apv *v1alpha1.ApplicationPackageVersion, c
 	metautils.SetStatusCondition(&apv.Status.Conditions, metav1.Condition{
 		Type:               condType,
 		Status:             metav1.ConditionTrue,
+		Reason:             "Succeeded",
 		ObservedGeneration: apv.Generation,
 		LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
 	})
