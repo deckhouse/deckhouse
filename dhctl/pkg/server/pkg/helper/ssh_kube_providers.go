@@ -36,7 +36,7 @@ import (
 func CreateProviders(ctx context.Context, config string, logger log.Logger, isDebug bool, tmpDir string) (*providerinitializer.SSHProviderInitializer, pkg.KubeProvider, func() error, error) {
 	cleanuper := callback.NewCallback()
 
-	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.(*log.TeeLogger).GetLogger().(*log.ExternalLogger).GetLogger())
+	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.(*log.ExternalLogger).GetLogger())
 	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: isDebug, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: tmpDir}
 	sett := settings.NewBaseProviders(params)
 

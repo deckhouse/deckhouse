@@ -18,12 +18,14 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"sync"
 	"time"
 
 	external "github.com/deckhouse/lib-dhctl/pkg/log"
+	"k8s.io/klog/v2"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -44,6 +46,149 @@ var (
 const (
 	ProcessPreflight = "preflight"
 )
+
+type LoggerOptions struct {
+	OutStream   io.Writer
+	Width       int
+	IsDebug     bool
+	DebugStream io.Writer
+}
+
+type debugLogWriter struct {
+	DebugStream io.Writer
+}
+
+type klogWriterWrapper struct {
+	logger Logger
+}
+
+func newKlogWriterWrapper(logger Logger) *klogWriterWrapper {
+	return &klogWriterWrapper{logger: logger}
+}
+
+func (l *klogWriterWrapper) Write(p []byte) (int, error) {
+	l.logger.LogDebugF("klog: %s", string(p))
+
+	return len(p), nil
+}
+
+func InitLogger(loggerType string) error {
+	return InitExternalLogger(loggerType)
+}
+
+func InitExternalLogger(loggerType string) error {
+	extLogger, err := external.NewLogger(external.Type(loggerType), app.IsDebug)
+	if err != nil {
+		return err
+	}
+	l := &ExternalLogger{logger: extLogger}
+	defaultLogger = l
+
+	err = initExternalKlog(l)
+	if err != nil {
+		return err
+	}
+	// Mute Shell-Operator logs
+	log.Default().SetLevel(log.LevelFatal)
+	if app.IsDebug {
+		// Enable shell-operator log, because it captures klog output
+		// todo: capture output of klog with default logger instead
+		log.Default().SetLevel(log.LevelDebug)
+		// Wrap them with our default logger
+		log.Default().SetOutput(defaultLogger)
+	}
+
+	return nil
+}
+
+func initExternalKlog(logger *ExternalLogger) error {
+	sanitizer := external.NewKeywordSanitizer().WithAdditionalKeywords(sensitiveKeywords)
+	err := external.InitKlog(logger.logger, external.WithKlogSanitizer(sanitizer))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func WrapLoggerWithTeeLogger(writer io.WriteCloser, bufSize int) error {
+	previousLogger := defaultLogger
+	var err error
+	defaultLogger, err = NewTeeLogger(defaultLogger, writer, bufSize)
+	if err != nil {
+		defaultLogger = previousLogger
+		return err
+	}
+
+	return nil
+}
+
+func initKlog(logger Logger) {
+	// we always init klog with maximal log level because we use wrapper for klog output which
+	// redirects all output to our logger and our logger doing all "perfect"
+	// (logs will out in standalone installer and dhctl-server)
+	flags := &flag.FlagSet{}
+	klog.InitFlags(flags)
+	klog.SetLogFilter(&LogSanitizer{}) // filter sensitive keywords
+	_ = flags.Set("logtostderr", "false")
+	_ = flags.Set("v", "10")
+
+	klog.SetOutput(newKlogWriterWrapper(logger))
+}
+
+func getExternalOpts(opts LoggerOptions) external.LoggerOptions {
+	return external.LoggerOptions{
+		OutStream:   opts.OutStream,
+		DebugStream: opts.DebugStream,
+		IsDebug:     opts.IsDebug,
+		Width:       opts.Width,
+	}
+}
+
+func InitLoggerWithOptions(loggerType string, opts LoggerOptions) error {
+	extLogger, err := external.NewLoggerWithOptions(external.Type(loggerType), getExternalOpts(opts))
+	if err != nil {
+		return err
+	}
+	l := &ExternalLogger{logger: extLogger}
+	defaultLogger = l
+
+	err = initExternalKlog(l)
+	if err != nil {
+		return err
+	}
+
+	// Mute Shell-Operator logs
+	log.Default().SetLevel(log.LevelFatal)
+	if opts.IsDebug {
+		// Enable shell-operator log, because it captures klog output
+		// todo: capture output of klog with default logger instead
+		log.Default().SetLevel(log.LevelDebug)
+		// Wrap them with our default logger
+		log.Default().SetOutput(defaultLogger)
+	}
+
+	return nil
+}
+
+func WrapWithTeeLogger(writer io.WriteCloser, bufSize int) error {
+	l, err := NewTeeLogger(defaultLogger, writer, bufSize)
+	if err != nil {
+		return err
+	}
+
+	defaultLogger = l
+
+	initKlog(l)
+
+	return nil
+}
+
+type ProcessLogger interface {
+	LogProcessStart(name string)
+	LogProcessFail()
+	LogProcessEnd()
+}
 
 type Logger interface {
 	FlushAndClose() error
@@ -81,13 +226,6 @@ type ProcessLogger interface {
 	LogProcessStart(name string)
 	LogProcessFail()
 	LogProcessEnd()
-}
-
-type LoggerOptions struct {
-	OutStream   io.Writer
-	Width       int
-	IsDebug     bool
-	DebugStream io.Writer
 }
 
 func InitLogger(loggerType string) error {
