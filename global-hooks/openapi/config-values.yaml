@@ -55,7 +55,7 @@ properties:
           - name
           - namespace
         description: |
-          The Gateway API Gateway used for Deckhouse modules.
+          Name of the Gateway object from the Gateway API used by modules of the Deckhouse ecosystem.
       ingressClass:
         type: string
         default: nginx

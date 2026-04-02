@@ -32,7 +32,7 @@ properties:
     properties:
       gatewayAPIGateway:
         description: |
-          Gateway API Gateway, используемый для модулей Deckhouse.
+          Имя объекта Gateway из Gateway API, используемого для модулей экосистемы Deckhouse.
       ingressClass:
         description: |
           Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.
