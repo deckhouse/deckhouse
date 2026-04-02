@@ -74,8 +74,9 @@ func execSyncCA(ctx context.Context, cc *commandContext, logger *log.Logger) (re
 	logger.Info("installing CA files from secret")
 	if err := installCAsFromSecret(cc.pkiSecretData, constants.KubernetesPkiPath); err != nil {
 		logger.Error("failed to install CAs", log.Err(err))
-		return reconcile.Result{}, cc.r.setConditions(ctx, cc.op,
+		_ = cc.r.setConditions(ctx, cc.op,
 			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()))
+		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil
 }
@@ -89,8 +90,9 @@ func execRenewPKICerts(ctx context.Context, cc *commandContext, logger *log.Logg
 		params := parsePKIParams(constants.KubernetesPkiPath, cc.cpmSecretData)
 		if err := renewCertsIfNeeded(params, certTree); err != nil {
 			logger.Error("failed to renew certs", log.Err(err))
-			return reconcile.Result{}, cc.r.setConditions(ctx, cc.op,
+			_ = cc.r.setConditions(ctx, cc.op,
 				failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()))
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -103,8 +105,9 @@ func execRenewKubeconfigs(ctx context.Context, cc *commandContext, logger *log.L
 	kubeconfigDir := kubeconfigDirPath()
 	if err := renewKubeconfigsForComponent(cc.component, cc.cpmSecretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
 		logger.Error("failed to renew kubeconfigs", log.Err(err))
-		return reconcile.Result{}, cc.r.setConditions(ctx, cc.op,
+		_ = cc.r.setConditions(ctx, cc.op,
 			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()))
+		return reconcile.Result{}, err
 	}
 	if needsRootKubeconfig(cc.component) {
 		if err := updateRootKubeconfig(kubeconfigDir); err != nil {
@@ -140,21 +143,24 @@ func execSyncManifests(ctx context.Context, cc *commandContext, logger *log.Logg
 	if cc.configChecksum != "" {
 		if err := writeExtraFiles(cc.component, cc.cpmSecretData, constants.ExtraFilesPath); err != nil {
 			logger.Error("failed to write extra-files", log.Err(err))
-			return reconcile.Result{}, cc.r.setConditions(ctx, cc.op,
+			_ = cc.r.setConditions(ctx, cc.op,
 				failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()))
+			return reconcile.Result{}, err
 		}
 		if err := writeStaticPodManifest(cc.component, cc.cpmSecretData,
 			cc.configChecksum, cc.pkiChecksum, cc.caChecksum, constants.ManifestsPath); err != nil {
 			logger.Error("failed to write manifest", log.Err(err))
-			return reconcile.Result{}, cc.r.setConditions(ctx, cc.op,
+			_ = cc.r.setConditions(ctx, cc.op,
 				failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()))
+			return reconcile.Result{}, err
 		}
 	} else {
 		if err := updateChecksumAnnotations(cc.component,
 			cc.pkiChecksum, cc.caChecksum, constants.ManifestsPath); err != nil {
 			logger.Error("failed to update checksum annotations", log.Err(err))
-			return reconcile.Result{}, cc.r.setConditions(ctx, cc.op,
+			_ = cc.r.setConditions(ctx, cc.op,
 				failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()))
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -181,8 +187,9 @@ func execSyncHotReload(ctx context.Context, cc *commandContext, logger *log.Logg
 	logger.Info("writing hot-reload files")
 	if err := writeHotReloadFiles(cc.cpmSecretData, constants.ExtraFilesPath); err != nil {
 		logger.Error("failed to write hot-reload files", log.Err(err))
-		return reconcile.Result{}, cc.r.setConditions(ctx, cc.op,
+		_ = cc.r.setConditions(ctx, cc.op,
 			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()))
+		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil
 }

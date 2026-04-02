@@ -148,32 +148,36 @@ func (r *Reconciler) reconcileEtcdJoin(
 		logger.Info("etcd join: cleaning up stale etcd data dir")
 		if err := cleanupEtcdDataDir(); err != nil {
 			logger.Error("failed to cleanup etcd data dir", log.Err(err))
-			return reconcile.Result{}, r.setConditions(ctx, op,
+			_ = r.setConditions(ctx, op,
 				failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError,
 					fmt.Sprintf("cleanup etcd data dir: %s", err)))
+			return reconcile.Result{}, fmt.Errorf("cleanup etcd data dir: %w", err)
 		}
 	}
 
 	logger.Info("etcd join: ensuring admin kubeconfig")
 	if err := ensureAdminKubeconfig(secretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
 		logger.Error("failed to ensure admin kubeconfig", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
+		_ = r.setConditions(ctx, op,
 			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError,
 				fmt.Sprintf("ensure admin kubeconfig: %s", err)))
+		return reconcile.Result{}, fmt.Errorf("ensure admin kubeconfig: %w", err)
 	}
 
 	logger.Info("etcd join: preparing manifest")
 	manifest, err := prepareManifestBytes(component, secretData, configChecksum, pkiChecksum, caChecksum)
 	if err != nil {
 		logger.Error("failed to prepare etcd manifest", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
+		_ = r.setConditions(ctx, op,
 			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, err.Error()))
+		return reconcile.Result{}, fmt.Errorf("prepare etcd manifest: %w", err)
 	}
 
 	ip := os.Getenv("MY_IP")
 	if ip == "" {
-		return reconcile.Result{}, r.setConditions(ctx, op,
+		_ = r.setConditions(ctx, op,
 			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError, "MY_IP env var is not set"))
+		return reconcile.Result{}, fmt.Errorf("MY_IP env var is not set")
 	}
 
 	logger.Info("etcd join: calling JoinCluster", slog.String("ip", ip))
@@ -182,9 +186,10 @@ func (r *Reconciler) reconcileEtcdJoin(
 		etcd.WithCertificatesDir(constants.KubernetesPkiPath),
 	); err != nil {
 		logger.Error("etcd JoinCluster failed", log.Err(err))
-		return reconcile.Result{}, r.setConditions(ctx, op,
+		_ = r.setConditions(ctx, op,
 			failedCondition(metav1.ConditionTrue, constants.ReasonManifestWriteError,
 				fmt.Sprintf("etcd join cluster: %s", err)))
+		return reconcile.Result{}, fmt.Errorf("etcd join cluster: %w", err)
 	}
 
 	if err := r.setConditions(ctx, op,
