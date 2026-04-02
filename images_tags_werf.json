@@ -174,7 +174,7 @@
 			"Rebuilt": false,
 			"Final": true,
 			"Size": 502817,
-			"BuildTime": "1.74",
+			"BuildTime": "0.29",
 			"Stages": [
 				{
 					"Name": "from",
@@ -284,7 +284,7 @@
 			"Rebuilt": false,
 			"Final": true,
 			"Size": 6244917,
-			"BuildTime": "1.83",
+			"BuildTime": "0.28",
 			"Stages": [
 				{
 					"Name": "from",
@@ -339,7 +339,7 @@
 			"Rebuilt": false,
 			"Final": false,
 			"Size": 747713429,
-			"BuildTime": "2.39",
+			"BuildTime": "0.30",
 			"Stages": [
 				{
 					"Name": "from",
@@ -407,7 +407,7 @@
 			"Rebuilt": false,
 			"Final": false,
 			"Size": 497093925,
-			"BuildTime": "1.06",
+			"BuildTime": "0.02",
 			"Stages": [
 				{
 					"Name": "from",
@@ -449,7 +449,7 @@
 			"Rebuilt": false,
 			"Final": false,
 			"Size": 478162782,
-			"BuildTime": "1.07",
+			"BuildTime": "0.02",
 			"Stages": [
 				{
 					"Name": "from",
@@ -491,7 +491,7 @@
 			"Rebuilt": false,
 			"Final": false,
 			"Size": 574008328,
-			"BuildTime": "207.87",
+			"BuildTime": "3.63",
 			"Stages": [
 				{
 					"Name": "from",
@@ -540,10 +540,10 @@
 					"DockerImageDigest": "sha256:d0de0273d729ca4ae162689635dfc01f24e70245fb7e5f8a16733668780df8e1",
 					"CreatedAt": 1775050520000000000,
 					"Size": 574008328,
-					"SourceType": "repo",
+					"SourceType": "",
 					"BaseImagePulled": false,
-					"Rebuilt": true,
-					"BuildTime": "162.04"
+					"Rebuilt": false,
+					"BuildTime": "0.00"
 				}
 			]
 		},
@@ -551,15 +551,15 @@
 			"WerfImageName": "documentation/web",
 			"ConfigType": "stapel",
 			"DockerRepo": "dev-registry.deckhouse.io/sys/deckhouse-oss",
-			"DockerTag": "3eb3ae5f85a95c858a851f52bab8edbd09b3c1db5cda052b47ec7b67-1775050624380",
-			"DockerImageID": "sha256:9ab30d20f12fe61ec1bf871241217805e251b0910f3dfbb926710b2b174b7355",
-			"DockerImageDigest": "sha256:6a2212c6271b3d1a2f68e06d1c7dff2bd7ebe171db15e95a33e5efdb476013b6",
-			"DockerImageName": "dev-registry.deckhouse.io/sys/deckhouse-oss:3eb3ae5f85a95c858a851f52bab8edbd09b3c1db5cda052b47ec7b67-1775050624380",
+			"DockerTag": "da690242ae3decbe7d7e37f025d6ee5665a0343cb419ab214d696b3f-1775052989466",
+			"DockerImageID": "sha256:217d9c4ddb863cf5681007fd4031de9e04c68f8654312e56559f4b5c7093fdfa",
+			"DockerImageDigest": "sha256:b7617b4b5356c024911cbd8a7d148dd52326d054a3210836414353da58e4ef60",
+			"DockerImageName": "dev-registry.deckhouse.io/sys/deckhouse-oss:da690242ae3decbe7d7e37f025d6ee5665a0343cb419ab214d696b3f-1775052989466",
 			"TargetPlatform": "linux/amd64",
-			"Rebuilt": false,
+			"Rebuilt": true,
 			"Final": true,
-			"Size": 152173883,
-			"BuildTime": "4.34",
+			"Size": 152159417,
+			"BuildTime": "152.14",
 			"Stages": [
 				{
 					"Name": "from",
@@ -589,29 +589,29 @@
 				},
 				{
 					"Name": "dependenciesBeforeSetup",
-					"DockerImageName": "dev-registry.deckhouse.io/sys/deckhouse-oss:4f88dddd5fc016934c567e1cae3d5fd45ebf6e8d1658d2432b4fdf81-1775050609370",
-					"DockerTag": "4f88dddd5fc016934c567e1cae3d5fd45ebf6e8d1658d2432b4fdf81-1775050609370",
-					"DockerImageID": "sha256:ad3b15563592a50c1bea5054707cd31da3bd7fe78c9919f7314cb8ec6b36f6e8",
-					"DockerImageDigest": "sha256:6bb3c8922e62b6ecbfb89479b205a4ced0370945376c5efda53bfad2801d4be6",
-					"CreatedAt": 1775050609000000000,
-					"Size": 152173883,
-					"SourceType": "",
+					"DockerImageName": "dev-registry.deckhouse.io/sys/deckhouse-oss:70fe9315fd998c18003ac312aead4b87cd7b170265f11155f90fe833-1775052930650",
+					"DockerTag": "70fe9315fd998c18003ac312aead4b87cd7b170265f11155f90fe833-1775052930650",
+					"DockerImageID": "sha256:761f513495cfb35acb10c1dea7cfe0ba4e0d30225eaa1f3e2546ec8d6a34a10a",
+					"DockerImageDigest": "sha256:2ea883001848db072ab469f5aba034792774238b243f5a1762ec5afb99461bc0",
+					"CreatedAt": 1775052918000000000,
+					"Size": 152159417,
+					"SourceType": "repo",
 					"BaseImagePulled": false,
-					"Rebuilt": false,
-					"BuildTime": "0.00"
+					"Rebuilt": true,
+					"BuildTime": "62.05"
 				},
 				{
 					"Name": "imageSpec",
-					"DockerImageName": "dev-registry.deckhouse.io/sys/deckhouse-oss:3eb3ae5f85a95c858a851f52bab8edbd09b3c1db5cda052b47ec7b67-1775050624380",
-					"DockerTag": "3eb3ae5f85a95c858a851f52bab8edbd09b3c1db5cda052b47ec7b67-1775050624380",
-					"DockerImageID": "sha256:9ab30d20f12fe61ec1bf871241217805e251b0910f3dfbb926710b2b174b7355",
-					"DockerImageDigest": "sha256:6a2212c6271b3d1a2f68e06d1c7dff2bd7ebe171db15e95a33e5efdb476013b6",
-					"CreatedAt": 1775050609000000000,
-					"Size": 152173883,
-					"SourceType": "",
+					"DockerImageName": "dev-registry.deckhouse.io/sys/deckhouse-oss:da690242ae3decbe7d7e37f025d6ee5665a0343cb419ab214d696b3f-1775052989466",
+					"DockerTag": "da690242ae3decbe7d7e37f025d6ee5665a0343cb419ab214d696b3f-1775052989466",
+					"DockerImageID": "sha256:217d9c4ddb863cf5681007fd4031de9e04c68f8654312e56559f4b5c7093fdfa",
+					"DockerImageDigest": "sha256:b7617b4b5356c024911cbd8a7d148dd52326d054a3210836414353da58e4ef60",
+					"CreatedAt": 1775052918000000000,
+					"Size": 152159417,
+					"SourceType": "repo",
 					"BaseImagePulled": false,
-					"Rebuilt": false,
-					"BuildTime": "0.00"
+					"Rebuilt": true,
+					"BuildTime": "12.93"
 				}
 			]
 		},
@@ -619,15 +619,15 @@
 			"WerfImageName": "documentation/web/static",
 			"ConfigType": "stapel",
 			"DockerRepo": "dev-registry.deckhouse.io/sys/deckhouse-oss",
-			"DockerTag": "5d1080de838fa87b574f5b1ac5d401d4f7a7fae823f1293853bcbe91-1775050459978",
-			"DockerImageID": "sha256:588625cae64d4d48e2f1f7d746de88e0dac8a92bb22b0970be0618e8722473f9",
-			"DockerImageDigest": "sha256:2a5ae91fa8812d025a179552a68a1f9e013568eab3d3c9b0e042da60cb552aa8",
-			"DockerImageName": "dev-registry.deckhouse.io/sys/deckhouse-oss:5d1080de838fa87b574f5b1ac5d401d4f7a7fae823f1293853bcbe91-1775050459978",
+			"DockerTag": "d893d9d2f4197a3e91fc4427ff4163807cb40b30ee6584514e43bb05-1775052808988",
+			"DockerImageID": "sha256:f4c76a470307e27b7bb588f7fd69bbccfa26f1a4dd55cd601bd42780a4901130",
+			"DockerImageDigest": "sha256:c679bdd085328e72836f22418488b0fde3a0455022226eaccf3ec713384a19ba",
+			"DockerImageName": "dev-registry.deckhouse.io/sys/deckhouse-oss:d893d9d2f4197a3e91fc4427ff4163807cb40b30ee6584514e43bb05-1775052808988",
 			"TargetPlatform": "linux/amd64",
-			"Rebuilt": false,
+			"Rebuilt": true,
 			"Final": false,
-			"Size": 600895030,
-			"BuildTime": "2.26",
+			"Size": 600882264,
+			"BuildTime": "134.89",
 			"Stages": [
 				{
 					"Name": "from",
@@ -670,16 +670,16 @@
 				},
 				{
 					"Name": "setup",
-					"DockerImageName": "dev-registry.deckhouse.io/sys/deckhouse-oss:5d1080de838fa87b574f5b1ac5d401d4f7a7fae823f1293853bcbe91-1775050459978",
-					"DockerTag": "5d1080de838fa87b574f5b1ac5d401d4f7a7fae823f1293853bcbe91-1775050459978",
-					"DockerImageID": "sha256:588625cae64d4d48e2f1f7d746de88e0dac8a92bb22b0970be0618e8722473f9",
-					"DockerImageDigest": "sha256:2a5ae91fa8812d025a179552a68a1f9e013568eab3d3c9b0e042da60cb552aa8",
-					"CreatedAt": 1775050459000000000,
-					"Size": 600895030,
-					"SourceType": "",
+					"DockerImageName": "dev-registry.deckhouse.io/sys/deckhouse-oss:d893d9d2f4197a3e91fc4427ff4163807cb40b30ee6584514e43bb05-1775052808988",
+					"DockerTag": "d893d9d2f4197a3e91fc4427ff4163807cb40b30ee6584514e43bb05-1775052808988",
+					"DockerImageID": "sha256:f4c76a470307e27b7bb588f7fd69bbccfa26f1a4dd55cd601bd42780a4901130",
+					"DockerImageDigest": "sha256:c679bdd085328e72836f22418488b0fde3a0455022226eaccf3ec713384a19ba",
+					"CreatedAt": 1775052797000000000,
+					"Size": 600882264,
+					"SourceType": "repo",
 					"BaseImagePulled": false,
-					"Rebuilt": false,
-					"BuildTime": "0.00"
+					"Rebuilt": true,
+					"BuildTime": "81.41"
 				}
 			]
 		},
