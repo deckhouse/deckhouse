@@ -62,7 +62,7 @@ CSI-драйвер `csi-rbd` - реализация [Container Storage Interface
 
    * **node-driver-registrar** — сайдкар-контейнер, регистрирующий Node Plugin в [kubelet](../../kubernetes-and-scheduling/kubelet.html). Вызывает в контейнере node RPC `GetPluginInfo` и `NodeGetInfo`, чтобы получить информацию о плагине и узле. Взаимодействуют c контейнером **node** по gRPC через Unix-сокет.
 
-## Взамодействия драйвера
+## Взаимодействия драйвера
 
 Драйвер взаимодействует со следующими компонентами:
 
