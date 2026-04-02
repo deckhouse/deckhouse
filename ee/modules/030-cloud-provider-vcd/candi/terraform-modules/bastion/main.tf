@@ -44,7 +44,7 @@ resource "vcd_vapp_vm" "bastion" {
   network {
     name               = var.network_name
     type               = "org"
-    ip_allocation_mode = var.ip_address == null ? "POOL" : "MANUAL"
+    ip_allocation_mode = var.ip_address == null ? "DHCP" : "MANUAL"
     is_primary         = true
     ip                 = var.ip_address
   }
