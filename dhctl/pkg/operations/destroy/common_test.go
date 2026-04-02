@@ -49,8 +49,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/testssh"
+
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 )
 
 const (

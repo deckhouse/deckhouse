@@ -20,15 +20,26 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/lib-connection/pkg/kube"
+	"github.com/deckhouse/lib-connection/pkg/provider"
+	"github.com/deckhouse/lib-connection/pkg/settings"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
 func TestCleanupsDoesNotPanic(t *testing.T) {
 	logger := libdhctl_log.NewDummyLogger(false)
 	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger)
-	_, kubeProvider, err := app.GetProviders(context.Background(), loggerProvider)
+	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: app.IsDebug, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: app.GetDefaultTmpDir()}
+	sett := settings.NewBaseProviders(params)
+
+	sshProvider := testCreateDefaultTestSSHProvider(session.Host{Host: "host"}, false)
+	providerInitializer := provider.NewSimpleSSHProviderInitializer(sshProvider)
+	cfg := &kube.Config{}
+	runnerInterface, err := provider.GetRunnerInterface(context.Background(), cfg, sett, providerInitializer)
+	require.NoError(t, err)
+	kubeProvider := provider.NewDefaultKubeProvider(sett, cfg, runnerInterface)
 	require.NoError(t, err)
 
 	provider := newKubeClientProvider(kubeProvider)
