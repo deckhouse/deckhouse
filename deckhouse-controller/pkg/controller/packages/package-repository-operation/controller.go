@@ -338,6 +338,13 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 				return ctrl.Result{}, patchErr
 			}
 
+			// Set Completed=False so MSG is visible in kubectl get
+			original := operation.DeepCopy()
+			r.SetConditionFalse(operation, v1alpha1.PackageRepositoryOperationConditionCompleted, reason, message)
+			if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
+				return ctrl.Result{}, patchErr
+			}
+
 			if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, reason, message, operation.Status.RetryPolicy); updateErr != nil {
 				logger.Warn("failed to update package repository condition", log.Err(updateErr))
 			}
@@ -384,6 +391,13 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
 			}
 			if patchErr := r.incrementRetryCount(ctx, operation, err.Error()); patchErr != nil {
+				return ctrl.Result{}, patchErr
+			}
+
+			// Set Completed=False so MSG is visible in kubectl get pro
+			original := operation.DeepCopy()
+			r.SetConditionFalse(operation, v1alpha1.PackageRepositoryOperationConditionCompleted, v1alpha1.PackageRepositoryOperationReasonPackageListingFailed, message)
+			if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 				return ctrl.Result{}, patchErr
 			}
 
@@ -439,12 +453,10 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 	logger.Debug("handling processing state")
 
-	// Check if operation already has a failed condition - skip processing if so
-	for _, cond := range operation.Status.Conditions {
-		if cond.Type == v1alpha1.PackageRepositoryOperationConditionCompleted && cond.Status == corev1.ConditionFalse {
-			logger.Debug("operation already has failed condition, skipping processing")
-			return res, nil
-		}
+	// Check if operation has exhausted all retries - skip processing if so
+	if operation.Status.RetryPolicy != nil && operation.Status.RetryPolicy.RetryCount >= operation.Status.RetryPolicy.MaxRetries {
+		logger.Debug("operation has exhausted all retries, skipping processing")
+		return res, nil
 	}
 
 	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
@@ -457,6 +469,13 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 				return ctrl.Result{RequeueAfter: retryInterval - time.Since(lastRetry)}, nil
 			}
 			if patchErr := r.incrementRetryCount(ctx, operation, err.Error()); patchErr != nil {
+				return ctrl.Result{}, patchErr
+			}
+
+			// Set Completed=False so MSG is visible in kubectl get pro
+			original := operation.DeepCopy()
+			r.SetConditionFalse(operation, v1alpha1.PackageRepositoryOperationConditionCompleted, reason, message)
+			if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 				return ctrl.Result{}, patchErr
 			}
 
