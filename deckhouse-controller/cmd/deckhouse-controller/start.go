@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -302,7 +303,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 }
 
 func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, logger *log.Logger) {
-	telemetryShutdown := registerTelemetry(ctx)
+	telemetryShutdown := registerTelemetry(ctx, logger.Named("otlp-tracing"))
 
 	interruptCh := make(chan os.Signal, 5)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGCHLD)
@@ -471,7 +472,27 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 	return nil
 }
 
-func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
+// loggingOTLPSpanExporter logs each batch export attempt and success at debug level.
+type loggingOTLPSpanExporter struct {
+	next   sdktrace.SpanExporter
+	logger *log.Logger
+}
+
+func (e *loggingOTLPSpanExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	e.logger.Debug("OTLP trace export attempt", slog.Int("spans", len(spans)))
+	err := e.next.ExportSpans(ctx, spans)
+	if err != nil {
+		return err
+	}
+	e.logger.Debug("OTLP trace export success", slog.Int("spans", len(spans)))
+	return nil
+}
+
+func (e *loggingOTLPSpanExporter) Shutdown(ctx context.Context) error {
+	return e.next.Shutdown(ctx)
+}
+
+func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context.Context) error {
 	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
 	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
 
@@ -492,7 +513,20 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 		}))
 	}
 
-	exporter, _ := otlptracegrpc.New(ctx, opts...)
+	exporter, err := otlptracegrpc.New(ctx, opts...)
+	if err != nil {
+		logger.Error("create OTLP trace exporter", log.Err(err))
+		return func(_ context.Context) error {
+			return nil
+		}
+	}
+
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(exportErr error) {
+		if exportErr == nil {
+			return
+		}
+		logger.Error("OTLP trace export", log.Err(exportErr))
+	}))
 
 	resource := sdkresource.NewWithAttributes(
 		semconv.SchemaURL,
@@ -502,8 +536,10 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 		semconv.K8SDeploymentName(AppName),
 	)
 
+	wrappedExporter := &loggingOTLPSpanExporter{next: exporter, logger: logger}
+
 	provider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
+		sdktrace.WithBatcher(wrappedExporter),
 		sdktrace.WithResource(resource),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
