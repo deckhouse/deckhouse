@@ -113,6 +113,27 @@ func (c *Client) getMemberStatus(ctx context.Context, memberID uint64) (isLearne
 }
 
 func (c *Client) MemberAddAsLearner(ctx context.Context, peerAddrs []string) (*clientv3.MemberAddResponse, error) {
+	// Check if member with this peer URL already exists for idempotency
+	listResp, err := c.client.MemberList(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("member list before add: %w", err)
+	}
+	for _, member := range listResp.Members {
+		for _, u := range member.PeerURLs {
+			for _, addr := range peerAddrs {
+				if u == addr {
+					logger.Info("member with peer URL already exists, skipping add",
+						slog.String("peerURL", addr),
+						slog.String("memberName", member.Name))
+					return &clientv3.MemberAddResponse{
+						Member:  member,
+						Members: listResp.Members,
+					}, nil
+				}
+			}
+		}
+	}
+
 	return c.client.MemberAddAsLearner(ctx, peerAddrs)
 }
 
@@ -120,6 +141,7 @@ func (c *Client) MemberAddAsLearner(ctx context.Context, peerAddrs []string) (*c
 func (c *Client) MemberPromote(ctx context.Context, id uint64) (*clientv3.MemberPromoteResponse, error) {
 	var (
 		lastError     error
+		lastResponse  *clientv3.MemberPromoteResponse
 		learnerIDUint = strconv.FormatUint(id, 16)
 	)
 	logger.Info("etcd] Waiting for a learner to start", slog.String("learnerID", learnerIDUint))
@@ -140,13 +162,22 @@ func (c *Client) MemberPromote(ctx context.Context, id uint64) (*clientv3.Member
 				lastError = errors.Errorf("the etcd member %s is not started", learnerIDUint)
 				return false, nil
 			}
+
+			// Learner is started — try to promote. May fail if not yet in sync with leader.
+			lastResponse, err = c.client.MemberPromote(pollCtx, id)
+			if err != nil {
+				logger.Info("promote attempt failed, will retry", slog.String("memberID", learnerIDUint), slog.String("error", err.Error()))
+				lastError = err
+				return false, nil
+			}
+
 			return true, nil
 		})
 	if err != nil {
 		return nil, lastError
 	}
 
-	return c.client.MemberPromote(ctx, id)
+	return lastResponse, nil
 }
 
 func (c *Client) Close() error {
