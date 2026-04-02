@@ -35,44 +35,79 @@ const (
 
 func RegisterMetrics(mStorage *metricsstorage.MetricStorage) error {
 	// Counters: count of upload/build/delete requests (ok/fail)
-	_, err := mStorage.RegisterCounter(DocsBuilderBuildTotal, []string{"status"})
+	_, err := mStorage.RegisterCounter(
+		DocsBuilderBuildTotal,
+		[]string{"status"},
+		options.WithHelp("Total number of docs builder build requests (success/failure)"),
+	)
 	if err != nil {
 		return err
 	}
 
-	_, err = mStorage.RegisterCounter(DocsBuilderUploadTotal, []string{"status"})
+	_, err = mStorage.RegisterCounter(
+		DocsBuilderUploadTotal,
+		[]string{"status"},
+		options.WithHelp("Total number of docs builder upload requests (success/failure)"),
+	)
 	if err != nil {
 		return err
 	}
 
-	_, err = mStorage.RegisterCounter(DocsBuilderDeleteTotal, []string{"status"})
+	_, err = mStorage.RegisterCounter(
+		DocsBuilderDeleteTotal,
+		[]string{"status"},
+		options.WithHelp("Total number of docs builder delete requests (success/failure)"),
+	)
 	if err != nil {
 		return err
 	}
 
-	// Histograms:time taken for upload/build/delete requests (ok/fail) - will take 10 minutes as a base unit
+	// Histograms: time taken for upload/build/delete requests (ok/fail) - will take 10 seconds as a base unit
 	defaultBuckets := []float64{0.1, 0.5, 1, 2.5, 5, 10}
-	_, err = mStorage.RegisterHistogram(DocsBuilderBuildDurationSeconds, []string{"status"}, defaultBuckets)
+	_, err = mStorage.RegisterHistogram(
+		DocsBuilderBuildDurationSeconds,
+		[]string{"status"},
+		defaultBuckets,
+		options.WithHelp("Build request duration in seconds (success/failure)"),
+	)
 	if err != nil {
 		return err
 	}
-	_, err = mStorage.RegisterHistogram(DocsBuilderUploadDurationSeconds, []string{"status"}, defaultBuckets)
+
+	_, err = mStorage.RegisterHistogram(
+		DocsBuilderUploadDurationSeconds,
+		[]string{"status"},
+		defaultBuckets,
+		options.WithHelp("Upload request duration in seconds (success/failure)"),
+	)
 	if err != nil {
 		return err
 	}
-	_, err = mStorage.RegisterHistogram(DocsBuilderDeleteDurationSeconds, []string{"status"}, defaultBuckets)
+
+	_, err = mStorage.RegisterHistogram(
+		DocsBuilderDeleteDurationSeconds,
+		[]string{"status"},
+		defaultBuckets,
+		options.WithHelp("Delete request duration in seconds (success/failure)"),
+	)
 	if err != nil {
 		return err
 	}
 
 	// Gauge: total number of loaded modules in the cache
-	_, err = mStorage.RegisterGauge(DocsBuilderCachedModules, nil)
+	_, err = mStorage.RegisterGauge(
+		DocsBuilderCachedModules,
+		nil,
+		options.WithHelp("Total number of cached docs builder modules"),
+	)
 	if err != nil {
 		return err
 	}
 
 	// Gauge: module documentation render error (1.0 = broken module was removed during build)
-	_, err = mStorage.RegisterGauge(DocsBuilderModuleRenderError, []string{"module"},
+	_, err = mStorage.RegisterGauge(
+		DocsBuilderModuleRenderError,
+		[]string{"module"},
 		options.WithHelp("Set to 1 if a module's documentation failed to render and was removed during the build"),
 	)
 	if err != nil {
