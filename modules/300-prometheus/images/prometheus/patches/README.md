@@ -33,4 +33,4 @@ Added op functions (op_top, op_defined, op_replace_nan, op_smoothie, op_zero_if_
 Applied to vendored `github.com/prometheus/prometheus` after `go mod vendor`.
 
 Patches existing vendored Prometheus files to:
-- Add to the `String` method of the `AggregateExpr` struct to print the expression with the `op_top` function
+- Add to the `String` method of the `AggregateExpr` struct to print the expression with the `op_top` function;
