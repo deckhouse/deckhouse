@@ -1,0 +1,106 @@
+{%- if page.platform_type == 'dvp' %}
+  {%- if page.lang == 'ru' %}
+  <h3>Сетевые настройки кластера</h3>
+  {%- else %}
+  <h3>Cluster network settings</h3>
+  {%- endif %}
+
+  <div class="form__row">
+    <span class="info invalid-message invalid-message-overlap" id="dvp-overlap-banner">{% if page.lang == 'ru' %}Подсети не должны пересекаться. Измените значения так, чтобы диапазоны CIDR не перекрывались.{% else %}Subnets must not overlap. Adjust CIDRs so ranges do not intersect.{% endif %}</span>
+  </div>
+
+  <div class="form__row">
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label" title="{% if page.lang == 'ru' %}Укажите подсеть узлов кластера{% else %}Cluster nodes subnet{% endif %}">
+          {% if page.lang == 'ru' %}Подсеть узлов кластера (internalNetworkCIDRs){% else %}Cluster nodes subnet (internalNetworkCIDRs){% endif %} <span style="color: red;">*</span>
+        </label>
+        <input class="textfield" type="text" id="internalnetworkcidrs" name="internalnetworkcidrs" placeholder="10.10.0.0/16" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите подсеть в формате CIDR (например, <code>10.10.0.0/16</code>). Это обязательное поле.{% else %}Enter a subnet in CIDR notation (e.g. <code>10.10.0.0/16</code>). Required.{% endif %}</span>
+        <span class="info invalid-message invalid-message-overlap">{% if page.lang == 'ru' %}Эта подсеть пересекается с другой указанной подсетью.{% else %}This subnet overlaps another configured subnet.{% endif %}</span>
+        <span class="info">{% if page.lang == 'ru' %}Подсеть узлов кластера. Не должна пересекаться с подсетями подов, сервисов и виртуальных машин.{% else %}Node subnet. Must not overlap pod, service, or VM subnets.{% endif %}</span>
+      </div>
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label" title="{% if page.lang == 'ru' %}Подсеть виртуальных машин{% else %}Virtual machine subnet{% endif %}">
+          {% if page.lang == 'ru' %}Подсеть виртуальных машин (virtualMachineCIDRs){% else %}Virtual machine subnet (virtualMachineCIDRs){% endif %} <span style="color: red;">*</span>
+        </label>
+        <input class="textfield" type="text" id="virtualmachinecidrs" name="virtualmachinecidrs" placeholder="10.20.0.0/16" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите подсеть в формате CIDR. Обязательное поле.{% else %}Enter a CIDR subnet. Required.{% endif %}</span>
+        <span class="info invalid-message invalid-message-overlap">{% if page.lang == 'ru' %}Эта подсеть пересекается с другой указанной подсетью.{% else %}This subnet overlaps another configured subnet.{% endif %}</span>
+        <span class="info">{% if page.lang == 'ru' %}Подсеть для виртуальных машин.{% else %}Subnet for virtual machines.{% endif %}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="form__row">
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label">{% if page.lang == 'ru' %}Подсеть подов (podSubnetCIDR){% else %}Pod subnet (podSubnetCIDR){% endif %}</label>
+        <input class="textfield" type="text" id="podsubnetcidr" name="podsubnetcidr" placeholder="10.115.0.0/16" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите подсеть в формате CIDR.{% else %}Enter a CIDR subnet.{% endif %}</span>
+        <span class="info invalid-message invalid-message-overlap">{% if page.lang == 'ru' %}Эта подсеть пересекается с другой указанной подсетью.{% else %}This subnet overlaps another configured subnet.{% endif %}</span>
+        <span class="info">{% if page.lang == 'ru' %}По умолчанию <code>10.115.0.0/16</code>, если поле пустое.{% else %}Default <code>10.115.0.0/16</code> if empty.{% endif %}</span>
+      </div>
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label">{% if page.lang == 'ru' %}Подсеть сервисов (serviceSubnetCIDR){% else %}Service subnet (serviceSubnetCIDR){% endif %}</label>
+        <input class="textfield" type="text" id="servicesubnetcidr" name="servicesubnetcidr" placeholder="10.225.0.0/16" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите подсеть в формате CIDR.{% else %}Enter a CIDR subnet.{% endif %}</span>
+        <span class="info invalid-message invalid-message-overlap">{% if page.lang == 'ru' %}Эта подсеть пересекается с другой указанной подсетью.{% else %}This subnet overlaps another configured subnet.{% endif %}</span>
+        <span class="info">{% if page.lang == 'ru' %}По умолчанию <code>10.225.0.0/16</code>, если поле пустое.{% else %}Default <code>10.225.0.0/16</code> if empty.{% endif %}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="form__row">
+    <div style="flex: 1; min-width: 250px;">
+      <label class="label">{% if page.lang == 'ru' %}IP-адрес worker-узла{% else %}Worker node IP address{% endif %} <span style="color: red;">*</span></label>
+      <input class="textfield" type="text" id="workernodeip" name="workernodeip" placeholder="192.168.1.11" autocomplete="off" />
+      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Укажите IPv4 worker-узла внутри подсети узлов кластера.{% else %}Enter the worker IPv4 address inside the cluster nodes subnet.{% endif %}</span>
+    </div>
+  </div>
+
+  <h3>{% if page.lang == 'ru' %}Настройки DNS{% else %}DNS settings{% endif %}</h3>
+  <div class="form__row">
+    <label class="label">{% if page.lang == 'ru' %}Шаблон для DNS-имен кластера{% else %}DNS name template for the cluster{% endif %}</label>
+    <input class="textfield" type="text" id="clusterdomain" name="domain" placeholder="%s.domain.my" autocomplete="off" />
+    <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Шаблон с <code>%s</code>, например <code>%s.domain.my</code>.{% else %}Template must contain <code>%s</code>, e.g. <code>%s.domain.my</code>.{% endif %}</span>
+    <span class="info invalid-message invalid-message-example-com">{% if page.lang == 'ru' %}Не используйте <code>example.com</code>.{% else %}Do not use <code>example.com</code>.{% endif %}</span>
+  </div>
+
+  <h3>{% if page.lang == 'ru' %}Настройки NFS-хранилища{% else %}NFS storage{% endif %}</h3>
+  <div class="form__row">
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 300px;">
+        <label class="label">{% if page.lang == 'ru' %}Путь к экспортируемому каталогу на NFS-сервере{% else %}Exported path on the NFS server{% endif %}</label>
+        <input class="textfield" type="text" id="nfsshare" name="nfsshare" placeholder="/srv/nfs/dvp" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Абсолютный путь, начинается с <code>/</code>.{% else %}Absolute path starting with <code>/</code>.{% endif %}</span>
+      </div>
+      <div style="flex: 1; min-width: 300px;">
+        <label class="label">{% if page.lang == 'ru' %}IP или hostname NFS-сервера{% else %}NFS server IP or hostname{% endif %}</label>
+        <input class="textfield" type="text" id="nfshost" name="nfshost" placeholder="192.168.1.100" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Укажите IP или DNS-имя.{% else %}Enter IP or hostname.{% endif %}</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>{% if page.lang == 'ru' %}Настройки доступа{% else %}Access{% endif %}</h3>
+  <div class="form__row">
+    <label class="label">{% if page.lang == 'ru' %}Публичный SSH-ключ пользователя caps{% else %}Public SSH key for user <code>caps</code>{% endif %} <span style="color: red;">*</span></label>
+    <input class="textfield" type="text" id="capssshkey" name="capssshkey" placeholder="ssh-ed25519 ..." autocomplete="off" />
+    <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите публичный ключ OpenSSH.{% else %}Enter an OpenSSH public key.{% endif %}</span>
+  </div>
+  <div class="form__row">
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label">{% if page.lang == 'ru' %}Имя администратора{% else %}Default admin username{% endif %} <span style="color: red;">*</span></label>
+        <input class="textfield" type="text" id="adminusername" name="adminusername" placeholder="admin" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Обязательное поле.{% else %}Required.{% endif %}</span>
+      </div>
+      <div style="flex: 1; min-width: 250px;">
+        <label class="label">{% if page.lang == 'ru' %}Пароль администратора{% else %}Default admin password{% endif %} <span style="color: red;">*</span></label>
+        <input class="textfield" type="password" id="adminpassword" name="adminpassword" placeholder="" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Не менее 8 символов.{% else %}At least 8 characters.{% endif %}</span>
+      </div>
+    </div>
+  </div>
+{%- endif %}

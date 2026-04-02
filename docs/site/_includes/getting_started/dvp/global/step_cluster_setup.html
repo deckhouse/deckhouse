@@ -3,6 +3,9 @@
 ## Configure cluster
 
 <div class="form">
+{%- if page.platform_type == 'dvp' %}
+{% include getting_started/dvp/global/partials/step_cluster_dvp_fields.liquid %}
+{%- endif %}
 {%- if page.platform_type == 'baremetal' %}
   <div class="form__row">
     <label class="label" title="Specify a template for DNS names that will be used by your cluster">
@@ -24,7 +27,7 @@
   </div>
 {%- endif %}
 
-{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_type == 'dvp' %}
   <div class="form__row">
     <label class="label" title="Specify public SSH key to access the cluster nodes">
       Public SSH key to access the cluster nodes
@@ -96,7 +99,7 @@
 
 > Do not use the registry administrator account to access the registry from Deckhouse Virtualization Platform. Create a separate account for Deckhouse Virtualization Platform with read-only permissions and only within the required repository in the registry. Refer to an [example of creating](/products/kubernetes-platform/documentation/v1/installing/#nexus-configuration-notes) such an account.
 >
-> For more information about configuring a third-party container registry, see the [installation documentation](/products/kubernetes-platform/documentation/v1/installing/#air-gapped-environment-working-via-proxy-and-using-external-registries).
+> For more information on configuring a third-party container registry, see the [installation documentation](/products/kubernetes-platform/documentation/v1/installing/#air-gapped-environment-working-via-proxy-and-using-external-registries).
 </div>
 
   <div class="form__row">
@@ -164,6 +167,12 @@
 {% endif %}
 </div>
 
+{%- if page.platform_type == 'dvp' %}
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag dvp-cluster-setup %}[_assets/js/dvp/getting-started-cluster-setup.js]{% endjavascript_asset_tag %}'></script>
+{%- else %}
 <script type="text/javascript">
 {% include getting_started/dvp/global/partials/getting-started-setup.js.liquid %}
 </script>
+{%- endif %}
