@@ -8,7 +8,7 @@ description: Архитектура CSI-драйвера для работы с 
 
 CSI-драйвер `csi-nfs` - реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с NFS томами в Deckhouse Kubernetes Platform (DKP).
 
-## Архитектура модуля
+## Архитектура драйвера
 
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
@@ -20,7 +20,7 @@ CSI-драйвер `csi-nfs` - реализация [Container Storage Interface
 Архитектура драйвера `csi-nfs` на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля csi-nfs](../../../images/architecture/storage/c4-l2-csi-driver-nfs.ru.png)
+![Архитектура драйвера csi-nfs](../../../images/architecture/storage/c4-l2-csi-driver-nfs.ru.png)
 
 ## Компоненты драйвера
 
