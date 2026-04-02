@@ -143,7 +143,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		original := apv.DeepCopy()
 		r.setConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
 			fmt.Sprintf("failed to get repository '%s': %s", apv.Spec.PackageRepositoryName, err.Error()),
 		)
@@ -164,7 +163,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		original := apv.DeepCopy()
 		r.setConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetImageErr,
 			fmt.Sprintf("get image: %s", err.Error()),
 		)
@@ -176,12 +174,11 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		return fmt.Errorf("get image for '%s': %w", apv.Name, err)
 	}
 
-	meta, err := parseVersionMetadataByImage(ctx, img)
+	meta, err := r.parseVersionMetadataByImage(ctx, img)
 	if err != nil {
 		original := apv.DeepCopy()
 		r.setConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
 			fmt.Sprintf("fetch package metadata: %s", err.Error()),
 		)
@@ -193,6 +190,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		return fmt.Errorf("fetch package metadata '%s': %w", apv.Name, err)
 	}
 
+	original := apv.DeepCopy()
 	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
 		Stage: meta.definition.Stage,
 		Description: &v1alpha1.PackageDescription{
@@ -210,8 +208,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		},
 	}
 
-	original := apv.DeepCopy()
-	r.setConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
+	r.setConditionTrue(apv)
 
 	if err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch status '%s': %w", apv.Name, err)
@@ -277,9 +274,9 @@ func (r *reconciler) handleDelete(ctx context.Context, apv *v1alpha1.Application
 }
 
 // setConditionTrue sets the given condition to True, clearing reason and message.
-func (r *reconciler) setConditionTrue(apv *v1alpha1.ApplicationPackageVersion, condType string) {
+func (r *reconciler) setConditionTrue(apv *v1alpha1.ApplicationPackageVersion) {
 	metautils.SetStatusCondition(&apv.Status.Conditions, metav1.Condition{
-		Type:               condType,
+		Type:               v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 		Status:             metav1.ConditionTrue,
 		Reason:             "Succeeded",
 		ObservedGeneration: apv.Generation,
@@ -288,9 +285,9 @@ func (r *reconciler) setConditionTrue(apv *v1alpha1.ApplicationPackageVersion, c
 }
 
 // setConditionFalse sets the given condition to False with a reason and message.
-func (r *reconciler) setConditionFalse(apv *v1alpha1.ApplicationPackageVersion, condType string, reason string, message string) {
+func (r *reconciler) setConditionFalse(apv *v1alpha1.ApplicationPackageVersion, reason, message string) {
 	metautils.SetStatusCondition(&apv.Status.Conditions, metav1.Condition{
-		Type:               condType,
+		Type:               v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 		Status:             metav1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,

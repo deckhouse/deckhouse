@@ -20,6 +20,13 @@ status:
     reason: Succeeded
     status: "True"
     type: MetadataLoaded
+  packageMetadata:
+    changelog: {}
+    description:
+      en: Test package
+      ru: Ru Test package
+    requirements: {}
+    stage: Preview
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
