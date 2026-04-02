@@ -27,14 +27,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/testssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -99,7 +100,7 @@ func TestStaticAbort(t *testing.T) {
 			require.Equal(t, 1, ts.sshProvider.cleanCommandCalled, "should clean command ran once")
 			ts.assertStateCacheIsEmpty(t)
 
-			assertOverDefaultBastion(t, tst.overBastion, ts.sshProvider.bastion, "clean script")
+			assertOverDefaultBastionExt(t, tst.overBastion, ts.sshProvider.bastion, "clean script")
 		})
 	}
 }
@@ -203,7 +204,7 @@ func (t *testAbortSSHProvider) runCommand(bastion testssh.Bastion, msg string) {
 
 func testCreateAbortSSHProvider(params testAbortStaticTestParams, logger log.Logger) *testAbortSSHProvider {
 	result := &testAbortSSHProvider{
-		provider: testCreateDefaultTestSSHProvider(params.host, params.overBastion),
+		provider: testCreateDefaultTestSSHProviderExt(params.host, params.overBastion),
 		logger:   logger,
 	}
 

@@ -20,17 +20,18 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 func TestCleanupsDoesNotPanic(t *testing.T) {
-	sshProvider := sshclient.NewDefaultSSHProviderWithFunc(func() (node.SSHClient, error) {
-		return gossh.NewClientFromFlags(context.Background())
-	})
+	logger := libdhctl_log.NewDummyLogger(false)
+	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger)
+	_, kubeProvider, err := app.GetProviders(context.Background(), loggerProvider)
+	require.NoError(t, err)
 
-	provider := newKubeClientProvider(sshProvider)
+	provider := newKubeClientProvider(kubeProvider)
 
 	cleanupTest := func() {
 		provider.Cleanup(true)

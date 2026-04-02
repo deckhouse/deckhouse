@@ -884,6 +884,10 @@ type TeeLogger struct {
 	out      io.WriteCloser
 }
 
+func (d *TeeLogger) GetLogger() Logger {
+	return d.l
+}
+
 func NewTeeLogger(l Logger, writer io.WriteCloser, bufferSize int) (*TeeLogger, error) {
 	buf := bufio.NewWriterSize(writer, bufferSize)
 

@@ -23,6 +23,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 
+	"github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
@@ -47,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
@@ -87,6 +90,8 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
 	NodeInterface              node.Interface
+	SSHProviderInitializer     *providerinitializer.SSHProviderInitializer
+	KubeProvider               pkg.KubeProvider
 	InitialState               phases.DhctlState
 	ResetInitialState          bool
 	DisableBootstrapClearCache bool
