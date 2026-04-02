@@ -283,11 +283,11 @@ func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.Co
 	}
 
 	if isPodCrashLooping(pod) {
-		logger.Warn("pod is crash looping", slog.String("pod", podName))
-		return reconcile.Result{RequeueAfter: requeueWaitPod}, r.setConditions(ctx, op,
-			failedCondition(metav1.ConditionTrue, constants.ReasonPodCrashLooping,
-				fmt.Sprintf("pod %s is in CrashLoopBackOff", podName)),
-		)
+		logger.Warn("pod is crash looping, will retry", slog.String("pod", podName))
+		_ = r.setConditions(ctx, op,
+			readyCondition(metav1.ConditionFalse, constants.ReasonWaitingForPod,
+				fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName)))
+		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
 
 	if !isPodReadyWithChecksums(pod, configChecksum, pkiChecksum, caChecksum) {
