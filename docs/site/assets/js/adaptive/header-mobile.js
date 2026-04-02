@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const navTrigger = document.querySelector('div .nav__trigger');
     const headerNavList = document.querySelector('ul#bottom-header-nav.nav.header__nav');
     const moduleSidebarNavList = document.querySelector('.header__sidebar .header__sidebar--nav');
+    const isModuleHeader = !!document.querySelector('.header-container--module');
     const burgerOverlay = document.createElement('div');
 
     let burgerInited = false;
@@ -28,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function getMobileNavList() {
-        if (moduleSidebarNavList) return moduleSidebarNavList;
+        if (isModuleHeader && moduleSidebarNavList) return moduleSidebarNavList;
         return headerNavList;
     }
 
@@ -45,20 +46,28 @@ document.addEventListener('DOMContentLoaded', function () {
             return activeNavMobile;
         }
 
-        const activeNav =
-            mobileNavList.querySelector('.header__navigation-item.header__navigation-item_active') ||
-            mobileNavList.querySelector('.header__navigation-item.active') ||
-            mobileNavList.querySelector('.header__navigation-item');
+        const activeNav = isModuleHeader
+            ? (
+                mobileNavList.querySelector('.header__navigation-item.header__navigation-item_active') ||
+                mobileNavList.querySelector('.header__navigation-item.active') ||
+                mobileNavList.querySelector('.header__navigation-item')
+            )
+            : (
+                mobileNavList.querySelector('.header__navigation-item.active') ||
+                mobileNavList.querySelector('.header__navigation-item')
+            );
         if (!activeNav) return null;
 
-        let originActiveClass = 'active';
-        if (activeNav.classList.contains('header__navigation-item_active')) {
-            originActiveClass = 'header__navigation-item_active';
-        } else if (activeNav.classList.contains('active')) {
-            originActiveClass = 'active';
+        if (isModuleHeader) {
+            let originActiveClass = 'active';
+            if (activeNav.classList.contains('header__navigation-item_active')) {
+                originActiveClass = 'header__navigation-item_active';
+            } else if (activeNav.classList.contains('active')) {
+                originActiveClass = 'active';
+            }
+            activeNav.dataset.mobileActiveOrigin = originActiveClass;
         }
 
-        activeNav.dataset.mobileActiveOrigin = originActiveClass;
         activeNav.classList.remove('active', 'header__navigation-item_active');
         activeNav.classList.add('active-mobile');
         if(navTrigger) {
@@ -71,15 +80,19 @@ document.addEventListener('DOMContentLoaded', function () {
         const mobileActiveItems = document.querySelectorAll('.header__navigation-item.active-mobile');
         mobileActiveItems.forEach(function (item) {
             item.classList.remove('active-mobile');
-            item.classList.remove('active', 'header__navigation-item_active');
 
-            const originActiveClass = item.dataset.mobileActiveOrigin;
-            if (originActiveClass === 'header__navigation-item_active') {
-                item.classList.add('header__navigation-item_active');
+            if (isModuleHeader) {
+                item.classList.remove('active', 'header__navigation-item_active');
+                const originActiveClass = item.dataset.mobileActiveOrigin;
+                if (originActiveClass === 'header__navigation-item_active') {
+                    item.classList.add('header__navigation-item_active');
+                } else {
+                    item.classList.add('active');
+                }
+                delete item.dataset.mobileActiveOrigin;
             } else {
                 item.classList.add('active');
             }
-            delete item.dataset.mobileActiveOrigin;
         });
     }
 

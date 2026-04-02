@@ -1046,6 +1046,10 @@ html {
                     height: 5px;
                     background:url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") bottom / contain no-repeat ;
                     transition: .15s;
+
+                    @include breakpoints.max-w(s) {
+                        right: 0;
+                    }
                 }
             }
 
@@ -1089,6 +1093,10 @@ html {
                             width: 7px;
                             height: 5px;
                             right: -15px;
+
+                            @include breakpoints.max-w(s) {
+                                right: 0;
+                            }
                         }
                     }
 
