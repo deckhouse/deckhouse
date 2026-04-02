@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const subMenu = item.querySelector('.sub-menu-container');
             subMenu.classList.toggle('sub-menu_open');
         })
-    });
+    })
 
     function getNavItemTitle(item) {
         if (!item) return '';
@@ -97,30 +97,25 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateMobileNavScrollState() {
-        const navContainer = isModuleHeader ? headerSidebar : headerNavList;
-        if (!navContainer) return;
+        if (!headerNavList) return;
 
-        const shouldApply = isModuleHeader
-            ? !!(headerSidebar && headerSidebar.classList.contains('show'))
-            : !!(headerNavList && headerNavList.classList.contains('active'));
-
-        if (window.innerWidth >= 1024 || !shouldApply) {
-            navContainer.style.maxHeight = '';
-            navContainer.style.overflowY = '';
-            navContainer.style.overflowX = '';
-            navContainer.style.webkitOverflowScrolling = '';
+        if (window.innerWidth >= 1024 || !headerNavList.classList.contains('active')) {
+            headerNavList.style.maxHeight = '';
+            headerNavList.style.overflowY = '';
+            headerNavList.style.overflowX = '';
+            headerNavList.style.webkitOverflowScrolling = '';
             return;
         }
 
-        const navRect = navContainer.getBoundingClientRect();
+        const navRect = headerNavList.getBoundingClientRect();
         const viewportPadding = 12;
         const availableHeight = Math.floor(window.innerHeight - navRect.top - viewportPadding);
         const maxHeight = Math.max(140, availableHeight);
 
-        navContainer.style.maxHeight = `${maxHeight}px`;
-        navContainer.style.overflowY = 'auto';
-        navContainer.style.overflowX = 'hidden';
-        navContainer.style.webkitOverflowScrolling = 'touch';
+        headerNavList.style.maxHeight = `${maxHeight}px`;
+        headerNavList.style.overflowY = 'auto';
+        headerNavList.style.overflowX = 'hidden';
+        headerNavList.style.webkitOverflowScrolling = 'touch';
     }
 
     function getLastPathname() {
