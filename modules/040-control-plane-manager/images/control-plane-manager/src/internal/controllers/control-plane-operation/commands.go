@@ -54,6 +54,7 @@ var commandRegistry = map[controlplanev1alpha1.CommandName]PipelineCommand{
 	controlplanev1alpha1.CommandJoinEtcdCluster:  {controlplanev1alpha1.CommandJoinEtcdCluster, constants.ReasonJoiningEtcd, execJoinEtcdCluster},
 	controlplanev1alpha1.CommandWaitPodReady:     {controlplanev1alpha1.CommandWaitPodReady, constants.ReasonWaitingForPod, execWaitPodReady},
 	controlplanev1alpha1.CommandSyncHotReload:    {controlplanev1alpha1.CommandSyncHotReload, constants.ReasonSyncingHotReload, execSyncHotReload},
+	controlplanev1alpha1.CommandObserve:          {controlplanev1alpha1.CommandObserve, constants.ReasonObserving, execObserve},
 }
 
 // resolveCommands looks up PipelineCommand entries for the given command names.

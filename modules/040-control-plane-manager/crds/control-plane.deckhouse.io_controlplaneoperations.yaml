@@ -86,6 +86,7 @@ spec:
                   - JoinEtcdCluster
                   - WaitPodReady
                   - SyncHotReload
+                  - Observe
                   type: string
                 minItems: 1
                 type: array
@@ -99,6 +100,7 @@ spec:
                 - KubeScheduler
                 - HotReload
                 - CA
+                - Observer
                 type: string
               configVersion:
                 description: |-
@@ -194,6 +196,23 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              observedState:
+                additionalProperties:
+                  description: ObservedComponentState holds the observed certificate
+                    state of a single control plane component.
+                  properties:
+                    certificatesExpiration:
+                      additionalProperties:
+                        format: date-time
+                        type: string
+                      description: CertificatesExpiration maps cert file names to
+                        their NotAfter timestamps.
+                      type: object
+                  type: object
+                description: |-
+                  ObservedState holds per-component observed state from an Observe operation.
+                  For static pod components only: etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
+                type: object
             type: object
         type: object
     served: true

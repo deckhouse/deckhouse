@@ -186,6 +186,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		slog.String("component", string(op.Spec.Component)),
 		slog.Any("commands", op.Spec.Commands))
 
+	// Observe read only, no secrets or configVersion needed
+	if op.Spec.Component == controlplanev1alpha1.OperationComponentObserver {
+		return r.reconcilePipeline(ctx, op, nil, nil, logger)
+	}
+
 	cpmSecret := &corev1.Secret{}
 	if err := r.client.Get(ctx, client.ObjectKey{
 		Name:      constants.ControlPlaneManagerConfigSecretName,

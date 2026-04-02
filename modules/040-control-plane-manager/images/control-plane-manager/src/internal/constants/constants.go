@@ -16,7 +16,10 @@ limitations under the License.
 
 package constants
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 const (
 	KubeSystemNamespace                 = "kube-system"
@@ -72,6 +75,7 @@ const (
 	ConditionCommandJoinEtcdCluster  = "JoinEtcdCluster"
 	ConditionCommandWaitPodReady     = "WaitPodReady"
 	ConditionCommandSyncHotReload    = "SyncHotReload"
+	ConditionCommandObserve          = "Observe"
 
 	// Approved condition reasons
 	ReasonApproved             = "Approved"
@@ -94,6 +98,7 @@ const (
 	ReasonJoiningEtcd        = "JoiningEtcd"
 	ReasonWaitingForPod      = "WaitingForPod"
 	ReasonSyncingHotReload   = "SyncingHotReload"
+	ReasonObserving          = "Observing"
 	ReasonCancelled          = "Cancelled"
 
 	// Failed condition reasons
@@ -116,6 +121,9 @@ const (
 
 	// Not configurable endpoint for local control plane
 	LocalControlPlaneEndpoint = "127.0.0.1:6445"
+
+	// ObserveInterval is the minimum duration between periodic Observe operations.
+	ObserveInterval = 24 * time.Hour
 )
 
 // ToRelativePath returns path without leading slash for using in tmp directory sync
