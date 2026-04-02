@@ -39,6 +39,19 @@ index f6d2b0d9c1..38b9f443e7 100644
  
  # Customize distroless with the following:
  # - password file
+diff --git a/pkg/config/analysis/analyzers/deployment/pod.go b/pkg/config/analysis/analyzers/deployment/pod.go
+index 7d727deb95..cd7560dabe 100644
+--- a/pkg/config/analysis/analyzers/deployment/pod.go
++++ b/pkg/config/analysis/analyzers/deployment/pod.go
+@@ -31,7 +31,7 @@ type ApplicationUIDAnalyzer struct{}
+ var _ analysis.Analyzer = &ApplicationUIDAnalyzer{}
+ 
+ const (
+-	UserID = int64(1337)
++	UserID = int64(64535)
+ )
+ 
+ func (appUID *ApplicationUIDAnalyzer) Metadata() analysis.Metadata {
 diff --git a/pkg/envoy/proxy.go b/pkg/envoy/proxy.go
 index 576234fc54..217d8892b5 100644
 --- a/pkg/envoy/proxy.go
@@ -54,6 +67,19 @@ index 576234fc54..217d8892b5 100644
  		}
  	}
  
+diff --git a/pkg/kube/inject/inject.go b/pkg/kube/inject/inject.go
+index d875f44783..0d6fd41845 100644
+--- a/pkg/kube/inject/inject.go
++++ b/pkg/kube/inject/inject.go
+@@ -904,7 +904,7 @@ func updateClusterEnvs(container *corev1.Container, newKVs map[string]string) {
+ }
+ 
+ // GetProxyIDs returns the UID and GID to be used in the RunAsUser and RunAsGroup fields in the template
+-// Inspects the namespace metadata for hints and fallbacks to the usual value of 1337.
++// Inspects the namespace metadata for hints and fallbacks to the usual value of 64535.
+ func GetProxyIDs(namespace *corev1.Namespace) (uid int64, gid int64) {
+ 	uid = constants.DefaultProxyUIDInt
+ 	gid = constants.DefaultProxyUIDInt
 diff --git a/tools/istio-iptables/pkg/constants/constants.go b/tools/istio-iptables/pkg/constants/constants.go
 index 6ac71c5619..06c8f579f8 100644
 --- a/tools/istio-iptables/pkg/constants/constants.go
