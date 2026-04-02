@@ -30,6 +30,7 @@
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
   {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
+  {{- $_ := set $csiControllerConfig "securityPolicyExceptionEnabled" true }}
   {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
@@ -39,6 +40,7 @@
   {{- $csiNodeConfig := dict }}
   {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
   {{- $_ := set $csiNodeConfig "driverFQDN" "yandex.csi.flant.com" }}
+  {{- $_ := set $csiNodeConfig "securityPolicyExceptionEnabled" true }}
   {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
