@@ -6,10 +6,6 @@
 #  to force manual creation of fresh build cache
 {{- $buildWithPreparedCacheAndDeps := true }}
 #
-{{- $source := "https://github.com" }}
-{{- if $.DistroPackagesProxy }}
-  {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
-{{- end }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
@@ -129,7 +125,6 @@ shell:
   - sudo -u cilium PATH=${PATH} mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   #
-  - export BAZELISK_BASE_URL="{{ $source }}/bazelbuild/bazel/releases/download"
   - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
 {{- if $buildWithPreparedCacheAndDeps }}
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
