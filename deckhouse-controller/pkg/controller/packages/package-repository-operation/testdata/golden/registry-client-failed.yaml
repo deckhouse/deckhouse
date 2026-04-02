@@ -51,4 +51,5 @@ status:
     reason: RegistryClientCreationFailed
     status: "False"
     type: LastOperationScanFinished
+  partialScanAvailable: false
   syncTime: null

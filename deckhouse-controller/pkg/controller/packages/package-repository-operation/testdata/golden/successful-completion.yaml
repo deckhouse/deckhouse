@@ -81,5 +81,6 @@ status:
   - name: v1.0.0
     type: Application
   packagesCount: 1
+  partialScanAvailable: false
   phase: Active
   syncTime: "2025-10-31T12:00:00Z"

@@ -140,7 +140,7 @@ type PackageRepositoryStatus struct {
 
 	// PartialScanAvailable indicates whether the registry supports pagination for tag listing.
 	// +optional
-	PartialScanAvailable bool `json:"partialScanAvailable,omitempty"`
+	PartialScanAvailable bool `json:"partialScanAvailable"`
 }
 
 type PackageRepositoryStatusPackage struct {
