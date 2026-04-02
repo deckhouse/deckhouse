@@ -1711,7 +1711,7 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 		PhasedActionProvider: phaseActionProvider,
 	})
 
-	sshProvider := testCreateDefaultTestSSHProvider(params.destroyOverHost, params.overBastion)
+	sshProvider := testCreateDefaultTestSSHProviderExt(params.destroyOverHost, params.overBastion)
 
 	i := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tmpDir, err := fs.RandomTmpDirWithNRunes(rootTmpDirStatic, fmt.Sprintf("%d", i), 15)

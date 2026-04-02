@@ -20,6 +20,8 @@ import (
 
 	"github.com/name212/govalue"
 
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -128,9 +130,24 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			return err
 		}
 
-		b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
-		// error is OK here in case of abort from cache w/o ssh hosts
-		sshProvider, _ := b.SSHProviderInitializer.GetSSHProvider(ctx)
+		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			mastersIPs, err := state.GetMasterHostsIPs(stateCache)
+			if err != nil {
+				return err
+			}
+			var sshHosts []sshconfig.Host
+			if len(mastersIPs) > 0 {
+				for _, h := range mastersIPs {
+					sshHosts = append(sshHosts, sshconfig.Host{Host: h.Host})
+				}
+			}
+			b.SSHProviderInitializer.SetAdditionalHosts(sshHosts)
+
+			// error checking is not mandatory here: simple abort could be performed w/o ssh client, just a terraform destroy from local cache
+			sshProvider, _ = b.SSHProviderInitializer.GetSSHProvider(ctx)
+			b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
+		}
 
 		log.DebugF("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache)
 		if !ok || forceAbortFromCache {
