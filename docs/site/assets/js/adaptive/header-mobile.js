@@ -184,6 +184,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function closeBurgerSidebar() {
+        closeNavModal();
         if (headerSidebar) headerSidebar.classList.remove('show');
         if (burgerOverlay.parentNode) burgerOverlay.parentNode.removeChild(burgerOverlay);
         if (body) body.classList.remove('sidebar-opened');
@@ -205,7 +206,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         window.addEventListener('click', function (e) {
-            if (!e.target.matches('.hamburger--collapse') && headerSidebar && headerSidebar.classList.contains('show')) {
+            if (!headerSidebar || !headerSidebar.classList.contains('show')) return;
+            const clickedInsideSidebar = headerSidebar.contains(e.target);
+            const clickedHamburger = hamburgerCollapse && hamburgerCollapse.contains(e.target);
+            if (!clickedInsideSidebar && !clickedHamburger) {
                 closeBurgerSidebar();
             }
         });
@@ -271,8 +275,9 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        if (headerNavList) {
-            headerNavList.addEventListener('click', function(e) {
+        const mobileNavList = getMobileNavList();
+        if (mobileNavList) {
+            mobileNavList.addEventListener('click', function(e) {
                 e.stopPropagation();
             });
         }
@@ -300,6 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             sidebarToggleTarget.addEventListener('click', function (e) {
                 e.preventDefault();
+                e.stopPropagation();
                 const isOpening = !cloneSidebar.classList.contains('header__sidebar-nav--show');
                 cloneSidebar.classList.toggle('header__sidebar-nav--show');
                 cloneSidebar.setAttribute('aria-hidden', !isOpening);
