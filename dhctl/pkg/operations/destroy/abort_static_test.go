@@ -100,7 +100,7 @@ func TestStaticAbort(t *testing.T) {
 			require.Equal(t, 1, ts.sshProvider.cleanCommandCalled, "should clean command ran once")
 			ts.assertStateCacheIsEmpty(t)
 
-			assertOverDefaultBastion(t, tst.overBastion, ts.sshProvider.bastion, "clean script")
+			assertOverDefaultBastionExt(t, tst.overBastion, ts.sshProvider.bastion, "clean script")
 		})
 	}
 }
@@ -204,7 +204,7 @@ func (t *testAbortSSHProvider) runCommand(bastion testssh.Bastion, msg string) {
 
 func testCreateAbortSSHProvider(params testAbortStaticTestParams, logger log.Logger) *testAbortSSHProvider {
 	result := &testAbortSSHProvider{
-		provider: testCreateDefaultTestSSHProvider(params.host, params.overBastion),
+		provider: testCreateDefaultTestSSHProviderExt(params.host, params.overBastion),
 		logger:   logger,
 	}
 
