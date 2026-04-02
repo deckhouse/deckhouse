@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
 {{ $manifestsDir := "/var/lib/bashible/control-plane" }}
+{{ $pkiDir := "/var/lib/bashible/control-plane/pki" }}
+
 
 {{- if eq .runType "ClusterBootstrap" }}
 # Read previously discovered IP and hostname
@@ -26,14 +27,9 @@ function subst_config() {
     mv "$tmpfile" "$1"
 }
 
-subst_config {{ $kubeadmDir }}/config.yaml
-for file in $(find {{ $kubeadmDir }}/patches/*.yaml); do
-  subst_config "$file"
-done
-
 for file in $(find {{ $manifestsDir }}/*.yaml); do
   subst_config "$file"
 done
 {{- end }}
 
-kubeadm init phase certs ca --config {{ $kubeadmDir }}/config.yaml
+cp {{ $pkiDir }}/* /etc/kubernetes/pki/

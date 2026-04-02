@@ -15,6 +15,8 @@
 package template
 
 import (
+	"fmt"
+	"net"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -22,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 )
 
 var (
@@ -80,6 +83,10 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 	}
 
 	if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
+		return err
+	}
+
+	if err := PreparePKI(templateController, nodeIP, kubeadmData); err != nil {
 		return err
 	}
 
@@ -170,6 +177,19 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 		}
 	}
 	return nil
+}
+
+func PreparePKI(templateController *Controller, nodeIP string, templateData map[string]interface{}) error {
+	path := fmt.Sprintf("%s/control-plane/pki", bashibleDir)
+	return preparePKIWithDir(templateController, nodeIP, templateData, path)
+}
+
+func preparePKIWithDir(_ *Controller, _ string, templateData map[string]interface{}, pkiDir string) error {
+	dnsDomain := templateData["clusterDomain"].(string)
+	serviceCIDR := templateData["serviceSubnetCIDR"].(string)
+	ip := net.ParseIP("127.0.0.1")
+
+	return pki.CreatePKIBundle("master", dnsDomain, ip, serviceCIDR, pki.WithPKIDir(pkiDir))
 }
 
 func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}) error {
