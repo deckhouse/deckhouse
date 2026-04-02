@@ -20,6 +20,78 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Moby is an open source container framework developed by Docker Inc. that is distributed as Docker Engine, Mirantis Container Runtime, and various other downstream projects/products. A firewalld firewall controller daemon vulnerability affects Moby releases before 28.0.0. When firewalld reloads, Docker fails to re-create iptables rules that isolate bridge networks, allowing any container to access all ports on any other container across different bridge networks on the same host. Deckhouse Kubernetes Platform is not vulnerable as it does not use this functionality for container isolation.",
       "timestamp": "2025-10-14T11:19:11.56805Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-22703",
+        "description": "Verification accepts any valid Rekor entry under certain conditions",
+        "name": "CVE-2026-22703",
+        "aliases": [ "GHSA-whqx-f9j3-ch6m" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/cosign/v2@v2.2.4"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Prior to versions 2.6.2 and 3.0.4, Cosign bundle can be crafted to successfully verify an artifact even if the embedded Rekor entry does not reference the artifact's digest, signature or public key. When verifying a Rekor entry, Cosign verifies the Rekor entry signature, and also compares the artifact's digest, the user's public key from either a Fulcio certificate or provided by the user, and the artifact signature to the Rekor entry contents. Without these comparisons, Cosign would accept any response from Rekor as valid. A malicious actor that has compromised a user's identity or signing key could construct a valid Cosign bundle by including any arbitrary Rekor entry, thus preventing the user from being able to audit the signing event. This issue has been patched in versions 2.6.2 and 3.0.4. Deckhouse Kubernetes Platform is not vulnerable as it does not utilize cosign bundles for verification.",
+      "timestamp": "2026-04-01t14:34:03z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-24137",
+        "description": "Legacy TUF client allows for arbitrary file writes with target cache path traversal",
+        "name": "CVE-2026-24137",
+        "aliases": [ "GHSA-fcv2-xgw5-pqxf" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/sigstore@v1.8.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "In versions 1.10.3 and below, the legacy TUF client (pkg/tuf/client.go) supports caching target files to disk. It constructs a filesystem path by joining a cache base directory with a target name sourced from signed target metadata; however, it does not validate that the resulting path stays within the cache base directory. A malicious TUF repository can trigger arbitrary file overwriting, limited to the permissions that the calling process has. Note that this should only affect clients that are directly using the TUF client in sigstore/sigstore or are using an older version of Cosign. Public Sigstore deployment users are unaffected, as TUF metadata is validated by a quorum of trusted collaborators. This issue has been fixed in version 1.10.4. Deckhouse Kubernetes Platform is not affected by this since it does not rely on any TUF repositories or Cosign.",
+      "timestamp": "2026-04-01t14:34:03z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-24117",
+        "description": "Server-Side Request Forgery (SSRF) via provided public key URL",
+        "name": "CVE-2026-24117",
+        "aliases": [ "GHSA-4c4x-jm2x-pf9j" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "In versions 1.4.3 and below, attackers can trigger SSRF to arbitrary internal services because /api/v1/index/retrieve supports retrieving a public key via user-provided URL. Since the SSRF only can trigger GET requests, the request cannot mutate state. The response from the GET request is not returned to the caller so data exfiltration is not possible. A malicious actor could attempt to probe an internal network through Blind SSRF. The issue has been fixed in version 1.5.0. Deckhouse Kubernetes Platform is not affected since it does not utilize rekor.",
+      "timestamp": "2026-04-01t14:34:03z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2025-66564",
+        "description": "Excessive memory allocation during request parsing",
+        "name": "CVE-2025-66564",
+        "aliases": [ "GHSA-4qg8-fj49-pxjh" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/timestamp-authority@v1.2.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Prior to 2.0.3, Function api.ParseJSONRequest currently splits (via a call to strings.Split) an optionally-provided OID (which is untrusted data) on periods. Similarly, function api.getContentType splits the Content-Type header (which is also untrusted data) on an application string. As a result, in the face of a malicious request with either an excessively long OID in the payload containing many period characters or a malformed Content-Type header, a call to api.ParseJSONRequest or api.getContentType incurs allocations of O(n) bytes (where n stands for the length of the function's argument). Deckhouse Kubernetes Platform is not affected by this since it does not implement or rely on timestamp verification using this package.",
+      "timestamp": "2026-04-01t14:34:03z"
     }
   ],
   "timestamp": "2025-10-14T11:19:11Z"
