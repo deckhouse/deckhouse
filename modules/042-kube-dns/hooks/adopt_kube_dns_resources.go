@@ -129,39 +129,35 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, adoptKubeDNSResources)
 
 func adoptKubeDNSResources(_ context.Context, input *go_hook.HookInput) error {
-	// Read USE_NELM flag from Deployment deckhouse
-	useNelm := false
+	var useNelm bool
 	if snap := input.Snapshots.Get("deckhouse_deployment"); len(snap) > 0 {
 		if err := snap[0].UnmarshalTo(&useNelm); err != nil {
-			return fmt.Errorf("cannot read USE_NELM from deckhouse Deployment: %w", err)
+			return fmt.Errorf("cannot get USE_NELM from Deployment deckhouse: %w", err)
 		}
 	}
 
-	// Deployment coredns must always be removed
+	var isClusterIP bool
+	if snap := input.Snapshots.Get("kube_dns_svc"); len(snap) > 0 {
+		if err := snap[0].UnmarshalTo(&isClusterIP); err != nil {
+			return fmt.Errorf("cannot get service type from Service kube-dns: %w", err)
+		}
+	}
+
+	// Always remove Deployment coredns
 	input.PatchCollector.DeleteNonCascading("apps/v1", "Deployment", "kube-system", "coredns")
 
-	// If NELM is disabled — delete Service kube-dns
+	// If service is not ClusterIP, nothing else to do
+	if !isClusterIP {
+		return nil
+	}
+
+	// If NELM disabled → delete Service
 	if !useNelm {
 		input.PatchCollector.Delete("v1", "Service", "kube-system", "kube-dns")
 		return nil
 	}
 
-	// Try to adopt Service kube-dns (only ClusterIP)
-	snap := input.Snapshots.Get("kube_dns_svc")
-	if len(snap) == 0 {
-		return nil // nothing to adopt
-	}
-
-	var isClusterIP bool
-	if err := snap[0].UnmarshalTo(&isClusterIP); err != nil {
-		return fmt.Errorf("cannot determine kube-dns Service type: %w", err)
-	}
-
-	if !isClusterIP {
-		return nil
-	}
-
-	// Apply Helm ownership metadata
+	// Otherwise adopt Service
 	input.PatchCollector.PatchWithMerge(metadata, "v1", "Service", "kube-system", "kube-dns")
 
 	return nil
