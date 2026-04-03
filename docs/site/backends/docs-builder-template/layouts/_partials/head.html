@@ -13,7 +13,9 @@
 {{- end -}}
 
 {{- $pageTitleForHead := .Title -}}
-{{- if strings.Contains $pageTitleForHead ":" -}}
+{{- if eq (strings.ToLower .File.TranslationBaseName) "readme" -}}
+  {{- $pageTitleForHead = T "moduleLinkTitleREADME" -}}
+{{- else if strings.Contains $pageTitleForHead ":" -}}
   {{- $parts := split $pageTitleForHead ":" -}}
   {{- if gt (len $parts) 1 -}}
     {{- $suffix := strings.TrimSpace (delimit (after 1 $parts) ":") -}}
