@@ -193,7 +193,6 @@ type PackageRepositoryOperationStatusPackage struct {
 	FoundVersions int `json:"foundVersions,omitempty"`
 }
 
-
 // +kubebuilder:object:root=true
 
 // PackageRepositoryOperationList is a list of PackageRepositoryOperation resources
