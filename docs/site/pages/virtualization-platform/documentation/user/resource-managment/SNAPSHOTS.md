@@ -666,7 +666,7 @@ The [USBDevice](/modules/virtualization/cr.html#usbdevice) resource provides sta
 - **Attached**: Indicates whether the device is attached to a virtual machine.
   - `AttachedToVirtualMachine`: Device is attached to a VM.
   - `Available`: Device is available for attachment.
-  - `DetachedForMigration`: Device was detached for migration.
+  - `NoFreeUSBIPPort`: Device is requested by a VM but cannot be attached because there are no free USBIP ports on the target node. In this case, `Attached=False`.
 
 ### Attaching USB Device to VM
 
@@ -692,7 +692,7 @@ The virtual machine must be running on the same node where the USB device is phy
 {% endalert %}
 
 {% alert level="warning" %}
-If a virtual machine with an attached USB device is migrated to another node, the USB device is automatically detached for the entire duration of the migration. After a successful migration, the device is forwarded to the new node again and reattached to the VM. If the migration fails, the device is reattached on the original node.
+During VM migration, the USB device briefly disconnects and reconnects on the new node when the VM switches to it. If migration fails, the device will remain on the original node.
 {% endalert %}
 
 ### Viewing USB Device Details
