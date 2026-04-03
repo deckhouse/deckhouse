@@ -31,10 +31,10 @@ import (
 )
 
 const (
-	nodeTypeLabel            = "node.deckhouse.io/type"
-	nodeTypeStatic           = "Static"
-	uninitializedTaintKey    = "node.cloudprovider.kubernetes.io/uninitialized"
-	staticProviderIDValue    = "static://"
+	nodeTypeLabel         = "node.deckhouse.io/type"
+	nodeTypeStatic        = "Static"
+	uninitializedTaintKey = "node.cloudprovider.kubernetes.io/uninitialized"
+	staticProviderIDValue = "static://"
 )
 
 type Reconciler struct {
