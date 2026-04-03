@@ -22,13 +22,16 @@ import (
 	"crypto/x509"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
+	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +39,6 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
@@ -49,8 +51,9 @@ type Interface interface {
 	Endpoints() []string
 	Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error)
 	WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error)
-	MemberAddAsLearner(ctx context.Context, peerAddrs []string) (*clientv3.MemberAddResponse, error)
+	MemberAddAsLearner(ctx context.Context, peerAddrs string) (*clientv3.MemberAddResponse, error)
 	MemberPromote(ctx context.Context, id uint64) (*clientv3.MemberPromoteResponse, error)
+	Raw() *clientv3.Client
 	Close() error
 }
 
@@ -64,8 +67,20 @@ type Client struct {
 
 var _ Interface = (*Client)(nil)
 
-func wrap(etcdClient *clientv3.Client) *Client {
-	return &Client{client: etcdClient}
+func wrap(etcdClient *clientv3.Client, tlsConfig *tls.Config) *Client {
+	c := &Client{client: etcdClient}
+	c.newEtcdClient = func(endpoints []string) (Interface, error) {
+		raw, err := clientv3.New(clientv3.Config{
+			Endpoints:   endpoints,
+			DialTimeout: 5 * time.Second,
+			TLS:         tlsConfig,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return wrap(raw, tlsConfig), nil
+	}
+	return c
 }
 
 // Raw returns the underlying etcd client when direct access is required.
@@ -84,9 +99,15 @@ func (c *Client) Status(ctx context.Context, endpoint string) (*clientv3.StatusR
 	return c.client.Status(ctx, endpoint)
 }
 
+//nolint:nonamedreturns
 func (c *Client) getMemberStatus(ctx context.Context, memberID uint64) (isLearner bool, started bool, err error) {
-	//todo newClient?
-	resp, err := c.client.MemberList(ctx)
+	cli, err := c.newEtcdClient(c.Endpoints())
+	if err != nil {
+		return false, false, err
+	}
+	defer func() { _ = cli.Close() }()
+
+	resp, err := cli.Raw().MemberList(ctx)
 	if err != nil {
 		return false, false, err
 	}
@@ -112,41 +133,89 @@ func (c *Client) getMemberStatus(ctx context.Context, memberID uint64) (isLearne
 	return m.IsLearner, started, nil
 }
 
-func (c *Client) MemberAddAsLearner(ctx context.Context, peerAddrs []string) (*clientv3.MemberAddResponse, error) {
-	// Check if member with this peer URL already exists for idempotency
-	listResp, err := c.client.MemberList(ctx)
+//nolint:sloglint
+func (c *Client) MemberAddAsLearner(ctx context.Context, peerAddrs string) (*clientv3.MemberAddResponse, error) {
+	_, err := url.Parse(peerAddrs)
 	if err != nil {
-		return nil, fmt.Errorf("member list before add: %w", err)
-	}
-	for _, member := range listResp.Members {
-		for _, u := range member.PeerURLs {
-			for _, addr := range peerAddrs {
-				if u == addr {
-					logger.Info("member with peer URL already exists, skipping add",
-						slog.String("peerURL", addr),
-						slog.String("memberName", member.Name))
-					return &clientv3.MemberAddResponse{
-						Member:  member,
-						Members: listResp.Members,
-					}, nil
-				}
-			}
-		}
+		return nil, fmt.Errorf("error parsing peer address %s: %w", peerAddrs, err)
 	}
 
-	return c.client.MemberAddAsLearner(ctx, peerAddrs)
+	cli, err := c.newEtcdClient(c.Endpoints())
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cli.Close() }()
+
+	var (
+		lastError error
+		resp      *clientv3.MemberAddResponse
+	)
+	err = wait.PollUntilContextTimeout(ctx, constants.EtcdAPICallRetryInterval, constants.EtcdAPICallTimeout,
+		true, func(pollCtx context.Context) (bool, error) {
+			ctx, cancel := context.WithTimeout(pollCtx, etcdTimeout)
+			defer cancel()
+
+			// List members and quickly return if the member already exists.
+			listResp, err := cli.Raw().MemberList(ctx)
+			if err != nil {
+				logger.Info("Failed to check whether the member", slog.String("peerAddrs", peerAddrs), log.Err(err))
+				lastError = err
+				return false, nil
+			}
+			found := false
+			for _, member := range listResp.Members {
+				if member.GetPeerURLs()[0] == peerAddrs {
+					found = true
+					break
+				}
+			}
+			if found {
+				logger.Info("The peer URL for the added etcd member already exists. Skipping etcd member addition", slog.String("peerAddrs", peerAddrs))
+				resp = &clientv3.MemberAddResponse{Members: listResp.Members}
+				return true, nil
+			}
+
+			logger.Info("Adding etcd member as learner", slog.String("peerAddrs", peerAddrs))
+			resp, err = cli.Raw().MemberAddAsLearner(ctx, []string{peerAddrs})
+
+			if err == nil {
+				return true, nil
+			}
+
+			// If the error indicates that the peer already exists, exit early. In this situation, resp is nil, so
+			// call out to MemberList to fetch all the members before returning.
+			if errors.Is(err, rpctypes.ErrPeerURLExist) {
+				logger.Info("The peer URL for the added etcd member already exists. Fetching the existing etcd members")
+				listResp, err = cli.Raw().MemberList(ctx)
+				if err == nil {
+					resp = &clientv3.MemberAddResponse{Members: listResp.Members}
+					return true, nil
+				}
+			}
+
+			logger.Info("Failed to add etcd member", log.Err(err))
+			lastError = err
+			return false, nil
+		})
+	if err != nil {
+		return nil, lastError
+	}
+
+	return resp, nil
 }
 
 // MemberPromote is the extension point for extra promotion logic around clientv3.
+//
+//nolint:sloglint
 func (c *Client) MemberPromote(ctx context.Context, id uint64) (*clientv3.MemberPromoteResponse, error) {
 	var (
 		lastError     error
-		lastResponse  *clientv3.MemberPromoteResponse
 		learnerIDUint = strconv.FormatUint(id, 16)
+		resp          *clientv3.MemberPromoteResponse
 	)
-	logger.Info("etcd] Waiting for a learner to start", slog.String("learnerID", learnerIDUint))
+	logger.Info("waiting for a learner to start", slog.String("learnerID", learnerIDUint))
 
-	err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, constants.KubernetesAPICallTimeout,
+	err := wait.PollUntilContextTimeout(ctx, constants.EtcdAPICallRetryInterval, constants.EtcdAPICallTimeout,
 		true, func(pollCtx context.Context) (bool, error) {
 			isLearner, started, err := c.getMemberStatus(pollCtx, id)
 			if err != nil {
@@ -162,22 +231,39 @@ func (c *Client) MemberPromote(ctx context.Context, id uint64) (*clientv3.Member
 				lastError = errors.Errorf("the etcd member %s is not started", learnerIDUint)
 				return false, nil
 			}
-
-			// Learner is started — try to promote. May fail if not yet in sync with leader.
-			lastResponse, err = c.client.MemberPromote(pollCtx, id)
-			if err != nil {
-				logger.Info("promote attempt failed, will retry", slog.String("memberID", learnerIDUint), slog.String("error", err.Error()))
-				lastError = err
-				return false, nil
-			}
-
 			return true, nil
 		})
 	if err != nil {
 		return nil, lastError
 	}
 
-	return lastResponse, nil
+	logger.Info("Promoting a learner as a voting member", slog.Any("memberID", learnerIDUint))
+
+	cli, err := c.newEtcdClient(c.Endpoints())
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() { _ = cli.Close() }()
+
+	err = wait.PollUntilContextTimeout(ctx, constants.EtcdAPICallRetryInterval, constants.EtcdAPICallTimeout,
+		true, func(_ context.Context) (bool, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), etcdTimeout)
+			defer cancel()
+
+			resp, err = c.client.MemberPromote(ctx, id)
+			if err == nil {
+				logger.Info("the learner was promoted as a voting member", slog.Any("memberID", learnerIDUint))
+				return true, nil
+			}
+			logger.Warn("promoting the learner failed", slog.Any("memberID", learnerIDUint), slog.Any("error", err))
+			lastError = err
+			return false, nil
+		})
+	if err != nil {
+		return nil, lastError
+	}
+	return resp, nil
 }
 
 func (c *Client) Close() error {
@@ -210,19 +296,21 @@ func New(client clientset.Interface, certificatesDir string) (Interface, error) 
 	caPool := x509.NewCertPool()
 	caPool.AppendCertsFromPEM(caData)
 
+	tlsConfig := &tls.Config{
+		RootCAs:      caPool,
+		Certificates: []tls.Certificate{cert},
+	}
+
 	rawClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: 5 * time.Second,
-		TLS: &tls.Config{
-			RootCAs:      caPool,
-			Certificates: []tls.Certificate{cert},
-		},
+		TLS:         tlsConfig,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return wrap(rawClient), nil
+	return wrap(rawClient, tlsConfig), nil
 }
 
 // getEtcdEndpoints returns the list of etcd endpoints.
@@ -282,6 +370,10 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 		}
 		etcdEndpoint, ok := pod.ObjectMeta.Annotations[constants.EtcdAdvertiseClientUrlsAnnotationKey]
 		if !ok {
+			etcdEndpoint, ok = pod.ObjectMeta.Annotations[constants.LegacyEtcdAdvertiseClientUrlsAnnotationKey]
+		}
+
+		if !ok {
 			logger.Info("etcd Pod is missing the annotation; cannot infer etcd advertise client URL using the Pod annotation", slog.String("pod", pod.ObjectMeta.Name), slog.String("annotation", constants.EtcdAdvertiseClientUrlsAnnotationKey))
 			continue
 		}
@@ -293,26 +385,20 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 func (c *Client) getClusterStatus() (map[string]*clientv3.StatusResponse, error) {
 	clusterStatus := make(map[string]*clientv3.StatusResponse)
 	for _, ep := range c.Endpoints() {
+		// Gets the member status
 		var lastError error
 		var resp *clientv3.StatusResponse
-		err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, constants.KubernetesAPICallTimeout,
+		err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, constants.EtcdAPICallTimeout,
 			true, func(_ context.Context) (bool, error) {
-				var statusClient Interface
-				if c.newEtcdClient != nil {
-					cli, err := c.newEtcdClient(c.Endpoints())
-					if err != nil {
-						lastError = err
-						return false, nil
-					}
-					defer func() { _ = cli.Close() }()
-					statusClient = cli
-				} else {
-					statusClient = c
+				cli, err := c.newEtcdClient(c.Endpoints())
+				if err != nil {
+					lastError = err
+					return false, nil
 				}
+				defer func() { _ = cli.Close() }()
 
 				ctx, cancel := context.WithTimeout(context.Background(), etcdTimeout)
-				var err error
-				resp, err = statusClient.Status(ctx, ep)
+				resp, err = cli.Status(ctx, ep)
 				cancel()
 				if err == nil {
 					return true, nil

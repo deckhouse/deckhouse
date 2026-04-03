@@ -120,7 +120,7 @@ spec:
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: ControlPlaneOperation
 metadata:
-  name: master-1-observe
+  name: master-1-observer
   labels:
     control-plane.deckhouse.io/node: master-1
     control-plane.deckhouse.io/component: Observer

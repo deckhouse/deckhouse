@@ -35,20 +35,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// observeCertFiles maps component names to cert file base names (without .crt) relative to pki dir.
+// observeCertFiles maps component names to leaf cert file base names relative to pki dir.
 var observeCertFiles = map[string][]string{
 	"etcd": {
-		"etcd/ca",
 		"etcd/server",
 		"etcd/peer",
 		"etcd/healthcheck-client",
 		"apiserver-etcd-client",
 	},
 	"kube-apiserver": {
-		"ca",
 		"apiserver",
 		"apiserver-kubelet-client",
-		"front-proxy-ca",
 		"front-proxy-client",
 	},
 }
@@ -122,7 +119,7 @@ func execObserve(ctx context.Context, cc *commandContext, logger *log.Logger) (r
 		}
 		if len(certExpiry) > 0 {
 			observedState[compName] = controlplanev1alpha1.ObservedComponentState{
-				CertificatesExpiration: certExpiry,
+				CertificatesExpirationDate: certExpiry,
 			}
 		}
 	}
@@ -135,8 +132,8 @@ func execObserve(ctx context.Context, cc *commandContext, logger *log.Logger) (r
 			continue
 		}
 		state := observedState[compName]
-		if state.CertificatesExpiration == nil {
-			state.CertificatesExpiration = make(map[string]metav1.Time)
+		if state.CertificatesExpirationDate == nil {
+			state.CertificatesExpirationDate = make(map[string]metav1.Time)
 		}
 		for _, file := range kubeconfigFiles {
 			kubeconfigPath := filepath.Join(kubeconfigDir, string(file))
@@ -146,9 +143,9 @@ func execObserve(ctx context.Context, cc *commandContext, logger *log.Logger) (r
 					slog.String("kubeconfig", kubeconfigPath), log.Err(err))
 				continue
 			}
-			state.CertificatesExpiration[string(file)] = expiry
+			state.CertificatesExpirationDate[string(file)] = expiry
 		}
-		if len(state.CertificatesExpiration) > 0 {
+		if len(state.CertificatesExpirationDate) > 0 {
 			observedState[compName] = state
 		}
 	}

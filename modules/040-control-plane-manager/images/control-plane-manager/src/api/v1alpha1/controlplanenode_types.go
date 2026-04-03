@@ -35,10 +35,10 @@ type ComponentChecksum struct {
 	// +optional
 	CAChecksum string `json:"caChecksum,omitempty"`
 
-	// CertificatesExpiration maps cert file names to their NotAfter timestamps.
+	// CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
 	// Only populated in status via Observe operation. Absent in spec.
 	// +optional
-	CertificatesExpiration map[string]metav1.Time `json:"certificatesExpiration,omitempty"`
+	CertificatesExpirationDate map[string]metav1.Time `json:"certificatesExpirationDate,omitempty"`
 }
 
 // ComponentChecksums holds checksums for all control plane components.
