@@ -30,10 +30,6 @@ Then you can check report:
 d8 k logs job.batch/kube-bench
 ```
 
-{% alert level="warning" %}
-Deckhouse set the log retention period to 7 days. However, according to the security requirements specified in kube-bench, logs should be retained for at least 30 days. Use separate storage for logs if you need to keep logs for more than 7 days.
-{% endalert %}
-
 ## How to collect debug info?
 
 1. Create a diagnostic archive with the `d8` utility, redirecting its output (stdout) to a file:
