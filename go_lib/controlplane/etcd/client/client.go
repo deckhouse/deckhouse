@@ -151,8 +151,8 @@ func (c *Client) MemberAddAsLearner(ctx context.Context, peerAddrs string) (*cli
 		resp      *clientv3.MemberAddResponse
 	)
 	err = wait.PollUntilContextTimeout(ctx, constants.EtcdAPICallRetryInterval, constants.EtcdAPICallTimeout,
-		true, func(_ context.Context) (bool, error) {
-			ctx, cancel := context.WithTimeout(ctx, etcdTimeout)
+		true, func(pollCtx context.Context) (bool, error) {
+			ctx, cancel := context.WithTimeout(pollCtx, etcdTimeout)
 			defer cancel()
 
 			// List members and quickly return if the member already exists.
