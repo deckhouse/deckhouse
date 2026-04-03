@@ -16,6 +16,7 @@ package helper
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/deckhouse/lib-connection/pkg"
@@ -42,7 +43,7 @@ func CreateProviders(ctx context.Context, config string, logger log.Logger, isDe
 
 	sshConfig, err := sshconfig.ParseConnectionConfig(strings.NewReader(config), sett)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("parsing connection config: %w", err)
 	}
 
 	kubecfg := &kube.Config{}
@@ -53,7 +54,7 @@ func CreateProviders(ctx context.Context, config string, logger log.Logger, isDe
 
 	mastersIPs, err := state.GetMasterHostsIPs(cache.Global())
 	if err != nil {
-		return nil, nil, cleanuper.AsFunc(), err
+		return nil, nil, cleanuper.AsFunc(), fmt.Errorf("getting IPs from cache: %w", err)
 	}
 	var sshHosts []sshconfig.Host
 	if len(mastersIPs) > 0 {
