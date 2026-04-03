@@ -60,6 +60,12 @@ func CreateKubeconfigFiles(files []File, options ...option) error {
 	}
 
 	for _, file := range files {
+		if file == Kubelet {
+			if err := opt.ensureNodeNameProvided(); err != nil {
+				return fmt.Errorf("failed to ensure node name for kubelet.conf: %w", err)
+			}
+		}
+
 		if err := createKubeConfigFile(file, opt); err != nil {
 			return fmt.Errorf("failed to create kubeconfig file %q: %w", file, err)
 		}
@@ -134,10 +140,10 @@ func getFileSpec(kind File, opt *options) (*fileSpec, error) {
 		}, nil
 	case Kubelet:
 		return &fileSpec{
-			ClusterName:             fmt.Sprintf("%s%s", "system:node:", opt.NodeName),
+			ClusterName:             opt.ClusterName,
 			APIServer:               opt.ControlPlaneEndpoint,
-			ClientName:              "kubernetes-super-admin",
-			ClientCertOrganizations: []string{"system:masters"},
+			ClientName:              fmt.Sprintf("%s%s", "system:node:", opt.NodeName),
+			ClientCertOrganizations: []string{"system:nodes"},
 			ClientCertNotAfter:      opt.CertProvider.NotAfter(),
 			CACert:                  opt.CertProvider.CACert(),
 			CAKey:                   opt.CertProvider.CAKey(),

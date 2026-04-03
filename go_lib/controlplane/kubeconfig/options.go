@@ -97,7 +97,6 @@ func prepareOptions(opts ...option) (*options, error) {
 	return opt, nil
 }
 
-//nolint:unused
 func (opt *options) ensureNodeNameProvided() error {
 	if opt.NodeName == "" {
 		name, err := os.ReadFile(constants.DiscoveredNodeNamePath)
@@ -147,8 +146,8 @@ func WithControlPlaneEndpoint(controlPlaneIP string) option {
 	}
 }
 
-// WithNodeNamePath is an option to set the node name path.
-func WithNodeNamePath(nodeName string) option {
+// WithNodeName is an option to set the node name.
+func WithNodeName(nodeName string) option {
 	return func(o *options) {
 		o.NodeName = nodeName
 	}

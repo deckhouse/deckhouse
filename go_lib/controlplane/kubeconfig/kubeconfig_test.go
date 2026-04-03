@@ -119,6 +119,11 @@ func TestCreateKubeConfigFile(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "Kubelet kubeconfig",
+			file:    Kubelet,
+			wantErr: false,
+		},
+		{
 			name:    "Unsupported kind",
 			file:    File("unknown.conf"),
 			wantErr: true,
