@@ -174,8 +174,6 @@ func resolveLogger(logger *log.Logger) *log.Logger {
 }
 
 // resolveTransport returns the base HTTP transport from options.
-// Uses the custom transport if set, builds one from CA/TLS if needed,
-// or falls back to http.DefaultTransport.
 func resolveTransport(opts *Options) http.RoundTripper {
 	if opts.Transport != nil {
 		return opts.Transport

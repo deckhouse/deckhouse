@@ -59,11 +59,10 @@ type Client struct {
 	constructedSegmentsOnce sync.Once
 	// remote options for go-containerregistry
 	options []remote.Option
-	// auth is the authenticator for registry access, stored separately for
-	// building custom HTTP transports (e.g., listTagsPage).
+	// auth is stored separately from remote options to build authenticated
+	// HTTP transports for direct registry requests (listTagsPage).
 	auth authn.Authenticator
-	// baseTransport is the HTTP transport with CA/TLS settings from client options.
-	// Used as the base for transport.NewWithContext in listTagsPage.
+	// baseTransport carries CA/TLS/proxy settings for direct HTTP requests.
 	baseTransport http.RoundTripper
 	// insecure flag for HTTP connections
 	insecure bool
@@ -365,7 +364,7 @@ func (c *Client) GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile
 	return configFile, nil
 }
 
-// WithLast sets the pagination continuation token for tags
+// WithTagsLast sets the pagination cursor; only tags after last are returned.
 func WithTagsLast(last string) registry.ListTagsOption {
 	return &withTagsLast{last: last}
 }
@@ -378,7 +377,7 @@ func (w *withTagsLast) ApplyToListTags(opts *registry.ListTagsOptions) {
 	opts.Last = w.last
 }
 
-// WithTagsLimit sets the maximum number of tag results to return
+// WithTagsLimit caps the number of tags returned to n (single page).
 func WithTagsLimit(n int) registry.ListTagsOption {
 	return &withTagsLimit{n: n}
 }
@@ -415,9 +414,6 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 	}
 	repo := ref.Context()
 
-	// Pagination mode: direct HTTP with proper ?last= and ?n= query parameters.
-	// Needed because remote.List does not pass "last" as an OCI pagination cursor
-	// and always iterates all pages even when N is set.
 	if listOptions.N > 0 || listOptions.Last != "" {
 		if c.timeout > 0 {
 			var cancel context.CancelFunc
@@ -427,13 +423,11 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 		return c.listTagsPage(ctx, repo, listOptions.Last, listOptions.N)
 	}
 
-	// Default: full listing via remote.List with cached transport.
 	remoteOpts := append(append([]remote.Option{}, c.options...), c.withContext(ctx))
 	return remote.List(repo, remoteOpts...)
 }
 
-// listTagsPage fetches tags with ?last= and ?n= query parameters via direct HTTP.
-// When pageSize > 0, only one page is returned. Otherwise all remaining pages are collected.
+// listTagsPage fetches a single page of tags (pageSize > 0) or all remaining pages via direct HTTP.
 func (c *Client) listTagsPage(ctx context.Context, repo name.Repository, last string, pageSize int) ([]string, error) {
 	httpClient, err := c.registryHTTPClient(ctx, repo)
 	if err != nil {
@@ -459,8 +453,7 @@ func (c *Client) listTagsPage(ctx context.Context, repo name.Repository, last st
 	return allTags, nil
 }
 
-// registryHTTPClient creates an HTTP client with OCI registry authentication
-// and the same CA/TLS settings as the original client.
+// registryHTTPClient creates an authenticated HTTP client for direct registry requests.
 func (c *Client) registryHTTPClient(ctx context.Context, repo name.Repository) (*http.Client, error) {
 	auth := c.auth
 	if auth == nil {
@@ -475,7 +468,7 @@ func (c *Client) registryHTTPClient(ctx context.Context, repo name.Repository) (
 	return &http.Client{Transport: rt}, nil
 }
 
-// tagsURL builds /v2/<repo>/tags/list with optional last and n query parameters.
+// tagsURL builds the /v2/<repo>/tags/list URL with optional last and n query parameters.
 func tagsURL(repo name.Repository, last string, pageSize int) string {
 	uri := &url.URL{
 		Scheme: repo.Scheme(),
@@ -495,14 +488,12 @@ func tagsURL(repo name.Repository, last string, pageSize int) string {
 	return uri.String()
 }
 
-// tagsResponse is the JSON body returned by GET /v2/<repo>/tags/list.
 type tagsResponse struct {
 	Name string   `json:"name"`
 	Tags []string `json:"tags"`
 }
 
-// fetchTagsPage performs a single GET to pageURL and returns the decoded tags
-// together with the next-page URL extracted from the Link header (empty if last page).
+// fetchTagsPage performs a single GET and returns tags with the next-page URL from the Link header.
 func (c *Client) fetchTagsPage(ctx context.Context, httpClient *http.Client, pageURL string) ([]string, string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pageURL, nil)
 	if err != nil {
@@ -528,7 +519,6 @@ func (c *Client) fetchTagsPage(ctx context.Context, httpClient *http.Client, pag
 }
 
 // nextPageURL extracts the URL from a Link: <url>; rel="next" header.
-// Returns empty string when no next page exists.
 func nextPageURL(resp *http.Response) string {
 	link := resp.Header.Get("Link")
 	if link == "" || link[0] != '<' {
