@@ -213,7 +213,9 @@ apiVersions:
             server:
               description: Хост или IP-адрес vCenter сервера.
             username:
-              description: Login ID.
+              description: |
+                Имя пользователя. Обязательно указывается с доменом, например username@domain.local.
+                Узнать правильный домен можно в панели управления vCenter.
             password:
               description: Пароль.
             insecure:
