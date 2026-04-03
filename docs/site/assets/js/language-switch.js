@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
-  const languageSwitch = document.querySelector('#language-switch');
-  if (!languageSwitch) return;
+  const mobileLanguageSwitch = document.querySelector('#language-switch');
+  if (!mobileLanguageSwitch) return;
 
   const isRuPath = (pathname) => /^\/ru(\/|$)/.test(pathname);
   const isEnPath = (pathname) => /^\/en(\/|$)/.test(pathname);
@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (staticMap[hostname]) return staticMap[hostname];
     if (hostname.includes('deckhouse.ru.')) return hostname.replace('deckhouse.ru.', 'deckhouse.');
-    if (hostname.includes('deckhouse.')) return hostname.replace('deckhouse.', 'deckhouse.ru.');
     if (hostname.includes('deckhouse-ru')) return hostname.replace('deckhouse-ru', 'deckhouse');
     if (hostname.includes('deckhouse')) return hostname.replace('deckhouse', 'deckhouse-ru');
 
@@ -42,28 +41,35 @@ document.addEventListener('DOMContentLoaded', function () {
     return url.toString();
   }
 
-  function syncCheckedState() {
+  function mobileSyncCheckedState() {
     const { pathname, hostname } = new URL(window.location.href);
     const isRuHost =
       hostname === 'deckhouse.ru' ||
       hostname === 'ru.localhost' ||
-      hostname.includes('deckhouse.ru.') ||
       hostname.includes('deckhouse-ru');
 
-    languageSwitch.checked = isRuPath(pathname) || isRuHost;
+    mobileLanguageSwitch.checked = isRuPath(pathname) || isRuHost;
   }
 
-  let isNavigating = false;
-  languageSwitch.removeAttribute('onclick');
-  languageSwitch.addEventListener('change', function () {
-    if (window.innerWidth >= 1024 || isNavigating) return;
+  let mobileIsNavigating = false;
+  mobileLanguageSwitch.removeAttribute('onclick');
+  mobileLanguageSwitch.addEventListener('change', function () {
+    if (window.innerWidth >= 1024 || mobileIsNavigating) return;
 
     const targetUrl = buildTargetUrl();
     if (!targetUrl || targetUrl === window.location.href) return;
 
-    isNavigating = true;
+    mobileIsNavigating = true;
     window.location.assign(targetUrl);
   });
 
-  syncCheckedState();
+  mobileSyncCheckedState();
+
+  const targetUrl = buildTargetUrl();
+  if (targetUrl && targetUrl !== window.location.href) {
+    $('a.lang-switcher').each(function () {
+        $(this).attr('href', targetUrl);
+    });
+  }
+
 });
