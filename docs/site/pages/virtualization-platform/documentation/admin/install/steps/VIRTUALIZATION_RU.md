@@ -242,9 +242,9 @@ spec:
 
 Для активации аудита событий безопасности:
 
-1. Включить модули `log-shipper` и `runtime-audit-engine`.
-1. Включить аудит Kubernetes API, установив `.spec.settings.apiserver.auditPolicyEnabled: true` в модуле `control-plane-manager`.
-1. Установить `.spec.settings.audit.enabled: true` в модуле `virtualization`:
+1. Включите модули `[log-shipper`](/modules/log-shipper/) и `[runtime-audit-engine](/modules/runtime-audit-engine/)`.
+1. Включите аудит Kubernetes API, установив [`.spec.settings.apiserver.auditPolicyEnabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) в модуле `control-plane-manager`.
+1. Установите [`.spec.settings.audit.enabled: true`](/modules/virtualization/stable/configuration.html#parameters-audit-enabled) в модуле `virtualization`:
 
    ```yaml
    spec:
@@ -253,9 +253,9 @@ spec:
          enabled: true
    ```
 
-Полный перечень параметров конфигурации приведён в разделе [Настройки](./configuration.html).
+Полный перечень параметров конфигурации приведён в разделе [«Настройки»](/modules/virtualization/configuration.html).
 
-События собираются подом `virtualization-audit-*` в пространстве имён `d8-virtualization`. Чтобы перенаправить события в систему логирования кластера (например, Loki), создайте ClusterLoggingConfig:
+События собираются подом `virtualization-audit-*` в неймспейсе `d8-virtualization`. Чтобы перенаправить события в систему логирования кластера (например, Loki), создайте [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

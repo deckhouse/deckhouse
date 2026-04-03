@@ -91,9 +91,9 @@ After creation, the [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) r
 - `Provisioning`: Disk creation process is in progress.
 - `Resizing`: Process of resizing the disk is in progress.
 - `WaitForFirstConsumer`: Disk is waiting for the virtual machine that will use it to be created.
-- `WaitForUserUpload`: Disk is waiting for the user to upload an image (type: Upload).
+- `WaitForUserUpload`: Disk is waiting for the user to upload an image (`type: Upload`).
 - `Ready`: Disk has been created and is ready for use.
-- `Migrating`: Live migration of a disk.
+- `Migrating`: Live migration of a disk is in progress.
 - `Exporting`: The disk export process is in progress.
 - `Failed`: An error occurred during the creation process.
 - `PVCLost`: System error, PVC with data has been lost.
@@ -102,7 +102,7 @@ After creation, the [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) r
 As long as the disk has not reached the `Ready` phase, you can modify any fields in the `.spec` block. When changes are made, the disk creation process is restarted.
 
 {% alert level="info" %}
-After the disk reaches the `Ready` phase, you can still change `.spec.persistentVolumeClaim.size` and `.spec.persistentVolumeClaim.storageClassName`. All other `.spec` fields are immutable.
+After the disk reaches the `Ready` phase, you can still change [`.spec.persistentVolumeClaim.size`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-size) and [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-storageclassname). All other `.spec` fields are immutable.
 {% endalert %}
 
 If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified, the default `StorageClass` at the cluster level will be used, or for images if specified in [module settings](/products/virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html).

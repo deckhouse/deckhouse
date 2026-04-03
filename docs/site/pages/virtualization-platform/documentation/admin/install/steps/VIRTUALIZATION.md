@@ -241,9 +241,9 @@ Not available in Community Edition.
 
 To enable security event auditing:
 
-1. Enable `log-shipper` and `runtime-audit-engine` modules.
-1. Enable Kubernetes API audit by setting `.spec.settings.apiserver.auditPolicyEnabled: true` in the `control-plane-manager` module.
-1. Set `.spec.settings.audit.enabled: true` in the `virtualization` module:
+1. Enable [`log-shipper`](/modules/log-shipper/) and [`runtime-audit-engine`](/modules/runtime-audit-engine/) modules.
+1. Enable Kubernetes API audit by setting [`.spec.settings.apiserver.auditPolicyEnabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) in the `control-plane-manager` module.
+1. Set [`.spec.settings.audit.enabled: true`](/modules/virtualization/stable/configuration.html#parameters-audit-enabled) in the `virtualization` module:
 
    ```yaml
    spec:
@@ -252,9 +252,9 @@ To enable security event auditing:
          enabled: true
    ```
 
-For a complete list of configuration options, see [Configuration](./configuration.html).
+For a complete list of configuration options, see [Configuration](/modules/virtualization/configuration.html).
 
-Events are collected by the `virtualization-audit-*` pod in the `d8-virtualization` namespace. To forward events to the cluster logging system (e.g., Loki), create a ClusterLoggingConfig:
+Events are collected by the `virtualization-audit-*` pod in the `d8-virtualization` namespace. To forward events to the cluster logging system (e.g., Loki), create a [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
