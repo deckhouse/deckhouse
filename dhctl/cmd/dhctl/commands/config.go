@@ -120,7 +120,7 @@ func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		return template.PrepareKubeadmConfig(templateController, templateData)
+		return template.PreparePKI(templateController, "127.0.0.1", templateData)
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {

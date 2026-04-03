@@ -184,12 +184,17 @@ func PreparePKI(templateController *Controller, nodeIP string, templateData map[
 	return preparePKIWithDir(templateController, nodeIP, templateData, path)
 }
 
-func preparePKIWithDir(_ *Controller, _ string, templateData map[string]interface{}, pkiDir string) error {
-	dnsDomain := templateData["clusterDomain"].(string)
-	serviceCIDR := templateData["serviceSubnetCIDR"].(string)
-	ip := net.ParseIP("127.0.0.1")
+func preparePKIWithDir(_ *Controller, nodeIP string, templateData map[string]interface{}, pkiDir string) error {
+	cc := templateData["clusterConfiguration"].(map[string]interface{})
+	serviceCIDR := cc["serviceSubnetCIDR"].(string)
+	dnsDomain := cc["clusterDomain"].(string)
 
-	return pki.CreatePKIBundle("master", dnsDomain, ip, serviceCIDR, pki.WithPKIDir(pkiDir))
+	ip := net.ParseIP(nodeIP)
+	fmt.Println("two")
+	opt := pki.WithPKIDir("/pkitest/")
+	fmt.Println("three")
+
+	return pki.CreatePKIBundle("master", dnsDomain, ip, serviceCIDR, opt)
 }
 
 func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}) error {
