@@ -45,6 +45,10 @@ properties:
         type: array
         description: |
           Список зеркал для container registry.
+      mirrorsSchemes:
+        type: array
+        description: |
+          Протокол доступа к зеркалам container registry. Опция доступна только при заданном параметре `mirrors`.
       forceCheckDisabledControllers:
         description: |
           Список контроллеров, которые необходимо проверять, даже если количество реплик подов равняется 0 или контроллер находится в статусе `suspend` (приостановленный).
