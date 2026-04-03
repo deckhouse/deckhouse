@@ -42,7 +42,6 @@ check_container_running "kubernetes-api-proxy"
 mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
 cp {{ $kubeadmDir}}/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
 cp {{ $manifestsDir}}/pki /etc/kubernetes/
-kubeadm init phase certs all --config {{ $kubeadmDir}}/config.yaml
 kubeadm init phase kubeconfig all --config {{ $kubeadmDir}}/config.yaml
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd"

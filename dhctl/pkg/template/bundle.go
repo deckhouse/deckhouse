@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 )
 
@@ -180,21 +181,22 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 }
 
 func PreparePKI(templateController *Controller, nodeIP string, templateData map[string]interface{}) error {
-	path := fmt.Sprintf("%s/control-plane/pki", bashibleDir)
+	path := fmt.Sprintf("%s/control-plane", bashibleDir)
 	return preparePKIWithDir(templateController, nodeIP, templateData, path)
 }
 
-func preparePKIWithDir(_ *Controller, nodeIP string, templateData map[string]interface{}, pkiDir string) error {
+func preparePKIWithDir(_ *Controller, nodeIP string, templateData map[string]interface{}, path string) error {
 	cc := templateData["clusterConfiguration"].(map[string]interface{})
 	serviceCIDR := cc["serviceSubnetCIDR"].(string)
 	dnsDomain := cc["clusterDomain"].(string)
 
 	ip := net.ParseIP(nodeIP)
-	fmt.Println("two")
-	opt := pki.WithPKIDir("/pkitest/")
-	fmt.Println("three")
+	pkiDir := fmt.Sprintf("%s/pki", path)
+	pki.CreatePKIBundle("master", dnsDomain, ip, serviceCIDR, pki.WithPKIDir(pkiDir))
+	var files []kubeconfig.File
+	files = append(files, kubeconfig.Kubelet, kubeconfig.Admin, kubeconfig.ControllerManager, kubeconfig.Scheduler)
 
-	return pki.CreatePKIBundle("master", dnsDomain, ip, serviceCIDR, opt)
+	return kubeconfig.CreateKubeconfigFiles(files, kubeconfig.WithLocalAPIEndpoint(nodeIP), kubeconfig.WithOutDir(path+"/kubeconfig"), kubeconfig.WithCertificatesDir(pkiDir))
 }
 
 func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}) error {
