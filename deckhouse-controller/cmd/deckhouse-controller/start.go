@@ -28,18 +28,22 @@ import (
 	"syscall"
 	"time"
 
+	"crypto/tls"
+
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	aoapp "github.com/flant/addon-operator/pkg/app"
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
+
 	"github.com/shirou/gopsutil/v3/process"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+	"google.golang.org/grpc/credentials"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -496,6 +500,7 @@ func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context
 	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
 	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
 	insecureTransport := os.Getenv("TRACING_OTLP_INSECURE") == "true"
+	tlsSkipVerify := os.Getenv("TRACING_OTLP_TLS_SKIP_VERIFY") == "true"
 
 	if endpoint == "" {
 		return func(_ context.Context) error {
@@ -509,6 +514,13 @@ func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context
 
 	if insecureTransport {
 		opts = append(opts, otlptracegrpc.WithInsecure())
+	}
+	// TRACING_OTLP_TLS_SKIP_VERIFY replicates grpcurl -insecure: TLS is used
+	// but the server certificate is not verified. Useful when the ingress uses
+	// a self-signed or internally-signed cert that the pod does not trust.
+	if tlsSkipVerify {
+		//nolint:gosec // intentional operator-configured skip
+		opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
 	}
 
 	if authToken != "" {
