@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	istioReservedUID        int64 = 1337
+	istioReservedUID        int64 = 64535
 	istioProxyContainerName       = "istio-proxy"
 	istioCanonicalNameLabel       = "service.istio.io/canonical-name"
 	reservedUIDMetricsGroup       = "d8_istio_reserved_uid"

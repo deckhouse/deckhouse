@@ -91,8 +91,8 @@ spec:
             - ALL
           privileged: false
           readOnlyRootFilesystem: true
-          runAsGroup: 1337
-          runAsUser: 1337
+          runAsGroup: 64535
+          runAsUser: 64535
           runAsNonRoot: true
         imagePullPolicy: IfNotPresent
         {{- if (hasPrefix "1.25" $fullVersion) }}
@@ -104,10 +104,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "istio_proxy_resources" . | nindent 12 }}
-  {{- end }}
-
+            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "istio_proxy_resources" . | nindent 12 }}
+            {{- end }}
         ports:
         {{- if (hasPrefix "1.25" $fullVersion) }}
         - containerPort: 8443
