@@ -6,38 +6,19 @@
 {{- $geoproxyReady := $context.Values.ingressNginx.internal.geoproxyReady | default false }}
 {{- $checksum := toJson $crd | sha256sum }}
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
-{{- $resources := $crd.spec.resourcesManagement | default dict }}
+{{- $resourcesManagement := $crd.spec.resourcesManagement | default dict }}
 {{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 }}
 
-{{- if (has "vertical-pod-autoscaler" $context.Values.global.enabledModules) }}
+{{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: validator-{{ $name }}
   namespace: d8-ingress-nginx
-  {{ include "helm_lib_module_labels" (list $context (dict "app" "validator" "name" $name)) | nindent 2 }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "validator" "name" $name)) | nindent 2 }}
 spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: validator-{{ $name }}
-  {{- if eq ($resources.mode | default "") "VPA" }}
-  updatePolicy:
-    updateMode: {{ $resources.vpa.mode | default "Initial" | quote }}
-  resourcePolicy:
-    containerPolicies:
-      - containerName: validator
-        minAllowed:
-          cpu: {{ $resources.vpa.cpu.min | default "10m" | quote }}
-          memory: {{ $resources.vpa.memory.min | default "50Mi" | quote }}
-        maxAllowed:
-          cpu: {{ $resources.vpa.cpu.max | default "50m" | quote }}
-          memory: {{ $resources.vpa.memory.max | default "200Mi" | quote }}
-  {{- else }}
-  updatePolicy:
-    updateMode: "Off"
-  {{- end }}
+  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "Deployment" (printf "validator-%s" $name | quote) "validator" $resourcesManagement ) | nindent 2}}
 {{- end }}
 ---
 apiVersion: policy/v1
@@ -194,8 +175,8 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
-            {{- if eq ($resources.mode | default "") "Static" }}
-            {{- $resourcesManagementStatic := $resources.static | default dict }}
+            {{- if eq ($resourcesManagement.mode | default "") "Static" }}
+            {{- $resourcesManagementStatic := $resourcesManagement.static | default dict }}
             {{- $requests := $resourcesManagementStatic.requests | default dict }}
             cpu: {{ $requests.cpu | default "350m" | quote }}
             memory: {{ $requests.memory | default "500Mi" | quote }}

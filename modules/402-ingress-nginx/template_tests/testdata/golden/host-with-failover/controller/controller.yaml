@@ -13,12 +13,20 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: controller
+      controlledValues: RequestsAndLimits
       maxAllowed:
         cpu: 200m
         memory: 200Mi
       minAllowed:
+        cpu: null
+        memory: null
+    - containerName: kube-rbac-proxy
+      maxAllowed:
+        cpu: 20m
+        memory: 25Mi
+      minAllowed:
         cpu: 10m
-        memory: 50Mi
+        memory: 25Mi
   targetRef:
     apiVersion: apps.kruise.io/v1alpha1
     kind: DaemonSet
@@ -336,12 +344,20 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: controller
+      controlledValues: RequestsAndLimits
       maxAllowed:
         cpu: 200m
         memory: 200Mi
       minAllowed:
+        cpu: null
+        memory: null
+    - containerName: kube-rbac-proxy
+      maxAllowed:
+        cpu: 20m
+        memory: 25Mi
+      minAllowed:
         cpu: 10m
-        memory: 50Mi
+        memory: 25Mi
   targetRef:
     apiVersion: apps.kruise.io/v1alpha1
     kind: DaemonSet
