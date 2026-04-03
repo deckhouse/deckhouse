@@ -1,4 +1,4 @@
-{{ $imageAvailabilityExporterVersion := "0.14.0" }}
+{{ $imageAvailabilityExporterVersion := "0.15.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -20,7 +20,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
