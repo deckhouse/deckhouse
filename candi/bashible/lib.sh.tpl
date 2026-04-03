@@ -5,6 +5,9 @@ function bb-patch-instance-condition() {
   local reason="$3"
   local message="${4:-}"
   local max_condition_message_len=32768
+
+  return 0
+
   if [ "${#message}" -gt "${max_condition_message_len}" ]; then
     message="${message:0:${max_condition_message_len}}"
   fi
