@@ -45,10 +45,14 @@
   },
   "code": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
     "editionsWithRestrictions": [
-    "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
     "editionsWithRestrictionsComments": {
       "all": {
