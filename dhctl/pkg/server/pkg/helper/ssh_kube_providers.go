@@ -41,7 +41,7 @@ func CreateProviders(ctx context.Context, config string, logger log.Logger, isDe
 	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: isDebug, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: tmpDir}
 	sett := settings.NewBaseProviders(params)
 
-	sshConfig, err := sshconfig.ParseConnectionConfig(strings.NewReader(config), sett)
+	sshConfig, err := sshconfig.ParseConnectionConfig(strings.NewReader(config), sett, sshconfig.ParseWithRequiredSSHHost(false))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("parsing connection config: %w", err)
 	}
