@@ -84,7 +84,7 @@ func renewKubeconfigs() error {
 		[]kubeconfig.File{kubeconfig.Kubelet},
 		kubeconfig.WithLocalAPIEndpoint(config.MyIP),
 		kubeconfig.WithNodeName(config.NodeName),
-		kubeconfig.WithCertificatesDir("/etc/kubernetes/pki/temporary")); err != nil {
+		kubeconfig.WithOutDir("/etc/kubernetes/pki/temporary")); err != nil {
 		log.Error("failed to create kubelet config", slog.String("error", err.Error()))
 	}
 
