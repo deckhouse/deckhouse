@@ -202,12 +202,12 @@ spec:
                       additionalProperties:
                         format: date-time
                         type: string
-                      description: CertificatesExpirationDate maps cert file names to
-                        their NotAfter timestamps.
+                      description: CertificatesExpirationDate maps cert file names
+                        to their NotAfter timestamps.
                       type: object
                   type: object
                 description: |-
-                  ObservedState holds per-component observed state from an Observe operation.
+                  ObservedState holds per-component observed state from completed Observer operation.
                   For static pod components only: etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
                 type: object
             type: object

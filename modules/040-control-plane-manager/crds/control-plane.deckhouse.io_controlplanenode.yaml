@@ -65,12 +65,12 @@ spec:
                           CAChecksum is the hash of CA certificates applied to this component.
                           Set when the component's pod restarts with the new CA.
                         type: string
-                      certificatesExpiration:
+                      certificatesExpirationDate:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpiration maps cert file names to their NotAfter timestamps.
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
                           Only populated in status via Observe operation. Absent in spec.
                         type: object
                       configChecksum:
@@ -93,12 +93,12 @@ spec:
                           CAChecksum is the hash of CA certificates applied to this component.
                           Set when the component's pod restarts with the new CA.
                         type: string
-                      certificatesExpiration:
+                      certificatesExpirationDate:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpiration maps cert file names to their NotAfter timestamps.
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
                           Only populated in status via Observe operation. Absent in spec.
                         type: object
                       configChecksum:
@@ -121,12 +121,12 @@ spec:
                           CAChecksum is the hash of CA certificates applied to this component.
                           Set when the component's pod restarts with the new CA.
                         type: string
-                      certificatesExpiration:
+                      certificatesExpirationDate:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpiration maps cert file names to their NotAfter timestamps.
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
                           Only populated in status via Observe operation. Absent in spec.
                         type: object
                       configChecksum:
@@ -149,12 +149,12 @@ spec:
                           CAChecksum is the hash of CA certificates applied to this component.
                           Set when the component's pod restarts with the new CA.
                         type: string
-                      certificatesExpiration:
+                      certificatesExpirationDate:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpiration maps cert file names to their NotAfter timestamps.
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
                           Only populated in status via Observe operation. Absent in spec.
                         type: object
                       configChecksum:
@@ -197,12 +197,12 @@ spec:
                           CAChecksum is the hash of CA certificates applied to this component.
                           Set when the component's pod restarts with the new CA.
                         type: string
-                      certificatesExpiration:
+                      certificatesExpirationDate:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpiration maps cert file names to their NotAfter timestamps.
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
                           Only populated in status via Observe operation. Absent in spec.
                         type: object
                       configChecksum:
@@ -225,12 +225,12 @@ spec:
                           CAChecksum is the hash of CA certificates applied to this component.
                           Set when the component's pod restarts with the new CA.
                         type: string
-                      certificatesExpiration:
+                      certificatesExpirationDate:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpiration maps cert file names to their NotAfter timestamps.
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
                           Only populated in status via Observe operation. Absent in spec.
                         type: object
                       configChecksum:
@@ -253,12 +253,12 @@ spec:
                           CAChecksum is the hash of CA certificates applied to this component.
                           Set when the component's pod restarts with the new CA.
                         type: string
-                      certificatesExpiration:
+                      certificatesExpirationDate:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpiration maps cert file names to their NotAfter timestamps.
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
                           Only populated in status via Observe operation. Absent in spec.
                         type: object
                       configChecksum:
@@ -281,12 +281,12 @@ spec:
                           CAChecksum is the hash of CA certificates applied to this component.
                           Set when the component's pod restarts with the new CA.
                         type: string
-                      certificatesExpiration:
+                      certificatesExpirationDate:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpiration maps cert file names to their NotAfter timestamps.
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
                           Only populated in status via Observe operation. Absent in spec.
                         type: object
                       configChecksum:
