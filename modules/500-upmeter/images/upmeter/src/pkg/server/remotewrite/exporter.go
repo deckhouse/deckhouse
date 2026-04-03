@@ -30,6 +30,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -37,12 +38,31 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
-	"go.opentelemetry.io/contrib/exporters/metric/cortex"
 )
+
+// Config mirrors the fields previously imported from
+// go.opentelemetry.io/contrib/exporters/metric/cortex.Config.
+// Defined locally to avoid pulling in the deprecated cortex exporter
+// and its incompatible OTel v0.x transitive dependency tree.
+type Config struct {
+	Endpoint            string            `mapstructure:"url"`
+	RemoteTimeout       time.Duration     `mapstructure:"remote_timeout"`
+	Name                string            `mapstructure:"name"`
+	BasicAuth           map[string]string `mapstructure:"basic_auth"`
+	BearerToken         string            `mapstructure:"bearer_token"`
+	BearerTokenFile     string            `mapstructure:"bearer_token_file"`
+	TLSConfig           map[string]string `mapstructure:"tls_config"`
+	ProxyURL            *url.URL          `mapstructure:"proxy_url"`
+	PushInterval        time.Duration     `mapstructure:"push_interval"`
+	Quantiles           []float64         `mapstructure:"quantiles"`
+	HistogramBoundaries []float64         `mapstructure:"histogram_boundaries"`
+	Headers             map[string]string `mapstructure:"headers"`
+	Client              *http.Client
+}
 
 // exporter forwards metrics to a remote_write storage
 type exporter struct {
-	config cortex.Config
+	config Config
 }
 
 // Export sends metrics via HTTP
