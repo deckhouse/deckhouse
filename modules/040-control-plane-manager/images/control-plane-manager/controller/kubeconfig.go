@@ -34,7 +34,6 @@ import (
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -79,15 +78,6 @@ func renewKubeconfigs() error {
 			return err
 		}
 	}
-
-	if err := kubeconfig.CreateKubeconfigFiles(
-		[]kubeconfig.File{kubeconfig.Kubelet},
-		kubeconfig.WithLocalAPIEndpoint(config.MyIP),
-		kubeconfig.WithNodeName(config.NodeName),
-		kubeconfig.WithOutDir("/etc/kubernetes/pki/temporary")); err != nil {
-		log.Error("failed to create kubelet config", slog.String("error", err.Error()))
-	}
-
 	return nil
 }
 

@@ -1,6 +1,6 @@
 module control-plane-manager
 
-go 1.25.6
+go 1.25.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
