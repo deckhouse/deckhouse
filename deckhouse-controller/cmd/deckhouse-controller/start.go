@@ -40,7 +40,6 @@ import (
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
-	"google.golang.org/grpc/credentials/insecure"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -496,6 +495,7 @@ func (e *loggingOTLPSpanExporter) Shutdown(ctx context.Context) error {
 func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context.Context) error {
 	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
 	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
+	insecureTransport := os.Getenv("TRACING_OTLP_INSECURE") == "true"
 
 	if endpoint == "" {
 		return func(_ context.Context) error {
@@ -503,10 +503,13 @@ func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context
 		}
 	}
 
-	opts := make([]otlptracegrpc.Option, 0, 1)
+	opts := make([]otlptracegrpc.Option, 0, 3)
 
 	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
-	opts = append(opts, otlptracegrpc.WithTLSCredentials(insecure.NewCredentials()))
+
+	if insecureTransport {
+		opts = append(opts, otlptracegrpc.WithInsecure())
+	}
 
 	if authToken != "" {
 		opts = append(opts, otlptracegrpc.WithHeaders(map[string]string{
