@@ -118,7 +118,7 @@ func Register(mgr manager.Manager) error {
 		Watches(
 			&controlplanev1alpha1.ControlPlaneNode{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(nodeLabelPredicate),
+			builder.WithPredicates(nodeLabelPredicate, predicate.GenerationChangedPredicate{}),
 		).
 		Complete(r)
 }
@@ -663,7 +663,7 @@ func (r *Reconciler) ensureObserveExists(
 		return nil
 	}
 
-	opName := fmt.Sprintf("%s-observe", cpn.Name)
+	opName := fmt.Sprintf("%s-observer", cpn.Name)
 
 	for i := range ops {
 		if ops[i].Name == opName {
@@ -711,17 +711,17 @@ func applyObserveResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *controlp
 		return
 	}
 
-	if observed, ok := op.Status.ObservedState["etcd"]; ok && len(observed.CertificatesExpiration) > 0 {
-		cpn.Status.Components.Etcd.CertificatesExpiration = observed.CertificatesExpiration
+	if observed, ok := op.Status.ObservedState["etcd"]; ok && len(observed.CertificatesExpirationDate) > 0 {
+		cpn.Status.Components.Etcd.CertificatesExpirationDate = observed.CertificatesExpirationDate
 	}
-	if observed, ok := op.Status.ObservedState["kube-apiserver"]; ok && len(observed.CertificatesExpiration) > 0 {
-		cpn.Status.Components.KubeAPIServer.CertificatesExpiration = observed.CertificatesExpiration
+	if observed, ok := op.Status.ObservedState["kube-apiserver"]; ok && len(observed.CertificatesExpirationDate) > 0 {
+		cpn.Status.Components.KubeAPIServer.CertificatesExpirationDate = observed.CertificatesExpirationDate
 	}
-	if observed, ok := op.Status.ObservedState["kube-controller-manager"]; ok && len(observed.CertificatesExpiration) > 0 {
-		cpn.Status.Components.KubeControllerManager.CertificatesExpiration = observed.CertificatesExpiration
+	if observed, ok := op.Status.ObservedState["kube-controller-manager"]; ok && len(observed.CertificatesExpirationDate) > 0 {
+		cpn.Status.Components.KubeControllerManager.CertificatesExpirationDate = observed.CertificatesExpirationDate
 	}
-	if observed, ok := op.Status.ObservedState["kube-scheduler"]; ok && len(observed.CertificatesExpiration) > 0 {
-		cpn.Status.Components.KubeScheduler.CertificatesExpiration = observed.CertificatesExpiration
+	if observed, ok := op.Status.ObservedState["kube-scheduler"]; ok && len(observed.CertificatesExpirationDate) > 0 {
+		cpn.Status.Components.KubeScheduler.CertificatesExpirationDate = observed.CertificatesExpirationDate
 	}
 
 	now := metav1.Now()

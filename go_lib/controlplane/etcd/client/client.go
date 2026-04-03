@@ -385,26 +385,20 @@ func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface
 func (c *Client) getClusterStatus() (map[string]*clientv3.StatusResponse, error) {
 	clusterStatus := make(map[string]*clientv3.StatusResponse)
 	for _, ep := range c.Endpoints() {
+		// Gets the member status
 		var lastError error
 		var resp *clientv3.StatusResponse
 		err := wait.PollUntilContextTimeout(context.Background(), constants.EtcdAPICallRetryInterval, constants.EtcdAPICallTimeout,
 			true, func(_ context.Context) (bool, error) {
-				var statusClient Interface
-				if c.newEtcdClient != nil {
-					cli, err := c.newEtcdClient(c.Endpoints())
-					if err != nil {
-						lastError = err
-						return false, nil
-					}
-					defer func() { _ = cli.Close() }()
-					statusClient = cli
-				} else {
-					statusClient = c
+				cli, err := c.newEtcdClient(c.Endpoints())
+				if err != nil {
+					lastError = err
+					return false, nil
 				}
+				defer func() { _ = cli.Close() }()
 
 				ctx, cancel := context.WithTimeout(context.Background(), etcdTimeout)
-				var err error
-				resp, err = statusClient.Status(ctx, ep)
+				resp, err = cli.Status(ctx, ep)
 				cancel()
 				if err == nil {
 					return true, nil

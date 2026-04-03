@@ -198,11 +198,11 @@ spec:
                   description: ObservedComponentState holds the observed certificate
                     state of a single control plane component.
                   properties:
-                    certificatesExpiration:
+                    certificatesExpirationDate:
                       additionalProperties:
                         format: date-time
                         type: string
-                      description: CertificatesExpiration maps cert file names to
+                      description: CertificatesExpirationDate maps cert file names to
                         their NotAfter timestamps.
                       type: object
                   type: object

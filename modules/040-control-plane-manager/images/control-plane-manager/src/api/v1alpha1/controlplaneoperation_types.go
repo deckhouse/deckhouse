@@ -146,9 +146,9 @@ type ControlPlaneOperationSpec struct {
 
 // ObservedComponentState holds the observed certificate state of a single control plane component.
 type ObservedComponentState struct {
-	// CertificatesExpiration maps cert file names to their NotAfter timestamps.
+	// CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
 	// +optional
-	CertificatesExpiration map[string]metav1.Time `json:"certificatesExpiration,omitempty"`
+	CertificatesExpirationDate map[string]metav1.Time `json:"certificatesExpirationDate,omitempty"`
 }
 
 // ControlPlaneOperationStatus defines the observed state of ControlPlaneOperation.
