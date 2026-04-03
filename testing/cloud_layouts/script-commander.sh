@@ -455,7 +455,7 @@ function prepare_environment() {
 
 function get_opentofu() {
   rm -rf $cwd/plugins
-  CONTAINER_ID=$(docker create "${INSTALL_IMAGE_NAME}")
+  CONTAINER_ID=$(docker create --pull always "${INSTALL_IMAGE_NAME}")
   docker cp "${CONTAINER_ID}:/bin/opentofu" $cwd/opentofu
   docker cp "${CONTAINER_ID}:/plugins" $cwd/
   docker rm "$CONTAINER_ID"
@@ -480,7 +480,7 @@ function bootstrap_static() {
   get_opentofu
 
   if [[ ${PROVIDER} == "Static" ]]; then
-    $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+    $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
   elif [[ ${PROVIDER} == "Static-cse" ]]; then
     $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
   fi
