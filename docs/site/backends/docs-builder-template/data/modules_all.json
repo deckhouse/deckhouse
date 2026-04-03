@@ -47,6 +47,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+    "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
     "tags": [
       "application",
       "web ui"
