@@ -437,7 +437,7 @@ function prepare_environment() {
     ;;
 
   "Static-cse")
-    cwd=$(pwd)/../testing/cloud_layouts/Static
+    cwd=$(pwd)/../testing/cloud_layouts/Static-cse
     export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
     export TF_VAR_PREFIX="$PREFIX"
 
