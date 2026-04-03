@@ -125,3 +125,7 @@ https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
 This patch fixes rewrite-target CVE-2026-3288 in Ingress-NGINX
 
 https://github.com/kubernetes/kubernetes/issues/137560
+
+### 024-fix-cve-2026-4342.patch
+
+This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issues/137893.
