@@ -720,12 +720,12 @@ spec:
                             max:
                               description: |
                                 Maximum value of allowed CPU requests to be submitted by the VPA.
-                              default: '50m'
+                              default: '1500m'
                               type: string
                             min:
                               description: |
                                 Minimum value of allowed CPU requests to be submitted by the VPA.
-                              default: '10m'
+                              default: '100m'
                               type: string
                             limitRatio:
                               type: number
@@ -741,12 +741,12 @@ spec:
                             max:
                               description: |
                                 Maximum value of allowed memory requests to be submitted by the VPA.
-                              default: '200Mi'
+                              default: '2000Mi'
                               type: string
                             min:
                               description: |
                                 Minimum value of allowed memory requests to be submitted by the VPA.
-                              default: '50Mi'
+                              default: '500Mi'
                               type: string
                             limitRatio:
                               type: number
@@ -1678,12 +1678,12 @@ spec:
                             max:
                               description: |
                                 Maximum value of allowed CPU requests to be submitted by the VPA.
-                              default: '50m'
+                              default: '1500m'
                               type: string
                             min:
                               description: |
                                 Minimum value of allowed CPU requests to be submitted by the VPA.
-                              default: '10m'
+                              default: '100m'
                               type: string
                             limitRatio:
                               type: number
@@ -1699,12 +1699,12 @@ spec:
                             max:
                               description: |
                                 Maximum value of allowed memory requests to be submitted by the VPA.
-                              default: '200Mi'
+                              default: '2000Mi'
                               type: string
                             min:
                               description: |
                                 Minimum value of allowed memory requests to be submitted by the VPA.
-                              default: '50Mi'
+                              default: '500Mi'
                               type: string
                             limitRatio:
                               type: number

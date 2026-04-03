@@ -165,7 +165,7 @@ spec:
         max: 100m
         limitRatio: 1.5
       memory:
-        max: 200Mi
+        max: 2000Mi
         limitRatio: 2
   hostPortWithProxyProtocol:
     httpPort: 80
@@ -262,12 +262,12 @@ spec:
     "cpu": {
       "limitRatio": 1.5,
       "max": "100m",
-      "min": "10m"
+      "min": "100m"
     },
     "memory": {
       "limitRatio": 2,
-      "max": "200Mi",
-      "min": "50Mi"
+      "max": "2000Mi",
+      "min": "500Mi"
     },
     "mode": "Auto"
   }
