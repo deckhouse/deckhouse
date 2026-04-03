@@ -18,6 +18,7 @@ package controlplanenode
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -52,6 +53,8 @@ const (
 	cacheSyncTimeout        = 3 * time.Minute
 	requeueInterval         = 5 * time.Minute
 )
+
+var errStatusConflict = errors.New("status update conflict")
 
 type Reconciler struct {
 	client client.Client
@@ -155,6 +158,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	if err := r.updateStatusFromOperations(ctx, cpn, states, ops.Items); err != nil {
+		// Using update - may be status conflicts, requeue to try again.
+		if errors.Is(err, errStatusConflict) {
+			return reconcile.Result{Requeue: true}, nil
+		}
 		return reconcile.Result{}, err
 	}
 
@@ -491,7 +498,13 @@ func (r *Reconciler) updateStatusFromOperations(
 	if reflect.DeepEqual(original.Status, cpn.Status) {
 		return nil
 	}
-	return r.client.Status().Update(ctx, cpn)
+	if err := r.client.Status().Update(ctx, cpn); err != nil {
+		if apierrors.IsConflict(err) {
+			return errStatusConflict
+		}
+		return err
+	}
+	return nil
 }
 
 // findOperationForState finds the single current CPO for a given component state.
