@@ -59,10 +59,10 @@ func filterApiCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 }
 
 func copyCAPairToModuleValues(_ context.Context, input *go_hook.HookInput) error {
-	if !(input.Values.Get("controlPlaneManager.apiserver.publishAPI.ingress.https.mode").Value() == "SelfSigned") {
-		fmt.Println("https mode is not SelfSigned, skipping")
-		return nil
-	}
+	// if !(input.Values.Get("controlPlaneManager.apiserver.publishAPI.ingress.https.mode").Value() == "SelfSigned") {
+	// 	fmt.Println("https mode is not SelfSigned, skipping")
+	// 	return nil
+	// }
 
 	keyPairs := input.Snapshots.Get("secret_publishapi_selfsigned_ca_migration")
 	fmt.Println(keyPairs[0])
