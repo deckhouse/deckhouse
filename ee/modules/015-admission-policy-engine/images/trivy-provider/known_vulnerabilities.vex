@@ -7,17 +7,34 @@
     {
       "vulnerability": {
         "@id": "https://bdu.fstec.ru/vul/2025-09312",
-        "description": "A vulnerability in the firewalld daemon ...",
+        "description": "A vulnerability in the firewalld daemon, part of the Moby containerization framework, is related to improper resource initialization. Exploitation of this vulnerability could allow an attacker to gain unauthorized access to protected information.",
         "name": "CVE-2025-54410",
         "aliases": [ "BDU:2025-09312" ]
       },
       "products": [
-        { "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible" },
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Moby is an open source container framework developed by Docker Inc. that is distributed as Docker Engine, Mirantis Container Runtime, and various other downstream projects/products. A firewalld firewall controller daemon vulnerability affects Moby releases before 28.0.0. When firewalld reloads, Docker fails to re-create iptables rules that isolate bridge networks, allowing any container to access all ports on any other container across different bridge networks on the same host. Deckhouse Kubernetes Platform is not vulnerable as it does not use this functionality for container isolation.",
+      "timestamp": "2025-10-14T11:19:11.56805Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-33997",
+        "description": "Off-by-one error in plugin privilege validation",
+        "name": "CVE-2026-33997",
+        "aliases": [ "GHSA-pxq6-2prw-chj9" ]
+      },
+      "products": [
         { "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible" }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Moby is an open source ...",
+      "impact_statement": "Prior to version 29.3.1, a security vulnerability has been detected that allows plugins privilege validation to be bypassed during docker plugin install. Due to an error in the daemon's privilege comparison logic, the daemon may incorrectly accept a privilege set that differs from the one approved by the user. Plugins that request exactly one privilege are also affected, because no comparison is performed at all. This issue has been patched in version 29.3.1. Deckhouse Kubernetes Platform is not affeceted by this since it does not ship or use Docker daemon or it's plugins in any way.",
       "timestamp": "2025-10-14T11:19:11.56805Z"
     }
   ],
