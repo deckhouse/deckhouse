@@ -4,6 +4,7 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 ---
 
 ## v1.7.0
+
 <span style="opacity:0.6; font-style:italic; font-size:0.9em;">
 Release date: March 31, 2026.
 </span>

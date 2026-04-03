@@ -5,6 +5,7 @@ lang: ru
 ---
 
 ## v1.7.0
+
 <span style="opacity:0.6; font-style:italic; font-size:0.9em;">
 Дата релиза: 31 марта 2026.
 </span>
