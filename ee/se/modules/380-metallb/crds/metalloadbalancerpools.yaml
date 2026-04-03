@@ -39,8 +39,9 @@ spec:
                     type: string
                   type: array
                   description: |-
-                    An array of public IP address ranges. Each range can be specified using a CIDR notation or
-                    by directly specifying the range, for example, `10.10.10.1-10.10.10.100`.
+                    An array of public IP address ranges. 
+                    
+                    Each range can be specified using a CIDR notation or by directly specifying the range, for example, `10.10.10.1-10.10.10.100`.
             status:
               type: object
           type: object
