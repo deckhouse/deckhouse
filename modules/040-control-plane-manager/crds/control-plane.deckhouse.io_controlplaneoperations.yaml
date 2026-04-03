@@ -201,16 +201,16 @@ spec:
                   description: ObservedComponentState holds the observed certificate
                     state of a single control plane component.
                   properties:
-                    certificatesExpiration:
+                    certificatesExpirationDate:
                       additionalProperties:
                         format: date-time
                         type: string
-                      description: CertificatesExpiration maps cert file names to
-                        their NotAfter timestamps.
+                      description: CertificatesExpirationDate maps cert file names
+                        to their NotAfter timestamps.
                       type: object
                   type: object
                 description: |-
-                  ObservedState holds per-component observed state from an Observe operation.
+                  ObservedState holds per-component observed state from completed Observer operation.
                   For static pod components only: etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
                 type: object
             type: object
