@@ -41,7 +41,7 @@ bb-kubectl-exec() {
   local args=""
 {{ if eq .runType "Normal" }}
   local kube_server
-  kube_server=$(kubectl --kubeconfig="$kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
+  kube_server=$(yq '.clusters[0].cluster.server' "$kubeconfig" 2>/dev/null)
   if [[ "$kube_server" == "https://127.0.0.1:6445" ]]; then
     args="--server=$kube_server"
   elif [[ -n "$kube_server" ]]; then
