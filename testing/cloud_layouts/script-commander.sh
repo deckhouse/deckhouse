@@ -479,14 +479,11 @@ function bootstrap_static() {
 
   get_opentofu
 
-  ls -la
-  set -x
   if [[ ${PROVIDER} == "Static" || ${PROVIDER} == "Static-cse" ]]; then
     $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
   fi
 
   $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
-  set +
 
   if [[ ${PROVIDER} == "Static" ]]; then
 
