@@ -1360,7 +1360,12 @@ How to work with bootable block devices in the web interface:
 - Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
-- You can add, extract, delete, resize, and reorder bootable block devices in the "Boot Disks" section.
+- In the "Boot Disks" section you can:
+  - `Add`: Attach a new disk or image to the VM.
+  - `Extract`: Detach the device from the VM (the image or disk remains in the project and can be attached again to this or another VM).
+  - `Delete`: Remove the image or disk resource from the cluster (after deletion it cannot be reused).
+  - `Resize`: Change the size of the disk.
+  - `Reorder`: Change the boot order of devices.
 
 #### Additional Block Devices
 
@@ -1451,7 +1456,11 @@ How to work with additional block devices in the web interface:
 - Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
-- You can add, extract, delete, and resize additional block devices in the "Additional Disks" section.
+- In the "Additional Disks" section you can:
+  - `Add`: Attach a new disk or image to the VM.
+  - `Extract`: Detach the device from the VM (the image or disk remains in the project and can be attached again to this or another VM).
+  - `Delete`: Remove the image or disk resource from the cluster (after deletion it cannot be reused).
+  - `Resize`: Change the size of the disk.
 
 #### Disk naming in guest OS
 
@@ -1528,6 +1537,10 @@ Use stable identifiers instead of `ethX`:
 - **MAC address binding** — in `netplan`, `systemd-networkd`, or `/etc/network/interfaces` configuration (preferred for guaranteed stability)
 
 In configuration files and scripts, use stable interface names (`enpXsY`) or MAC address binding instead of `ethX` names.
+
+{% alert level="info" %}
+Predictable interface order works only on guest OS with systemd (e.g. Ubuntu, Debian). On Alpine and other distros without systemd the order may not match.
+{% endalert %}
 
 ### Organizing interaction with virtual machines
 
@@ -2060,7 +2073,13 @@ NAME             VIRTUALMACHINEIPADDRESS                              STATUS   A
 ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
-`VirtualMachineIPAddress` (`vmip`) resource: A project/namespace resource that is responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or by explicit request.
+[VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) resource: A project/namespace resource that is responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or by explicit request.
+
+After creation, the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource can have the following `Phase` values:
+
+- `Pending`: Resource is being created.
+- `Bound`: [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) is bound to the [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) resource.
+- `Attached`: [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) is attached to the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
 By default, an ip address is automatically assigned to a virtual machine from the subnets defined in the module and is assigned to it until it is deleted. You can check the assigned ip address using the command:
 

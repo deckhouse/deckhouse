@@ -156,7 +156,7 @@ Golden image — это предварительно настроенный об
    systemctl start qemu-guest-agent
    ```
 
-1. Установите политику запуска ВМ [runPolicy: AlwaysOnUnlessStoppedManually](/modules/virtualization/stable/cr.html#virtualmachine-v1alpha2-spec-runpolicy) — это потребуется, чтобы ВМ можно было выключить.
+1. Установите политику запуска ВМ [`runPolicy: AlwaysOnUnlessStoppedManually`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) — это потребуется, чтобы ВМ можно было выключить.
 
 1. Подготовьте образ. Очистите неиспользуемые блоки файловой системы:
 

@@ -52,7 +52,7 @@ func (c PortsCheck) Run(ctx context.Context) error {
 }
 
 func checkAvailabilityPorts(ctx context.Context, nodeInterface node.Interface) error {
-	file, err := template.RenderAndSavePreflightCheckPortsScript()
+	file, err := template.RenderAndSavePreflightCheckPortsScript(nil)
 	if err != nil {
 		return err
 	}

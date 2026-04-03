@@ -6,11 +6,11 @@
 Deckhouse использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в `mainNetwork`, вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
 {% endalert %}
 
-* **User** с необходимым [набором прав](#создание-и-назначение-роли).
+* **User** с необходимым [набором привилегий](#создание-и-назначение-роли).
 * **Network** с DHCP и доступом в интернет.
 * **Datacenter** с соответствующим тегом [`k8s-region`](#создание-тегов-и-категорий-тегов).
 * **Cluster** с соответствующим тегом [`k8s-zone`](#создание-тегов-и-категорий-тегов).
-* **Datastore** в любом количестве, с соответствующими [тегами](#конфигурация-datastore).
+* **Datastore** в любом количестве, с соответствующими [тегами](#настройка-datastore).
 * **Template** — [подготовленный](#подготовка-образа-виртуальной-машины) образ виртуальной машины.
 
 ## Конфигурация vSphere
@@ -70,7 +70,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 ```
 {% endsnippetcut %}
 
-#### Конфигурация Datastore
+#### Настройка Datastore
 
 {% alert level="warning" %}
 Для динамического заказа `PersistentVolume` необходимо, чтобы `Datastore` был доступен на **каждом** хосте ESXi (shared datastore).
@@ -93,21 +93,46 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 {% alert %}
 Ввиду разнообразия подключаемых к vSphere SSO-провайдеров шаги по созданию пользователя в данной статье не рассматриваются.
 
-Роль, которую предлагается создать далее, включает в себя все возможные права для всех компонентов Deckhouse.
-Для получения детального списка привилегий, обратитесь [к документации](/modules/cloud-provider-vsphere/configuration.html#список-необходимых-привилегий).
-При необходимости получения более гранулярных прав обратитесь в техподдержку Deckhouse.
+Роль, которую предлагается создать далее, включает в себя привилегии из раздела [«Список необходимых привилегий»](/modules/cloud-provider-vsphere/environment.html#список-необходимых-привилегий). При необходимости более гранулярных прав обратитесь в техподдержку Deckhouse.
 {% endalert %}
 
-Создайте роль с необходимыми правами:
+Создайте роль с необходимыми привилегиями:
 
 {% snippetcut %}
 ```shell
 govc role.create deckhouse \
-   Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
-   Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
-   VcIdentityProviders.Read \
-   Infraprofile.Read\
-   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.' -e 'Host.Cim.' -e 'Host.Config.' -e 'Profile.' -e 'VApp.')
+   Cns.Searchable \
+   Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
+   Folder.Create Folder.Delete Folder.Move Folder.Rename \
+   Global.GlobalTag Global.SystemTag \
+   InventoryService.Tagging.AttachTag InventoryService.Tagging.CreateCategory \
+   InventoryService.Tagging.CreateTag InventoryService.Tagging.DeleteCategory \
+   InventoryService.Tagging.DeleteTag InventoryService.Tagging.EditCategory \
+   InventoryService.Tagging.EditTag InventoryService.Tagging.ModifyUsedByForCategory \
+   InventoryService.Tagging.ModifyUsedByForTag InventoryService.Tagging.ObjectAttachable \
+   Network.Assign \
+   Resource.AssignVMToPool Resource.CreatePool Resource.DeletePool Resource.EditPool Resource.RenamePool \
+   StorageProfile.View \
+   System.Anonymous System.Read System.View \
+   VApp.ApplicationConfig VApp.AssignResourcePool VApp.AssignVM VApp.Create VApp.Delete \
+   VApp.ExtractOvfEnvironment VApp.Import VApp.InstanceConfig VApp.PowerOff VApp.PowerOn VApp.ResourceConfig \
+   VirtualMachine.Config.AddExistingDisk VirtualMachine.Config.AddNewDisk VirtualMachine.Config.AddRemoveDevice \
+   VirtualMachine.Config.AdvancedConfig VirtualMachine.Config.Annotation VirtualMachine.Config.CPUCount \
+   VirtualMachine.Config.ChangeTracking VirtualMachine.Config.DiskExtend VirtualMachine.Config.DiskLease \
+   VirtualMachine.Config.EditDevice VirtualMachine.Config.ManagedBy VirtualMachine.Config.Memory \
+   VirtualMachine.Config.QueryUnownedFiles VirtualMachine.Config.RawDevice VirtualMachine.Config.ReloadFromPath \
+   VirtualMachine.Config.RemoveDisk VirtualMachine.Config.Rename VirtualMachine.Config.ResetGuestInfo \
+   VirtualMachine.Config.Resource VirtualMachine.Config.Settings VirtualMachine.Config.SwapPlacement \
+   VirtualMachine.Config.UpgradeVirtualHardware \
+   VirtualMachine.GuestOperations.Query \
+   VirtualMachine.Interact.AnswerQuestion VirtualMachine.Interact.DeviceConnection \
+   VirtualMachine.Interact.GuestControl VirtualMachine.Interact.PowerOff VirtualMachine.Interact.PowerOn \
+   VirtualMachine.Interact.Reset VirtualMachine.Interact.SetCDMedia VirtualMachine.Interact.ToolsInstall \
+   VirtualMachine.Inventory.Create VirtualMachine.Inventory.CreateFromExisting VirtualMachine.Inventory.Delete \
+   VirtualMachine.Inventory.Move \
+   VirtualMachine.Provisioning.Clone VirtualMachine.Provisioning.Customize VirtualMachine.Provisioning.DeployTemplate \
+   VirtualMachine.Provisioning.GetVmFiles VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
+   VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
 {% endsnippetcut %}
 

@@ -282,6 +282,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(c.logger),
 		),
+		nil,
 	)
 	if err != nil {
 		log.ErrorLn(err)

@@ -63,6 +63,9 @@ data:
           "deckhouse-ru-5.*" "ru";
           "deckhouse-ru-6.*" "ru";
           "deckhouse-ru-7.*" "ru";
+          "deckhouse-ru-8.*" "ru";
+          "deckhouse-ru-9.*" "ru";
+          "deckhouse-ru-10.*" "ru";
           default       "en";
       }
 

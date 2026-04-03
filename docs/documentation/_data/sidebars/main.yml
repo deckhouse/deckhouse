@@ -1282,6 +1282,9 @@ entries:
                     en: Cloud-provider-vcd module
                     ru: Модуль cloud-provider-vcd
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vcd.html
+                    en: Cloud-provider-openstack module
+                    ru: Модуль cloud-provider-openstack
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-openstack.html
                 - title:
                     en: Cloud-provider-yandex module
                     ru: Модуль cloud-provider-yandex
@@ -1381,11 +1384,15 @@ entries:
             - title:
                 en: Snapshot-controller module
                 ru: Модуль snapshot-controller
-              url: /architecture/storage/snapshot-controller.html          
+              url: /architecture/storage/snapshot-controller.html
             - title:
                 en: Sds-local-volume module
                 ru: Модуль sds-local-volume
-              url: /architecture/storage/sds-local-volume.html      
+              url: /architecture/storage/sds-local-volume.html
+            - title:
+                en: Sds-node-configurator module
+                ru: Модуль sds-node-configurator
+              url: /architecture/storage/sds-node-configurator.html               
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
