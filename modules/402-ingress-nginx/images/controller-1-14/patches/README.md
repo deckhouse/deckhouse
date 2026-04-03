@@ -142,3 +142,7 @@ This patch sets go version to 1.25 to comply with current Deckhouse build image.
 ### 022-stable-config-hash-metric-04.patch
 
 This patch updates the way config_hash controller metric is calculated so that all pods of a controller report the same value
+
+### 023-fix-cve-2026-4342.patch
+
+This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issues/137893.
