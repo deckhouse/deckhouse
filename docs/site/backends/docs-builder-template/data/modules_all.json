@@ -250,7 +250,7 @@
       "managed services"
     ],
     "external": "true",
-    "path": "/modules/kafka/"
+    "path": "/modules/managed-kafka/"
   },
   "managed-postgres": {
     "editions": [
