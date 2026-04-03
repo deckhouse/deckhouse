@@ -40,7 +40,6 @@ const (
 
 // core conditions checked for install/ready states
 var coreConds = []string{
-	string(status.ConditionDownloaded),
 	string(status.ConditionReadyOnFilesystem),
 	string(status.ConditionReadyInRuntime),
 	string(status.ConditionReadyInCluster),
