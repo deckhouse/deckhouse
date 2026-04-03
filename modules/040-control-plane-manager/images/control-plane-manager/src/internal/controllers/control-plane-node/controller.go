@@ -281,6 +281,11 @@ func (r *Reconciler) ensureOperationsExist(
 
 		op := newControlPlaneOperation(cpn, operationName, state, commands)
 		if err := r.client.Create(ctx, op); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				logger.Debug("ControlPlaneOperation already exists (race), skipping",
+					slog.String("operation", operationName))
+				continue
+			}
 			return fmt.Errorf("create ControlPlaneOperation %s: %w", operationName, err)
 		}
 		logger.Info("ControlPlaneOperation created",
@@ -699,6 +704,9 @@ func (r *Reconciler) ensureObserveExists(
 	}
 
 	if err := r.client.Create(ctx, op); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return nil
+		}
 		return fmt.Errorf("create Observe operation %s: %w", opName, err)
 	}
 	logger.Info("Observe operation created", slog.String("operation", opName))
