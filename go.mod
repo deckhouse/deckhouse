@@ -355,7 +355,7 @@ require (
 	k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f // indirect
 	oras.land/oras-go v1.2.6 // indirect
 	sigs.k8s.io/kustomize/api v0.19.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
 )
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
