@@ -64,6 +64,42 @@
     "external": "true",
     "path": "/modules/code/stable/"
   },
+  "managed-cassandra": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-cassandra/"
+  },
+  "managed-hive-metastore": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-hive-metastore/"
+  },
+  "managed-kafka": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/kafka/"
+  },
   "managed-postgres": {
     "editions": [
       "ee",
@@ -71,7 +107,7 @@
       "se-plus"
     ],
     "tags": [
-      "database"
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-postgres/"
@@ -83,10 +119,22 @@
       "se-plus"
     ],
     "tags": [
-      "database"
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-memcached/"
+  },
+  "managed-trino": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-trino/"
   },
   "managed-valkey": {
     "editions": [
@@ -95,7 +143,7 @@
       "se-plus"
     ],
     "tags": [
-      "database"
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-valkey/"
