@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
       this.canvas = this.initializeCanvas();
       this.ctx = this.canvas.getContext('2d');
       this.nav = this.initializeNav();
+      this.bindResizeHandler();
     }
 
     initializeCanvas() {
@@ -70,6 +71,18 @@ document.addEventListener('DOMContentLoaded', () => {
       this.container.appendChild(nav.container);
 
       return nav;
+    }
+
+    bindResizeHandler() {
+      let v = this;
+
+      window.addEventListener('resize', function () {
+        if (!v.pdfDoc) {
+          return;
+        };
+        
+        v.queueRenderPage(v.pageNum);
+      });
     }
 
     renderPage(num) {

@@ -125,7 +125,6 @@ require (
 	github.com/itchyny/gojq v0.12.18 // indirect
 	github.com/miekg/dns v1.1.61 // indirect
 	github.com/name212/govalue v1.0.2 // indirect
-	github.com/natefinch/atomic v1.0.1 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.5.3 // indirect
 	github.com/redis/go-redis/v9 v9.10.0 // indirect
@@ -133,7 +132,6 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/sigstore/protobuf-specs v0.5.0 // indirect
 	github.com/sigstore/sigstore v1.10.4 // indirect
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yannh/kubeconform v0.6.7 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.63.0 // indirect
