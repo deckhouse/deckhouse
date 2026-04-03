@@ -27,11 +27,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
+	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
-	taskdownload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/download"
-	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
-	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
+	taskremove "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/remove"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
@@ -78,8 +77,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	r.status.ClearRuntimeConditions(name)
 
 	tasks := []queue.Task{
-		taskdownload.NewModuleTask(name, version, repo, r.installer, r.status, r.logger),
-		taskinstall.NewModuleTask(name, version, repo, r.installer, r.status, r.logger),
+		taskdeploy.NewModuleTask(name, version, repo, r.modulesDeployer, r.status, r.logger),
 		taskload.NewModuleTask(name, repo, r.loadModule, r.status, r.logger),
 	}
 
@@ -161,5 +159,5 @@ func (r *Runtime) RemoveModule(name string) {
 		}()
 	})
 
-	r.queueService.Enqueue(ctx, name, taskuninstall.NewModuleTask(name, r.installer, r.logger), cleanup)
+	r.queueService.Enqueue(ctx, name, taskremove.NewTask(name, r.modulesDeployer, r.logger), cleanup)
 }

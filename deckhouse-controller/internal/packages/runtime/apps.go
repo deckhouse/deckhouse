@@ -29,11 +29,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
+	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
-	taskdownload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/download"
-	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
-	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
+	taskremove "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/remove"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
@@ -108,8 +107,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.status.ClearRuntimeConditions(name)
 
 	tasks := []queue.Task{
-		taskdownload.NewAppTask(name, packageName, version, repo, r.installer, r.status, r.logger),
-		taskinstall.NewAppTask(name, packageName, version, repo, r.installer, r.status, r.logger),
+		taskdeploy.NewAppTask(name, packageName, version, repo, r.appsDeployer, r.status, r.logger),
 		taskload.NewAppTask(name, repo, r.loadApp, r.status, r.logger),
 	}
 
@@ -196,5 +194,5 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 		}()
 	})
 
-	r.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, r.installer, r.logger), cleanup)
+	r.queueService.Enqueue(ctx, name, taskremove.NewTask(name, r.appsDeployer, r.logger), cleanup)
 }

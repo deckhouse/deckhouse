@@ -27,7 +27,6 @@ const (
 	ConditionReasonCreatePackageDir status.ConditionReason = "CreatePackageDir"
 	ConditionReasonRemoveOldVersion status.ConditionReason = "RemoveOldVersion"
 	ConditionReasonCreateSymlink    status.ConditionReason = "CreateSymlink"
-	ConditionReasonCheckMount       status.ConditionReason = "CheckMount"
 	ConditionReasonCheckVersion     status.ConditionReason = "CheckVersion"
 )
 
@@ -36,7 +35,7 @@ func newDownloadErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonDownload,
 				Message: err.Error(),
@@ -50,7 +49,7 @@ func newCreatePackageDirErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonCreatePackageDir,
 				Message: err.Error(),
@@ -81,20 +80,6 @@ func newCreateSymlinkErr(err error) error {
 				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonCreateSymlink,
-				Message: err.Error(),
-			},
-		},
-	}
-}
-
-func newCheckMountErr(err error) error {
-	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionReadyOnFilesystem,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonCheckMount,
 				Message: err.Error(),
 			},
 		},

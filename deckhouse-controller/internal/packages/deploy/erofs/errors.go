@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	ConditionReasonGetRootHash    status.ConditionReason = "GetRootHash"
-	ConditionReasonGetImageReader status.ConditionReason = "GetImageReader"
-	ConditionReasonImageByTar     status.ConditionReason = "ImageByTar"
+	ConditionReasonCreatePackageDir status.ConditionReason = "CreatePackageDir"
+	ConditionReasonGetRootHash      status.ConditionReason = "GetRootHash"
+	ConditionReasonGetImageReader   status.ConditionReason = "GetImageReader"
+	ConditionReasonImageByTar       status.ConditionReason = "ImageByTar"
 
 	ConditionReasonUnmount            status.ConditionReason = "Unmount"
 	ConditionReasonCloseDeviceMapper  status.ConditionReason = "CloseDeviceMapper"
@@ -34,12 +35,26 @@ const (
 	ConditionReasonMount              status.ConditionReason = "Mount"
 )
 
+func newCreatePackageDirErr(err error) error {
+	return &status.Error{
+		Err: err,
+		Conditions: []status.Condition{
+			{
+				Type:    status.ConditionReadyOnFilesystem,
+				Status:  metav1.ConditionFalse,
+				Reason:  ConditionReasonCreatePackageDir,
+				Message: err.Error(),
+			},
+		},
+	}
+}
+
 func newGetRootHashErr(err error) error {
 	return &status.Error{
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonGetRootHash,
 				Message: err.Error(),
@@ -53,7 +68,7 @@ func newGetImageReaderErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonGetImageReader,
 				Message: err.Error(),
@@ -67,7 +82,7 @@ func newImageByTarErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonImageByTar,
 				Message: err.Error(),
