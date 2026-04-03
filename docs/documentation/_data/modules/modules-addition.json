@@ -500,11 +500,11 @@
       },
       "cse-lite": {
         "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
-        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse Stronghold CSE. Есть ограничения функциональности"
       },
       "cse-pro": {
         "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
-        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse Stronghold CSE. Есть ограничения функциональности"
       }
     },
     "external": "true",
