@@ -244,12 +244,12 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
+			return fmt.Errorf("creating provider: %w", err)
 		}
 
 		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
+			return fmt.Errorf("getting ssh provider: %w", err)
 		}
 
 		return nil
