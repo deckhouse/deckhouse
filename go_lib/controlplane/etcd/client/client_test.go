@@ -66,13 +66,17 @@ func (f *fakeClient) Status(_ context.Context, endpoint string) (*clientv3.Statu
 	return &clientv3.StatusResponse{}, nil
 }
 
-func (f *fakeClient) MemberAddAsLearner(_ context.Context, _ []string) (*clientv3.MemberAddResponse, error) {
+func (f *fakeClient) MemberAddAsLearner(_ context.Context, _ string) (*clientv3.MemberAddResponse, error) {
 	return &clientv3.MemberAddResponse{}, nil
 }
 
 func (f *fakeClient) MemberPromote(_ context.Context, id uint64) (*clientv3.MemberPromoteResponse, error) {
 	f.promotedMemberIDs = append(f.promotedMemberIDs, id)
 	return &clientv3.MemberPromoteResponse{}, nil
+}
+
+func (f *fakeClient) Raw() *clientv3.Client {
+	return nil
 }
 
 func (f *fakeClient) Close() error {
