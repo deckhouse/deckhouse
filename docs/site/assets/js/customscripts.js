@@ -1,38 +1,34 @@
 $('#mysidebar').height($(".nav").height());
 
+function safeGetLocalStorage(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function safeSetLocalStorage(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function safeParseJSON(value, fallback) {
+  try {
+    return JSON.parse(value || fallback);
+  } catch (e) {
+    return JSON.parse(fallback);
+  }
+}
+
 $(document).ready(function () {
   $('#search-input').on("keyup", function (e) {
     if (e.target.value.length > 0) $(".search__results").addClass("active");
     else $(".search__results").removeClass("active");
-  });
-  $('a.lang-switcher').each(function () {
-    let pageDomain = window.location.hostname;
-    if (window.location.pathname.startsWith('/ru/')) {
-      $(this).attr('href', window.location.href.replace('/ru/', '/en/'))
-    } else if (window.location.pathname.startsWith('/en/')) {
-      $(this).attr('href', window.location.href.replace('/en/', '/ru/'))
-    } else {
-      switch (pageDomain) {
-        case 'deckhouse.io':
-          $(this).attr('href', window.location.href.replace('deckhouse.io', 'deckhouse.ru'))
-          break;
-        case 'deckhouse.ru':
-          $(this).attr('href', window.location.href.replace('deckhouse.ru', 'deckhouse.io'))
-          break;
-        case 'ru.localhost':
-          $(this).attr('href', window.location.href.replace('ru.localhost', 'localhost'))
-          break;
-        case 'localhost':
-          $(this).attr('href', window.location.href.replace('localhost', 'ru.localhost'))
-          break;
-        default:
-          if (pageDomain.includes('deckhouse.ru.')) {
-            $(this).attr('href', window.location.href.replace('deckhouse.ru.', 'deckhouse.'))
-          } else if (pageDomain.includes('deckhouse.')) {
-            $(this).attr('href', window.location.href.replace('deckhouse.', 'deckhouse.ru.'))
-          }
-      }
-    }
   });
 });
 
@@ -314,4 +310,3 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener("load", function () {
   openDiagram()
 });
-

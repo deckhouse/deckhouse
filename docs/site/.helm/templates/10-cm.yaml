@@ -16,6 +16,14 @@ metadata:
 data:
   ca.yaml: |
     {{ pluck .Values.werf.env .Values.s3.ca_bundle | first | default .Values.s3.ca_bundle._default | nindent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: embedded-modules-history-sync-script
+data:
+  sync.sh: |
+    {{ include "embedded_modules_history_sync_script" . | nindent 4 }}
 {{- if ne .Values.web.env "web-production" }}
 ---
 apiVersion: v1

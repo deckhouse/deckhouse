@@ -91,6 +91,7 @@ module_release_channel_details_content: |
   To change the module release channel, follow the [instruction](/products/kubernetes-platform/documentation/v1/faq.html#how-do-i-change-the-release-channel-for-a-module).
 module_versions: Module versions
 module_version: Module version
+embedded_in_dkp: Embedded in DKP
 module_crd_warning_1: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
 ossPageBlock1: |
   <h2>Third-party components</h2>
@@ -102,7 +103,15 @@ documentation: documentation
 Documentation: Documentation
 modules_documentation: Modules documentation
 modules_list: Modules list
-category: category
+filters: Filters
+search_filter: Search by module name
+search_placeholder_text_filter: Search
+editions_filter: Edition
+editions_filter_all_selected: All editions
+statuses_filter: Status
+statuses_filter_all_selected: All statuses
+tags_filter: Tag
+tags_filter_all_selected: All tags
 core: core
 community_edition_en: community edition
 commercial_editions_en: commercial editions

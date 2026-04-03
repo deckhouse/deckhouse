@@ -90,6 +90,7 @@ module_release_channel_details_content: |
   Для смены канала обновлений модуля воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#как-сменить-канал-обновлений-для-модуля).
 module_versions: Версии модуля
 module_version: Версия модуля
+embedded_in_dkp: Встроенный в DKP
 module_crd_warning_1: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
 ossPageBlock1: |
   <h2>Внешние компоненты</h2>
@@ -101,7 +102,15 @@ documentation: документация
 Documentation: Документация
 modules_documentation: Документация модулей
 modules_list: Список модулей
-category: категория
+filters: Фильтры
+search_filter: Поиск по названию модуля
+search_placeholder_text_filter: Поиск
+editions_filter: Редакция
+editions_filter_all_selected: Все редакции
+statuses_filter: Статус
+statuses_filter_all_selected: Все статусы
+tags_filter: Тег
+tags_filter_all_selected: Все теги
 core: ядро
 community_edition_en: community edition
 commercial_editions_en: commercial editions
