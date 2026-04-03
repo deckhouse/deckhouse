@@ -62,6 +62,9 @@ type Client struct {
 	// auth is the authenticator for registry access, stored separately for
 	// building custom HTTP transports (e.g., listTagsPage).
 	auth authn.Authenticator
+	// baseTransport is the HTTP transport with CA/TLS settings from client options.
+	// Used as the base for transport.NewWithContext in listTagsPage.
+	baseTransport http.RoundTripper
 	// insecure flag for HTTP connections
 	insecure bool
 
@@ -100,12 +103,13 @@ func NewClientWithOptions(host string, opts *Options) *Client {
 	}
 
 	return &Client{
-		registryHost: host,
-		options:      buildRemoteOptions(opts, logger),
-		auth:         opts.Auth,
-		timeout:      opts.Timeout,
-		logger:       logger,
-		insecure:     opts.Insecure,
+		registryHost:  host,
+		options:       buildRemoteOptions(opts, logger),
+		auth:          opts.Auth,
+		baseTransport: resolveTransport(opts),
+		timeout:       opts.Timeout,
+		logger:        logger,
+		insecure:      opts.Insecure,
 	}
 }
 
@@ -146,13 +150,14 @@ func (c *Client) WithSegment(segments ...string) *Client {
 	}
 
 	return &Client{
-		registryHost: c.registryHost,
-		segments:     append(append([]string(nil), c.segments...), segments...),
-		options:      c.options,
-		auth:         c.auth,
-		logger:       c.logger,
-		insecure:     c.insecure,
-		timeout:      c.timeout,
+		registryHost:  c.registryHost,
+		segments:      append(append([]string(nil), c.segments...), segments...),
+		options:       c.options,
+		auth:          c.auth,
+		baseTransport: c.baseTransport,
+		logger:        c.logger,
+		insecure:      c.insecure,
+		timeout:       c.timeout,
 	}
 }
 
@@ -408,8 +413,23 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 	if err != nil {
 		return nil, fmt.Errorf("parse reference: %w", err)
 	}
+	repo := ref.Context()
 
-	return c.listTagsPage(ctx, ref.Context(), listOptions.Last, listOptions.N)
+	// Pagination mode: direct HTTP with proper ?last= and ?n= query parameters.
+	// Needed because remote.List does not pass "last" as an OCI pagination cursor
+	// and always iterates all pages even when N is set.
+	if listOptions.N > 0 || listOptions.Last != "" {
+		if c.timeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, c.timeout)
+			defer cancel()
+		}
+		return c.listTagsPage(ctx, repo, listOptions.Last, listOptions.N)
+	}
+
+	// Default: full listing via remote.List with cached transport.
+	remoteOpts := append(append([]remote.Option{}, c.options...), c.withContext(ctx))
+	return remote.List(repo, remoteOpts...)
 }
 
 // listTagsPage fetches tags with ?last= and ?n= query parameters via direct HTTP.
@@ -439,14 +459,15 @@ func (c *Client) listTagsPage(ctx context.Context, repo name.Repository, last st
 	return allTags, nil
 }
 
-// registryHTTPClient creates an HTTP client with OCI registry authentication.
+// registryHTTPClient creates an HTTP client with OCI registry authentication
+// and the same CA/TLS settings as the original client.
 func (c *Client) registryHTTPClient(ctx context.Context, repo name.Repository) (*http.Client, error) {
 	auth := c.auth
 	if auth == nil {
 		auth = authn.Anonymous
 	}
 
-	rt, err := transport.NewWithContext(ctx, repo.Registry, auth, http.DefaultTransport, []string{repo.Scope(transport.PullScope)})
+	rt, err := transport.NewWithContext(ctx, repo.Registry, auth, c.baseTransport, []string{repo.Scope(transport.PullScope)})
 	if err != nil {
 		return nil, fmt.Errorf("build transport: %w", err)
 	}

@@ -173,6 +173,21 @@ func resolveLogger(logger *log.Logger) *log.Logger {
 	return logger
 }
 
+// resolveTransport returns the base HTTP transport from options.
+// Uses the custom transport if set, builds one from CA/TLS if needed,
+// or falls back to http.DefaultTransport.
+func resolveTransport(opts *Options) http.RoundTripper {
+	if opts.Transport != nil {
+		return opts.Transport
+	}
+
+	if opts.CA != "" || needsCustomTransport(opts) {
+		return buildTransport(opts)
+	}
+
+	return http.DefaultTransport
+}
+
 // buildRemoteOptions constructs remote options including auth and transport configuration.
 // logger is used to warn about ignored options when a custom transport is provided.
 func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
