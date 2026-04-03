@@ -25,9 +25,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"chronyExporter": "imageHash-chrony-chronyExporter",
 	},
 	"ciliumHubble": map[string]interface{}{
-		"relay":      "imageHash-ciliumHubble-relay",
-		"uiBackend":  "imageHash-ciliumHubble-uiBackend",
-		"uiFrontend": "imageHash-ciliumHubble-uiFrontend",
+		"relay":                "imageHash-ciliumHubble-relay",
+		"uiBackend":            "imageHash-ciliumHubble-uiBackend",
+		"uiBackendVexArtifact": "imageHash-ciliumHubble-uiBackendVexArtifact",
+		"uiFrontend":           "imageHash-ciliumHubble-uiFrontend",
 	},
 	"cloudProviderAws": map[string]interface{}{
 		"cloudControllerManager129": "imageHash-cloudProviderAws-cloudControllerManager129",
