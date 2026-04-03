@@ -322,12 +322,26 @@ func determineCommands(state componentState, configChanged, pkiChanged, caChange
 		}
 		commands = append(commands, controlplanev1alpha1.CommandWaitPodReady)
 		return commands
-	default:
+	case controlplanev1alpha1.OperationComponentKubeAPIServer:
 		var commands []controlplanev1alpha1.CommandName
 		if caChanged || pkiChanged {
 			commands = append(commands,
 				controlplanev1alpha1.CommandSyncCA,
 				controlplanev1alpha1.CommandRenewPKICerts,
+				controlplanev1alpha1.CommandRenewKubeconfigs,
+			)
+		}
+		commands = append(commands,
+			controlplanev1alpha1.CommandSyncManifests,
+			controlplanev1alpha1.CommandWaitPodReady,
+		)
+		return commands
+	default:
+		// KCM, Scheduler: no leaf PKI certs
+		var commands []controlplanev1alpha1.CommandName
+		if caChanged {
+			commands = append(commands,
+				controlplanev1alpha1.CommandSyncCA,
 				controlplanev1alpha1.CommandRenewKubeconfigs,
 			)
 		}
