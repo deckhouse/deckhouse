@@ -36,7 +36,7 @@
 
 {%- assign page_title_for_head = page.title -%}
 {%- if module_readme_page -%}
-  {%- assign page_title_for_head = site.data.modules.sidebar.titles.overview[page.lang] | default: site.data.modules.sidebar.titles.overview.en | default: 'Overview' -%}
+  {%- assign page_title_for_head = site.data.modules.sidebar.titles.overview[page.lang] -%}
 {%- elsif page.title contains ':' -%}
   {%- assign _suffix = page.title | regex_replace_once: '^[^:]+:\s*', '' | strip -%}
   {%- if _suffix != '' -%}
