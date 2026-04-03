@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index 44952b3..8411963 100644
+index 44952b31..98816283 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
  module github.com/ratify-project/ratify
  
 -go 1.23.3
-+go 1.25.0
++go 1.25.5
  
  // Accidentally published prior to 1.0.0 release
  retract (
@@ -211,7 +211,7 @@ index 44952b3..8411963 100644
 -	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 +	github.com/tchap/go-patricia/v2 v2.3.3 // indirect
  	github.com/thales-e-security/pool v0.0.2 // indirect
-+	github.com/theupdateframework/go-tuf/v2 v2.3.0 // indirect
++	github.com/theupdateframework/go-tuf/v2 v2.4.1 // indirect
  	github.com/tjfoc/gmsm v1.4.1 // indirect
 -	github.com/xanzy/go-gitlab v0.102.0 // indirect
 +	github.com/transparency-dev/formats v0.0.0-20251017110053-404c0d5b696c // indirect
@@ -349,7 +349,7 @@ index 44952b3..8411963 100644
  	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
  	github.com/sassoftware/relic v7.2.1+incompatible // indirect
 -	github.com/secure-systems-lab/go-securesystemslib v0.8.0 // indirect
-+	github.com/secure-systems-lab/go-securesystemslib v0.9.1 // indirect
++	github.com/secure-systems-lab/go-securesystemslib v0.10.0 // indirect
  	github.com/shibumi/go-pathspec v1.3.0 // indirect
 -	github.com/sigstore/rekor v1.3.7
 -	github.com/spf13/afero v1.11.0 // indirect
@@ -428,7 +428,7 @@ index 44952b3..8411963 100644
 +	sigs.k8s.io/yaml v1.6.0 // indirect
  )
 diff --git a/go.sum b/go.sum
-index 5ddaf14..f427342 100644
+index 5ddaf141..68c6e06d 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,40 +1,38 @@
@@ -1252,8 +1252,8 @@ index 5ddaf14..f427342 100644
 -github.com/secure-systems-lab/go-securesystemslib v0.8.0/go.mod h1:UH2VZVuJfCYR8WgMlCU1uFsOUU+KeyrTWcSS73NBOzU=
 -github.com/segmentio/ksuid v1.0.4 h1:sBo2BdShXjmcugAMwjugoGUdUV0pcxY5mW4xKRn3v4c=
 -github.com/segmentio/ksuid v1.0.4/go.mod h1:/XUiZBD3kVx5SmUOl55voK5yeAbBNNIed+2O73XgrPE=
-+github.com/secure-systems-lab/go-securesystemslib v0.9.1 h1:nZZaNz4DiERIQguNy0cL5qTdn9lR8XKHf4RUyG1Sx3g=
-+github.com/secure-systems-lab/go-securesystemslib v0.9.1/go.mod h1:np53YzT0zXGMv6x4iEWc9Z59uR+x+ndLwCLqPYpLXVU=
++github.com/secure-systems-lab/go-securesystemslib v0.10.0 h1:l+H5ErcW0PAehBNrBxoGv1jjNpGYdZ9RcheFkB2WI14=
++github.com/secure-systems-lab/go-securesystemslib v0.10.0/go.mod h1:MRKONWmRoFzPNQ9USRF9i1mc7MvAVvF1LlW8X5VWDvk=
 +github.com/segmentio/asm v1.2.0 h1:9BQrFxC+YOHJlTlHGkTrFWf59nbL3XnCoFLTwDCI7ys=
 +github.com/segmentio/asm v1.2.0/go.mod h1:BqMnlJP91P8d+4ibuonYZw9mfnzI9HfxselHZr5aAcs=
 +github.com/sergi/go-diff v1.4.0 h1:n/SP9D5ad1fORl+llWyN+D6qoUETXNZARKjyY2/KVCw=
@@ -1376,8 +1376,8 @@ index 5ddaf14..f427342 100644
  github.com/thales-e-security/pool v0.0.2/go.mod h1:qtpMm2+thHtqhLzTwgDBj/OuNnMpupY8mv0Phz0gjhU=
  github.com/theupdateframework/go-tuf v0.7.0 h1:CqbQFrWo1ae3/I0UCblSbczevCCbS31Qvs5LdxRWqRI=
  github.com/theupdateframework/go-tuf v0.7.0/go.mod h1:uEB7WSY+7ZIugK6R1hiBMBjQftaFzn7ZCDJcp1tCUug=
-+github.com/theupdateframework/go-tuf/v2 v2.3.0 h1:gt3X8xT8qu/HT4w+n1jgv+p7koi5ad8XEkLXXZqG9AA=
-+github.com/theupdateframework/go-tuf/v2 v2.3.0/go.mod h1:xW8yNvgXRncmovMLvBxKwrKpsOwJZu/8x+aB0KtFcdw=
++github.com/theupdateframework/go-tuf/v2 v2.4.1 h1:K6ewW064rKZCPkRo1W/CTbTtm/+IB4+coG1iNURAGCw=
++github.com/theupdateframework/go-tuf/v2 v2.4.1/go.mod h1:Nex2enPVYDFCklrnbTzl3OVwD7fgIAj0J5++z/rvCj8=
 +github.com/tink-crypto/tink-go-awskms/v2 v2.1.0 h1:N9UxlsOzu5mttdjhxkDLbzwtEecuXmlxZVo/ds7JKJI=
 +github.com/tink-crypto/tink-go-awskms/v2 v2.1.0/go.mod h1:PxSp9GlOkKL9rlybW804uspnHuO9nbD98V/fDX4uSis=
 +github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0 h1:3B9i6XBXNTRspfkTC0asN5W0K6GhOSgcujNiECNRNb0=
@@ -1794,7 +1794,7 @@ index 5ddaf14..f427342 100644
  software.sslmate.com/src/go-pkcs12 v0.4.0 h1:H2g08FrTvSFKUj+D309j1DPfk5APnIdAQAB8aEykJ5k=
  software.sslmate.com/src/go-pkcs12 v0.4.0/go.mod h1:Qiz0EyvDRJjjxGyUQa2cCNZn/wMyzrRJ/qcDXOQazLI=
 diff --git a/pkg/manager/manager.go b/pkg/manager/manager.go
-index b5e6e0d..b6844f1 100644
+index b5e6e0dd..b6844f1e 100644
 --- a/pkg/manager/manager.go
 +++ b/pkg/manager/manager.go
 @@ -45,6 +45,8 @@ import (
@@ -1824,7 +1824,7 @@ index b5e6e0d..b6844f1 100644
  		LeaderElection:         enableLeaderElection,
  		LeaderElectionID:       "1a306109.github.com/ratify-project/ratify",
 diff --git a/pkg/utils/test_utils.go b/pkg/utils/test_utils.go
-index 4ef0fd5..9c6f289 100644
+index 4ef0fd5e..9c6f289b 100644
 --- a/pkg/utils/test_utils.go
 +++ b/pkg/utils/test_utils.go
 @@ -47,6 +47,10 @@ func (w MockResourceWriter) Patch(_ context.Context, _ client.Object, _ client.P
