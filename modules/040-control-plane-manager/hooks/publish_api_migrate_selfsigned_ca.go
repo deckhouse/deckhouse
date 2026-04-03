@@ -63,7 +63,7 @@ func copyCAPairToModuleValues(_ context.Context, input *go_hook.HookInput) error
 	// 	fmt.Println("https mode is not SelfSigned, skipping")
 	// 	return nil
 	// }
-
+	fmt.Println("Getting selfsigned publishAPI CA")
 	keyPairs := input.Snapshots.Get("secret_publishapi_selfsigned_ca_migration")
 	fmt.Println(keyPairs[0])
 
