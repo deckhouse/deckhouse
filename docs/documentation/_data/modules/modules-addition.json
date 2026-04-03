@@ -66,9 +66,7 @@
   },
   "managed-cassandra": {
     "editions": [
-      "ee",
-      "se",
-      "se-plus"
+      "ee"
     ],
     "tags": [
       "managed services"
@@ -78,9 +76,7 @@
   },
   "managed-hive-metastore": {
     "editions": [
-      "ee",
-      "se",
-      "se-plus"
+      "ee"
     ],
     "tags": [
       "managed services"
@@ -90,9 +86,7 @@
   },
   "managed-kafka": {
     "editions": [
-      "ee",
-      "se",
-      "se-plus"
+      "ee"
     ],
     "tags": [
       "managed services"
@@ -126,9 +120,7 @@
   },
   "managed-trino": {
     "editions": [
-      "ee",
-      "se",
-      "se-plus"
+      "ee"
     ],
     "tags": [
       "managed services"
