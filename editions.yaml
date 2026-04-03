@@ -71,7 +71,6 @@ editions:
   - chrony
   - cilium-hubble
   - cloud-provider-dvp
-  - cloud-provider-openstack
   - cni-cilium
   - common
   - control-plane-manager
