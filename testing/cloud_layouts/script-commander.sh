@@ -479,9 +479,7 @@ function bootstrap_static() {
 
   get_opentofu
 
-  if [[ ${PROVIDER} == "Static" ]]; then
-    $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-  elif [[ ${PROVIDER} == "Static-cse" ]]; then
+  if [[ ${PROVIDER} == "Static" || ${PROVIDER} == "Static-cse" ]]; then
     $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
   fi
 
