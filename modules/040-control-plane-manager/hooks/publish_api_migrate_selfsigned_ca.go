@@ -46,7 +46,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterApiCASecret,
 		},
 	},
-}, handlePublishAPIConfig)
+}, copyCAPairToModuleValues)
 
 func filterApiCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
@@ -65,6 +65,7 @@ func copyCAPairToModuleValues(_ context.Context, input *go_hook.HookInput) error
 	}
 
 	keyPairs := input.Snapshots.Get("secret_publishapi_selfsigned_ca_migration")
+	fmt.Println(keyPairs[0])
 
 	selfSignedKeyPair := make(map[string]string)
 	if len(keyPairs) > 0 {
