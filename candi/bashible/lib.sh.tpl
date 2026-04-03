@@ -6,8 +6,6 @@ function bb-patch-instance-condition() {
   local message="${4:-}"
   local max_condition_message_len=32768
 
-  return 0
-
   if [ "${#message}" -gt "${max_condition_message_len}" ]; then
     message="${message:0:${max_condition_message_len}}"
   fi
@@ -87,6 +85,11 @@ function bb-bashible-ready-error() {
 function bb-bashible-ready-initial-run() {
   local message="${1:-}"
   bb-patch-instance-condition "BashibleReady" "Unknown" "InitialRunInProgress" "${message}"
+}
+
+function bb-bashible-ready-converge-in-progress() {
+  local message="${1:-Converge cycle is in progress}"
+  bb-patch-instance-condition "BashibleReady" "True" "ConvergeInProgress" "${message}"
 }
 
 

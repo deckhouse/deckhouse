@@ -403,6 +403,10 @@ function main() {
 
   fi
 
+  # Temporarily avoid per-step status patches: they noticeably slow down convergence.
+  local converge_start_message="converge cycle is in progress"
+  bb-bashible-ready-converge-in-progress "${converge_start_message}"
+
   {{- if ne .runType "ClusterBootstrap" }}
       bb-event-info-create "start"
   {{- end }}
@@ -438,10 +442,6 @@ function main() {
       {{- end }}
       bb-bashible-ready-steps-failed "${step##*/}"
     done
-
-    local last_successful_step="${step##*/}"
-    local steps_completed_message="Last successful step: ${last_successful_step}"
-    bb-bashible-ready-steps-completed "$last_successful_step" "${steps_completed_message}"
   done
 
   local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}"
