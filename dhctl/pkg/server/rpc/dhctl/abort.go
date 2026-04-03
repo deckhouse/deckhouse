@@ -277,6 +277,7 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 		Logger:            loggerFor,
 		IsDebug:           s.params.IsDebug,
 		TmpDir:            s.params.TmpDir,
+		DirectoryConfig:   s.params.DownloadDirConfig,
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)

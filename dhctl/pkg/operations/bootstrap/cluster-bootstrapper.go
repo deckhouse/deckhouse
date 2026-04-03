@@ -25,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -106,6 +107,8 @@ type Params struct {
 	// todo refact to logger provider
 	Logger  log.Logger
 	IsDebug bool
+
+	DirectoryConfig *directoryconfig.DirectoryConfig
 
 	*client.KubernetesInitParams
 }
@@ -232,6 +235,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		b.DirectoryConfig,
 		config.ValidateOptionValidateExtensions(true),
 	)
 	if err != nil {
@@ -547,7 +551,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath, b.CommanderMode); err != nil {
+	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath, b.CommanderMode, b.DirectoryConfig); err != nil {
 		return err
 	}
 

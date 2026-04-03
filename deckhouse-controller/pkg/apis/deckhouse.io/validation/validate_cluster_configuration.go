@@ -354,6 +354,7 @@ func validateClusterConfiguration(ctx context.Context, clusterConfiguration []by
 		ctx,
 		string(clusterConfiguration),
 		config.DummyPreparatorProvider(),
+		nil,
 		config.ValidateOptionOmitDocInError(true),
 		config.ValidateOptionStrictUnmarshal(true),
 	)
