@@ -12,9 +12,7 @@ spec:
   commands:
     - SyncCA
     - RenewPKICerts
-    - RenewKubeconfigs
     - JoinEtcdCluster
-    - SyncManifests
     - WaitPodReady
   desiredConfigChecksum: 215dfa8dd684c54dea814c09d0f2912d640fc870a68bb9542705fafffedd9faf
   desiredPkiChecksum: aaa111000000000000000000000000000000000000000000000000000000aaa1

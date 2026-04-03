@@ -304,6 +304,24 @@ func determineCommands(state componentState, configChanged, pkiChanged, caChange
 		return []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandSyncCA}
 	case controlplanev1alpha1.OperationComponentHotReload:
 		return []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandSyncHotReload}
+	case controlplanev1alpha1.OperationComponentEtcd:
+		// Etcd has no kubeconfigs (admin.conf is handled by ensureAdminKubeconfig inside JoinEtcdCluster).
+		var commands []controlplanev1alpha1.CommandName
+		if caChanged || pkiChanged {
+			commands = append(commands,
+				controlplanev1alpha1.CommandSyncCA,
+				controlplanev1alpha1.CommandRenewPKICerts,
+			)
+		}
+		commands = append(commands, controlplanev1alpha1.CommandJoinEtcdCluster)
+		// Join (empty status): JoinEtcdCluster writes manifest with correct --initial-cluster.
+		// Update (non-empty status): SyncManifests overwrites manifest from template.
+		isJoin := state.statusConfigChecksum == "" && state.statusPKIChecksum == ""
+		if !isJoin {
+			commands = append(commands, controlplanev1alpha1.CommandSyncManifests)
+		}
+		commands = append(commands, controlplanev1alpha1.CommandWaitPodReady)
+		return commands
 	default:
 		var commands []controlplanev1alpha1.CommandName
 		if caChanged || pkiChanged {
@@ -312,9 +330,6 @@ func determineCommands(state componentState, configChanged, pkiChanged, caChange
 				controlplanev1alpha1.CommandRenewPKICerts,
 				controlplanev1alpha1.CommandRenewKubeconfigs,
 			)
-		}
-		if state.component == controlplanev1alpha1.OperationComponentEtcd {
-			commands = append(commands, controlplanev1alpha1.CommandJoinEtcdCluster)
 		}
 		commands = append(commands,
 			controlplanev1alpha1.CommandSyncManifests,

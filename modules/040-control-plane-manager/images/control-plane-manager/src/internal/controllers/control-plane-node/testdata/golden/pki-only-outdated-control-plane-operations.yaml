@@ -12,7 +12,6 @@ spec:
   commands:
     - SyncCA
     - RenewPKICerts
-    - RenewKubeconfigs
     - JoinEtcdCluster
     - SyncManifests
     - WaitPodReady
