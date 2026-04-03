@@ -255,7 +255,7 @@ spec:
 
 ### Создание сервиса и назначение ему IPAddressPools при использовании mettalb в режиме BGP LoadBalancer
 
-Создание Service и назначение ему IPAddressPools возможно в режиме BGP LoadBalancer через аннотацию `network.deckhouse.io/load-balancer-pool`. Для режима L2 LoadBalancer необходимо использовать настройки MetalLoadBalancerClass (см. выше).
+Создание сервиса и назначение ему IPAddressPools возможно в режиме BGP LoadBalancer через аннотацию `network.deckhouse.io/load-balancer-pool`. Для режима L2 LoadBalancer необходимо использовать настройки MetalLoadBalancerClass (см. выше).
 
 ```yaml
 apiVersion: v1
