@@ -34,8 +34,13 @@
   {%- assign module_readme_page = true -%}
 {%- endif -%}
 
+{%- assign embed_module_readme = false -%}
+{%- if module_readme_page and page.sidebar == 'embedded-modules' -%}
+  {%- assign embed_module_readme = true -%}
+{%- endif -%}
+
 {%- assign page_title_for_head = page.title -%}
-{%- if module_readme_page -%}
+{%- if embed_module_readme -%}
   {%- assign page_title_for_head = site.data.modules.sidebar.titles.overview[page.lang] -%}
 {%- elsif page.title contains ':' -%}
   {%- assign _suffix = page.title | regex_replace_once: '^[^:]+:\s*', '' | strip -%}
@@ -61,7 +66,7 @@
 {%- else -%}
   {%- assign generated_title = title_parts | reverse | join: "" -%}
 {%- endif -%}
-{%- if module_readme_page -%}
+{%- if embed_module_readme -%}
   {%- assign generated_title = page_title_for_head -%}
 {%- endif -%}
 
@@ -79,7 +84,7 @@
 {%- if page.sidebar == 'embedded-modules' and page['module-kebab-name'] and page['module-kebab-name'] != 'global' %}
   {%- assign module_primary_title = page_title_for_head -%}
   {%- if page.title_gen -%}
-    {%- unless module_readme_page -%}
+    {%- unless embed_module_readme -%}
       {%- assign module_primary_title = generated_title -%}
     {%- endunless -%}
   {%- endif -%}
