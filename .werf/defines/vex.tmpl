@@ -74,10 +74,9 @@ shell:
   - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
   - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
   - |
-    # Merge VEX files from dhctl and opentofu if they exist
+    # Merge VEX files from dhctl if it exists
     VEX_FILES="/known_vulnerabilities.vex"
     [ -f /dhctl_vulnerabilities.vex ] && VEX_FILES="$VEX_FILES /dhctl_vulnerabilities.vex"
-    [ -f /opentofu_vulnerabilities.vex ] && VEX_FILES="$VEX_FILES /opentofu_vulnerabilities.vex"
 
     # If multiple files exist, merge them using jq
     if [ "$VEX_FILES" != "/known_vulnerabilities.vex" ]; then
