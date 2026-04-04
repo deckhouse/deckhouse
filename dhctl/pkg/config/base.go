@@ -287,6 +287,8 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 		return true, nil
 	}
 
+	docData = PrepareProviderConfigYAML(index, docData)
+
 	_, err = schemaStore.Validate(&docData, opts...)
 	if err != nil {
 		if errors.Is(err, ErrSchemaNotFound) {
@@ -294,12 +296,6 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 		}
 		return false, fmt.Errorf("Config document validation failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
-
-	log.InfoF("Before prepare for %s:\n'%s'\n", index.Kind, string(docData))
-
-	docData = PrepareProviderConfigYAML(index, docData)
-
-	log.InfoF("After prepare for %s:\n'%s'\n", index.Kind, string(docData))
 
 	var data map[string]json.RawMessage
 	if err = yaml.Unmarshal(docData, &data); err != nil {

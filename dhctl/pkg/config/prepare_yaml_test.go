@@ -232,7 +232,8 @@ sshPublicKey: |
 			require.NotEqual(t, contentBytesCopy, res)
 			require.True(t, bytes.HasSuffix(res, []byte("\n# comment for safe trim")))
 
-			sshKeyInDoc, provider := extractSettings(t, res)
+			contentCopyForExtract := copyBytes(contentBytes)
+			sshKeyInDoc, provider := extractSettings(t, contentCopyForExtract)
 
 			require.Equal(t, tt.expectedSSHKey, sshKeyInDoc, "ssh key should equal")
 			require.Equal(t, "YXB", provider.KubeConfig, "kube config should equal")
