@@ -16,23 +16,10 @@ package config
 
 import(
 	"bytes"
-
-	"sigs.k8s.io/yaml"
 )
 
-type documentWithKind struct {
-	Kind string `json:"kind,omitempty"`
-}
-
-func PrepareProviderConfigYAML(cfg []byte) []byte {
-	doc := documentWithKind{}
-	err := yaml.Unmarshal(cfg, &doc)
-	if err != nil {
-		// skip errors
-		return cfg
-	}
-
-	if doc.Kind != "DVPClusterConfiguration" {
+func PrepareProviderConfigYAML(index SchemaIndex, cfg []byte) []byte {
+	if index.Kind != "DVPClusterConfiguration" {
 		return cfg
 	}
 

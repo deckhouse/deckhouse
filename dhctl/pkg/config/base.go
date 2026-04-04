@@ -295,6 +295,8 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 		return false, fmt.Errorf("Config document validation failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
+	docData = PrepareProviderConfigYAML(index, docData)
+
 	var data map[string]json.RawMessage
 	if err = yaml.Unmarshal(docData, &data); err != nil {
 		return false, fmt.Errorf("Config document unmarshal failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))

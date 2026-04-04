@@ -50,10 +50,15 @@ sshPublicKey: |
 		"YandexClusterConfiguration",
 	}
 
-	assertNotChange := func(t *testing.T, provider []byte) {
+	assertNotChange := func(t *testing.T, kind string, provider []byte) {
 		copyProvider := copyBytes(provider)
 
-		res := PrepareProviderConfigYAML(provider)
+		index := SchemaIndex{
+			Kind:    kind,
+			Version: "deckhouse.io/v1",
+		}
+
+		res := PrepareProviderConfigYAML(index, provider)
 
 		require.Equal(t, copyProvider, res, "provider conf should not changed")
 	}
@@ -61,7 +66,7 @@ sshPublicKey: |
 	for _, k := range kinds {
 		t.Run(fmt.Sprintf("kind %s", k), func(t *testing.T) {
 			provider := generateDoc(k)
-			assertNotChange(t, provider)
+			assertNotChange(t, k, provider)
 		})
 	}
 
@@ -72,7 +77,7 @@ version: 1
 settings:
   set: val
 `)
-		assertNotChange(t, doc)
+		assertNotChange(t, "ModuleConfig", doc)
 	})
 
 	t.Run("No kind", func(t *testing.T) {
@@ -81,12 +86,12 @@ version: 1
 settings:
   set: val
 `)
-		assertNotChange(t, doc)
+		assertNotChange(t, "", doc)
 	})
 
 	t.Run("Invalid yaml", func(t *testing.T) {
 		doc := []byte(`3"rfrf!`)
-		assertNotChange(t, doc)
+		assertNotChange(t, "", doc)
 	})
 }
 
@@ -216,7 +221,13 @@ sshPublicKey: |
 		t.Run(tt.name, func(t *testing.T) {
 			contentBytes := []byte(tt.content)
 			contentBytesCopy := copyBytes(contentBytes)
-			res := PrepareProviderConfigYAML(contentBytes)
+
+			index := SchemaIndex{
+				Kind:    "DVPClusterConfiguration",
+				Version: "deckhouse.io/v1",
+			}
+
+			res := PrepareProviderConfigYAML(index, contentBytes)
 
 			require.NotEqual(t, contentBytesCopy, res)
 			require.True(t, bytes.HasSuffix(res, []byte("\n# comment for safe trim")))
