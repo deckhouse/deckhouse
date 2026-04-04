@@ -14,15 +14,25 @@
 
 package config
 
-import(
-	"bytes"
-)
+import "bytes"
 
 func PrepareProviderConfigYAML(index SchemaIndex, cfg []byte) []byte {
 	if index.Kind != "DVPClusterConfiguration" {
 		return cfg
 	}
 
+	// cloud provider dvp has problem.
+	// when we add ssh key with multiline like
+	// sshPublicKey: |
+	//   ssh-rsa AAAAA
+	// we can have situation with attach in commander
+	// because we save yaml after unmarshal document in cluster
+	// we get sshPublicKey in end of document with new line
+	// but in commander we pass document and trim
+	// after it we got ssh public key without new line
+	// and terraform get destructive change
+	// for prevent it, we add comment to end of document
+	// for prevent trim new line in ssh key
 	buf := bytes.NewBuffer(cfg)
 	buf.WriteString("\n# comment for safe trim")
 	return buf.Bytes()

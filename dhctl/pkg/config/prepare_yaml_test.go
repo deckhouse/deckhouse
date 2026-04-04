@@ -248,7 +248,7 @@ func prepareLocalRunForPrepareYAML(t *testing.T) []string {
 	stat, err := os.Stat(cloudProvidersDir)
 	if err == nil {
 		require.True(t, stat.IsDir(), "should be directory %s", cloudProvidersDir)
-		return nil
+		return []string{"deckhouse/candi/cloud-providers"}
 	}
 
 	return []string{"/deckhouse/modules/030-cloud-provider-dvp/candi"}
