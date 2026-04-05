@@ -4,7 +4,7 @@ title: "The istio module: examples"
 
 ## Circuit Breaker
 
-The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) custom resource help to determine whether some endpoints do not behave as expected. 
+The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) custom resource help to determine whether some endpoints do not behave as expected.
 Refer to the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier) for more details on the Outlier Detection algorithm.
 
 Example:

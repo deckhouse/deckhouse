@@ -658,9 +658,9 @@ annotations:
 
 ## Обновление control plane Istio
 
- * Deckhouse Kubernetes Platform позволяет инсталлировать несколько версий control plane одновременно:
-  * Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [globalVersion](configuration.html#parameters-globalversion).
-  * Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x21`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
+* Deckhouse Kubernetes Platform позволяет инсталлировать несколько версий control plane одновременно:
+* Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [globalVersion](configuration.html#parameters-globalversion).
+* Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x21`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
 * Алгоритм обновления (для примера, с версии `1.21` на версию `1.25`):
