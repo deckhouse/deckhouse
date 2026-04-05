@@ -110,6 +110,8 @@ shell:
         echo "Moving images and presentations to be accessible as local from the module pages (like in Hugo)..."
         cd /app/_site/
         find modules_en modules_ru -type d \( -path "*/docs/images" -o -path "*/docs/presentations" \) -exec sh -c 'module=$(basename $(dirname $(dirname $0)) | cut -d/ -f2-); lang=$(dirname $0 | cut -d/ -f1 | cut -d_ -f2); cp -rf "$0" "$lang/modules/$module" ; ' {} \;
+        echo "Moving reusable partial static assets next to rendered module partials..."
+        find modules_en modules_ru -type d -path "*/docs/partials/static" -exec sh -c 'module=$(basename $(dirname $(dirname $(dirname $0))) ) ; lang=$(dirname $0 | cut -d/ -f1 | cut -d_ -f2); mkdir -p "$lang/modules/$module/partials"; cp -rf "$0" "$lang/modules/$module/partials/"; ' {} \;
         rm -rf modules_en modules_ru
 import:
 - from: {{ index $.Images "tools/jq" }}

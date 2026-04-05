@@ -1,0 +1,65 @@
+{{ tpl (.Files.Get (printf "%s.werf/defines/packages-proxies.tmpl" .ModulePath)) . }}
+---
+image: docs-nginx-lua-runtime-artifact
+from: {{ index $.Images "builder/alpine-3.21" }}
+final: false
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+{{- if eq .ModuleName "documentation" }}
+  setup:
+  - mkdir -p /etc/nginx/lua /var/log/nginx
+  - |
+    if [ -d /usr/local/share/luajit-2.1 ] && [ ! -e /usr/local/share/luajit-2.1.0-beta3 ]; then
+      ln -s /usr/local/share/luajit-2.1 /usr/local/share/luajit-2.1.0-beta3
+    fi
+import:
+- image: ingress-nginx/controller-1-14-nginx-artifact
+  add: /etc/nginx
+  to: /etc/nginx
+  before: setup
+- image: ingress-nginx/controller-1-14-nginx-artifact
+  add: /usr/local/bin
+  to: /usr/local/bin
+  before: setup
+  includePaths:
+  - lua
+  - luajit
+- image: ingress-nginx/controller-1-14-nginx-artifact
+  add: /usr/local/lib
+  to: /usr/local/lib
+  before: setup
+- image: ingress-nginx/controller-1-14-nginx-artifact
+  add: /usr/local/nginx
+  to: /usr/local/nginx
+  before: setup
+- image: ingress-nginx/controller-1-14-nginx-artifact
+  add: /usr/local/share
+  to: /usr/local/share
+  before: setup
+  includePaths:
+  - lua
+  - luajit-2.1
+- image: ingress-nginx/controller-1-14-chroot-artifact
+  add: /chroot/usr/lib
+  to: /usr/lib
+  before: setup
+  includePaths:
+  - libcrypto.so*
+  - libgcc_s.so*
+  - libssl.so*
+  - libstdc++.so*
+  - libz.so*
+{{- else }}
+  - apk add --no-cache openresty lua-resty-core lua-resty-lrucache lua-cjson
+  setup:
+  - mkdir -p /etc/nginx/lua /var/log/nginx /usr/local/nginx/sbin /usr/local/nginx/bin /usr/local/bin /usr/local/lib /usr/local/share
+  - ln -sf /usr/sbin/nginx /usr/local/nginx/sbin/nginx
+  - ln -sf /usr/sbin/nginx /usr/local/nginx/bin/nginx
+  - ln -sf /usr/bin/luajit /usr/local/bin/luajit
+  - ln -sf /usr/bin/luajit /usr/local/bin/lua
+  - ln -sf /usr/lib/lua /usr/local/lib/lua
+  - ln -sf /usr/share/lua /usr/local/share/lua
+  - ln -sf /usr/share/luajit-2.1 /usr/local/share/luajit-2.1.0-beta3
+{{- end }}
+---

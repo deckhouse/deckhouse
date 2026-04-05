@@ -128,6 +128,10 @@ module-archive.tar
 │   ├── README.md              # Module documentation
 │   ├── FAQ.md                 # FAQ documentation
 │   └── configuration.md       # Configuration docs
+│   └── partials/              # Reusable content fragments
+│       ├── feature-name.md    # EN partial → /en/modules/{module}/{channel}/partials/feature-name.html
+│       ├── feature-name.ru.md # RU partial → /ru/modules/{module}/{channel}/partials/feature-name.html
+│       └── static/            # Static assets for partials → /{lang}/modules/{module}/{channel}/partials/static/*
 ├── openapi/                   # API specs → data/modules/{module}/{channel}/
 │   ├── config-values.yaml     # Configuration schema
 │   └── doc-*-config-values.yaml # Generated config docs
@@ -140,6 +144,20 @@ module-archive.tar
 ### Language Support
 - **English:** Default documentation files (`.md`)
 - **Russian:** Files with `_RU.md` suffix (converted to `.ru.md`)
+- **Reusable partials:** Hugo source files for the non-default language must keep the `.ru.md` suffix.
+
+### Reusable partials contract
+- `docs/partials/**/*.md` and `docs/partials/**/*.ru.md` are rendered as HTML fragments.
+- `docs/partials/static/**` is published as static assets and is not processed by Hugo.
+- The placeholder artifact name is language-agnostic and uses the Markdown file name without the language suffix, for example `feature-name.md`.
+- The final language is selected by the current request and nginx routing, so the same artifact resolves to:
+  - `/en/modules/{module}/{channel}/partials/feature-name.html`
+  - `/ru/modules/{module}/{channel}/partials/feature-name.html`
+- Nested `static` directories outside the root `docs/partials/static/` are forbidden.
+
+### Reusable partials follow-up
+- **Search/SEO.** Runtime-injected content is excluded from Hugo/Jekyll search indexes and sidebars. If product pages need full-text search or SEO weight from injected content, add a separate indexing pipeline that resolves placeholders before publishing search artifacts.
+- **Artifact retention.** Runtime URLs resolve partials from the current module channel/version storage. If product pages must keep rendering historical partial revisions after a module artifact rotation, add immutable artifact retention for published `partials/` trees and define cleanup policies separately.
 
 ### Channel Management
 - Supports multiple publication channels (stable, alpha, beta, etc.)

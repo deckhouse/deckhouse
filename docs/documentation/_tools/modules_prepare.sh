@@ -49,6 +49,48 @@ page::has_frontmatter() {
     return 1
 }
 
+partial::prepare_page() {
+    local src_file="$1"
+    local dst_file="$2"
+    local permalink="$3"
+    local lang="$4"
+
+    mkdir -p "$(dirname "$dst_file")"
+    cp -f "$src_file" "$dst_file"
+
+    if page::has_frontmatter "$dst_file"; then
+        sed -i "1alayout: module-partial" "$dst_file"
+        sed -i "1asearchable: false" "$dst_file"
+        sed -i "1asitemap_include: false" "$dst_file"
+        sed -i "1apermalink: ${permalink}" "$dst_file"
+        if [[ "$lang" == "ru" ]]; then
+            if grep -q '^lang:' "$dst_file"; then
+                sed -i '/^lang:/{s#lang: .*#lang: ru#}' "$dst_file"
+            else
+                sed -i "1alang: ru" "$dst_file"
+            fi
+        fi
+        return 0
+    fi
+
+    local tmp_file
+    tmp_file=$(mktemp)
+    {
+        echo "---"
+        echo "layout: module-partial"
+        echo "searchable: false"
+        echo "sitemap_include: false"
+        echo "permalink: ${permalink}"
+        if [[ "$lang" == "ru" ]]; then
+            echo "lang: ru"
+        fi
+        echo "---"
+        echo
+        cat "$src_file"
+    } > "$tmp_file"
+    mv "$tmp_file" "$dst_file"
+}
+
 pages=$(
 for i in $(find ${MODULES_SRC_DIR} -regex '.*.md' -print | sort); do
       if page::has_frontmatter "${i}"
@@ -91,4 +133,41 @@ for page in ${pages}; do
 
     rsync -a --exclude='*.md' ${MODULES_SRC_DIR}/${module_original_name}/ ${MODULES_DST_EN}/${module_name}/
     rsync -a --exclude='*.md' ${MODULES_SRC_DIR}/${module_original_name}/ ${MODULES_DST_RU}/${module_name}/
+done
+
+partials=$(
+for i in $(find "${MODULES_SRC_DIR}" -path '*/docs/partials/*.md' -print | sort); do
+    echo "$i"
+done | sed "s|^${MODULES_SRC_DIR}/||" | sort | uniq )
+
+for partial in ${partials}; do
+    module_original_name=$(echo "$partial" | cut -d\/ -f1)
+    module_name=$(echo "$module_original_name" | sed -E 's#^[0-9]+-##')
+    partial_rel_path=$(echo "$partial" | sed -E 's#^[^/]+/docs/partials/##')
+
+    if [[ "$partial_rel_path" == static/* ]]; then
+        continue
+    fi
+
+    partial_base_path=$(echo "$partial_rel_path" | sed -E 's/_RU\.md$/.md/' | sed -E 's/\.md$//')
+    partial_dst_rel="partials/${partial_base_path}.md"
+
+    en_src="${MODULES_SRC_DIR}/${module_original_name}/docs/partials/${partial_base_path}.md"
+    ru_src="${MODULES_SRC_DIR}/${module_original_name}/docs/partials/${partial_base_path}_RU.md"
+
+    if [[ -f "$en_src" ]]; then
+        partial::prepare_page \
+            "$en_src" \
+            "${MODULES_DST_EN}/${module_name}/${partial_dst_rel}" \
+            "en/modules/${module_name}/partials/${partial_base_path}.html" \
+            "en"
+    fi
+
+    if [[ -f "$ru_src" ]]; then
+        partial::prepare_page \
+            "$ru_src" \
+            "${MODULES_DST_RU}/${module_name}/${partial_dst_rel}" \
+            "ru/modules/${module_name}/partials/${partial_base_path}.html" \
+            "ru"
+    fi
 done

@@ -54,7 +54,7 @@ spec:
           lifecycle:
             preStop:
               exec:
-                command: ["/usr/sbin/nginx", "-s", "quit"]
+                command: ["/usr/local/nginx/sbin/nginx", "-s", "quit"]
           startupProbe:
             httpGet:
               path: /healthz
@@ -80,7 +80,7 @@ spec:
             - mountPath: /app/ru/search-external-modules-index
               name: modules-searchindex-ru
             - name: nginx-config
-              mountPath: /usr/conf/nginx.conf
+              mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
             - mountPath: /tmp
               name: web-tmp
