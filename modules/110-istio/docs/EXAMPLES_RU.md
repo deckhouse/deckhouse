@@ -294,12 +294,10 @@ spec:
 
 Для работы с Ingress NGINX требуется подготовить:
 
-* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` в кастомном ресурсе [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/ingress-nginx/).
+* Ingress-контроллер, добавив к нему сайдкар от Istio. В нашем случае включить параметр `enableIstioSidecar` в кастомном ресурсе [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/ingress-nginx/).
 * Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
-* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` в кастомном ресурсе [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [`ingress-nginx`](../../modules/ingress-nginx/).
-* Ingress-ресурс, который ссылается на сервис. Обязательные аннотации для Ingress-ресурса:
-* `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
-  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией sidecar сможет идентифицировать прикладной сервис, для которого предназначен запрос.
+  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
+  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
 
 Примеры:
 
@@ -656,8 +654,6 @@ annotations:
 
 {% alert level="warning" %}Каждый из обходных вариантов выводит трафик из-под контроля Istio, что в свою очередь убирает шифрование трафика между прикладными сервисами.{% endalert %}
 
-{% alert level="warning" %}UID `1337` зарезервирован Istio для sidecar-контейнера `istio-proxy`. Не запускайте прикладные контейнеры от данного пользователя — их трафик будет полностью обходить Istio (правила маршрутизации, mTLS и телеметрия применяться не будут). Используйте UID `1337` только в init-контейнерах, когда необходимо выполнить сетевые запросы до момента готовности sidecar.{% endalert %}
-
 ## Обновление Istio
 
 ## Обновление control plane Istio
@@ -695,16 +691,16 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 ## Настройка ресурсов istio-proxy sidecar
 
-Для переопределения глобальных ограничений ресурсов для istio-proxy sidecar в отдельных рабочих нагрузках происходит через аннотации. Поддерживаются следующие аннотации:
+Для переопределения глобальных ограничений ресурсов для сайдкара istio-proxy в отдельных рабочих нагрузках происходит через аннотации. Поддерживаются следующие аннотации:
 
 ### Поддерживаемые аннотации
 
-| Аннотация                          | Описание                     | Пример значения |
-|-------------------------------------|-----------------------------|---------------|
-| `sidecar.istio.io/proxyCPU`         | Запрос CPU для sidecar      | `200m`        |
-| `sidecar.istio.io/proxyCPULimit`    | Лимит CPU для sidecar       | `"1"`         |
-| `sidecar.istio.io/proxyMemory`      | Запрос памяти для sidecar   | `128Mi`       |
-| `sidecar.istio.io/proxyMemoryLimit` | Лимит памяти для sidecar    | `512Mi`       |
+| Аннотация                          | Описание                   | Пример значения |
+|-------------------------------------|----------------------------|---------------|
+| `sidecar.istio.io/proxyCPU`         | Запрос CPU для сайдкара    | `200m`        |
+| `sidecar.istio.io/proxyCPULimit`    | Лимит CPU для сайдкара     | `"1"`         |
+| `sidecar.istio.io/proxyMemory`      | Запрос памяти для сайдкара | `128Mi`       |
+| `sidecar.istio.io/proxyMemoryLimit` | Лимит памяти для сайдкара  | `512Mi`       |
 
 ### Примеры конфигурации
 
