@@ -67,7 +67,7 @@ func copyCAPairToModuleValues(_ context.Context, input *go_hook.HookInput) error
 	keyPairs := input.Snapshots.Get("secret_publishapi_selfsigned_ca_migration")
 	fmt.Println(keyPairs[0])
 
-	selfSignedKeyPair := make(map[string]string)
+	selfSignedKeyPair := make(map[string][]byte)
 	if len(keyPairs) > 0 {
 		err := keyPairs[0].UnmarshalTo(&selfSignedKeyPair)
 
@@ -76,6 +76,7 @@ func copyCAPairToModuleValues(_ context.Context, input *go_hook.HookInput) error
 		}
 
 		fmt.Println("Setting key pair into internal values")
+		fmt.Println(selfSignedKeyPair)
 		input.Values.Set("controlPlaneManager.internal.selfSignedCA", selfSignedKeyPair)
 
 	} else {
