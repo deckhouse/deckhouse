@@ -1,3 +1,5 @@
+{{- $version := include "get_oss_version_by_id" (list "terraform-provider-aws" $) }}
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
 git:
@@ -31,7 +33,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.aws.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-aws.git /src
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-aws.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
@@ -55,7 +57,7 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - GO_VER=go CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion={{ .TF.aws.version }}"
+  - GO_VER=go CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion={{ $version }}"
   - mv /go/bin/terraform-provider-aws /terraform-provider-aws
   - strip /terraform-provider-aws
   - chmod -R 755 /terraform-provider-aws
