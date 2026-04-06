@@ -34,3 +34,11 @@ Fix CVE-2026-33487 (`github.com/russellhaering/goxmldsig`) and CVE-2026-34986 (`
 go get github.com/russellhaering/goxmldsig@v1.6.0 github.com/go-jose/go-jose/v3@v3.0.5
 go mod tidy
 ```
+
+### 006-fix-cves.patch
+
+Fix CVE-2026-1229 (`github.com/cloudflare/circl`).
+```sh
+go get github.com/cloudflare/circl@v1.6.3
+go mod tidy
+```
