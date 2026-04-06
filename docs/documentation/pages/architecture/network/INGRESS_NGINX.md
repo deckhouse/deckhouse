@@ -59,10 +59,10 @@ The module consists of the following components:
    * Persistent data storage (if components are restarted, it doesn't require accessing the MaxMind servers again).
    * It lets you specify a custom mirror for downloading databases.
 
-  It consists of the following containers:
+   It consists of the following containers:
 
-* **geoproxy**: Proxy server. This server is developed by Flant.
-* **kube-rbac-proxy**: Sidecar container providing authorized access to geoproxy metrics (described above). GeoIP databases are available without authorization.
+   * **geoproxy**: Proxy server. This server is developed by Flant.
+   * **kube-rbac-proxy**: Sidecar container providing authorized access to geoproxy metrics (the GeoIP databases are available without authorization). This container is described in detail above.
 
 ## Module interactions
 
