@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -476,26 +475,6 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 	return nil
 }
 
-// loggingOTLPSpanExporter logs each batch export attempt and success at debug level.
-type loggingOTLPSpanExporter struct {
-	next   sdktrace.SpanExporter
-	logger *log.Logger
-}
-
-func (e *loggingOTLPSpanExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	e.logger.Debug("OTLP trace export attempt", slog.Int("spans", len(spans)))
-	err := e.next.ExportSpans(ctx, spans)
-	if err != nil {
-		return err
-	}
-	e.logger.Debug("OTLP trace export success", slog.Int("spans", len(spans)))
-	return nil
-}
-
-func (e *loggingOTLPSpanExporter) Shutdown(ctx context.Context) error {
-	return e.next.Shutdown(ctx)
-}
-
 func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context.Context) error {
 	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
 	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
@@ -508,7 +487,7 @@ func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context
 		}
 	}
 
-	opts := make([]otlptracegrpc.Option, 0, 3)
+	opts := make([]otlptracegrpc.Option, 0, 1)
 
 	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
 
@@ -541,7 +520,7 @@ func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context
 		if exportErr == nil {
 			return
 		}
-		logger.Error("OTLP trace export", log.Err(exportErr))
+		logger.Debug("OTLP trace export", log.Err(exportErr))
 	}))
 
 	resource := sdkresource.NewWithAttributes(
@@ -552,10 +531,8 @@ func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context
 		semconv.K8SDeploymentName(AppName),
 	)
 
-	wrappedExporter := &loggingOTLPSpanExporter{next: exporter, logger: logger}
-
 	provider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(wrappedExporter),
+		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(resource),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
