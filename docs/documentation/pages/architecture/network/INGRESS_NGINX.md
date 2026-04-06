@@ -123,7 +123,7 @@ The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet ty
 
      * Monitors a performance of the main Ingress controller and returns its status.
      * Monitors the NGINX configuration file on the node and reboots Ingress controller if this configuration is changed.
-     * Starts a [NGINX](https://github.com/nginx/nginx) instance that proxies traffic to the failover controller in case the main one is unavailable. Traffic is switched to the failover controller and back to the main controller with the use of `iptables` rules, that are configured by the iptables-loop container depending on the availability of the main controller 80 and 443 TCP ports.
+     * Starts a [NGINX](https://github.com/nginx/nginx) instance that proxies traffic to the failover controller in case the main one is unavailable. Traffic is switched to the failover controller and back to the main controller with the use of `iptables` rules, that are configured by the iptables-loop container depending on the availability of the `80` and `443` TCP ports on the main controller.
 
      This controller is developed by Flant.
 
