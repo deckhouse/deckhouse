@@ -1283,6 +1283,10 @@ entries:
                     ru: Модуль cloud-provider-openstack
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-openstack.html
                 - title:
+                    en: Cloud-provider-vcd module
+                    ru: Модуль cloud-provider-vcd
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vcd.html
+                - title:
                     en: Cloud-provider-yandex module
                     ru: Модуль cloud-provider-yandex
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html
