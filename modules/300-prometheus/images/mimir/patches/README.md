@@ -17,3 +17,11 @@ Fix CVE-2026-33186 (`google.golang.org/grpc`).
 go get google.golang.org/grpc@v1.79.3
 go mod tidy
 ```
+
+### 003-fix-cves.patch
+
+Fix CVE-2026-34986 (`github.com/go-jose/go-jose/v4`).
+```sh
+go get github.com/go-jose/go-jose/v4@v4.1.4
+go mod tidy
+```
