@@ -127,7 +127,7 @@ The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet ty
 
      This controller is developed by Flant.
 
-   * **iptables-loop**: Sidecar container that updates the `iptables` rules on the node that are necessary for the Ingress controller to work.
+   * **iptables-loop**: Sidecar container that updates the `iptables` rules on the node that are necessary for the Ingress controller to work. It is developed by Flant.
 
    * **nginx-exporter**: Sidecar container that connects to NGINX over HTTP and exports metrics in the Prometheus format. It is an [open source project](https://github.com/nginx/nginx-prometheus-exporter).
   
