@@ -26,16 +26,9 @@ Add loading chunk snapshots in remote-write to solve problem with unknown series
 
 ### 005-fix-cves.patch
 
-Fix CVE-2026-33186 (`google.golang.org/grpc`).
+Fix CVE-2026-33186 and CVE-2026-24051.
 ```sh
 go get google.golang.org/grpc@v1.79.3
-go mod tidy
-```
-
-### 006-fix-cves.patch
-
-Fix CVE-2026-24051 (`go.opentelemetry.io/otel/sdk`).
-```sh
 go get go.opentelemetry.io/otel/sdk@v1.40.0
 go mod tidy
 ```
