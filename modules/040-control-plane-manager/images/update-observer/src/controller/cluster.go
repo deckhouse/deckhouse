@@ -31,7 +31,7 @@ import (
 	podstatus "update-observer/pkg/pod-status"
 )
 
-func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, downgradeInProgress bool) (*cluster.State, error) {
+func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, configmapLabels map[string]string, downgradeInProgress bool) (*cluster.State, error) {
 	nodesState, err := r.getNodesState(ctx, cfg.DesiredVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get nodes state: %w", err)
@@ -42,7 +42,13 @@ func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configura
 		return nil, fmt.Errorf("failed to get control plane state: %w", err)
 	}
 
-	return cluster.GetState(cfg, nodesState, controlPlaneState, downgradeInProgress), nil
+	maxUsedVersion := configmapLabels[common.MaxK8sVersionLabelKey]
+	versionSettings, err := cluster.LoadVersionSettingsFromEnv()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse versions from env: %w", err)
+	}
+
+	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, maxUsedVersion, downgradeInProgress), nil
 }
 
 func (r *reconciler) getClusterConfiguration(ctx context.Context) (*cluster.Configuration, error) {

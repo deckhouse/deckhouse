@@ -71,8 +71,7 @@ spec:
           name: ztunnel-stats
           protocol: TCP
         resources:
-          {{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.dataPlane.ztunnel.resourcesManagement) | nindent 10 }}
-          {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- include "helm_lib_resources_management_pod_resources" (list $.Values.istio.dataPlane.ztunnel.resourcesManagement) | nindent 10 }}
         imagePullPolicy: IfNotPresent
         securityContext:
           # K8S docs are clear that CAP_SYS_ADMIN *or* privileged: true

@@ -153,7 +153,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
    systemctl start qemu-guest-agent
    ```
 
-1. Set the VM run policy to [`runPolicy: AlwaysOnUnlessStoppedManually`](/modules/virtualization/stable/cr.html#virtualmachine-v1alpha2-spec-runpolicy). This is required to be able to shut down the VM.
+1. Set the VM run policy to [`runPolicy: AlwaysOnUnlessStoppedManually`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy). This is required to be able to shut down the VM.
 
 1. Prepare the image. Clean unused filesystem blocks:
 

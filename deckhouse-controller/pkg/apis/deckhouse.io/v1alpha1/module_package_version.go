@@ -28,6 +28,7 @@ const (
 	ModulePackageVersionResource = "modulepackageversions"
 	ModulePackageVersionKind     = "ModulePackageVersion"
 
+	ModulePackageVersionLabelLegacy          = "packages.deckhouse.io/legacy"
 	ModulePackageVersionLabelDraft           = "packages.deckhouse.io/draft"
 	ModulePackageVersionLabelPackage         = "packages.deckhouse.io/package"
 	ModulePackageVersionLabelRepository      = "packages.deckhouse.io/repository"

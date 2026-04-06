@@ -109,7 +109,7 @@ func Serve(params settings.ServerParams) error {
 	reflection.Register(s)
 
 	// init services
-	validationService := validation.New(config.NewSchemaStore())
+	validationService := validation.New(config.NewSchemaStore(params.DownloadDirConfig))
 	statusService := status.New(requestsCounter)
 
 	// register services

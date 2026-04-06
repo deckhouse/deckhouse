@@ -213,12 +213,10 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		completed := 0
 		remaining := 0
 		for _, op := range r.Operations {
-			if op.Type == progrep.OperationTypeTrackReadiness {
-				if op.Status == progrep.OperationStatusCompleted {
-					completed++
-				} else {
-					remaining++
-				}
+			if op.Status == progrep.OperationStatusCompleted {
+				completed++
+			} else {
+				remaining++
 			}
 		}
 

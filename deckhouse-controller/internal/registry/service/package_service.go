@@ -29,21 +29,25 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	internalRegistry "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	registryClient "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/client"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/deckhouse/deckhouse/pkg/registry"
 	"github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
 const (
 	packageVersionSegment = "version"
+	packageReleaseSegment = "release"
 
 	packagesServiceName       = "packages"
 	packageServiceName        = "package"
 	packageVersionServiceName = "package_version"
+	packageReleaseServiceName = "package_release"
 )
 
 type ServiceManagerInterface[T any] interface {
-	Service(registryURL, dockerCFG, ca, userAgent, scheme string) (*T, error)
+	Service(registryURL string, config utils.RegistryConfig) (*T, error)
 }
 
 type ServiceManager[T any] struct {
@@ -57,6 +61,8 @@ type ServiceManager[T any] struct {
 type packageCredentials struct {
 	registryURL string
 	dockerCFG   string
+	login       string
+	password    string
 	ca          string
 	userAgent   string
 }
@@ -69,7 +75,7 @@ func NewPackageServiceManager(logger *log.Logger) *ServiceManager[PackagesServic
 	}
 }
 
-func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, scheme string) (*T, error) {
+func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryConfig) (*T, error) {
 	if m.services == nil {
 		m.services = make(map[packageCredentials]*T)
 	}
@@ -84,9 +90,11 @@ func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, schem
 
 	creds := packageCredentials{
 		registryURL: registryURL,
-		dockerCFG:   dockerCFG,
-		ca:          ca,
-		userAgent:   userAgent,
+		dockerCFG:   config.DockerConfig,
+		login:       config.Login,
+		password:    config.Password,
+		ca:          config.CA,
+		userAgent:   config.UserAgent,
 	}
 
 	// if service with these creds already exists - return it
@@ -95,7 +103,7 @@ func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, schem
 		return m.services[creds], nil
 	}
 
-	auth, err := client.AuthFromDockerConfig(registryURL, dockerCFG)
+	authOpts, err := m.createAuthOptions(registryURL, config.DockerConfig, config.Login, config.Password) // factory method
 	if err != nil {
 		return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
 	}
@@ -107,17 +115,18 @@ func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, schem
 		m.cachedCredentials[registryURL] = &creds
 	}
 
-	c := client.NewClientWithOptions(registryURL, &client.Options{
-		Auth:      auth,
-		Scheme:    scheme,
-		CA:        ca,
-		UserAgent: userAgent,
-		Logger:    m.logger,
-	})
+	c := registryClient.New(registryURL,
+		append(authOpts,
+			client.WithInsecure(config.Scheme == "http"),
+			client.WithCA(config.CA),
+			client.WithUserAgent(config.UserAgent),
+			client.WithLogger(m.logger),
+		)...,
+	)
 
-	// Type switch using reflection to create the appropriate service based on the generic type T
-	switch reflect.TypeOf(*new(T)) {
-	case reflect.TypeOf(PackagesService{}):
+	var zero T
+	switch any(zero).(type) {
+	case PackagesService, *PackagesService:
 		m.services[creds] = any(NewPackagesService(c, m.logger)).(*T)
 	default:
 		return nil, fmt.Errorf("unsupported service type: %s", reflect.TypeOf(*new(T)).String())
@@ -126,8 +135,31 @@ func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, schem
 	return m.services[creds], nil
 }
 
+// getAuth determines and returns an authenticator for accessing a container registry based on the provided authorization data.
+// if both dockerCfg and credentials parameters are filled in, credentials is the priority.
+func (m *ServiceManager[T]) createAuthOptions(registryURL, dockerCFG, login, password string) ([]client.Option, error) {
+	var opts []client.Option
+
+	switch {
+	case login != "":
+		opts = append(opts, client.WithLoginPassword(login, password))
+		m.logger.Debug("init auth from credentials")
+	case dockerCFG != "":
+		opt, err := client.WithDockercfg(registryURL, dockerCFG)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
+		}
+		opts = append(opts, opt)
+		m.logger.Debug("init auth from docker config")
+	default:
+		return nil, errors.New("there is no authorization data")
+	}
+
+	return opts, nil
+}
+
 type PackagesService struct {
-	client registry.Client
+	client internalRegistry.Interface
 
 	*BasicService
 
@@ -136,7 +168,7 @@ type PackagesService struct {
 	logger *log.Logger
 }
 
-func NewPackagesService(client registry.Client, logger *log.Logger) *PackagesService {
+func NewPackagesService(client internalRegistry.Interface, logger *log.Logger) *PackagesService {
 	return &PackagesService{
 		client: client,
 
@@ -162,29 +194,36 @@ func (s *PackagesService) Package(packageName string) *PackageService {
 
 // PackageService provides high-level operations for Deckhouse platform management
 type PackageService struct {
-	client registry.Client
+	client internalRegistry.Interface
 
 	*BasicService
 	packageVersion *PackageVersionService
+	packageRelease *PackageReleaseService
 
 	logger *log.Logger
 }
 
 // NewPackageService creates a new deckhouse service
-func NewPackageService(client registry.Client, logger *log.Logger) *PackageService {
+func NewPackageService(client internalRegistry.Interface, logger *log.Logger) *PackageService {
 	return &PackageService{
 		client: client,
 
 		BasicService:   NewBasicService(packageServiceName, client, logger),
 		packageVersion: NewPackageVersionService(NewBasicService(packageVersionServiceName, client.WithSegment(packageVersionSegment), logger)),
+		packageRelease: NewPackageReleaseService(NewBasicService(packageReleaseServiceName, client.WithSegment(packageReleaseSegment), logger)),
 
 		logger: logger,
 	}
 }
 
-// TODO: add methods for legacy behaviour
+// Versions returns the service for accessing <package>/version path (new v1alpha2 modules).
 func (s *PackageService) Versions() *PackageVersionService {
 	return s.packageVersion
+}
+
+// Release returns the service for accessing <package>/release path (legacy v1alpha1 modules).
+func (s *PackageService) Release() *PackageReleaseService {
+	return s.packageRelease
 }
 
 // GetRoot gets path of the registry root
@@ -198,6 +237,17 @@ type PackageVersionService struct {
 
 func NewPackageVersionService(basicService *BasicService) *PackageVersionService {
 	return &PackageVersionService{
+		BasicService: basicService,
+	}
+}
+
+// PackageReleaseService provides access to the <package>/release path for legacy v1alpha1 modules.
+type PackageReleaseService struct {
+	*BasicService
+}
+
+func NewPackageReleaseService(basicService *BasicService) *PackageReleaseService {
+	return &PackageReleaseService{
 		BasicService: basicService,
 	}
 }

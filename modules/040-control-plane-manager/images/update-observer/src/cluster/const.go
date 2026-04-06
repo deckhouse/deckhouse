@@ -17,9 +17,11 @@ limitations under the License.
 package cluster
 
 const (
-	componentLabelKey           = "component"
-	kubeVersionAnnotation       = "control-plane-manager.deckhouse.io/kubernetes-version"
-	clusterConfigurationYAML    = "cluster-configuration.yaml"
-	defaultKubernetesVersion    = "deckhouseDefaultKubernetesVersion"
-	ControlPlaneComponentsCount = 3
+	componentLabelKey              = "component"
+	kubeVersionAnnotation          = "control-plane-manager.deckhouse.io/kubernetes-version"
+	clusterConfigurationYAML       = "cluster-configuration.yaml"
+	defaultKubernetesVersion       = "deckhouseDefaultKubernetesVersion"
+	ControlPlaneComponentsCount    = 3
+	automaticKubernetesVersionEnv  = "AUTOMATIC_KUBERNETES_VERSION"
+	supportedKubernetesVersionsEnv = "ALLOWED_KUBERNETES_VERSIONS"
 )

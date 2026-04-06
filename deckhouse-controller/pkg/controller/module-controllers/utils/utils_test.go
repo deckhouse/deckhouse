@@ -293,7 +293,7 @@ func TestGenerateRegistryOptions(t *testing.T) {
 
 		options := utils.GenerateRegistryOptions(config, logger)
 
-		assert.Len(t, options, 4)
+		assert.Len(t, options, 5)
 		// We can't directly check the content of options since the functions are not exported
 		// but we can verify they were created
 	})
@@ -308,7 +308,7 @@ func TestGenerateRegistryOptions(t *testing.T) {
 
 		options := utils.GenerateRegistryOptions(config, logger)
 
-		assert.Len(t, options, 4)
+		assert.Len(t, options, 5)
 		// Default user agent should be set
 	})
 
@@ -322,7 +322,7 @@ func TestGenerateRegistryOptions(t *testing.T) {
 
 		options := utils.GenerateRegistryOptions(config, logger)
 
-		assert.Len(t, options, 4)
+		assert.Len(t, options, 5)
 		// Insecure schema should be true
 	})
 }
