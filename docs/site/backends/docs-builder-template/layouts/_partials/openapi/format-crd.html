@@ -63,9 +63,11 @@
         
         {{- $propertyLangData := index $langVersionData.schema.openAPIV3Schema.properties $property }}
 
-        {{/* Rendering status */}}
         {{- $liClass := "" }}
-        {{- if eq $property "status" }}
+        {{- if eq $property "spec" }}
+          {{- $liClass = "top-level-toggleable" }}
+        {{/* Rendering status */}}
+        {{- else if eq $property "status" }}
           {{- $liClass = "closed top-level-toggleable" }}
         {{- end }}
         {{- partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "parent" $versionSchema "apiVersion"  $versionName "resourceName" $kindDowncase "liClass" $liClass) }}
