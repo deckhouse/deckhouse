@@ -139,3 +139,9 @@ properties:
       kubernetesApiserverAddresses:
         type: array
         items: strings
+      authn:
+        type: object
+        default: {}
+        properties:
+          enableBasicAuth:
+            type: boolean
