@@ -201,8 +201,8 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		return
 	}
 
-	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: "ChartUpgrade"})
-	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: "ChartUpgrade"})
+	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: "ManifestsApply"})
+	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: "ManifestsApply"})
 
 	for i := len(report.StageReports) - 1; i >= 0; i-- {
 		r := report.StageReports[i]
