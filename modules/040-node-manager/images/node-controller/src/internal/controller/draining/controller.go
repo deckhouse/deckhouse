@@ -19,7 +19,6 @@ package draining
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -155,7 +154,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		r.Recorder.Eventf(node, corev1.EventTypeWarning, "DrainFailed", "drain failed: %v", err)
 		nodeDrainingGauge.WithLabelValues(node.Name, err.Error()).Set(1)
 
-		if drainCtx.Err() != nil || errors.Is(err, kubedrain.ErrDrainTimeout) {
+		if drainCtx.Err() != nil {
 			logger.Info("drain timed out, marking as drained anyway", "node", node.Name, "timeout", drainTimeout)
 		} else {
 			return ctrl.Result{}, err
