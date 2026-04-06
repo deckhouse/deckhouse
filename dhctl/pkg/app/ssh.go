@@ -15,25 +15,18 @@
 package app
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	flag "github.com/spf13/pflag"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-connection/pkg/kube"
-	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
-	libcon_config "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"
@@ -221,29 +214,6 @@ func processConnectionConfigFlags() error {
 	return nil
 }
 
-// func to initialize both SSHProvider and KubeProvider
-func GetProviders(ctx context.Context, loggerProvider libdhctl_log.LoggerProvider) (*providerinitializer.SSHProviderInitializer, pkg.KubeProvider, error) {
-	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: IsDebug, NodeTmpPath: DeckhouseNodeTmpPath, NodeBinPath: DeckhouseNodeBinPath, TmpDir: GetDefaultTmpDir()}
-	sett := settings.NewBaseProviders(params)
-	parser := libcon_config.NewFlagsParser(sett)
-	fset := flag.NewFlagSet("my-set", flag.ExitOnError)
-	flags, err := parser.InitFlags(fset)
-	if err != nil {
-		return nil, nil, err
-	}
-	config, err := flags.ExtractConfig(os.Args[1:])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	sshProviderInitializer := providerinitializer.NewSSHProviderInitializer(sett, config)
-
-	cfg := &kube.Config{}
-	runnerInterface, err := provider.GetRunnerInterface(ctx, cfg, sett, sshProviderInitializer)
-	if err != nil {
-		return sshProviderInitializer, nil, err
-	}
-	kubeProvider := provider.NewDefaultKubeProvider(sett, cfg, runnerInterface)
-
-	return sshProviderInitializer, kubeProvider, nil
+func GetProviderParams(loggerProvider libdhctl_log.LoggerProvider) settings.ProviderParams {
+	return settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: IsDebug, NodeTmpPath: DeckhouseNodeTmpPath, NodeBinPath: DeckhouseNodeBinPath, TmpDir: GetDefaultTmpDir()}
 }

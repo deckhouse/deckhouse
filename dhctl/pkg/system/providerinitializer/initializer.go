@@ -26,6 +26,9 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
 
 type SSHProviderInitializer struct {
@@ -33,48 +36,48 @@ type SSHProviderInitializer struct {
 	sett     *settings.BaseProviders
 	config   *sshconfig.ConnectionConfig
 
-	additionalHosts []sshconfig.Host
+	hostsProvider func() ([]sshconfig.Host, error)
 
 	mut sync.Mutex
 }
 
-func NewSSHProviderInitializer(sett *settings.BaseProviders, config *sshconfig.ConnectionConfig, additionalHosts ...sshconfig.Host) *SSHProviderInitializer {
+func NewSSHProviderInitializer(sett *settings.BaseProviders, config *sshconfig.ConnectionConfig) *SSHProviderInitializer {
 	initializer := &SSHProviderInitializer{
-		sett:            sett,
-		config:          config,
-		additionalHosts: additionalHosts,
+		sett:   sett,
+		config: config,
+		hostsProvider: func() ([]sshconfig.Host, error) {
+			c := cache.Global()
+			if c == nil {
+				return nil, fmt.Errorf("global cache is not initialized yet")
+			}
+			return state.GetMasterHosts(c)
+		},
 	}
 
-	var opts provider.SSHClientOption
 	if len(config.Hosts) > 0 {
-		opts = provider.SSHClientWithStartAfterCreate(true)
-	} else if len(additionalHosts) > 0 {
-		config.Hosts = additionalHosts
-		opts = provider.SSHClientWithStartAfterCreate(true)
-	}
-
-	if opts != nil {
-		initializer.provider = provider.NewDefaultSSHProvider(sett, config, opts)
-	} else {
-		initializer.provider = provider.NewDefaultSSHProvider(sett, config)
+		initializer.provider = provider.NewDefaultSSHProvider(sett, config, provider.SSHClientWithStartAfterCreate(true))
 	}
 
 	return initializer
 }
 
 func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (pkg.SSHProvider, error) {
-	if len(i.config.Hosts) > 0 {
+	i.mut.Lock()
+	defer i.mut.Unlock()
+
+	if govalue.NotNil(i.provider) {
 		return i.provider, nil
 	}
 
-	if len(i.additionalHosts) > 0 {
-		i.config.Hosts = i.additionalHosts
+	lateHosts, err := i.hostsProvider()
+	if err == nil && len(lateHosts) > 0 {
+		i.config.Hosts = lateHosts
 		opts := provider.SSHClientWithStartAfterCreate(true)
 		i.provider = provider.NewDefaultSSHProvider(i.sett, i.config, opts)
 		return i.provider, nil
 	}
 
-	return i.provider, fmt.Errorf("no hosts for ssh passed")
+	return provider.NewDefaultSSHProvider(i.sett, i.config), fmt.Errorf("failed to get hosts from cache: %w", err)
 }
 
 func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {
@@ -83,13 +86,6 @@ func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {
 	}
 
 	return i.provider.Cleanup(ctx)
-}
-
-func (i *SSHProviderInitializer) SetAdditionalHosts(hosts []sshconfig.Host) {
-	i.mut.Lock()
-	defer i.mut.Unlock()
-
-	i.additionalHosts = hosts
 }
 
 func (i *SSHProviderInitializer) GetKubeProvider(ctx context.Context) pkg.KubeProvider {

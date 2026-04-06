@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -149,9 +150,10 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.(*log.TeeLogger).GetLogger().(*log.ExternalLogger).GetLogger())
-		sshProviderInitializer, kubeProvider, err := app.GetProviders(ctx, loggerProvider)
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			if !strings.Contains(err.Error(), "no hosts for ssh passed") {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
 			}
 		}
