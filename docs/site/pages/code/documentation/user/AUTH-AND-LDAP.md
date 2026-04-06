@@ -240,8 +240,8 @@ If nested groups must be taken into account, this must be implemented on the LDA
 
 This approach simplifies synchronization and avoids issues related to recursive group processing.
 
-## Frequently asked questions
+#### Creating a local account when LDAP synchronization is enabled
 
-### Can I create local accounts when LDAP synchronization is enabled?
+Local accounts can still be created and used even when LDAP synchronization is enabled.
 
-Yes, you can create local accounts even when LDAP synchronization is enabled. For these users to sign in via the web interface, the [Allow password and passkey authentication for the web interface](https://docs.gitlab.com/administration/settings/sign_in_restrictions/#password-and-passkey-authentication) setting must be enabled.
+To allow such users to sign in through the web interface, the ["Enable password and passkey authentication for the web interface"](https://docs.gitlab.com/administration/settings/sign_in_restrictions/#password-and-passkey-authentication) setting must be enabled.
