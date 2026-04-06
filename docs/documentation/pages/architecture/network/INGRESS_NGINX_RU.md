@@ -101,7 +101,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
 Для инлетов вида HostPort, HostPortWithProxyProtocol, HostPortWithSSLPassthrough и HostWithFailover балансировщик нагрузки разворачивается пользователем, либо может отсутствовать. В этом случае пользователь самостоятельно настраивает бэкенды балансировщика или обеспечивает сетевую связность до ingress-controller. Точкой входа в ingress-controller в этом случае являются порты на узлах кластера, на которых запущен контроллер.
 
-## Архитектура ingress-контроллера с инлетом HostWithFailover
+## Архитектура Ingress-контроллера с инлетом HostWithFailover
 
 При значении `HostWithFailover` параметра [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) кастомного ресурса IngressNginxController в кластере устанавливаются два Ingress-контроллера — основной и резервный (failover), а так же proxy-failover контроллер, координириующий переключения трафика с основного Ingress-контроллера на failover. Основной контроллер запускается в `hostNetwork`, в то время как failover контроллер запускается в `podNetwork`. Если под основного контроллера недоступен на узле, proxy-failover начинает проксировать трафик в под failover-контроллера, используя `PROXY PROTOCOL` для сохранения информации об IP-адресе клиента.
 
