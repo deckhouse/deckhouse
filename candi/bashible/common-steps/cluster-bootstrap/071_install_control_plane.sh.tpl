@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
 {{ $manifestsDir := "/var/lib/bashible/control-plane" }}
 
 check_container_running() {
@@ -39,10 +38,7 @@ check_container_running() {
 }
 
 check_container_running "kubernetes-api-proxy"
-mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
-cp {{ $kubeadmDir}}/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
 cp {{ $manifestsDir}}/pki /etc/kubernetes/
-kubeadm init phase kubeconfig all --config {{ $kubeadmDir}}/config.yaml
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd"
 
