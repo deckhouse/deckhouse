@@ -26,3 +26,11 @@ Fix CVE-2026-24051 (`go.opentelemetry.io/otel/sdk`).
 go get go.opentelemetry.io/otel/sdk@v1.40.0
 go mod tidy
 ```
+
+### 005-fix-cves.patch
+
+Fix CVE-2026-33487 (`github.com/russellhaering/goxmldsig`) and CVE-2026-34986 (`github.com/go-jose/go-jose/v3`).
+```sh
+go get github.com/russellhaering/goxmldsig@v1.6.0 github.com/go-jose/go-jose/v3@v3.0.5
+go mod tidy
+```
