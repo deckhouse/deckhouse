@@ -187,8 +187,7 @@ func resolveTransport(opts *Options) http.RoundTripper {
 }
 
 // buildRemoteOptions constructs remote options including auth and transport configuration.
-// logger is used to warn about ignored options when a custom transport is provided.
-func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
+func buildRemoteOptions(opts *Options, logger *log.Logger, baseTransport http.RoundTripper) []remote.Option {
 	remoteOptions := []remote.Option{}
 
 	if opts.Auth != nil {
@@ -220,12 +219,12 @@ func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 			logger.Warn("WithCustomTransport is set: TLSSkipVerify option will be ignored")
 		}
 
-		remoteOptions = append(remoteOptions, remote.WithTransport(opts.Transport))
+		remoteOptions = append(remoteOptions, remote.WithTransport(baseTransport))
 
 		return remoteOptions
 	}
 
-	if opts.CA != "" || needsCustomTransport(opts) {
+	if baseTransport != nil && baseTransport != http.DefaultTransport {
 		if opts.TLSSkipVerify {
 			logger.Debug("TLS certificate verification disabled")
 		}
@@ -234,8 +233,7 @@ func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 			logger.Debug("Insecure HTTP mode enabled")
 		}
 
-		transport := buildTransport(opts)
-		remoteOptions = append(remoteOptions, remote.WithTransport(transport))
+		remoteOptions = append(remoteOptions, remote.WithTransport(baseTransport))
 	}
 
 	return remoteOptions

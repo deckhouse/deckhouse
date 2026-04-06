@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -40,6 +41,9 @@ import (
 )
 
 var ErrImageNotFound = errors.New("image not found")
+
+// maxTagsResponseBytes limits the size of a single tags/list JSON response (8 MiB).
+const maxTagsResponseBytes = 8 << 20
 
 // isNotFound reports whether err is an HTTP 404 response from the registry.
 func isNotFound(err error) bool {
@@ -101,11 +105,13 @@ func NewClientWithOptions(host string, opts *Options) *Client {
 		opts.Insecure = true
 	}
 
+	baseTransport := resolveTransport(opts)
+
 	return &Client{
 		registryHost:  host,
-		options:       buildRemoteOptions(opts, logger),
+		options:       buildRemoteOptions(opts, logger, baseTransport),
 		auth:          opts.Auth,
-		baseTransport: resolveTransport(opts),
+		baseTransport: baseTransport,
 		timeout:       opts.Timeout,
 		logger:        logger,
 		insecure:      opts.Insecure,
@@ -420,14 +426,25 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 			ctx, cancel = context.WithTimeout(ctx, c.timeout)
 			defer cancel()
 		}
-		return c.listTagsPage(ctx, repo, listOptions.Last, listOptions.N)
+		tags, err := c.listTagsPage(ctx, repo, listOptions.Last, listOptions.N)
+		if err != nil {
+			return nil, err
+		}
+		c.logger.Debug("Tags listed", slog.Int("count", len(tags)))
+		return tags, nil
 	}
 
 	remoteOpts := append(append([]remote.Option{}, c.options...), c.withContext(ctx))
-	return remote.List(repo, remoteOpts...)
+	tags, err := remote.List(repo, remoteOpts...)
+	if err != nil {
+		return nil, err
+	}
+	c.logger.Debug("Tags listed", slog.Int("count", len(tags)))
+	return tags, nil
 }
 
 // listTagsPage fetches a single page of tags (pageSize > 0) or all remaining pages via direct HTTP.
+// When pageSize is 0, the registry picks its own page size and all pages are collected via Link headers.
 func (c *Client) listTagsPage(ctx context.Context, repo name.Repository, last string, pageSize int) ([]string, error) {
 	httpClient, err := c.registryHTTPClient(ctx, repo)
 	if err != nil {
@@ -511,7 +528,7 @@ func (c *Client) fetchTagsPage(ctx context.Context, httpClient *http.Client, pag
 	}
 
 	var parsed tagsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxTagsResponseBytes)).Decode(&parsed); err != nil {
 		return nil, "", fmt.Errorf("decode response: %w", err)
 	}
 
@@ -519,6 +536,7 @@ func (c *Client) fetchTagsPage(ctx context.Context, httpClient *http.Client, pag
 }
 
 // nextPageURL extracts the URL from a Link: <url>; rel="next" header.
+// Handles the common OCI registry format only; RFC 8288 multi-value headers are not supported.
 func nextPageURL(resp *http.Response) string {
 	link := resp.Header.Get("Link")
 	if link == "" || link[0] != '<' {
