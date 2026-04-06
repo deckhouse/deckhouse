@@ -51,7 +51,9 @@ The module consists of the following components:
    * **kruise-state-metrics**: Sidecar container that monitors the state of OpenKruise API objects and exposes corresponding metrics (but not metrics of the kruise-controller-manager itself).
    * **kube-rbac-proxy**: Sidecar container providing authorized access to controller metrics and status (described above).
 
-4. **Geoproxy** (StatefulSet): Caching proxy server for the Ingress controller that provides the GeoIP database downloaded from the MaxMind provider for quick access, as well as when the cluster does not have access to Internet. This service is aimed at improving the stability of the Ingress NGINX Controller when working with GeoIP databases and provides the following features:
+4. **Geoproxy** (StatefulSet): Caching proxy server for the Ingress controller that provides quick access to the GeoIP database downloaded from the MaxMind provider. This component also grants access to already downloaded bases in clusters that have no internet access, improving the stability of the Ingress NGINX Controller when working with GeoIP databases.
+
+   This component provides the following features:
 
 * MaxMind license saving (databases are downloaded from a single point once a day).
 * Persistent data storage (if components are restarted, it doesn't require accessing the MaxMind servers).
