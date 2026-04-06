@@ -130,7 +130,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
      Является разработкой компании «Флант»;
 
-   * **iptables-loop** — сайдкар-контейнер, обновляющий правила `iptables` на узле, необходимые для работы Ingress-контроллер. Является разработкой компании «Флант»;
+   * **iptables-loop** — сайдкар-контейнер, который обновляет на узле правила `iptables`, необходимые для работы Ingress-контроллера. Является разработкой компании «Флант»;
 
    * **nginx-exporter** — сайдкар-контейнер в поде ingress-controller, подключается к NGINX по протоколу HTTP и экспортирует метрики в формате для Prometheus. Является [Open Source-проектом](https://github.com/nginx/nginx-prometheus-exporter);
 
