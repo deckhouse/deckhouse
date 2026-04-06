@@ -30,8 +30,8 @@ description: Архитектура модуля csi-netapp в Deckhouse Kuberne
 
 1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-netapp/stable/cr.html):
 
-  * NetappStorageConnection — параметры подключения к СХД NetApp;
-  * NetappStorageClass — определяет конфигурацию для Kubernetes StorageClass.
+* NetappStorageConnection — параметры подключения к СХД NetApp;
+* NetappStorageClass — определяет конфигурацию для Kubernetes StorageClass.
 
   В NetappStorageClass задается протокол подключения, название пула ресурсов, тип файловой системы и reclaim policy.
 

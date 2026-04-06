@@ -1,14 +1,14 @@
 ---
-title: CSI-драйвер (csi-s3)
-permalink: ru/architecture/storage/csi-drivers/csi-driver-s3.html
+title: CSI-драйвер (csi-scsi-generic)
+permalink: ru/architecture/storage/csi-drivers/csi-driver-scsi-generic.html
 lang: ru
-search: csi-s3, s3, csi driver
-description: Архитектура CSI-драйвера csi-s3 в Deckhouse Kubernetes Platform.
+search: csi-scsi-generic, csi driver
+description: Архитектура CSI-драйвера csi-scsi-generic в Deckhouse Kubernetes Platform.
 ---
 
-CSI-драйвер [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) - реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с томами на основе `S3-хранилищ` в Deckhouse Kubernetes Platform (DKP).
+CSI-драйвер `csi-scsi-generic` - реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД с подключением по SCSI в Deckhouse Kubernetes Platform (DKP).
 
-## Архитектура CSI-драйвера (csi-s3)
+## Архитектура CSI-драйвера (csi-scsi-generic)
 
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
@@ -17,10 +17,10 @@ CSI-драйвер [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) - ре
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура CSI-драйвера (csi-s3) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура CSI-драйвера (csi-scsi-generic) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура CSI-драйвера (csi-s3)](../../../images/architecture/storage/c4-l2-csi-driver-s3.ru.png)
+![Архитектура CSI-драйвера (csi-scsi-generic)](../../../images/architecture/storage/c4-l2-csi-driver-scsi-generic.ru.png)
 
 ## Компоненты драйвера
 
@@ -31,6 +31,8 @@ CSI-драйвер [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) - ре
    Состоит из следующих контейнеров:
 
    * **controller** — основной контейнер, реализующий функциональность CSI-драйвера (capabilities) в виде gRPC-сервисов Identity Service и Controller Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
+
+   * **scsi-modules-loader** — init-контейнер, обеспечивающий загрузку модуля ядра для работы с iSCSI (`iscsi_tcp`);
 
    * **сайдкар-контейнеры контроллера** — поддерживаемые сообществом Kubernetes внешние контроллеры (external controllers).
 
@@ -44,6 +46,8 @@ CSI-драйвер [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) - ре
 
      * **attacher** ([external-attacher](https://github.com/kubernetes-csi/external-attacher)) — отслеживает ресурсы VolumeAttachment после того, как под запланирован на узел, а также подключает и отключает тома через RPC `ControllerPublishVolume` и `ControllerUnpublishVolume`;
 
+     * **resizer** ([external-resizer](https://github.com/kubernetes-csi/external-resizer)) — отслеживает обновления ресурсов PersistentVolumeClaim, расширяет тома с помощью RPC `ControllerExpandVolume`, если пользователь запросил больше дискового пространства для PVC и драйвер поддерживает capability `EXPAND_VOLUME`;
+
      * [**livenessprobe**](https://github.com/kubernetes-csi/livenessprobe) — отслеживает состояние CSI-драйвера через RPC `Probe` из Identity Service и предоставляет HTTP-эндпоинт `/healthz`, за которым следит [kubelet](../../kubernetes-and-scheduling/kubelet.html). При неуспешной *livenessProbe* kubelet перезапускает под csi-controller.
 
 1. **Csi-node** (DaemonSet) — Node Plugin, работающий на всех узлах кластера и отвечающий за локальное монтирование и размонтирование томов.
@@ -53,7 +57,9 @@ CSI-драйвер [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) - ре
 
    * **node** — основной контейнер, реализующий функции CSI-драйвера в виде gRPC-сервисов Identity Service и Node Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
 
-   * **node-driver-registrar** — сайдкар-контейнер, регистрирующий Node Plugin в [kubelet](../../kubernetes-and-scheduling/kubelet.html). Вызывает в контейнере node RPC `GetPluginInfo` и `NodeGetInfo`, чтобы получить информацию о плагине и узле. Взаимодействует c контейнером **node** по gRPC через Unix-сокет.
+   * **node-driver-registrar** — сайдкар-контейнер, регистрирующий Node Plugin в [kubelet](../../kubernetes-and-scheduling/kubelet.html). Вызывает в контейнере node RPC `GetPluginInfo` и `NodeGetInfo`, чтобы получить информацию о плагине и узле. Взаимодействует c контейнером **node** по gRPC через Unix-сокет;
+
+   * **scsi-modules-loader** — init-контейнер, обеспечивающий загрузку модуля ядра для работы с iSCSI (`iscsi_tcp`).
 
 ## Взаимодействия драйвера
 
@@ -61,7 +67,7 @@ CSI-драйвер [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) - ре
 
 1. **Kube-apiserver** — мониторинг ресурсов PersistentVolumeClaim, VolumeAttachment.
 
-1. **S3-хранилище** — создание и удаление томов, подключение и отключение томов от узлов.
+1. **СХД с подключением по SCSI** — создание и удаление томов, подключение и отключение томов от узлов.
 
 С драйвером взаимодействуют следующие внешние компоненты:
 

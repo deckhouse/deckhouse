@@ -30,15 +30,15 @@ description: Архитектура модуля csi-yadro-tatlin-unified в Dec
 
 1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-yadro-tatlin-unified/stable/cr.html):
 
-  * YadroTatlinUnifiedStorageConnection — параметры подключения к СХД Yadro.Tatlin;
-  * YadroTatlinUnifiedStorageClass — определяет конфигурацию для Kubernetes StorageClass.
+* YadroTatlinUnifiedStorageConnection — параметры подключения к СХД Yadro.Tatlin;
+* YadroTatlinUnifiedStorageClass — определяет конфигурацию для Kubernetes StorageClass.
 
   В YadroTatlinUnifiedStorageClass задаются параметры подключения (YadroTatlinUnifiedStorageConnection), а так же название пула ресурсов, тип файловой системы и reclaim policy.
 
    Состоит из следующих контейнеров:
 
-   * **controller** — основной контейнер;
-   * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов YadroTatlinUnifiedStorageConnection и YadroTatlinUnifiedStorageClass.
+* **controller** — основной контейнер;
+* **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов YadroTatlinUnifiedStorageConnection и YadroTatlinUnifiedStorageClass.
 
 1. **CSI-драйвер (yadro-tatlin-unified)** — реализация CSI-драйвера для `csi-tatlinunified.yadro.com` provisioner. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
