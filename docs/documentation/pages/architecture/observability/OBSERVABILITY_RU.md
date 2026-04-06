@@ -29,7 +29,7 @@ description: Архитектура модуля observability в Deckhouse Kube
 Архитектура модуля [`observability`](/modules/observability/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля observability](../../../images/architecture/storage/c4-l2-observability.ru.png)
+![Архитектура модуля observability](../../../images/architecture/observability/c4-l2-observability.ru.png)
 
 ## Компоненты модуля
 
@@ -37,11 +37,11 @@ description: Архитектура модуля observability в Deckhouse Kube
 
 1. **Observability-controller** — состоит из одного контейнера, управляет жизненным циклом большинства кастомных ресурсов модуля, таких как: ObservabilityMetricsAlertingRules, ObservabilityNotificationChannels, ObservabilityNotificationSilence и т.д. Полный список ресурсов, которыми управляет модуль, приведён [в документации модуля](/modules/observability/cr.html).
 
-1. **Observability-webhook** — состоит из одного контейнера, реализующего вебхук-сервер для проверки и изменения кастомных ресурсов через механизмы [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
+2. **Observability-webhook** — состоит из одного контейнера, реализующего вебхук-сервер для проверки и изменения кастомных ресурсов через механизмы [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
-1. **Alert-kube-api** — состоит из одного контейнера, реализует [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), который расширяет Kubernetes API кастомными ресурсами ObservabilityAlerts и ClusterObservabilityAlerts. Alert-kube-api позволяет запрашивать алерты как кастомные реурсы, используя в качестве бэкенда alertmanager, и кэширует их в памяти для быстрого доступа.
+3. **Alert-kube-api** — состоит из одного контейнера, реализует [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), который расширяет Kubernetes API кастомными ресурсами ObservabilityAlerts и ClusterObservabilityAlerts. Alert-kube-api позволяет запрашивать алерты как кастомные реурсы, используя в качестве бэкенда alertmanager, и кэширует их в памяти для быстрого доступа.
 
-1. **Alertmanager** — принимает алерты от Prometheus сервера, обрабатывает и отправляет их конечным получателям. DKP поддерживает отправку алертов с помощью Alertmanager:
+4. **Alertmanager** — принимает алерты от Prometheus сервера, обрабатывает и отправляет их конечным получателям. DKP поддерживает отправку алертов с помощью Alertmanager:
 
    - по протоколу SMTP;
    - в PagerDuty;
@@ -59,7 +59,7 @@ description: Архитектура модуля observability в Deckhouse Kube
 В модуле [`prometheus`](/modules/prometheus/) используется другая инсталляция Grafana, основанная на [оригинальном проекте](https://github.com/grafana/grafana).
 {% endalert %}
 
-1. **Grafana** — компонент, предоставляющий веб-интерфейс для визуализации данных мониторинга. В модуле [`observability`](/modules/observability/) используется [форк Grafana](https://github.com/okmeter/grafana), входящий в состав системы мониторинга [Okmeter](https://okmeter.ru/docs/overview/) от компании «Флант». Используемая модификация Grafana обладает расширенными возможностями, такими как разграничение доступа к метрикам и дашбордам в рамках [мультитенантности](../iam/multitenancy.html). Дашборды Grafana модуля [`observability`](/modules/observability/) интегрированы в [веб-интерфейс](/modules/console/stable/) DKP (управление системой мониторинга из одного окна).
+5. **Grafana** — компонент, предоставляющий веб-интерфейс для визуализации данных мониторинга. В модуле [`observability`](/modules/observability/) используется [форк Grafana](https://github.com/okmeter/grafana), входящий в состав системы мониторинга [Okmeter](https://okmeter.ru/docs/overview/) от компании «Флант». Используемая модификация Grafana обладает расширенными возможностями, такими как разграничение доступа к метрикам и дашбордам в рамках [мультитенантности](../iam/multitenancy.html). Дашборды Grafana модуля [`observability`](/modules/observability/) интегрированы в [веб-интерфейс](/modules/console/stable/) DKP (управление системой мониторинга из одного окна).
 
    Компонент содержит следующие контейнеры:
 
@@ -67,16 +67,31 @@ description: Архитектура модуля observability в Deckhouse Kube
    - **grafana-kube-storage** — сайдкар-контейнер, реализующий бэкенд для grafana и предоставляющий управление ресурсами Dashboards и чтение ресурсов Datasources Grafana API. Данные ресурсы позволяют просматривать и управлять дашбордами в пределах пространств имён (проектов), а также подключать [пользовательские источники данных](/modules/observability/stable/#%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%BA%D0%B0-%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D1%81%D0%BA%D0%B8%D1%85-%D0%B8%D1%81%D1%82%D0%BE%D1%87%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2-%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85);
    - **nginx** — сайдкар-контейнер, представляющий собой прокси-сервер NGINX, который пересылает авторизованные и неавторизованные (публичные) запросы к Grafana, а также пробы до обоих контейнеров. Является [Open Source-проектом](https://github.com/nginx/nginx)
    
+6. **Label-enforcer** — выполняет авторизацию и проксирование запросов пользователей к источникам метрик (Prometheus через сервис label-proxy) и логов (Loki через сервис logs-gateway), указанным в ресурсах Datasources Grafana API. Label-enforcer проверяет RBAC-доступ к данным мониторинга в зависимости от прав пользователя, получает список доступных пространств имён и обогащает запросы лейблами для возможности фильтрации запрашиваемых данных в рамках пространств имён пользователей. Подробнее о разграничении доступа можно ознакомиться в [в разделе документации модуля](/modules/observability/stable/#%D1%80%D0%B0%D0%B7%D0%B3%D1%80%D0%B0%D0%BD%D0%B8%D1%87%D0%B5%D0%BD%D0%B8%D0%B5-%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%B0-%D0%BA-%D0%BC%D0%B5%D1%82%D1%80%D0%B8%D0%BA%D0%B0%D0%BC).
+
+   Состоит из одного контейнера:
+
+   **enforcer**.
 
 ## Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
 
 1. **Kube-apiserver**:
-   - для работы с кастомными ресурсами, относящимися к блочным устройствам и LVM;
-   - для авторизации запросов к метрикам.
+
+   - для авторизации запросов к данным мониторинга;
+   - для управления кастомными ресурсами модуля;
+
+1. **Prometheus** — использует в качестве источника данных.
+1. **Loki** — использует в качестве источника данных.
+1. **Получатели алертов** — отправляет алерты.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Kube-apiserver** — выполняет валидацию кастомных ресурсов [LVMLogicalVolumeSnapshot](/modules/observability/cr.html#lvmlogicalvolumesnapshot).
-1. **Kube-scheduler** — собирает метрики компонента `observability`.
+1. **Kube-apiserver**:
+
+   - выполняет проверку и изменение кастомных ресурсов модуля (с помощью validating и mutating вбхуков);
+   - пересылает в alert-kube-api запросы на кастомные ресурсы ObservabilityAlerts и ClusterObservabilityAlerts.
+
+1. **Prometheus** — отправляет алерты в Alertmanager.
+1. **[Deckhouse Веб Интерфейс](/modules/console/)** — использует Grafana для визуализации данных мониторинга.
