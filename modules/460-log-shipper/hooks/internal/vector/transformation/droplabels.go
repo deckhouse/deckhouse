@@ -26,18 +26,17 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-var keepOnlyKeyRe = regexp.MustCompile(`^[a-zA-Z0-9_./:@%#*+\-]+$`)
+var keepChildKeysKeyRe = regexp.MustCompile(`^[a-zA-Z0-9_./:@%#*+\-]+$`)
 
-func isKeepOnlyKey(s string) bool {
-	return keepOnlyKeyRe.MatchString(s)
+func isKeepChildKeysKey(s string) bool {
+	return keepChildKeysKeyRe.MatchString(s)
 }
 
 func DropLabelsVRL(d v1alpha1.DropLabelsSpec) (string, error) {
 	if len(d.Labels) == 0 {
 		return "", fmt.Errorf("dropLabels: labels is empty")
 	}
-	// if keepOnly is empty, drop all labels
-	if len(d.KeepOnly) == 0 {
+	if len(d.KeepChildKeys) == 0 {
 		paths, err := parser.MapLabelPaths(d.Labels, parser.PathSegmentsToVRLDotPath)
 		if err != nil {
 			return "", fmt.Errorf("dropLabels: %w", err)
@@ -46,10 +45,9 @@ func DropLabelsVRL(d v1alpha1.DropLabelsSpec) (string, error) {
 			Paths []string
 		}{Paths: paths}})
 	}
-	// validate keepOnly keys
-	for _, k := range d.KeepOnly {
-		if !isKeepOnlyKey(k) {
-			return "", fmt.Errorf("dropLabels: invalid keepOnly key %q", k)
+	for _, k := range d.KeepChildKeys {
+		if !isKeepChildKeysKey(k) {
+			return "", fmt.Errorf("dropLabels: invalid keepChildKeys key %q", k)
 		}
 	}
 	pathArrays, err := parser.MapLabelPaths(d.Labels, parser.PathSegmentsToVRLArray)
@@ -58,7 +56,7 @@ func DropLabelsVRL(d v1alpha1.DropLabelsSpec) (string, error) {
 	}
 	parts := make([]string, 0, len(pathArrays))
 	for _, pa := range pathArrays {
-		s, err := vrl.DropLabelsKeepOnly.Render(vrl.Args{"pathArray": pa, "keepKeys": d.KeepOnly})
+		s, err := vrl.DropLabelsKeepChildKeys.Render(vrl.Args{"pathArray": pa, "keepKeys": d.KeepChildKeys})
 		if err != nil {
 			return "", err
 		}

@@ -82,10 +82,9 @@ func wrapAddLabelsWhen(exprs []*parser.WhenExpr, body string) (string, error) {
 
 func renderWhenLeaf(i int, we *parser.WhenExpr) (string, error) {
 	args := vrl.Args{
-		"i":            i,
-		"pathArray":    parser.PathSegmentsToVRLArray(we.LeftPathSegs),
-		"arrayWantAny": parser.WhenArrayWantAny(we.Op),
-		"cmpOp":        string(we.Op),
+		"i":         i,
+		"pathArray": parser.PathSegmentsToVRLArray(we.LeftPathSegs),
+		"cmpOp":     string(we.Op),
 	}
 	switch we.Op {
 	case parser.WhenExists, parser.WhenNotExists:

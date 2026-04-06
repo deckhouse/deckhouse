@@ -38,8 +38,8 @@ if exists({{$path}}) {
 {{- end }}
 `
 
-// DropLabelsKeepOnly keeps only listed keys in the object at pathArray; drops the rest (dropLabels with keepOnly).
-const DropLabelsKeepOnly Rule = `
+// DropLabelsKeepChildKeys keeps only listed keys in the object at pathArray; drops the rest (dropLabels with keepChildKeys).
+const DropLabelsKeepChildKeys Rule = `
 obj, err = get(., {{.pathArray}})
 if err == null && is_object(obj) {
   filtered = {}
@@ -78,42 +78,26 @@ if err == null && value != null {
 
 // AddLabelsWhenPresenceLeaf is one addLabels when clause: path exists (opCmp ==) or missing (opCmp !=).
 const AddLabelsWhenPresenceLeaf Rule = `
-_, err_{{.i}} = get(., {{.pathArray}})
-b_{{.i}} = err_{{.i}} {{.opCmp}} null
+_, err = get(., {{.pathArray}})
+b_{{.i}} = err {{.opCmp}} null
 `
 
-// AddLabelsWhenLeaf is one addLabels when clause: compare or regex on a path; arrays use any-hit / no-hit (arrayWantAny).
+// AddLabelsWhenLeaf is one addLabels when clause: compare or regex on a scalar path value.
 // kind: literal (quoted rhs), regex (pattern literal only).
+// Reuses val, err, s, err_s, perr across leaves; only b_{{.i}} is unique per condition.
 const AddLabelsWhenLeaf Rule = `
-val_{{.i}}, err_{{.i}} = get(., {{.pathArray}})
+val, err = get(., {{.pathArray}})
 b_{{.i}} = false
-if err_{{.i}} == null {
-  if is_array(val_{{.i}}) {
-    hit_{{.i}} = filter(array!(val_{{.i}})) -> |_idx_{{.i}}, el_{{.i}}| {
-      s_el_{{.i}}, err_el_{{.i}} = to_string(el_{{.i}})
+if err == null {
+  s, err_s = to_string(val)
 {{- if eq .kind "regex" }}
-      if err_el_{{.i}} != null {
-        false
-      } else {
-        _, perr_{{.i}} = parse_regex(s_el_{{.i}}, r'{{.regex}}')
-        perr_{{.i}} == null
-      }
-{{- else }}
-      err_el_{{.i}} == null && s_el_{{.i}} == {{.quotedValue}}
-{{- end }}
-    }
-    b_{{.i}} = {{ if .arrayWantAny }}length(hit_{{.i}}) > 0{{ else }}length(hit_{{.i}}) == 0{{ end }}
-  } else {
-    s_{{.i}}, err_s_{{.i}} = to_string(val_{{.i}})
-{{- if eq .kind "regex" }}
-    if err_s_{{.i}} == null {
-      _, perr_{{.i}} = parse_regex(s_{{.i}}, r'{{.regex}}')
-      b_{{.i}} = perr_{{.i}} {{.regexFindOp}} null
-    }
-{{- else }}
-    b_{{.i}} = err_s_{{.i}} == null && s_{{.i}} {{.cmpOp}} {{.quotedValue}}
-{{- end }}
+  if err_s == null {
+    _, perr = parse_regex(s, r'{{.regex}}')
+    b_{{.i}} = perr {{.regexFindOp}} null
   }
+{{- else }}
+  b_{{.i}} = err_s == null && s {{.cmpOp}} {{.quotedValue}}
+{{- end }}
 }
 `
 

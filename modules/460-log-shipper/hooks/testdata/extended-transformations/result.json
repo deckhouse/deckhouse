@@ -29,7 +29,7 @@
       "inputs": [
         "transform/File/destination/test-ext-loki/01_tf_parseMessage_JSON"
       ],
-      "source": "val_0, err_0 = get(., [\"message\", \"user_id\"])\nb_0 = false\nif err_0 == null {\n  if is_array(val_0) {\n    hit_0 = filter(array!(val_0)) -> |_idx_0, el_0| {\n      s_el_0, err_el_0 = to_string(el_0)\n      err_el_0 == null && s_el_0 == \"123\"\n    }\n    b_0 = length(hit_0) > 0\n  } else {\n    s_0, err_s_0 = to_string(val_0)\n    b_0 = err_s_0 == null && s_0 == \"123\"\n  }\n}\nif b_0 {\n.from_addlabels = \"yes\"\nv, err = get(., [\"message\", \"user_id\"])\nif err == null {\n  .from_path = v\n}\n}",
+      "source": "val, err = get(., [\"message\", \"user_id\"])\nb_0 = false\nif err == null {\n  s, err_s = to_string(val)\n  b_0 = err_s == null && s == \"123\"\n}\nif b_0 {\n.from_addlabels = \"yes\"\nv, err = get(., [\"message\", \"user_id\"])\nif err == null {\n  .from_path = v\n}\n}",
       "type": "remap"
     },
     "transform/File/destination/test-ext-loki/03_tf_addLabels": {

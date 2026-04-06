@@ -35,10 +35,10 @@ func TestDropLabelsVRL(t *testing.T) {
 			"if exists(.second) {\n  del(.second)\n}", got)
 	})
 
-	t.Run("keepOnly", func(t *testing.T) {
+	t.Run("keepChildKeys", func(t *testing.T) {
 		got, err := DropLabelsVRL(v1alpha1.DropLabelsSpec{
-			Labels:   []string{".pod_labels"},
-			KeepOnly: []string{"app", "group"},
+			Labels:        []string{".pod_labels"},
+			KeepChildKeys: []string{"app", "group"},
 		})
 		require.NoError(t, err)
 		assert.Equal(t, `obj, err = get(., ["pod_labels"])

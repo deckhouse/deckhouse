@@ -108,17 +108,6 @@ func parseRightValue(s string) (string, error) {
 	return s, nil
 }
 
-func WhenArrayWantAny(op WhenOp) bool {
-	switch op {
-	case WhenEQ, WhenRe:
-		return true
-	case WhenNE, WhenNRe:
-		return false
-	default:
-		return false
-	}
-}
-
 // ValidateWhenRegexExpr compiles WhenExpr.Value for =~ / !=~.
 // Invalid patterns must be rejected when building config so Vector does not fail at runtime.
 func ValidateWhenRegexExpr(we *WhenExpr) error {

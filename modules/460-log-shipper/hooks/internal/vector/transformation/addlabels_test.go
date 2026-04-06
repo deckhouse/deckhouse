@@ -56,19 +56,11 @@ if err == null {
 				"==",
 				`.ns == "prod"`,
 				map[string]string{".tag": "x", ".lbl": "{{ .label }}"},
-				`val_0, err_0 = get(., ["ns"])
+				`val, err = get(., ["ns"])
 b_0 = false
-if err_0 == null {
-  if is_array(val_0) {
-    hit_0 = filter(array!(val_0)) -> |_idx_0, el_0| {
-      s_el_0, err_el_0 = to_string(el_0)
-      err_el_0 == null && s_el_0 == "prod"
-    }
-    b_0 = length(hit_0) > 0
-  } else {
-    s_0, err_s_0 = to_string(val_0)
-    b_0 = err_s_0 == null && s_0 == "prod"
-  }
+if err == null {
+  s, err_s = to_string(val)
+  b_0 = err_s == null && s == "prod"
 }
 if b_0 {
 v, err = get(., ["label"])
@@ -82,19 +74,11 @@ if err == null {
 				"!=",
 				`.k != 'v'`,
 				map[string]string{".a": "1", ".lbl": "{{ .label }}"},
-				`val_0, err_0 = get(., ["k"])
+				`val, err = get(., ["k"])
 b_0 = false
-if err_0 == null {
-  if is_array(val_0) {
-    hit_0 = filter(array!(val_0)) -> |_idx_0, el_0| {
-      s_el_0, err_el_0 = to_string(el_0)
-      err_el_0 == null && s_el_0 == "v"
-    }
-    b_0 = length(hit_0) == 0
-  } else {
-    s_0, err_s_0 = to_string(val_0)
-    b_0 = err_s_0 == null && s_0 != "v"
-  }
+if err == null {
+  s, err_s = to_string(val)
+  b_0 = err_s == null && s != "v"
 }
 if b_0 {
 .a = "1"
@@ -108,26 +92,13 @@ if err == null {
 				"=~",
 				`.msg =~ '^[a-z]+$'`,
 				map[string]string{".ok": "1", ".lbl": "{{ .label }}"},
-				`val_0, err_0 = get(., ["msg"])
+				`val, err = get(., ["msg"])
 b_0 = false
-if err_0 == null {
-  if is_array(val_0) {
-    hit_0 = filter(array!(val_0)) -> |_idx_0, el_0| {
-      s_el_0, err_el_0 = to_string(el_0)
-      if err_el_0 != null {
-        false
-      } else {
-        _, perr_0 = parse_regex(s_el_0, r'^[a-z]+$')
-        perr_0 == null
-      }
-    }
-    b_0 = length(hit_0) > 0
-  } else {
-    s_0, err_s_0 = to_string(val_0)
-    if err_s_0 == null {
-      _, perr_0 = parse_regex(s_0, r'^[a-z]+$')
-      b_0 = perr_0 == null
-    }
+if err == null {
+  s, err_s = to_string(val)
+  if err_s == null {
+    _, perr = parse_regex(s, r'^[a-z]+$')
+    b_0 = perr == null
   }
 }
 if b_0 {
@@ -142,8 +113,8 @@ if err == null {
 				"exists",
 				`.pod_labels.app`,
 				map[string]string{".tag": "x"},
-				`_, err_0 = get(., ["pod_labels", "app"])
-b_0 = err_0 == null
+				`_, err = get(., ["pod_labels", "app"])
+b_0 = err == null
 if b_0 {
 .tag = "x"
 }`,
@@ -152,8 +123,8 @@ if b_0 {
 				"notexists",
 				`!.pod_labels.skip`,
 				map[string]string{".tag": "x"},
-				`_, err_0 = get(., ["pod_labels", "skip"])
-b_0 = err_0 != null
+				`_, err = get(., ["pod_labels", "skip"])
+b_0 = err != null
 if b_0 {
 .tag = "x"
 }`,
@@ -162,26 +133,13 @@ if b_0 {
 				"!=~",
 				`.msg !=~ '^\d+$'`,
 				map[string]string{".ok": "1", ".lbl": "{{ .label }}"},
-				`val_0, err_0 = get(., ["msg"])
+				`val, err = get(., ["msg"])
 b_0 = false
-if err_0 == null {
-  if is_array(val_0) {
-    hit_0 = filter(array!(val_0)) -> |_idx_0, el_0| {
-      s_el_0, err_el_0 = to_string(el_0)
-      if err_el_0 != null {
-        false
-      } else {
-        _, perr_0 = parse_regex(s_el_0, r'^\d+$')
-        perr_0 == null
-      }
-    }
-    b_0 = length(hit_0) == 0
-  } else {
-    s_0, err_s_0 = to_string(val_0)
-    if err_s_0 == null {
-      _, perr_0 = parse_regex(s_0, r'^\d+$')
-      b_0 = perr_0 != null
-    }
+if err == null {
+  s, err_s = to_string(val)
+  if err_s == null {
+    _, perr = parse_regex(s, r'^\d+$')
+    b_0 = perr != null
   }
 }
 if b_0 {
@@ -233,55 +191,26 @@ if err == null {
 			SetLabels: map[string]string{".tag": "x"},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, `val_0, err_0 = get(., ["ns"])
+		assert.Equal(t, `val, err = get(., ["ns"])
 b_0 = false
-if err_0 == null {
-  if is_array(val_0) {
-    hit_0 = filter(array!(val_0)) -> |_idx_0, el_0| {
-      s_el_0, err_el_0 = to_string(el_0)
-      err_el_0 == null && s_el_0 == "prod"
-    }
-    b_0 = length(hit_0) > 0
-  } else {
-    s_0, err_s_0 = to_string(val_0)
-    b_0 = err_s_0 == null && s_0 == "prod"
-  }
+if err == null {
+  s, err_s = to_string(val)
+  b_0 = err_s == null && s == "prod"
 }
-val_1, err_1 = get(., ["bar"])
+val, err = get(., ["bar"])
 b_1 = false
-if err_1 == null {
-  if is_array(val_1) {
-    hit_1 = filter(array!(val_1)) -> |_idx_1, el_1| {
-      s_el_1, err_el_1 = to_string(el_1)
-      if err_el_1 != null {
-        false
-      } else {
-        _, perr_1 = parse_regex(s_el_1, r'bar.*')
-        perr_1 == null
-      }
-    }
-    b_1 = length(hit_1) > 0
-  } else {
-    s_1, err_s_1 = to_string(val_1)
-    if err_s_1 == null {
-      _, perr_1 = parse_regex(s_1, r'bar.*')
-      b_1 = perr_1 == null
-    }
+if err == null {
+  s, err_s = to_string(val)
+  if err_s == null {
+    _, perr = parse_regex(s, r'bar.*')
+    b_1 = perr == null
   }
 }
-val_2, err_2 = get(., ["tst"])
+val, err = get(., ["tst"])
 b_2 = false
-if err_2 == null {
-  if is_array(val_2) {
-    hit_2 = filter(array!(val_2)) -> |_idx_2, el_2| {
-      s_el_2, err_el_2 = to_string(el_2)
-      err_el_2 == null && s_el_2 == "far"
-    }
-    b_2 = length(hit_2) == 0
-  } else {
-    s_2, err_s_2 = to_string(val_2)
-    b_2 = err_s_2 == null && s_2 != "far"
-  }
+if err == null {
+  s, err_s = to_string(val)
+  b_2 = err_s == null && s != "far"
 }
 if b_0 && b_1 && b_2 {
 .tag = "x"

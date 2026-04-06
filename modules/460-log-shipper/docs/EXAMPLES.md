@@ -906,11 +906,6 @@ The `when` field is an optional list of conditions combined with logical AND. Th
 - Field existence check: Only a path with no operator, for example, `.pod_labels.team` (the field must exist).
 - Field absence check: `!.pod_labels.legacy`.
 
-If the value at a set path is an array, the conditions work as follows:
-
-- `==` and `=~` are true when at least one element matches.
-- `!=` and `!=~` are true when no element matches.
-
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -937,7 +932,7 @@ Transformed result for an event in namespace `production` with pod label `app=ap
 
 ### Removing labels
 
-You can use the `DropLabels` transformation to remove specific labels from log records. If `keepOnly` is set, each entry in `labels` is a path to an **object**. Inside that object, every nested key not listed in `keepOnly` is removed (key names without a leading dot). If `keepOnly` is unset, each listed path in `labels` is removed entirely.
+You can use the `DropLabels` transformation to remove specific labels from log records. If `keepChildKeys` is set, each entry in `labels` is a path to an **object**. Inside that object, every nested key not listed in `keepChildKeys` is removed (key names without a leading dot). If `keepChildKeys` is unset, each listed path in `labels` is removed entirely.
 
 > To apply the `DropLabels` transformation to the `message` field or its nested fields,
 > the log entry must first be parsed into a structured object using the `ParseMessage` transformation.

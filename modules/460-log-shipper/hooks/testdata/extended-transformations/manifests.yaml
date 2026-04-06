@@ -49,5 +49,5 @@ spec:
     dropLabels:
       labels:
       - .pod_labels
-      keepOnly:
+      keepChildKeys:
       - app

@@ -42,8 +42,8 @@ type ReplaceKeysSpec struct {
 }
 
 type DropLabelsSpec struct {
-	Labels   []string `json:"labels"`
-	KeepOnly []string `json:"keepOnly,omitempty"`
+	Labels        []string `json:"labels"`
+	KeepChildKeys []string `json:"keepChildKeys,omitempty"`
 }
 
 type ReplaceValueSpec struct {
