@@ -6,7 +6,7 @@ search: csi-yadro-tatlin-unified, yadro tatlin unified
 description: Архитектура модуля csi-yadro-tatlin-unified в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) предназначен для управления томами c использованием СХД TATLIN.UNIFIED. Он позволяет создавать StorageClass в Kubernetes с помощью ресурса YadroTatlinUnifiedStorageClass.
+Модуль [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) предназначен для управления томами c использованием систем хранения данных TATLIN.UNIFIED. Он позволяет создавать StorageClass в Kubernetes с помощью ресурса YadroTatlinUnifiedStorageClass.
 
 Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/csi-yadro-tatlin-unified/).
 

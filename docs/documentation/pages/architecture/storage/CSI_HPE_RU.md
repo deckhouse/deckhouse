@@ -6,7 +6,7 @@ search: csi-hpe, hpe
 description: Архитектура модуля csi-hpe в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`csi-hpe`](/modules/csi-hpe/) предназначен для управления томами c использованием СХД HPE. Он позволяет создавать StorageClass в Kubernetes с помощью ресурса HPEStorageClass.
+Модуль [`csi-hpe`](/modules/csi-hpe/) предназначен для управления томами c использованием систем хранения данных HPE. Он позволяет создавать StorageClass в Kubernetes с помощью ресурса HPEStorageClass.
 
 Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/csi-hpe/).
 
@@ -33,7 +33,7 @@ description: Архитектура модуля csi-hpe в Deckhouse Kubernetes
   * HPEStorageConnection — параметры подключения к СХД HPE;
   * HPEStorageClass — определяет конфигурацию для Kubernetes StorageClass.
 
-  В HPEStorageClass задается протокол подключения? название пула ресурсов, тип файловой системы и reclaim policy.
+  В HPEStorageClass задается протокол подключения, название пула ресурсов, тип файловой системы и reclaim policy.
 
    Состоит из следующих контейнеров:
 
