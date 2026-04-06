@@ -1,0 +1,53 @@
+- name: Microsoft Azure Cloud provider
+  link: https://github.com/kubernetes-sigs/cloud-provider-azure
+  description: Cloud Controller Manager for Microsoft Azure.
+  logo: /images/logos/azure.svg
+  license: Apache License 2.0
+  id: ccm-azure
+  versions:
+    - condition:
+        k8s: "1.31"
+      version: v1.31.12
+    - condition:
+        k8s: "1.32"
+      version: v1.32.11
+    - condition:
+        k8s: "1.33"
+      version: v1.33.6
+    - condition:
+        k8s: "1.34"
+      version: v1.34.3
+    - condition:
+        k8s: "1.35"
+      version: v1.34.3
+
+- name: Microsoft Azure CSI driver
+  link: https://github.com/kubernetes-sigs/azuredisk-csi-driver
+  description: CSI driver for Microsoft Azure Disks.
+  logo: /images/logos/azure.svg
+  license: Apache License 2.0
+  id: csi-azure
+  versions:
+    - condition:
+        k8s: "1.31"
+      version: v1.31.12
+    - condition:
+        k8s: "1.32"
+      version: v1.32.12
+    - condition:
+        k8s: "1.33"
+      version: v1.33.8
+    - condition:
+        k8s: "1.34"
+      version: v1.34.2
+    - condition:
+        k8s: "1.35"
+      version: v1.34.2
+
+- name: Microsoft Azure Terraform provider
+  link: https://github.com/hashicorp/terraform-provider-azurerm
+  description: Terraform provider for Microsoft Azure Resource Manager.
+  logo: /images/logos/azure.svg
+  license: Mozilla Public License 2.0
+  id: terraform-provider-azure
+  version: "3.117.1"

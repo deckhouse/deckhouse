@@ -1,0 +1,7 @@
+- name: Yandex Cloud Terraform provider
+  link: https://github.com/yandex-cloud/terraform-provider-yandex
+  description: Terraform provider for Yandex Cloud.
+  logo: /images/logos/terraform.svg
+  license: Mozilla Public License 2.0
+  id: terraform-provider-yandex
+  version: "0.174.0"
