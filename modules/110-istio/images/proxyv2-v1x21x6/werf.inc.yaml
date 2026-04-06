@@ -6,7 +6,7 @@
 {{- $llvmRev := "llvmorg-14.0.6" }}
 {{- $goVersion := "1.23.1" }}
 {{- $protocVersion := "22.3" }}
-{{- $bazelVersions := "6.3.2" }}
+{{- $bazelVersion := "6.3.2" }}
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
@@ -316,22 +316,9 @@ shell:
   - rm -rf /src/protobuf-go
   - rm -rf /src/protoc-gen-go-json
   - rm -rf /src/protoc-gen-doc
-  # Install multiversion bazel
-  - bazel_versions=({{ $bazelVersions }})
-  # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
-  - git archive --remote "$(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoyproxy_deps.git" HEAD "bazel/${bazel_versions[-1]}/bazel.sh" | tar -C /tmp -xvf -
-  - mv "/tmp/bazel/${bazel_versions[-1]}/bazel.sh" /usr/local/bin/bazel
-  - chmod +x /usr/local/bin/bazel
-  - |
-    for bazel_version in ${bazel_versions[@]} ; do
-      # instead of using installer script, download binaries directly, as installer script doesn't append version suffix,
-      # so for multiple versions to be usable files will need to moved around, which would be more tedious
-      long_binary_name="bazel-${bazel_version}-linux-x86_64"
-      git archive --remote "$(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoyproxy_deps.git" HEAD "bazel/${bazel_version}/${long_binary_name}" | tar -C /tmp -xvf -
-      mv "/tmp/bazel/${bazel_version}/${long_binary_name}" "/usr/local/bin/${long_binary_name}"
-      chmod +x "/usr/local/bin/${long_binary_name}"
-      USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
-    done
+  - git archive --remote "$(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoyproxy_deps.git" HEAD "bazel/{{ $bazelVersion }}/bazel-{{ $bazelVersion }}-linux-x86_64" | tar -C /tmp -xvf -
+  - mv "/tmp/bazel/{{ $bazelVersion }}/bazel-{{ $bazelVersion }}-linux-x86_64" "/usr/local/bin/bazel"
+  - chmod +x "/usr/local/bin/bazel"
   - rm -r /tmp/bazel
 imageSpec:
   config:
