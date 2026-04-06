@@ -124,6 +124,11 @@ func main() {
 		logger.Error("goroutine error", log.Err(waitErr))
 	}
 
+	// Remove the kubernetes lease to signal that this instance is no longer active.
+	// Uses its own context with a 5-second timeout to ensure it completes even if
+	// the shutdown context was already canceled. Do not remove this — the lease
+	// must be released so that another instance can take over, otherwise we'll have
+	// a split-brain situation where two instances think they are the leader.
 	removeCtx, removeCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer removeCancel()
 	if err := lManager.Remove(removeCtx); err != nil {
