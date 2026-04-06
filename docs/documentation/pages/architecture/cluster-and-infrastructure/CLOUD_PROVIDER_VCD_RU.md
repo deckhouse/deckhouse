@@ -6,9 +6,9 @@ search: cloud-provider-vcd, cloud provider vcd, vmware cloud director
 description: Архитектура модуля cloud-provider-vcd в Deckhouse Kubernetes Platform.
 ---
 
-Модуль `cloud-provider-vcd` управляет взаимодействием с облачными ресурсами [VMware Cloud Director](https://www.vmware.com/products/cloud-infrastructure/cloud-director). Он позволяет модулю [`node-manager`](/modules/node-manager/) использовать ресурсы VMware Cloud Director при заказе узлов для описанной [группы узлов](/modules/node-manager/cr.html#nodegroup).
+Модуль [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) обеспечивает интеграцию с облачными ресурсами [VMware Cloud Director](https://www.vmware.com/products/cloud-infrastructure/cloud-director). Он используется модулем [`node-manager`](/modules/node-manager/) для заказа узлов в соответствии [с настройками группы узлов](/modules/node-manager/cr.html#nodegroup).
 
-Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/cloud-provider-vcd/).
+Подробнее с описанием модуля можно ознакомиться [в соответствующем разделе документации](/modules/cloud-provider-vcd/).
 
 ## Архитектура модуля
 
@@ -28,7 +28,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
 Модуль состоит из следующих компонентов:
 
-1. **Capcd-controller-manager** — [Kubernetes Cluster API Provider Cloud Director](https://github.com/vmware-archive/cluster-api-provider-cloud-director). [Cluster API](https://github.com/kubernetes-sigs/cluster-api) является расширением для Kubernetes, которое дает возможность управлять Kubernetes-кластерами как кастомными ресурсами внутри другого Kubernetes-кластера. Cluster API Provider позволяет для кластеров под управлением Cluster API заказывать виртуальные машины в инфраструктуре облачного провайдера, в данном случае VMware Cloud Director. Capcd-controller-manager работает со следующими кастомными ресурсами:
+1. **Capcd-controller-manager** — [Kubernetes Cluster API Provider Cloud Director](https://github.com/vmware-archive/cluster-api-provider-cloud-director). [Cluster API](https://github.com/kubernetes-sigs/cluster-api) является расширением для Kubernetes, которое дает возможность управлять Kubernetes-кластерами как кастомными ресурсами внутри другого Kubernetes-кластера. Cluster API Provider используется для заказа виртуальных машин в инфраструктуре VMware Cloud Director для кластеров, находящихся под управлением Cluster API. Capcd-controller-manager работает со следующими кастомными ресурсами:
 
    * VCDClusterTemplate — шаблон с описанием инфраструктурных настроек создаваемого кластера (Control Plane endpoint, Loadbalancer, VCD-специфичные настройки);
    * VCDCluster — описание созданного на основе VCDClusterTemplate кластера;
@@ -39,7 +39,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
    * **capcd-controller-manager**.
 
-2. **Сloud-controller-manager** — [Kubernetes External Cloud Provider for VMware Cloud Director](https://github.com/vmware-archive/cloud-provider-for-cloud-director), реализация [Сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для VMware Cloud Director. Обеспечивает взаимодействие с облаком VMware Cloud Director и выполняет следующие функции:
+1. **Сloud-controller-manager** — [Kubernetes External Cloud Provider for VMware Cloud Director](https://github.com/vmware-archive/cloud-provider-for-cloud-director), реализация [Сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для VMware Cloud Director. Компонент обеспечивает интеграцию с облаком VMware Cloud Director и выполняет следующие функции:
 
    * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
 
@@ -48,26 +48,26 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
    * при создании ресурса Service типа LoadBalancer в Kubernetes создаёт балансировщик в облаке, который направляет трафик извне к узлам кластера.
 
-   Подробнее о cloud-controller-manager можно почитать в [документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/).
+   Подробнее о cloud-controller-manager можно почитать [в документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/).
 
    Состоит из одного контейнера:
 
    * **vcd-cloud-controller-manager**.
 
-3. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-vcd`.
+1. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-vcd`.
 
    Состоит из следующих контейнеров:
 
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-4. **Infra-controller-manager** — отвечает за контроль расположения узлов друг относительно друга на уровне гипервизоров, что может повысить отказоустойчивость и контролировать распределение рабочих нагрузок. Infra-controller-manager работает с кастомным ресурсом [VCDAffinityRule](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-affinityrule), который описывает правила размещения ресурсов в VMware Cloud Director.
+1. **Infra-controller-manager** — отвечает за контроль расположения узлов друг относительно друга на уровне гипервизоров, что может повысить отказоустойчивость и контролировать распределение рабочих нагрузок. Infra-controller-manager работает с кастомным ресурсом [VCDAffinityRule](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-affinityrule), который описывает правила размещения ресурсов в VMware Cloud Director.
 
    Состоит из одного контейнера:
 
    * **infra-controller-manager**.
 
-5. **CSI-драйвер (VCD)** — реализация CSI-драйвера для VMware Cloud Director. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-driver.html). В модуле cloud-provider-vcd используется [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
+1. **CSI-драйвер (VCD)** — реализация CSI-драйвера для VMware Cloud Director. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../infrastructure/csi-driver.html). В модуле `cloud-provider-vcd` используется [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
 
    CSI-драйвер (VCD) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 
@@ -84,7 +84,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
     * мониторинг сервисов типа LoadBalancer;
     * авторизация запросов на получение метрик.
 
-2. **VMware Cloud Director**:
+1. **VMware Cloud Director**:
 
     * получение параметров облака;
     * управление виртуальными машинами;
@@ -104,11 +104,11 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
    * шаблоны для создания кастомных ресурсов Cluster API для конкретного провайдера, которые `cloud-provider-vcd` использует для создания виртуальных машин в облаке;
    * секрет `kube-system/d8-node-manager-cloud-provider`, в котором содержатся все необходимые настройки для подключения к облаку и создания CloudEphemeral-узлов. Эти настройки прописываются в кастомных ресурсах Cluster API, созданных на основе упомянутых выше шаблонов и учитывающих особенности провайдера.
 
-2. Модуль `cloud-provider-vcd` предоставляет компоненты Terraform/OpenTofu для VMware Cloud Director, которые используются при сборке исполняемого файла утилиты [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) в модуле [`terraform-manager`](/modules/terraform-manager/), такие как:
+1. Модуль `cloud-provider-vcd` предоставляет компоненты Terraform/OpenTofu для VMware Cloud Director, которые используются при сборке исполняемого файла утилиты [`dhctl`](https://github.com/deckhouse/deckhouse/tree/main/dhctl) в модуле [`terraform-manager`](/modules/terraform-manager/), такие как:
 
    * Terraform/OpenTofu-провайдер;
    * Terraform-модули;
-   * layouts — набор схем размещения в облаке, определяющих, как создается базовая инфраструктура, как и с какими дополнительными характеристиками для данного размещения должны создаваться узлы. Например, в одной схеме узлы могут иметь публичные IP-адреса, а в другой — нет. Каждый layout включает три модуля:
+   * layouts — набор схем размещения в облаке, определяющих, как создается базовая инфраструктура, как и с какими дополнительными характеристиками для данного размещения должны создаваться узлы. Например, в одной схеме узлы могут иметь публичные IP-адреса, а в другой — нет. Каждая схема включает три модуля:
 
      * `base-infrastructure` — базовая инфраструктура (например, создание сетей), может быть пустым;
      * `master-node`;
