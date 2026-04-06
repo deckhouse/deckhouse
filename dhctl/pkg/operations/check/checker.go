@@ -220,7 +220,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("Unable to get static/provider cluster config: %w", err)
 	}
 
-	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger)
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger, nil)
 	if err != nil {
 		return "", fmt.Errorf("Unable to get in-cluster meta config: %w", err)
 	}

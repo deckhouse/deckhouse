@@ -364,18 +364,24 @@ spec:
             description: |
               Allow access to host device directory.
               CSI Node Driver requires access to /dev to manage block devices and perform disk operations for persistent volumes.
-      {{- if $additionalNodeVolumes }}
-        {{- range $vol := $additionalNodeVolumes }}
-          {{- if $vol.hostPath }}
-        - path: {{ $vol.hostPath.path }}
-          readOnly: false
+    {{- if $additionalNodeVolumes }}
+      {{- range $volume := $additionalNodeVolumes }}
+        {{- if $volume.hostPath }}
+          {{- $readOnly := false }}
+          {{- range $volumeMount := $additionalNodeVolumeMounts }}
+            {{- if eq $volumeMount.name $volume.name }}
+              {{- $readOnly = (default false $volumeMount.readOnly) }}
+            {{- end }}
+          {{- end }}
+        - path: {{ $volume.hostPath.path }}
+          readOnly: {{ $readOnly }}
           metadata:
             description: |
-              Allow access to additional hostPath volume at {{ $vol.hostPath.path }}.
+              Allow access to additional hostPath volume at {{ $volume.hostPath.path }}.
               This additional hostPath volume is required by the CSI Node Driver for extended storage operations specific to the cloud provider implementation.
-          {{- end }}
         {{- end }}
       {{- end }}
+    {{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

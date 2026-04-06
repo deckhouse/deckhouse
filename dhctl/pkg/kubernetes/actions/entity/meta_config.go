@@ -18,19 +18,21 @@ import (
 	"context"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 )
 
-func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, logger log.Logger) (*config.MetaConfig, error) {
+func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, logger log.Logger, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
 	metaConfig, err := config.ParseConfigFromCluster(
 		ctx,
 		kubeCl,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(logger),
 		),
+		dc,
 	)
 	if err != nil {
 		return nil, err
