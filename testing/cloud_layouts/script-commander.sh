@@ -1641,9 +1641,9 @@ function cleanup() {
 
     get_opentofu
 
-    if [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "VCD" ]]; then
+    if [[ ${PROVIDER} == "VCD" ]]; then
       $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-    elif [[ ${PROVIDER} == "Static-cse" ]]; then
+    elif [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "Static-cse" ]]; then
       $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
     fi
 
