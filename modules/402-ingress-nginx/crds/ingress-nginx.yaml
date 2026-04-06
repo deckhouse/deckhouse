@@ -1651,7 +1651,7 @@ spec:
                   required: ['mode']
                   type: object
                   description: |
-                    Maximum amount of CPU and memory resources a Pod can request when selecting a node. If the VPA is disabled, these max values become the default ones.
+                    Configures CPU and memory for controller Pods. In VPA mode, set bounds (min/max) and optional limit ratios for requests that VPA manages. In Static mode, set pod requests and optional limits under static.
                   properties:
                     mode:
                       type: string
@@ -1709,7 +1709,7 @@ spec:
                             limitRatio:
                               type: number
                               description: |
-                                The CPU limits/requests ratio.
+                                The memory limits/requests ratio.
 
                                 If set, the limits are calculated based on the requests and the specified ratio.
                     static:

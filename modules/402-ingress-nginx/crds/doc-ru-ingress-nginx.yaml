@@ -548,7 +548,7 @@ spec:
                     Минимальное количество реплик `LoadBalancer`, `LoadBalancerWithProxyProtocol` и `LoadBalancerWithSSLPassthrough` для HPA.
                 maxReplicas:
                   description: |
-                    Максимальное количество реплик `LoadBalancer` `LoadBalancerWithProxyProtocol` и `LoadBalancerWithSSLPassthrough` для HPA.
+                    Максимальное количество реплик `LoadBalancer`, `LoadBalancerWithProxyProtocol` и `LoadBalancerWithSSLPassthrough` для HPA.
                 defaultSSLCertificate:
                   description: |
                     Сертификат, который используется:
@@ -1051,7 +1051,7 @@ spec:
                     Дополнительные поля, которые будут добавлены в логи nginx. Указываются в формате `ключ: значение(строка)`.
                 resourcesRequests:
                   description: |
-                    Настройки максимальных значений CPU и памяти (memory), которые может запросить под при выборе узла. Если VPA выключен, максимальные значения становятся значениями по умолчанию.
+                    Настройки CPU и памяти для подов контроллера. В режиме VPA задаются границы (min/max) и при необходимости коэффициенты limits/requests для автоматически выставляемых запросов. В статическом режиме запросы и ограничения задаются в секции static.
                   properties:
                     mode:
                       description: |
@@ -1090,7 +1090,7 @@ spec:
                                 Минимальное значение запроса к памяти, которое может выставить VPA.
                             limitRatio:
                               description: |
-                                Коэффициент соотношения limits/requests для CPU.
+                                Коэффициент соотношения limits/requests для памяти.
 
                                 Если параметр указан, limits рассчитываются на основе requests и заданного коэффициента.
                     static:
@@ -1143,7 +1143,7 @@ spec:
                     Минимальное количество реплик `LoadBalancer`, `LoadBalancerWithProxyProtocol` и `LoadBalancerWithSSLPassthrough` для HPA.
                 maxReplicas:
                   description: |
-                    Максимальное количество реплик `LoadBalancer` `LoadBalancerWithProxyProtocol` и `LoadBalancerWithSSLPassthrough` для HPA.
+                    Максимальное количество реплик `LoadBalancer`, `LoadBalancerWithProxyProtocol` и `LoadBalancerWithSSLPassthrough` для HPA.
                 defaultSSLCertificate:
                   description: |
                     Сертификат, который используется:
