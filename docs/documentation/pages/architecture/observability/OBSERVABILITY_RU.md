@@ -1,6 +1,6 @@
 ---
 title: Модуль observability
-permalink: ru/architecture/storage/observability.html
+permalink: ru/architecture/observability/observability.html
 lang: ru
 search: observability, grafana, alertmanager, dashboard, дашборд, alert, алерт, алертинг
 description: Архитектура модуля observability в Deckhouse Kubernetes Platform.

@@ -1407,8 +1407,8 @@ entries:
                 ru: Модули логирования
               url: /architecture/observability/logging.html
             - title:
-                en: Модуль observability
-                ru: Observability module
+                en: Observability module
+                ru: Модуль observability
               url: /architecture/observability/observability.html              
     - title:
         en: Reference
