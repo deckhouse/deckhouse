@@ -61,7 +61,10 @@ cp {{ $manifestsDir}}/kube-controller-manager.yaml /etc/kubernetes/manifests/kub
 check_container_running "kube-apiserver"
 check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
-kubeadm init phase mark-control-plane --config {{ $kubeadmDir}}/config.yaml
+
+# kubeadm init phase mark-control-plane --config {{ $kubeadmDir}}/config.yaml
+kubectl label node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane=""
+kubectl taint node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane:NoSchedule
 
 # CIS becnhmark purposes
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}

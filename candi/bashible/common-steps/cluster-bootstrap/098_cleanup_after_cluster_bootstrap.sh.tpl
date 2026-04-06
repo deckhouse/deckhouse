@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-rm -rf /var/lib/bashible/kubeadm
 rm -rf /var/lib/bashible/control-plane
-bb-package-remove kubeadm
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
 bb-package-remove module-registry-auth module-registry-distribution cfssl
