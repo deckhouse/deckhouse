@@ -55,7 +55,7 @@ func filterApiCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 		return nil, fmt.Errorf("cannot convert incoming object to Secret: %v", err)
 	}
 
-	return secret.Data[secretEncryptionKeySecretKey], nil
+	return secret.Data, nil
 }
 
 func copyCAPairToModuleValues(_ context.Context, input *go_hook.HookInput) error {
