@@ -62,7 +62,7 @@ check_container_running "kube-apiserver"
 check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
 
-# kubeadm init phase mark-control-plane --config {{ $kubeadmDir}}/config.yaml
+# kubeadm init phase mark-control-plane
 kubectl label node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane=""
 kubectl taint node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane:NoSchedule
 
