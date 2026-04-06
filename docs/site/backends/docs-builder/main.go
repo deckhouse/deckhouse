@@ -100,17 +100,26 @@ func main() {
 
 	logger.Info("stopping application")
 
+	// Create a new context with timeout for graceful shutdown.
+	// The signal context (ctx) may already be canceled (e.g., if one of the goroutines failed).
+	// In that case, shutdown would immediately exit — which is not what we want.
+	// A separate context allows all shutdown goroutines to complete correctly,
+	// even if one of them fails — the error won't cancel the context for others.
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	eg.Go(func() error {
+	// New errgroup for shutdown — the main eg may have already exited with an error
+	// (and consequently canceled its context). Reusing it for shutdown is not allowed.
+	shutdownEg, shutdownCtx := errgroup.WithContext(shutdownCtx)
+
+	shutdownEg.Go(func() error {
 		return srv.Shutdown(shutdownCtx)
 	})
-	eg.Go(func() error {
+	shutdownEg.Go(func() error {
 		return metricsSrv.Shutdown(shutdownCtx)
 	})
 
-	waitErr := eg.Wait()
+	waitErr := shutdownEg.Wait()
 	if waitErr != nil && !errors.Is(waitErr, context.Canceled) {
 		logger.Error("goroutine error", log.Err(waitErr))
 	}
