@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"net/http"
 	"os"
@@ -99,22 +100,25 @@ func main() {
 
 	logger.Info("stopping application")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err = lManager.Remove(ctx)
-	if err != nil {
+	eg.Go(func() error {
+		return srv.Shutdown(shutdownCtx)
+	})
+	eg.Go(func() error {
+		return metricsSrv.Shutdown(shutdownCtx)
+	})
+
+	waitErr := eg.Wait()
+	if waitErr != nil && !errors.Is(waitErr, context.Canceled) {
+		logger.Error("goroutine error", log.Err(waitErr))
+	}
+
+	removeCtx, removeCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer removeCancel()
+	if err := lManager.Remove(removeCtx); err != nil {
 		logger.Error("lease removing failed", log.Err(err))
-	}
-
-	err = srv.Shutdown(ctx)
-	if err != nil {
-		logger.Error("shutdown failed", log.Err(err))
-	}
-
-	err = eg.Wait()
-	if err != nil {
-		logger.Error("error due stopping application", log.Err(err))
 	}
 
 	logger.Info("application stopped")
