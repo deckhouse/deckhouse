@@ -78,32 +78,29 @@ function __on_conversion::v1_to_v2() {
                   }
                 else {} end)
               + (if ($rr.static? != null) then
-                  (
-                    {}
-                    + (if (($rr.static | has("cpu")) or ($rr.static | has("memory"))) then
-                        {static: {requests:
-                          (
-                            {}
-                            + (if ($rr.static | has("cpu")) then {cpu: $rr.static.cpu} else {} end)
-                            + (if ($rr.static | has("memory")) then {memory: $rr.static.memory} else {} end)
-                          )
-                        }}
-                      else {} end)
-                    + (if ($rr.static.limits? != null) then
-                        {static:
-                          (
-                            (.static // {})
-                            + {limits:
-                              (
-                                {}
-                                + (if ($rr.static.limits | has("cpu")) then {cpu: $rr.static.limits.cpu} else {} end)
-                                + (if ($rr.static.limits | has("memory")) then {memory: $rr.static.limits.memory} else {} end)
-                              )
-                            }
-                          )
-                        }
-                      else {} end)
-                  )
+                  {static:
+                    (
+                      {}
+                      + (if (($rr.static | has("cpu")) or ($rr.static | has("memory"))) then
+                          {requests:
+                            (
+                              {}
+                              + (if ($rr.static | has("cpu")) then {cpu: $rr.static.cpu} else {} end)
+                              + (if ($rr.static | has("memory")) then {memory: $rr.static.memory} else {} end)
+                            )
+                          }
+                        else {} end)
+                      + (if ($rr.static.limits? != null) then
+                          {limits:
+                            (
+                              {}
+                              + (if ($rr.static.limits | has("cpu")) then {cpu: $rr.static.limits.cpu} else {} end)
+                              + (if ($rr.static.limits | has("memory")) then {memory: $rr.static.limits.memory} else {} end)
+                            )
+                          }
+                        else {} end)
+                    )
+                  }
                 else {} end)
             ) |
             del(.spec.resourcesRequests)
@@ -166,34 +163,27 @@ function __on_conversion::v2_to_v1() {
                   }
                 else {} end)
               + (if ($rm.static? != null) then
-                  (
-                    {}
-                    + (if ($rm.static.requests? != null) then
-                        (if (($rm.static.requests | has("cpu")) or ($rm.static.requests | has("memory"))) then
-                          {static:
+                  {static:
+                    (
+                      {}
+                      + (if ($rm.static.requests? != null) and (($rm.static.requests | has("cpu")) or ($rm.static.requests | has("memory"))) then
+                          (
+                            {}
+                            + (if ($rm.static.requests | has("cpu")) then {cpu: $rm.static.requests.cpu} else {} end)
+                            + (if ($rm.static.requests | has("memory")) then {memory: $rm.static.requests.memory} else {} end)
+                          )
+                        else {} end)
+                      + (if ($rm.static.limits? != null) then
+                          {limits:
                             (
                               {}
-                              + (if ($rm.static.requests | has("cpu")) then {cpu: $rm.static.requests.cpu} else {} end)
-                              + (if ($rm.static.requests | has("memory")) then {memory: $rm.static.requests.memory} else {} end)
+                              + (if ($rm.static.limits | has("cpu")) then {cpu: $rm.static.limits.cpu} else {} end)
+                              + (if ($rm.static.limits | has("memory")) then {memory: $rm.static.limits.memory} else {} end)
                             )
                           }
                         else {} end)
-                      else {} end)
-                    + (if ($rm.static.limits? != null) then
-                        {static:
-                          (
-                            (.static // {})
-                            + {limits:
-                              (
-                                {}
-                                + (if ($rm.static.limits | has("cpu")) then {cpu: $rm.static.limits.cpu} else {} end)
-                                + (if ($rm.static.limits | has("memory")) then {memory: $rm.static.limits.memory} else {} end)
-                              )
-                            }
-                          )
-                        }
-                      else {} end)
-                  )
+                    )
+                  }
                 else {} end)
             ) |
             del(.spec.resourcesManagement)
