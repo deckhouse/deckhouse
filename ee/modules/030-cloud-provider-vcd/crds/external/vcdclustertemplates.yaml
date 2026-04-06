@@ -19,6 +19,17 @@ spec:
     plural: vcdclustertemplates
     singular: vcdclustertemplate
   scope: Namespaced
+  conversion:
+    strategy: Webhook
+    webhook:
+      conversionReviewVersions:
+      - v1
+      - v1beta1
+      clientConfig:
+        service:
+          name: capcd-controller-manager-webhook-service
+          namespace: d8-cloud-provider-vcd
+          path: /convert
   versions:
   - name: v1beta2
     schema:
