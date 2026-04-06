@@ -39,7 +39,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
    * **capcd-controller-manager**.
 
-1. **Сloud-controller-manager** — [Kubernetes External Cloud Provider for VMware Cloud Director](https://github.com/vmware-archive/cloud-provider-for-cloud-director), реализация [Сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для VMware Cloud Director. Компонент обеспечивает интеграцию с облаком VMware Cloud Director и выполняет следующие функции:
+1. **Сloud-controller-manager** — [Kubernetes External Cloud Provider for VMware Cloud Director](https://github.com/vmware-archive/cloud-provider-for-cloud-director), реализация [cloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для VMware Cloud Director. Компонент обеспечивает интеграцию с облаком VMware Cloud Director и выполняет следующие функции:
 
    * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
 
@@ -95,7 +95,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Prometheus-main** — сбор метрик cloud-data-discoverer.
+* **Prometheus-main** — сбор метрик cloud-data-discoverer.
 
 Непрямые взаимодействия:
 

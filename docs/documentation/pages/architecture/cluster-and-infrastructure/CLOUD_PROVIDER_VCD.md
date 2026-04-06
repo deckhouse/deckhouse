@@ -38,7 +38,7 @@ The module consists of the following components:
 
    * **capcd-controller-manager**.
 
-1. **Cloud-controller-manager**: [Kubernetes External Cloud Provider for VMware Cloud Director](https://github.com/vmware-archive/cloud-provider-for-cloud-director). It is an implementation of [Cloud controller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) for VMware Cloud Director. It provides interaction with the VMware Cloud Director cloud and performs the following functions:
+1. **Cloud-controller-manager**: [Kubernetes External Cloud Provider for VMware Cloud Director](https://github.com/vmware-archive/cloud-provider-for-cloud-director). It is an implementation of [cloud controller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) for VMware Cloud Director. It provides interaction with the VMware Cloud Director cloud and performs the following functions:
 
    * Implements a 1:1 relationship between a Node resource in Kubernetes and a VM in a cloud provider. To do this:
 
@@ -94,7 +94,7 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
-1. **Prometheus-main**: Collects cloud-data-discoverer metrics.
+* **Prometheus-main**: Collects cloud-data-discoverer metrics.
 
 Indirect interactions:
 
@@ -109,6 +109,6 @@ Indirect interactions:
    * Terraform modules.
    * Layouts: Set of cloud placement schemes, which define how the basic infrastructure is created, how and with which additional characteristics should nodes be created for this placement. For example, for one scheme, nodes may have public IP addresses, but they will not for the other. Each layout should have three modules:
 
-     * `base-infrastructure`: Basic infrastructure (for example, creation of networks), can also be empty.
+     * `base-infrastructure`: Basic infrastructure (for example, creation of networks), can also be empty
      * `master-node`
-     * `static-node`
+     * `static-node`.
