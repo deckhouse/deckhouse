@@ -55,9 +55,9 @@ The module consists of the following components:
 
    This component provides the following features:
 
-* MaxMind license saving (databases are downloaded from a single point once a day).
-* Persistent data storage (if components are restarted, it doesn't require accessing the MaxMind servers).
-* Lets you specify a custom mirror for downloading databases.
+   * MaxMind license saving (databases are downloaded from a single point once a day).
+   * Persistent data storage (if components are restarted, it doesn't require accessing the MaxMind servers again).
+   * It lets you specify a custom mirror for downloading databases.
 
   It consists of the following containers:
 
