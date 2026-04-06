@@ -19,6 +19,6 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 data:
-  tls.crt: {{ .Values.controlPlaneManage.internal.selfSignedCA.cert | b64enc }}
-  tls.key: {{ .Values.controlPlaneManage.internal.selfSignedCA.key | b64enc }}
+  tls.crt: {{ .Values.controlPlaneManager.internal.selfSignedCA.cert | b64enc }}
+  tls.key: {{ .Values.controlPlaneManager.internal.selfSignedCA.key | b64enc }}
 {{- end }}
