@@ -17,6 +17,7 @@ package template
 import (
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -86,8 +87,7 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 	// if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
 	// 	return err
 	// }
-
-	if err := PreparePKI(templateController, nodeIP, kubeadmData); err != nil {
+	if err := PreparePKI(templateController, "127.0.01", kubeadmData); err != nil {
 		return err
 	}
 
@@ -181,7 +181,7 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 }
 
 func PreparePKI(templateController *Controller, nodeIP string, templateData map[string]interface{}) error {
-	path := fmt.Sprintf("%s/control-plane", bashibleDir)
+	path := fmt.Sprintf("%s/control-plane", templateController.TmpDir+bashibleDir)
 	return preparePKIWithDir(templateController, nodeIP, templateData, path)
 }
 
@@ -191,11 +191,18 @@ func preparePKIWithDir(_ *Controller, nodeIP string, templateData map[string]int
 	dnsDomain := cc["clusterDomain"].(string)
 
 	ip := net.ParseIP(nodeIP)
+
 	pkiDir := fmt.Sprintf("%s/pki", path)
-	pki.CreatePKIBundle("master", dnsDomain, ip, serviceCIDR, pki.WithPKIDir(pkiDir))
+	err := os.MkdirAll(pkiDir, 0755)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = pki.CreatePKIBundle("master", dnsDomain, ip, serviceCIDR, pki.WithPKIDir(pkiDir))
+	if err != nil {
+		fmt.Println(err)
+	}
 	var files []kubeconfig.File
 	files = append(files, kubeconfig.Kubelet, kubeconfig.Admin, kubeconfig.ControllerManager, kubeconfig.Scheduler)
-
 	return kubeconfig.CreateKubeconfigFiles(files, kubeconfig.WithLocalAPIEndpoint(nodeIP), kubeconfig.WithOutDir(path+"/kubeconfig"), kubeconfig.WithCertificatesDir(pkiDir))
 }
 

@@ -32,4 +32,4 @@ for file in $(find {{ $manifestsDir }}/*.yaml); do
 done
 {{- end }}
 
-cp {{ $pkiDir }}/* /etc/kubernetes/pki/
+cp -r {{ $pkiDir }}/* /etc/kubernetes/pki/
