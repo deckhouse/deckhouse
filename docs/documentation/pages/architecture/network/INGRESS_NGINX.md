@@ -149,7 +149,7 @@ Failover Ingress controller interacts with the following components:
 
 3. **Dex-authenticator of platform services and user applications**: Used to authenticate requests in dex via dex-authenticator, which acts as an OAuth2 proxy.
 
-4. **DKP platform services** (such as Console, Dashboard, Grafana, and others): The module forwards HTTP requests that have been authenticated via Dex.
+4. **DKP platform services** (such as `console`, `dashboard`, Grafana, and others): The module forwards HTTP requests that have been authenticated via Dex.
 
 5. **User services deployed in DKP**: The module forwards external HTTP requests to user services. To enable this, the user must create the corresponding Ingress resources and, if authentication via Dex is required, the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) custom resource.
 
