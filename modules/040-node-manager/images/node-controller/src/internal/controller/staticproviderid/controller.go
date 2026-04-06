@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -35,7 +36,7 @@ func init() {
 }
 
 const (
-	nodeTypeLabel         = "node.deckhouse.io/type"
+	nodeTypeLabel         = nodecommon.NodeTypeLabel
 	nodeTypeStatic        = "Static"
 	uninitializedTaintKey = "node.cloudprovider.kubernetes.io/uninitialized"
 	staticProviderIDValue = "static://"

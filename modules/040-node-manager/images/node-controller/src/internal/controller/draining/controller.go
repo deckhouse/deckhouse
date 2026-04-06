@@ -35,6 +35,7 @@ import (
 
 	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -43,10 +44,7 @@ func init() {
 }
 
 const (
-	drainingAnnotationKey = "update.node.deckhouse.io/draining"
-	drainedAnnotationKey  = "update.node.deckhouse.io/drained"
-	nodeGroupLabel        = "node.deckhouse.io/group"
-	defaultDrainTimeout   = 10 * time.Minute
+	defaultDrainTimeout = 10 * time.Minute
 )
 
 type Reconciler struct {
@@ -62,7 +60,7 @@ func (r *Reconciler) Setup(mgr ctrl.Manager) error {
 
 func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		_, hasGroup := obj.GetLabels()[nodeGroupLabel]
+		_, hasGroup := obj.GetLabels()[nodecommon.NodeGroupLabel]
 		return hasGroup
 	}))
 }
@@ -81,14 +79,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Backward compatibility: treat empty annotation value as "bashible" (original hook behavior).
 	var drainingSource, drainedSource string
-	if source, ok := node.Annotations[drainingAnnotationKey]; ok {
+	if source, ok := node.Annotations[nodecommon.DrainingAnnotation]; ok {
 		if source == "" {
 			drainingSource = "bashible"
 		} else {
 			drainingSource = source
 		}
 	}
-	if source, ok := node.Annotations[drainedAnnotationKey]; ok {
+	if source, ok := node.Annotations[nodecommon.DrainedAnnotation]; ok {
 		if source == "" {
 			drainedSource = "bashible"
 		} else {
@@ -106,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		logger.Info("removing stale drained=user annotation from schedulable node", "node", node.Name)
 		nodeDrainingGauge.DeletePartialMatch(prometheus.Labels{"node": node.Name})
 		return ctrl.Result{}, r.patchAnnotations(ctx, node.Name, map[string]interface{}{
-			drainedAnnotationKey: nil,
+			nodecommon.DrainedAnnotation: nil,
 		})
 	}
 
@@ -116,12 +114,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	logger.Info("node drain requested", "node", node.Name, "source", drainingSource, "nodeGroup", node.Labels[nodeGroupLabel])
+	logger.Info("node drain requested", "node", node.Name, "source", drainingSource, "nodeGroup", node.Labels[nodecommon.NodeGroupLabel])
 
 	if drainedSource == "user" {
 		logger.Info("removing existing drained=user annotation before new drain", "node", node.Name)
 		if err := r.patchAnnotations(ctx, node.Name, map[string]interface{}{
-			drainedAnnotationKey: nil,
+			nodecommon.DrainedAnnotation: nil,
 		}); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -131,7 +129,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("failed to create kubernetes client: %w", err)
 	}
 
-	drainTimeout := r.getDrainTimeout(ctx, node.Labels[nodeGroupLabel])
+	drainTimeout := r.getDrainTimeout(ctx, node.Labels[nodecommon.NodeGroupLabel])
 	logger.V(1).Info("drain timeout resolved", "node", node.Name, "timeout", drainTimeout)
 
 	if node.Spec.Unschedulable {
@@ -165,14 +163,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	logger.Info("drain completed, updating annotations",
 		"node", node.Name,
-		"removingAnnotation", drainingAnnotationKey,
-		"settingAnnotation", drainedAnnotationKey,
+		"removingAnnotation", nodecommon.DrainingAnnotation,
+		"settingAnnotation", nodecommon.DrainedAnnotation,
 		"value", drainingSource,
 	)
 
 	return ctrl.Result{}, r.patchAnnotations(ctx, node.Name, map[string]interface{}{
-		drainingAnnotationKey: nil,
-		drainedAnnotationKey:  drainingSource,
+		nodecommon.DrainingAnnotation: nil,
+		nodecommon.DrainedAnnotation:  drainingSource,
 	})
 }
 

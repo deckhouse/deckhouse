@@ -31,6 +31,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -72,7 +73,7 @@ func TestReconcile_NoAnnotations_Noop(t *testing.T) {
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "node-1",
-			Labels: map[string]string{nodeGroupLabel: "worker"},
+			Labels: map[string]string{nodecommon.NodeGroupLabel: "worker"},
 		},
 	}
 
@@ -89,8 +90,8 @@ func TestReconcile_DrainingAnnotation_CordonsAndDrains(t *testing.T) {
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "node-1",
-			Labels:      map[string]string{nodeGroupLabel: "worker"},
-			Annotations: map[string]string{drainingAnnotationKey: "bashible"},
+			Labels:      map[string]string{nodecommon.NodeGroupLabel: "worker"},
+			Annotations: map[string]string{nodecommon.DrainingAnnotation: "bashible"},
 		},
 	}
 
@@ -105,11 +106,11 @@ func TestReconcile_DrainingAnnotation_CordonsAndDrains(t *testing.T) {
 	}
 
 	// Draining annotation should be removed, drained should be set
-	if _, exists := updated.Annotations[drainingAnnotationKey]; exists {
+	if _, exists := updated.Annotations[nodecommon.DrainingAnnotation]; exists {
 		t.Fatal("draining annotation should be removed")
 	}
-	if updated.Annotations[drainedAnnotationKey] != "bashible" {
-		t.Fatalf("expected drained annotation 'bashible', got %q", updated.Annotations[drainedAnnotationKey])
+	if updated.Annotations[nodecommon.DrainedAnnotation] != "bashible" {
+		t.Fatalf("expected drained annotation 'bashible', got %q", updated.Annotations[nodecommon.DrainedAnnotation])
 	}
 }
 
@@ -117,8 +118,8 @@ func TestReconcile_DrainedUserSchedulable_RemovesDrained(t *testing.T) {
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "node-1",
-			Labels:      map[string]string{nodeGroupLabel: "worker"},
-			Annotations: map[string]string{drainedAnnotationKey: "user"},
+			Labels:      map[string]string{nodecommon.NodeGroupLabel: "worker"},
+			Annotations: map[string]string{nodecommon.DrainedAnnotation: "user"},
 		},
 		Spec: corev1.NodeSpec{Unschedulable: false},
 	}
@@ -127,7 +128,7 @@ func TestReconcile_DrainedUserSchedulable_RemovesDrained(t *testing.T) {
 	reconcile(t, r, "node-1")
 
 	updated := getNode(t, r, "node-1")
-	if _, exists := updated.Annotations[drainedAnnotationKey]; exists {
+	if _, exists := updated.Annotations[nodecommon.DrainedAnnotation]; exists {
 		t.Fatal("drained annotation should be removed for schedulable node with user source")
 	}
 }
@@ -136,8 +137,8 @@ func TestReconcile_DrainedNonUser_Noop(t *testing.T) {
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "node-1",
-			Labels:      map[string]string{nodeGroupLabel: "worker"},
-			Annotations: map[string]string{drainedAnnotationKey: "bashible"},
+			Labels:      map[string]string{nodecommon.NodeGroupLabel: "worker"},
+			Annotations: map[string]string{nodecommon.DrainedAnnotation: "bashible"},
 		},
 		Spec: corev1.NodeSpec{Unschedulable: false},
 	}
@@ -146,7 +147,7 @@ func TestReconcile_DrainedNonUser_Noop(t *testing.T) {
 	reconcile(t, r, "node-1")
 
 	updated := getNode(t, r, "node-1")
-	if updated.Annotations[drainedAnnotationKey] != "bashible" {
+	if updated.Annotations[nodecommon.DrainedAnnotation] != "bashible" {
 		t.Fatal("drained annotation should remain for non-user source")
 	}
 }
@@ -155,8 +156,8 @@ func TestReconcile_AlreadyCordoned_StillDrains(t *testing.T) {
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "node-1",
-			Labels:      map[string]string{nodeGroupLabel: "worker"},
-			Annotations: map[string]string{drainingAnnotationKey: "bashible"},
+			Labels:      map[string]string{nodecommon.NodeGroupLabel: "worker"},
+			Annotations: map[string]string{nodecommon.DrainingAnnotation: "bashible"},
 		},
 		Spec: corev1.NodeSpec{Unschedulable: true},
 	}
@@ -165,11 +166,11 @@ func TestReconcile_AlreadyCordoned_StillDrains(t *testing.T) {
 	reconcile(t, r, "node-1")
 
 	updated := getNode(t, r, "node-1")
-	if _, exists := updated.Annotations[drainingAnnotationKey]; exists {
+	if _, exists := updated.Annotations[nodecommon.DrainingAnnotation]; exists {
 		t.Fatal("draining annotation should be removed")
 	}
-	if updated.Annotations[drainedAnnotationKey] != "bashible" {
-		t.Fatalf("expected drained annotation 'bashible', got %q", updated.Annotations[drainedAnnotationKey])
+	if updated.Annotations[nodecommon.DrainedAnnotation] != "bashible" {
+		t.Fatalf("expected drained annotation 'bashible', got %q", updated.Annotations[nodecommon.DrainedAnnotation])
 	}
 }
 
@@ -177,10 +178,10 @@ func TestReconcile_DrainingWithUserDrained_RemovesDrainedFirst(t *testing.T) {
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "node-1",
-			Labels: map[string]string{nodeGroupLabel: "worker"},
+			Labels: map[string]string{nodecommon.NodeGroupLabel: "worker"},
 			Annotations: map[string]string{
-				drainingAnnotationKey: "bashible",
-				drainedAnnotationKey:  "user",
+				nodecommon.DrainingAnnotation: "bashible",
+				nodecommon.DrainedAnnotation:  "user",
 			},
 		},
 	}
@@ -189,8 +190,8 @@ func TestReconcile_DrainingWithUserDrained_RemovesDrainedFirst(t *testing.T) {
 	reconcile(t, r, "node-1")
 
 	updated := getNode(t, r, "node-1")
-	if updated.Annotations[drainedAnnotationKey] != "bashible" {
-		t.Fatalf("expected drained annotation to be set to 'bashible', got %q", updated.Annotations[drainedAnnotationKey])
+	if updated.Annotations[nodecommon.DrainedAnnotation] != "bashible" {
+		t.Fatalf("expected drained annotation to be set to 'bashible', got %q", updated.Annotations[nodecommon.DrainedAnnotation])
 	}
 }
 

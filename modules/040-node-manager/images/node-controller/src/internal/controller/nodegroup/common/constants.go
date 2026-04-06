@@ -16,6 +16,8 @@ limitations under the License.
 
 package common
 
+import nodecommon "github.com/deckhouse/node-controller/internal/common"
+
 const (
 	ConditionTypeReady                        = "Ready"
 	ConditionTypeUpdating                     = "Updating"
@@ -23,11 +25,13 @@ const (
 	ConditionTypeError                        = "Error"
 	ConditionTypeScaling                      = "Scaling"
 	ConditionTypeFrozen                       = "Frozen"
-	NodeGroupLabel                            = "node.deckhouse.io/group"
-	ConfigurationChecksumAnnotation           = "node.deckhouse.io/configuration-checksum"
-	MachineNamespace                          = "d8-cloud-instance-manager"
-	ConfigurationChecksumsSecretName          = "configuration-checksums"
 	CloudProviderSecretName                   = "d8-node-manager-cloud-provider"
-	DisruptionRequiredAnnotation              = "update.node.deckhouse.io/disruption-required"
-	ApprovedAnnotation                        = "update.node.deckhouse.io/approved"
+
+	// Re-exported from internal/common.
+	NodeGroupLabel                   = nodecommon.NodeGroupLabel
+	ConfigurationChecksumAnnotation  = nodecommon.ConfigurationChecksumAnnotation
+	MachineNamespace                 = nodecommon.MachineNamespace
+	ConfigurationChecksumsSecretName = nodecommon.ConfigurationChecksumsSecretName
+	DisruptionRequiredAnnotation     = nodecommon.DisruptionRequiredAnnotation
+	ApprovedAnnotation               = nodecommon.ApprovedAnnotation
 )

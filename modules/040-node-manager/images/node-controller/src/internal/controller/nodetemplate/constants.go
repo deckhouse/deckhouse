@@ -16,11 +16,13 @@ limitations under the License.
 
 package nodetemplate
 
+import nodecommon "github.com/deckhouse/node-controller/internal/common"
+
 const (
 	controllerName = "node-template"
 	allRequestName = "__all__"
 
-	nodeGroupNameLabel                = "node.deckhouse.io/group"
+	nodeGroupNameLabel                = nodecommon.NodeGroupLabel
 	lastAppliedNodeTemplateAnnotation = "node-manager.deckhouse.io/last-applied-node-template"
 	nodeUninitializedTaintKey         = "node.deckhouse.io/uninitialized"
 	masterNodeRoleKey                 = "node-role.kubernetes.io/master"

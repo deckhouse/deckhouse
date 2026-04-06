@@ -25,20 +25,22 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
+// Re-exported from internal/common so existing consumers using the ua. alias continue to work.
 const (
-	NodeGroupLabel                   = "node.deckhouse.io/group"
-	ConfigurationChecksumAnnotation  = "node.deckhouse.io/configuration-checksum"
-	MachineNamespace                 = "d8-cloud-instance-manager"
-	ConfigurationChecksumsSecretName = "configuration-checksums"
-	ApprovedAnnotation               = "update.node.deckhouse.io/approved"
-	WaitingForApprovalAnnotation     = "update.node.deckhouse.io/waiting-for-approval"
-	DisruptionRequiredAnnotation     = "update.node.deckhouse.io/disruption-required"
-	DisruptionApprovedAnnotation     = "update.node.deckhouse.io/disruption-approved"
-	RollingUpdateAnnotation          = "update.node.deckhouse.io/rolling-update"
-	DrainingAnnotation               = "update.node.deckhouse.io/draining"
-	DrainedAnnotation                = "update.node.deckhouse.io/drained"
+	NodeGroupLabel                   = nodecommon.NodeGroupLabel
+	ConfigurationChecksumAnnotation  = nodecommon.ConfigurationChecksumAnnotation
+	MachineNamespace                 = nodecommon.MachineNamespace
+	ConfigurationChecksumsSecretName = nodecommon.ConfigurationChecksumsSecretName
+	ApprovedAnnotation               = nodecommon.ApprovedAnnotation
+	WaitingForApprovalAnnotation     = nodecommon.WaitingForApprovalAnnotation
+	DisruptionRequiredAnnotation     = nodecommon.DisruptionRequiredAnnotation
+	DisruptionApprovedAnnotation     = nodecommon.DisruptionApprovedAnnotation
+	RollingUpdateAnnotation          = nodecommon.RollingUpdateAnnotation
+	DrainingAnnotation               = nodecommon.DrainingAnnotation
+	DrainedAnnotation                = nodecommon.DrainedAnnotation
 )
 
 type NodeInfo struct {

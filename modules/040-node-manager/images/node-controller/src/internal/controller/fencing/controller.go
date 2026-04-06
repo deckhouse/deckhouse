@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -41,7 +42,7 @@ func init() {
 const (
 	fencingEnabledLabel = "node-manager.deckhouse.io/fencing-enabled"
 	fencingModeLabel    = "node-manager.deckhouse.io/fencing-mode"
-	nodeTypeLabel       = "node.deckhouse.io/type"
+	nodeTypeLabel       = nodecommon.NodeTypeLabel
 	leaseNamespace      = "kube-node-lease"
 	fencingTimeout      = 60 * time.Second
 	requeueInterval     = 1 * time.Minute
@@ -51,8 +52,8 @@ const (
 )
 
 var maintenanceAnnotations = []string{
-	"update.node.deckhouse.io/disruption-approved",
-	"update.node.deckhouse.io/approved",
+	nodecommon.DisruptionApprovedAnnotation,
+	nodecommon.ApprovedAnnotation,
 	"node-manager.deckhouse.io/fencing-disable",
 }
 
