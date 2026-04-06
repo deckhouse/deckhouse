@@ -123,3 +123,14 @@ properties:
               type: string
               pattern: '^[a-zA-Z]+$'
             default: []
+      selfSignedCA:
+        type: object
+        default: {}
+        x-examples:
+        - cert: test
+          key: test
+        properties:
+          cert:
+            type: string
+          key:
+            type: string

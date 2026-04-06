@@ -67,17 +67,9 @@ func copyCAPairToModuleValues(_ context.Context, input *go_hook.HookInput) error
 	keyPairs := input.Snapshots.Get("secret_publishapi_selfsigned_ca_migration")
 	fmt.Println(keyPairs[0])
 
-	selfSignedKeyPair := make(map[string][]byte)
 	if len(keyPairs) > 0 {
-		err := keyPairs[0].UnmarshalTo(&selfSignedKeyPair)
-
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal 'secret_publishapi_selfsigned_ca_migration' snapshot: %w", err)
-		}
-
 		fmt.Println("Setting key pair into internal values")
-		fmt.Println(selfSignedKeyPair)
-		input.Values.Set("controlPlaneManager.internal.selfSignedCA", selfSignedKeyPair)
+		input.Values.Set("controlPlaneManager.internal.selfSignedCA", keyPairs[0])
 
 	} else {
 		fmt.Println("'kubernetes-api-ca-key-pair' secret appears to not have data")
