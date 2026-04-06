@@ -352,7 +352,7 @@ spec:
 - --cloud-provider=vmware-cloud-director
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers=cloud-node,cloud-node-lifecycle
+- --controllers=cloud-node-controller,cloud-node-lifecycle-controller
 - --v=4`))
 			Expect(ccmDeployment.Field("spec.template.spec.containers.0.volumeMounts").String()).To(MatchYAML(`
 - mountPath: /etc/cloud
@@ -622,7 +622,7 @@ node-role.deckhouse.io/control-plane: ""`))
 - --cloud-provider=vmware-cloud-director
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers=cloud-node,cloud-node-lifecycle
+- --controllers=cloud-node-controller,cloud-node-lifecycle-controller
 - --v=4
 `))
 		})
@@ -649,7 +649,7 @@ node-role.deckhouse.io/control-plane: ""`))
 - --cloud-provider=vmware-cloud-director
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers=cloud-node,cloud-node-lifecycle,service
+- --controllers=cloud-node-controller,cloud-node-lifecycle-controller,service-lb-controller
 - --v=4
 `))
 		})
