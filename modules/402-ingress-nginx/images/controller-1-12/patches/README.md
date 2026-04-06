@@ -141,3 +141,7 @@ https://github.com/kubernetes/kubernetes/issues/137560
 ### 025-stable-config-hash-metric-02.patch
 
 This patch updates the way config_hash controller metric is calculated so that all pods of a controller report the same value
+
+### 026-fix-cve-2026-4342.patch
+
+This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issues/137893.

@@ -46,10 +46,53 @@
   },
   "code": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
+    "editionsWithRestrictions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
     "external": "true",
     "path": "/modules/code/stable/"
+  },
+  "managed-cassandra": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-cassandra/"
+  },
+  "managed-hive-metastore": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-hive-metastore/"
+  },
+  "managed-kafka": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-kafka/"
   },
   "managed-postgres": {
     "editions": [
@@ -58,7 +101,7 @@
       "se-plus"
     ],
     "tags": [
-      "database"
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-postgres/"
@@ -70,10 +113,20 @@
       "se-plus"
     ],
     "tags": [
-      "database"
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-memcached/"
+  },
+  "managed-trino": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-trino/"
   },
   "managed-valkey": {
     "editions": [
@@ -82,7 +135,7 @@
       "se-plus"
     ],
     "tags": [
-      "database"
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-valkey/"
@@ -503,11 +556,11 @@
       },
       "cse-lite": {
         "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
-        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse Stronghold CSE. Есть ограничения функциональности"
       },
       "cse-pro": {
         "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
-        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse Stronghold CSE. Есть ограничения функциональности"
       }
     },
     "external": "true",

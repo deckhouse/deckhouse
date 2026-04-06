@@ -30,44 +30,6 @@ $(document).ready(function () {
     if (e.target.value.length > 0) $(".search__results").addClass("active");
     else $(".search__results").removeClass("active");
   });
-  $('a.lang-switcher').each(function () {
-    let pageDomain = window.location.hostname;
-    if (window.location.pathname.startsWith('/ru/')) {
-      $(this).attr('href', window.location.href.replace('/ru/', '/en/'))
-    } else if (window.location.pathname.startsWith('/en/')) {
-      $(this).attr('href', window.location.href.replace('/en/', '/ru/'))
-    } else {
-      let newHostname = null;
-      switch (pageDomain) {
-        case 'deckhouse.io':
-          newHostname = 'deckhouse.ru';
-          break;
-        case 'deckhouse.ru':
-          newHostname = 'deckhouse.io';
-          break;
-        case 'ru.localhost':
-          newHostname = 'localhost';
-          break;
-        case 'localhost':
-          newHostname = 'ru.localhost';
-          break;
-        default:
-          if (pageDomain.includes('deckhouse-ru')) {
-            newHostname = pageDomain.replace('deckhouse-ru', 'deckhouse');
-          } else if (pageDomain.includes('deckhouse')) {
-            newHostname = pageDomain.replace('deckhouse', 'deckhouse-ru');
-          }
-      }
-      if (newHostname) {
-        const currentUrl = window.location.href;
-        const newUrl = currentUrl.replace(
-          window.location.hostname,
-          newHostname
-        );
-        $(this).attr('href', newUrl);
-      }
-    }
-  });
 });
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -376,4 +338,3 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener("load", function () {
   openDiagram()
 });
-
