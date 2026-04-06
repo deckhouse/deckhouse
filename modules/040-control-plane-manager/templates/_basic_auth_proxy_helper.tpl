@@ -1,5 +1,5 @@
 {{- define "is_basic_auth_enabled" }}
-  {{- if .Values.userAuthn.publishAPI.enabled }}
+  {{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
     {{- range $provider := .Values.userAuthn.internal.providers }}
       {{- if eq $provider.type "Crowd" }}
         {{- if $provider.crowd.enableBasicAuth }}
