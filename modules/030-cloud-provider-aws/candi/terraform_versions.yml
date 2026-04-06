@@ -1,5 +1,4 @@
 terraform: 0.14.8
-
 aws:
   namespace: hashicorp
   cloudName: AWS
