@@ -103,7 +103,10 @@ Please check connectivity to control-plane host and that the sshd config paramet
 		return fmt.Errorf("prepare request: %w", err)
 	}
 
-	httpCl := utils.BuildHTTPClientWithLocalhostProxy(proxyURL)
+	httpCl, err := utils.BuildRegistryHTTPClientWithLocalhostProxy(c.MetaConfig, proxyURL)
+	if err != nil {
+		return err
+	}
 	resp, err := httpCl.Do(req)
 	if err != nil {
 		return fmt.Errorf(`Container registry API connectivity check was failed with error: %w.

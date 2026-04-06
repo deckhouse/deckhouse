@@ -610,10 +610,10 @@ CRl8TSg922cXTLVt8Q==
 				// docker.io/library/nginx:stable-alpine
 				image:   "docker.io/library/nginx:latest",
 				wantErr: true,
-				err:     "failed to parse CA PEM",
+				err:     "invalid cert in CA PEM",
 			},
 			{
-				title:     "With docker ca, failure",
+				title:     "With docker ca, success",
 				directory: testDir,
 				rc:        RegistryConfig{scheme: "HTTPS", registry: "docker.io", ca: dockerCA},
 				// docker.io/library/nginx:stable-alpine
@@ -621,8 +621,7 @@ CRl8TSg922cXTLVt8Q==
 				prepareFunc: func() error {
 					return os.RemoveAll(filepath.Join(testDir, "usr"))
 				},
-				wantErr: true,
-				err:     "tls: failed to verify certificate: x509: certificate signed by unknown authority",
+				wantErr: false,
 			},
 			{
 				title:     "Cannot pull image, failure",
