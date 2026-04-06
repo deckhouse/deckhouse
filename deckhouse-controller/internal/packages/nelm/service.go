@@ -49,8 +49,8 @@ var ErrPackageNotHelm = errors.New("package not helm")
 type Package interface {
 	GetName() string
 	GetPath() string
+	GetRuntimeValues() string
 	GetValues() addonutils.Values
-	GetExtraNelmValues() string
 }
 
 // Service manages Helm release lifecycle via nelm client.
@@ -152,7 +152,7 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 	return s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		ExtraValues: pkg.GetExtraNelmValues(),
+		RootValues:  pkg.GetRuntimeValues(),
 	})
 }
 
@@ -226,7 +226,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	renderedManifests, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		ExtraValues: pkg.GetExtraNelmValues(),
+		RootValues:  pkg.GetRuntimeValues(),
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -258,7 +258,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		ReleaseLabels: map[string]string{
 			nelm.LabelPackageChecksum: checksum,
 		},
-		ExtraValues: pkg.GetExtraNelmValues(),
+		RootValues: pkg.GetRuntimeValues(),
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())

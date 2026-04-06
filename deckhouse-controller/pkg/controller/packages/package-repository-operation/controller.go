@@ -29,7 +29,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
@@ -102,17 +101,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return res, err
 	}
 
-	// handle delete event
+	// handle delete event - no cleanup needed, child resources are owned by PackageRepository
 	if !operation.DeletionTimestamp.IsZero() {
 		logger.Debug("deleting package repository operation")
-
-		err := r.delete(ctx, operation)
-		if err != nil {
-			logger.Warn("failed to delete package repository operation", log.Err(err))
-
-			return res, err
-		}
-
 		return res, nil
 	}
 
@@ -544,7 +535,7 @@ func (r *reconciler) dequeuePackageWithError(ctx context.Context, operation *v1a
 	operation.Status.Packages.Failed = append(operation.Status.Packages.Failed, v1alpha1.PackageRepositoryOperationStatusFailedPackage{
 		Name: packageName,
 		Errors: []v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
-			{Error: processErr.Error()},
+			{Message: processErr.Error()},
 		},
 	})
 
@@ -565,15 +556,16 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, operation *v1
 	}
 
 	operation.Status.Packages.Processed = append(operation.Status.Packages.Processed, v1alpha1.PackageRepositoryOperationStatusPackage{
-		Name: packageName,
-		Type: string(result.PackageType),
+		Name:          packageName,
+		Type:          string(result.PackageType),
+		FoundVersions: result.FoundVersions,
 	})
 
 	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(result.Failed))
 	for _, fv := range result.Failed {
 		failedList = append(failedList, v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
 			Version: fv.Name,
-			Error:   fv.Error,
+			Message: fv.Error,
 		})
 	}
 	if len(failedList) > 0 {
@@ -621,23 +613,6 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 		logger.Debug("deleting old operation", slog.String("name", op.Name))
 		if err := r.client.Delete(ctx, &op); err != nil {
 			return fmt.Errorf("delete old operation: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (r *reconciler) delete(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
-	r.logger.Info("deleting PackageRepositoryOperation", slog.String("name", operation.Name))
-
-	// Remove finalizer if present
-	if controllerutil.ContainsFinalizer(operation, "packages.deckhouse.io/finalizer") {
-		original := operation.DeepCopy()
-
-		controllerutil.RemoveFinalizer(operation, "packages.deckhouse.io/finalizer")
-
-		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return err
 		}
 	}
 

@@ -3,6 +3,35 @@ title: "Release notes"
 permalink: en/virtualization-platform/documentation/release-notes.html
 ---
 
+## v1.7.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: March 31, 2026.
+</span>
+
+### New features
+
+- [vm] The order of additional network interfaces is now deterministic and does not change after virtual machine restarts.
+- [vm] Added a mechanism to prevent TCP connection drops during live migration of a virtual machine.
+- [vm] Reduced USB device downtime during virtual machine migration.
+- [vm] Added a garbage collector for completed and failed virtual machine pods:
+  - Pods older than 24 hours are deleted.
+  - No more than 2 completed pods are retained.
+- [usb] When scheduling virtual machines on nodes, the system now takes into account whether a USB device uses USB 2.0 (High-Speed) or USB 3.0 (SuperSpeed).
+
+### Fixes
+
+- [vm] Fixed double storage quota consumption during migration of a virtual machine with local storage.
+- [vm] When using [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) with the `Clone` or `Restore` type, disks now also restore their association with the virtual machine (owner reference).
+- [vm] Fixed virtual machine eviction during node drain: pods responsible for block device attachments are no longer removed from a cordoned node before virtual machine migration is complete.
+- [vm] Block devices can now be attached and detached even if the virtual machine is running on a cordoned node.
+- [vm] Fixed validation for the `AlwaysForced` virtual machine migration policy: [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resources with the `Evict` or `Migrate` type without explicit `force=true` are now rejected for this policy.
+- [vm] Fixed an issue where a virtual machine could get stuck in the `Maintenance` state during restore from a snapshot.
+- [vm] Added storage-side error messages (from the CSI driver) to the virtual machine status for block device attachment failures.
+- [vd,vi,cvi] Fixed the creation of block devices from VMDK files (especially for VMDKs in the `streamOptimized` format used in exports from VMware).
+- [usb] Stabilized USB device support for virtualization on Deckhouse Kubernetes Platform version `>=1.76` and Kubernetes version `>=1.33`.
+- [usb] Fixed USB device detection on the host: duplicate USB devices could previously appear.
+
 ## v1.6.1
 
 <span style="opacity:0.6; font-style:italic; font-size:0.9em;">

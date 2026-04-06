@@ -34,6 +34,7 @@ extractedLinksMax: 0
 
 * [`local-path-provisioner`](local-path-provisioner.html);
 * [`snapshot-controller`](snapshot-controller.html);
-* [`sds-local-volume`](sds-local-volume.html).
+* [`sds-local-volume`](sds-local-volume.html);
+* [`sds-node-configurator`](sds-node-configurator.html).
 
 Материалы по остальным модулям подсистемы Storage будут добавляться по мере готовности.

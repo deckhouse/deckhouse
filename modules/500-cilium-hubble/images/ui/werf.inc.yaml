@@ -83,3 +83,5 @@ git:
 imageSpec:
   config:
     entrypoint: ["/usr/local/bin/hubble-ui-backend"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName "ui-backend" )) }}

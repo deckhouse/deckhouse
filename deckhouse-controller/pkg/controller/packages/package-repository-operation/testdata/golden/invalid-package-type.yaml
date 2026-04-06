@@ -31,7 +31,7 @@ status:
   packages:
     failed:
     - errors:
-      - error: 'package type could not be determined: unknown value "Garbage"'
+      - message: 'package type could not be determined: unknown value "Garbage"'
         version: v1.0.0
       name: test-package
     processed:

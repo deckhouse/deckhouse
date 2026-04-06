@@ -23,9 +23,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"chronyExporter": "imageHash-chrony-chronyExporter",
 	},
 	"ciliumHubble": map[string]interface{}{
-		"relay":      "imageHash-ciliumHubble-relay",
-		"uiBackend":  "imageHash-ciliumHubble-uiBackend",
-		"uiFrontend": "imageHash-ciliumHubble-uiFrontend",
+		"relay":                "imageHash-ciliumHubble-relay",
+		"uiBackend":            "imageHash-ciliumHubble-uiBackend",
+		"uiBackendVexArtifact": "imageHash-ciliumHubble-uiBackendVexArtifact",
+		"uiFrontend":           "imageHash-ciliumHubble-uiFrontend",
 	},
 	"cloudProviderAws": map[string]interface{}{
 		"cloudControllerManager131": "imageHash-cloudProviderAws-cloudControllerManager131",
@@ -371,10 +372,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"metallbSpeaker":    "imageHash-metallb-metallbSpeaker",
 	},
 	"monitoringKubernetes": map[string]interface{}{
-		"ebpfExporter":                      "imageHash-monitoringKubernetes-ebpfExporter",
 		"kubeStateMetrics":                  "imageHash-monitoringKubernetes-kubeStateMetrics",
 		"kubeletEvictionThresholdsExporter": "imageHash-monitoringKubernetes-kubeletEvictionThresholdsExporter",
 		"nodeExporter":                      "imageHash-monitoringKubernetes-nodeExporter",
+		"oomKillsExporter":                  "imageHash-monitoringKubernetes-oomKillsExporter",
 	},
 	"monitoringPing": map[string]interface{}{
 		"monitoringPing": "imageHash-monitoringPing-monitoringPing",

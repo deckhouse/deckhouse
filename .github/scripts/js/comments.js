@@ -13,7 +13,7 @@
  * Bot related functions.
  */
 
-const {abortFailedE2eCommand} = require('./constants');
+const { abortFailedE2eCommand } = require('./constants');
 
 const WORKFLOW_START_MARKER = '<!-- workflow_start -->'
 module.exports.WORKFLOW_START_MARKER = WORKFLOW_START_MARKER;
@@ -25,7 +25,7 @@ module.exports.commentCommandRecognition = (userName, command) => {
 
 // Confirm label.
 module.exports.commentLabelRecognition = (userName, label) => {
-  return  `Aye, aye, @${userName}. I've started the workflow for label '${label}'...\n${WORKFLOW_START_MARKER}`;
+  return `Aye, aye, @${userName}. I've started the workflow for label '${label}'...\n${WORKFLOW_START_MARKER}`;
 };
 
 module.exports.deleteBotComment = (text) => {
@@ -67,7 +67,7 @@ module.exports.hasJobResult = (comment, name) => {
 
 
 
-module.exports.renderJobStatusOneLine  = (status, name, started_at) => {
+module.exports.renderJobStatusOneLine = (status, name, started_at) => {
   const time_elapsed = getTimeElapsedForStatus(started_at);
   let statusComment = `:white_check_mark:\u00a0\`${name}\` succeeded${time_elapsed}`;
   if (status === 'failure') {
@@ -117,7 +117,7 @@ module.exports.renderDocumentationComments = (workflowName) => {
   const allEnvironments = [
     { name: 'Stage', host: 'deckhouse.stage.flant.dev' },
     { name: 'Test', host: 'deckhouse.test.flant.dev' },
-    ...Array.from({ length: 6 }, (_, i) => ({
+    ...Array.from({ length: 9 }, (_, i) => ({
       name: `Test${i + 2}`,
       host: `deckhouse-${i + 2}.test.flant.dev`
     }))
@@ -140,16 +140,16 @@ module.exports.renderDocumentationComments = (workflowName) => {
   }
 
   const basePath = '/products/kubernetes-platform/documentation/v1/';
-  
+
   if (environments.length === 1) {
     const env = environments[0];
     return `\nEnvironment URL: <a href="https://${env.host}${basePath}">${env.host}</a>`;
   }
-  
+
   const listItems = environments
     .map(env => `<li>${env.name}: <a href="https://${env.host}${basePath}">${env.host}</a></li>`)
     .join('');
-  
+
   return `\nEnvironment URLS:\n<ul>${listItems}</ul>`;
 };
 
