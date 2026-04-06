@@ -63,7 +63,7 @@ func buildControlPlaneTopology(pods *corev1.PodList, desiredVersion string) (map
 			return nil, fmt.Errorf("%s annotation are missing", kubeVersionAnnotation)
 		}
 
-		version, err := version.NormalizeAndTrimPatch(kubeVersion)
+		version, err := version.Normalize(kubeVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to normalize kubernetes-version '%s': %w", kubeVersion, err)
 		}

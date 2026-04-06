@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -60,6 +61,9 @@ type MetaConfig struct {
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
 	ResourceManagementTimeout string                 `json:"resourceManagementTimeout,omitempty"`
+
+	DownloadRootDir  string `json:"-"`
+	DownloadCacheDir string `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -663,7 +667,13 @@ func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
 func (m *MetaConfig) LoadInstallerVersion() error {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
-		return err
+		// TODO param instead of hardcode path
+		versionFilePath := filepath.Join(app.DownloadDirName, "deckhouse", "version")
+		rawFile, err = os.ReadFile(versionFilePath)
+		if err != nil {
+			return fmt.Errorf("could not read both %s and %s: %w", app.VersionFile, versionFilePath, err)
+		}
+
 	}
 
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))

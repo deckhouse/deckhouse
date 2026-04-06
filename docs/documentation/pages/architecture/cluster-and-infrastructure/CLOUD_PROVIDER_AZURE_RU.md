@@ -6,9 +6,9 @@ search: cloud-provider-azure, cloud provider azure
 description: Архитектура модуля cloud-provider-azure в Deckhouse Kubernetes Platform.
 ---
 
-Модуль `cloud-provider-azure` управляет взаимодействием с облачными ресурсами [Microsoft Azure](https://portal.azure.com/). Он позволяет модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Microsoft Azure при заказе узлов для описанной [группы узлов](/modules/node-manager/cr.html#nodegroup).
+Модуль [`cloud-provider-azure`](/modules/cloud-provider-azure/) обеспечивает интеграцию с облачными ресурсами [Microsoft Azure](https://portal.azure.com/). Он используется модулем [`node-manager`](/modules/node-manager/) для заказа узлов в соответствии [с настройками группы узлов](/modules/node-manager/cr.html#nodegroup).
 
-Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/cloud-provider-azure/).
+Подробнее с описанием модуля можно ознакомиться [в соответствующем разделе документации](/modules/cloud-provider-azure/).
 
 ## Архитектура модуля
 
@@ -28,7 +28,7 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
 
 Модуль состоит из следующих компонентов:
 
-1. **Сloud-controller-manager** — реализация [Сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для Microsoft Azure. Обеспечивает взаимодействие с облаком Microsoft Azure и выполняет следующие функции:
+1. **Сloud-controller-manager** — реализация [сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для Microsoft Azure. Компонент обеспечивает интеграцию с облаком Microsoft Azure и выполняет следующие функции:
 
    * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
 
@@ -38,20 +38,20 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
    * при создании ресурса Service типа LoadBalancer в Kubernetes создаёт балансировщик в облаке, который направляет трафик извне к узлам кластера;
    * создает сетевые маршруты для сети `PodNetwork` на стороне Azure.
 
-   Подробнее о cloud-controller-manager можно почитать в [документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/).
+   Подробнее о cloud-controller-manager можно почитать [в документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/).
 
    Состоит из одного контейнера:
 
    * **azure-cloud-controller-manager**.
 
-2. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-azure`.
+1. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-azure`.
 
    Состоит из следующих контейнеров:
 
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-3. **CSI-драйвер (azure)** — реализация CSI-драйвера для Microsoft Azure. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-driver.html).
+1. **CSI-драйвер (azure)** — реализация CSI-драйвера для Microsoft Azure. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../infrastructure/csi-driver.html).
 
 ## Взаимодействия модуля
 
@@ -65,7 +65,7 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
     * мониторинг сервисов типа LoadBalancer;
     * авторизация запросов на получение метрик.
 
-2. **Microsoft Azure**:
+1. **Microsoft Azure**:
 
     * получение параметров облака;
     * получение `ProviderID` и прочей информации о виртуальных машинах, которые являются узлами кластера;
@@ -75,7 +75,7 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Prometheus-main** — сбор метрик cloud-data-discoverer.
+* **Prometheus-main** — сбор метрик cloud-data-discoverer.
 
 Непрямые взаимодействия:
 
@@ -84,11 +84,11 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
    * шаблоны для создания кастомных ресурсов для конкретного провайдера, которые `cloud-provider-azure` использует для создания виртуальных машин в облаке;
    * секрет `kube-system/d8-node-manager-cloud-provider`, в котором содержатся все необходимые настройки для подключения к облаку и создания CloudEphemeral-узлов. Эти настройки прописываются в кастомных ресурсах, созданных на основе упомянутых выше шаблонов и учитывающих особенности провайдера.
 
-2. Модуль `cloud-provider-azure` предоставляет компоненты Terraform/OpenTofu для Azure, которые используются при сборке исполняемого файла утилиты [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) в модуле [`terraform-manager`](/modules/terraform-manager/), такие как:
+1. Модуль `cloud-provider-azure` предоставляет компоненты Terraform/OpenTofu для Azure, которые используются при сборке исполняемого файла утилиты [`dhctl`](https://github.com/deckhouse/deckhouse/tree/main/dhctl) в модуле [`terraform-manager`](/modules/terraform-manager/), такие как:
 
    * Terraform/OpenTofu-провайдер;
    * Terraform-модули;
-   * layouts — набор схем размещения в облаке, определяющих, как создается базовая инфраструктура, как и с какими дополнительными характеристиками для данного размещения должны создаваться узлы. Например, в одной схеме узлы могут иметь публичные IP-адреса, а в другой — нет. Каждый layout включает три модуля:
+   * layouts — набор схем размещения в облаке, определяющих, как создается базовая инфраструктура, как и с какими дополнительными характеристиками для данного размещения должны создаваться узлы. Например, в одной схеме узлы могут иметь публичные IP-адреса, а в другой — нет. Каждая схема включает три модуля:
 
      * `base-infrastructure` — базовая инфраструктура (например, создание сетей), может быть пустым;
      * `master-node`;

@@ -61,14 +61,20 @@ properties:
       - cse-pro
     description: |
       Trivy provider settings.
-      
+
       The Trivy provider prevents creation of the Pod, Deployment, StatefulSet, and DaemonSet resources with images containing vulnerabilities in namespaces labeled with `security.deckhouse.io/trivy-provider: ""`.
+
+      **Deprecated.** These settings have been moved to the `operator-trivy` module. Please migrate your configuration.
     properties:
+      enabled:
+        type: boolean
+        default: false
+        description: Enable the Trivy provider.
       allowedSeverityLevels:
         type: array
         description: |
           List of allowed vulnerability severity levels.
-          
+
           Images containing only vulnerabilities of the specified severity levels will not be blocked.
         items:
           type: string
@@ -86,10 +92,6 @@ properties:
           > **Warning.** If you specify a value different from the current StorageClass used in the existing PersistentVolumeClaim, the disk will be re-provisioned, and all data will be deleted.
 
           If you set it to `false`, `emptyDir` will be forcibly used instead of a PVC.
-      enabled:
-        type: boolean
-        default: false
-        description: Enable the Trivy provider.
       registrySecrets:
         type: array
         default: []

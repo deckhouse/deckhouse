@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -60,9 +61,10 @@ type Params struct {
 	InfrastructureContext *infrastructure.Context
 	ProviderGetter        infrastructure.CloudProviderGetter
 
-	TmpDir  string
-	Logger  log.Logger
-	IsDebug bool
+	TmpDir          string
+	Logger          log.Logger
+	IsDebug         bool
+	DirectoryConfig *directoryconfig.DirectoryConfig
 
 	NoSwitchToNodeUser bool
 
@@ -330,19 +332,21 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
 		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
-			KubeClient:     kubeCl,
-			Cache:          stateCache,
-			ChangeParams:   c.Params.ChangesSettings,
-			ProviderGetter: c.ProviderGetter,
-			Logger:         c.Logger,
+			KubeClient:      kubeCl,
+			Cache:           stateCache,
+			ChangeParams:    c.Params.ChangesSettings,
+			ProviderGetter:  c.ProviderGetter,
+			Logger:          c.Logger,
+			DirectoryConfig: c.DirectoryConfig,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
-			KubeClient:     kubeCl,
-			Cache:          stateCache,
-			ChangeParams:   c.Params.ChangesSettings,
-			ProviderGetter: c.ProviderGetter,
-			Logger:         c.Logger,
+			KubeClient:      kubeCl,
+			Cache:           stateCache,
+			ChangeParams:    c.Params.ChangesSettings,
+			ProviderGetter:  c.ProviderGetter,
+			Logger:          c.Logger,
+			DirectoryConfig: c.DirectoryConfig,
 		})
 	}
 

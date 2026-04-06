@@ -6,9 +6,9 @@ search: cloud-provider-aws, cloud provider aws, amazon web services
 description: Архитектура модуля cloud-provider-aws в Deckhouse Kubernetes Platform.
 ---
 
-Модуль `cloud-provider-aws` управляет взаимодействием с облачными ресурсами [Amazon Web Services](https://aws.amazon.com/). Он позволяет модулю [`node-manager`](/modules/node-manager/) использовать ресурсы AWS при заказе узлов для описанной [группы узлов](/modules/node-manager/cr.html#nodegroup).
+Модуль [`cloud-provider-aws`](/modules/cloud-provider-aws/) обеспечивает интеграцию с облачными ресурсами [Amazon Web Services](https://aws.amazon.com/). Он используется модулем [`node-manager`](/modules/node-manager/) для заказа узлов в соответствии [с настройками группы узлов](/modules/node-manager/cr.html#nodegroup).
 
-Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/cloud-provider-aws/).
+Подробнее с описанием модуля можно ознакомиться [в соответствующем разделе документации](/modules/cloud-provider-aws/).
 
 ## Архитектура модуля
 
@@ -28,7 +28,7 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 
 Модуль состоит из следующих компонентов:
 
-1. **Сloud-controller-manager** — реализация [Сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для AWS. Обеспечивает взаимодействие с облаком AWS и выполняет следующие функции:
+1. **Сloud-controller-manager** — реализация [cloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для AWS. Компонент обеспечивает интеграцию с облаком AWS и выполняет следующие функции:
 
    * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
 
@@ -38,22 +38,22 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
    * при создании ресурса Service типа LoadBalancer в Kubernetes создаёт балансировщик в облаке, который направляет трафик извне к узлам кластера;
    * создает сетевые маршруты для сети `PodNetwork` на стороне AWS.
 
-   Подробнее о cloud-controller-manager можно почитать в [документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/).
+   Подробнее о cloud-controller-manager можно почитать [в документации Kubernetes](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/).
 
    Состоит из одного контейнера:
 
    * **aws-cloud-controller-manager**.
 
-2. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-aws`.
+1. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-aws`.
 
    Состоит из следующих контейнеров:
 
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-3. **CSI-драйвер (aws)** — реализация CSI-драйвера для AWS. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-driver.html).
+1. **CSI-драйвер (aws)** — реализация CSI-драйвера для AWS. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../infrastructure/csi-driver.html).
 
-4. **Node-termination-handler** — [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler), отвечает за обработку DKP событий от сервисов AWS о недоступности экземпляров EC2.
+1. **Node-termination-handler** — [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler), отвечает за обработку DKP событий от сервисов AWS о недоступности экземпляров EC2.
 
    Node-termination-hadler обрабатывает следующие события AWS:
    * [EC2 maintenance events](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html);
@@ -80,7 +80,7 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
     * мониторинг сервисов типа LoadBalancer;
     * авторизация запросов на получение метрик.
 
-2. **Amazon Web Services**:
+1. **Amazon Web Services**:
 
     * получение параметров облака;
     * получение `ProviderID` и прочей информации о виртуальных машинах, которые являются узлами кластера;
@@ -91,7 +91,7 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Prometheus-main** — сбор метрик cloud-data-discoverer.
+* **Prometheus-main** — сбор метрик cloud-data-discoverer.
 
 Непрямые взаимодействия:
 
@@ -100,11 +100,11 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
    * шаблоны для создания кастомных ресурсов для конкретного провайдера, которые `cloud-provider-aws` использует для создания виртуальных машин в облаке;
    * секрет `kube-system/d8-node-manager-cloud-provider`, в котором содержатся все необходимые настройки для подключения к облаку и создания CloudEphemeral-узлов. Эти настройки прописываются в кастомных ресурсах, созданных на основе упомянутых выше шаблонов и учитывающих особенности провайдера.
 
-2. Модуль `cloud-provider-aws` предоставляет компоненты Terraform/OpenTofu для AWS, которые используются при сборке исполняемого файла утилиты [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) в модуле [`terraform-manager`](/modules/terraform-manager/), такие как:
+1. Модуль `cloud-provider-aws` предоставляет компоненты Terraform/OpenTofu для AWS, которые используются при сборке исполняемого файла утилиты [`dhctl`](https://github.com/deckhouse/deckhouse/tree/main/dhctl) в модуле [`terraform-manager`](/modules/terraform-manager/), такие как:
 
    * Terraform/OpenTofu-провайдер;
    * Terraform-модули;
-   * layouts — набор схем размещения в облаке, определяющих, как создается базовая инфраструктура, как и с какими дополнительными характеристиками для данного размещения должны создаваться узлы. Например, в одной схеме узлы могут иметь публичные IP-адреса, а в другой — нет. Каждый layout включает три модуля:
+   * layouts — набор схем размещения в облаке, определяющих, как создается базовая инфраструктура, как и с какими дополнительными характеристиками для данного размещения должны создаваться узлы. Например, в одной схеме узлы могут иметь публичные IP-адреса, а в другой — нет. Каждая схема включает три модуля:
 
      * `base-infrastructure` — базовая инфраструктура (например, создание сетей), может быть пустым;
      * `master-node`;
