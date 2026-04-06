@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"os"
@@ -27,15 +28,12 @@ import (
 	"syscall"
 	"time"
 
-	"crypto/tls"
-
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	aoapp "github.com/flant/addon-operator/pkg/app"
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
-
 	"github.com/shirou/gopsutil/v3/process"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -498,7 +496,6 @@ func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context
 	// but the server certificate is not verified. Useful when the ingress uses
 	// a self-signed or internally-signed cert that the pod does not trust.
 	if tlsSkipVerify {
-		//nolint:gosec // intentional operator-configured skip
 		opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
 	}
 
