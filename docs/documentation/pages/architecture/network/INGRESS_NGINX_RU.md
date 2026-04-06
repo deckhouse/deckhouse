@@ -136,7 +136,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
    * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к метрикам контроллера. Подробно описан выше.
 
-3. **Failover-cleaner** (DaemonSet) — компонент, который деплоится на узлах кластера, отмеченных меткой `ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup=true`, и выполняет очистку правил iptables. При штатной работе Ingress-контроллера компонент failover-cleaner не запущен ни на одном узле.
+3. **Failover-cleaner** (DaemonSet) — компонент, который разворачивается на узлах кластера, отмеченных лейблом `ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup=true`, и выполняет очистку правил `iptables`. При штатной работе Ingress-контроллера компонент failover-cleaner не запущен ни на одном узле.
 
 ### Взаимодействия failover Ingress-контроллера
 
