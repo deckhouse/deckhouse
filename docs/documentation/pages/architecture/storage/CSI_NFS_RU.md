@@ -35,7 +35,7 @@ description: Архитектура модуля csi-nfs в Deckhouse Kubernetes
    * **controller** — основной контейнер;
    * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов NFSStorageClass и ресурсов StorageClass.
 
-2. **Csi-nfs-scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler, реализует специфичную для подов логику размещения при использовании NFS-томов. При планировании учитываются заданные в NFSStorageClass селекторы узлов.
+2. **Scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler, реализует специфичную для подов логику размещения при использовании NFS-томов. При планировании учитываются заданные в NFSStorageClass селекторы узлов.
 
 3. **CSI-драйвер (`csi-nfs`)** — реализация CSI-драйвера для `nfs.csi.k8s.io` provisioner ([NFS CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs)). С архитектурой CSI-драйвера (`csi-nfs`), используемого в DKP, можно ознакомиться [в разделе документации CSI-драйвера](../storage/csi-drivers/csi-driver-nfs.html).
 

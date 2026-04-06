@@ -57,7 +57,7 @@ The CSI driver consists of the following components:
 
      * **Syncer**: VMware vSphere specific controller, it is responsible for pushing the PersistentVolumes, PersistentVolumeClaims, and pod metadata to Cloud Native Storage (CNS). [CNS](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/container-storage-plugin/3-0/getting-started-with-vmware-vsphere-container-storage-plug-in-3-0/vsphere-container-storage-plug-in-concepts.html) in vCenter is a storage control plane for container volumes.
 
-2. **Csi-node** (DaemonSet): Node Plugin running on all cluster nodes and responsible for local volume mount and unmount operations.
+1. **Csi-node** (DaemonSet): Node Plugin running on all cluster nodes and responsible for local volume mount and unmount operations.
 
    > **Warning.** The plugin has privileged access to the filesystem of each node. On Linux, this requires the `CAP_SYS_ADMIN` capability. This is necessary to perform mount operations and interact with block devices.
 
@@ -81,17 +81,17 @@ The driver interacts with the following components:
 
 1. **Kube-apiserver**: Monitors PersistentVolumeClaim, VolumeAttachment, and VolumeSnapshotContent resources.
 
-2. **NFS storage**:
+1. **NFS storage**:
 
    * Attaches and detaches NFS-based volumes from nodes.
    * Manages snapshots.
 
 The following external components interact with the driver:
 
-1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
+* [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-   * Checks the CSI driver livenessProbe.
-   * Registers the Node Plugin.
-   * Calls the RPC methods `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, `NodeUnpublishVolume`, and `NodeExpandVolume` in Node Plugin.
+  * Checks the CSI driver livenessProbe.
+  * Registers the Node Plugin.
+  * Calls the RPC methods `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, `NodeUnpublishVolume`, and `NodeExpandVolume` in Node Plugin.
 
    [Kubelet](../../kubernetes-and-scheduling/kubelet.html) communicates with Node Plugin via gRPC over a Unix socket.

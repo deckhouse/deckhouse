@@ -56,7 +56,7 @@ CSI-драйвер состоит из следующих компонентов
 
       * [**livenessprobe**](https://github.com/kubernetes-csi/livenessprobe) — отслеживает состояние CSI-драйвера через RPC `Probe` из Identity Service и предоставляет HTTP-эндпоинт `/healthz`, за которым следит [kubelet](../../kubernetes-and-scheduling/kubelet.html). При неуспешной *livenessProbe* kubelet перезапускает под csi-controller.
 
-2. **Csi-node** (DaemonSet) — Node Plugin, работающий на всех узлах кластера и отвечающий за локальное монтирование и размонтирование томов.
+1. **Csi-node** (DaemonSet) — Node Plugin, работающий на всех узлах кластера и отвечающий за локальное монтирование и размонтирование томов.
 
    > **Внимание.** У плагина есть привилегированный доступ к файловой системе каждого узла. В Linux для этого требуется capability `CAP_SYS_ADMIN`. Это необходимо для выполнения операций монтирования и работы с блочными устройствами.
 
@@ -80,17 +80,17 @@ CSI-драйвер состоит из следующих компонентов
 
 1. **Kube-apiserver** — мониторинг ресурсов PersistentVolumeClaim, VolumeAttachment и VolumeSnapshotContent.
 
-2. **Сетевое файловое хранилище NFS**:
+1. **Сетевое файловое хранилище NFS**:
 
    * подключение и отключение NFS-томов от узлов;
    * управление снимками.
 
 С драйвером взаимодействуют следующие внешние компоненты:
 
-1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
+* [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-   * проверяет livenessProbe CSI-драйвера;
-   * регистрирует Node Plugin;
-   * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, `NodeUnpublishVolume` и `NodeExpandVolume` в Node Plugin.
+  * проверяет livenessProbe CSI-драйвера;
+  * регистрирует Node Plugin;
+  * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, `NodeUnpublishVolume` и `NodeExpandVolume` в Node Plugin.
 
    [Kubelet](../../kubernetes-and-scheduling/kubelet.html) взаимодействует с Node Plugin по gRPC через Unix-сокет.
