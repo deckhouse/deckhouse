@@ -134,3 +134,8 @@ properties:
             type: string
           key:
             type: string
+      kubernetesApiserverTargetPort:
+        type: integer
+      kubernetesApiserverAddresses:
+        type: array
+        items: strings
