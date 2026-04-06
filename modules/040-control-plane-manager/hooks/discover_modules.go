@@ -102,6 +102,7 @@ func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) err
 		userAuthnOIDCIssuerURLPath     = "controlPlaneManager.apiserver.authn.oidcIssuerURL"
 		userAuthnOIDCIssuerAddressPath = "controlPlaneManager.apiserver.authn.oidcIssuerAddress"
 		userAuthnOIDCIssuerCAPath      = "controlPlaneManager.apiserver.authn.oidcCA"
+		userAuthnEnableBasicAuthPath   = "controlPlaneManager.internal.authn.enableBasicAuth"
 
 		runtimeAuditWebhookURLPath = "controlPlaneManager.internal.audit.webhookURL"
 		runtimeAuditWebhookCAPath  = "controlPlaneManager.internal.audit.webhookCA"
@@ -143,6 +144,9 @@ func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) err
 			input.Values.Remove(userAuthnOIDCIssuerCAPath)
 			input.Values.Remove(userAuthnOIDCIssuerAddressPath)
 		}
+	}
+	if enableBasicAuth, ok := authNData["enableBasicAuth"]; ok {
+		input.Values.Set(userAuthnEnableBasicAuthPath, enableBasicAuth)
 	}
 
 	authnWebhookURLExists := input.ConfigValues.Exists(userAuthenticationWebhookURLPath)
