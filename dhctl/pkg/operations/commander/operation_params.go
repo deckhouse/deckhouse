@@ -14,7 +14,6 @@
 
 package commander
 
-
 type CommanderModeParams struct {
 	ClusterConfigurationData         []byte
 	ProviderClusterConfigurationData []byte
