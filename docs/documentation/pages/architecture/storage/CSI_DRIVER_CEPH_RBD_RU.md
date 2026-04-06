@@ -8,7 +8,7 @@ description: Архитектура CSI-драйвера для работы с 
 
 CSI-драйвер `csi-rbd` - реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с Ceph [RBD (RADOS Block Device)](https://docs.ceph.com/en/reef/rbd/) томами в Deckhouse Kubernetes Platform (DKP).
 
-## Архитектура CSI-драйвера (rbd)
+## Архитектура CSI-драйвера (csi-rbd)
 
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
@@ -17,16 +17,16 @@ CSI-драйвер `csi-rbd` - реализация [Container Storage Interface
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура CSI-драйвера (rbd) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура CSI-драйвера (`csi-rbd`) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура CSI-драйвера (rbd)](../../../images/architecture/storage/c4-l2-csi-ceph-rbd-driver.ru.png)
+![Архитектура CSI-драйвера (csi-rbd)](../../../images/architecture/storage/c4-l2-csi-ceph-rbd-driver.ru.png)
 
 ## Компоненты драйвера
 
 Драйвер состоит из следующих компонентов:
 
-1. **Csi-controller-rbd** (Deployment) — Controller Plugin, отвечающий за глобальные операции с томами: создание и удаление, подключение и отключение от узлов, а также управление снимками.
+1. **Csi-controller** (Deployment) — Controller Plugin, отвечающий за глобальные операции с томами: создание и удаление, подключение и отключение от узлов, а также управление снимками.
 
    Состоит из следующих контейнеров:
 
@@ -52,7 +52,7 @@ CSI-драйвер `csi-rbd` - реализация [Container Storage Interface
 
      * [**livenessprobe**](https://github.com/kubernetes-csi/livenessprobe) — отслеживает состояние CSI-драйвера через RPC `Probe` из Identity Service и предоставляет HTTP-эндпоинт `/healthz`, за которым следит [kubelet](../../kubernetes-and-scheduling/kubelet.html). При неуспешной *livenessProbe* kubelet перезапускает под csi-controller.
 
-2. **Csi-node-rbd** (DaemonSet) — Node Plugin, работающий на всех узлах кластера и отвечающий за локальное монтирование и размонтирование томов.
+1. **Csi-node** (DaemonSet) — Node Plugin, работающий на всех узлах кластера и отвечающий за локальное монтирование и размонтирование томов.
 
    > **Внимание.** У плагина есть привилегированный доступ к файловой системе каждого узла. В Linux для этого требуется capability `CAP_SYS_ADMIN`. Это необходимо для выполнения операций монтирования и работы с блочными устройствами.
 
@@ -68,14 +68,14 @@ CSI-драйвер `csi-rbd` - реализация [Container Storage Interface
 
 1. **Kube-apiserver** — мониторинг ресурсов PersistentVolumeClaim, VolumeAttachment и VolumeSnapshotContent.
 
-2. **Кластер Ceph** — создание и удаление томов, подключение и отключение томов от узлов, управление снимками.
+1. **Кластер Ceph** — создание и удаление томов, подключение и отключение томов от узлов, управление снимками.
 
 С драйвером взаимодействуют следующие внешние компоненты:
 
-1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
+* [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-   * проверяет livenessProbe CSI-драйвера;
-   * регистрирует Node Plugin;
-   * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, `NodeUnpublishVolume` и `NodeExpandVolume` в Node Plugin.
+  * проверяет livenessProbe CSI-драйвера;
+  * регистрирует Node Plugin;
+  * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, `NodeUnpublishVolume` и `NodeExpandVolume` в Node Plugin.
 
    [Kubelet](../../kubernetes-and-scheduling/kubelet.html) взаимодействует с Node Plugin по gRPC через Unix-сокет.

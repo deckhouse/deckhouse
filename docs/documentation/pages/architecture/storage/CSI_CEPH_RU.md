@@ -42,22 +42,22 @@ description: Архитектура модуля csi-ceph в Deckhouse Kubernete
    * **controller** — основной контейнер;
    * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов CephClusterAuthentication, CephClusterConnection, CephMetadataBackup и CephStorageClass.
 
-2. **CSI-драйвер (rbd/cephfs)** — реализация CSI-драйвера для `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` provisioner. Выбор CSI-драйвера выполняется путём задания storage-класса в кастомном ресурсе CephStorageClass.
+1. **CSI-драйвер (`rbd/cephfs`)** — реализация CSI-драйвера для `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` provisioner. Выбор CSI-драйвера выполняется путём задания storage-класса в кастомном ресурсе CephStorageClass.
 
-CSI-драйвер (cephfs) реализован по типовой архитектуре CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html).
+CSI-драйвер (`cephfs`) реализован по типовой архитектуре CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
-CSI-драйвер (rbd) реализован по отличной от типовой архитектуры CSI-драйвера, которая приведена [в разделе документации CSI-драйвера](../storage/csi-drivers/csi-driver-ceph-rbd.html).
+CSI-драйвер (`rbd`) реализован по отличной от типовой архитектуры CSI-драйвера, которая приведена [в разделе документации CSI-драйвера](../storage/csi-drivers/csi-driver-ceph-rbd.html).
 
 ## Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
 
-1. **Kube-apiserver**:
+* **Kube-apiserver**:
 
-   * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
-   * работа с кастомными ресурсами CephClusterAuthentication, CephClusterConnection, CephMetadataBackup, CephStorageClass;
-   * создание ресурса StorageClass.
+  * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
+  * работа с кастомными ресурсами CephClusterAuthentication, CephClusterConnection, CephMetadataBackup, CephStorageClass;
+  * создание ресурса StorageClass.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Kube-apiserver** — валидация кастомных ресурсов CephClusterAuthentication, CephClusterConnection, CephMetadataBackup, CephStorageClass, ресурсов StorageClass.
+* **Kube-apiserver** — валидация кастомных ресурсов CephClusterAuthentication, CephClusterConnection, CephMetadataBackup, CephStorageClass.
