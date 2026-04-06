@@ -90,7 +90,7 @@ description: Архитектура модуля observability в Deckhouse Kube
 
 1. **Kube-apiserver**:
 
-   - выполняет проверку и изменение кастомных ресурсов модуля (с помощью validating и mutating вбхуков);
+   - выполняет проверку и изменение кастомных ресурсов модуля (с помощью validating и mutating вебхуков);
    - пересылает в alert-kube-api запросы на кастомные ресурсы ObservabilityAlerts и ClusterObservabilityAlerts.
 
 1. **Prometheus** — отправляет алерты в Alertmanager.
