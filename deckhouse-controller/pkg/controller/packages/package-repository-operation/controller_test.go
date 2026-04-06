@@ -525,6 +525,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	resultStr = regexp.MustCompile(`startTime: "[^"]*"`).ReplaceAllString(resultStr, `startTime: "2025-10-31T12:00:00Z"`)
 	resultStr = regexp.MustCompile(`syncTime: "[^"]*"`).ReplaceAllString(resultStr, `syncTime: "2025-10-31T12:00:00Z"`)
 	resultStr = regexp.MustCompile(`completionTime: "[^"]*"`).ReplaceAllString(resultStr, `completionTime: "2025-10-31T12:00:00Z"`)
+	resultStr = regexp.MustCompile(`lastTransitionTime: "[^"]*"`).ReplaceAllString(resultStr, `lastTransitionTime: "2025-10-31T12:00:00Z"`)
 
 	return []byte(resultStr)
 }
@@ -559,8 +560,7 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 
 	ctr := &reconciler{
 		client: kubeClient,
-		logger: log.NewLogger(log.WithLevel(slog.LevelDebug)), // return nop
-		dc:     dependency.NewMockedContainer(),
+		logger: log.NewLogger(log.WithLevel(slog.LevelDebug)),
 	}
 
 	// Load test data from file

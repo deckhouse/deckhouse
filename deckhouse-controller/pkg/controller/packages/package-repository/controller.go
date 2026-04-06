@@ -23,6 +23,7 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -143,17 +144,14 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 		return ctrl.Result{}, fmt.Errorf("list operations: %w", err)
 	}
 
-	// Check if there is an active operation (Pending or Processing)
+	// Check if there is an active operation (no Completed condition means still in progress)
 	hasActiveOperation := false
 	for _, op := range operationList.Items {
-		if op.Status.Phase == "" ||
-			op.Status.Phase == v1alpha1.PackageRepositoryOperationPhasePending ||
-			op.Status.Phase == v1alpha1.PackageRepositoryOperationPhaseProcessing {
+		if apimeta.FindStatusCondition(op.Status.Conditions, v1alpha1.PackageRepositoryOperationConditionCompleted) == nil {
 			hasActiveOperation = true
 
 			logger.Debug("active operation exists, skipping creation",
-				slog.String("operation", op.Name),
-				slog.String("phase", op.Status.Phase))
+				slog.String("operation", op.Name))
 
 			break
 		}

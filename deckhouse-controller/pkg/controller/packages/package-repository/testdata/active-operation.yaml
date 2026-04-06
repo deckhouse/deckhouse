@@ -22,4 +22,8 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Processing
+  conditions:
+  - type: Pending
+    status: "True"
+  - type: Discovered
+    status: "True"

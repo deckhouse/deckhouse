@@ -370,7 +370,7 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register package repository controller: %w", err)
 		}
 
-		err = packagerepositoryoperation.RegisterController(runtimeManager, dc, logger.Named("package-repository-operation-controller"))
+		err = packagerepositoryoperation.RegisterController(runtimeManager, logger.Named("package-repository-operation-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register package repository operation controller: %w", err)
 		}

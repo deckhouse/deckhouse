@@ -181,9 +181,6 @@ spec:
                     description: Total number of packages found.
                     type: integer
                 type: object
-              phase:
-                description: Current phase of the operation.
-                type: string
               startTime:
                 description: Time when the operation started.
                 format: date-time
