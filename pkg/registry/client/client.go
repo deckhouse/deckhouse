@@ -505,6 +505,7 @@ func tagsURL(repo name.Repository, last string, pageSize int) string {
 	return uri.String()
 }
 
+// tagsResponse represents the JSON body of GET /v2/<name>/tags/list (OCI Distribution Spec).
 type tagsResponse struct {
 	Name string   `json:"name"`
 	Tags []string `json:"tags"`
