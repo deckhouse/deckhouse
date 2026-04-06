@@ -113,7 +113,7 @@ The following diagram does not show the architecture of the main Ingress control
 The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet type and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Ingress-nginx module architecture](../../../images/architecture/network/c4-l2-ingress-nginx-failover.png)
+![Architecture of ingress-nginx module with HostWithFailover inlet type](../../../images/architecture/network/c4-l2-ingress-nginx-failover.png)
 
 ### Components of Ingress controller with HostWithFailover inlet type
 
