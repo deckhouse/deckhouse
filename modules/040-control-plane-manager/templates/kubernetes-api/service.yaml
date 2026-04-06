@@ -4,7 +4,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kubernetes
-  namespace: d8-{{ .Chart.Name }}
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   clusterIP: None
