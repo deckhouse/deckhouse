@@ -59,30 +59,25 @@ func filterApiCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 }
 
 func copyCAPairToModuleValues(_ context.Context, input *go_hook.HookInput) error {
-	// if !(input.Values.Get("controlPlaneManager.apiserver.publishAPI.ingress.https.mode").Value() == "SelfSigned") {
-	// 	fmt.Println("https mode is not SelfSigned, skipping")
-	// 	return nil
-	// }
-	fmt.Println("Getting selfsigned publishAPI CA")
 	keyPairs := input.Snapshots.Get("secret_publishapi_selfsigned_ca_migration")
-	fmt.Println(keyPairs[0])
 
 	selfSignedKeyPair := make(map[string][]byte)
+
 	if len(keyPairs) > 0 {
 		err := keyPairs[0].UnmarshalTo(&selfSignedKeyPair)
-
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal 'secret_publishapi_selfsigned_ca_migration' snapshot: %w", err)
 		}
-
-		fmt.Println("Setting key pair into internal values")
-		fmt.Println(string(selfSignedKeyPair["tls.crt"]))
-		fmt.Println(string(selfSignedKeyPair["tls.key"]))
-		input.Values.Set("controlPlaneManager.internal.selfSignedCA.cert", string(selfSignedKeyPair["tls.crt"]))
-		input.Values.Set("controlPlaneManager.internal.selfSignedCA.key", string(selfSignedKeyPair["tls.key"]))
-
+		cert, certOk := selfSignedKeyPair["tls.crt"]
+		key, keyOk := selfSignedKeyPair["tls.key"]
+		if certOk && keyOk {
+			input.Values.Set("controlPlaneManager.internal.selfSignedCA.cert", string(cert))
+			input.Values.Set("controlPlaneManager.internal.selfSignedCA.key", string(key))
+		} else {
+			input.Logger.Info("'kubernetes-api-ca-key-pair' secret exists but does not have either tls.crt or tls.key")
+		}
 	} else {
-		fmt.Println("'kubernetes-api-ca-key-pair' secret appears to not have data")
+		input.Logger.Info("'kubernetes-api-ca-key-pair' secret appears to not have data")
 	}
 	return nil
 }

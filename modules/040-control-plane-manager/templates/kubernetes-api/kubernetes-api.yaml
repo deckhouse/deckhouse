@@ -9,16 +9,16 @@ metadata:
   {{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges | join "," }}
   {{- end }}
-  {{- if include "is_basic_auth_enabled" . }}
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      if ($http_authorization ~ "^(.*)Basic(.*)$") {
-        rewrite ^(.*)$ /basic-auth$1;
-      }
-      location ~ ^/(healthz|livez|readyz) {
-        deny all;
-        return 403;
-      }
-  {{- else }}
+  # {{- if include "is_basic_auth_enabled" . }}
+  #   nginx.ingress.kubernetes.io/configuration-snippet: |
+  #     if ($http_authorization ~ "^(.*)Basic(.*)$") {
+  #       rewrite ^(.*)$ /basic-auth$1;
+  #     }
+  #     location ~ ^/(healthz|livez|readyz) {
+  #       deny all;
+  #       return 403;
+  #     }
+  # {{- else }}
     nginx.ingress.kubernetes.io/configuration-snippet: |
       location ~ ^/(healthz|livez|readyz) {
         deny all;
