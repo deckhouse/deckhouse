@@ -23,3 +23,11 @@ Update dependencies to fix CVEs
 ### 004-hardfix_bug_with_dropped_unknown_samples.patch
 
 Add loading chunk snapshots in remote-write to solve problem with unknown series's samples drop.
+
+### 005-fix-cves.patch
+
+Fix CVE-2026-33186 (`google.golang.org/grpc`).
+```sh
+go get google.golang.org/grpc@v1.79.3
+go mod tidy
+```
