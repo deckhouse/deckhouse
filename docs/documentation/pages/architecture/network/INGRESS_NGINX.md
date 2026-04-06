@@ -115,7 +115,7 @@ The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet ty
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Architecture of ingress-nginx module with HostWithFailover inlet type](../../../images/architecture/network/c4-l2-ingress-nginx-failover.png)
 
-### Components of Ingress controller with HostWithFailover inlet type
+### Components of failover Ingress controller
 
 1. **Controller-nginx-failover** ([Advanced DaemonSet](https://openkruise.io/docs/user-manuals/advanceddaemonset)): Failover Ingress-controller deployed on the same nodes as the main one. Failover controller has the same pods with the same purpose as the main Ingress controller.
 
