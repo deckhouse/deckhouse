@@ -1,5 +1,5 @@
 {{ if .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled -}}
-  {{- if eq .Values.controlPlaneManager.apiserver.publishAPI.ingresshttps.mode "Global" -}}
+  {{- if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global" -}}
     {{- if eq (include "helm_lib_module_https_mode" .) "CustomCertificate" }}
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "kube-system" "kubernetes-tls") -}}
     {{- end -}}
