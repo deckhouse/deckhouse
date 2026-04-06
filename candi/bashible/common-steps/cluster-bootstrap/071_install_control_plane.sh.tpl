@@ -38,7 +38,7 @@ check_container_running() {
 }
 
 check_container_running "kubernetes-api-proxy"
-cp {{ $manifestsDir}}/pki /etc/kubernetes/
+cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd"
 

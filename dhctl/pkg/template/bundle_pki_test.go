@@ -38,8 +38,10 @@ var allPKIFiles = []string{
 // makeTemplateData возвращает минимальный templateData, необходимый для PreparePKI.
 func makeTemplateData(clusterDomain, serviceSubnetCIDR string) map[string]interface{} {
 	return map[string]interface{}{
-		"clusterDomain":     clusterDomain,
-		"serviceSubnetCIDR": serviceSubnetCIDR,
+		"clusterConfiguration": map[string]interface{}{
+			"clusterDomain":     clusterDomain,
+			"serviceSubnetCIDR": serviceSubnetCIDR,
+		},
 	}
 }
 
@@ -52,13 +54,13 @@ func TestPreparePKI_CreatesAllFiles(t *testing.T) {
 	// Чтобы тест был изолирован и не загрязнял /tmp, мы временно подменяем
 	// вызов через обёртку preparePKIWithDir, которую добавим ниже.
 	// Пока тестируем публичный API напрямую, передавая pkiDir через замену.
-	err := preparePKIWithDir(nil, "10.0.0.1", templateData, pkiDir)
+	err := preparePKIWithDir(nil, "master-0", "10.0.0.1", templateData, pkiDir)
 	if err != nil {
 		t.Fatalf("PreparePKI вернул ошибку: %v", err)
 	}
 
 	for _, f := range allPKIFiles {
-		path := filepath.Join(pkiDir, f)
+		path := filepath.Join(pkiDir, "pki", f)
 		info, statErr := os.Stat(path)
 		if statErr != nil {
 			t.Errorf("ожидался файл %q, но он не найден: %v", f, statErr)
@@ -75,7 +77,7 @@ func TestPreparePKI_Idempotent(t *testing.T) {
 	templateData := makeTemplateData("cluster.local", "10.96.0.0/12")
 
 	// Первый вызов
-	if err := preparePKIWithDir(nil, "10.0.0.1", templateData, pkiDir); err != nil {
+	if err := preparePKIWithDir(nil, "master-0", "10.0.0.1", templateData, pkiDir); err != nil {
 		t.Fatalf("первый вызов PreparePKI вернул ошибку: %v", err)
 	}
 
@@ -83,7 +85,7 @@ func TestPreparePKI_Idempotent(t *testing.T) {
 	before := readPKIFiles(t, pkiDir)
 
 	// Второй вызов — должен быть идемпотентным (CA не перегенерируются)
-	if err := preparePKIWithDir(nil, "10.0.0.1", templateData, pkiDir); err != nil {
+	if err := preparePKIWithDir(nil, "master-0", "10.0.0.1", templateData, pkiDir); err != nil {
 		t.Fatalf("второй вызов PreparePKI вернул ошибку: %v", err)
 	}
 
@@ -124,13 +126,13 @@ func TestPreparePKI_DifferentServiceCIDR(t *testing.T) {
 			pkiDir := t.TempDir()
 			templateData := makeTemplateData(tt.clusterDomain, tt.serviceCIDR)
 
-			err := preparePKIWithDir(nil, "10.0.0.1", templateData, pkiDir)
+			err := preparePKIWithDir(nil, "master-0", "10.0.0.1", templateData, pkiDir)
 			if err != nil {
 				t.Fatalf("PreparePKI(%q, %q) вернул ошибку: %v", tt.clusterDomain, tt.serviceCIDR, err)
 			}
 
 			// Проверяем, что хотя бы основной CA создан
-			caPath := filepath.Join(pkiDir, "ca.crt")
+			caPath := filepath.Join(pkiDir, "pki", "ca.crt")
 			if _, err := os.Stat(caPath); err != nil {
 				t.Errorf("ca.crt не создан: %v", err)
 			}
@@ -147,10 +149,12 @@ func TestPreparePKI_MissingClusterDomain(t *testing.T) {
 
 	// templateData без clusterDomain — должна быть паника при type assertion
 	templateData := map[string]interface{}{
-		"serviceSubnetCIDR": "10.96.0.0/12",
+		"clusterConfiguration": map[string]interface{}{
+			"serviceSubnetCIDR": "10.96.0.0/12",
+		},
 	}
 
-	_ = preparePKIWithDir(nil, "10.0.0.1", templateData, t.TempDir())
+	_ = preparePKIWithDir(nil, "master-0", "10.0.0.1", templateData, t.TempDir())
 }
 
 func TestPreparePKI_MissingServiceSubnetCIDR(t *testing.T) {
@@ -162,10 +166,12 @@ func TestPreparePKI_MissingServiceSubnetCIDR(t *testing.T) {
 
 	// templateData без serviceSubnetCIDR — должна быть паника при type assertion
 	templateData := map[string]interface{}{
-		"clusterDomain": "cluster.local",
+		"clusterConfiguration": map[string]interface{}{
+			"clusterDomain": "cluster.local",
+		},
 	}
 
-	_ = preparePKIWithDir(nil, "10.0.0.1", templateData, t.TempDir())
+	_ = preparePKIWithDir(nil, "master-0", "10.0.0.1", templateData, t.TempDir())
 }
 
 // readPKIFiles читает содержимое всех PKI файлов из директории.
@@ -173,7 +179,7 @@ func readPKIFiles(t *testing.T, dir string) map[string][]byte {
 	t.Helper()
 	result := make(map[string][]byte, len(allPKIFiles))
 	for _, f := range allPKIFiles {
-		data, err := os.ReadFile(filepath.Join(dir, f))
+		data, err := os.ReadFile(filepath.Join(dir, "pki", f))
 		if err != nil {
 			t.Fatalf("не удалось прочитать файл %q: %v", f, err)
 		}

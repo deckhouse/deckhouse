@@ -17,7 +17,6 @@ package template
 import (
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -67,7 +66,7 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	log.DebugF("Data %s\n%s", name, string(formattedData))
 }
 
-func PrepareBundle(templateController *Controller, nodeIP, devicePath string, metaConfig *config.MetaConfig) error {
+func PrepareBundle(templateController *Controller, nodeName, nodeIP, devicePath string, metaConfig *config.MetaConfig) error {
 	kubeadmData, err := metaConfig.ConfigForKubeadmTemplates("")
 	if err != nil {
 		return err
@@ -87,7 +86,7 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 	// if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
 	// 	return err
 	// }
-	if err := PreparePKI(templateController, "127.0.01", kubeadmData); err != nil {
+	if err := PreparePKI(templateController, nodeName, "127.0.0.1", kubeadmData); err != nil {
 		return err
 	}
 
@@ -180,12 +179,12 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 	return nil
 }
 
-func PreparePKI(templateController *Controller, nodeIP string, templateData map[string]interface{}) error {
+func PreparePKI(templateController *Controller, nodeName, nodeIP string, templateData map[string]interface{}) error {
 	path := fmt.Sprintf("%s/control-plane", templateController.TmpDir+bashibleDir)
-	return preparePKIWithDir(templateController, nodeIP, templateData, path)
+	return preparePKIWithDir(templateController, nodeName, nodeIP, templateData, path)
 }
 
-func preparePKIWithDir(_ *Controller, nodeIP string, templateData map[string]interface{}, path string) error {
+func preparePKIWithDir(_ *Controller, nodeName, nodeIP string, templateData map[string]interface{}, path string) error {
 	cc := templateData["clusterConfiguration"].(map[string]interface{})
 	serviceCIDR := cc["serviceSubnetCIDR"].(string)
 	dnsDomain := cc["clusterDomain"].(string)
@@ -193,13 +192,14 @@ func preparePKIWithDir(_ *Controller, nodeIP string, templateData map[string]int
 	ip := net.ParseIP(nodeIP)
 
 	pkiDir := fmt.Sprintf("%s/pki", path)
-	err := os.MkdirAll(pkiDir, 0755)
+	// err := os.MkdirAll(pkiDir, 0755)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	fmt.Println(nodeName, dnsDomain, ip, serviceCIDR)
+	err := pki.CreatePKIBundle(nodeName, dnsDomain, ip, serviceCIDR, pki.WithPKIDir(pkiDir))
 	if err != nil {
-		fmt.Println(err)
-	}
-	err = pki.CreatePKIBundle("master", dnsDomain, ip, serviceCIDR, pki.WithPKIDir(pkiDir))
-	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	var files []kubeconfig.File
 	files = append(files, kubeconfig.Kubelet, kubeconfig.Admin, kubeconfig.ControllerManager, kubeconfig.Scheduler)

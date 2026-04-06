@@ -108,10 +108,28 @@ func BootstrapMaster(ctx context.Context, nodeInterface node.Interface, controll
 	})
 }
 
-func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+func PrepareBashibleBundle(nodeName, nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller) error {
 	return log.Process("bootstrap", "Prepare Bashible", func() error {
-		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig)
+		return template.PrepareBundle(controller, nodeName, nodeIP, devicePath, metaConfig)
 	})
+}
+
+func getNodeShortHostname(ctx context.Context, nodeInterface node.Interface) (string, error) {
+	cmd := nodeInterface.Command("hostname", "-s")
+	cmd.Sudo(ctx)
+	cmd.WithTimeout(10 * time.Second)
+
+	stdout, stderr, err := cmd.Output(ctx)
+	if err != nil {
+		return "", fmt.Errorf("get node short hostname: %w; stderr: %s", err, string(stderr))
+	}
+
+	hostname := strings.TrimSpace(string(stdout))
+	if hostname == "" {
+		return "", fmt.Errorf("get node short hostname: empty hostname returned")
+	}
+
+	return hostname, nil
 }
 
 func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string, commanderMode bool) error {
@@ -510,7 +528,12 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		defer cleanUpTunnel()
 	}
 
-	if err = PrepareBashibleBundle(nodeIP, devicePath, cfg, templateController); err != nil {
+	nodeName, err := getNodeShortHostname(ctx, nodeInterface)
+	if err != nil {
+		return err
+	}
+
+	if err = PrepareBashibleBundle(nodeName, nodeIP, devicePath, cfg, templateController); err != nil {
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
