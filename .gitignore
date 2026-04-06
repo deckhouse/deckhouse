@@ -28,6 +28,9 @@ out/
 # local development deckhouse binary
 /deckhouse/deckhouse
 
+# Generated documentation PDF (make docs-generate-pdf)
+/PDF/
+
 # terraform and dhctl artifacts
 *-tfstate/
 .terraform/

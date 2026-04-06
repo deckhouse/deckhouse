@@ -294,6 +294,7 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 MODULE_PATH ?=
 CHANNEL ?= alpha
 MODULE_VERSION ?= v0.1.0
+DKP_DOC_VERSION ?=
 
 .PHONY: docs
 docs: bin/werf ## Run containers with the documentation.
@@ -302,6 +303,41 @@ docs: bin/werf ## Run containers with the documentation.
 	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+
+.PHONY: docs-generate-pdf
+docs-generate-pdf: ## Generate PDF documentation.
+  ##~ Options: DKP_DOC_VERSION=X.XX - version of the documentation, if not set, the version is determined from the git branch name.
+  ##~ Options: ONLY_RU=1 or ONLY_EN=1 - build a single language, do not combine both.
+	@GET_DOCUMENTATION_TMPDIR=$$(mktemp -d "$${TMPDIR:-/tmp}/deckhouse-get-doc.XXXXXX") || exit 1; \
+	export GET_DOCUMENTATION_TMPDIR; \
+	echo "Temporary directory: $$GET_DOCUMENTATION_TMPDIR"; \
+	bash tools/docs/pdf/get-documentation.sh && \
+	mkdir -p "$(CURDIR)/PDF" && \
+	if [ -n "$(strip $(DKP_DOC_VERSION))" ]; then \
+		DKP_DOC_VERSION="$(strip $(DKP_DOC_VERSION))"; \
+	else \
+		DKP_DOC_VERSION=""; \
+		BRANCH=$$(cd "$(CURDIR)" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ""); \
+		if [ "$$BRANCH" != "main" ] && echo "$$BRANCH" | grep -q 'release-'; then \
+			DKP_DOC_VERSION=$$(echo "$$BRANCH" | sed 's/.*release-//' | sed 's/[^0-9.].*//'); \
+		fi; \
+	fi; \
+	docker run --rm \
+		-w /app \
+		-e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
+		-e DKP_DOC_VERSION="$$DKP_DOC_VERSION" \
+		-e ONLY_RU="$(strip $(ONLY_RU))" \
+		-e ONLY_EN="$(strip $(ONLY_EN))" \
+		-v "$(CURDIR)/tools/docs/pdf/get_pdf_page.py:/app/get_pdf_page.py:ro" \
+		-v "$(CURDIR)/tools/docs/pdf/toc_style.css:/app/toc_style.css:ro" \
+		-v "$(CURDIR)/tools/docs/pdf/toc_template.xsl:/app/toc_template.xsl:ro" \
+		-v "$$GET_DOCUMENTATION_TMPDIR/app/docs-dkp:/app/content:ro" \
+		-v "$$GET_DOCUMENTATION_TMPDIR/app/embedded-modules:/app/embedded-modules:ro" \
+		-v "$(CURDIR)/docs/documentation/_data/sidebars/main.yml:/app/main.yml:ro" \
+		-v "$(CURDIR)/PDF:/out" \
+		konstantinnezhbert/deckhouse-docs-builder:0.1 \
+		python3 get_pdf_page.py && \
+	rm -rf "$$GET_DOCUMENTATION_TMPDIR"
 
 .PHONY: docs-external-module
 docs-external-module: yq bin/werf ## Build an external module docs and run the local portal.
