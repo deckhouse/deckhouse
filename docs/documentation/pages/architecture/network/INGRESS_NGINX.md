@@ -133,6 +133,8 @@ The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet ty
   
    * **kube-rbac-proxy**: Sidecar container providing authorized access to controller metrics and status (described above).
 
+3. **Failover-cleaner** (DaemonSet): Component deployed to the cluster nodes that are labeled with `ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup=true`. It cleans up the `iptables` rules. If the Ingress controller operates normally, the failover-cleaner component doesn't run on any node.
+
 ### Failover Ingress controller interactions
 
 Failover Ingress controller interacts with the following components:
