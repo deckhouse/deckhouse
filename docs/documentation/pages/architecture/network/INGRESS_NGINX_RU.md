@@ -144,7 +144,7 @@ Failover Ingress-контроллер взаимодействует со сле
 
 1. **Kube-apiserver**:
 
-    * мониторинг ресурсов Node на предмет наличия метки `ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup=true`;
+    * мониторинг ресурсов Node на предмет наличия лейбла `ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup=true`;
     * авторизация запросов на получение метрик контроллера;
     * перенаправление внешних HTTP-запросов на эндпоинт API Kubernetes.
 
