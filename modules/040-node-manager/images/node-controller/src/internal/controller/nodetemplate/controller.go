@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -75,8 +76,8 @@ func (r *Reconciler) reconcileSingleNode(ctx context.Context, req ctrl.Request, 
 		return ctrl.Result{}, nil
 	}
 
-	ng := &v1.NodeGroup{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: nodeGroupName}, ng); err != nil {
+	ng, err := nodecommon.GetNodeGroup(ctx, r.Client, nodeGroupName)
+	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.V(1).Info("skipping: NodeGroup not found", "node", node.Name, "nodeGroup", nodeGroupName)
 			return ctrl.Result{}, nil

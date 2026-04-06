@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ua "github.com/deckhouse/node-controller/internal/controller/updateapproval/common"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 type Client struct {
@@ -36,31 +36,11 @@ type Client struct {
 }
 
 func (c Client) GetNodesForNodeGroup(ctx context.Context, ngName string) ([]corev1.Node, error) {
-	nodeList := &corev1.NodeList{}
-	if err := c.Client.List(ctx, nodeList, client.MatchingLabels{ua.NodeGroupLabel: ngName}); err != nil {
-		return nil, fmt.Errorf("failed to list nodes for nodegroup %s: %w", ngName, err)
-	}
-	return nodeList.Items, nil
+	return nodecommon.GetNodesForNodeGroup(ctx, c.Client, ngName)
 }
 
 func (c Client) GetConfigurationChecksums(ctx context.Context) (map[string]string, error) {
-	secret := &corev1.Secret{}
-	err := c.Client.Get(ctx, types.NamespacedName{
-		Namespace: ua.MachineNamespace,
-		Name:      ua.ConfigurationChecksumsSecretName,
-	}, secret)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to get secret %s/%s: %w", ua.MachineNamespace, ua.ConfigurationChecksumsSecretName, err)
-	}
-
-	checksums := make(map[string]string, len(secret.Data))
-	for k, v := range secret.Data {
-		checksums[k] = string(v)
-	}
-	return checksums, nil
+	return nodecommon.GetConfigurationChecksums(ctx, c.Client)
 }
 
 func (c Client) PatchNode(ctx context.Context, nodeName string, patch map[string]interface{}) error {

@@ -20,18 +20,12 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 func (s *Service) getNodesForNodeGroup(ctx context.Context, ngName string) ([]corev1.Node, error) {
-	nodeList := &corev1.NodeList{}
-	if err := s.Client.List(ctx, nodeList, client.MatchingLabels{common.NodeGroupLabel: ngName}); err != nil {
-		return nil, err
-	}
-	return nodeList.Items, nil
+	return nodecommon.GetNodesForNodeGroup(ctx, s.Client, ngName)
 }
 
 func isNodeReady(node *corev1.Node) bool {
@@ -44,12 +38,9 @@ func isNodeReady(node *corev1.Node) bool {
 }
 
 func (s *Service) getConfigurationChecksum(ctx context.Context, ngName string) string {
-	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{
-		Namespace: common.MachineNamespace,
-		Name:      common.ConfigurationChecksumsSecretName,
-	}, secret); err != nil {
+	checksums, err := nodecommon.GetConfigurationChecksums(ctx, s.Client)
+	if err != nil || checksums == nil {
 		return ""
 	}
-	return string(secret.Data[ngName])
+	return checksums[ngName]
 }

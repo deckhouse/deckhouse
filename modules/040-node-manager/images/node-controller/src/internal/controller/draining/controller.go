@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
-	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -193,8 +192,8 @@ func (r *Reconciler) getDrainTimeout(ctx context.Context, ngName string) time.Du
 		return defaultDrainTimeout
 	}
 
-	ng := &v1.NodeGroup{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: ngName}, ng); err != nil {
+	ng, err := nodecommon.GetNodeGroup(ctx, r.Client, ngName)
+	if err != nil {
 		return defaultDrainTimeout
 	}
 
