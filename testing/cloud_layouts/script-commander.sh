@@ -424,6 +424,7 @@ function prepare_environment() {
 
   "Static")
     cwd=$(pwd)/testing/cloud_layouts/Static
+    export TF_CLI_CONFIG_FILE="$cwd/.tofurc"
     export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
     export TF_VAR_PREFIX="$PREFIX"
 
@@ -438,6 +439,7 @@ function prepare_environment() {
 
   "Static-cse")
     cwd=$(pwd)/../testing/cloud_layouts/Static-cse
+    export TF_CLI_CONFIG_FILE="$cwd/.tofurc"
     export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
     export TF_VAR_PREFIX="$PREFIX"
 
@@ -1516,7 +1518,7 @@ function run-test() {
   if [[ "$PROVIDER" != "Static-cse" && "$PROVIDER" != "DVP-cse" ]]; then
     testScript="${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
   else
-    testScript="${cwd}/../../../deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
+    testScript="${cwd}/../../testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
   fi
 
   testRunAttempts=5
