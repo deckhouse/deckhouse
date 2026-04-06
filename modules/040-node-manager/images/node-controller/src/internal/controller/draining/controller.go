@@ -19,12 +19,13 @@ package draining
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -33,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -71,7 +73,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, req.NamespacedName, node); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			nodeDrainingGauge.DeletePartialMatch(prometheus.Labels{"node": req.Name})
 			return ctrl.Result{}, nil
 		}
@@ -153,7 +155,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		r.Recorder.Eventf(node, corev1.EventTypeWarning, "DrainFailed", "drain failed: %v", err)
 		nodeDrainingGauge.WithLabelValues(node.Name, err.Error()).Set(1)
 
-		if drainCtx.Err() != nil {
+		if drainCtx.Err() != nil || errors.Is(err, kubedrain.ErrDrainTimeout) {
 			logger.Info("drain timed out, marking as drained anyway", "node", node.Name, "timeout", drainTimeout)
 		} else {
 			return ctrl.Result{}, err
@@ -224,7 +226,14 @@ func (r *Reconciler) cordonNode(ctx context.Context, node *corev1.Node) error {
 }
 
 func (r *Reconciler) drainNode(ctx context.Context, nodeName string) error {
-	return drainNodePods(ctx, r.kubeClient, nodeName)
+	timeout := time.Duration(0) // 0 means infinite; actual timeout is controlled by ctx
+	drainer := kubedrain.NewDrainer(kubedrain.HelperConfig{
+		Client:  r.kubeClient,
+		Timeout: &timeout,
+	})
+	drainer.Ctx = ctx
+
+	return kubedrain.RunNodeDrain(drainer, nodeName)
 }
 
 func (r *Reconciler) patchAnnotations(ctx context.Context, nodeName string, annotations map[string]interface{}) error {
