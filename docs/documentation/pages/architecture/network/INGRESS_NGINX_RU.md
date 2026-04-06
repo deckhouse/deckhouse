@@ -132,7 +132,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
    * **iptables-loop** — сайдкар-контейнер, который обновляет на узле правила `iptables`, необходимые для работы Ingress-контроллера. Является разработкой компании «Флант»;
 
-   * **nginx-exporter** — сайдкар-контейнер в поде ingress-controller, подключается к NGINX по протоколу HTTP и экспортирует метрики в формате для Prometheus. Является [Open Source-проектом](https://github.com/nginx/nginx-prometheus-exporter);
+   * **nginx-exporter** — сайдкар-контейнер в поде ingress-controller, который подключается к NGINX по протоколу HTTP и экспортирует метрики в формате Prometheus. Является [Open Source-проектом](https://github.com/nginx/nginx-prometheus-exporter);
 
    * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к метрикам контроллера. Подробно описан выше.
 
