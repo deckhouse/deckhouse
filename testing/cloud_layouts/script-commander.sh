@@ -481,12 +481,12 @@ function bootstrap_static() {
 
   get_opentofu
 
-  if [[ ${PROVIDER} == "Static" || ${PROVIDER} == "Static-cse" ]]; then
-    $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-  fi
-
+  set -x
+  printenv TF_CLI_CONFIG_FILE
+  $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
   $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 
+  set +x
   if [[ ${PROVIDER} == "Static" ]]; then
 
     if ! master_ip="$($cwd/opentofu output -raw master_ip_address_for_ssh)"; then
@@ -1642,7 +1642,8 @@ function cleanup() {
     cd $cwd
 
     get_opentofu
-
+    set -x
+    printenv TF_CLI_CONFIG_FILE
     if [[ ${PROVIDER} == "VCD" ]]; then
       $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
     elif [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "Static-cse" ]]; then
@@ -1650,6 +1651,7 @@ function cleanup() {
     fi
 
     $cwd/opentofu destroy -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+    set +x
   fi
 
   return 0
