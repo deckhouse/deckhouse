@@ -157,6 +157,7 @@ masterNodeGroup:
 		name           string
 		content        string
 		expectedSSHKey string
+		prepare        bool
 	}
 
 	tests := []prepareTest{
@@ -168,6 +169,7 @@ provider:
   namespace: test
 `),
 			expectedSSHKey: "ssh-rsa AAAA",
+			prepare:        false,
 		},
 		{
 			name: "one string key in the end no new line",
@@ -176,6 +178,7 @@ provider:
   namespace: test
 sshPublicKey: ssh-rsa AAAB`),
 			expectedSSHKey: "ssh-rsa AAAB",
+			prepare:        false,
 		},
 		{
 			name: "one string key in the end with new line",
@@ -185,6 +188,7 @@ sshPublicKey: ssh-rsa AAAB`),
 sshPublicKey: "ssh-rsa AAAC"
 `),
 			expectedSSHKey: "ssh-rsa AAAC",
+			prepare:        false,
 		},
 		{
 			name: "multiline string key middle",
@@ -195,6 +199,7 @@ provider:
   namespace: test
 `),
 			expectedSSHKey: "ssh-rsa AAAD\n",
+			prepare:        true,
 		},
 		{
 			name: "multiline string key in the end no new line",
@@ -203,7 +208,8 @@ provider:
   namespace: test
 sshPublicKey: |
   ssh-rsa AAAE`),
-			expectedSSHKey: "ssh-rsa AAAE\n",
+			expectedSSHKey: "ssh-rsa AAAE",
+			prepare: false,
 		},
 		{
 			name: "multiline string key in the end with new line",
@@ -214,6 +220,7 @@ sshPublicKey: |
   ssh-rsa AAAF
 `),
 			expectedSSHKey: "ssh-rsa AAAF\n",
+			prepare: true,
 		},
 	}
 
@@ -229,10 +236,14 @@ sshPublicKey: |
 
 			res := PrepareProviderConfigYAML(index, contentBytes)
 
-			require.NotEqual(t, contentBytesCopy, res)
-			require.True(t, bytes.HasSuffix(res, []byte("\n# comment for safe trim")))
+			if tt.prepare {
+				require.NotEqual(t, contentBytesCopy, res)
+				require.True(t, bytes.HasSuffix(res, []byte("\n# comment for safe trim")))
+			} else {
+				require.Equal(t, contentBytesCopy, res)
+			}
 
-			contentCopyForExtract := copyBytes(contentBytes)
+			contentCopyForExtract := copyBytes(res)
 			sshKeyInDoc, provider := extractSettings(t, contentCopyForExtract)
 
 			require.Equal(t, tt.expectedSSHKey, sshKeyInDoc, "ssh key should equal")

@@ -14,10 +14,31 @@
 
 package config
 
-import "bytes"
+import (
+	"bytes"
+	"strings"
+
+	"sigs.k8s.io/yaml"
+)
+
+type dvpConfigSSHKey struct {
+	SSHPublicKey string `json:"sshPublicKey,omitempty"`
+}
 
 func PrepareProviderConfigYAML(index SchemaIndex, cfg []byte) []byte {
 	if index.Kind != "DVPClusterConfiguration" {
+		return cfg
+	}
+
+	ssh := dvpConfigSSHKey{}
+
+	err := yaml.Unmarshal(cfg, &ssh)
+	if err != nil {
+		// skip error
+		return cfg
+	}
+
+	if !strings.HasSuffix(ssh.SSHPublicKey, "\n") {
 		return cfg
 	}
 
