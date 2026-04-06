@@ -138,6 +138,8 @@ const badModuleValues = `
     zones: ["zonea", "zoneb"]
 `
 
+const moduleNamespace = "d8-cloud-provider-openstack"
+
 func openstackCheck(f *Config, k8sVer string) {
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, k8sVer, k8sVer))
