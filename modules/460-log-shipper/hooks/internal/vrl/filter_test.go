@@ -33,7 +33,24 @@ func TestFilterInRule(t *testing.T) {
 			name:   "Single value",
 			values: []string{"test-1"},
 			res: strings.TrimSpace(`
-if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
+if is_array(.parsed_data.test) {
+    matched = false
+    for_each(array!(.parsed_data.test)) -> |_index, elem| {
+        if is_boolean(elem) || is_float(elem) {
+            data, err = to_string(elem);
+            if err == null {
+                if includes(["test-1"], data) {
+                    matched = true
+                }
+            }
+        } else if elem != null {
+            if includes(["test-1"], elem) {
+                matched = true
+            }
+        }
+    }
+    matched
+} else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
         false;
@@ -51,7 +68,24 @@ if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
 			name:   "Two values",
 			values: []string{"test-1", "test-2"},
 			res: strings.TrimSpace(`
-if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
+if is_array(.parsed_data.test) {
+    matched = false
+    for_each(array!(.parsed_data.test)) -> |_index, elem| {
+        if is_boolean(elem) || is_float(elem) {
+            data, err = to_string(elem);
+            if err == null {
+                if includes(["test-1","test-2"], data) {
+                    matched = true
+                }
+            }
+        } else if elem != null {
+            if includes(["test-1","test-2"], elem) {
+                matched = true
+            }
+        }
+    }
+    matched
+} else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
         false;
@@ -86,7 +120,24 @@ func TestFilterNotInRule(t *testing.T) {
 			name:   "Single value",
 			values: []string{"test-1"},
 			res: strings.TrimSpace(`
-if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
+if is_array(.parsed_data.test) {
+    matched = false
+    for_each(array!(.parsed_data.test)) -> |_index, elem| {
+        if is_boolean(elem) || is_float(elem) {
+            data, err = to_string(elem);
+            if err == null {
+                if includes(["test-1"], data) {
+                    matched = true
+                }
+            }
+        } else if elem != null {
+            if includes(["test-1"], elem) {
+                matched = true
+            }
+        }
+    }
+    !matched
+} else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
         true;
@@ -104,7 +155,24 @@ if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
 			name:   "Two values",
 			values: []string{"test-1", "test-2"},
 			res: strings.TrimSpace(`
-if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
+if is_array(.parsed_data.test) {
+    matched = false
+    for_each(array!(.parsed_data.test)) -> |_index, elem| {
+        if is_boolean(elem) || is_float(elem) {
+            data, err = to_string(elem);
+            if err == null {
+                if includes(["test-1","test-2"], data) {
+                    matched = true
+                }
+            }
+        } else if elem != null {
+            if includes(["test-1","test-2"], elem) {
+                matched = true
+            }
+        }
+    }
+    !matched
+} else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
         true;

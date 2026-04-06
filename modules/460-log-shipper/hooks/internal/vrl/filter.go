@@ -28,7 +28,24 @@ const FilterDoesNotExistRule Rule = `
 
 // FilterInRule checks that the provided label value is in the following list.
 const FilterInRule Rule = `
-if is_boolean(.{{ $.filter.Field }}) || is_float(.{{ $.filter.Field }}) {
+if is_array(.{{ $.filter.Field }}) {
+    matched = false
+    for_each(array!(.{{ $.filter.Field }})) -> |_index, elem| {
+        if is_boolean(elem) || is_float(elem) {
+            data, err = to_string(elem);
+            if err == null {
+                if includes({{ $.filter.Values | toJson }}, data) {
+                    matched = true
+                }
+            }
+        } else if elem != null {
+            if includes({{ $.filter.Values | toJson }}, elem) {
+                matched = true
+            }
+        }
+    }
+    matched
+} else if is_boolean(.{{ $.filter.Field }}) || is_float(.{{ $.filter.Field }}) {
     data, err = to_string(.{{ $.filter.Field }});
     if err != null {
         false;
@@ -44,7 +61,24 @@ if is_boolean(.{{ $.filter.Field }}) || is_float(.{{ $.filter.Field }}) {
 
 // FilterNotInRule checks that the provided label value is out of the following list.
 const FilterNotInRule Rule = `
-if is_boolean(.{{ $.filter.Field }}) || is_float(.{{ $.filter.Field }}) {
+if is_array(.{{ $.filter.Field }}) {
+    matched = false
+    for_each(array!(.{{ $.filter.Field }})) -> |_index, elem| {
+        if is_boolean(elem) || is_float(elem) {
+            data, err = to_string(elem);
+            if err == null {
+                if includes({{ $.filter.Values | toJson }}, data) {
+                    matched = true
+                }
+            }
+        } else if elem != null {
+            if includes({{ $.filter.Values | toJson }}, elem) {
+                matched = true
+            }
+        }
+    }
+    !matched
+} else if is_boolean(.{{ $.filter.Field }}) || is_float(.{{ $.filter.Field }}) {
     data, err = to_string(.{{ $.filter.Field }});
     if err != null {
         true;
