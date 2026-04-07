@@ -41,6 +41,11 @@ var metadata = map[string]interface{}{
 	},
 }
 
+type FilterResult struct {
+	IsClusterIP bool
+	IsUseNelm   bool
+}
+
 func kubeDNSServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	service := &v1.Service{}
 	err := sdk.FromUnstructured(obj, service)
@@ -48,14 +53,14 @@ func kubeDNSServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		return nil, fmt.Errorf("cannot create service object: %v", err)
 	}
 
-	return service.Spec.Type == v1.ServiceTypeClusterIP, nil
+	return FilterResult{IsClusterIP: service.Spec.Type == v1.ServiceTypeClusterIP}, nil
 }
 
 func deckhouseDeploymentFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	containers, found, err := unstructured.NestedSlice(obj.Object, "spec", "template", "spec", "containers")
-	if err != nil || !found {
-		return false, err
-	}
+	containers, _, _ := unstructured.NestedSlice(
+		obj.Object,
+		"spec", "template", "spec", "containers",
+	)
 
 	for _, c := range containers {
 		container, ok := c.(map[string]interface{})
@@ -63,30 +68,27 @@ func deckhouseDeploymentFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 			continue
 		}
 
-		name, _, _ := unstructured.NestedString(container, "name")
-		if name != "deckhouse" {
-			continue
-		}
+		if name, _, _ := unstructured.NestedString(container, "name"); name == "deckhouse" {
+			envs, _, _ := unstructured.NestedSlice(container, "env")
 
-		envs, found, err := unstructured.NestedSlice(container, "env")
-		if err != nil || !found {
-			return false, err
-		}
+			for _, e := range envs {
+				env, ok := e.(map[string]interface{})
+				if !ok {
+					continue
+				}
 
-		for _, e := range envs {
-			env, ok := e.(map[string]interface{})
-			if !ok {
-				continue
-			}
+				if n, _, _ := unstructured.NestedString(env, "name"); n == "USE_NELM" {
+					val, _, _ := unstructured.NestedString(env, "value")
 
-			if n, _, _ := unstructured.NestedString(env, "name"); n == "USE_NELM" {
-				val, _, _ := unstructured.NestedString(env, "value")
-				return val == "true", nil
+					return FilterResult{
+						IsUseNelm: val == "true",
+					}, nil
+				}
 			}
 		}
 	}
 
-	return false, nil
+	return FilterResult{}, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -122,23 +124,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchNames: []string{"deckhouse"},
 			},
 			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   deckhouseDeploymentFilter,
 		},
 	},
 }, adoptKubeDNSResources)
 
 func adoptKubeDNSResources(_ context.Context, input *go_hook.HookInput) error {
-	var useNelm bool
+	var deckhouseDeploymentResult FilterResult
+	var kubeDNSServiceResult FilterResult
+
 	if snap := input.Snapshots.Get("deckhouse_deployment"); len(snap) > 0 {
-		if err := snap[0].UnmarshalTo(&useNelm); err != nil {
+		if err := snap[0].UnmarshalTo(&deckhouseDeploymentResult); err != nil {
 			return fmt.Errorf("cannot get USE_NELM from Deployment deckhouse: %w", err)
 		}
 	}
 
-	var isClusterIP bool
 	if snap := input.Snapshots.Get("kube_dns_svc"); len(snap) > 0 {
-		if err := snap[0].UnmarshalTo(&isClusterIP); err != nil {
+		if err := snap[0].UnmarshalTo(&kubeDNSServiceResult); err != nil {
 			return fmt.Errorf("cannot get service type from Service kube-dns: %w", err)
 		}
 	}
@@ -147,12 +150,12 @@ func adoptKubeDNSResources(_ context.Context, input *go_hook.HookInput) error {
 	input.PatchCollector.DeleteNonCascading("apps/v1", "Deployment", "kube-system", "coredns")
 
 	// If service is not ClusterIP, nothing else to do
-	if !isClusterIP {
+	if !kubeDNSServiceResult.IsClusterIP {
 		return nil
 	}
 
 	// If NELM disabled → delete Service
-	if !useNelm {
+	if !deckhouseDeploymentResult.IsUseNelm {
 		input.PatchCollector.Delete("v1", "Service", "kube-system", "kube-dns")
 		return nil
 	}
