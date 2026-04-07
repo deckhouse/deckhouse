@@ -70,7 +70,8 @@ func waitEtcdHasNoMember(ctx context.Context, client *flantkubeclient.Client, no
 
 		ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
 		if err != nil {
-			return err
+			log.DebugF("etcd check transient error while waiting for '%s' to leave: %v\n", nodeName, err)
+			return fmt.Errorf("node '%s' is still listed as etcd cluster member", nodeName)
 		}
 
 		if ok {
