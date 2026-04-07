@@ -1741,6 +1741,32 @@ alerts:
         Desired control plane version isn't installed.
       severity: "6"
       markupFormat: markdown
+    - name: D8IstioFederationDataPlaneNotConnected
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The data-plane health check for IstioFederation `{{$labels.name}}` to target `{{$labels.target}}` has been failing for more than 5 minutes.
+
+        This means that actual service mesh traffic between federated clusters is not flowing properly, even though the control plane metadata exchange may be working.
+
+        Possible causes:
+
+        - The remote cluster's `alliance-healthcheck` pod is not running.
+        - Istio sidecar injection is not working properly on the healthcheck pods.
+        - The ingress gateway between federated clusters is misconfigured or unreachable.
+        - mTLS or trust domain configuration issues between clusters.
+
+        To check the status:
+
+        ```bash
+        d8 k get istiofederation {{$labels.name}} -o jsonpath='{.status.dataPlaneHealth}'
+        ```
+      summary: |
+        Federation data-plane connectivity check failed for {{$labels.name}}.
+      severity: "4"
+      markupFormat: markdown
     - name: D8IstioFederationMetadataEndpointDoesntWork
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/federation.yaml
       moduleUrl: 110-istio
@@ -1785,6 +1811,32 @@ alerts:
         ```
       summary: |
         Global control plane isn't working.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IstioMulticlusterDataPlaneNotConnected
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The data-plane health check for IstioMulticluster `{{$labels.name}}` to target `{{$labels.target}}` has been failing for more than 5 minutes.
+
+        This means that actual service mesh traffic between multicluster peers is not flowing properly, even though the control plane metadata exchange may be working.
+
+        Possible causes:
+
+        - The remote cluster's `alliance-healthcheck` pod is not running.
+        - Istio sidecar injection is not working properly on the healthcheck pods.
+        - Cross-cluster service discovery is not functioning.
+        - Network connectivity issues between cluster meshes.
+
+        To check the status:
+
+        ```bash
+        d8 k get istiomulticluster {{$labels.name}} -o jsonpath='{.status.dataPlaneHealth}'
+        ```
+      summary: |
+        Multicluster data-plane connectivity check failed for {{$labels.name}}.
       severity: "4"
       markupFormat: markdown
     - name: D8IstioMulticlusterMetadataEndpointDoesntWork
