@@ -27,7 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transformation/parser"
 )
 
-func buildTransformations(destSpec v1alpha1.ClusterLogDestinationSpec, sourceType string) ([]apis.LogTransform, loglabels.DestinationSinkArtifacts, error) {
+func buildTransformations(destSpec v1alpha1.ClusterLogDestinationSpec, sourceType string) ([]apis.LogTransform, loglabels.DestinationSinkLabelMaps, error) {
 	transforms := make([]apis.LogTransform, 0, len(destSpec.Transformations))
 	var addLabelKeys []string
 	var dropLabelPaths []string
@@ -37,55 +37,55 @@ func buildTransformations(destSpec v1alpha1.ClusterLogDestinationSpec, sourceTyp
 		case v1alpha1.AddLabels:
 			source, keys, err := transformation.AddLabelsVRL(tm.AddLabels)
 			if err != nil {
-				return nil, loglabels.DestinationSinkArtifacts{}, fmt.Errorf("transformations addLabels: %w", err)
+				return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("transformations addLabels: %w", err)
 			}
 			addLabelKeys = append(addLabelKeys, keys...)
 			lt = newTransformation("tf_addLabels", source)
 		case v1alpha1.ReplaceKeys:
 			source, err := transformation.ReplaceKeysVRL(tm.ReplaceKeys)
 			if err != nil {
-				return nil, loglabels.DestinationSinkArtifacts{}, fmt.Errorf("transformations replaceKeys: %w", err)
+				return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("transformations replaceKeys: %w", err)
 			}
 			lt = newTransformation("tf_replaceKeys", source)
 		case v1alpha1.ParseMessage:
 			vrlName := fmt.Sprintf("tf_parseMessage_%s", tm.ParseMessage.SourceFormat)
 			source, err := transformation.GenerateParseMessageVRL(tm.ParseMessage)
 			if err != nil {
-				return nil, loglabels.DestinationSinkArtifacts{}, fmt.Errorf("transformations parseMessage: %w", err)
+				return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("transformations parseMessage: %w", err)
 			}
 			lt = newTransformation(vrlName, source)
 		case v1alpha1.DropLabels:
 			source, dropVRLPaths, err := transformation.DropLabelsVRL(tm.DropLabels)
 			if err != nil {
-				return nil, loglabels.DestinationSinkArtifacts{}, fmt.Errorf("transformations dropLabels: %w", err)
+				return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("transformations dropLabels: %w", err)
 			}
 			prefs, err := parser.SinkKeysFromVRLPaths(dropVRLPaths)
 			if err != nil {
-				return nil, loglabels.DestinationSinkArtifacts{}, fmt.Errorf("transformations dropLabels: %w", err)
+				return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("transformations dropLabels: %w", err)
 			}
 			dropLabelPaths = append(dropLabelPaths, prefs...)
 			lt = newTransformation("tf_dropLabels", source)
 		case v1alpha1.ReplaceValue:
 			source, err := transformation.ReplaceValueVRL(tm.ReplaceValue)
 			if err != nil {
-				return nil, loglabels.DestinationSinkArtifacts{}, fmt.Errorf("transformations replaceValue: %w", err)
+				return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("transformations replaceValue: %w", err)
 			}
 			lt = newTransformation("tf_replaceValue", source)
 		default:
-			return nil, loglabels.DestinationSinkArtifacts{}, fmt.Errorf("transformations action: %q not valid", tm.Action)
+			return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("transformations action: %q not valid", tm.Action)
 		}
 		if lt != nil {
 			transforms = append(transforms, lt)
 		}
 	}
-	sinkLabels := loglabels.BuildDestinationSinkArtifacts(loglabels.DestinationSinkInput{
+	sinkLabelMaps := loglabels.BuildDestinationSinkLabelMaps(loglabels.DestinationSinkInput{
 		Spec:           destSpec,
 		SourceType:     sourceType,
 		AddLabelKeys:   addLabelKeys,
 		DropLabelPaths: dropLabelPaths,
 		WithPodLabels:  destSpec.Type == v1alpha1.DestLoki,
 	})
-	return transforms, sinkLabels, nil
+	return transforms, sinkLabelMaps, nil
 }
 
 func newTransformation(name, source string) *DynamicTransform {

@@ -24,21 +24,21 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
-func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination, sourceType string) ([]apis.LogTransform, loglabels.DestinationSinkArtifacts, error) {
+func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination, sourceType string) ([]apis.LogTransform, loglabels.DestinationSinkLabelMaps, error) {
 	var transforms []apis.LogTransform
 	if dest.Spec.RateLimit.LinesPerMinute != nil {
 		throttleTransform, err := throttleTransform(dest.Spec.RateLimit)
 		if err != nil {
-			return nil, loglabels.DestinationSinkArtifacts{}, fmt.Errorf("failed to build throttle transform: %w", err)
+			return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("failed to build throttle transform: %w", err)
 		}
 		transforms = append(transforms, throttleTransform)
 	}
 	if len(dest.Spec.ExtraLabels) > 0 {
 		transforms = append(transforms, extraFieldTransform(dest.Spec.ExtraLabels))
 	}
-	customTransforms, sinkArtifacts, err := buildTransformations(dest.Spec, sourceType)
+	customTransforms, sinkLabelMaps, err := buildTransformations(dest.Spec, sourceType)
 	if err != nil {
-		return nil, loglabels.DestinationSinkArtifacts{}, fmt.Errorf("failed to build custom transformations: %w", err)
+		return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("failed to build custom transformations: %w", err)
 	}
 	transforms = append(transforms, customTransforms...)
 	switch dest.Spec.Type {
@@ -69,5 +69,5 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	}
 	transforms = append(transforms, cleanUpParsedDataTransform())
 	destTransformBase := fmt.Sprintf("transform/%s/destination/%s", sourceType, name)
-	return buildFromMapSlice(destTransformBase, transforms), sinkArtifacts, nil
+	return buildFromMapSlice(destTransformBase, transforms), sinkLabelMaps, nil
 }

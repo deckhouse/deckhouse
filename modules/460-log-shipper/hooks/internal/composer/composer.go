@@ -155,13 +155,13 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 			continue
 		}
 
-		transforms, sinkArtifacts, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec, sourceType)
+		transforms, sinkLabelMaps, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec, sourceType)
 		if err != nil {
 			return nil, err
 		}
 
 		sinkName := destination.ComposeNameWithSourceType(destSpec.Name, sourceType)
-		dest := newLogDest(destSpec.Spec.Type, sinkName, destSpec.Spec, sinkArtifacts)
+		dest := newLogDest(destSpec.Spec.Type, sinkName, destSpec.Spec, sinkLabelMaps)
 		if dest == nil {
 			continue
 		}
@@ -176,10 +176,10 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 }
 
 // newLogDest creates a log destination instance based on the destination type.
-func newLogDest(typ, sinkName string, spec v1alpha1.ClusterLogDestinationSpec, art loglabels.DestinationSinkArtifacts) apis.LogDestination {
+func newLogDest(typ, sinkName string, spec v1alpha1.ClusterLogDestinationSpec, labelMaps loglabels.DestinationSinkLabelMaps) apis.LogDestination {
 	switch typ {
 	case v1alpha1.DestLoki:
-		return destination.NewLoki(sinkName, spec, art.LokiLabels)
+		return destination.NewLoki(sinkName, spec, labelMaps.LokiLabels)
 	case v1alpha1.DestElasticsearch:
 		return destination.NewElasticsearch(sinkName, spec)
 	case v1alpha1.DestLogstash:
@@ -187,11 +187,11 @@ func newLogDest(typ, sinkName string, spec v1alpha1.ClusterLogDestinationSpec, a
 	case v1alpha1.DestVector:
 		return destination.NewVector(sinkName, spec)
 	case v1alpha1.DestKafka:
-		return destination.NewKafka(sinkName, spec, art.CEFExtensions)
+		return destination.NewKafka(sinkName, spec, labelMaps.CEFExtensions)
 	case v1alpha1.DestSplunk:
-		return destination.NewSplunk(sinkName, spec, art.SplunkIndexedFields)
+		return destination.NewSplunk(sinkName, spec, labelMaps.SplunkIndexedFields)
 	case v1alpha1.DestSocket:
-		return destination.NewSocket(sinkName, spec, art.CEFExtensions)
+		return destination.NewSocket(sinkName, spec, labelMaps.CEFExtensions)
 	}
 	return nil
 }

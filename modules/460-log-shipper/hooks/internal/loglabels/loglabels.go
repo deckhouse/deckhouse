@@ -62,7 +62,7 @@ var FilesLabels = map[string]string{
 	"file":    "{{ file }}",
 }
 
-type DestinationSinkArtifacts struct {
+type DestinationSinkLabelMaps struct {
 	LokiLabels          map[string]string
 	SplunkIndexedFields map[string]string
 	CEFExtensions       map[string]string
@@ -103,7 +103,7 @@ func (in DestinationSinkInput) orderedSinkKeys() []string {
 		}
 		keys = append(keys, addKey)
 	}
-	return in.withoutDroppedKeys(keys)
+	return in.sinkKeysExcludingDropPaths(keys)
 }
 
 func (in DestinationSinkInput) sinkMapKeyDropped(k string) bool {
@@ -115,7 +115,7 @@ func (in DestinationSinkInput) sinkMapKeyDropped(k string) bool {
 	return false
 }
 
-func (in DestinationSinkInput) withoutDroppedKeys(keys []string) []string {
+func (in DestinationSinkInput) sinkKeysExcludingDropPaths(keys []string) []string {
 	if len(in.DropLabelPaths) == 0 {
 		return keys
 	}
@@ -151,9 +151,9 @@ func (in DestinationSinkInput) cefExtensions() map[string]string {
 	return ext
 }
 
-func BuildDestinationSinkArtifacts(in DestinationSinkInput) DestinationSinkArtifacts {
+func BuildDestinationSinkLabelMaps(in DestinationSinkInput) DestinationSinkLabelMaps {
 	spec := in.Spec
-	var a DestinationSinkArtifacts
+	var a DestinationSinkLabelMaps
 	switch spec.Type {
 	case v1alpha1.DestLoki:
 		a.LokiLabels = sinkTemplateMapFromKeys(in, in.orderedSinkKeys())

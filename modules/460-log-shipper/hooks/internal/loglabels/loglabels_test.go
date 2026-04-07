@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
-func TestBuildDestinationSinkArtifacts_mergeExtraAddAndDrop(t *testing.T) {
+func TestBuildDestinationSinkLabelMaps_mergeExtraAddAndDrop(t *testing.T) {
 	const src = v1alpha1.SourceFile
 
 	tests := []struct {
@@ -147,11 +147,11 @@ func TestBuildDestinationSinkArtifacts_mergeExtraAddAndDrop(t *testing.T) {
 					Type:        v1alpha1.DestLoki,
 					ExtraLabels: maps.Clone(extra),
 				}
-				got := BuildDestinationSinkArtifacts(DestinationSinkInput{
+				got := BuildDestinationSinkLabelMaps(DestinationSinkInput{
 					Spec: spec, SourceType: src, AddLabelKeys: addLabelKeys, DropLabelPaths: drop, WithPodLabels: true,
 				})
-				if diff := cmp.Diff(DestinationSinkArtifacts{LokiLabels: tt.wantLoki}, got); diff != "" {
-					t.Fatalf("BuildDestinationSinkArtifacts Loki (-want +got):\n%s", diff)
+				if diff := cmp.Diff(DestinationSinkLabelMaps{LokiLabels: tt.wantLoki}, got); diff != "" {
+					t.Fatalf("BuildDestinationSinkLabelMaps Loki (-want +got):\n%s", diff)
 				}
 			})
 
@@ -160,11 +160,11 @@ func TestBuildDestinationSinkArtifacts_mergeExtraAddAndDrop(t *testing.T) {
 					Type:        v1alpha1.DestSplunk,
 					ExtraLabels: maps.Clone(extra),
 				}
-				got := BuildDestinationSinkArtifacts(DestinationSinkInput{
+				got := BuildDestinationSinkLabelMaps(DestinationSinkInput{
 					Spec: spec, SourceType: src, AddLabelKeys: addLabelKeys, DropLabelPaths: drop, WithPodLabels: false,
 				})
-				if diff := cmp.Diff(DestinationSinkArtifacts{SplunkIndexedFields: tt.wantSplunk}, got); diff != "" {
-					t.Fatalf("BuildDestinationSinkArtifacts Splunk (-want +got):\n%s", diff)
+				if diff := cmp.Diff(DestinationSinkLabelMaps{SplunkIndexedFields: tt.wantSplunk}, got); diff != "" {
+					t.Fatalf("BuildDestinationSinkLabelMaps Splunk (-want +got):\n%s", diff)
 				}
 			})
 
@@ -176,11 +176,11 @@ func TestBuildDestinationSinkArtifacts_mergeExtraAddAndDrop(t *testing.T) {
 						Encoding: v1alpha1.CommonEncoding{Codec: v1alpha1.EncodingCodecCEF},
 					},
 				}
-				got := BuildDestinationSinkArtifacts(DestinationSinkInput{
+				got := BuildDestinationSinkLabelMaps(DestinationSinkInput{
 					Spec: spec, SourceType: src, AddLabelKeys: addLabelKeys, DropLabelPaths: drop, WithPodLabels: false,
 				})
-				if diff := cmp.Diff(DestinationSinkArtifacts{CEFExtensions: tt.wantCEF}, got); diff != "" {
-					t.Fatalf("BuildDestinationSinkArtifacts Kafka CEF (-want +got):\n%s", diff)
+				if diff := cmp.Diff(DestinationSinkLabelMaps{CEFExtensions: tt.wantCEF}, got); diff != "" {
+					t.Fatalf("BuildDestinationSinkLabelMaps Kafka CEF (-want +got):\n%s", diff)
 				}
 			})
 
@@ -192,11 +192,11 @@ func TestBuildDestinationSinkArtifacts_mergeExtraAddAndDrop(t *testing.T) {
 						Encoding: v1alpha1.CommonEncoding{Codec: v1alpha1.EncodingCodecCEF},
 					},
 				}
-				got := BuildDestinationSinkArtifacts(DestinationSinkInput{
+				got := BuildDestinationSinkLabelMaps(DestinationSinkInput{
 					Spec: spec, SourceType: src, AddLabelKeys: addLabelKeys, DropLabelPaths: drop, WithPodLabels: false,
 				})
-				if diff := cmp.Diff(DestinationSinkArtifacts{CEFExtensions: maps.Clone(tt.wantCEF)}, got); diff != "" {
-					t.Fatalf("BuildDestinationSinkArtifacts Socket CEF (-want +got):\n%s", diff)
+				if diff := cmp.Diff(DestinationSinkLabelMaps{CEFExtensions: maps.Clone(tt.wantCEF)}, got); diff != "" {
+					t.Fatalf("BuildDestinationSinkLabelMaps Socket CEF (-want +got):\n%s", diff)
 				}
 			})
 		})
