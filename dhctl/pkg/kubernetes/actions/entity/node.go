@@ -245,18 +245,16 @@ func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.Kubernetes
 				return err
 			}
 
-			msg := fmt.Sprintf("Node %q conditions:\n", nodeName)
 			for _, cond := range node.Status.Conditions {
-				msg += fmt.Sprintf("  %s: %s", cond.Type, cond.Status)
-				if cond.Message != "" {
-					msg += fmt.Sprintf(" (%s)", cond.Message)
+				if cond.Type != corev1.NodeReady {
+					continue
 				}
-				msg += "\n"
-			}
-			log.InfoF("%s", msg)
-
-			for _, cond := range node.Status.Conditions {
-				if cond.Type == corev1.NodeReady && cond.Status == corev1.ConditionTrue {
+				if cond.Message != "" {
+					log.InfoF("Node %q Ready: %s (%s)\n", nodeName, cond.Status, cond.Message)
+				} else {
+					log.InfoF("Node %q Ready: %s\n", nodeName, cond.Status)
+				}
+				if cond.Status == corev1.ConditionTrue {
 					return nil
 				}
 			}
