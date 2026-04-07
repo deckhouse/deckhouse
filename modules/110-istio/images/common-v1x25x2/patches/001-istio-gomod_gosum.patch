@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 2ca62a410c..64e50beeb5 100644
+index 2ca62a410c..c17abc1e49 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,35 +1,35 @@
@@ -39,7 +39,7 @@ index 2ca62a410c..64e50beeb5 100644
  	github.com/fsnotify/fsnotify v1.8.0
 -	github.com/go-jose/go-jose/v3 v3.0.3
 -	github.com/go-logr/logr v1.4.2
-+	github.com/go-jose/go-jose/v3 v3.0.4
++	github.com/go-jose/go-jose/v3 v3.0.5
 +	github.com/go-logr/logr v1.4.3
  	github.com/gogo/protobuf v1.3.2
  	github.com/golang/protobuf v1.5.4
@@ -147,7 +147,7 @@ index 2ca62a410c..64e50beeb5 100644
  	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
  	github.com/go-errors/errors v1.5.1 // indirect
 -	github.com/go-jose/go-jose/v4 v4.0.4 // indirect
-+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
++	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
  	github.com/go-logr/stdr v1.2.2 // indirect
  	github.com/go-openapi/jsonpointer v0.21.0 // indirect
  	github.com/go-openapi/jsonreference v0.21.0 // indirect
@@ -207,7 +207,7 @@ index 2ca62a410c..64e50beeb5 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/ini.v1 v1.67.0 // indirect
 diff --git a/go.sum b/go.sum
-index 5354185bcf..d8e9247e8c 100644
+index 5354185bcf..0d863ecb3f 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,13 +1,13 @@
@@ -322,10 +322,10 @@ index 5354185bcf..d8e9247e8c 100644
 -github.com/go-jose/go-jose/v3 v3.0.3/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQrVfLAMboGkQ=
 -github.com/go-jose/go-jose/v4 v4.0.4 h1:VsjPI33J0SB9vQM6PLmNjoHqMQNGPiZ0rHL7Ni7Q6/E=
 -github.com/go-jose/go-jose/v4 v4.0.4/go.mod h1:NKb5HO1EZccyMpiZNbdUw/14tiXNyUJh188dfnMCAfc=
-+github.com/go-jose/go-jose/v3 v3.0.4 h1:Wp5HA7bLQcKnf6YYao/4kpRpVMp/yf6+pJKV8WFSaNY=
-+github.com/go-jose/go-jose/v3 v3.0.4/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQrVfLAMboGkQ=
-+github.com/go-jose/go-jose/v4 v4.1.3 h1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=
-+github.com/go-jose/go-jose/v4 v4.1.3/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
++github.com/go-jose/go-jose/v3 v3.0.5 h1:BLLJWbC4nMZOfuPVxoZIxeYsn6Nl2r1fITaJ78UQlVQ=
++github.com/go-jose/go-jose/v3 v3.0.5/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQrVfLAMboGkQ=
++github.com/go-jose/go-jose/v4 v4.1.4 h1:moDMcTHmvE6Groj34emNPLs/qtYXRVcd6S7NHbHz3kA=
++github.com/go-jose/go-jose/v4 v4.1.4/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
  github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
  github.com/go-logfmt/logfmt v0.5.0/go.mod h1:wCYkCAKZfumFQihp8CzCvQ3paCTfi41vtzG1KdI/P7A=
  github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
