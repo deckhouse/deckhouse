@@ -99,7 +99,7 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "extensions", Probe: "dex"},
 		{Group: "extensions", Probe: "grafana"},
 		{Group: "extensions", Probe: "grafana-v10"},
-		{Group: "extensions", Probe: "label-proxy"},
+		{Group: "extensions", Probe: "label-enforcer"},
 		{Group: "extensions", Probe: "observability-controller"},
 		{Group: "extensions", Probe: "observability-webhook"},
 		{Group: "extensions", Probe: "openvpn"},

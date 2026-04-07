@@ -342,9 +342,9 @@ const langPack: LangPack = {
           "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
-      "label-proxy": {
-        title: "Observability Label Proxy",
-        description: "Label Proxy provides secured and filtered access to metrics backends.",
+      "label-enforcer": {
+        title: "Observability Label Enforcer",
+        description: "Label Enforcer provides secured and filtered access to metrics backends.",
         reasonUp: "at least one Pod is in <code>Ready</code> state",
         reasonDown: "no ready Pods present",
         reasonUnknown: REASON_APISERVER_UNAVAILABLE,
