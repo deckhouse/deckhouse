@@ -42,7 +42,7 @@ func WithConnectionConfig(s string) ProviderOptions {
 
 // func to initialize both SSHProviderInitializer and KubeProvider
 func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, pkg.KubeProvider, error) {
-	sett := settings.NewBaseProviders(params)
+	baseProviderSettings := settings.NewBaseProviders(params)
 
 	options := &providerOptions{}
 	for _, o := range opts {
@@ -52,12 +52,17 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	var config *libcon_config.ConnectionConfig
 	var err error
 	if len(options.connectionConfig) > 0 {
-		config, err = libcon_config.ParseConnectionConfig(strings.NewReader(options.connectionConfig), sett, libcon_config.ParseWithRequiredSSHHost(false))
+		config, err = libcon_config.ParseConnectionConfig(
+			strings.NewReader(options.connectionConfig),
+			baseProviderSettings,
+			libcon_config.ParseWithRequiredSSHHost(false),
+		)
+
 		if err != nil {
 			return nil, nil, err
 		}
 	} else {
-		parser := libcon_config.NewFlagsParser(sett)
+		parser := libcon_config.NewFlagsParser(baseProviderSettings)
 		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
 		flags, err := parser.InitFlags(fset)
 		if err != nil {
@@ -69,14 +74,18 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 		}
 	}
 
-	sshProviderInitializer := NewSSHProviderInitializer(sett, config)
+	sshProviderInitializer := NewSSHProviderInitializer(baseProviderSettings, config)
 
 	cfg := &kube.Config{}
-	runnerInterface, err := provider.GetRunnerInterface(ctx, cfg, sett, sshProviderInitializer)
+	runnerInterface, err := provider.GetRunnerInterface(ctx,
+		cfg,
+		baseProviderSettings,
+		sshProviderInitializer,
+	)
 	if err != nil {
 		return sshProviderInitializer, nil, err
 	}
-	kubeProvider := provider.NewDefaultKubeProvider(sett, cfg, runnerInterface)
+	kubeProvider := provider.NewDefaultKubeProvider(baseProviderSettings, cfg, runnerInterface)
 
 	return sshProviderInitializer, kubeProvider, nil
 }

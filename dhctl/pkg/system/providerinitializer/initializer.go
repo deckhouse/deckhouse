@@ -32,19 +32,19 @@ import (
 )
 
 type SSHProviderInitializer struct {
-	provider pkg.SSHProvider
-	sett     *settings.BaseProviders
-	config   *sshconfig.ConnectionConfig
+	provider             pkg.SSHProvider
+	baseProviderSettings *settings.BaseProviders
+	config               *sshconfig.ConnectionConfig
 
 	hostsProvider func() ([]sshconfig.Host, error)
 
 	mut sync.Mutex
 }
 
-func NewSSHProviderInitializer(sett *settings.BaseProviders, config *sshconfig.ConnectionConfig) *SSHProviderInitializer {
+func NewSSHProviderInitializer(baseProviderSettings *settings.BaseProviders, config *sshconfig.ConnectionConfig) *SSHProviderInitializer {
 	initializer := &SSHProviderInitializer{
-		sett:   sett,
-		config: config,
+		baseProviderSettings: baseProviderSettings,
+		config:               config,
 		hostsProvider: func() ([]sshconfig.Host, error) {
 			c := cache.Global()
 			if c == nil {
@@ -55,7 +55,11 @@ func NewSSHProviderInitializer(sett *settings.BaseProviders, config *sshconfig.C
 	}
 
 	if len(config.Hosts) > 0 {
-		initializer.provider = provider.NewDefaultSSHProvider(sett, config, provider.SSHClientWithStartAfterCreate(true))
+		initializer.provider = provider.NewDefaultSSHProvider(
+			baseProviderSettings,
+			config,
+			provider.SSHClientWithStartAfterCreate(true),
+		)
 	}
 
 	return initializer
@@ -73,11 +77,11 @@ func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (pkg.SSHProvi
 	if err == nil && len(lateHosts) > 0 {
 		i.config.Hosts = lateHosts
 		opts := provider.SSHClientWithStartAfterCreate(true)
-		i.provider = provider.NewDefaultSSHProvider(i.sett, i.config, opts)
+		i.provider = provider.NewDefaultSSHProvider(i.baseProviderSettings, i.config, opts)
 		return i.provider, nil
 	}
 
-	return provider.NewDefaultSSHProvider(i.sett, i.config), fmt.Errorf("failed to get hosts from cache: %w", err)
+	return provider.NewDefaultSSHProvider(i.baseProviderSettings, i.config), fmt.Errorf("failed to get hosts from cache: %w", err)
 }
 
 func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {
@@ -90,9 +94,9 @@ func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {
 
 func (i *SSHProviderInitializer) GetKubeProvider(ctx context.Context) pkg.KubeProvider {
 	cfg := &kube.Config{}
-	runnerInterface, err := provider.GetRunnerInterface(ctx, cfg, i.sett, i)
+	runnerInterface, err := provider.GetRunnerInterface(ctx, cfg, i.baseProviderSettings, i)
 	if err != nil {
 		return nil
 	}
-	return provider.NewDefaultKubeProvider(i.sett, cfg, runnerInterface)
+	return provider.NewDefaultKubeProvider(i.baseProviderSettings, cfg, runnerInterface)
 }
