@@ -31,7 +31,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	restore := b.applyParams()
 	defer restore()
 
-	metaConfig, err := config.LoadConfigFromFile(
+	metaConfig, err := config.ParseConfig(
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
