@@ -245,7 +245,11 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 	// Filter components with empty spec checksums (etcd-arbiter nodes only have Etcd + CA)
 	result := make([]componentState, 0, len(all))
 	for _, s := range all {
-		if s.specConfigChecksum == "" && s.specPKIChecksum == "" && s.specCAChecksum == "" {
+		if s.component.IsStaticPodComponent() {
+			if s.specConfigChecksum == "" && s.specPKIChecksum == "" {
+				continue
+			}
+		} else if s.specConfigChecksum == "" && s.specPKIChecksum == "" && s.specCAChecksum == "" {
 			continue
 		}
 		result = append(result, s)

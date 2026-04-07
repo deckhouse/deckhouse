@@ -175,6 +175,22 @@ func (suite *ControllerTestSuite) TestBothChecksumsOutdatedControlPlaneNode() {
 	})
 }
 
+// TestEtcdArbiterControlPlaneNode verifies that on an etcd-arbiter node
+// ControlPlaneOperation objects are created — only Etcd and CA.
+func (suite *ControllerTestSuite) TestEtcdArbiterControlPlaneNode() {
+	suite.Run("etcd-arbiter node creates only Etcd and CA operations", func() {
+		suite.setupController(suite.fetchTestFileData("etcd-arbiter-control-plane-node.yaml"))
+		suite.reconcile()
+
+		operations := suite.getControlPlaneOperations()
+		expected := suite.loadGoldenOperations("etcd-arbiter-control-plane-operations.yaml")
+
+		require.Len(suite.T(), operations, len(expected),
+			"number of created operations should match golden file")
+		suite.compareOperations(operations, expected)
+	})
+}
+
 // TestUpToDateControlPlaneNode verifies that when all spec checksums already match status checksums,
 // no new ControlPlaneOperation objects are created.
 func (suite *ControllerTestSuite) TestUpToDateControlPlaneNode() {
