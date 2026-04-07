@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
-  "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 6,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 8,
   "statements": [
     {
       "vulnerability": {
@@ -99,10 +99,38 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость GHSA-6g7g-w4f8-9c9x невозможно эксплуатировать в рамках Deckhouse: платформа использует исключительно клиентскую библиотеку github.com/buger/jsonparser через стандартизированные kubelet-интерфейсы, которые не используют функцию Delete при обработке JSON-входов от внешних источников, что является обязательным условием для эксплуатации. Все входящие JSON>запросы поступают от внутренних компонентов Deckhouse через валидированные protobuf-конверторы, исключая возможность отправки невалидного JSON через штатные интерфейсы управления.",
+      "impact_statement": "Уязвимость GHSA-6g7g-w4f8-9c9x невозможно эксплуатировать в рамках Deckhouse: платформа использует исключительно клиентскую библиотеку github.com/buger/jsonparser через стандартизированные kubelet-интерфейсы, которые не используют функцию Delete при обработке JSON-входов от внешних источников, что является обязательным условием для эксплуатации. Все входящие JSON\u003eзапросы поступают от внутренних компонентов Deckhouse через валидированные protobuf-конверторы, исключая возможность отправки невалидного JSON через штатные интерфейсы управления.",
       "timestamp": "2026-03-26T14:29:37.200879Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В CVE-2026-34040 описана уязвимость Docker Engine при пересылке API-запросов плагинам авторизации (AuthZ): тело слишком большого запроса может не передаваться плагину, из‑за чего плагин, принимающий решения на основе содержимого тела, может ошибочно разрешить операцию. Образ crictl содержит только клиентский бинарник CRI: dockerd не запускается, API Docker Engine не обслуживается, плагины AuthZ не подключаются. Соответственно, уязвимый код на стороне демона в этом продукте не используется.",
+      "timestamp": "2026-04-07T10:43:26.143812Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В CVE-2026-33997 описана уязвимость Docker Engine при установке устаревших (legacy) плагинов Docker: из‑за ошибки «смещение на единицу» в логике сравнения привилегий демон может принять набор привилегий, не совпадающий с тем, который пользователь согласовал при установке. Образ crictl содержит только клиентский бинарник CRI: dockerd не запускается, установка плагинов и проверка их привилегий не выполняются; из модуля github.com/docker/docker используется лишь пакет api/types/time для разбора значений флага --since в команде crictl logs. Данный путь выполнения не затрагивает уязвимую логику валидации плагинов.",
+      "timestamp": "2026-04-07T10:45:27.439571Z"
     }
   ],
   "timestamp": "2026-01-21T10:25:02Z",
-  "last_updated": "2026-03-26T14:29:37.200879Z"
+  "last_updated": "2026-04-07T10:45:27Z"
 }
