@@ -39,6 +39,7 @@ const labels = {
   'e2e/run/static': { type: 'e2e-run', provider: 'static' },
   'e2e/run/static-cse': { type: 'e2e-run', provider: 'static-cse' },
   'e2e/run/dvp': { type: 'e2e-run', provider: 'dvp' },
+  'e2e/run/dvp-cse': { type: 'e2e-run', provider: 'dvp-cse' },
   'e2e/run/zvirt': { type: 'e2e-run', provider: 'zvirt' },
 
   // E2E: use Kubernetes version
