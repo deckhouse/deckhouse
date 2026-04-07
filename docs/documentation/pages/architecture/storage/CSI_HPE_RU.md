@@ -30,15 +30,15 @@ description: Архитектура модуля csi-hpe в Deckhouse Kubernetes
 
 1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-hpe/stable/cr.html):
 
-* HPEStorageConnection — параметры подключения к СХД HPE;
-* HPEStorageClass — определяет конфигурацию для Kubernetes StorageClass.
+  * HPEStorageConnection — параметры подключения к СХД HPE;
+  * HPEStorageClass — определяет конфигурацию для Kubernetes StorageClass.
 
   В HPEStorageClass задается протокол подключения, название пула ресурсов, тип файловой системы и reclaim policy.
 
-   Состоит из следующих контейнеров:
+  Состоит из следующих контейнеров:
 
-* **controller** — основной контейнер;
-* **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов HPEStorageConnection и HPEStorageClass.
+  * **controller** — основной контейнер;
+  * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов HPEStorageConnection и HPEStorageClass.
 
 1. **CSI-драйвер (hpe)** — реализация CSI-драйвера для `csi.hpe.com` provisioner. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html).
 

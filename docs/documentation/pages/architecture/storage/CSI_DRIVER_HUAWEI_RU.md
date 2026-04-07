@@ -1,14 +1,14 @@
 ---
-title: CSI-драйвер (csi-scsi-generic)
-permalink: ru/architecture/storage/csi-drivers/csi-driver-scsi-generic.html
+title: CSI-драйвер (csi-huawei)
+permalink: ru/architecture/storage/csi-drivers/csi-driver-huawei.html
 lang: ru
-search: csi-scsi-generic, csi driver
-description: Архитектура CSI-драйвера csi-scsi-generic в Deckhouse Kubernetes Platform.
+search: csi-huawei, csi driver
+description: Архитектура CSI-драйвера csi-huawei в Deckhouse Kubernetes Platform.
 ---
 
-CSI-драйвер `csi-scsi-generic` — реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД с подключением по SCSI в Deckhouse Kubernetes Platform (DKP).
+CSI-драйвер `csi-huawei` — реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД Huawei в Deckhouse Kubernetes Platform (DKP).
 
-## Архитектура CSI-драйвера (csi-scsi-generic)
+## Архитектура CSI-драйвера (csi-huawei)
 
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
@@ -17,10 +17,10 @@ CSI-драйвер `csi-scsi-generic` — реализация [Container Storag
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура CSI-драйвера (csi-scsi-generic) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура CSI-драйвера (csi-huawei) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура CSI-драйвера (csi-scsi-generic)](../../../images/architecture/storage/c4-l2-csi-driver-scsi-generic.ru.png)
+![Архитектура CSI-драйвера (csi-huawei)](../../../images/architecture/storage/c4-l2-csi-driver-huawei.ru.png)
 
 ## Компоненты драйвера
 
@@ -31,8 +31,6 @@ CSI-драйвер `csi-scsi-generic` — реализация [Container Storag
    Состоит из следующих контейнеров:
 
    * **controller** — основной контейнер, реализующий функциональность CSI-драйвера (capabilities) в виде gRPC-сервисов Identity Service и Controller Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
-
-   * **scsi-modules-loader** — init-контейнер, обеспечивающий загрузку модуля ядра для работы с iSCSI (`iscsi_tcp`);
 
    * **сайдкар-контейнеры контроллера** — поддерживаемые сообществом Kubernetes внешние контроллеры (external controllers).
 
@@ -48,7 +46,16 @@ CSI-драйвер `csi-scsi-generic` — реализация [Container Storag
 
      * **resizer** ([external-resizer](https://github.com/kubernetes-csi/external-resizer)) — отслеживает обновления ресурсов PersistentVolumeClaim, расширяет тома с помощью RPC `ControllerExpandVolume`, если пользователь запросил больше дискового пространства для PVC и драйвер поддерживает capability `EXPAND_VOLUME`;
 
+     * **snapshotter** ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) — работает совместно с модулем [`snapshot-controller`](/modules/snapshot-controller/), следит за ресурсами VolumeSnapshotContent, а также управляет снимками томов через RPC `CreateSnapshot`, `DeleteSnapshot` и `ListSnapshots` (если драйвер это поддерживает);
+
      * [**livenessprobe**](https://github.com/kubernetes-csi/livenessprobe) — отслеживает состояние CSI-драйвера через RPC `Probe` из Identity Service и предоставляет HTTP-эндпоинт `/healthz`, за которым следит [kubelet](../../kubernetes-and-scheduling/kubelet.html). При неуспешной *livenessProbe* kubelet перезапускает под csi-controller.
+   
+   * **storage-backend-controller** — дополнительный контроллер, обеспечивающий работу со следующими [кастомными ресурсами](https://github.com/Huawei/eSDK_K8S_Plugin/blob/master/helm/esdk/crds/backend/):
+
+      * StorageBackendClaim — запрос на подключение к СХД Huawei;
+      * StorageBackendContent — описание фактического подключения к СХД Huawei.
+
+   * **storage-backend-sidecar** — сайдкар-контейнер, обеспечивающий работу с СХД Huawei через вызовы RPC `AddStorageBackend`, `UpdateStorageBackend`, `RemoveStorageBackend`, `GetBackendStats`.
 
 1. **Csi-node** (DaemonSet) — Node Plugin, работающий на всех узлах кластера и отвечающий за локальное монтирование и размонтирование томов.
 
@@ -57,21 +64,24 @@ CSI-драйвер `csi-scsi-generic` — реализация [Container Storag
 
    * **node** — основной контейнер, реализующий функции CSI-драйвера в виде gRPC-сервисов Identity Service и Node Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
 
-   * **node-driver-registrar** — сайдкар-контейнер, регистрирующий Node Plugin в [kubelet](../../kubernetes-and-scheduling/kubelet.html). Вызывает в контейнере node RPC `GetPluginInfo` и `NodeGetInfo`, чтобы получить информацию о плагине и узле. Взаимодействует c контейнером **node** по gRPC через Unix-сокет;
-
-   * **scsi-modules-loader** — init-контейнер, обеспечивающий загрузку модуля ядра для работы с iSCSI (`iscsi_tcp`).
+   * **node-driver-registrar** — сайдкар-контейнер, регистрирующий Node Plugin в [kubelet](../../kubernetes-and-scheduling/kubelet.html). Вызывает в контейнере node RPC `GetPluginInfo` и `NodeGetInfo`, чтобы получить информацию о плагине и узле. Взаимодействует c контейнером **node** по gRPC через Unix-сокет.
 
 ## Взаимодействия драйвера
 
 Драйвер взаимодействует со следующими компонентами:
 
-1. **Kube-apiserver** — мониторинг ресурсов PersistentVolumeClaim, VolumeAttachment.
+1. **Kube-apiserver**:
 
-1. **СХД с подключением по SCSI** — создание и удаление томов, подключение и отключение томов от узлов.
+   * мониторинг ресурсов PersistentVolumeClaim, VolumeAttachment;
+   * работа с кастомными ресурсами StorageBackendClaim, StorageBackendContent.
+
+1. **СХД Huawei** — создание и удаление томов, подключение и отключение томов от узлов.
 
 С драйвером взаимодействуют следующие внешние компоненты:
 
-* [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
+1. **Kube-apiserver** — валидация кастомных ресурсов StorageBackendClaim, StorageBackendContent;
+ 
+1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
   * проверяет livenessProbe CSI-драйвера;
   * регистрирует Node Plugin;

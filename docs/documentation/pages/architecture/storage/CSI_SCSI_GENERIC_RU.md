@@ -30,17 +30,17 @@ description: Архитектура модуля csi-scsi-generic в Deckhouse K
 
 1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-scsi-generic/stable/cr.html):
 
-* SCSITarget — описание точки подключения к СХД (iSCSI/FC);
-* SCSIDevice — описание обнаруженного SCSI-устройства;
-* PendingResizeRequest — заявка на отложенное расширение PVC, если запрошенный размер больше текущего размера устройства;
-* SCSIStorageClass — определяет конфигурацию для Kubernetes StorageClass.
+  * SCSITarget — описание точки подключения к СХД (iSCSI/FC);
+  * SCSIDevice — описание обнаруженного SCSI-устройства;
+  * PendingResizeRequest — заявка на отложенное расширение PVC, если запрошенный размер больше текущего размера устройства;
+  * SCSIStorageClass — определяет конфигурацию для Kubernetes StorageClass.
 
   В SCSIStorageClass задаются селектор устройств (`scsiDeviceSelector`), reclaim policy и параметры очистки тома.
 
-   Состоит из следующих контейнеров:
+  Состоит из следующих контейнеров:
 
-* **controller** — основной контейнер;
-* **iscsi-command-service** — сайдкар-контейнер, реализующий обнаружение SCSI-устройств.
+  * **controller** — основной контейнер;
+  * **iscsi-command-service** — сайдкар-контейнер, реализующий обнаружение SCSI-устройств.
 
 1. **CSI-драйвер (`csi-scsi-generic`)** — реализация CSI-драйвера для `scsi-generic.csi.storage.deckhouse.io` provisioner. С архитектурой CSI-драйвера `scsi-scsi-generic` можно ознакомиться [в соответствующем разделе документации](../storage/csi-drivers/csi-driver-scsi-generic.html).
 

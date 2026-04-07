@@ -6,7 +6,7 @@ search: csi-s3, s3, csi driver
 description: Архитектура CSI-драйвера csi-s3 в Deckhouse Kubernetes Platform.
 ---
 
-CSI-драйвер [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) - реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с томами на основе `S3-хранилищ` в Deckhouse Kubernetes Platform (DKP).
+CSI-драйвер [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) — реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с томами на основе `S3-хранилищ` в Deckhouse Kubernetes Platform (DKP).
 
 ## Архитектура CSI-драйвера (csi-s3)
 
