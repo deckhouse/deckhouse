@@ -1,4 +1,4 @@
-{{- $version := "v0.33.2" }}
+{{- $version := include "get_oss_version_by_id" (list "ccm-yandex" $) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
