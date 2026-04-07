@@ -195,7 +195,7 @@ func preparePKIWithDir(_ *Controller, nodeName, nodeIP string, templateData map[
 	}
 	var files []kubeconfig.File
 	files = append(files, kubeconfig.Kubelet, kubeconfig.Admin, kubeconfig.ControllerManager, kubeconfig.Scheduler)
-	return kubeconfig.CreateKubeconfigFiles(files, kubeconfig.WithLocalAPIEndpoint(nodeIP), kubeconfig.WithOutDir(path+"/kubeconfig"), kubeconfig.WithCertificatesDir(pkiDir))
+	return kubeconfig.CreateKubeconfigFiles(files, kubeconfig.WithLocalAPIEndpoint(nodeIP), kubeconfig.WithNodeName(nodeName), kubeconfig.WithOutDir(path+"/kubeconfig"), kubeconfig.WithCertificatesDir(pkiDir))
 }
 
 func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}) error {
