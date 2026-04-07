@@ -1,4 +1,4 @@
-{{- $version_map := include "get_oss_version_map_by_id_and_condition_key" (list "terraform-provider-vcd" "mode" $) }}
+{{- $version_map := include "get_oss_version_map_by_id_and_condition_key" (list "terraform-provider-vcd" "mode" $) | fromYaml }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
