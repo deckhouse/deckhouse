@@ -32,8 +32,8 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
-	ua "github.com/deckhouse/node-controller/internal/controller/updateapproval/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
+	ua "github.com/deckhouse/node-controller/internal/controller/updateapproval/common"
 	"github.com/deckhouse/node-controller/internal/controller/updateapproval/engine"
 	"github.com/deckhouse/node-controller/internal/controller/updateapproval/kubeclient"
 	uametrics "github.com/deckhouse/node-controller/internal/controller/updateapproval/metrics"

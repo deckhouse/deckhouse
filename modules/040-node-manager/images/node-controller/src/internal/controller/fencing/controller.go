@@ -47,7 +47,7 @@ const (
 	leaseNamespace      = "kube-node-lease"
 	fencingTimeout      = 60 * time.Second
 	requeueInterval     = 1 * time.Minute
-	notifyMode = "Notify"
+	notifyMode          = "Notify"
 )
 
 var maintenanceAnnotations = []string{

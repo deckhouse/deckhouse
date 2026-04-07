@@ -22,7 +22,7 @@ const (
 	NodeTypeLabel  = "node.deckhouse.io/type"
 
 	// Update annotations
-	ApprovedAnnotation          = "update.node.deckhouse.io/approved"
+	ApprovedAnnotation           = "update.node.deckhouse.io/approved"
 	WaitingForApprovalAnnotation = "update.node.deckhouse.io/waiting-for-approval"
 	DisruptionRequiredAnnotation = "update.node.deckhouse.io/disruption-required"
 	DisruptionApprovedAnnotation = "update.node.deckhouse.io/disruption-approved"
