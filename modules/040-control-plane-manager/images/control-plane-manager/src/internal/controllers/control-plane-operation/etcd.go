@@ -43,17 +43,12 @@ const (
 
 // etcdNeedsJoin checks if the etcd member needs to join the cluster:
 //
-//	admin.conf absent -> fresh node (including new etcd-arbiter node) -> needs join
 //	member in cluster (by name or peer URL) -> no join needed
 //	/var/lib/etcd/member does not exist and not in cluster -> fresh node, needs join
 //	data dir exists but not in cluster -> orphan, needs join (cleanup)
+//
+// must ensure admin.conf exists before calling (for ensureAdminKubeconfig).
 func etcdNeedsJoin(nodeName, pkiDir, kubeconfigDir string) (bool, error) {
-	adminConfPath := filepath.Join(kubeconfigDir, "admin.conf")
-	if _, err := os.Stat(adminConfPath); os.IsNotExist(err) {
-		// Skip membership check if admin.conf is absent, reconcileEtcdJoin will create admin.conf via ensureAdminKubeconfig.
-		return true, nil
-	}
-
 	peerURL := etcd.GetPeerURL(os.Getenv("MY_IP"))
 	exists, err := checkEtcdMemberExists(nodeName, peerURL, pkiDir, kubeconfigDir)
 	if err != nil {
@@ -167,6 +162,7 @@ func (r *Reconciler) reconcileEtcdJoin(
 		}
 	}
 
+	// admin.conf is already created by execJoinEtcdCluster, idempotency check is not needed, maybe remove this check later.
 	logger.Info("etcd join: ensuring admin kubeconfig")
 	if err := ensureAdminKubeconfig(secretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
 		logger.Error("failed to ensure admin kubeconfig", log.Err(err))

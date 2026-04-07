@@ -122,7 +122,17 @@ func execJoinEtcdCluster(ctx context.Context, cc *commandContext, logger *log.Lo
 	if cc.component != controlplanev1alpha1.OperationComponentEtcd {
 		return reconcile.Result{}, nil
 	}
-	needsJoin, err := etcdNeedsJoin(cc.r.nodeName, constants.KubernetesPkiPath, kubeconfigDirPath())
+
+	kubeconfigDir := kubeconfigDirPath()
+
+	// Ensure admin.conf exists before checking membership on fresh nodes (including etcd-arbiter)
+	// admin.conf is absent until created here, ensureAdminKubeconfig is idempotent.
+	if err := ensureAdminKubeconfig(cc.cpmSecretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
+		logger.Error("failed to ensure admin kubeconfig", log.Err(err))
+		return reconcile.Result{}, fmt.Errorf("ensure admin kubeconfig: %w", err)
+	}
+
+	needsJoin, err := etcdNeedsJoin(cc.r.nodeName, constants.KubernetesPkiPath, kubeconfigDir)
 	if err != nil {
 		logger.Error("failed to check etcd join need", log.Err(err))
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
