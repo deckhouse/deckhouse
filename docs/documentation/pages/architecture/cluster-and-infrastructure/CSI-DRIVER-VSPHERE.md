@@ -2,7 +2,7 @@
 title: CSI driver (csi-vsphere)
 permalink: en/architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
 search: csi vsphere, csi-vsphere, container storage interface, vmware vsphere
-description: Overview of the CSI driver for VMware vSphere architecture in Deckhouse Kubernetes Platform.
+description: Overview of the CSI driver architecture for VMware vSphere in Deckhouse Kubernetes Platform.
 ---
 
 A CSI driver (plugin) is used to manage persistent storage volumes in Deckhouse Kubernetes Platform (DKP).
@@ -20,10 +20,10 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`csi-vsphere`](/modules/csi-vsphere/) driver and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`csi-vsphere`](/modules/csi-vsphere/) CSI driver and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Reference CSI driver architecture](../../../../images/architecture/cluster-and-infrastructure/c4-l2-csi-driver-vsphere.png)
+![Architecture of the csi-vsphere CSI driver](../../../../images/architecture/cluster-and-infrastructure/c4-l2-csi-driver-vsphere.png)
 
 ## Driver components
 
@@ -53,7 +53,7 @@ The CSI driver consists of the following components:
 
      * [**Livenessprobe**](https://github.com/kubernetes-csi/livenessprobe): Monitors the health of the CSI driver through the `Probe` RPC from the Identity Service and exposes the HTTP endpoint `/healthz`, which is checked by [kubelet](../../kubernetes-and-scheduling/kubelet.html). If *livenessProbe* fails, kubelet restarts the csi-controller pod.
 
-     * **Syncer**: VMware vSphere specific controller, it is responsible for pushing the PersistentVolumes, PersistentVolumeClaims, and pod metadata to Cloud Native Storage (CNS). [CNS](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/container-storage-plugin/3-0/getting-started-with-vmware-vsphere-container-storage-plug-in-3-0/vsphere-container-storage-plug-in-concepts.html) in vCenter is a storage control plane for container volumes.
+     * **Syncer**: VMware vSphere specific controller, it is responsible for pushing the PersistentVolumes, PersistentVolumeClaims, and pod metadata to Cloud Native Storage (CNS). [CNS](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/container-storage-plugin/3-0/getting-started-with-vmware-vsphere-container-storage-plug-in-3-0/vsphere-container-storage-plug-in-concepts.html) is a control plane managing various volume types in the VMware vSphere storage system.
 
 2. **Csi-node** (DaemonSet): Node Plugin running on all cluster nodes and responsible for local volume mount and unmount operations.
 
