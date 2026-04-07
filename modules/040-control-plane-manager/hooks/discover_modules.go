@@ -148,7 +148,10 @@ func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) err
 	}
 	if enableBasicAuth, ok := authNData["enableBasicAuth"]; ok {
 		if enabledBool, err := strconv.ParseBool(enableBasicAuth); err != nil {
+			fmt.Println("setting enabled bool")
 			input.Values.Set(userAuthnEnableBasicAuthPath, enabledBool)
+		} else {
+			fmt.Printf("error when converting enablebasicauth to bool: %e\n", err)
 		}
 	}
 
