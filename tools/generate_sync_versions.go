@@ -16,17 +16,17 @@ limitations under the License.
 
 package main
 
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/ee/modules/030-cloud-provider-openstack
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/ee/modules/030-cloud-provider-huaweicloud
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/ee/modules/030-cloud-provider-dynamix
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/ee/modules/030-cloud-provider-vcd
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/modules/030-cloud-provider-aws
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/modules/030-cloud-provider-azure
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/modules/030-cloud-provider-gcp
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/modules/030-cloud-provider-dvp
-//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --module /deckhouse/modules/030-cloud-provider-yandex
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module ee/se-plus/modules/030-cloud-provider-vsphere
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module ee/se-plus/modules/030-cloud-provider-zvirt
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module ee/modules/030-cloud-provider-openstack
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module ee/modules/030-cloud-provider-huaweicloud
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module ee/modules/030-cloud-provider-dynamix
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module ee/modules/030-cloud-provider-vcd
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module modules/030-cloud-provider-aws
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module modules/030-cloud-provider-azure
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module modules/030-cloud-provider-gcp
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module modules/030-cloud-provider-dvp
+//go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module modules/030-cloud-provider-yandex
 
-//go:generate /bin/bash sync_versions/sync_oss_versions.sh --source-module /deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere --source-id csi-vsphere --target-module /deckhouse/modules/000-common --target-id csi-vsphere
-//go:generate /bin/bash sync_versions/sync_oss_versions.sh --source-module /deckhouse/modules/030-cloud-provider-aws --source-id ccm-aws --target-module /deckhouse/modules/007-registrypackages --target-id ecr-credential-provider-aws
+//go:generate /bin/bash sync_versions/sync_oss_versions.sh --repo-root .. --source-module ee/se-plus/modules/030-cloud-provider-vsphere --source-id csi-vsphere --target-module modules/000-common --target-id csi-vsphere
+//go:generate /bin/bash sync_versions/sync_oss_versions.sh --repo-root .. --source-module modules/030-cloud-provider-aws --source-id ccm-aws --target-module modules/007-registrypackages --target-id ecr-credential-provider-aws
