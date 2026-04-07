@@ -57,8 +57,8 @@ resources:
     memory:
       # Global defaults for all components by environment.
       _default:
-        _default: 32M
-        web-production: 150M
+        _default: 32Mi
+        web-production: 128Mi
       # Explicit requests for registry-modules-watcher by environment.
       registryModulesWatcher:
         _default:
@@ -70,8 +70,8 @@ resources:
       moduleslibrary:
         # Explicit per-container requests for the web container.
         web:
-          _default: 32M
-          web-production: 150M
+          _default: 32Mi
+          web-production: 128Mi
         # Explicit per-container requests for the builder container.
         builder:
           _default: 128Mi
