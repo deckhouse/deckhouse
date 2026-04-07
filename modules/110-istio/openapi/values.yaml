@@ -10,19 +10,19 @@ properties:
         type: object
         default: {}
         x-examples:
-          - {"1.21": { "fullVersion": "1.21.6", "revision": "1x21", "imageSuffix": "V1x21x6", "isReady": false } } # must be real
+          - {"1.25": { "fullVersion": "1.25.2", "revision": "v1x25", "imageSuffix": "V1x25x2", "isReady": false } } # must be real
         additionalProperties:
           type: object
           properties:
             fullVersion:
               type: string
-              x-examples: ["1.21.6"]
+              x-examples: ["1.25.2"]
             revision:
               type: string
-              x-examples: ["v1x21"]
+              x-examples: ["v1x25"]
             imageSuffix:
               type: string
-              x-examples: ["V1x21x6"]
+              x-examples: ["V1x25x2"]
             isReady:
               type: boolean
               x-examples: [false]
@@ -139,7 +139,7 @@ properties:
             alertSeverity: 4
       globalVersion:
         type: string
-        x-examples: ["1.21"] # must be real
+        x-examples: ["1.25"] # must be real
       isGlobalVersionIstiodReady:
         type: boolean
         default: false
@@ -150,14 +150,14 @@ properties:
           type: string
         default: []
         x-examples:
-        - ["1.21"] # must be real
+        - ["1.25"] # must be real
       operatorVersionsToInstall:
         type: array
         items:
           type: string
         default: []
         x-examples:
-        - ["1.21"] # must be real
+        - ["1.25"] # must be real
       applicationNamespaces:
         type: array
         items:
