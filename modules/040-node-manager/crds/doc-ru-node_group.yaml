@@ -499,7 +499,49 @@ spec:
                       properties:
                         partedConfig:
                           description: |
-                            Имя используемой конфигурация MIG.
+                            Имя конфигурации MIG, которая будет применена на узле.
+
+                            Поддерживаются:
+                            - стандартные профили вида `all-*`, задающие одинаковую схему разбиения для всех GPU на узле;
+                            - значение `custom`, позволяющее задать индивидуальную схему разбиения для каждой видеокарты отдельно.
+                          x-doc-default: all-1g.5gb
+                        customConfigs:
+                          description: |
+                            Кастомная схема разбиения MIG для отдельных GPU по их индексам.
+
+                            Используется только при значении `partedConfig: custom`.
+
+                            Представляет собой список GPU, где каждый элемент указывает индекс видеокарты на узле и набор MIG-срезов, которые должны быть созданы для этой видеокарты.
+                          x-doc-examples:
+                            - profile: 3g.40gb
+                              count: 2
+                            - profile: 1g.10gb.me
+                              count: 1
+                          items:
+                            properties:
+                              index:
+                                description: Индекс GPU на узле.
+                              slices:
+                                description: Список создаваемых MIG-срезов.
+                                items:
+                                  properties:
+                                    profile:
+                                      description: Имя MIG-профиля, который будет создан на GPU.
+                                    count:
+                                      description: Количество MIG-срезов указанного профиля.
+                      oneOf:
+                        - properties:
+                            partedConfig:
+                              pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          not:
+                            required:
+                              - customConfigs
+                        - properties:
+                            partedConfig:
+                              pattern: "^custom$"
+                          required:
+                            - partedConfig
+                            - customConfigs
                     timeSlicing:
                       description: |
                         Параметры для стратегии `TimeSlicing`.
