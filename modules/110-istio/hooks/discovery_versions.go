@@ -64,7 +64,7 @@ func imageToIstioVersion(img string) (*IstioVersion, error) {
 
 	// Ambient mode is available starting with version 1.25
 	ambientMinVersion := semver.MustParse("1.25.0")
-	supportsAmbient := !versionSemver.LessThan(ambientMinVersion)
+	supportsAmbient := versionSemver.GreaterThanEqual(ambientMinVersion)
 
 	return &IstioVersion{
 		version: fmt.Sprintf(versionTemplate, major, minor),
