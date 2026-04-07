@@ -20,6 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=log.sh
 source "${SCRIPT_DIR}/log.sh"
 
+REPO_ROOT="/deckhouse"
 SOURCE_MODULE=""
 SOURCE_ID=""
 TARGET_MODULE=""
@@ -31,6 +32,7 @@ TARGET_OSS_FILE=""
 help() {
 echo "
 Usage: $0 \
+  [--repo-root <path>] \
   --source-module <module_dir> \
   --source-id <dependency_id> \
   --target-module <module_dir> \
@@ -39,14 +41,17 @@ Usage: $0 \
   Synchronize dependency version data between oss.yaml files of two modules.
 
 Arguments:
+  --repo-root
+      Deckhouse repository root. Module paths are interpreted relative to it. Default: /deckhouse.
+
   --source-module
-      Path to source module directory containing oss.yaml.
+      Path to source module directory containing oss.yaml (relative to --repo-root).
 
   --source-id
       Dependency ID in source oss.yaml.
 
   --target-module
-      Path to target module directory containing oss.yaml.
+      Path to target module directory containing oss.yaml (relative to --repo-root).
 
   --target-id
       Dependency ID in target oss.yaml.
@@ -59,6 +64,16 @@ Arguments:
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --repo-root)
+        shift
+        if [[ $# -gt 0 ]]; then
+          REPO_ROOT="$1"
+        else
+          log_error "--repo-root requires value"
+          help
+          exit 1
+        fi
+        ;;
       --source-module)
         shift
         if [[ $# -gt 0 ]]; then
@@ -139,8 +154,8 @@ check_requirements() {
     exit 1
   fi
 
-  SOURCE_OSS_FILE="${SOURCE_MODULE}/oss.yaml"
-  TARGET_OSS_FILE="${TARGET_MODULE}/oss.yaml"
+  SOURCE_OSS_FILE="${REPO_ROOT}/${SOURCE_MODULE}/oss.yaml"
+  TARGET_OSS_FILE="${REPO_ROOT}/${TARGET_MODULE}/oss.yaml"
 
   if [[ ! -f "$SOURCE_OSS_FILE" ]]; then
     log_error "source oss.yaml not found: $SOURCE_OSS_FILE"

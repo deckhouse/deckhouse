@@ -20,15 +20,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=log.sh
 source "${SCRIPT_DIR}/log.sh"
 
+REPO_ROOT="/deckhouse"
+TF_YAML_FILE="candi/terraform_versions.yml"
 MODULE=""
-TF_FILE="/deckhouse/candi/terraform_versions.yml"
+
 OSS_FILE=""
-MODULE_TF_YAML=""
+GLOBAL_TF_YAML_FILE=""
+MODULE_TF_YAML_FILE=""
 MODULE_TF_DIR=""
+
 
 help() {
 echo "
-Usage: $0 --module <cloud_provider_module_dir>
+Usage: $0 [--repo-root <path>] --module <cloud_provider_module_dir>
 
   Synchronize terraform provider versions from oss.yaml to:
     - global candi/terraform_versions.yml
@@ -36,8 +40,11 @@ Usage: $0 --module <cloud_provider_module_dir>
     - module candi/terraform-modules/version*.tf
 
 Arguments:
+  --repo-root
+      Deckhouse repository root. All other paths are interpreted relative to it. Default: /deckhouse.
+
   --module
-      Path to cloud provider module directory containing oss.yaml.
+      Path to cloud provider module directory containing oss.yaml (relative to --repo-root).
 
   --help|-h
       Print this message.
@@ -47,6 +54,16 @@ Arguments:
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --repo-root)
+        shift
+        if [[ $# -gt 0 ]]; then
+          REPO_ROOT="$1"
+        else
+          log_error "--repo-root requires value"
+          help
+          exit 1
+        fi
+        ;;
       --module)
         shift
         if [[ $# -gt 0 ]]; then
@@ -87,17 +104,23 @@ check_requirements() {
     exit 1
   fi
 
-  OSS_FILE="${MODULE}/oss.yaml"
-  MODULE_TF_YAML="${MODULE}/candi/terraform_versions.yml"
-  MODULE_TF_DIR="${MODULE}/candi/terraform-modules"
+  OSS_FILE="${REPO_ROOT}/${MODULE}/oss.yaml"
+  GLOBAL_TF_YAML_FILE="${REPO_ROOT}/${TF_YAML_FILE}"
+  MODULE_TF_YAML_FILE="${REPO_ROOT}/${MODULE}/${TF_YAML_FILE}"
+  MODULE_TF_DIR="${REPO_ROOT}/${MODULE}/candi/terraform-modules"
 
   if [[ ! -f "$OSS_FILE" ]]; then
     log_error "oss.yaml not found: $OSS_FILE"
     exit 1
   fi
 
-  if [[ ! -f "$TF_FILE" ]]; then
-    log_error "terraform versions file not found: $TF_FILE"
+  if [[ ! -f "$GLOBAL_TF_YAML_FILE" ]]; then
+    log_error "global terraform versions file not found: $GLOBAL_TF_YAML_FILE"
+    exit 1
+  fi
+
+  if [[ ! -f "$MODULE_TF_YAML_FILE" ]]; then
+    log_error "module terraform versions file not found: $MODULE_TF_YAML_FILE"
     exit 1
   fi
 }
@@ -215,16 +238,11 @@ sync_tf_versions() {
   VERSIONS_LIST="$(yq e ".[] | select(.id == \"$FULL_ID\") | .versions[].version" "$OSS_FILE")"
   CONDITIONS_COUNT="$(yq e ".[] | select(.id == \"$FULL_ID\") | [.versions[]? | select(has(\"condition\"))] | length" "$OSS_FILE")"
 
-  update_yaml_version "$TF_FILE"
-  update_yaml_version "$MODULE_TF_YAML"
+  update_yaml_version "GLOBAL_TF_YAML_FILE"
+  update_yaml_version "$MODULE_TF_YAML_FILE"
 
   if [[ -n "$SINGLE_VERSION" ]]; then
-    if [[ "$PROVIDER_ID" == "vcd" ]]; then
-      update_tf_single_version "${MODULE_TF_DIR}/versions-legacy.tf" "$SINGLE_VERSION"
-      update_tf_single_version "${MODULE_TF_DIR}/versions-new.tf" "$SINGLE_VERSION"
-    else
-      update_tf_single_version "${MODULE_TF_DIR}/versions.tf" "$SINGLE_VERSION"
-    fi
+    update_tf_single_version "${MODULE_TF_DIR}/versions.tf" "$SINGLE_VERSION"
     return 0
   fi
 
@@ -246,7 +264,7 @@ sync_tf_versions() {
   local old_ifs="$IFS"
   IFS='
 '
-  set -- $VERSIONS_LIST
+  set -- "$VERSIONS_LIST"
   IFS="$old_ifs"
 
   update_tf_versions_list "${MODULE_TF_DIR}/versions.tf" "$@"
