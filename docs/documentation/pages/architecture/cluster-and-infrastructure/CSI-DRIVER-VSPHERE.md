@@ -1,5 +1,5 @@
 ---
-title: CSI driver (csi-vsphere)
+title: CSI driver (VMware vSphere)
 permalink: en/architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
 search: csi vsphere, csi-vsphere, container storage interface, vmware vsphere
 description: Overview of the CSI driver architecture for VMware vSphere in Deckhouse Kubernetes Platform.
