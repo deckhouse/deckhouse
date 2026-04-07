@@ -8,12 +8,14 @@ Deckhouse Virtualization Platform (DVP) is available both as a standalone produc
 Supplied as a standalone product:
 
 - DVP EE: Commercial edition for enterprise use.
+- DVP CSE: A certified edition (FSTEC) is planned.
 
 Supplied as a virtualization module:
 
 - DKP CE: Open Source edition under the Apache 2.0 license.
 - DKP SE+: Extended version of the virtualization module.
 - DKP EE: Extended version of the virtualization module.
+- DKP CSE Pro: Support for the certified module edition is planned.
 
 The table below provides brief a comparison of editions listing its main features and functions:
 
