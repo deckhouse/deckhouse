@@ -71,7 +71,7 @@ diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go b/cluste
 +
 +	klog.V(2).Infof("Next machines will be saved to annotation %v", savedInAnnotation)
 +
-+	annotationVal := createMachinesTriggeredForDeletionAnnotValue(savedInAnnotation)
++	annotationVal := createMachinesTriggeredForDeletionAnnotValue(savedInAnnotation, time.Now().Format(time.RFC3339))
 +	mdCopy := mcd.DeepCopy()
 +	mdCopy.Annotations[machineutils.TriggerDeletionByMCM] = annotationVal
 +	updatedMd, err := ngImpl.mcmManager.machineClient.MachineDeployments(mcd.Namespace).Update(context.TODO(), mdCopy, metav1.UpdateOptions{})
