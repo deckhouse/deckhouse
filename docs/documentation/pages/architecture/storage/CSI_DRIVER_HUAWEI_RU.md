@@ -49,7 +49,7 @@ CSI-драйвер `csi-huawei` — реализация [Container Storage Inte
      * **snapshotter** ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) — работает совместно с модулем [`snapshot-controller`](/modules/snapshot-controller/), следит за ресурсами VolumeSnapshotContent, а также управляет снимками томов через RPC `CreateSnapshot`, `DeleteSnapshot` и `ListSnapshots` (если драйвер это поддерживает);
 
      * [**livenessprobe**](https://github.com/kubernetes-csi/livenessprobe) — отслеживает состояние CSI-драйвера через RPC `Probe` из Identity Service и предоставляет HTTP-эндпоинт `/healthz`, за которым следит [kubelet](../../kubernetes-and-scheduling/kubelet.html). При неуспешной *livenessProbe* kubelet перезапускает под csi-controller.
-   
+
    * **storage-backend-controller** — дополнительный контроллер, обеспечивающий работу со следующими [кастомными ресурсами](https://github.com/Huawei/eSDK_K8S_Plugin/blob/master/helm/esdk/crds/backend/):
 
       * StorageBackendClaim — запрос на подключение к СХД Huawei;
@@ -80,11 +80,11 @@ CSI-драйвер `csi-huawei` — реализация [Container Storage Inte
 С драйвером взаимодействуют следующие внешние компоненты:
 
 1. **Kube-apiserver** — валидация кастомных ресурсов StorageBackendClaim, StorageBackendContent;
- 
+
 1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-  * проверяет livenessProbe CSI-драйвера;
-  * регистрирует Node Plugin;
-  * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume` и `NodeUnpublishVolume` в Node Plugin.
+* проверяет livenessProbe CSI-драйвера;
+* регистрирует Node Plugin;
+* вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume` и `NodeUnpublishVolume` в Node Plugin.
 
    [Kubelet](../../kubernetes-and-scheduling/kubelet.html) взаимодействует с Node Plugin по gRPC через Unix-сокет.

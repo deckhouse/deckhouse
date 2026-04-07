@@ -30,22 +30,22 @@ description: Архитектура модуля csi-huawei в Deckhouse Kuberne
 
 1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-huawei/stable/cr.html):
 
-  * HuaweiStorageConnection — параметры подключения к СХД Huawei;
-  * HuaweiStorageClass — определяет конфигурацию для Kubernetes StorageClass.
+* HuaweiStorageConnection — параметры подключения к СХД Huawei;
+* HuaweiStorageClass — определяет конфигурацию для Kubernetes StorageClass.
 
   В HuaweiStorageClass задается название пула ресурсов, тип файловой системы и reclaim policy.
 
   Состоит из следующих контейнеров:
 
-  * **controller** — основной контейнер;
-  * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов HPEStorageConnection и HPEStorageClass.
+* **controller** — основной контейнер;
+* **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов HPEStorageConnection и HPEStorageClass.
 
 1. **CSI-драйвер (huawei)** — реализация CSI-драйвера для `csi.huawei.com` provisioner. С архитектурой CSI-драйвера `csi-huawei` можно ознакомиться [в соответствующем разделе документации](../storage/csi-drivers/csi-driver-huawei.html).
 
   CSI-драйвер `csi-huawei` обслуживает следующие [кастомные ресурсы](https://github.com/Huawei/eSDK_K8S_Plugin/blob/master/helm/esdk/crds/backend/):
 
-  * StorageBackendClaim — запрос на подключение к СХД Huawei;
-  * StorageBackendContent — описание фактического подключения к СХД Huawei.
+* StorageBackendClaim — запрос на подключение к СХД Huawei;
+* StorageBackendContent — описание фактического подключения к СХД Huawei.
 
 ## Взаимодействия модуля
 
