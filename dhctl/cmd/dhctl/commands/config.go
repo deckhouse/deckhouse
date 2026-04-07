@@ -167,7 +167,7 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 				return err
 			}
 		} else {
-			metaConfig, err = config.LoadConfigFromFile(context.TODO(), []string{app.ParseInputFile}, preparatorProvider, app.GetDirConfig())
+			metaConfig, err = config.ParseConfig(context.TODO(), []string{app.ParseInputFile}, preparatorProvider, app.GetDirConfig())
 			if err != nil {
 				return err
 			}
