@@ -24,11 +24,9 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
-	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +34,6 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
@@ -179,7 +176,7 @@ func New(client clientset.Interface, certificatesDir string) (Interface, error) 
 	caPool := x509.NewCertPool()
 	caPool.AppendCertsFromPEM(caData)
 
-	rawClient, err := clientv3.New(clientv3.Config{
+	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: 5 * time.Second,
 		TLS: &tls.Config{

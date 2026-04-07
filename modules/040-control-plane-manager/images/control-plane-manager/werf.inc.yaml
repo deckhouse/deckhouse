@@ -1,4 +1,3 @@
-{{ $appAbsPath := printf "/deckhouse/modules/040-%s/images/%s/controller" $.ModuleName $.ImageName }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
@@ -27,8 +26,8 @@ fromCacheVersion: "2025-07-25-3"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /src
+  add: /src/deckhouse
+  to: /deckhouse
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /go_lib/controlplane
