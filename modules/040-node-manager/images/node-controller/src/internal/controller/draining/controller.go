@@ -19,7 +19,6 @@ package draining
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -117,10 +116,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	if err := r.ensureKubeClient(); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to create kubernetes client: %w", err)
-	}
-
 	drainTimeout := r.getDrainTimeout(ctx, node.Labels[nodecommon.NodeGroupLabel])
 	logger.V(1).Info("drain timeout resolved", "node", node.Name, "timeout", drainTimeout)
 
@@ -164,20 +159,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		nodecommon.DrainingAnnotation: nil,
 		nodecommon.DrainedAnnotation:  drainingSource,
 	})
-}
-
-func (r *Reconciler) ensureKubeClient() error {
-	if r.kubeClient != nil {
-		return nil
-	}
-
-	config := ctrl.GetConfigOrDie()
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-	r.kubeClient = clientset
-	return nil
 }
 
 func (r *Reconciler) getDrainTimeout(ctx context.Context, ngName string) time.Duration {
