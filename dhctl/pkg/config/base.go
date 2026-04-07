@@ -287,8 +287,6 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 		return true, nil
 	}
 
-	docData = PrepareProviderConfigYAML(index, docData)
-
 	_, err = schemaStore.Validate(&docData, opts...)
 	if err != nil {
 		if errors.Is(err, ErrSchemaNotFound) {

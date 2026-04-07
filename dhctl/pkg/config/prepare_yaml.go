@@ -25,21 +25,28 @@ type dvpConfigSSHKey struct {
 	SSHPublicKey string `json:"sshPublicKey,omitempty"`
 }
 
-func PrepareProviderConfigYAML(index SchemaIndex, cfg []byte) []byte {
+func PrepareProviderConfigYAML(original []byte) []byte {
+	index := SchemaIndex{}
+
+	err := yaml.Unmarshal(original, &index)
+	if err != nil {
+		return original
+	}
+
 	if index.Kind != "DVPClusterConfiguration" {
-		return cfg
+		return original
 	}
 
 	ssh := dvpConfigSSHKey{}
 
-	err := yaml.Unmarshal(cfg, &ssh)
+	err = yaml.Unmarshal(original, &ssh)
 	if err != nil {
 		// skip error
-		return cfg
+		return original
 	}
 
 	if !strings.HasSuffix(ssh.SSHPublicKey, "\n") {
-		return cfg
+		return original
 	}
 
 	// cloud provider dvp has problem.
@@ -54,7 +61,7 @@ func PrepareProviderConfigYAML(index SchemaIndex, cfg []byte) []byte {
 	// and terraform get destructive change
 	// for prevent it, we add comment to end of document
 	// for prevent trim new line in ssh key
-	buf := bytes.NewBuffer(cfg)
+	buf := bytes.NewBuffer(original)
 	buf.WriteString("\n# comment for safe trim")
 	return buf.Bytes()
 }

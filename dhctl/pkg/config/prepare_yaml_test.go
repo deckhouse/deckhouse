@@ -53,12 +53,7 @@ sshPublicKey: |
 	assertNotChange := func(t *testing.T, kind string, provider []byte) {
 		copyProvider := copyBytes(provider)
 
-		index := SchemaIndex{
-			Kind:    kind,
-			Version: "deckhouse.io/v1",
-		}
-
-		res := PrepareProviderConfigYAML(index, provider)
+		res := PrepareProviderConfigYAML(provider)
 
 		require.Equal(t, copyProvider, res, "provider conf should not changed")
 	}
@@ -229,12 +224,7 @@ sshPublicKey: |
 			contentBytes := []byte(tt.content)
 			contentBytesCopy := copyBytes(contentBytes)
 
-			index := SchemaIndex{
-				Kind:    "DVPClusterConfiguration",
-				Version: "deckhouse.io/v1",
-			}
-
-			res := PrepareProviderConfigYAML(index, contentBytes)
+			res := PrepareProviderConfigYAML(contentBytes)
 
 			if tt.prepare {
 				require.NotEqual(t, contentBytesCopy, res)
@@ -243,8 +233,7 @@ sshPublicKey: |
 				require.Equal(t, contentBytesCopy, res)
 			}
 
-			contentCopyForExtract := copyBytes(res)
-			sshKeyInDoc, provider := extractSettings(t, contentCopyForExtract)
+			sshKeyInDoc, provider := extractSettings(t, res)
 
 			require.Equal(t, tt.expectedSSHKey, sshKeyInDoc, "ssh key should equal")
 			require.Equal(t, "YXB", provider.KubeConfig, "kube config should equal")
