@@ -52,7 +52,7 @@ The module consists of the following components:
 
 1. **CSI driver (aws)**: It is an implementation of the CSI driver for AWS. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../infrastructure/csi-driver.html) section.
 
-4. **Node-termination-handler**: [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler). It is responsible for gracefully handling the termination of EC2 instances in the Kubernetes control plane.
+1. **Node-termination-handler**: [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler). It is responsible for gracefully handling the termination of EC2 instances in the Kubernetes control plane.
 
    Node-termination-handler processes the following AWS events:
    * [EC2 maintenance events](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html).
