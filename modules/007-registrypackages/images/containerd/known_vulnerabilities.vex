@@ -62,6 +62,34 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-34040 невозможно эксплуатировать в рамках Deckhouse: уязвимость относится к работе с запуском dockerd, обслуживанием API Docker Engine и подключением плагинов AuthZ. Соответственно, уязвимый код в патчах привносящих данную зависиомсть в containerd не выполняется.",
+      "timestamp": "2026-04-07T10:43:26.143812Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33997 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает часть по работе с Docker Engine при установке устаревших (legacy) плагинов Docker - установка плагинов и проверка их привилегий в патчах привносящих данную зависиомсть в containerd не выполняются.",
+      "timestamp": "2026-04-07T10:45:27.439571Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2026-34986"
       },
       "products": [

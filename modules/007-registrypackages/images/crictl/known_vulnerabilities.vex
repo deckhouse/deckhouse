@@ -113,7 +113,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-34040 невозможно эксплуатировать в рамках Deckhouse: платформа использует лишь пакет github.com/docker/docker/api/types/time. Уязвимость относится к работе с запуском dockerd, обслуживанием API Docker Engine и подключением плагинов AuthZ. Соответственно, уязвимый код на стороне демона в этом продукте не используется.",
+      "impact_statement": "Уязвимость CVE-2026-34040 невозможно эксплуатировать в рамках Deckhouse: платформа использует лишь пакет github.com/docker/docker/api/types/time. Уязвимость относится к работе с запуском dockerd, обслуживанием API Docker Engine и подключением плагинов AuthZ. Соответственно, уязвимый код не используется.",
       "timestamp": "2026-04-07T10:43:26.143812Z"
     },
     {
