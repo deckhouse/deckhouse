@@ -19,7 +19,7 @@ package etcd
 import (
 	"path/filepath"
 
-	constants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 )
 
 type options struct {
