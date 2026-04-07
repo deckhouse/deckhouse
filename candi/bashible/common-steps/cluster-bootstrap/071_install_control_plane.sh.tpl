@@ -13,6 +13,7 @@
 # limitations under the License.
 
 {{ $manifestsDir := "/var/lib/bashible/control-plane" }}
+{{ $kubeconfigDir := "/var/lib/bashible/control-plane/kubeconfig" }}
 
 check_container_running() {
   local container_name=$1
@@ -39,6 +40,7 @@ check_container_running() {
 
 check_container_running "kubernetes-api-proxy"
 cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
+cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf} /etc/kubernetes/
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd"
 
