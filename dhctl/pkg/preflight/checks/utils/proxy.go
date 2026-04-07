@@ -25,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
 
 var ErrBadProxyConfig = errors.New("bad proxy config")
@@ -66,20 +65,6 @@ func BuildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {
 			DisableKeepAlives: true,
 		},
 	}
-}
-
-func BuildRegistryHTTPClientWithLocalhostProxy(metaConfig *config.MetaConfig, proxyUrl *url.URL) (*http.Client, error) {
-	registry := metaConfig.Registry.Settings.RemoteData
-	transport, err := registryutil.NewRegistryTransport(string(registry.Scheme), registry.CA)
-	if err != nil {
-		return nil, fmt.Errorf("build registry transport: %w", err)
-	}
-
-	localhostProxy := *proxyUrl
-	localhostProxy.Host = net.JoinHostPort("localhost", ProxyTunnelPort)
-	transport.Proxy = http.ProxyURL(&localhostProxy)
-	transport.DisableKeepAlives = true
-	return &http.Client{Transport: transport}, nil
 }
 
 func GetProxyFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, []string, error) {
