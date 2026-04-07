@@ -10,7 +10,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/cilium/cilium:v1.17.3"
+          "@id": "pkg:golang/github.com/cilium/cilium@v1.17.3"
         }
       ],
       "status": "not_affected",
