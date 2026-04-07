@@ -19,6 +19,7 @@ package controlplaneoperation
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
@@ -37,6 +38,7 @@ type commandContext struct {
 	configChecksum string
 	pkiChecksum    string
 	caChecksum     string
+	certRenewalID  string
 }
 
 type PipelineCommand struct {
@@ -54,7 +56,7 @@ var commandRegistry = map[controlplanev1alpha1.CommandName]PipelineCommand{
 	controlplanev1alpha1.CommandJoinEtcdCluster:  {controlplanev1alpha1.CommandJoinEtcdCluster, constants.ReasonJoiningEtcd, execJoinEtcdCluster},
 	controlplanev1alpha1.CommandWaitPodReady:     {controlplanev1alpha1.CommandWaitPodReady, constants.ReasonWaitingForPod, execWaitPodReady},
 	controlplanev1alpha1.CommandSyncHotReload:    {controlplanev1alpha1.CommandSyncHotReload, constants.ReasonSyncingHotReload, execSyncHotReload},
-	controlplanev1alpha1.CommandObserve:          {controlplanev1alpha1.CommandObserve, constants.ReasonObserving, execObserve},
+	controlplanev1alpha1.CommandCertObserve:      {controlplanev1alpha1.CommandCertObserve, constants.ReasonCertObserving, execCertObserve},
 }
 
 // resolveCommands looks up PipelineCommand entries for the given command names.
@@ -135,6 +137,11 @@ func execJoinEtcdCluster(ctx context.Context, cc *commandContext, logger *log.Lo
 
 // execSyncManifests writes the static pod manifest (or patches annotations for PKI-only updates).
 func execSyncManifests(ctx context.Context, cc *commandContext, logger *log.Logger) (reconcile.Result, error) {
+	// set cert-renewal-id to force pod restart with renewed certs.
+	if isRenewalOperation(cc.op) {
+		cc.certRenewalID = cc.op.Name
+	}
+
 	if cc.configChecksum != "" {
 		if err := writeExtraFiles(cc.component, cc.cpmSecretData, constants.ExtraFilesPath); err != nil {
 			logger.Error("failed to write extra-files", log.Err(err))
@@ -147,7 +154,7 @@ func execSyncManifests(ctx context.Context, cc *commandContext, logger *log.Logg
 		}
 	} else {
 		if err := updateChecksumAnnotations(cc.component,
-			cc.pkiChecksum, cc.caChecksum, constants.ManifestsPath); err != nil {
+			cc.pkiChecksum, cc.caChecksum, cc.certRenewalID, constants.ManifestsPath); err != nil {
 			logger.Error("failed to update checksum annotations", log.Err(err))
 			return reconcile.Result{}, err
 		}
@@ -168,7 +175,7 @@ func execWaitPodReady(ctx context.Context, cc *commandContext, logger *log.Logge
 		return reconcile.Result{}, err
 	}
 
-	return cc.r.waitForPod(ctx, cc.op, cc.configChecksum, cc.pkiChecksum, cc.caChecksum, logger)
+	return cc.r.waitForPod(ctx, cc.op, cc.configChecksum, cc.pkiChecksum, cc.caChecksum, cc.certRenewalID, logger)
 }
 
 // execSyncHotReload writes config files that kube-apiserver picks up without restart.
@@ -179,4 +186,9 @@ func execSyncHotReload(ctx context.Context, cc *commandContext, logger *log.Logg
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil
+}
+
+// isRenewalOperation detects if CPO is a cert renewal operation by name
+func isRenewalOperation(op *controlplanev1alpha1.ControlPlaneOperation) bool {
+	return strings.Contains(op.Name, "-certrenewal-")
 }

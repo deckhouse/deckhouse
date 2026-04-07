@@ -186,8 +186,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		slog.String("component", string(op.Spec.Component)),
 		slog.Any("commands", op.Spec.Commands))
 
-	// Observe read only, no secrets or configVersion needed
-	if op.Spec.Component == controlplanev1alpha1.OperationComponentObserver {
+	// CertObserver read only, no secrets or configVersion needed
+	if op.Spec.Component == controlplanev1alpha1.OperationComponentCertObserver {
 		return r.reconcilePipeline(ctx, op, nil, nil, logger)
 	}
 
@@ -286,7 +286,7 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1al
 }
 
 // waitForPod checks if the static pod is ready with the expected checksums annotations.
-func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, configChecksum, pkiChecksum, caChecksum string, logger *log.Logger) (reconcile.Result, error) {
+func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, configChecksum, pkiChecksum, caChecksum, certRenewalID string, logger *log.Logger) (reconcile.Result, error) {
 	podName := fmt.Sprintf("%s-%s", op.Spec.Component.PodComponentName(), r.nodeName)
 	pod := &corev1.Pod{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: podName, Namespace: constants.KubeSystemNamespace}, pod); err != nil {
@@ -302,7 +302,7 @@ func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.Co
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
 
-	if !isPodReadyWithChecksums(pod, configChecksum, pkiChecksum, caChecksum) {
+	if !isPodReadyWithChecksums(pod, configChecksum, pkiChecksum, caChecksum, certRenewalID) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}

@@ -45,7 +45,7 @@ func prepareManifestBytes(component controlplanev1alpha1.OperationComponent, sec
 
 	expanded := os.ExpandEnv(string(tpl))
 
-	manifest, err := setChecksumAnnotations([]byte(expanded), configChecksum, pkiChecksum, caChecksum)
+	manifest, err := setChecksumAnnotations([]byte(expanded), configChecksum, pkiChecksum, caChecksum, "")
 	if err != nil {
 		return nil, fmt.Errorf("set checksum annotations: %w", err)
 	}
@@ -66,13 +66,13 @@ func writeStaticPodManifest(component controlplanev1alpha1.OperationComponent, s
 
 // updateChecksumAnnotations reads an existing manifest from disk and updates the given checksum annotations
 // Empty strings are not changed. Used for UpdatePKI command where only checksums change, not the template.
-func updateChecksumAnnotations(component controlplanev1alpha1.OperationComponent, pkiChecksum, caChecksum, manifestDir string) error {
+func updateChecksumAnnotations(component controlplanev1alpha1.OperationComponent, pkiChecksum, caChecksum, certRenewalID, manifestDir string) error {
 	filename := filepath.Join(manifestDir, component.PodComponentName()+".yaml")
 	existing, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("read existing manifest %s: %w", filename, err)
 	}
-	updated, err := setChecksumAnnotations(existing, "", pkiChecksum, caChecksum)
+	updated, err := setChecksumAnnotations(existing, "", pkiChecksum, caChecksum, certRenewalID)
 	if err != nil {
 		return fmt.Errorf("set checksum annotations: %w", err)
 	}
@@ -80,8 +80,7 @@ func updateChecksumAnnotations(component controlplanev1alpha1.OperationComponent
 }
 
 // setChecksumAnnotations parses the manifest as a Pod, sets the given checksum annotations, replaces any existing values and serializes back to YAML
-// An empty string for any checksum - not change that annotation.
-func setChecksumAnnotations(manifestBytes []byte, configChecksum, pkiChecksum, caChecksum string) ([]byte, error) {
+func setChecksumAnnotations(manifestBytes []byte, configChecksum, pkiChecksum, caChecksum, certRenewalID string) ([]byte, error) {
 	pod := &corev1.Pod{}
 	if err := yaml.Unmarshal(manifestBytes, pod); err != nil {
 		return nil, fmt.Errorf("unmarshal pod manifest: %w", err)
@@ -98,6 +97,9 @@ func setChecksumAnnotations(manifestBytes []byte, configChecksum, pkiChecksum, c
 	}
 	if caChecksum != "" {
 		pod.Annotations[constants.CAChecksumAnnotationKey] = caChecksum
+	}
+	if certRenewalID != "" {
+		pod.Annotations[constants.CertRenewalIDAnnotationKey] = certRenewalID
 	}
 
 	out, err := yaml.Marshal(pod)
@@ -144,8 +146,7 @@ func writeHotReloadFiles(secretData map[string][]byte, extraFilesDir string) err
 }
 
 // isPodReadyWithChecksums returns true if the pod has the expected checksum annotations and is in Ready condition.
-// An empty string for any checksum — do not check that annotation.
-func isPodReadyWithChecksums(pod *corev1.Pod, configChecksum, pkiChecksum, caChecksum string) bool {
+func isPodReadyWithChecksums(pod *corev1.Pod, configChecksum, pkiChecksum, caChecksum, certRenewalID string) bool {
 	if pod == nil {
 		return false
 	}
@@ -157,6 +158,9 @@ func isPodReadyWithChecksums(pod *corev1.Pod, configChecksum, pkiChecksum, caChe
 		return false
 	}
 	if caChecksum != "" && pod.Annotations[constants.CAChecksumAnnotationKey] != caChecksum {
+		return false
+	}
+	if certRenewalID != "" && pod.Annotations[constants.CertRenewalIDAnnotationKey] != certRenewalID {
 		return false
 	}
 
