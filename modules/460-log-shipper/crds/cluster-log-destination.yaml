@@ -1148,12 +1148,12 @@ spec:
                             type: array
                             description: |
                               Vector paths: each item starts with `.` (e.g. `.pod_labels`, `.annotations`). If `keepChildKeys` is unset, each listed path is removed entirely. If `keepChildKeys` is set, each item is a path to an **object**; inside that object, every key not listed in `keepChildKeys` is removed. No item may be `.parsed_data`.
-                            x-kubernetes-validations:
-                              - message: dropLabels.labels must not include .parsed_data
-                                rule: 'self.all(l, l != ".parsed_data")'
                             items:
                               type: string
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
+                              x-kubernetes-validations:
+                                - message: dropLabels.labels item must not be .parsed_data
+                                  rule: 'self != ".parsed_data"'
                           keepChildKeys:
                             type: array
                             description: |
