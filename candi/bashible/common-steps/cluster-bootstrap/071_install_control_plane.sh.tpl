@@ -41,7 +41,6 @@ check_container_running() {
 check_container_running "kubernetes-api-proxy"
 cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
 cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super-admin.conf} /etc/kubernetes/
-kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd"
 
@@ -66,6 +65,7 @@ check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
 
 # kubeadm init phase mark-control-plane
+kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
 kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane=""
 kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane:NoSchedule
 
