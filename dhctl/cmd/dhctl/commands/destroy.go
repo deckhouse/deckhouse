@@ -55,7 +55,17 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
 		ctx := context.Background()
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.(*log.TeeLogger).GetLogger().(*log.ExternalLogger).GetLogger())
+		teeLogger, ok := logger.(*log.TeeLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to TeeLogger")
+		}
+
+		externalLogger, ok := teeLogger.GetLogger().(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
 		params := app.GetProviderParams(loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
