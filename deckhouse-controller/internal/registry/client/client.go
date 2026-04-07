@@ -31,7 +31,7 @@ const (
 
 // Client is a wrapper around the underlying registry client, adding tracing support.
 type Client struct {
-	wrapped *registryClient.Client
+	wrapped registry.Client
 }
 
 // New creates a new wrapped internal registry client with options.
