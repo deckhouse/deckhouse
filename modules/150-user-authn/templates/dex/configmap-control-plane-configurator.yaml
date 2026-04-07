@@ -15,5 +15,5 @@ data:
   oidcIssuerAddress: {{ .Values.userAuthn.internal.discoveredDexClusterIP | nindent 4 }}
 {{- end }}
 {{- if include "is_basic_auth_enabled" . }}
-  enableBasicAuth: true
+  enableBasicAuth: "true"
 {{- end }}
