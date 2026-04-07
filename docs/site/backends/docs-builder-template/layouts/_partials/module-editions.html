@@ -1,7 +1,7 @@
 {{- $moduleName := .moduleName }}
 {{- if not $moduleName }}{{ return }}{{ end }}
 {{- $moduleData := index site.Data.modules_all $moduleName }}
-{{- $editionsData := site.Data.editions }}
+{{- $editionsData := site.Data.helpers.editions }}
 {{- $lang := .lang }}
 
 {{- $editionsWithoutRestrictions := slice -}}
@@ -27,7 +27,7 @@
           {{- continue -}}
         {{- end }}
 
-        {{- $editionLanguages := index $editionsData $edition "languages" -}}
+        {{- $editionLanguages := index (where $editionsData "id" $edition | first 1) 0 "languages" -}}
         {{- if $editionLanguages -}}
             {{- if not (in $editionLanguages $lang) -}}
                 {{- continue -}}
@@ -44,11 +44,12 @@
       {{- $lastIndex := sub (len $editionsWithRestrictions) 1 -}}
       {{- range $index, $edition := $editionsWithRestrictions }}
 
+         {{- $editionData := index (where $editionsData "id" $edition | first 1) 0  -}}
          {{- $comment := index $moduleData.editionsWithRestrictionsComments $edition -}}
          {{- if $comment }}
            {{- $commentLang := index $comment $lang -}}
            <span style="border-bottom: 1px dotted #000" data-tippy-content="{{ $commentLang }}">
-             {{- with index $editionsData $edition }}
+             {{- with $editionData }}
                {{- if .name_version }}
                  {{ .name_version }}
                {{- else }}
@@ -57,7 +58,7 @@
              {{- end }}
            </span>
          {{- else }}
-           {{- with index $editionsData $edition }}
+           {{- with $editionData }}
              {{- if .name_version }}
                {{ .name_version }}
              {{- else }}
@@ -79,7 +80,8 @@
           {{- $lastIndex := sub (len $editionsWithoutRestrictions) 1 -}}
           {{- range $index, $edition := $editionsWithoutRestrictions }}
 
-            {{- with index $editionsData $edition }}
+            {{- $editionData := index (where $editionsData "id" $edition | first 1) 0  -}}
+            {{- with $editionData }}
               {{- if .name_version }}
                 {{ .name_version }}
               {{- else }}
@@ -102,7 +104,7 @@
         {{- if eq $edition "fe" -}}
             {{- continue -}}
         {{- end -}}
-        {{- $editionLanguages := index $editionsData $edition "languages" -}}
+        {{- $editionLanguages := index (where $editionsData "id" $edition | first 1) 0 "languages" -}}
         {{- if $editionLanguages -}}
             {{- if not (in $editionLanguages $lang) -}}
                 {{- continue -}}
@@ -118,7 +120,8 @@
     <strong>
       {{- $lastIndex := sub (len $editionsWithoutRestrictions) 1 -}}
       {{- range $i, $edition := $editionsWithoutRestrictions -}}
-        {{- with index $editionsData $edition -}}
+        {{- $editionData := index (where $editionsData "id" $edition | first 1) 0  -}}
+        {{- with $editionData -}}
           {{- if .name_version -}}
             {{ .name_version }}
           {{- else -}}

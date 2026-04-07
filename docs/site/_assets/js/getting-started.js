@@ -21,17 +21,59 @@ function config_highlight() {
   let matchMightChangeEN = /# [Yy]ou might consider changing this\.?/;
   let matchMightChangeRU = /# [Вв]озможно, захотите изменить\.?/;
 
+  function nextCodeSpan($el) {
+    let n = $el.next();
+    while (n.length && (n.hasClass('line-number') || n.attr('data-copy') === 'ignore')) {
+      n = n.next();
+    }
+    return n;
+  }
+
+  function isLineNumberSpan(el) {
+    return $(el).hasClass('line-number') || $(el).attr('data-copy') === 'ignore';
+  }
+
   $('code span.c1').filter(function () {
     return (matchMightChangeEN.test(this.innerText)) || (matchMightChangeRU.test(this.innerText));
   }).each(function (index) {
+    let $third = nextCodeSpan(nextCodeSpan(nextCodeSpan($(this))));
+    let $colon = $third.length && nextCodeSpan($third).length && nextCodeSpan($third).text().trim() === ':' ? nextCodeSpan($third) : null;
     try {
-      if ($(this).next().next().next() && $(this).next().next().next().text() === '-') {
-        $(this).next().next().next().next().addClass('mightChange');
-      } else {
-        $(this).next().next().next().addClass('mightChange');
+      if ($third.length && $third.text() === '-') {
+        nextCodeSpan($third).addClass('mightChange');
+      } else if ($third.length && $third.text().trim() === ':') {
+        // key: value — highlight the value span, not the colon (after ":" there may be a space span)
+        let $afterColon = nextCodeSpan($third);
+        if ($afterColon.length && $afterColon.text().trim() === '' && nextCodeSpan($afterColon).length) {
+          nextCodeSpan($afterColon).addClass('mightChange');
+        } else if ($afterColon.length) {
+          $afterColon.addClass('mightChange');
+        }
+      } else if ($colon && nextCodeSpan($colon).length && /[\n]/.test(nextCodeSpan($colon).text())) {
+        // key: \n    nested-key: value — highlight only the value (after colon); colon may be in same span as key (e.g. "key:")
+        let $cursor = nextCodeSpan($colon);
+        while ($cursor.length && /^[\s\n]*$/.test($cursor.text())) {
+          $cursor = nextCodeSpan($cursor);
+        }
+        // Advance until we find a span that contains ":" (either ":" alone or "key:" in one span)
+        while ($cursor.length && $cursor.text().indexOf(':') === -1 && $cursor.text().indexOf('\n') === -1) {
+          $cursor = nextCodeSpan($cursor);
+        }
+        // Value is always in the next span(s) after the one that contains ":"
+        if ($cursor.length && $cursor.text().indexOf(':') !== -1) {
+          $cursor = nextCodeSpan($cursor);
+          while ($cursor.length && /^\s*$/.test($cursor.text()) && $cursor.text().indexOf('\n') === -1 && !isLineNumberSpan($cursor[0])) {
+            $cursor = nextCodeSpan($cursor);
+          }
+          if ($cursor.length && !isLineNumberSpan($cursor[0])) {
+            $cursor.addClass('mightChange');
+          }
+        }
+      } else if ($third.length && !isLineNumberSpan($third[0])) {
+        $third.addClass('mightChange');
       }
     } catch (e) {
-      $(this).next().next().next().addClass('mightChange');
+      if ($third.length && !isLineNumberSpan($third[0])) $third.addClass('mightChange');
     }
     $(this).addClass('mightChange');
   });

@@ -161,13 +161,12 @@ func (s *SCP) SCP(ctx context.Context) *SCP {
 		dstPath = s.Session.RemoteAddress() + ":" + dstPath
 	}
 
+	args = append(args, sshPathArgs...)
 	args = append(args, []string{
 		srcPath,
 		dstPath,
 	}...)
-
-	scpArgs := append(sshPathArgs, args...)
-	s.scpCmd = exec.CommandContext(ctx, "scp", scpArgs...)
+	s.scpCmd = exec.CommandContext(ctx, "scp", args...)
 	s.scpCmd.Env = env
 	// scpCmd.Stdout = os.Stdout
 	// scpCmd.Stderr = os.Stderr

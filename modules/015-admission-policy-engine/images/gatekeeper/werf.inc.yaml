@@ -1,4 +1,4 @@
-{{ $gatekeeperVersion := "v3.20.1" }}
+{{ $gatekeeperVersion := include "get_oss_version_by_id" (list "gatekeeper" $ ) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -34,9 +34,9 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $gatekeeperVersion }} $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
+  - git clone --depth 1 --branch v{{ $gatekeeperVersion }} $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
   - cd /src
-  #- git apply /patches/*.patch --verbose
+  - git apply /patches/*.patch --verbose --allow-empty
   - rm -rf website
   - rm -rf .git
   # check if module crds/gatekeeper are the same as gatekeeper crds
@@ -45,7 +45,7 @@ shell:
     diff -qr "/src/charts/gatekeeper/crds" "/module_crds/gatekeeper" 
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" ) }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

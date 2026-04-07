@@ -77,10 +77,10 @@ func (tmp *telemetryMessageProcessor) runConfigWatcher(ctx context.Context) {
 	if err != nil {
 		log.Fatalf("start file watcher failed: %s", err)
 	}
-	defer watcher.Close()
 
 	err = watcher.Add(telemetryConfigFile)
 	if err != nil {
+		watcher.Close()
 		log.Fatalf("add watcher for file failed: %s", err)
 	}
 
@@ -93,12 +93,13 @@ func (tmp *telemetryMessageProcessor) runConfigWatcher(ctx context.Context) {
 				_ = watcher.Remove(event.Name)
 				err = watcher.Add(event.Name)
 				if err != nil {
+					watcher.Close()
 					log.Fatal(err)
 				}
-				switch event.Name {
-				case telemetryConfigFile:
+				if event.Name == telemetryConfigFile {
 					err := tmp.parseConfig()
 					if err != nil {
+						watcher.Close()
 						log.Fatalf("Config reload failed: %s", err)
 					}
 				}
@@ -108,6 +109,7 @@ func (tmp *telemetryMessageProcessor) runConfigWatcher(ctx context.Context) {
 			log.Errorf("watch files error: %s", err)
 
 		case <-ctx.Done():
+			watcher.Close()
 			return
 		}
 	}

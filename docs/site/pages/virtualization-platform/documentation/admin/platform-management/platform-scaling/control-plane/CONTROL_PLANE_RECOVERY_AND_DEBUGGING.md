@@ -99,12 +99,47 @@ Be careful: these actions completely erase the previous data and form a new etcd
 
 ### Recovering etcd after panic: unexpected removal of unknown remote peer error
 
-In some cases, manual restoration via `etcdutl snapshot restore` can help:
+1. Find the `etcdutl` utility on the master node and copy the executable to `/usr/local/bin/`:
 
-1. Save a local snapshot from `/var/lib/etcd/member/snap/db`.
-1. Use `etcdutl` with the `--force-new-cluster` option to restore.
-1. Completely wipe the `/var/lib/etcd` directory and place the restored snapshot there.
-1. Remove any "stuck" etcd/kube-apiserver containers and restart the node.
+   ```shell
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ```
+
+1. Create a new etcd database snapshot from the current local snapshot (`/var/lib/etcd/member/snap/db`):
+
+   ```shell
+   etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=<HOSTNAME>=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://<ADDRESS>:2380 \
+   --skip-hash-check=true --data-dir /var/lib/etcdtest
+   ```
+
+   where:
+
+   * `<HOSTNAME>`: Name of the master node.
+   * `<ADDRESS>`: Address of the master node.
+
+1. Execute the following commands to use the new snapshot:
+
+   ```shell
+   cp -r /var/lib/etcd /tmp/etcd-backup
+   rm -rf /var/lib/etcd
+   mv /var/lib/etcdtest /var/lib/etcd
+   ```
+
+1. Locate the `etcd` and `api-server` containers:
+
+   ```shell
+   crictl ps -a | egrep "etcd|apiserver"
+   ```
+
+1. Remove the `etcd` and `api-server` containers:
+
+   ```shell
+   crictl rm <CONTAINER-ID>
+   ```
+
+1. Restart the master node.
 
 ### Actions to take when etcd database exceeds quota-backend-bytes limit
 

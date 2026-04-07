@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в VK Cloud
 permalink: ru/admin/integrations/public/vk/connection-and-authorization.html
 cloud_type: vk
 lang: ru

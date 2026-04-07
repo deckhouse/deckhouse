@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в Huawei Cloud
 permalink: ru/admin/integrations/private/huaweicloud/authorization.html
 lang: ru
 ---

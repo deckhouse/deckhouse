@@ -46,6 +46,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -108,9 +109,9 @@ func BootstrapMaster(ctx context.Context, nodeInterface node.Interface, controll
 	})
 }
 
-func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller, dc *directoryconfig.DirectoryConfig) error {
 	return log.Process("bootstrap", "Prepare Bashible", func() error {
-		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig)
+		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig, dc)
 	})
 }
 
@@ -229,8 +230,8 @@ func killBashible(ctx context.Context, nodeInterface node.Interface, pids []stri
 	return nil
 }
 
-func unlockBashible(ctx context.Context, NodeInterface node.Interface) error {
-	cmd := NodeInterface.Command("rm", "-f", "/var/lock/bashible")
+func unlockBashible(ctx context.Context, nodeInterface node.Interface) error {
+	cmd := nodeInterface.Command("rm", "-f", "/var/lock/bashible")
 	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(ctx); err != nil {
@@ -262,18 +263,23 @@ func cleanupPreviousBashibleRunIfNeed(ctx context.Context, nodeInterface node.In
 	})
 }
 
-func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient) (node.ReverseTunnel, error) {
+func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient, dc *directoryconfig.DirectoryConfig) (node.ReverseTunnel, error) {
 	port := "5444"
 	listenAddress := "127.0.0.1"
 
 	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(
-		fmt.Sprintf("https://localhost:%s/healthz", port))
+		fmt.Sprintf("https://localhost:%s/healthz", port),
+		dc,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot render reverse tunnel checking script: %v", err)
 	}
 
 	killScript, err := template.RenderAndSaveKillReverseTunnelScript(
-		listenAddress, port)
+		listenAddress,
+		port,
+		dc,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
 	}
@@ -296,7 +302,7 @@ type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
 
-func newRegistryClientConfigGetter(config registry_config.Data) (*registryClientConfigGetter, error) {
+func newRegistryClientConfigGetter(config registry_config.Data) *registryClientConfigGetter {
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
 			Repository: config.ImagesRepo,
@@ -304,7 +310,7 @@ func newRegistryClientConfigGetter(config registry_config.Data) (*registryClient
 			CA:         config.CA,
 			Auth:       config.AuthBase64(),
 		},
-	}, nil
+	}
 }
 
 func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, error) {
@@ -324,10 +330,7 @@ func StartRegistryPackagesProxy(ctx context.Context, registryRemote registry_con
 		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
 	}
 
-	clientConfigGetter, err := newRegistryClientConfigGetter(registryRemote)
-	if err != nil {
-		return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
-	}
+	clientConfigGetter := newRegistryClientConfigGetter(registryRemote)
 	srv := &http.Server{}
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 	proxyConfig := &proxy.Config{SignCheck: (rppSignCheck == "true")}
@@ -412,7 +415,15 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool) error {
+func RunBashiblePipeline(
+	ctx context.Context,
+	nodeInterface node.Interface,
+	cfg *config.MetaConfig,
+	nodeIP string,
+	devicePath string,
+	commanderMode bool,
+	dc *directoryconfig.DirectoryConfig,
+) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -433,7 +444,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
 	err = log.Process("bootstrap", "Preparing bootstrap", func() error {
-		if err := template.PrepareBootstrap(templateController, nodeIP, cfg); err != nil {
+		if err := template.PrepareBootstrap(templateController, nodeIP, cfg, dc); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
@@ -505,7 +516,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	}
 
 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		cleanUpTunnel, err := setupRPPTunnel(ctx, wrapper.Client())
+		cleanUpTunnel, err := setupRPPTunnel(ctx, wrapper.Client(), dc)
 		if err != nil {
 			return err
 		}
@@ -513,7 +524,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		defer cleanUpTunnel()
 	}
 
-	if err = PrepareBashibleBundle(nodeIP, devicePath, cfg, templateController); err != nil {
+	if err = PrepareBashibleBundle(nodeIP, devicePath, cfg, templateController, dc); err != nil {
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
@@ -545,10 +556,10 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		})
 }
 
-func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient) (func(), error) {
+func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient, dc *directoryconfig.DirectoryConfig) (func(), error) {
 	var tun node.ReverseTunnel
 	log.DebugLn("Starting reverse tunnel routine")
-	tun, err := SetupSSHTunnelToRegistryPackagesProxy(ctx, sshClient)
+	tun, err := SetupSSHTunnelToRegistryPackagesProxy(ctx, sshClient, dc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
 	}
@@ -624,7 +635,7 @@ func CheckDHCTLDependencies(ctx context.Context, nodeInterface node.Interface) e
 				}
 
 				log.DebugF("Generated dependency check bash script:\n%s\n", bashScript)
-				//Encode the script to avoid "\n" characters and safely pass it via SSH
+				// Encode the script to avoid "\n" characters and safely pass it via SSH
 				encoded := base64.StdEncoding.EncodeToString([]byte(bashScript))
 				remoteCmd := fmt.Sprintf("echo %q | base64 -d | bash", encoded)
 				cmd := nodeInterface.Command("bash", "-c", remoteCmd)
@@ -648,9 +659,14 @@ func CheckDHCTLDependencies(ctx context.Context, nodeInterface node.Interface) e
 						continue
 					}
 					status, dep := fields[0], fields[1]
+					statusCode, err := strconv.Atoi(status)
+					if err != nil {
+						// Skipping non-numeric output line, hack to bypass problems with the sshd banner
+						continue
+					}
 
 					log.InfoF("Checking '%s' dependency\n", dep)
-					if status == "1" {
+					if statusCode == 1 {
 						log.Success(fmt.Sprintf("Dependency '%s' is available\n", dep))
 					} else {
 						log.WarnLn(fmt.Sprintf("Dependency '%s' is missing!\n", dep))
@@ -742,7 +758,6 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -792,7 +807,7 @@ func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.Kubernet
 		}
 
 		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, false, infrastructureContext)
+			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, infrastructureContext)
 			if err != nil {
 				return err
 			}

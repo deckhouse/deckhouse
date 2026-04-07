@@ -1,7 +1,7 @@
 ---
 title: How to change the instance type for nodes with the CloudPermanent type?
 subsystems:
-  - сluster_infrastructure
+  - cluster_infrastructure
 lang: en
 ---
 

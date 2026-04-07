@@ -48,7 +48,21 @@ type destroyParams struct {
 	request      *pb.DestroyStart
 	switchPhase  phases.DefaultOnPhaseFunc
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.DestroyResponse
+}
+
+func (p *destroyParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *destroyParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.DestroyResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.DestroyResponse {
+			return &pb.DestroyResponse{Message: &pb.DestroyResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
 }
 
 func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
@@ -71,21 +85,6 @@ func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 		dataFunc: func(progress phases.Progress) *pb.DestroyResponse {
 			return &pb.DestroyResponse{Message: &pb.DestroyResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.DestroyResponse {
-			return &pb.DestroyResponse{Message: &pb.DestroyResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.DestroyRequest, *pb.DestroyResponse](server, receiveCh, doneCh, internalErrCh)
@@ -116,11 +115,11 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.destroySafe(ctx, destroyParams{
+					result := s.destroySafe(ctx, &destroyParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}}
 				}()
@@ -138,7 +137,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
@@ -155,7 +154,10 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.DestroyResult) {
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) destroySafe(ctx context.Context, p *destroyParams) (result *pb.DestroyResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -166,19 +168,13 @@ func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.
 	return s.destroy(ctx, p)
 }
 
-func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResult {
+func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
@@ -198,6 +194,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
 			),
+			s.params.DownloadDirConfig,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -278,9 +275,10 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		TmpDir:         s.params.TmpDir,
-		LoggerProvider: log.SimpleLoggerProvider(loggerFor),
-		IsDebug:        s.params.IsDebug,
+		TmpDir:          s.params.TmpDir,
+		LoggerProvider:  log.SimpleLoggerProvider(loggerFor),
+		IsDebug:         s.params.IsDebug,
+		DirectoryConfig: s.params.DownloadDirConfig,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

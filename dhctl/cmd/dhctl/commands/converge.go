@@ -16,6 +16,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/name212/govalue"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -29,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -73,14 +75,23 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 					},
 				},
 			},
-			ProviderGetter: providerGetter,
-			TmpDir:         tmpDir,
-			Logger:         logger,
-			IsDebug:        isDebug,
+			ProviderGetter:  providerGetter,
+			TmpDir:          tmpDir,
+			Logger:          logger,
+			IsDebug:         isDebug,
+			DirectoryConfig: app.GetDirConfig(),
+
+			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
 		_, err = converger.Converge(ctx)
 
-		return err
+		if err != nil {
+			msg := fmt.Sprintf("Converge failed with error: %v", err)
+			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 	return cmd
 }
@@ -114,10 +125,11 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 					},
 				},
 			},
-			ProviderGetter: providerGetter,
-			TmpDir:         tmpDir,
-			Logger:         logger,
-			IsDebug:        isDebug,
+			ProviderGetter:  providerGetter,
+			TmpDir:          tmpDir,
+			Logger:          logger,
+			IsDebug:         isDebug,
+			DirectoryConfig: app.GetDirConfig(),
 		})
 		return converger.AutoConverge(app.AutoConvergeListenAddress, app.ApplyInterval)
 	})
@@ -176,8 +188,16 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			TmpDir:                                tmpDir,
 			Logger:                                loggerFor,
 			IsDebug:                               isDebug,
+			DirectoryConfig:                       app.GetDirConfig(),
 		})
-		return converger.ConvergeMigration(ctx)
+		err = converger.ConvergeMigration(ctx)
+		if err != nil {
+			msg := fmt.Sprintf("ConvergeMigration failed with error: %v", err)
+			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 	return cmd
 }

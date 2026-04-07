@@ -28,11 +28,8 @@ import (
 )
 
 func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
 	metaConfig, err := config.ParseConfig(
 		ctx,
@@ -40,6 +37,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
+		b.DirectoryConfig,
 	)
 	if err != nil {
 		return err

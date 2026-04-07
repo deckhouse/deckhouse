@@ -16,4 +16,4 @@ limitations under the License.
 
 package main
 
-//go:generate go run integrity_check_namespaces/main.go -config ./integrity_namespace_generator_config.yaml -output ./build_includes/integrity-check-namespaces.yaml
+//go:generate go run integrity_check_namespaces/main.go -root-dir ../ -enabled-modules-config ../editions.yaml -config ./integrity_check_namespaces -edition all

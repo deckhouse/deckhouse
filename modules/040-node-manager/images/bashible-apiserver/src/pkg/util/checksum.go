@@ -17,9 +17,9 @@ limitations under the License.
 package util
 
 import (
-	"bashible-apiserver/pkg/template"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"bashible-apiserver/pkg/template"
 )
 
 const ConfigurationChecksumAnnotation = "bashible.deckhouse.io/configuration-checksum"

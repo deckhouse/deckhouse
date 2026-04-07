@@ -1,5 +1,6 @@
 ---
-title: "Locality failover с Istio"
+title: "Настройка Locality failover с Istio"
+description: "Настройка географического failover с использованием Istio в Deckhouse Kubernetes Platform. Управление приоритетной маршрутизацией трафика между зонами с помощью DestinationRule и node labels."
 permalink: ru/user/network/locality_failover_istio.html
 lang: ru
 ---

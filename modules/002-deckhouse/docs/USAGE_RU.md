@@ -1,6 +1,6 @@
 ---
 title: "Модуль deckhouse: примеры конфигурации"
-
+search: "release.deckhouse.io/approved"
 ---
 
 

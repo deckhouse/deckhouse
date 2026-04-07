@@ -40,13 +40,14 @@ git:
   add: /frameworks/shell
   to: /deckhouse/shell-operator/frameworks/shell
   {{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
+  {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
 - image: deckhouse-controller-artifact
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   after: setup
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
@@ -61,6 +62,9 @@ import:
 mount:
 {{ include "mount points for golang builds" . }}
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache elfutils-dev openssl-dev
   install:
   - go install github.com/onsi/ginkgo/ginkgo@latest
   - go install github.com/go-delve/delve/cmd/dlv@latest

@@ -39,7 +39,7 @@ kind: DaemonSet
 metadata:
   annotations:
     ingress-nginx-controller.deckhouse.io/checksum: aae2dceef3dfbb345a89425527b723dcd4e516f30d446804e8746bb70d231eeb
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.12"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
   labels:
     app: controller
@@ -74,9 +74,11 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        - --enable-metrics=true
         - --publish-service=d8-ingress-nginx/wait-lb-non-default-load-balancer
         - --shutdown-grace-period=333
         - --controller-class=ingress-nginx.deckhouse.io/%!s(<nil>)
+        - --enable-annotation-validation=false
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-%!s(<nil>)
         - --status-service-label=network.deckhouse.io/ingress-nginx-class=
@@ -91,7 +93,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller19
+        image: registry.example.com@imageHash-ingressNginx-controller112
         lifecycle:
           preStop:
             exec:
@@ -137,6 +139,8 @@ spec:
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+          seccompProfile:
+            type: Unconfined
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
@@ -244,9 +248,6 @@ spec:
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
           echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
-          ln -sf /var/lib/geoip/GeoIPASNum.dat /chroot/etc/ingress-controller/geoip/GeoIPASNum.dat
-          ln -sf /var/lib/geoip/GeoIP.dat /chroot/etc/ingress-controller/geoip/GeoIP.dat
-          ln -sf /var/lib/geoip/GeoLiteCity.dat /chroot/etc/ingress-controller/geoip/GeoLiteCity.dat
         image: registry.example.com@imageHash-ingressNginx-init
         name: init
         resources:

@@ -55,11 +55,11 @@ func main() {
 		}
 	}
 
-	var allIPs []string
 	internalIPs, externalIPs, err := getInternalAndExternalIPs(hostname)
 	if err != nil {
 		log.Fatal(err)
 	}
+	allIPs := make([]string, 0, len(internalIPs)+len(externalIPs))
 	allIPs = append(allIPs, internalIPs...)
 	allIPs = append(allIPs, externalIPs...)
 	if len(allIPs) == 0 {
@@ -83,7 +83,7 @@ func main() {
 		}
 	}
 
-	var flannelArgs []string
+	flannelArgs := make([]string, 0, len(os.Args)+2*len(allIPs))
 	flannelArgs = append(flannelArgs, "flanneld")
 	flannelArgs = append(flannelArgs, os.Args[1:]...)
 	for _, ip := range allIPs {
@@ -95,7 +95,7 @@ func main() {
 	}
 }
 
-func getInternalAndExternalIPs(nodeName string) (internalIPs []string, externalIPs []string, err error) {
+func getInternalAndExternalIPs(nodeName string) ([]string, []string, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, nil, err
@@ -113,6 +113,7 @@ func getInternalAndExternalIPs(nodeName string) (internalIPs []string, externalI
 		return nil, nil, err
 	}
 
+	var internalIPs, externalIPs []string
 	for _, ip := range nodeObj.Status.Addresses {
 		switch ip.Type {
 		case v1.NodeInternalIP:
@@ -122,7 +123,7 @@ func getInternalAndExternalIPs(nodeName string) (internalIPs []string, externalI
 		}
 	}
 
-	return
+	return internalIPs, externalIPs, nil
 }
 
 func insertUnique(iptablesMgr *iptables.IPTables, table, chain string, rule []string, pos int) error {

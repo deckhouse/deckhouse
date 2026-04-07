@@ -17,9 +17,6 @@ limitations under the License.
 package bashible
 
 import (
-	"bashible-apiserver/pkg/apis/bashible"
-	"bashible-apiserver/pkg/template"
-	"bashible-apiserver/pkg/util"
 	"errors"
 	"fmt"
 	"os"
@@ -28,6 +25,10 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"bashible-apiserver/pkg/apis/bashible"
+	"bashible-apiserver/pkg/template"
+	"bashible-apiserver/pkg/util"
 )
 
 const templateName = "bashible.sh.tpl"

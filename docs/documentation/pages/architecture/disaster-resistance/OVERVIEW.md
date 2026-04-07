@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: Disaster resilience
 permalink: en/architecture/disaster-resilience/
 ---
 

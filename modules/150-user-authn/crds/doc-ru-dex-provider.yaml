@@ -228,7 +228,7 @@ spec:
 
                         Работает **только** при включенном параметре [publishAPI](https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi).
 
-                        Полученные от IdP данные авторизации и групп сохраняются в кэш на 10 секунд.
+                        Полученные от IdP данные авторизации и групп сохраняются в кеш на 10 секунд.
                 ldap: &ldap
                   description: |
                     Параметры провайдера LDAP.
@@ -310,7 +310,7 @@ spec:
                       description: |
                         Включает возможность базовой аутентификации (Basic Authentication) для Kubernetes API server с использованием этого LDAP-провайдера.
 
-                        В качестве учетных данных используются логин и пароль пользователя из LDAP. 
+                        В качестве учетных данных используются логин и пароль пользователя из LDAP.
                         Эта функция недоступна если в кластере присутствует более одного провайдера аутентификации (IdP) типа `OIDC`, `Crowd` или `LDAP`.
 
                         Работает **только** при включенном параметре [publishAPI](https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi).
@@ -341,6 +341,51 @@ spec:
                         krb5ConfSecretName:
                           description: |
                             Необязательное имя секрета с ключом `krb5.conf` для монтирования в `/etc/krb5.conf` (обычно не требуется для офлайн‑проверки билетов).
+                saml: &saml
+                  description: |
+                    Параметры провайдера SAML (можно указывать, только если `type: SAML`).
+                  properties:
+                    ssoURL:
+                      description: |
+                        URL для отправки SAML AuthnRequest (SSO URL провайдера).
+                    rootCAData:
+                      description: |
+                        Цепочка CA в формате PEM, используемая для валидации TLS.
+                    entityIssuer:
+                      description: |
+                        Значение Issuer, ожидаемое в SAML-ответе. По умолчанию — URL callback.
+                    ssoIssuer:
+                      description: |
+                        Значение Issuer, ожидаемое в SAML-ответе от IdP.
+                    redirectURI:
+                      description: |
+                        URI обратного вызова.
+                        
+                        Переопределяет URL callback по умолчанию. Должен быть установлен в `https://<dex-domain>/callback`.
+                    usernameAttr:
+                      description: |
+                        SAML-атрибут для маппинга в claim username.
+                    emailAttr:
+                      description: |
+                        SAML-атрибут для маппинга в claim email.
+                    groupsAttr:
+                      description: |
+                        SAML-атрибут для маппинга в claim groups.
+                    groupsDelim:
+                      description: |
+                        Разделитель для разбиения значения атрибута groups, если оно является одной строкой.
+                    allowedGroups:
+                      description: |
+                        Если задано, вход будет разрешён только членам хотя бы одной из перечисленных групп.
+                    filterGroups:
+                      description: |
+                        Если `true`, коннектор будет фильтровать claim groups, оставляя только группы из списка `allowedGroups`.
+                    nameIDPolicyFormat:
+                      description: |
+                        Формат NameIDPolicy для запроса к IdP.
+                    insecureSkipSignatureValidation:
+                      description: |
+                        Пропустить проверку подписи SAML-ответов. Небезопасно, использовать только для тестирования.
     - name: v1
       schema:
         openAPIV3Schema:
@@ -404,3 +449,4 @@ spec:
                 crowd: *crowd
                 oidc: *oidc
                 ldap: *ldap
+                saml: *saml

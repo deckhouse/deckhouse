@@ -1,9 +1,12 @@
 ---
 title: "How to run and verify a module in the DKP cluster"
 permalink: en/architecture/module-development/run/
+description: How to run a module in a Deckhouse Kubernetes Platform cluster using ModuleSource, ModuleUpdatePolicy, and ModuleConfig, and how to verify module operation.
 ---
 
 This section describes the process of running a module in a Deckhouse Kubernetes Platform (DKP) cluster, as well as connecting Deckhouse Module Tools for setting up validation and metrics collection.
+
+## Run the module in the DKP cluster
 
 Follow these steps to run the module in a cluster:
 
@@ -11,7 +14,12 @@ Follow these steps to run the module in a cluster:
 - _(optional)_ Define the [module update policy](#module-update-policy) (the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource).
 - [Enable the module in the cluster](#enabling-the-module) (the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) resource).
   
-## Module source
+### Module source
+
+Deckhouse Kubernetes Platform (DKP) can work with the following types of modules:
+
+- Built-in modules. These are included in DKP. Their release cycle is tied to the DKP release cycle.
+- Modules from [module source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source). The release cycle for these modules is not tied to the DKP release cycle.
 
 Create a [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource to set the source to fetch module information from. This resource will contain the address of the container registry to pull modules from, authentication parameters, and other settings.
 
@@ -141,7 +149,7 @@ Next, you need to enable the module. To do this, you need to create a ModuleConf
 
 The parameter `enabled` in ModuleConfig is responsible for enabling the module. If the module is available from multiple sources (resource ModuleSource), the required source can be specified in the `source` parameter.
 
-The update policy (the name of the ModuleUpdatePolicy) can be specified in the `updatePolicy` parameter. It is not necessary to specify the update policy; in this case, it will be inherited from the Deckhouse update parameters.
+The update policy (the name of the ModuleUpdatePolicy) can be specified in the `updatePolicy` parameter. It is not necessary to specify the update policy; in this case, it will be inherited from the Deckhouse Kubernetes Platform update parameters ([releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) and [update](/modules/deckhouse/configuration.html#parameters-update) of the ModuleConfig `deckhouse`).
 
 Example of ModuleConfig for enabling the module `module-one` from the source `example`:
 
@@ -289,6 +297,12 @@ If a module release is `Pending`, it means that manual confirmation is required 
 d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
 
+This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
+
+```shell
+d8 system module approve <module-name> <version>
+```
+
 {% endalert %}
 
 ### Switching the module to a different module source
@@ -304,7 +318,7 @@ Follow these steps to deploy a module from a different module source:
    d8 k get mr
    ```
 
-## Module update policy
+### Module update policy
 
 The module update policy refers to the rules that DKP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource with the following settings:
 - module update mode (automatic, manual, updates are disabled);
@@ -334,7 +348,7 @@ spec:
 
 The update policy is specified in the `updatePolicy` field in ModuleConfig.
 
-## Enabling the module
+### Enabling the module
 
 Before enabling the module, make sure that it can be enabled. Run the following command to list all the available DKP modules:
 
@@ -435,6 +449,12 @@ The example output above illustrates ModuleRelease message when the update mode 
 
 ```shell
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
+```
+
+This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
+
+```shell
+d8 system module approve module-1 v1.23.2
 ```
 
 ## Integrating Deckhouse Module Tools for Module Validation

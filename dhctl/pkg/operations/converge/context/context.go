@@ -23,6 +23,7 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -32,6 +33,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
+
+type MultiMasterClientSwitcher interface {
+	SwitchToFirstMaster(ctx context.Context) error
+	SwitchToNotFirstMaster(ctx context.Context) error
+	SwitchWhenDecreaseMastersIfNeed(ctx context.Context, ngName string, nodesToDeleteInfo []*NodeState) error
+	SwitchClientsToAnotherNodeIfNeed(ctx context.Context, nodeName, ip string) error
+}
 
 type Context struct {
 	kubeClientMu sync.RWMutex
@@ -47,18 +55,22 @@ type Context struct {
 	changeParams          infrastructure.ChangeActionSettings
 	stateStore            stateStore
 	stateChecker          infrastructure.StateChecker
+	clientSwitcher        MultiMasterClientSwitcher
 
 	providerGetter infrastructure.CloudProviderGetter
 
-	logger log.Logger
+	logger          log.Logger
+	directoryConfig *directoryconfig.DirectoryConfig
 }
 
 type Params struct {
-	KubeClient     *client.KubernetesClient
-	Cache          dstate.Cache
-	ChangeParams   infrastructure.ChangeActionSettings
-	ProviderGetter infrastructure.CloudProviderGetter
-	Logger         log.Logger
+	KubeClient      *client.KubernetesClient
+	Cache           dstate.Cache
+	ChangeParams    infrastructure.ChangeActionSettings
+	ProviderGetter  infrastructure.CloudProviderGetter
+	Logger          log.Logger
+	ClientSwitcher  MultiMasterClientSwitcher
+	DirectoryConfig *directoryconfig.DirectoryConfig
 }
 
 func newContext(ctx context.Context, params Params) *Context {
@@ -69,12 +81,14 @@ func newContext(ctx context.Context, params Params) *Context {
 	}
 
 	return &Context{
-		providerGetter: params.ProviderGetter,
-		kubeClient:     params.KubeClient,
-		stateCache:     params.Cache,
-		changeParams:   params.ChangeParams,
-		ctx:            ctx,
-		logger:         logger,
+		providerGetter:  params.ProviderGetter,
+		kubeClient:      params.KubeClient,
+		stateCache:      params.Cache,
+		changeParams:    params.ChangeParams,
+		ctx:             ctx,
+		logger:          logger,
+		clientSwitcher:  params.ClientSwitcher,
+		directoryConfig: params.DirectoryConfig,
 
 		stateStore: newInSecretStateStore(),
 	}
@@ -123,6 +137,16 @@ func (c *Context) KubeClient() *client.KubernetesClient {
 
 func (c *Context) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
 	return c.KubeClient(), nil
+}
+
+func (c *Context) ClientSwitcher() MultiMasterClientSwitcher {
+	return c.clientSwitcher
+}
+
+// SetClientSwitcher
+// Warning! do not use in controllers only in initialization!
+func (c *Context) SetClientSwitcher(s MultiMasterClientSwitcher) {
+	c.clientSwitcher = s
 }
 
 func (c *Context) InfrastructureContext(metaConfig *config.MetaConfig) *infrastructure.Context {
@@ -184,7 +208,7 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return metaConfig, nil
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient, c.logger)
+	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient, c.logger, c.directoryConfig)
 	if err != nil {
 		return nil, err
 	}

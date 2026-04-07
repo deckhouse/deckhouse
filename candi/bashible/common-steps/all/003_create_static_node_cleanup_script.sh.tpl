@@ -15,112 +15,221 @@
 bb-sync-file /var/lib/bashible/cleanup_static_node.sh - << "EOF"
 #!/bin/bash
 
-if [ -z $1 ] || [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ];  then
-  >&2 echo "Needed flag isn't passed, exit without any action (--yes-i-am-sane-and-i-understand-what-i-am-doing)"
+MOTD_FILE="/etc/motd"
+MARKER="D8_CLEANUP_STATIC_NODE"
+CLEANUP_FAILED=0
+SCRIPT_PATH="/var/lib/bashible/cleanup_static_node.sh"
+SCRIPT_BACKUP="/tmp/cleanup_static_node.sh.bak"
+
+PATHS_TO_REMOVE=(
+  /var/cache/registrypackages
+  /etc/kubernetes
+  /var/lib/kubelet
+  /var/lib/containerd
+  /etc/cni
+  /var/lib/cni
+  /opt/cni
+  /var/lib/etcd
+  /opt/containerd
+  /etc/containerd
+  /opt/deckhouse
+  /var/lib/deckhouse
+  /var/log/kube-audit
+  /var/log/pods
+  /var/log/containers
+  /var/log/containerd
+  /etc/logrotate.d/containerd-integrity.conf
+  /var/lib/upmeter
+  /etc/sudoers.d/sudoers_flant_kubectl
+  /etc/sudoers.d/30-deckhouse-nodeadmins
+  /home/deckhouse
+)
+
+SERVICES_TO_REMOVE=(
+  bashible.service
+  bashible.timer
+  d8-shutdown-inhibitor.service
+  sysctl-tuner.service
+  sysctl-tuner.timer
+  old-csi-mount-cleaner.service
+  old-csi-mount-cleaner.timer
+  d8-containerd-cgroup-migration.service
+  containerd-deckhouse.service
+  containerd-deckhouse-logger.service
+  containerd-deckhouse-logger-logrotate.service
+  containerd-deckhouse-logger-logrotate.timer
+  kubelet.service
+)
+
+SYSTEMD_FILES=(
+  /etc/systemd/system/bashible.*
+  /etc/systemd/system/sysctl-tuner.*
+  /etc/systemd/system/old-csi-mount-cleaner.*
+  /etc/systemd/system/d8-containerd-cgroup-migration.*
+  /etc/systemd/system/containerd-deckhouse*
+  /lib/systemd/system/containerd-deckhouse*
+  /etc/systemd/system/d8-shutdown-inhibitor*
+  /lib/systemd/system/d8-shutdown-inhibitor*
+  /etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf
+  /etc/systemd/system/kubelet*
+  /lib/systemd/system/kubelet*
+)
+
+log_info() {
+  echo "[INFO] $(date +'%Y-%m-%d %H:%M:%S') - $@"
+}
+
+log_err() {
+  echo "[ERROR] $(date +'%Y-%m-%d %H:%M:%S') - $@" >&2
+}
+
+restore_motd_message() {
+  sed -i "\|^# ${MARKER}_START$|,\|^# ${MARKER}_END$|d" "$MOTD_FILE" 2>/dev/null || true
+}
+
+set_motd_message() {
+  restore_motd_message
+  cat <<BLOCK >> "$MOTD_FILE"
+# ${MARKER}_START
+Deckhouse node cleanup is not complete. Reboot and run:
+  bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+If you see this message by mistake, please remove it from /etc/motd.
+# ${MARKER}_END
+BLOCK
+}
+
+stop_services() {
+  log_info "systemctl stop $@"
+  systemctl stop $@ 2>/dev/null || true
+}
+
+kill_and_wait() {
+  local pattern=$1
+
+  log_info "Stopping processes matching pattern: $pattern"
+  # Try SIGTERM
+  pkill -f "$pattern" || true
+  for i in {1..5}; do
+    pgrep -f "$pattern" >/dev/null || return 0
+    sleep 1
+  done
+
+  # Try SIGKILL
+  pkill -9 -f "$pattern" || true
+  for i in {1..5}; do
+    pgrep -f "$pattern" >/dev/null || return 0
+    sleep 1
+  done
+
+  # Check
+  log_err "ERROR: Process '$pattern' still running after SIGKILL."
+  CLEANUP_FAILED=1
+  return 1
+}
+
+remove_path() {
+  local path="$1"
+
+  # if it does not exist
+  [ ! -e "$path" ] && return 0
+
+  for i in {1..5}; do
+    if [ -d "$path" ]; then
+      mount | grep -F "$path" | awk '{print $3}' | sort -r | xargs -r umount -l 2>/dev/null
+    fi
+    rm -rf "$path" 2>/dev/null && return 0
+    sleep 1
+  done
+
+  # if it exists after attempting to delete
+  if [ -e "$path" ]; then
+    log_err "ERROR: failed to remove $path"
+    return 1
+  fi
+}
+
+# --- Main ---
+log_info "Starting static node cleanup"
+
+# Backup current script for potential rerun
+cp -f "$0" "$SCRIPT_BACKUP" 2>/dev/null || log_err "Failed to backup cleanup script to $SCRIPT_BACKUP"
+chmod +x "$SCRIPT_BACKUP" 2>/dev/null || true
+
+if [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ]; then
+  log_err "Needed flag isn't passed, exit without any action (--yes-i-am-sane-and-i-understand-what-i-am-doing)"
   exit 1
 fi
 
-systemctl disable bashible.service bashible.timer
-systemctl stop bashible.service bashible.timer
-for pid in $(ps ax | grep "bash /var/lib/bashible/bashible" | grep -v grep | awk '{print $1}'); do
-  kill $pid
+log_info "Setting MOTD cleanup message"
+set_motd_message
+
+# Stop services
+log_info "Stopping services"
+for service in "${SERVICES_TO_REMOVE[@]}"; do
+  stop_services "$service"
 done
 
-if [ -f /lib/systemd/system/d8-shutdown-inhibitor.service ] ; then
-  systemctl disable d8-shutdown-inhibitor.service
-  systemctl stop d8-shutdown-inhibitor.service
-fi
+# Kill Processes
+kill_and_wait "bash /var/lib/bashible/bashible"
+kill_and_wait "containerd-shim"
 
-systemctl disable sysctl-tuner.service sysctl-tuner.timer
-systemctl disable old-csi-mount-cleaner.service old-csi-mount-cleaner.timer
-systemctl disable d8-containerd-cgroup-migration.service
-systemctl disable containerd-deckhouse.service
-systemctl disable containerd-deckhouse-logger-logrotate.timer
-systemctl disable containerd-deckhouse-logger-logrotate.service
-systemctl disable containerd-deckhouse-logger.service
-systemctl disable kubelet.service
+# Unmount
+log_info "Unmounting kubelet/containerd mounts"
+for dir in /var/lib/kubelet /var/lib/containerd; do
+  mount | grep "$dir" | awk '{print $3}' | sort -r | xargs -r umount -l 2>/dev/null
+done
 
-systemctl stop sysctl-tuner.service sysctl-tuner.timer
-systemctl stop old-csi-mount-cleaner.service old-csi-mount-cleaner.timer
-systemctl stop d8-containerd-cgroup-migration.service
-systemctl stop containerd-deckhouse-logger-logrotate.timer
-systemctl stop containerd-deckhouse-logger-logrotate.service
-systemctl stop containerd-deckhouse-logger.service
-systemctl stop containerd-deckhouse.service
-systemctl stop kubelet.service
-
-# `killall` needs `psmisc` package
-# `pkill` needs `procps` on debian-like systems and `procps-ng` on centos-like
-# looks like procps(-ng) already installed by default in systems
-# killall /opt/deckhouse/bin/containerd-shim-runc-v2
-pkill containerd-shim
-
-for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
-for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i; done
-
+# Remove immutable bit
 if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
-  chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
+  chattr -R -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs 2>/dev/null || true
 fi
 
-rm -rf /etc/systemd/system/bashible.*
-rm -rf /etc/systemd/system/sysctl-tuner.*
-rm -rf /etc/systemd/system/old-csi-mount-cleaner.*
-rm -rf /etc/systemd/system/d8-containerd-cgroup-migration.*
-rm -rf /etc/systemd/system/containerd-deckhouse.service /etc/systemd/system/containerd-deckhouse.service.d /lib/systemd/system/containerd-deckhouse.service
-rm -rf /etc/systemd/system/containerd-deckhouse-logger.service /etc/systemd/system/containerd-deckhouse-logger-logrotate.service /etc/systemd/system/containerd-deckhouse-logrotate.timer
-rm -rf /etc/systemd/system/d8-shutdown-inhibitor.* /etc/systemd/system/d8-shutdown-inhibitor.service.d /lib/systemd/system/d8-shutdown-inhibitor.service
-rm -rf /etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf
-rm -rf /etc/systemd/system/kubelet.service /etc/systemd/system/kubelet.service.d /lib/systemd/system/kubelet.service
-
+# Remove systemd files
+log_info "Removing systemd unit files and reloading systemd"
+rm -rf "${SYSTEMD_FILES[@]}"
 systemctl daemon-reload
-# Send SIGHUP to logind to reload its configuration.
 systemctl -s SIGHUP kill systemd-logind
 
-rm -rf /var/cache/registrypackages
-rm -rf /etc/kubernetes
-rm -rf /var/lib/kubelet
-rm -rf /var/lib/containerd
-rm -rf /etc/cni
-rm -rf /var/lib/cni
-rm -rf /var/lib/etcd
-rm -rf /opt/cni
-rm -rf /opt/containerd
-rm -rf /opt/deckhouse
-rm -rf /var/lib/bashible
-rm -rf /etc/containerd
-rm -rf /var/log/kube-audit
-rm -rf /var/log/pods
-rm -rf /var/log/containers
-rm -rf /var/log/containerd
-rm -rf /etc/logrotate.d/containerd-integrity.conf
-rm -rf /var/lib/deckhouse
-rm -rf /var/lib/upmeter
-rm -rf /etc/sudoers.d/sudoers_flant_kubectl
-rm -rf /etc/sudoers.d/30-deckhouse-nodeadmins
-userdel deckhouse
-groupdel nodeadmin
-for user in `cat /etc/passwd |grep "created by deckhouse" |egrep -o "^[^:]+"`; do
-	userdel $user
+# Remove files
+for p in "${PATHS_TO_REMOVE[@]}"; do
+  log_info "Removing $p"
+  remove_path "$p" || CLEANUP_FAILED=1
 done
-rm -rf /home/deckhouse
 
-# remove d8-dhctl-converger
+# Remove Users
+log_info "Removing users"
+userdel deckhouse 2>/dev/null
+groupdel nodeadmin 2>/dev/null
+grep "created by deckhouse" /etc/passwd | cut -d: -f1 | xargs -r -n1 userdel 2>/dev/null
 
-if [[ `getent passwd d8-dhctl-converger` ]]
-  then
-    cat <<'EOF2' >> /root/cleanup.sh
+# Handle d8-dhctl-converger cleanup
+if getent passwd d8-dhctl-converger >/dev/null; then
+  log_info "Scheduling d8-dhctl-converger cleanup on reboot"
+  cat <<'EOF_CRON' > /root/d8-user-cleanup.sh
 #!/bin/bash
-
 userdel d8-dhctl-converger
-(cat /root/old_crontab) | crontab -
-rm -f /root/old_crontab
-rm -f /root/cleanup.sh
-EOF2
-    chmod +x /root/cleanup.sh
-    crontab -l 2>/dev/null > /root/old_crontab
-    (crontab -l 2>/dev/null; echo "@reboot /root/cleanup.sh") | crontab -
+[ -f /root/old_crontab ] && crontab /root/old_crontab && rm -f /root/old_crontab
+rm -f "$0"
+EOF_CRON
+  chmod +x /root/d8-user-cleanup.sh
+  crontab -l 2>/dev/null > /root/old_crontab
+  (cat /root/old_crontab; echo "@reboot /root/d8-user-cleanup.sh") | crontab -
 fi
 
+remove_path /var/lib/bashible/ || CLEANUP_FAILED=1
+
+if [ "$CLEANUP_FAILED" -ne 0 ]; then
+  if [ ! -f "$SCRIPT_PATH" ]; then
+    mkdir -p /var/lib/bashible/
+    cp -f "$SCRIPT_BACKUP" "$SCRIPT_PATH"
+    chmod +x "$SCRIPT_PATH"
+  fi
+  log_err "Cleanup finished with errors. Reboot the server and run as root user $SCRIPT_PATH --yes-i-am-sane-and-i-understand-what-i-am-doing again, or fix the issues above manually"
+  exit 2
+fi
+
+log_info "Cleanup completed successfully, restoring MOTD and rebooting"
+restore_motd_message
 shutdown -r -t 5
 EOF
 {{- end }}

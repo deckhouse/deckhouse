@@ -101,12 +101,47 @@ done
 
 ### Восстановление etcd при ошибке panic: unexpected removal of unknown remote peer
 
-В некоторых случаях помогает ручное восстановление через `etcdutl snapshot restore`:
+1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
-1. Сохраните локальный снапшот `/var/lib/etcd/member/snap/db`.
-1. Воспользуйтесь `etcdutl` с опцией `--force-new-cluster`.
-1. Полностью очистите `/var/lib/etcd` и положите туда восстановленный снапшот.
-1. Удалите «зависшие» контейнеры etcd / kube-apiserver, перезапустите узел.
+   ```shell
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ```
+
+1. Создайте новый снимок базы etcd на основе текущего локального снимка (`/var/lib/etcd/member/snap/db`):
+
+   ```shell
+   etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=<HOSTNAME>=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://<ADDRESS>:2380 \
+   --skip-hash-check=true --data-dir /var/lib/etcdtest
+   ```
+
+   где:
+
+   - `<HOSTNAME>` — имя master-узла;
+   - `<ADDRESS>` — адрес master-узла.
+
+1. Выполните следующие команды для использования нового снимка:
+
+   ```shell
+   cp -r /var/lib/etcd /tmp/etcd-backup
+   rm -rf /var/lib/etcd
+   mv /var/lib/etcdtest /var/lib/etcd
+   ```
+
+1. Найдите контейнеры `etcd` и `api-server`:
+
+   ```shell
+   crictl ps -a | egrep "etcd|apiserver"
+   ```
+
+1. Удалите найденные контейнеры `etcd` и `api-server`:
+
+   ```shell
+   crictl rm <CONTAINER-ID>
+   ```
+
+1. Перезапустите master-узел.
 
 ### Действия при переполнении базы данных etcd (превышение quota-backend-bytes)
 

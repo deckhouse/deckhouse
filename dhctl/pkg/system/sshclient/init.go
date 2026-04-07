@@ -145,7 +145,6 @@ type ClientOptions struct {
 }
 
 func NewInitClientFromFlags(ctx context.Context, askPassword bool) (node.SSHClient, error) {
-
 	switch {
 	case app.SSHLegacyMode:
 		// if set --ssh-legacy-mode
@@ -159,7 +158,6 @@ func NewInitClientFromFlags(ctx context.Context, askPassword bool) (node.SSHClie
 	default:
 		return gossh.NewInitClientFromFlags(ctx, askPassword)
 	}
-
 }
 
 func NewInitClientFromFlagsWithHosts(ctx context.Context, askPassword bool) (node.SSHClient, error) {
@@ -175,7 +173,6 @@ func NewClient(ctx context.Context, sess *session.Session, privateKeys []session
 }
 
 func NewClientWithOptions(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey, clientOptions ClientOptions) node.SSHClient {
-
 	switch {
 	case app.SSHLegacyMode:
 		// if set --ssh-legacy-mode

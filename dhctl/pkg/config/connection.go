@@ -187,7 +187,6 @@ func NewConnectionConfigParser() *ConnectionConfigParser {
 // ParseConnectionConfigFromFile parses SSH connection config from file (app.ConnectionConfigPath)
 // and fills app.SSH* variables with corresponding data.
 func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
-
 	if p == nil {
 		return fmt.Errorf("ConnectionConfigParser is nil")
 	}
@@ -262,5 +261,9 @@ func parseConnectionConfigFromFile(path string) (*ConnectionConfig, error) {
 		return nil, fmt.Errorf("loading connection config file: %v", err)
 	}
 
-	return ParseConnectionConfig(string(configData), NewSchemaStore(), ValidateOptionValidateExtensions(true))
+	return ParseConnectionConfig(
+		string(configData),
+		NewSchemaStore(app.GetDirConfig()),
+		ValidateOptionValidateExtensions(true),
+	)
 }

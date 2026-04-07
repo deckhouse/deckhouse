@@ -137,7 +137,7 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 	return err
 }
 
-func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exitCode int, err error) {
+func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int, error) {
 	args := []string{
 		"plan",
 		"-input=false",
@@ -158,6 +158,14 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 		args = append(args, "-destroy")
 	}
 
+	if opts.Target != "" {
+		targetArgs := []string{
+			fmt.Sprintf("-target=%s", opts.Target),
+			"-show-sensitive",
+		}
+		args = append(args, targetArgs...)
+	}
+
 	e.cmd = tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
 	if opts.NoOutput {
 		e.cmd.Stdout = io.Discard
@@ -167,8 +175,8 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 	return infraexec.Exec(ctx, e.cmd, e.logger)
 }
 
-func (e *Executor) Output(ctx context.Context, statePath string, outFielda ...string) (result []byte, err error) {
-	cmd, out, err := tofuOutputRun(ctx, e.params.RunExecutorParams, statePath, outFielda...)
+func (e *Executor) Output(ctx context.Context, opts infrastructure.OutputOpts) ([]byte, error) {
+	cmd, out, err := tofuOutputRun(ctx, e.params.RunExecutorParams, opts)
 	e.cmd = cmd
 	return out, err
 }
@@ -189,12 +197,17 @@ func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts)
 	return err
 }
 
-func (e *Executor) Show(ctx context.Context, planPath string) (result []byte, err error) {
+func (e *Executor) Show(ctx context.Context, opts infrastructure.ShowOpts) ([]byte, error) {
 	args := []string{
 		"show",
 		"-json",
-		planPath,
 	}
+
+	if opts.ShowSensitive {
+		args = append(args, "-show-sensitive")
+	}
+
+	args = append(args, opts.PlanPath)
 
 	e.cmd = tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
 
@@ -217,7 +230,7 @@ func (e *Executor) Stop() {
 	_ = syscall.Kill(-e.cmd.Process.Pid, syscall.SIGINT)
 }
 
-func (e *Executor) GetActions(ctx context.Context, planPath string) (actions []string, err error) {
+func (e *Executor) GetActions(ctx context.Context, planPath string) ([]string, error) {
 	args := []string{
 		"show",
 		"-json",

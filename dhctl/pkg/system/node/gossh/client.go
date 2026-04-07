@@ -355,7 +355,6 @@ func (s *Client) keepAlive() {
 				} else {
 					s.UnregisterSession(sess)
 				}
-
 			}
 			time.Sleep(5 * time.Second)
 		}
@@ -366,7 +365,7 @@ func (s *Client) restart() {
 	s.live = false
 	s.stopChan = nil
 	s.silent = true
-	s.Start()
+	_ = s.Start()
 	s.sessionList = nil
 }
 
@@ -474,8 +473,8 @@ func (s *Client) Stop() {
 	log.DebugLn("closing sessions")
 	for _, sess := range s.sessionList {
 		if sess != nil {
-			sess.Signal(ssh.SIGKILL)
-			sess.Close()
+			_ = sess.Signal(ssh.SIGKILL)
+			_ = sess.Close()
 		}
 	}
 	s.sessionList = nil
@@ -575,5 +574,5 @@ func (s *Client) UnregisterSession(sess *ssh.Session) {
 func (s *Client) stopKubeproxy() {
 	cmd := NewSSHCommand(s, "killall kubectl")
 	cmd.Sudo(context.Background())
-	cmd.Run(context.Background())
+	_ = cmd.Run(context.Background())
 }

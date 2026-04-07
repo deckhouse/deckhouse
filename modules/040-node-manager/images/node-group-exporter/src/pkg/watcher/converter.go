@@ -19,12 +19,12 @@ package watcher
 import (
 	"fmt"
 
-	ngv1 "node-group-exporter/internal/v1"
-	"node-group-exporter/pkg/entity"
-
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	ngv1 "node-group-exporter/internal/v1"
+	"node-group-exporter/pkg/entity"
 )
 
 const (

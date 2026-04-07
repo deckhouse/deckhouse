@@ -3,9 +3,10 @@ title: "Модуль cert-manager"
 description: "Управление сертификатами в кластере Deckhouse Kubernetes Platform."
 ---
 
-{% assign cert_manager_version = "v1.19.2" %}
-
-Устанавливает надежную и высокодоступную инсталляцию cert-manager [release {{ cert_manager_version }}](<https://github.com/jetstack/cert-manager/tree/{{ cert_manager_version }}>).
+{%- assign target_item = site.data.modules.metadata.modules[page['module-kebab-name']]['oss'] | where: "id", "cert-manager" | first -%}
+Устанавливает надежную и высокодоступную инсталляцию
+{%- if target_item %} cert-manager [версии {{ target_item.version }}](<{{ target_item.link }}/tree/v{{ target_item.version }}>)
+{%- else %} [cert-manager](https://github.com/jetstack/cert-manager){% endif %}.
 
 При установке модуля автоматически учитываются особенности кластера:
 

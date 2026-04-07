@@ -34,8 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const kubeconfigPath = "/etc/kubernetes/admin.conf"
-
 var defaultBackoff = wait.Backoff{
 	Duration: 1 * time.Second,
 	Factor:   1.05,
@@ -43,6 +41,7 @@ var defaultBackoff = wait.Backoff{
 	Steps:    50,
 }
 
+//nolint:unparam
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
 
@@ -126,7 +125,7 @@ func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
 }
 
 func cleanupEtcdFolder() error {
-	return os.RemoveAll(filepath.Join("/var/lib/etcd/member"))
+	return os.RemoveAll("/var/lib/etcd/member")
 }
 
 func backupFile(src string) error {
@@ -150,24 +149,6 @@ func removeFile(src string) error {
 		return err
 	}
 	return os.Remove(src)
-}
-
-func removeDirectory(dir string) error {
-	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
-		if d == nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		return removeFile(path)
-	}
-
-	err := filepath.WalkDir(dir, walkDirFunc)
-	if err != nil {
-		return err
-	}
-	return os.RemoveAll(dir)
 }
 
 func removeOrphanFiles() {
@@ -274,7 +255,7 @@ func DoAction(ctx context.Context, backoff wait.Backoff, op func(ctx context.Con
 	}
 
 	err := wait.ExponentialBackoffWithContext(ctx, backoff, condition)
-	if errors.Is(err, wait.ErrWaitTimeout) {
+	if wait.Interrupted(err) {
 		return fmt.Errorf("retries exhausted for %s after %d attempts: %w", opName, attempts, err)
 	}
 	return err

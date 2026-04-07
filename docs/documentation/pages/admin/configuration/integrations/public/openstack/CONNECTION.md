@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in OpenStack
 permalink: en/admin/integrations/public/openstack/connection-and-authorization.html
 cloud_type: openstack
 ---

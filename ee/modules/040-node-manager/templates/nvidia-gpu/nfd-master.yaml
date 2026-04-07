@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- if include "nvidia_gpu_enabled" . }}
 ---
 apiVersion: policy/v1
@@ -113,4 +114,5 @@ spec:
             items:
               - key: nfd-master.conf
                 path: nfd-master.conf
+{{- end }}
 {{- end }}

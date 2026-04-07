@@ -17,15 +17,16 @@ limitations under the License.
 package nodegroupbundle
 
 import (
-	"bashible-apiserver/pkg/apis/bashible"
-	"bashible-apiserver/pkg/template"
-	"bashible-apiserver/pkg/util"
 	"errors"
 	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"bashible-apiserver/pkg/apis/bashible"
+	"bashible-apiserver/pkg/template"
+	"bashible-apiserver/pkg/util"
 )
 
 // NewStorage returns a RESTStorage object that will work against API services.

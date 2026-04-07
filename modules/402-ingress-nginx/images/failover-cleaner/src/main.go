@@ -33,30 +33,32 @@ import (
 var (
 	chainName            = "ingress-failover"
 	jumpRule             = strings.Fields("-p tcp -m multiport --dports 80,443 -m addrtype --dst-type LOCAL -j ingress-failover")
-	restoreHttpMarkRule  = strings.Fields("-p tcp --dport 80 -j CONNMARK --restore-mark")
-	restoreHttpsMarkRule = strings.Fields("-p tcp --dport 443 -j CONNMARK --restore-mark")
+	restoreHTTPMarkRule  = strings.Fields("-p tcp --dport 80 -j CONNMARK --restore-mark")
+	restoreHTTPSMarkRule = strings.Fields("-p tcp --dport 443 -j CONNMARK --restore-mark")
 	inputAcceptRule      = strings.Fields("-p tcp -m multiport --dport 1081,1444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT")
 	linkName             = "ingressfailover"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// In-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
+		cancel()
 		log.Fatalf("Failed to create in-cluster config: %v", err)
 	}
 
 	// Clientset
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
+		cancel()
 		log.Fatalf("Failed to create kubernetes client: %v", err)
 	}
 
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
+		cancel()
 		log.Fatal(err)
 	}
 
@@ -66,6 +68,7 @@ func main() {
 
 	nodeName := os.Getenv("NODE_NAME")
 	if nodeName == "" {
+		cancel()
 		log.Fatal("NODE_NAME env variable is required")
 	}
 

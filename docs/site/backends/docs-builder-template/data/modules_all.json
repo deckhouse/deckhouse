@@ -25,7 +25,7 @@
     "tags": [
       "managing",
       "application",
-      "web-interface"
+      "web ui"
     ],
     "external": "true",
     "path": "/modules/commander/stable/"
@@ -45,11 +45,24 @@
   },
   "code": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
+    "editionsWithRestrictions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
     "tags": [
       "application",
-      "web-interface"
+      "web ui"
     ],
     "external": "true",
     "path": "/modules/code/stable/"
@@ -77,7 +90,7 @@
     "tags": [
       "managing",
       "observability",
-      "web-interface"
+      "web ui"
     ],
     "external": "true",
     "path": "/modules/console/stable/"
@@ -209,32 +222,78 @@
     "external": "true",
     "path": ""
   },
-  "managed-postgres": {
+  "managed-cassandra": {
     "editions": [
       "ee"
     ],
     "tags": [
-      "database"
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-cassandra/"
+  },
+  "managed-hive-metastore": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-hive-metastore/"
+  },
+  "managed-kafka": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-kafka/"
+  },
+  "managed-postgres": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "tags": [
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-postgres/"
   },
   "managed-memcached": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
     "tags": [
-      "database"
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-memcached/"
   },
-  "managed-valkey": {
+  "managed-trino": {
     "editions": [
       "ee"
     ],
     "tags": [
-      "database"
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-trino/"
+  },
+  "managed-valkey": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "tags": [
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-valkey/"
@@ -290,7 +349,7 @@
     },
     "tags": [
       "observability",
-      "web-interface",
+      "web ui",
       "application"
     ],
     "external": "true",
@@ -506,7 +565,7 @@
     },
     "tags": [
       "security",
-      "web-interface"
+      "web ui"
     ],
     "external": "true",
     "path": "/modules/stronghold/stable/"

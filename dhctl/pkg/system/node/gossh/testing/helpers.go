@@ -64,17 +64,17 @@ func GenerateKeys(passphrase string) (string, string, error) {
 	return file.Name(), string(gossh.MarshalAuthorizedKey(publicKey)), nil
 }
 
-func PrepareFakeBashibleBundle(parentDir, entrypoint, bundleDir string) (err error) {
-	err = nil
+func PrepareFakeBashibleBundle(parentDir, entrypoint, bundleDir string) error {
+	var err error
 	bundle := filepath.Join(parentDir, bundleDir)
 	err = os.MkdirAll(bundle, 0755)
 	if err != nil {
-		return
+		return err
 	}
 
 	testFile, err := os.Create(filepath.Join(bundle, entrypoint))
 	if err != nil {
-		return
+		return err
 	}
 	script := `#!/bin/bash
 
@@ -120,22 +120,22 @@ done
 `
 	_, err = testFile.WriteString(script)
 	if err != nil {
-		return
+		return err
 	}
 	err = testFile.Chmod(0o755)
 	if err != nil {
-		return
+		return err
 	}
 
 	stepsDir := filepath.Join(bundle, "bundle_steps")
 	err = os.MkdirAll(stepsDir, 0755)
 	if err != nil {
-		return
+		return err
 	}
 
 	firstStep, err := os.Create(filepath.Join(stepsDir, "01-step.sh"))
 	if err != nil {
-		return
+		return err
 	}
 
 	script = `#!/bin/bash
@@ -150,15 +150,15 @@ done
 `
 	_, err = firstStep.WriteString(script)
 	if err != nil {
-		return
+		return err
 	}
 	err = firstStep.Chmod(0o755)
 	if err != nil {
-		return
+		return err
 	}
 	secondStep, err := os.Create(filepath.Join(stepsDir, "02-step.sh"))
 	if err != nil {
-		return
+		return err
 	}
 
 	script = `#!/bin/bash
@@ -178,14 +178,9 @@ done
 `
 	_, err = secondStep.WriteString(script)
 	if err != nil {
-		return
+		return err
 	}
-	err = secondStep.Chmod(0o755)
-	if err != nil {
-		return
-	}
-
-	return
+	return secondStep.Chmod(0o755)
 }
 
 func simpleHandler(w http.ResponseWriter, r *http.Request) {
@@ -194,9 +189,6 @@ func simpleHandler(w http.ResponseWriter, r *http.Request) {
 
 func StartWebServer(port string) error {
 	http.HandleFunc("/", simpleHandler)
-	err := http.ListenAndServe(port, nil)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return http.ListenAndServe(port, nil)
 }

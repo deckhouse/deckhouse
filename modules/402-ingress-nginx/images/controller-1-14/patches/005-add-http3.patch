@@ -1,0 +1,172 @@
+diff --git a/internal/ingress/controller/config/config.go b/internal/ingress/controller/config/config.go
+index afc56eb91..875c6b323 100644
+--- a/internal/ingress/controller/config/config.go
++++ b/internal/ingress/controller/config/config.go
+@@ -450,6 +450,11 @@ type Configuration struct {
+ 	// Default: true
+ 	UseHTTP2 bool `json:"use-http2,omitempty"`
+ 
++	// Enables or disables the HTTP/3 support in secure connections
++	// https://nginx.org/en/docs/http/ngx_http_v3_module.html
++	// Default: false
++	UseHTTP3 bool `json:"use-http3,omitempty"`
++
+ 	// Disables gzipping of responses for requests with "User-Agent" header fields matching any of
+ 	// the specified regular expressions.
+ 	// https://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_disable
+@@ -847,6 +852,7 @@ func NewDefault() Configuration {
+ 		VariablesHashBucketSize:          256,
+ 		VariablesHashMaxSize:             2048,
+ 		UseHTTP2:                         true,
++		UseHTTP3:                         false,
+ 		DisableProxyInterceptErrors:      false,
+ 		RelativeRedirects:                false,
+ 		ProxyStreamTimeout:               "600s",
+diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
+index 2a2cf6557..3c5f8ea96 100644
+--- a/internal/ingress/controller/template/template.go
++++ b/internal/ingress/controller/template/template.go
+@@ -326,6 +326,7 @@ var funcMap = text_template.FuncMap{
+ 	"shouldLoadModSecurityModule":        shouldLoadModSecurityModule,
+ 	"buildHTTPListener":                  buildHTTPListener,
+ 	"buildHTTPSListener":                 buildHTTPSListener,
++	"buildHTTP3Listener":                 buildHTTP3Listener,
+ 	"buildOpentelemetryForLocation":      buildOpentelemetryForLocation,
+ 	"shouldLoadOpentelemetryModule":      shouldLoadOpentelemetryModule,
+ 	"buildModSecurityForLocation":        buildModSecurityForLocation,
+@@ -1400,7 +1401,7 @@ func buildHTTPListener(t, s interface{}) string {
+ 		addrV4 = tc.Cfg.BindAddressIpv4
+ 	}
+ 
+-	co := commonListenOptions(&tc, hostname)
++	co := commonListenOptions(&tc, hostname, false)
+ 
+ 	out = append(out, httpListener(addrV4, co, &tc)...)
+ 
+@@ -1433,7 +1434,7 @@ func buildHTTPSListener(t, s interface{}) string {
+ 		return ""
+ 	}
+ 
+-	co := commonListenOptions(&tc, hostname)
++	co := commonListenOptions(&tc, hostname, false)
+ 
+ 	addrV4 := []string{""}
+ 	if len(tc.Cfg.BindAddressIpv4) > 0 {
+@@ -1456,7 +1457,45 @@ func buildHTTPSListener(t, s interface{}) string {
+ 	return strings.Join(out, "\n")
+ }
+ 
+-func commonListenOptions(template *config.TemplateConfig, hostname string) string {
++func buildHTTP3Listener(t, s interface{}) string {
++	var out []string
++
++	tc, ok := t.(config.TemplateConfig)
++	if !ok {
++		klog.Errorf("expected a 'config.TemplateConfig' type but %T was returned", t)
++		return ""
++	}
++
++	hostname, ok := s.(string)
++	if !ok {
++		klog.Errorf("expected a 'string' type but %T was returned", s)
++		return ""
++	}
++
++	co := commonListenOptions(&tc, hostname, true)
++
++	addrV4 := []string{""}
++	if len(tc.Cfg.BindAddressIpv4) > 0 {
++		addrV4 = tc.Cfg.BindAddressIpv4
++	}
++
++	out = append(out, http3Listener(addrV4, co, &tc)...)
++
++	if !tc.IsIPV6Enabled {
++		return strings.Join(out, "\n")
++	}
++
++	addrV6 := []string{"[::]"}
++	if len(tc.Cfg.BindAddressIpv6) > 0 {
++		addrV6 = tc.Cfg.BindAddressIpv6
++	}
++
++	out = append(out, http3Listener(addrV6, co, &tc)...)
++
++	return strings.Join(out, "\n")
++}
++
++func commonListenOptions(template *config.TemplateConfig, hostname string, useHTTP3 bool) string {
+ 	var out []string
+ 
+ 	if template.Cfg.UseProxyProtocol {
+@@ -1475,7 +1514,10 @@ func commonListenOptions(template *config.TemplateConfig, hostname string) strin
+ 		out = append(out, "reuseport")
+ 	}
+ 
+-	out = append(out, fmt.Sprintf("backlog=%v", template.BacklogSize))
++	// backlog is not supported with QUIC listeners
++	if !useHTTP3 {
++		out = append(out, fmt.Sprintf("backlog=%v", template.BacklogSize))
++	}
+ 
+ 	return strings.Join(out, " ")
+ }
+@@ -1529,6 +1571,24 @@ func httpsListener(addresses []string, co string, tc *config.TemplateConfig) []s
+ 	return out
+ }
+ 
++func http3Listener(addresses []string, co string, tc *config.TemplateConfig) []string {
++	out := make([]string, 0)
++	for _, address := range addresses {
++		lo := []string{"listen"}
++
++		if address == "" {
++			lo = append(lo, fmt.Sprintf("%v", tc.ListenPorts.HTTPS))
++		} else {
++			lo = append(lo, fmt.Sprintf("%v:%v", address, tc.ListenPorts.HTTPS))
++		}
++
++		lo = append(lo, "quic", co, ";")
++		out = append(out, strings.Join(lo, " "))
++	}
++
++	return out
++}
++
+ func buildOpentelemetryForLocation(isOTEnabled, isOTTrustSet bool, location *ingress.Location) string {
+ 	isOTEnabledInLoc := location.Opentelemetry.Enabled
+ 	isOTSetInLoc := location.Opentelemetry.Set
+diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
+index 45d1ebf7c..dd4fd1cc9 100644
+--- a/rootfs/etc/nginx/template/nginx.tmpl
++++ b/rootfs/etc/nginx/template/nginx.tmpl
+@@ -593,6 +593,9 @@ http {
+ 
+         {{ buildHTTPListener  $all $redirect.From }}
+         {{ buildHTTPSListener $all $redirect.From }}
++        {{ if $cfg.UseHTTP3 }}
++        {{ buildHTTP3Listener $all $redirect.From }}
++        {{ end }}
+ 
+         ssl_certificate_by_lua_file /etc/nginx/lua/nginx/ngx_conf_certificate.lua;
+ 
+@@ -641,6 +644,9 @@ http {
+         {{ if $cfg.UseHTTP2 }}
+             http2 on;
+         {{ end }}
++        {{ if $cfg.UseHTTP3 }}
++            add_header Alt-Svc 'h3=":{{ $all.ListenPorts.HTTPS }}"; ma=86400';
++        {{ end }}
+ 
+         {{ if gt (len $cfg.BlockUserAgents) 0 }}
+         if ($block_ua) {
+@@ -909,6 +915,9 @@ stream {
+ 
+         {{ buildHTTPListener  $all $server.Hostname }}
+         {{ buildHTTPSListener $all $server.Hostname }}
++        {{ if $all.Cfg.UseHTTP3 }}
++        {{ buildHTTP3Listener $all $server.Hostname }}
++        {{ end }}
+ 
+         set $proxy_upstream_name "-";
+ 

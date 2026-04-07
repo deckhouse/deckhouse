@@ -82,7 +82,7 @@ For example, if you want to allow for overriding the threshold value in an alert
 
 ## Alerting rules severity
 
-To set the severity level of the alerting rule, use the `severity_level` label (or a pair of `impact` + `likehood` labels). For example:
+To set the severity level of the alerting rule, use the `severity_level` label (or a pair of `impact` + `likelihood` labels). For example:
 
 ```yaml
 spec:
@@ -109,13 +109,13 @@ You can do the same using `impact` and `likelihood` pair of labels:
 ```yaml
       labels:
         impact: deadly
-        likehood: certain
+        likelihood: certain
 ```
 
 We recommend using the second method (with the `impact` and `likelihood` labels) if the incident can be described in terms of possible harmful consequences and their probability. For example:
 * Suppose one of the four disks in the RAID5 array fails (and this array is used to store the database).
   * Failure of another disk will lead to the entire array failure and data loss; thus, `impact: deadly`.
-  * The probability of the second disk failing right after the first one is relatively low; however, it is still possible; thus, `likehood: possible`.
+  * The probability of the second disk failing right after the first one is relatively low; however, it is still possible; thus, `likelihood: possible`.
   * Two of these labels combined give the S3 criticality level.
 
 Click the criticality icon for any incident in Polk to see the level/label matrix.

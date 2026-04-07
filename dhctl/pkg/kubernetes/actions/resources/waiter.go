@@ -31,6 +31,7 @@ type Checker interface {
 	IsReady(ctx context.Context) (bool, error)
 	Name() string
 	Single() bool
+	ReadyMsg() string
 }
 
 type constructorParams struct {
@@ -72,8 +73,8 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 		loggerProvider: log.SimpleLoggerProvider(logger),
 	}
 
-	staticNGSChecker, err := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params)
-	tryToAppendCheck(staticNGSChecker, err)
+	staticNGSChecker := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params)
+	tryToAppendCheck(staticNGSChecker, nil)
 
 	type constructor func(resource *template.Resource, params constructorParams) (Checker, error)
 
@@ -123,4 +124,28 @@ func (w *Waiter) ReadyAll(ctx context.Context) (bool, error) {
 	w.checkers = checkersToStay
 
 	return len(w.checkers) == 0, nil
+}
+
+func (w *Waiter) ReadyAllWithRes(ctx context.Context) (bool, []string, []string, error) {
+	checkersToStay := make([]Checker, 0)
+	readyResources := make([]string, 0)
+	remainedResources := make([]string, 0)
+
+	for _, c := range w.checkers {
+		ready, err := c.IsReady(ctx)
+		if err != nil {
+			return false, readyResources, remainedResources, err
+		}
+
+		if !ready {
+			checkersToStay = append(checkersToStay, c)
+			remainedResources = append(remainedResources, c.Name())
+		} else {
+			readyResources = append(readyResources, c.Name())
+		}
+	}
+
+	w.checkers = checkersToStay
+
+	return len(w.checkers) == 0, readyResources, remainedResources, nil
 }

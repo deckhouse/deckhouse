@@ -35,6 +35,7 @@ type (
 	// PKI:
 	PKI         = init_secret.Config
 	PKICertKey  = init_secret.CertKey
+	PKIUser     = init_secret.User
 	PKIProvider func() (PKI, error)
 )
 
@@ -95,7 +96,7 @@ func (d Data) DockerCfgBase64() (string, error) {
 	return base64.StdEncoding.EncodeToString(cfg), nil
 }
 
-func (d Data) AddressAndPath() (address string, path string) {
+func (d Data) AddressAndPath() (string, string) {
 	return helpers.SplitAddressAndPath(d.ImagesRepo)
 }
 

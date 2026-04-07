@@ -18,14 +18,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
-
-var moduleSourceGVR = schema.GroupVersionResource{
-	Group:    "deckhouse.io",
-	Version:  "v1alpha1",
-	Resource: "modulesources",
-}
 
 type ModuleSource struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -49,6 +42,6 @@ func (ms ModuleSource) IsEqual(newMs ModuleSource) bool {
 	return ms.Spec.Registry.CA == newMs.Spec.Registry.CA
 }
 
-func (ms ModuleSource) getRegistry() (registryHosts string) {
+func (ms ModuleSource) getRegistry() string {
 	return strings.Split(ms.Spec.Registry.Repo, "/")[0]
 }

@@ -161,6 +161,8 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 Пример:
 
+{% raw %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -175,6 +177,8 @@ data:
   key: value
 ```
 
+{% endraw %}
+
 В этом случае ресурс получит лейблы `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но не получит лейбл `heritage: multitenancy-manager`.
 
 ### Исключение ресурсов из управления multitenancy-manager
@@ -182,6 +186,8 @@ data:
 Если необходимо исключить ресурс из управления `multitenancy-manager` (например, если он должен управляться вручную или другим контроллером), добавьте к ресурсу лейбл `projects.deckhouse.io/unmanaged`.
 
 Пример:
+
+{% raw %}
 
 ```yaml
 ---
@@ -197,12 +203,14 @@ data:
   token: <base64-encoded-value>
 ```
 
+{% endraw %}
+
 Ресурсы с лейблом `projects.deckhouse.io/unmanaged`:
 
 - Будут созданы **только один раз** при создании проекта;
 - **Не будут обновляться** при последующих изменениях шаблона или обновлениях;
 - Не будут отслеживаться в статусе проекта;
-- Получат метки `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получат** лейбл `heritage: multitenancy-manager`.
+- Получат лейблы `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получат** лейбл `heritage: multitenancy-manager`.
 
 {% alert level="warning" %}
 После того как ресурс помечен как `unmanaged`, он будет создан при первой установке, но не будет обновляться при изменении ProjectTemplate.
@@ -211,7 +219,7 @@ data:
 
 ## Реализация валидации изменений объектов с помощью пользовательского лейбла
 
-Модуль `multitenancy-manager` использует `ValidatingAdmissionPolicy` для защиты ресурсов с меткой `heritage: multitenancy-manager` от ручных изменений.  
+Модуль `multitenancy-manager` использует `ValidatingAdmissionPolicy` для защиты ресурсов с лейблом `heritage: multitenancy-manager` от ручных изменений.  
 Вы можете реализовать аналогичную валидацию для ресурсов с любым лейблом.
 
 ### Как работает валидация в multitenancy-manager

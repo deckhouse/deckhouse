@@ -1,5 +1,5 @@
 ---
-title: Хранилище и балансировка
+title: Хранилище и балансировка нагрузки в zVirt
 permalink: ru/admin/integrations/virtualization/zvirt/storage.html
 lang: ru
 ---

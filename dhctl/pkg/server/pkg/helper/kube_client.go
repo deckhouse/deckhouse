@@ -23,19 +23,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
-type ApiServerOptions struct {
+type APIServerOptions struct {
 	Token                    string
 	InsecureSkipTLSVerify    bool
 	CertificateAuthorityData []byte
 }
 
-func CreateKubeClient(ctx context.Context, apiServerUrl string, opts ApiServerOptions) (*client.KubernetesClient, error) {
+func CreateKubeClient(ctx context.Context, apiServerURL string, opts APIServerOptions) (*client.KubernetesClient, error) {
 	kubeCl := client.NewKubernetesClient()
 
 	if err := kubeCl.InitContext(ctx, &client.KubernetesInitParams{
 		RestConfig: &rest.Config{
 			BearerToken: opts.Token,
-			Host:        apiServerUrl,
+			Host:        apiServerURL,
 			TLSClientConfig: rest.TLSClientConfig{
 				CAData:   opts.CertificateAuthorityData,
 				Insecure: opts.InsecureSkipTLSVerify,

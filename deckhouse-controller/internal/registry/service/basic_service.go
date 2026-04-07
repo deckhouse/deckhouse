@@ -23,6 +23,7 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
+	internalRegistry "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
 )
@@ -30,12 +31,12 @@ import (
 // BasicService provides common registry operations with standardized logging
 type BasicService struct {
 	name   string
-	client registry.Client
+	client internalRegistry.Interface
 	logger *log.Logger
 }
 
 // NewBasicService creates a new basic service
-func NewBasicService(name string, client registry.Client, logger *log.Logger) *BasicService {
+func NewBasicService(name string, client internalRegistry.Interface, logger *log.Logger) *BasicService {
 	return &BasicService{
 		name:   name,
 		client: client,
@@ -88,6 +89,21 @@ func (s *BasicService) CheckImageExists(ctx context.Context, tag string) error {
 	s.logger.Debug("Image existence check completed")
 
 	return nil
+}
+
+func (s *BasicService) GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile, error) {
+	logger := s.logger.With(slog.String("service", s.name), slog.String("tag", tag))
+
+	logger.Debug("Getting image config")
+
+	cfg, err := s.client.GetImageConfig(ctx, tag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image config: %w", err)
+	}
+
+	logger.Debug("Image config retrieved successfully")
+
+	return cfg, nil
 }
 
 func (s *BasicService) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {

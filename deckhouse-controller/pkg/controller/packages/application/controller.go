@@ -18,15 +18,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -34,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
-	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -71,8 +69,8 @@ type moduleManager interface {
 }
 
 type packageOperator interface {
-	Update(repo registry.Remote, inst packageoperator.Instance)
-	Remove(namespace, name string)
+	UpdateApp(repo registry.Remote, inst packageoperator.App)
+	RemoveApp(namespace, name string)
 	Status() *packagestatus.Service
 }
 
@@ -143,7 +141,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err := r.client.Get(ctx, req.NamespacedName, app); err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Debug("application not found")
-
 			return ctrl.Result{}, nil
 		}
 
@@ -186,16 +183,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
 		logger.Debug("application package not found", slog.String("package", app.Spec.PackageName), log.Err(err))
 
-		r.setConditionFalse(
-			app,
-			v1alpha1.ApplicationConditionTypeProcessed,
-			v1alpha1.ApplicationConditionReasonApplicationPackageNotFound,
-			fmt.Sprintf("ApplicationPackage '%s' not found", app.Spec.PackageName),
-		)
-
-		if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch status application %s: %w", app.Name, err)
-		}
+		// TODO: Completed = "false"
 
 		return fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
 	}
@@ -208,16 +196,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
 		logger.Debug("application package version not found", slog.String("apv", apvName), log.Err(err))
 
-		r.setConditionFalse(
-			app,
-			v1alpha1.ApplicationConditionTypeProcessed,
-			v1alpha1.ApplicationConditionReasonVersionNotFound,
-			fmt.Sprintf("ApplicationPackageVersion '%s' not found", apv.Name),
-		)
-
-		if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch application status '%s': %w", app.Name, err)
-		}
+		// TODO: Completed = "false"
 
 		return fmt.Errorf("get application package version '%s': %w", apv.Name, err)
 	}
@@ -226,21 +205,35 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if apv.IsDraft() {
 		logger.Debug("application package version is in draft", slog.String("apv", apvName))
 
-		app = r.setConditionFalse(
-			app,
-			v1alpha1.ApplicationConditionTypeProcessed,
-			v1alpha1.ApplicationConditionReasonVersionIsDraft,
-			"ApplicationPackageVersion "+apvName+" is in draft",
-		)
-
-		if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch application status '%s': %w", app.Name, err)
-		}
+		// TODO: Completed = "false"
 
 		return fmt.Errorf("application package version '%s' is draft", apvName)
 	}
 
 	logger.Debug("check if application installed to ApplicationPackageVersion", slog.String("apv", apv.Name))
+
+	// Check if application is switching from a different version
+	oldAPVName := r.findOldAPVReference(app)
+	if oldAPVName != "" && oldAPVName != apvName {
+		logger.Debug("application is switching versions, cleaning up old APV", slog.String("old_apv", oldAPVName), slog.String("new_apv", apvName))
+
+		oldAPV := new(v1alpha1.ApplicationPackageVersion)
+		if err := r.client.Get(ctx, client.ObjectKey{Name: oldAPVName}, oldAPV); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("get old application package version '%s': %w", oldAPVName, err)
+			}
+			logger.Debug("old APV not found, skipping cleanup", slog.String("old_apv", oldAPVName))
+		} else if oldAPV.IsAppInstalled(app.Namespace, app.Name) {
+			logger.Debug("removing application from old APV", slog.String("old_apv", oldAPVName))
+
+			patch := client.MergeFrom(oldAPV.DeepCopy())
+			oldAPV = oldAPV.RemoveInstalledApp(app.Namespace, app.Name)
+			if err := r.client.Status().Patch(ctx, oldAPV, patch); err != nil {
+				logger.Error("failed to patch application package", log.Err(err))
+				return fmt.Errorf("patch old application package version status '%s': %w", oldAPVName, err)
+			}
+		}
+	}
 
 	if !apv.IsAppInstalled(app.Namespace, app.Name) {
 		logger.Debug("application not installed to ApplicationPackageVersion, install it", slog.String("apv", apv.Name))
@@ -249,32 +242,76 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		apv = apv.AddInstalledApp(app.Namespace, app.Name)
 		if err := r.client.Status().Patch(ctx, apv, patch); err != nil {
+			logger.Error("failed to patch apv", log.Err(err))
 			return fmt.Errorf("patch application package version status '%s': %w", apv.Name, err)
 		}
 	}
 
 	logger.Debug("check if application installed to ApplicationPackage", slog.String("package", ap.Name))
 
+	// Check if application is switching to a different package
+	oldAPName := r.findOldAPReference(app)
+	if oldAPName != "" && oldAPName != ap.Name {
+		logger.Debug("application is switching packages, cleaning up old AP", slog.String("old_ap", oldAPName), slog.String("new_ap", ap.Name))
+
+		oldAP := new(v1alpha1.ApplicationPackage)
+		if err := r.client.Get(ctx, client.ObjectKey{Name: oldAPName}, oldAP); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("get old application package '%s': %w", oldAPName, err)
+			}
+			logger.Debug("old AP not found, skipping cleanup", slog.String("old_ap", oldAPName))
+		} else if oldAP.IsAppInstalled(app.Namespace, app.Name) {
+			logger.Debug("removing application from old AP", slog.String("old_ap", oldAPName))
+
+			patch := client.MergeFrom(oldAP.DeepCopy())
+			oldAP = oldAP.RemoveInstalledApp(app.Namespace, app.Name)
+			if err := r.client.Status().Patch(ctx, oldAP, patch); err != nil {
+				logger.Error("failed to patch application package", log.Err(err))
+				return fmt.Errorf("patch old application package status '%s': %w", oldAPName, err)
+			}
+		}
+	}
+
 	if !ap.IsAppInstalled(app.Namespace, app.Name) {
 		logger.Debug("application not installed to ApplicationPackage, install it", slog.String("package", ap.Name))
 
 		patch := client.MergeFrom(ap.DeepCopy())
 
-		ap = ap.AddInstalledApp(app.Namespace, app.Name)
+		ap = ap.AddInstalledApp(app.Namespace, app.Name, app.Spec.PackageVersion)
 		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
+			logger.Error("failed to patch application package", log.Err(err))
+			return fmt.Errorf("patch application package status '%s': %w", ap.Name, err)
+		}
+	} else if ap.GetAppVersion(app.Namespace, app.Name) != app.Spec.PackageVersion {
+		logger.Debug("application version changed, updating ApplicationPackage", slog.String("package", ap.Name), slog.String("new_version", app.Spec.PackageVersion))
+
+		patch := client.MergeFrom(ap.DeepCopy())
+
+		ap.UpdateAppVersion(app.Namespace, app.Name, app.Spec.PackageVersion)
+		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
+			logger.Error("failed to patch application package", log.Err(err))
 			return fmt.Errorf("patch application package status '%s': %w", ap.Name, err)
 		}
 	}
 
 	logger.Debug("registry application to operator")
-	if err := r.updateOperatorPackage(ctx, app, apv); err != nil {
-		return err
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
+		logger.Error("get package repository", log.Err(err))
+		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
 	}
 
-	app = r.setConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
-	if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("patch application status '%s': %w", app.Name, err)
-	}
+	r.operator.UpdateApp(registry.BuildRemote(repo), packageoperator.App{
+		Name:      app.Name,
+		Namespace: app.Namespace,
+		Definition: apps.Definition{
+			Name:    app.Spec.PackageName,
+			Version: app.Spec.PackageVersion,
+		},
+		Settings: app.Spec.Settings.GetMap(),
+	})
+
+	// TODO: Completed = "true"
 
 	// set finalizer if it is not set
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
@@ -288,67 +325,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	app = r.addOwnerReferences(app, apv, ap)
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
+		logger.Error("failed to patch application", log.Err(err))
 		return fmt.Errorf("patch application '%s': %w", app.Name, err)
 	}
-
-	return nil
-}
-
-func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Application, apv *v1alpha1.ApplicationPackageVersion) error {
-	repo := new(v1alpha1.PackageRepository)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
-		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
-	}
-
-	var requirements apps.Requirements
-	if apv.Status.PackageMetadata != nil && apv.Status.PackageMetadata.Requirements != nil {
-		var err error
-
-		var kubernetesConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Kubernetes) > 0 {
-			if kubernetesConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Kubernetes); err != nil {
-				return fmt.Errorf("parse kubernetes requirement: %w", err)
-			}
-		}
-
-		var deckhouseConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Deckhouse) > 0 {
-			if deckhouseConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Deckhouse); err != nil {
-				return fmt.Errorf("parse deckhouse requirement: %w", err)
-			}
-		}
-
-		modules := make(map[string]apps.Dependency)
-		for module, rawConstraint := range apv.Status.PackageMetadata.Requirements.Modules {
-			raw, optional := strings.CutSuffix(rawConstraint, "!optional")
-			constraint, err := semver.NewConstraint(raw)
-			if err != nil {
-				return fmt.Errorf("parse module requirement '%s': %w", module, err)
-			}
-
-			modules[module] = apps.Dependency{
-				Constraints: constraint,
-				Optional:    optional,
-			}
-		}
-
-		requirements = apps.Requirements{
-			Kubernetes: kubernetesConstraint,
-			Deckhouse:  deckhouseConstraint,
-			Modules:    modules,
-		}
-	}
-
-	r.operator.Update(registry.BuildRemote(repo), packageoperator.Instance{
-		Name:      app.Name,
-		Namespace: app.Namespace,
-		Definition: apps.Definition{
-			Name:         app.Spec.PackageName,
-			Version:      app.Spec.PackageVersion,
-			Requirements: requirements,
-		},
-		Settings: app.Spec.Settings.GetMap(),
-	})
 
 	return nil
 }
@@ -374,6 +353,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 
 		ap = ap.RemoveInstalledApp(app.Namespace, app.Name)
 		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
+			logger.Error("failed to patch application package", log.Err(err))
 			return fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
 		}
 	}
@@ -394,6 +374,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 
 		apv = apv.RemoveInstalledApp(app.Namespace, app.Name)
 		if err := r.client.Status().Patch(ctx, apv, patch); err != nil {
+			logger.Error("failed to patch apv", log.Err(err))
 			return fmt.Errorf("patch application package version status '%s': %w", app.Spec.PackageName, err)
 		}
 	}
@@ -401,7 +382,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	logger.Debug("delete application")
 
 	// call PackageOperator method (PackageRemover interface)
-	r.operator.Remove(app.Namespace, app.Name)
+	r.operator.RemoveApp(app.Namespace, app.Name)
 
 	patch := client.MergeFrom(app.DeepCopy())
 
@@ -412,98 +393,54 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	}
 
 	if err := r.client.Patch(ctx, app, patch); err != nil {
+		logger.Error("failed to patch application", log.Err(err))
 		return fmt.Errorf("patch application %s: %w", app.Name, err)
 	}
 
 	return nil
 }
 
-func (r *reconciler) setConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
-	now := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range app.Status.ResourceConditions {
-		if cond.Type == condType {
-			app.Status.ResourceConditions[idx].LastProbeTime = now
-			if cond.Status != corev1.ConditionTrue {
-				app.Status.ResourceConditions[idx].LastTransitionTime = now
-				app.Status.ResourceConditions[idx].Status = corev1.ConditionTrue
-			}
-
-			app.Status.ResourceConditions[idx].Reason = ""
-			app.Status.ResourceConditions[idx].Message = ""
-
-			return app
-		}
-	}
-
-	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationStatusResourceCondition{
-		Type:               condType,
-		Status:             corev1.ConditionTrue,
-		LastProbeTime:      now,
-		LastTransitionTime: now,
-	})
-
-	return app
-}
-
-func (r *reconciler) setConditionFalse(app *v1alpha1.Application, condType string, reason string, message string) *v1alpha1.Application {
-	now := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range app.Status.ResourceConditions {
-		if cond.Type == condType {
-			app.Status.Conditions[idx].LastProbeTime = now
-			if cond.Status != corev1.ConditionFalse {
-				app.Status.Conditions[idx].LastTransitionTime = now
-				app.Status.Conditions[idx].Status = corev1.ConditionFalse
-			}
-
-			app.Status.Conditions[idx].Reason = reason
-			app.Status.Conditions[idx].Message = message
-
-			return app
-		}
-	}
-
-	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationStatusResourceCondition{
-		Type:               condType,
-		Status:             corev1.ConditionFalse,
-		Reason:             reason,
-		Message:            message,
-		LastProbeTime:      now,
-		LastTransitionTime: now,
-	})
-
-	return app
-}
-
 func (r *reconciler) addOwnerReferences(app *v1alpha1.Application, apv *v1alpha1.ApplicationPackageVersion, ap *v1alpha1.ApplicationPackage) *v1alpha1.Application {
 	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
 
 	ownerRefs := app.GetOwnerReferences()
-	trueLink := &[]bool{true}[0]
-	falseLink := &[]bool{false}[0]
+	trueLink := ptr.To(true)
+	falseLink := ptr.To(false)
 
 	isAPVRefSet := false
 	isAPRefSet := false
+	newOwnerRefs := []metav1.OwnerReference{}
 
-	// check which owner references are not set
+	// check which owner references are set and remove stale APV references
 	for _, ref := range ownerRefs {
 		if ref.Kind == v1alpha1.ApplicationPackageVersionKind {
-			isAPVRefSet = true
+			if ref.Name == apv.Name {
+				isAPVRefSet = true
+				newOwnerRefs = append(newOwnerRefs, ref)
+			} else {
+				logger.Debug("removing stale ApplicationPackageVersion owner reference", slog.String("old_apv_name", ref.Name))
+			}
 			continue
 		}
 
 		if ref.Kind == v1alpha1.ApplicationPackageKind {
-			isAPRefSet = true
+			if ref.Name == ap.Name {
+				isAPRefSet = true
+				newOwnerRefs = append(newOwnerRefs, ref)
+			} else {
+				logger.Debug("removing stale ApplicationPackage owner reference", slog.String("old_ap_name", ref.Name))
+			}
 			continue
 		}
+
+		newOwnerRefs = append(newOwnerRefs, ref)
 	}
 
 	// add owner references if they are not set
 	if !isAPVRefSet {
 		logger.Debug("adding ApplicationPackageVersion owner reference to application", slog.String("apv_name", apv.Name))
 
-		ownerRefs = append(ownerRefs, metav1.OwnerReference{
+		newOwnerRefs = append(newOwnerRefs, metav1.OwnerReference{
 			APIVersion:         v1alpha1.ApplicationPackageVersionGVK.GroupVersion().String(),
 			Kind:               v1alpha1.ApplicationPackageVersionKind,
 			Name:               apv.Name,
@@ -516,7 +453,7 @@ func (r *reconciler) addOwnerReferences(app *v1alpha1.Application, apv *v1alpha1
 	if !isAPRefSet {
 		logger.Debug("adding ApplicationPackage owner reference to application", slog.String("ap_name", ap.Name))
 
-		ownerRefs = append(ownerRefs, metav1.OwnerReference{
+		newOwnerRefs = append(newOwnerRefs, metav1.OwnerReference{
 			APIVersion:         v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
 			Kind:               v1alpha1.ApplicationPackageKind,
 			Name:               ap.Name,
@@ -526,7 +463,29 @@ func (r *reconciler) addOwnerReferences(app *v1alpha1.Application, apv *v1alpha1
 		})
 	}
 
-	app.SetOwnerReferences(ownerRefs)
+	app.SetOwnerReferences(newOwnerRefs)
 
 	return app
+}
+
+// findOldAPVReference searches for an existing ApplicationPackageVersion owner reference
+// and returns its name if found. Returns empty string if no APV reference exists.
+func (r *reconciler) findOldAPVReference(app *v1alpha1.Application) string {
+	for _, ref := range app.GetOwnerReferences() {
+		if ref.Kind == v1alpha1.ApplicationPackageVersionKind {
+			return ref.Name
+		}
+	}
+	return ""
+}
+
+// findOldAPReference searches for an existing ApplicationPackage owner reference
+// and returns its name if found. Returns empty string if no AP reference exists.
+func (r *reconciler) findOldAPReference(app *v1alpha1.Application) string {
+	for _, ref := range app.GetOwnerReferences() {
+		if ref.Kind == v1alpha1.ApplicationPackageKind {
+			return ref.Name
+		}
+	}
+	return ""
 }

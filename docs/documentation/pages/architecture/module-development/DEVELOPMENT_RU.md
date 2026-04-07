@@ -2,6 +2,7 @@
 title: "Разработка и отладка модуля"
 permalink: ru/architecture/module-development/development/
 lang: ru
+description: Инструменты и подходы для разработки и отладки модулей Deckhouse Kubernetes Platform, включая локальное тестирование и поиск ошибок.
 ---
 
 При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride).
@@ -45,7 +46,7 @@ spec:
 
 * Тег образа контейнера (`spec.imageTag`) может быть любым. Например, `pr333`, `my-branch`.
 
-Необязательный параметр `spec.scanInterval` устанавливает интервал времени для проверки образов в registry. По умолчанию задан интервал в 15 секунд. Для принудительного обновления можно изменить интервал, либо установить на ModulePullOverride аннотацию `renew=""`.
+Необязательный параметр `spec.scanInterval` устанавливает интервал времени для проверки образов в хранилище образов. По умолчанию задан интервал в 15 секунд. Для принудительного обновления можно изменить интервал, либо установить на ModulePullOverride аннотацию `renew=""`.
 
 Необязательный параметр `spec.rollback` — если установить этот параметр в `true`, это восстановит развернутый модуль до предыдущего состояния после удаления ModulePullOverride.
 
@@ -366,6 +367,12 @@ p-o-test-v0.7.25   Pending      Release is waiting for the 'modules.deckhouse.io
 d8 k annotate mr p-o-test-v0.7.25 modules.deckhouse.io/approved="true"
 ```
 
+Для удобства это можно сделать с помощью [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI (имена модулей и версии автодополняются):
+
+```shell
+d8 system module approve p-o-test v0.7.25
+```
+
 Пример вывода после подтверждения:
 
 ```console
@@ -461,9 +468,9 @@ update:
 
 {% endraw %}
 
-## Артефакты модуля в container registry
+## Артефакты модуля в хранилище образов
 
-После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource).
+После сборки модуля его артефакты должны быть загружены в хранилище образов контейнеров по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в хранилище образов, указывается в ресурсе [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource).
 
 Пример иерархии образов контейнеров после загрузки артефактов модулей `module-1` и `modules-2` в registry:
 
@@ -493,7 +500,7 @@ registry.example.io
 ```
 
 {% alert level="warning" %}
-Container registry должен поддерживать вложенную структуру репозиториев. Подробнее об этом [в разделе требований](../#требования).  
+Хранилище образов должно поддерживать вложенную структуру репозиториев. Подробнее об этом [в разделе требований](../#требования).  
 {% endalert %}
 
 Далее приведен список команд для работы с источником модулей. В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее [по инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для macOS воспользуйтесь `brew`.
@@ -600,7 +607,7 @@ alpha
 beta
 ```
 
-В примере в container registry два релиза и используются два канала обновлений: `alpha` и `beta`.
+В примере в хранилище образов два релиза и используются два канала обновлений: `alpha` и `beta`.
 
 ### Вывод версии, используемой на канале обновлений `alpha`
 

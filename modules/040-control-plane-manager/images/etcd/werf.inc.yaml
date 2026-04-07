@@ -1,3 +1,5 @@
+{{- $version := include "get_oss_version_by_id" (list "etcd" $ ) }}
+{{- $version = printf "v%s" $version }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
@@ -13,7 +15,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b v3.6.7 --depth 1 $(cat /run/secrets/SOURCE_REPO)/etcd-io/etcd.git /src
+  - git clone -b {{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/etcd-io/etcd.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf tools
@@ -41,7 +43,7 @@ imageSpec:
     entrypoint: ["/usr/bin/etcd"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -67,3 +69,4 @@ shell:
     - cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
     - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

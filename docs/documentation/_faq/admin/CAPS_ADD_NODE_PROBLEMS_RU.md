@@ -1,7 +1,7 @@
 ---
 title: Что делать в случае проблем с добавлением узла в кластер через Cluster API Provider Static?
 subsystems:
-  - сluster_infrastructure
+  - cluster_infrastructure
 lang: ru
 ---
 

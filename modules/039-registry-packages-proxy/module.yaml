@@ -5,6 +5,6 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-instance-manager
 descriptions:
-  en: Internal registry packages proxy.
-  ru: Внутренний прокси-сервер пакетов registry.
+  en: Provides an in-cluster HTTP proxy service for accessing packages from container registries.
+  ru: Предоставляет сервис HTTP-прокси внутри кластера для доступа к пакетам из хранилищ образов контейнеров.
 stage: General Availability

@@ -26,18 +26,16 @@ import (
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
-	metaConfig, err := config.ParseConfig(
+	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
+		b.DirectoryConfig,
 	)
 	if err != nil {
 		return err
@@ -60,7 +58,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		}
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath, b.CommanderMode); err != nil {
+	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath, b.CommanderMode, b.DirectoryConfig); err != nil {
 		return err
 	}
 

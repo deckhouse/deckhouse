@@ -34,7 +34,7 @@ spec:
   # [<en>] This is a hash of the newly generated <GENERATED_PASSWORD> password.
   # [<en>] Generate your own or use it at your own risk (for testing purposes):
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного сейчас.
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного сейчас.
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования:
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

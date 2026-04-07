@@ -11,6 +11,10 @@ When using the [registry](/modules/registry/) module, change the address and par
 Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial editions of the Deckhouse Kubernetes Platform.
 {% endalert %}
 
+{% alert level="warning" %}
+If, during the switching process, the image of a module did not reload and the module did not reinstall, use the [instructions](../../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
+{% endalert %}
+
 To switch the cluster to use an external registry, follow these steps:
 
 1. Run the `deckhouse-controller helper change-registry` command from the DKP pod with the parameters of the new registry.  

@@ -144,8 +144,8 @@
   if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
   with:
     registry: ghcr.io
-    username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-    password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
     logout: false
 # </template: login_rw_registry_step>
 {!{- end -}!}
@@ -174,8 +174,8 @@
   if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
   with:
     registry: ghcr.io
-    username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-    password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
     logout: false
 # </template: login_rw_registry_step>
 {!{- end -}!}
@@ -206,8 +206,8 @@
   if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
   with:
     registry: ghcr.io
-    username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-    password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
     logout: false
 # </template: login_flant_registry_step>
 {!{- end -}!}
@@ -383,4 +383,16 @@
       return patchNumber >= 1;
 # example use ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
 # </template: check-tag-for-release-branch>
+{!{- end -}!}
+
+
+{!{ define "docker_config_isolation" }!}
+# </template: docker-config-isolation>
+- name: Isolate docker config
+  id: docker-config-isolation
+  run: |
+    mkdir -p $RUNNER_TEMP/.docker
+    echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+# </template: docker_config_isolation>
 {!{- end -}!}

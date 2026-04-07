@@ -1,5 +1,6 @@
 ---
-title: "Управление авторизацией и доступом к workload c Istio"
+title: "Управление авторизацией и доступом к нагрузке c Istio"
+description: "Управление авторизацией и контролем доступа к workload в Deckhouse Kubernetes Platform с использованием Istio. Настройка AuthorizationPolicy с политиками ALLOW и DENY для контроля трафика."
 permalink: ru/user/network/authorization-workload-istio.html
 lang: ru
 ---
@@ -32,7 +33,7 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/istio-cr.html#authorizationpolicy -->
 
-Подробнее ознакомиться с AuthorizationPolicy можно [в документации Istio](https://istio.io/v1.19/docs/reference/config/security/authorization-policy/).
+Подробнее ознакомиться с AuthorizationPolicy можно [в документации Istio](https://istio.io/v1.21/docs/reference/config/security/authorization-policy/).
 
 Ресурс AuthorizationPolicy включает и определяет контроль доступа к workload. Поддерживает как ALLOW-, так и DENY-правила, описанные выше.
 
@@ -47,7 +48,7 @@ lang: ru
   * `host`;
   * `port`;
   * URI.
-* [`conditions`](https://istio.io/v1.19/docs/reference/config/security/conditions/#supported-conditions):
+* [`conditions`](https://istio.io/v1.21/docs/reference/config/security/conditions/#supported-conditions):
   * HTTP-заголовки;
   * аргументы `source`;
   * аргументы `destination`;

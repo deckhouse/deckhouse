@@ -1,5 +1,5 @@
 ---
-title: Обзор
+title: Интеграция с IaaS
 permalink: ru/admin/integrations/integrations-overview.html
 lang: ru
 ---

@@ -162,7 +162,10 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 		re := regexp.MustCompile(`\s+`)
 		files := re.Split(filesString, -1)
 		for _, file := range files {
-			f.Download(ctx, remotePath+"/"+file, dstPath+"/"+file)
+			err = f.Download(ctx, filepath.Join(remotePath, file), filepath.Join(dstPath, file))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -373,7 +376,6 @@ func checkResponse(r io.Reader) error {
 	}
 
 	return nil
-
 }
 
 func wait(wg *sync.WaitGroup, ctx context.Context) error {
@@ -393,7 +395,6 @@ func wait(wg *sync.WaitGroup, ctx context.Context) error {
 }
 
 func CopyFromRemote(ctx context.Context, file *os.File, remotePath string, sshClient *ssh.Client) error {
-
 	session, err := sshClient.NewSession()
 	if err != nil {
 		return fmt.Errorf("Error creating ssh session in copy from remote: %v", err)
@@ -412,7 +413,6 @@ func CopyFromRemote(ctx context.Context, file *os.File, remotePath string, sshCl
 			errCh <- err
 			// We must unblock the go routine first as we block on reading the channel later
 			wg.Done()
-
 		}()
 
 		r, err := session.StdoutPipe()

@@ -49,7 +49,7 @@ cloudProvider:
     externalNetworkNames:
     - public
     instances:
-      imageName: ubuntu-22-04-cloud-amd64
+      imageName: ubuntu-24-04-cloud-amd64
       mainNetwork: kube
       securityGroups:
       - kube
@@ -94,7 +94,7 @@ nodeGroup:
     containerLogMaxSize: 50Mi
     resourceReservation:
       mode: "Off"
-  kubernetesVersion: "1.30"
+  kubernetesVersion: "1.31"
   manualRolloutID: ""
   name: master
   nodeTemplate:
@@ -134,10 +134,20 @@ post-install() {
 
 ## Monitoring script execution
 
-You can view the script execution log on a node in the `bashible` service log using the following command:
+Applying NodeGroupConfiguration triggers an update of the **`bashible` configuration of the node group** in the specified groups. DKP automatically detects the change in this configuration and then sets the `UPTODATE` field (in the output of the `d8 k get nodegroup` command) to `0`. The `UPTODATE` field shows how many nodes have already been brought to the **target `bashible` configuration of the node group**; a value of `0` means that no node has been brought to the target `bashible` configuration yet (i.e., the update has not been applied to any node).
+
+DKP controls the start of updates on nodes via the `update.node.deckhouse.io/approved` annotation on the `Node` object. By default, the update runs simultaneously on one node from each group. Update parallelism is defined by the [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) parameter in the node group configuration. When DKP selects a node to update (taking the queue and `maxConcurrent` into account), it sets the `update.node.deckhouse.io/approved` annotation, after which the `bashible` service on that node begins applying the **target `bashible` configuration of the node group**.
+
+You can view the node annotations set by DKP to start the update using the following command:
 
 ```bash
-journalctl -u bashible.service
+d8 k get nodes -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+```
+
+You can monitor script execution on the node in the `bashible` service logs using:
+
+```bash
+journalctl -fu bashible.service
 ```
 
 The scripts are located in the `/var/lib/bashible/bundle_steps/` directory on the node.
@@ -313,6 +323,50 @@ spec:
 ```
 
 After the configurations are applied, bootstrap and reboot the nodes to apply the settings and install the drivers.
+
+### MIG in a single-node cluster
+
+{% alert level="info" %}
+General information about preparing GPU nodes, installing drivers, and verifying GPU operation is provided in the [How do I work with GPU nodes](/modules/node-manager/faq.html#how-do-i-work-with-gpu-nodes) section.
+{% endalert %}
+
+In a single-node cluster that uses the `MIG` strategy, the MIG configuration must be reapplied manually after each node reboot.
+
+This limitation applies to the current MIG implementation, which uses the `nvidia-mig-manager` component.
+
+After each node reboot, perform the following steps:
+
+1. Add the service annotation to the node:
+
+   ```bash
+   d8 k annotate node <node_name> update.node.deckhouse.io/drained=""
+   ```
+
+1. Restart the `nvidia-mig-manager` component:
+
+   ```bash
+   d8 k -n d8-nvidia-gpu delete pod -l component=nvidia-mig-manager
+   ```
+
+1. Wait until the MIG configuration is reapplied by checking the `nvidia-mig-manager` logs:
+
+   ```bash
+   d8 k -n d8-nvidia-gpu logs -f -l component=nvidia-mig-manager
+   ```
+
+   Successful configuration application is confirmed by a log entry similar to:
+
+   ```console
+   Successfully updated to MIG config: <partedConfig>
+   ```
+
+   where `<partedConfig>` is the value of the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter in the NodeGroup resource (for example, `all-1g.10gb`).
+
+1. After the MIG configuration has been successfully applied, return the node to the schedulable state:
+
+   ```bash
+   d8 k uncordon <node_name>
+   ```
 
 ### Verifying successful installation
 

@@ -20,17 +20,13 @@ metadata:
     kind: ApplicationPackage
     name: test
     uid: ""
-  resourceVersion: "3"
+  resourceVersion: "2"
 spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: v1.0.2
 status:
-  resourceConditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: Processed
+  tracking: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage
@@ -43,10 +39,11 @@ metadata:
 status:
   availableRepositories:
   - deckhouse
-  installed:
-    foobar:
-    - name: test-app
-  installedOverall: 1
+  usedBy:
+  - name: test-app
+    namespace: foobar
+    version: v1.0.2
+  usedByCount: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
@@ -63,8 +60,9 @@ spec:
   packageVersion: v1.0.2
 status:
   conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
     status: "True"
     type: IsEnriched
   packageMetadata:

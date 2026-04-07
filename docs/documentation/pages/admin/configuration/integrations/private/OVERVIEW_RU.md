@@ -1,5 +1,5 @@
 ---
-title: Обзор
+title: Частные облака
 permalink: ru/admin/integrations/private/overview.html
 description: "Интеграция Deckhouse Kubernetes Platform с частными облаками включая VK Private Cloud, OpenStack и Huawei Cloud. Развертывание в локальной инфраструктуре и управление частными облачными ресурсами."
 lang: ru

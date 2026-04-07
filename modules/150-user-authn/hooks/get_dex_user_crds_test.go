@@ -585,7 +585,7 @@ username: admin
     "name": "admin",
     "spec": {
       "email": "admin@example.com",
-      "password": "password",
+      "password": "JDJhJDEwJDJiMmNVOENQaE9UYUdyczFIUlF1QXVlUzdKVFQ1WkhzSFN6WWlGUG0xbGVaY2s3TWM4VDRXCg==",
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
@@ -641,7 +641,7 @@ username: admin
     "name": "admin",
     "spec": {
       "email": "admin@example.com",
-      "password": "password",
+      "password": "JDJhJDEwJDJiMmNVOENQaE9UYUdyczFIUlF1QXVlUzdKVFQ1WkhzSFN6WWlGUG0xbGVaY2s3TWM4VDRXCg==",
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",

@@ -1,7 +1,7 @@
 ---
 image: deckhouse-controller-src-artifact
 final: false
-fromImage: builder/src
+from: {{ index $.Images "builder/src" }}
 git:
 - add: /
   to: /deckhouse
@@ -14,6 +14,7 @@ git:
     install:
       {{ include "controller_src_git_imports_stage_deps" . | nindent 6}}
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 shell:
   install:

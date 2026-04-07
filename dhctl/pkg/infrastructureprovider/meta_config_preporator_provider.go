@@ -37,7 +37,7 @@ const (
 )
 
 type PreflightChecks struct {
-	DVPValidateKubeApi bool
+	DVPValidateKubeAPI bool
 }
 
 type PreparatorProviderParams struct {
@@ -99,7 +99,7 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 			if params.phase != DhctlPhaseBootstrap {
 				return prep
 			}
-			return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeApi)
+			return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeAPI)
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}

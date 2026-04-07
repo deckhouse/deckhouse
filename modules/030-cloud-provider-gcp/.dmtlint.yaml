@@ -66,3 +66,8 @@ linters-settings:
       pdb:
         - kind: DaemonSet
           name: csi-node
+  openapi:
+    exclude-rules:
+      enum:
+      - properties.internal.properties.providerClusterConfiguration.properties.apiVersion
+      - properties.internal.properties.providerDiscoveryData.properties.apiVersion

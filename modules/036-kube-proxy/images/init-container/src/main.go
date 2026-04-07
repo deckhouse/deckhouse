@@ -54,7 +54,7 @@ func main() {
 		log.Fatal("CONTROL_PLANE_ADDRESS env not provided")
 	}
 
-	apiProxyAddress, err := getApiProxyAddress()
+	apiProxyAddress, err := getAPIProxyAddress()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 	return firstInternalAddress + "/32", nil
 }
 
-func getApiProxyAddress() (string, error) {
+func getAPIProxyAddress() (string, error) {
 	inClusterConfig, err := rest.InClusterConfig()
 	if err != nil {
 		return "", err

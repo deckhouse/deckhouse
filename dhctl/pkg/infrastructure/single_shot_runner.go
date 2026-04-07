@@ -33,36 +33,45 @@ type SingleShotRunner struct {
 	init, apply, plan, destroy, stop sync.Once
 }
 
-func (r *SingleShotRunner) Init(ctx context.Context) (err error) {
+func (r *SingleShotRunner) Init(ctx context.Context) error {
+	var err error
 	r.init.Do(func() {
 		err = r.Runner.Init(ctx)
 	})
-	return
+	return err
 }
 
-func (r *SingleShotRunner) Apply(ctx context.Context) (err error) {
+func (r *SingleShotRunner) Apply(ctx context.Context) error {
+	var err error
 	r.apply.Do(func() {
 		err = r.Runner.Apply(ctx)
 	})
-	return
+	return err
 }
 
-func (r *SingleShotRunner) Plan(ctx context.Context, destroy, noout bool) (err error) {
+func (r *SingleShotRunner) Plan(ctx context.Context, destroy, noout bool) error {
+	var err error
 	r.plan.Do(func() {
 		err = r.Runner.Plan(ctx, destroy, noout)
 	})
-	return
+	return err
+}
+
+func (r *SingleShotRunner) DebugPlanTarget(ctx context.Context, destroy bool, step, target string) (string, error) {
+	// always return debug plan
+	return r.Runner.DebugPlanTarget(ctx, destroy, step, target)
 }
 
 func (r *SingleShotRunner) GetInfrastructureOutput(ctx context.Context, output string) ([]byte, error) {
 	return r.Runner.GetInfrastructureOutput(ctx, output)
 }
 
-func (r *SingleShotRunner) Destroy(ctx context.Context) (err error) {
+func (r *SingleShotRunner) Destroy(ctx context.Context) error {
+	var err error
 	r.destroy.Do(func() {
 		err = r.Runner.Destroy(ctx)
 	})
-	return
+	return err
 }
 
 func (r *SingleShotRunner) ResourcesQuantityInState() int {

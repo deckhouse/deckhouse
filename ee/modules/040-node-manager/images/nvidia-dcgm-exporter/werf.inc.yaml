@@ -40,6 +40,10 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt-get update
+  - apt-get install --assume-yes --no-install-recommends libcap2-bin
+  - rm -rf /var/lib/apt/lists/*
   - export GOPATH=/go
   - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
   - export GIT_COMMIT=$(cat /src/.GIT_HASH)
@@ -57,6 +61,10 @@ shell:
     echo "include /etc/ld.so.conf.d/*.conf" > /ldconf/ld.so.conf
     mkdir -p /ldconf/ld.so.conf.d
     echo "/usr/lib/x86_64-linux-gnu" > /ldconf/ld.so.conf.d/x86_64-linux-gnu.conf
+  - |
+    mkdir -p /out/lib/x86_64-linux-gnu
+    cp /lib/x86_64-linux-gnu/libcap.so.2* /out/lib/x86_64-linux-gnu/
+    cd /out/lib/x86_64-linux-gnu && for f in libcap.so.2.*; do ln -sf "$f" libcap.so.2; done
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -80,6 +88,19 @@ import:
   - dcgm-exporter
   - dcgm-exporter-entrypoint.sh
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /sbin
+  to: /sbin
+  includePaths:
+  - getcap
+  - setcap
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /out/lib/x86_64-linux-gnu
+  to: /usr/lib/x86_64-linux-gnu
+  includePaths:
+  - libcap.so.2*
+  before: setup
 - image: {{ .ModuleName }}/nvidia-dcgm-build-artifact
   add: /out/
   to: /
@@ -96,13 +117,13 @@ import:
   includePaths:
     - lib64
   before: setup
-- image: libs/glibc
+- from: {{ index $.Images "libs/glibc" }}
   add: /
   to: /
   includePaths:
   - sbin/*
   before: setup
-- image: tools/bash
+- from: {{ index $.Images "tools/bash" }}
   add: /usr/bin/bash
   to: /usr/bin/bash
   before: setup

@@ -53,6 +53,14 @@ func (c *FakeDeckhouseV1alpha1) ModuleDocumentations() v1alpha1.ModuleDocumentat
 	return newFakeModuleDocumentations(c)
 }
 
+func (c *FakeDeckhouseV1alpha1) ModulePackages() v1alpha1.ModulePackageInterface {
+	return newFakeModulePackages(c)
+}
+
+func (c *FakeDeckhouseV1alpha1) ModulePackageVersions() v1alpha1.ModulePackageVersionInterface {
+	return newFakeModulePackageVersions(c)
+}
+
 func (c *FakeDeckhouseV1alpha1) ModulePullOverrides() v1alpha1.ModulePullOverrideInterface {
 	return newFakeModulePullOverrides(c)
 }

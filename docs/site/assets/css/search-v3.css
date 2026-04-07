@@ -1,7 +1,7 @@
 /* Search Container Styles */
 .searchV3 {
   position: relative;
-  z-index: 100;
+  z-index: 99;
 }
 
 .searchV3 .container {
@@ -253,6 +253,51 @@
   margin-right: 0;
 }
 
+.searchV3 .breadcrumbs-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.searchV3 .result-breadcrumbs {
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  display: inline-block;
+  letter-spacing: 0.025em;
+  border: 1px solid #d1d5db;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  margin-right: 0;
+  text-decoration: none;
+  cursor: default;
+}
+
+.searchV3 .result-breadcrumbs-separator {
+  color: #9ca3af;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+}
+
+.searchV3 .result-breadcrumbs-ellipsis {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #f3f4f6;
+  padding: 0.375rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  line-height: 1;
+}
+
 .searchV3 .result-description {
   color: #4b5563;
   font-size: 0.95rem;
@@ -390,15 +435,21 @@
 }
 
 /* Responsive Design */
+
+@media (max-width: 1024px) {
+  .searchV3 .input {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+}
+
 @media (max-width: 768px) {
   .searchV3 .results {
     padding: 1rem;
     flex-direction: column;
+    flex-wrap: nowrap;
     gap: 1rem;
-    width: 100%;
     right: 0;
-    left: 0;
-    max-width: calc(100vw - 20px);
   }
 
   .searchV3 .modules-row {
@@ -411,7 +462,6 @@
 
   .searchV3 .results > * {
     max-width: 100%;
-    max-height: 70vh;
   }
 
   .searchV3 .container {
@@ -419,8 +469,23 @@
   }
 
   .searchV3 .input {
-    padding: 10px 14px;
     font-size: 14px;
+  }
+}
+
+@media (max-width: 550px) {
+  .searchV3 .input {
+    padding: 5px 7px;
+  }
+}
+
+@media (max-width: 430px) {
+  .searchV3 .container {
+    padding: 0;
+  }
+
+  .searchV3 .input {
+    padding: 10px;
   }
 }
 
@@ -436,11 +501,6 @@
   right: 0;
   width: 300px;
   z-index: 100;
-}
-
-/* Adjust breadcrumb positioning to accommodate search */
-.breadcrumbs__right {
-  margin-right: 320px;
 }
 
 /* Subtle fade effect for page content when search is active */

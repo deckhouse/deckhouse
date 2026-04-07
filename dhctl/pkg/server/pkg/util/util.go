@@ -37,7 +37,9 @@ func WriteTempFile(dir, pathPattern string, writer func(*os.File) error) (string
 	}
 
 	if err := writer(f); err != nil {
-		defer cleanup()
+		defer func() {
+			_ = cleanup()
+		}()
 		return "", nil, fmt.Errorf("writing temp file: %w", err)
 	}
 

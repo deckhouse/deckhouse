@@ -154,7 +154,7 @@ func (l *LeaseLock) Unlock(ctx context.Context) {
 		return err
 	})
 	if err != nil {
-		log.Errorf("Error while Unlock lease %v", err)
+		log.Error("Error while Unlock lease %v", err)
 	}
 
 	l.lease = nil
@@ -226,14 +226,14 @@ func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1
 	return lease, err
 }
 
-func (l *LeaseLock) createLease(ctx context.Context) (lease *coordinationv1.Lease, err error) {
+func (l *LeaseLock) createLease(ctx context.Context) (*coordinationv1.Lease, error) {
 	userInfo := NewLockUserInfo(l.config.AdditionalUserInfo)
 	userInfoStr, err := json.Marshal(userInfo)
 	if err != nil {
 		userInfoStr = nil
 	}
 
-	lease = &coordinationv1.Lease{
+	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: l.config.Name,
 			Annotations: map[string]string{
@@ -382,7 +382,7 @@ func RemoveLease(ctx context.Context, kubeCl *client.KubernetesClient, config *L
 		return err
 	}
 
-	log.Infof("Starting remove lease lock")
+	log.Info("Starting remove lease lock")
 
 	err = retry.NewSilentLoop("release lease", 5, config.RetryWaitDuration).RunContext(ctx, func() error {
 		err := leasesCl.Delete(ctx, lease.Name, metav1.DeleteOptions{})

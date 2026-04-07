@@ -34,7 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 )
@@ -176,7 +175,7 @@ func checkClusterState(ctx context.Context, kubeCl *client.KubernetesClient, met
 	}, nil
 }
 
-func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeGroupState *state.NodeGroupInfrastructureState, nodeName string, infrastructureContext *infrastructure.Context, opts CheckStateOptions) (int, plan.Plan, *plan.DestructiveChanges, error) {
+func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeGroupState *dhctlstate.NodeGroupInfrastructureState, nodeName string, infrastructureContext *infrastructure.Context, opts CheckStateOptions) (int, plan.Plan, *plan.DestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
 		return plan.HasNoChanges, nil, nil, fmt.Errorf("can't extract index from infrastructure state secret (%v), skip %s", err, nodeName)
@@ -334,7 +333,7 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 
 	// NOTE: Nodes state loaded from target kubernetes cluster in default dhctl-converge.
 	// NOTE: In the commander mode nodes state should exist in the local state cache.
-	var nodesState map[string]state.NodeGroupInfrastructureState
+	var nodesState map[string]dhctlstate.NodeGroupInfrastructureState
 	if opts.CommanderMode {
 		nodesState, err = LoadNodesStateForCommanderMode(ctx, opts.StateCache, metaConfig, kubeCl)
 		if err != nil {

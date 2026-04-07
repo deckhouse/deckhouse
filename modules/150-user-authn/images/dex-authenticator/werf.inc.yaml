@@ -28,7 +28,7 @@ git:
         - '**/*'
   - url: {{ $.SOURCE_REPO }}/oauth2-proxy/oauth2-proxy.git
     to: /src
-    tag: v7.5.1
+    tag: v{{include "get_oss_version_by_id" (list "oauth2-proxy" $ )}}
     stageDependencies:
       install:
         - '**/*.go'
@@ -52,7 +52,7 @@ shell:
     - rm -rf .git docs
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" ) }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -75,7 +75,7 @@ shell:
     - chmod 0700 oauth2-proxy
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-url-exec-prober-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

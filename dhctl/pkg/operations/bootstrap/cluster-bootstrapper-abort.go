@@ -29,7 +29,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -39,11 +41,8 @@ import (
 )
 
 func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
 	if !app.SanityCheck {
 		log.WarnLn(bootstrapAbortCheckMessage)
@@ -92,16 +91,21 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
-	metaConfig, err := config.ParseConfig(
+	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
+		b.DirectoryConfig,
 	)
 	if err != nil {
 		return err
 	}
+
+	b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(
+		phases.OperationDestroy, b.Params.OnPhaseFunc, b.Params.OnProgressFunc,
+	)
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
@@ -118,6 +122,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 	}
 	stateCache := cache.Global()
+
+	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+		return err
+	}
+	defer func() {
+		_ = b.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	hasUUID, err := stateCache.InCache("uuid")
 	if err != nil {
@@ -189,7 +200,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				IsDebug:       b.IsDebug,
 				CommanderMode: b.CommanderMode,
 			})
-
 			if err != nil {
 				return err
 			}
@@ -218,6 +228,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			PhasedExecutionContext: b.PhasedExecutionContext,
 			SkipResources:          app.SkipResources,
 			InfrastructureContext:  b.InfrastructureContext,
+			DirectoryConfig:        b.DirectoryConfig,
 		}
 
 		if b.CommanderMode {
@@ -245,10 +256,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		log.InfoLn("Deckhouse installation was started before. Destroy cluster")
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
+
+	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
 	if metaConfig.IsStatic() {
 		deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
@@ -265,20 +277,20 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			return err
 		}
 
-		preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
-		if err := preflightChecker.StaticSudo(ctx); err != nil {
+		staticAbortSuite := suites.NewStaticAbortSuite(suites.StaticAbortDeps{Node: b.NodeInterface})
+		preflightRunner := preflight.New(staticAbortSuite)
+		preflightRunner.UseCache(bootstrapState)
+		preflightRunner.SetCacheSalt(state.ConfigHash(app.ConfigPaths))
+		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
+		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
+
 	}
 
 	if govalue.IsNil(destroyer) {
 		return fmt.Errorf("Destroyer not initialized")
 	}
-
-	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
-		return err
-	}
-	defer b.PhasedExecutionContext.Finalize(stateCache)
 
 	// destroy cluster cleanup provider
 	if err := destroyer.DestroyCluster(ctx, app.SanityCheck); err != nil {

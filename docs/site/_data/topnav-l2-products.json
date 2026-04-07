@@ -221,6 +221,58 @@
           "rel": ""
         }
       ]
+    },
+    {
+      "id": 10571,
+      "parent_id": 0,
+      "title": "Code",
+      "url": "/products/code/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "id": 10573,
+          "parent_id": 10571,
+          "title": "Learn more",
+          "url": "/products/code/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 10574,
+          "parent_id": 10571,
+          "title": "Documentation",
+          "url": "/products/code/documentation/",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "id": 10570,
+      "parent_id": 0,
+      "title": "Development Platform",
+      "url": "/products/development-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "id": 10572,
+          "parent_id": 10570,
+          "title": "Learn more",
+          "url": "/products/development-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 10575,
+          "parent_id": 10570,
+          "title": "Documentation",
+          "url": "/products/development-platform/documentation/",
+          "target": "",
+          "rel": ""
+        }
+      ]
     }
   ],
   "ru": [
@@ -265,10 +317,34 @@
               "rel": ""
             },
             {
+              "id": 10110,
+              "parent_id": 8398,
+              "title": "Виртуализация",
+              "url": "/products/kubernetes-platform/features/virtualization/",
+              "target": "",
+              "rel": ""
+            },
+            {
               "id": 8450,
               "parent_id": 8398,
               "title": "Наблюдаемость",
               "url": "/products/kubernetes-platform/features/observability/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 9987,
+              "parent_id": 8398,
+              "title": "Совместимость",
+              "url": "/products/kubernetes-platform/features/compatibility/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 10172,
+              "parent_id": 8398,
+              "title": "Управление секретами",
+              "url": "/products/kubernetes-platform/features/secrets-management/",
               "target": "",
               "rel": ""
             }
@@ -289,6 +365,48 @@
           "url": "/products/kubernetes-platform/licensing-dkp/",
           "target": "",
           "rel": ""
+        },
+        {
+          "id": 9665,
+          "parent_id": 5349,
+          "title": "Сценарии использования",
+          "url": "/products/kubernetes-platform/solutions/",
+          "target": "",
+          "rel": "",
+          "items": [
+            {
+              "id": 9742,
+              "parent_id": 9665,
+              "title": "Безопасность",
+              "url": "/products/kubernetes-platform/solutions/security/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 9666,
+              "parent_id": 9665,
+              "title": "Хранение и обработка данных",
+              "url": "/products/kubernetes-platform/solutions/deckhouse-data-orchestration/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 10356,
+              "parent_id": 9665,
+              "title": "Kubernetes для организаций",
+              "url": "/products/kubernetes-platform/solutions/kubernetes-standard-for-orgs/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "id": 10590,
+              "parent_id": 9665,
+              "title": "Kubernetes для облачных провайдеров",
+              "url": "/products/kubernetes-platform/solutions/k8s-for-cloud-providers/",
+              "target": "",
+              "rel": ""
+            }
+          ]
         },
         {
           "id": 5393,
@@ -481,6 +599,14 @@
           "parent_id": 5351,
           "title": "Возможности",
           "url": "/products/stronghold/features/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 10427,
+          "parent_id": 5351,
+          "title": "ФСТЭК-редакция",
+          "url": "/products/stronghold/certified-security-edition/",
           "target": "",
           "rel": ""
         },

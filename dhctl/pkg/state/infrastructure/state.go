@@ -19,22 +19,30 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
 	v1 "k8s.io/api/core/v1"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+)
+
+const (
+	infraStateSecretNodeGroupLabelKey = "node.deckhouse.io/node-group"
+	infraStateSecretNodeNameLabelKey  = "node.deckhouse.io/node-name"
 )
 
 var ErrNoInfrastructureState = errors.New("Infrastructure state is not found in outputs.")
@@ -73,53 +81,170 @@ func GetClusterUUID(ctx context.Context, kubeCl *client.KubernetesClient) (strin
 	return clusterUUID, err
 }
 
-func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) ([]*v1.Secret, error) {
+func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, action string, additionalLabels ...kubernetes.LabelSelector) ([]*v1.Secret, error) {
+	selectors := []kubernetes.LabelSelector{
+		{
+			Label:    manifests.NodeInfrastructureStateLabelKey,
+			Operator: selection.Exists,
+		},
+	}
+
+	selectors = append(selectors, additionalLabels...)
+
+	selector, err := kubernetes.GetLabelSelector(selectors)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot build label selector for %s: %w", action, err)
+	}
+
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector,
+	}
+
 	var secrets []*v1.Secret
-	err := retry.NewLoop("Get Nodes infrastructure state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx, func() error {
-		nodeStateSecrets, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).List(ctx, metav1.ListOptions{LabelSelector: manifests.NodeInfrastructureStateLabelKey})
+
+	processName := fmt.Sprintf("Get nodes infrastructure state from Kubernetes cluster for %s", action)
+
+	err = retry.NewLoop(processName, 15, 5*time.Second).RunContext(ctx, func() error {
+		timeoutCtx, cancel := defaultRequestTimeoutCtx(ctx)
+		defer cancel()
+
+		nodeStateSecrets, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).List(timeoutCtx, listOpts)
 		if err != nil {
 			return err
 		}
 
 		for _, nodeState := range nodeStateSecrets.Items {
-			name := nodeState.Labels["node.deckhouse.io/node-name"]
+			secretName := nodeState.GetName()
+
+			name := nodeState.Labels[infraStateSecretNodeNameLabelKey]
 			if name == "" {
-				return fmt.Errorf("can't determine Node name for %q secret", nodeState.Name)
+				return fmt.Errorf("Cannot determine Node name for %q secret", secretName)
 			}
 
 			if _, ok := nodeState.Labels[global.InfrastructureStateBackupLabelKey]; ok {
-				log.DebugF("Found backup state secret %s for node: %s. Skip.\n", nodeState.Name, name)
+				log.DebugF("Found backup state secret %s for node: %s. Skip.\n", secretName, name)
 				continue
 			}
 
-			nodeGroup := nodeState.Labels["node.deckhouse.io/node-group"]
+			nodeGroup := nodeState.Labels[infraStateSecretNodeGroupLabelKey]
 			if nodeGroup == "" {
-				return fmt.Errorf("can't determine NodeGroup for %q secret", nodeState.Name)
+				return fmt.Errorf("can't determine NodeGroup for %q secret", nodeState.GetName())
 			}
 			secrets = append(secrets, &nodeState)
 		}
 		return nil
 	})
+
 	return secrets, err
 }
 
 func GetNodesStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]state.NodeGroupInfrastructureState, error) {
-	secrets, err := GetNodesStateSecretsFromCluster(ctx, kubeCl)
+	secrets, err := GetNodesStateSecretsFromCluster(ctx, kubeCl, "all nodes")
 	if err != nil {
 		return nil, err
 	}
 
+	return extractNodesStatesFromSecrets(secrets)
+}
+
+func getInfraStateSecretsSelectorForNodeGroup(nodeGroup string) kubernetes.LabelSelector {
+	return kubernetes.LabelSelector{
+		// infrastructure state secret has different label for node group
+		Label:    infraStateSecretNodeGroupLabelKey,
+		Operator: selection.Equals,
+		Vals:     []string{nodeGroup},
+	}
+}
+
+type HasNodeStateInClusterParams struct {
+	NodeGroup string
+	Name      string
+}
+
+func (p HasNodeStateInClusterParams) String() string {
+	return fmt.Sprintf("%s/%s", p.NodeGroup, p.Name)
+}
+
+func HasNodeStateInCluster(ctx context.Context, kubeCl *client.KubernetesClient, params HasNodeStateInClusterParams) (bool, error) {
+	nodeName := params.Name
+	if nodeName == "" {
+		return false, fmt.Errorf("HasNodeStateInCluster: internal error. node name not passed")
+	}
+
+	nodeGroup := params.NodeGroup
+	if nodeGroup == "" {
+		return false, fmt.Errorf("HasNodeStateInCluster: internal error. node group not passed for %s", nodeName)
+	}
+
+	selectors := []kubernetes.LabelSelector{
+		getInfraStateSecretsSelectorForNodeGroup(nodeGroup),
+		{
+			Label:    infraStateSecretNodeNameLabelKey,
+			Operator: selection.Equals,
+			Vals:     []string{nodeName},
+		},
+	}
+
+	action := fmt.Sprintf("node %s", nodeName)
+	secrets, err := GetNodesStateSecretsFromCluster(ctx, kubeCl, action, selectors...)
+	if err != nil {
+		return false, err
+	}
+
+	secretsLen := len(secrets)
+
+	switch secretsLen {
+	case 0:
+		return false, nil
+	case 1:
+		return true, nil
+	default:
+		secretsNames := make([]string, 0, secretsLen)
+		for _, s := range secrets {
+			secretsNames = append(secretsNames, s.GetName())
+		}
+		return false, fmt.Errorf(
+			"Internal error. Found multiple states [%s] for node %s",
+			strings.Join(secretsNames, ", "),
+			nodeName,
+		)
+	}
+}
+
+func GetMasterNodesStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string][]byte, error) {
+	ngSelector := getInfraStateSecretsSelectorForNodeGroup(global.MasterNodeGroupName)
+	secrets, err := GetNodesStateSecretsFromCluster(ctx, kubeCl, "all control-planes", ngSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	statesForNgMap, err := extractNodesStatesFromSecrets(secrets)
+	if err != nil {
+		return nil, err
+	}
+
+	states, ok := statesForNgMap[global.MasterNodeGroupName]
+	if !ok {
+		return nil, fmt.Errorf("GetMasterNodesStateFromCluster: states for master node group not found")
+	}
+
+	return states.State, nil
+}
+
+func extractNodesStatesFromSecrets(secrets []*v1.Secret) (map[string]state.NodeGroupInfrastructureState, error) {
 	extractedState := make(map[string]state.NodeGroupInfrastructureState, len(secrets))
 
 	for _, nodeState := range secrets {
-		name := nodeState.Labels["node.deckhouse.io/node-name"]
+		secretName := nodeState.GetName()
+
+		name := nodeState.Labels[infraStateSecretNodeNameLabelKey]
 		if name == "" {
-			return nil, fmt.Errorf("can't determine Node name for %q secret", nodeState.Name)
+			return nil, fmt.Errorf("Cannot determine Node name for %q secret", secretName)
 		}
 
-		nodeGroup := nodeState.Labels["node.deckhouse.io/node-group"]
+		nodeGroup := nodeState.Labels[infraStateSecretNodeGroupLabelKey]
 		if nodeGroup == "" {
-			return nil, fmt.Errorf("can't determine NodeGroup for %q secret", nodeState.Name)
+			return nil, fmt.Errorf("Cannot determine NodeGroup for %q secret", secretName)
 		}
 
 		if _, ok := extractedState[nodeGroup]; !ok {
@@ -136,7 +261,7 @@ func GetNodesStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClie
 		extractedState[nodeGroup] = nodeGroupInfrastructureState
 	}
 
-	return extractedState, err
+	return extractedState, nil
 }
 
 func SaveNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte, logger log.Logger) error {
@@ -271,4 +396,8 @@ func DeleteInfrastructureState(ctx context.Context, kubeCl *client.KubernetesCli
 		RunContext(ctx, func() error {
 			return kubeCl.CoreV1().Secrets("d8-system").Delete(ctx, secretName, metav1.DeleteOptions{})
 		})
+}
+
+func defaultRequestTimeoutCtx(parent context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(parent, 10*time.Second)
 }

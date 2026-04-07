@@ -47,6 +47,7 @@ func (p *RunExecutorParams) validateRunParams() error {
 	return nil
 }
 
+//nolint:gocritic
 func terraformCmd(ctx context.Context, params RunExecutorParams, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, params.TerraformBinPath, args...)
 	cmd.Dir = filepath.Dir(params.TerraformBinPath)

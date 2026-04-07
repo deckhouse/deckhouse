@@ -27,7 +27,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -37,6 +36,9 @@ import (
 const (
 	oneShotDhctlServerCmd = "_server"
 	grpcServerCmd         = "server"
+	autoConvergeCmd       = "converge-periodical"
+	terraformGroupCmd     = "terraform"
+	exporterCmd           = "converge-exporter"
 )
 
 var (
@@ -102,7 +104,7 @@ var (
 			DefineFunc: commands.DefineConvergeCommand,
 		},
 		{
-			Name:       "converge-periodical",
+			Name:       autoConvergeCmd,
 			Help:       "Start service for periodical run converge.",
 			DefineFunc: commands.DefineAutoConvergeCommand,
 		},
@@ -132,11 +134,11 @@ var (
 			DefineFunc: commands.DefineSessionCommand,
 		},
 		{
-			Name: "terraform",
+			Name: terraformGroupCmd,
 			Help: "Infrastructure commands.",
 		},
 		{
-			Name:       "converge-exporter",
+			Name:       exporterCmd,
 			Help:       "Run infrastructure converge exporter.",
 			DefineFunc: commands.DefineInfrastructureConvergeExporterCommand,
 			Parrent:    "terraform",
@@ -390,7 +392,6 @@ func initGlobalVars() {
 	config.InitGlobalVars(dhctlPath)
 	commands.InitGlobalVars(dhctlPath)
 	app.InitGlobalVars(dhctlPath)
-	manifests.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
 	infrastructure.InitGlobalVars(dhctlPath)
 }

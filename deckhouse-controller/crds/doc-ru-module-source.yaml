@@ -6,6 +6,8 @@ spec:
           type: object
           description: |
             Определяет конфигурацию источника модулей Deckhouse.
+
+            Подробнее об установке модуля из источника — в разделе [«Запуск модуля в кластере DKP»](../../architecture/module-development/run/#запуск-модуля-в-кластере-dkp)
           properties:
             spec:
               properties:

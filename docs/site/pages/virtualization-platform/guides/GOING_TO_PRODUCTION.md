@@ -126,7 +126,7 @@ Always use three master nodes — this number ensures fault tolerance and allows
 If you need to run workloads (virtual machines) on control plane nodes, which is typical for **Single-node cluster (Single Node / Edge)** and **Three-node cluster (High Availability)** configurations, you need to configure tolerations in the virtual machine configuration or in the virtual machine class to allow VMs to be placed on master nodes.
 {% endalert %}
 
-See also the [Working with static nodes](/products/kubernetes-platform/documentation/v1/architecture/node.html#working-with-static-nodes) section.
+See also the [Working with static nodes](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/node-management/overview.html#working-with-static-nodes) section.
 
 ### Frontend nodes
 

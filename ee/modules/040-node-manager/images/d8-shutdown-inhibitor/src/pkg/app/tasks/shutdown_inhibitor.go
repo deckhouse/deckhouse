@@ -79,7 +79,7 @@ func (s *ShutdownInhibitor) acquireLock() error {
 		return err
 	}
 	if s.inhibitLock != 0 {
-		s.dbusCon.ReleaseInhibitLock(s.inhibitLock)
+		_ = s.dbusCon.ReleaseInhibitLock(s.inhibitLock)
 	}
 	s.inhibitLock = lock
 	return nil

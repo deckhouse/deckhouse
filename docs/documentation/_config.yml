@@ -78,6 +78,8 @@ kramdown:
  auto_ids: true
  hard_wrap: false
  syntax_highlighter: rouge
+ syntax_highlighter_opts:
+  default_lang: plaintext
  parse_block_html: true
 
 defaults:
@@ -140,9 +142,13 @@ defaults:
       type: faq
     values:
       section: admin
+      searchable: true
+      sitemap_include: true
   - scope:
       path: "_faq/user"
       type: faq
     values:
       section: user
+      searchable: true
+      sitemap_include: true
 timezone: Europe/Moscow

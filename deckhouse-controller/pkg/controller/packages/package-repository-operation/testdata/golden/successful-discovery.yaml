@@ -27,7 +27,7 @@ status:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
-    type: Processed
+    type: Completed
   packages:
     processed:
     - name: test-package
@@ -52,9 +52,5 @@ status:
     reason: ""
     status: "True"
     type: LastOperationScanFinished
-  packages:
-  - name: test-package
-    type: Application
-  packagesCount: 1
   phase: Active
   syncTime: "2025-10-31T12:00:00Z"

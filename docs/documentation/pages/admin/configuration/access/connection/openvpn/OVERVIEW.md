@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Access via OpenVPN"
 permalink: en/admin/configuration/access/connection/openvpn/overview.html
 ---
 

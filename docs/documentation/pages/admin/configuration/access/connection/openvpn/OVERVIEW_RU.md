@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Доступ через OpenVPN"
 permalink: ru/admin/configuration/access/connection/openvpn/overview.html
 lang: ru
 ---

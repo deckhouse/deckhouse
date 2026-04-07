@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func AskBecomePassword() (err error) {
+func AskBecomePassword() error {
 	if !app.AskBecomePass {
 		return nil
 	}
@@ -33,6 +33,7 @@ func AskBecomePassword() (err error) {
 	fd := int(os.Stdin.Fd())
 
 	var data []byte
+	var err error
 
 	if !terminal.IsTerminal(fd) {
 		data, err = io.ReadAll(os.Stdin)
@@ -69,7 +70,7 @@ func AskPassword(prompt string) ([]byte, error) {
 	return data, nil
 }
 
-func AskBastionPassword() (err error) {
+func AskBastionPassword() error {
 	if !app.AskBastionPass || app.SSHLegacyMode || (len(app.SSHPrivateKeys) > 0 && !app.SSHModernMode) {
 		return nil
 	}
@@ -77,6 +78,7 @@ func AskBastionPassword() (err error) {
 	fd := int(os.Stdin.Fd())
 
 	var data []byte
+	var err error
 
 	if !terminal.IsTerminal(fd) {
 		data, err = io.ReadAll(os.Stdin)

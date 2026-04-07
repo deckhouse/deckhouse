@@ -1,5 +1,6 @@
 ---
 title: "The deckhouse module: usage"
+search: "release.deckhouse.io/approved"
 ---
 
 ## Setting up the update mode

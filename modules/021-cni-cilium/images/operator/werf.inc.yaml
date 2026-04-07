@@ -1,10 +1,9 @@
-{{- $ciliumVersion := "1.17.4" }}
 # #####################################################################
 # Based on https://github.com/cilium/cilium/blob/v1.17.4/images/operator/Dockerfile
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 final: false
 import:
 - image: {{ .ModuleName }}/bin-cilium-src-artifact
@@ -26,6 +25,10 @@ shell:
   - export GOOS=linux GOARCH=amd64
   - cd /src/cilium
   - go mod vendor && go mod verify
+  # Remove compile-time interface assertion in checkmate to fix newer Go versions compatibility (testing.TB interface changed).
+  # This is safe because checkmate is a transitive test dependency, its *C type is not used in Cilium production code as testing.TB,
+  # and this change just stops the compiler from failing on unused code interface checks.
+  - '[ -f vendor/github.com/cilium/checkmate/check.go ] && sed -i "/var _ testing.TB =/d" vendor/github.com/cilium/checkmate/check.go || true'
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}

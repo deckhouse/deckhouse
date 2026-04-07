@@ -1,5 +1,5 @@
 ---
-title: Обзор
+title: Безопасность
 permalink: ru/admin/configuration/security/
 description: "Настройка функций безопасности в Deckhouse Kubernetes Platform включая сертификаты, аудит логирование, runtime безопасность, сканирование и политики безопасности."
 lang: ru

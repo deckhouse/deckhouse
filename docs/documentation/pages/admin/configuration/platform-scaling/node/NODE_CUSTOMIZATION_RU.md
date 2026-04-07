@@ -49,7 +49,7 @@ cloudProvider:
     externalNetworkNames:
     - public
     instances:
-      imageName: ubuntu-22-04-cloud-amd64
+      imageName: ubuntu-24-04-cloud-amd64
       mainNetwork: kube
       securityGroups:
       - kube
@@ -93,7 +93,7 @@ nodeGroup:
     containerLogMaxSize: 50Mi
     resourceReservation:
       mode: "Off"
-  kubernetesVersion: "1.30"
+  kubernetesVersion: "1.31"
   manualRolloutID: ""
   name: master
   nodeTemplate:
@@ -133,13 +133,23 @@ post-install() {
 
 ## Мониторинг выполнения скриптов
 
+Применение NodeGroupConfiguration запускает обновление **конфигурации `bashible` группы узлов** в указанных группах. DKP автоматически обнаруживает изменение этой конфигурации, затем выставляет поле `UPTODATE` (в выводе команды `d8 k get nodegroup`) в `0`. Поле `UPTODATE` показывает, сколько узлов уже приведены к **целевой конфигурации `bashible` группы узлов**; значение `0` означает, что пока ни один узел не приведён к целевой конфигурации `bashible` (т.е. обновление ещё не применено ни на одном узле).
+
+DKP управляет запуском обновления на узлах через аннотацию `update.node.deckhouse.io/approved` на объекте `Node`. По умолчанию обновление выполняется одновременно на одном узле из каждой группы. Параллельность обновления задаётся параметром [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) в конфигурации группы узлов. Когда DKP выбирает узел для обновления (с учётом очереди и `maxConcurrent`), на него проставляется аннотация `update.node.deckhouse.io/approved`, после чего сервис `bashible` на этом узле начинает применять **целевую конфигурацию `bashible` группы узлов**.
+
+Проставленные DKP аннотации узлов на запуск обновления можно посмотреть с помощью команды:
+
+```bash
+d8 k get nodes -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+```
+
 Ход выполнения скриптов можно увидеть на узле в журнале сервиса `bashible` c помощью команды:
 
 ```bash
-journalctl -u bashible.service
-```  
+journalctl -fu bashible.service
+```
 
-Сами скрипты находятся на узле в директории `/var/lib/bashible/bundle_steps/`.  
+Сами скрипты находятся на узле в директории `/var/lib/bashible/bundle_steps/`.
 
 ## Механизм повторного запуска скриптов
 
@@ -312,6 +322,50 @@ spec:
 ```
 
 После того как конфигурации будут применены, проведите бутстрап и перезагрузите узлы, чтобы применить настройки и установить драйвера.
+
+### Особенности использования MIG в кластере из одного узла
+
+{% alert level="info" %}
+Общая информация о подготовке GPU-узлов, установке драйверов и проверке работы GPU приведена в разделе [«Как работать с GPU-узлами»](/modules/node-manager/faq.html#как-работать-с-gpu-узлами).
+{% endalert %}
+
+В одноузловом кластере при использовании стратегии `MIG` после перезагрузки узла требуется вручную повторно применить MIG-конфигурацию.
+
+Это ограничение относится к текущей реализации MIG, в которой используется компонент `nvidia-mig-manager`.
+
+После каждой перезагрузки узла выполните следующие шаги:
+
+1. Пометьте узел служебной аннотацией:
+
+   ```bash
+   d8 k annotate node <node_name> update.node.deckhouse.io/drained=""
+   ```
+
+1. Перезапустите компонент `nvidia-mig-manager`:
+
+   ```bash
+   d8 k -n d8-nvidia-gpu delete pod -l component=nvidia-mig-manager
+   ```
+
+1. Дождитесь повторного применения MIG-конфигурации по логам `nvidia-mig-manager`:
+
+   ```bash
+   d8 k -n d8-nvidia-gpu logs -f -l component=nvidia-mig-manager
+   ```
+
+   Успешное применение конфигурации подтверждается записью вида:
+
+   ```console
+   Successfully updated to MIG config: <partedConfig>
+   ```
+
+   где `<partedConfig>` — значение параметра [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) в NodeGroup (например, `all-1g.10gb`).
+
+1. После успешного применения MIG-конфигурации верните узел в рабочее состояние:
+
+   ```bash
+   d8 k uncordon <node_name>
+   ```
 
 ### Проверка успешности установки
 

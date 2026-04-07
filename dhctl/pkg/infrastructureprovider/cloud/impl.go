@@ -128,7 +128,7 @@ func (p *Provider) IsVMChange(rc plan.ResourceChange) bool {
 		return dvp.IsVMManifest(rc, p.logger)
 	}
 
-	return rc.Type == p.settings.VmResourceType()
+	return rc.Type == p.settings.VMResourceType()
 }
 
 func (p *Provider) String() string {
@@ -496,7 +496,9 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 		p.String(),
 	)
 
-	err = p.di.InfraPluginProvider.DownloadPlugin(ctx, params, destination)
+	err = log.Process("Cloud infrastructure", "Download plugins", func() error {
+		return p.di.InfraPluginProvider.DownloadPlugin(ctx, params, destination, p.metaConfig)
+	})
 	if err != nil {
 		return "", fmt.Errorf("Cannot download plugin version %s to %s for %s: %w", version, destination, p.String(), err)
 	}
@@ -522,20 +524,22 @@ func (p *Provider) downloadInfraUtil(ctx context.Context, rootDir, errPrefix str
 
 	var err error
 
-	if useTofu {
-		p.logger.LogDebugF("Downloading opentofu %s for %s\n", params.Version.String(), p.String())
-		err = p.di.InfraUtilProvider.DownloadOpenTofu(ctx, params, destination)
-	} else {
-		p.logger.LogDebugF("Downloading terraform %s for %s\n", params.Version.String(), p.String())
-		err = p.di.InfraUtilProvider.DownloadTerraform(ctx, params, destination)
-	}
+	_ = log.Process("Cloud infrastructure", "Preparing infrastructure util", func() error {
+		if useTofu {
+			p.logger.LogDebugF("Downloading opentofu %s for %s\n", params.Version.String(), p.String())
+			err = p.di.InfraUtilProvider.DownloadOpenTofu(ctx, params, destination, p.metaConfig)
+		} else {
+			p.logger.LogDebugF("Downloading terraform %s for %s\n", params.Version.String(), p.String())
+			err = p.di.InfraUtilProvider.DownloadTerraform(ctx, params, destination, p.metaConfig)
+		}
+		return nil
+	})
 
 	if err != nil {
 		return "", fmt.Errorf("%s. Cannot download infrastructure util to %s for %s: %w", errPrefix, destination, p.String(), err)
 	}
 
 	return destination, nil
-
 }
 
 func (p *Provider) arch() string {

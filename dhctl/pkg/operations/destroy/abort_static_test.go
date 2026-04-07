@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -130,7 +131,11 @@ func (ts *testAbortStaticTest) getStateCache() dhctlstate.Cache {
 func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestParams) *testAbortStaticTest {
 	require.NotEmpty(t, params.host.Host)
 
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider())
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), dc)
 	require.NoError(t, err, "parsing config from data")
 	metaConfig.UUID = uuid.Must(uuid.NewRandom()).String()
 
@@ -143,24 +148,22 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 
 	loggerProvider := log.SimpleLoggerProvider(logger)
 
-	pipeline := phases.NewDummyDefaultPipelineProviderOpts(
-		phases.WithPipelineName("static abort"),
-		phases.WithPipelineLoggerProvider(loggerProvider),
-	)()
-
 	sshProvider := testCreateAbortSSHProvider(params, logger)
 
 	stateCache := cache.NewTestCache()
 
+	pec := phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, nil, nil)
+	require.NoError(t, pec.InitPipeline(stateCache))
+
 	abortParams := &GetAbortDestroyerParams{
 		MetaConfig:             metaConfig,
 		StateCache:             stateCache,
-		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, nil, nil),
+		PhasedExecutionContext: pec,
 		LoggerProvider:         loggerProvider,
 		TmpDir:                 tmpDir,
 		SSHClientProvider:      sshProvider.provider,
 
-		overridePhaseProvider: phases.NewPhaseActionProviderFromPipeline(pipeline),
+		overridePhaseProvider: phases.NewDefaultPhaseActionProviderWithStateCache(pec, stateCache),
 		staticLoopsParams: static.LoopsParams{
 			DestroyMaster: retry.NewEmptyParams(),
 		},

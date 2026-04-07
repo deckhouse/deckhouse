@@ -1,0 +1,11 @@
+image: dev/candi
+from: {{ index $.Images "builder/scratch" }}
+git:
+- add: /
+  to: /deckhouse
+  includePaths:
+  - candi
+{{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+
+{{ include "candi_prepare_with_shell" (dict "CI_COMMIT_TAG" .CI_COMMIT_TAG) }}

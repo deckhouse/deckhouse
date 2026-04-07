@@ -1,5 +1,8 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2021 The Kubernetes Authors
+Copyright 2026 Flant JSC
+
+Modifications made by Flant JSC as part of the Deckhouse project.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -92,7 +95,6 @@ func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions)
 	if !exists {
 		var err error
 		obj, err = r.storage.Render(name)
-
 		if err != nil {
 			requestlog.LogRenderResult(ctx, nil, exists, err)
 			return nil, err // TODO form status error
@@ -113,10 +115,9 @@ func (r *RESTBootstrap) Get(ctx context.Context, name string, options *metav1.Ge
 		return nil, err // TODO form status error
 	}
 
-	runtimeObj := obj.(runtime.Object)
-	requestlog.LogRenderResult(ctx, runtimeObj, false, nil)
+	requestlog.LogRenderResult(ctx, obj, false, nil)
 
-	return runtimeObj, nil
+	return obj, nil
 }
 
 func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
@@ -135,16 +136,4 @@ func (r *REST) Destroy() {}
 
 func (r *REST) NamespaceScoped() bool {
 	return false
-}
-
-// --------------------------------------------------------------------------------
-// Helper methods
-//
-
-func (r *REST) forbidden() (runtime.Object, error) {
-	return nil, fmt.Errorf("forbidden")
-}
-
-func (r *REST) forbiddenBool() (runtime.Object, bool, error) {
-	return nil, false, fmt.Errorf("forbidden")
 }

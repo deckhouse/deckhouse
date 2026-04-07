@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"slices"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -64,7 +63,7 @@ var _ runtime.Object = (*ApplicationPackageVersion)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=apv
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
-// +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepository
+// +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName
 // +kubebuilder:printcolumn:name="TransitionTime",type="date",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime"
 // +kubebuilder:printcolumn:name="MetadataLoaded",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].status"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].message"
@@ -110,7 +109,9 @@ type ApplicationPackageVersionStatus struct {
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions []ApplicationPackageVersionCondition `json:"conditions,omitempty"`
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// Information about applications that are using this package version.
 	// +optional
@@ -129,37 +130,6 @@ type ApplicationPackageVersionStatusInstance struct {
 	// Name of the application instance.
 	// +optional
 	Name string `json:"name,omitempty"`
-}
-
-type ApplicationPackageVersionCondition struct {
-	// Type of the condition.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	Type string `json:"type,omitempty"`
-
-	// Machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
-	// Human-readable message indicating details about last transition.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Status of the condition.
-	// Can be True, False, Unknown.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	Status corev1.ConditionStatus `json:"status,omitempty"`
-
-	// Timestamp of when the condition was last probed.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	// +optional
-	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-
-	// Last time the condition transitioned from one status to another.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 type ApplicationPackageVersionStatusMetadata struct {
@@ -230,11 +200,12 @@ func (a *ApplicationPackageVersion) AddInstalledApp(namespace string, appName st
 
 // RemoveInstalledApp removes an application from the list of applications using this package version.
 func (a *ApplicationPackageVersion) RemoveInstalledApp(namespace string, appName string) *ApplicationPackageVersion {
+	prevLen := len(a.Status.UsedBy)
 	a.Status.UsedBy = slices.DeleteFunc(a.Status.UsedBy, func(v ApplicationPackageVersionStatusInstance) bool {
 		return v.Namespace == namespace && v.Name == appName
 	})
 
-	if a.Status.UsedByCount > 0 {
+	if len(a.Status.UsedBy) < prevLen && a.Status.UsedByCount > 0 {
 		a.Status.UsedByCount--
 	}
 

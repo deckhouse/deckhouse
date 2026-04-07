@@ -87,14 +87,13 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	imagePath := filepath.Join(downloaded, version)
-	if err := os.MkdirAll(filepath.Dir(imagePath), 0755); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return newCreatePackageDirErr(err)
+	versionPath := filepath.Join(downloaded, version)
+	if _, err := os.Stat(versionPath); err == nil {
+		return nil
 	}
 
 	// download/extract into <downloaded>/<version> directory
-	if err := i.registry.Download(ctx, repo, imagePath, name, version); err != nil {
+	if err := i.registry.Download(ctx, repo, versionPath, name, version); err != nil {
 		return newDownloadErr(err)
 	}
 
@@ -133,6 +132,12 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 		if err = os.Remove(deployed); err != nil {
 			return newRemoveOldVersionErr(err)
 		}
+	}
+
+	// Create parent directory if it does not exist (for new clusters).
+	if err := os.MkdirAll(filepath.Dir(deployed), 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newCreatePackageDirErr(err)
 	}
 
 	// <downloaded>/<version>

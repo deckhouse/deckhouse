@@ -1,7 +1,7 @@
 ---
 title: What to do if you encounter problems updating Kubernetes components on cluster nodes, synchronizing nodes, or applying NodeGroup Configuration?
 subsystems:
-  - сluster_infrastructure
+  - cluster_infrastructure
 lang: en  
 ---
 

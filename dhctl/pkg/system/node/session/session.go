@@ -93,6 +93,10 @@ func (h *Host) String() string {
 	return fmt.Sprintf("%s%s", name, h.Host)
 }
 
+func (h *Host) IsEmpty() bool {
+	return h.Host == ""
+}
+
 type SortByName []Host
 
 func (h SortByName) Len() int { return len(h) }
@@ -126,6 +130,18 @@ func (s *Session) Host() string {
 	defer s.lock.RUnlock()
 	s.lock.RLock()
 	return s.host
+}
+
+func (s *Session) CurrentHost() Host {
+	currentHost := s.Host()
+	availableHosts := s.AvailableHosts()
+	for _, h := range availableHosts {
+		if h.Host == currentHost {
+			return h
+		}
+	}
+
+	return Host{}
 }
 
 // ChoiceNewHost choice new host for connection
@@ -318,7 +334,8 @@ func (s *Session) selectNewHost() {
 	}
 
 	host := hosts[hostIndx]
-	s.remainingHosts = append(hosts[:hostIndx], hosts[hostIndx+1:]...)
+	s.remainingHosts = hosts[:hostIndx]
+	s.remainingHosts = append(s.remainingHosts, hosts[hostIndx+1:]...)
 
 	s.host = host.Host
 }

@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"os"
@@ -39,6 +40,7 @@ import (
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+	"google.golang.org/grpc/credentials"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -302,7 +304,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 }
 
 func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, logger *log.Logger) {
-	telemetryShutdown := registerTelemetry(ctx)
+	telemetryShutdown := registerTelemetry(ctx, logger.Named("otlp-tracing"))
 
 	interruptCh := make(chan os.Signal, 5)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGCHLD)
@@ -471,9 +473,11 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 	return nil
 }
 
-func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
+func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context.Context) error {
 	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
 	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
+	insecureTransport := os.Getenv("TRACING_OTLP_INSECURE") == "true"
+	tlsSkipVerify := os.Getenv("TRACING_OTLP_TLS_SKIP_VERIFY") == "true"
 
 	if endpoint == "" {
 		return func(_ context.Context) error {
@@ -484,7 +488,16 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 	opts := make([]otlptracegrpc.Option, 0, 1)
 
 	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
-	opts = append(opts, otlptracegrpc.WithInsecure())
+
+	if insecureTransport {
+		opts = append(opts, otlptracegrpc.WithInsecure())
+	}
+	// TRACING_OTLP_TLS_SKIP_VERIFY replicates grpcurl -insecure: TLS is used
+	// but the server certificate is not verified. Useful when the ingress uses
+	// a self-signed or internally-signed cert that the pod does not trust.
+	if tlsSkipVerify {
+		opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
+	}
 
 	if authToken != "" {
 		opts = append(opts, otlptracegrpc.WithHeaders(map[string]string{
@@ -492,7 +505,20 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 		}))
 	}
 
-	exporter, _ := otlptracegrpc.New(ctx, opts...)
+	exporter, err := otlptracegrpc.New(ctx, opts...)
+	if err != nil {
+		logger.Error("create OTLP trace exporter", log.Err(err))
+		return func(_ context.Context) error {
+			return nil
+		}
+	}
+
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(exportErr error) {
+		if exportErr == nil {
+			return
+		}
+		logger.Debug("OTLP trace export", log.Err(exportErr))
+	}))
 
 	resource := sdkresource.NewWithAttributes(
 		semconv.SchemaURL,

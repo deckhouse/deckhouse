@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/user/resource-management/ima
 lang: ru
 ---
 
-Ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage.html) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин.
+Ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин.
 
 {% alert level="warning" %}
 Обратите внимание, что [VirtualImage](/modules/virtualization/cr.html#virtualimage) — это проектный ресурс, то есть он доступен только в том проекте или пространстве имен, в котором был создан. Для использования образов на уровне всего кластера предназначен отдельный ресурс — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
@@ -14,9 +14,9 @@ lang: ru
 
 Процесс создания образа включает следующие шаги:
 
-- Пользователь создаёт ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage.html).
+- Пользователь создаёт ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage).
 - После создания образ автоматически загружается из указанного в спецификации источника в хранилище DVCR или PVC в зависимости от типа.
-- После завершения загрузки ресурс становится доступным для создания дисков.
+- После завершения загрузки, ресурс становится доступным для создания дисков.
 
 Существуют различные типы образов:
 
@@ -28,7 +28,7 @@ lang: ru
 <a id="image-resources-table"></a>
 
 | Дистрибутив                                                                       | Пользователь по умолчанию |
-|-----------------------------------------------------------------------------------|---------------------------|
+| --------------------------------------------------------------------------------- | ------------------------- |
 | [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
 | [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
 | [AltLinux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/)                   | `altlinux`                |
@@ -47,22 +47,30 @@ lang: ru
 
 Также файлы образов могут быть сжаты одним из следующих алгоритмов сжатия: gz, xz.
 
-После создания ресурса тип и размер образа определяются автоматически. Эта информация отражается в статусе ресурса.
+После создания ресурса, тип и размер образа определяются автоматически и эта информация отражается в статусе ресурса.
+
+В статусе образа отображаются два размера:
+
+- STOREDSIZE (размер в хранилище) — объём, который образ фактически занимает в хранилище (DVCR или PVC). Для образов, загруженных в сжатом виде (например, `.gz`, `.xz`), это значение меньше распакованного размера.
+- UNPACKEDSIZE (распакованный размер) — размер образа после распаковки. Он используется при создании диска из образа и задаёт минимальный размер диска, который можно создать.
+
+{% alert level="info" %}
+При создании диска из образа укажите размер диска не меньше значения `UNPACKEDSIZE`.  
+Если размер не задан, диск будет создан с размером, соответствующим распакованному размеру образа.
+{% endalert %}
 
 Образы могут быть загружены из различных источников, таких как HTTP-серверы, где расположены файлы образов, или контейнерные реестры. Также доступна возможность загрузки образов напрямую из командной строки с использованием утилиты curl.
 
 Образы могут быть созданы из других образов и дисков виртуальных машин.
 
-Проектный образ поддерживает два типа хранения:
+Проектный образ поддерживает два варианта хранения:
 
-- `ContainerRegistry` — тип по умолчанию, при котором образ хранится в `DVCR`.
-- `PersistentVolumeClaim` — тип, при котором в качестве хранилища для образа используется `PVC`. Этот вариант предпочтителен, если используется хранилище с поддержкой быстрого клонирования `PVC`, что позволяет быстрее создавать диски из образов.
+- `ContainerRegistry` - тип по умолчанию, при котором образ хранится в `DVCR`.
+- `PersistentVolumeClaim` - тип, при котором в качестве хранилища для образа используется `PVC`. Этот вариант предпочтителен, если используется хранилище с поддержкой быстрого клонирования `PVC`, что позволяет быстрее создавать диски из образов.
 
 {% alert level="warning" %}
 Использование образа с параметром `storage: PersistentVolumeClaim` поддерживается только для создания дисков в том же классе хранения (StorageClass).
 {% endalert %}
-
-С полным описанием параметров конфигурации ресурса `VirtualImage` можно ознакомиться [в документации к ресурсу](/modules/virtualization/cr.html#virtualimage.html).
 
 ## Создание образа с HTTP-сервера
 
@@ -75,7 +83,7 @@ lang: ru
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
    metadata:
-     name: ubuntu-22-04
+     name: ubuntu-24-04
    spec:
      # Сохраним образ в DVCR.
      storage: ContainerRegistry
@@ -90,26 +98,28 @@ lang: ru
 1. Проверьте результат создания `VirtualImage`:
 
    ```bash
-   d8 k get virtualimage ubuntu-22-04
+   d8 k get virtualimage ubuntu-24-04
    # или более короткий вариант
-   d8 k get vi ubuntu-22-04
+   d8 k get vi ubuntu-24-04
    ```
 
    Пример вывода:
 
    ```console
    NAME           PHASE   CDROM   PROGRESS   AGE
-   ubuntu-22-04   Ready   false   100%       23h
+   ubuntu-24-04   Ready   false   100%       23h
    ```
 
 После создания ресурс `VirtualImage` может находиться в следующих состояниях (фазах):
 
-- `Pending` — ожидание готовности всех зависимых ресурсов, требующихся для создания образа.
-- `WaitForUserUpload` — ожидание загрузки образа пользователем (фаза присутствует только для `type=Upload`).
-- `Provisioning` — идет процесс создания образа.
-- `Ready` — образ создан и готов для использования.
-- `Failed` — произошла ошибка в процессе создания образа.
-- `Terminating` — идет процесс удаления Образа. Образ может «зависнуть» в данном состоянии, если он еще подключен к виртуальной машине.
+- `Pending` — ожидание готовности всех зависимых ресурсов, требующихся для создания образа;
+- `WaitForUserUpload` — ожидание загрузки образа пользователем (фаза присутствует только для `type=Upload`);
+- `Provisioning` — идет процесс создания образа;
+- `Ready` — образ создан и готов для использования;
+- `Failed` — произошла ошибка в процессе создания образа;
+- `Terminating` - идет процесс удаления образа. Образ может «зависнуть» в данном состоянии, если он еще подключен к виртуальной машине;
+- `ImageLost` - образ отсутствует в DVCR. Ресурс не может быть использован;
+- `PVCLost` - дочерний PVC ресурса отсутствует. Ресурс не может быть использован.
 
 До тех пор, пока образ не перешёл в фазу `Ready`, содержимое всего блока `.spec` допускается изменять. При изменении процесс создании образа запустится заново. После перехода в фазу `Ready` содержимое блока `.spec` менять нельзя.
 
@@ -118,26 +128,26 @@ lang: ru
 Отследить процесс создания образа можно путем добавления ключа `-w` к предыдущей команде:
 
 ```bash
-d8 k get vi ubuntu-22-04 -w
+d8 k get vi ubuntu-24-04 -w
 ```
 
 Пример вывода:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22-04   Provisioning   false              4s
-ubuntu-22-04   Provisioning   false   0.0%       4s
-ubuntu-22-04   Provisioning   false   28.2%      6s
-ubuntu-22-04   Provisioning   false   66.5%      8s
-ubuntu-22-04   Provisioning   false   100.0%     10s
-ubuntu-22-04   Provisioning   false   100.0%     16s
-ubuntu-22-04   Ready          false   100%       18s
+ubuntu-24-04   Provisioning   false              4s
+ubuntu-24-04   Provisioning   false   0.0%       4s
+ubuntu-24-04   Provisioning   false   28.2%      6s
+ubuntu-24-04   Provisioning   false   66.5%      8s
+ubuntu-24-04   Provisioning   false   100.0%     10s
+ubuntu-24-04   Provisioning   false   100.0%     16s
+ubuntu-24-04   Ready          false   100%       18s
 ```
 
 В описание ресурса `VirtualImage` можно получить дополнительную информацию о скачанном образе:
 
 ```bash
-d8 k describe vi ubuntu-22-04
+d8 k describe vi ubuntu-24-04
 ```
 
 Как создать образ с HTTP-сервера в веб-интерфейсе:
@@ -159,13 +169,13 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22-04-pvc
+  name: ubuntu-24-04-pvc
 spec:
   # Настройки хранения проектного образа.
   storage: PersistentVolumeClaim
   persistentVolumeClaim:
     # Подставьте ваше название StorageClass.
-    storageClassName: i-sds-replicated-thin-r2
+    storageClassName: rv-thin-r2
   # Источник для создания образа.
   dataSource:
     type: HTTP
@@ -177,14 +187,14 @@ EOF
 Проверьте результат создания `VirtualImage`:
 
 ```bash
-d8 k get vi ubuntu-22-04-pvc
+d8 k get vi ubuntu-24-04-pvc
 ```
 
 Пример вывода:
 
 ```console
 NAME              PHASE   CDROM   PROGRESS   AGE
-ubuntu-22-04-pvc  Ready   false   100%       23h
+ubuntu-24-04-pvc  Ready   false   100%       23h
 ```
 
 Если параметр `.spec.persistentVolumeClaim.storageClassName` не указан, то будет использован `StorageClass` по умолчанию на уровне кластера, либо для образов, если он указан в настройках модуля.

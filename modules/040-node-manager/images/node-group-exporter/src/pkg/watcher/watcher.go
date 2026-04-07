@@ -19,10 +19,8 @@ package watcher
 import (
 	"context"
 	"fmt"
-	"node-group-exporter/pkg/entity"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	dynamicInformers "k8s.io/client-go/dynamic/dynamicinformer"
@@ -30,6 +28,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"node-group-exporter/pkg/entity"
 )
 
 // EventHandler defines interface for handling resource events
@@ -81,10 +83,11 @@ func NewWatcher(clientset kubernetes.Interface, restConfig *rest.Config, eventHa
 
 // Start begins watching for resource changes
 func (w *Watcher) Start(ctx context.Context) error {
+	var err error
 	w.logger.Debug("Starting resource watchers...")
 
 	// Add event handlers to Node informer
-	w.nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err = w.nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			node, err := ConvertToNode(obj)
 			if err != nil {
@@ -110,9 +113,12 @@ func (w *Watcher) Start(ctx context.Context) error {
 			w.eventHandler.OnNodeDelete(node)
 		},
 	})
+	if err != nil {
+		return fmt.Errorf("Watcher nodeInformer error: %w", err)
+	}
 
 	// Add event handlers to NodeGroup informer
-	w.nodeGroupInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err = w.nodeGroupInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			nodeGroup, err := ConvertToNodeGroup(obj)
 			if err != nil {
@@ -138,6 +144,9 @@ func (w *Watcher) Start(ctx context.Context) error {
 			w.eventHandler.OnNodeGroupDelete(nodeGroup)
 		},
 	})
+	if err != nil {
+		return fmt.Errorf("Watcher nodeGroupInformer error: %w", err)
+	}
 
 	// Start the informers
 	w.wg.Add(1)

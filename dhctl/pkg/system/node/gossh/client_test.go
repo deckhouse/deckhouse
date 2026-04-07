@@ -54,14 +54,14 @@ func TestOnlyPreparePrivateKeys(t *testing.T) {
 	t.Run("OnlyPrepareKeys cases", func(t *testing.T) {
 		cases := []struct {
 			title    string
-			settings session.Session
+			settings *session.Session
 			keys     []session.AgentPrivateKey
 			wantErr  bool
 			err      string
 		}{
 			{
 				title: "No keys",
-				settings: *session.NewSession(session.Input{
+				settings: session.NewSession(session.Input{
 					AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
 					User:           "user",
 					Port:           "20022",
@@ -71,7 +71,7 @@ func TestOnlyPreparePrivateKeys(t *testing.T) {
 			},
 			{
 				title: "Key auth, no password",
-				settings: *session.NewSession(session.Input{
+				settings: session.NewSession(session.Input{
 					AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
 					User:           "user",
 					Port:           "20022"}),
@@ -80,7 +80,7 @@ func TestOnlyPreparePrivateKeys(t *testing.T) {
 			},
 			{
 				title: "Key auth, no password, noexistent key",
-				settings: *session.NewSession(session.Input{
+				settings: session.NewSession(session.Input{
 					AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
 					User:           "user",
 					Port:           "20022"}),
@@ -90,7 +90,7 @@ func TestOnlyPreparePrivateKeys(t *testing.T) {
 			},
 			{
 				title: "Key auth, no password, wrong key",
-				settings: *session.NewSession(session.Input{
+				settings: session.NewSession(session.Input{
 					AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
 					User:           "user",
 					Port:           "20022"}),
@@ -100,7 +100,7 @@ func TestOnlyPreparePrivateKeys(t *testing.T) {
 			},
 			{
 				title: "Key auth, with passphrase",
-				settings: *session.NewSession(session.Input{
+				settings: session.NewSession(session.Input{
 					AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
 					User:           "user",
 					Port:           "20022"}),
@@ -109,7 +109,7 @@ func TestOnlyPreparePrivateKeys(t *testing.T) {
 			},
 			{
 				title: "Key auth, with wrong passphrase",
-				settings: *session.NewSession(session.Input{
+				settings: session.NewSession(session.Input{
 					AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
 					User:           "user",
 					Port:           "20022"}),
@@ -125,7 +125,7 @@ func TestOnlyPreparePrivateKeys(t *testing.T) {
 				if c.settings.BecomePass != "" {
 					app.BecomePass = c.settings.BecomePass
 				}
-				sshClient = NewClient(context.Background(), &c.settings, c.keys)
+				sshClient = NewClient(context.Background(), c.settings, c.keys)
 				err := sshClient.OnlyPreparePrivateKeys()
 				if !c.wantErr {
 					require.NoError(t, err)

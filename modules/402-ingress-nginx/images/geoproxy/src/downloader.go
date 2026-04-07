@@ -41,9 +41,10 @@ import (
 )
 
 const (
-	dbExtension    = ".tar.gz"
-	maxmindURL     = "https://download.maxmind.com/app/geoip_download?license_key=%v&edition_id=%v&suffix=tar.gz"
-	lockTimeLayout = time.RFC3339Nano
+	dbExtension           = ".tar.gz"
+	maxmindURL            = "https://download.maxmind.com/app/geoip_download?license_key=%v&edition_id=%v&suffix=tar.gz"
+	lockTimeLayout        = time.RFC3339Nano
+	legacyDownloadTimeout = 1 * time.Minute
 
 	headlessServiceName = "geoproxy-headless"
 	kubeRBACProxyPort   = "7475" // kube-rbac-proxy serves HTTPS on 7475
@@ -67,7 +68,8 @@ func NewDownloader(watcher *GeoUpdaterSecret, leader *LeaderElection) *Downloade
 func (d *Downloader) Download(ctx context.Context, dstPathRoot string, cfg *Config, force bool) error {
 	mapLicenseAndEditions := d.watcher.GetLicenseEditions()
 	if len(mapLicenseAndEditions) == 0 {
-		klog.Infof("License editions is emty, skip downloading...")
+		klog.Infof("License editions is empty, skip downloading...")
+		GeoIPDownloadError.Reset()
 		return nil
 	}
 
@@ -81,6 +83,8 @@ func (d *Downloader) Download(ctx context.Context, dstPathRoot string, cfg *Conf
 		}
 	}
 
+	GeoIPDownloadError.Reset()
+
 	var errs []error
 	for licenseKey, account := range mapLicenseAndEditions {
 		client, clientInitialized := d.initMaxMindClient(account.AccountID, licenseKey)
@@ -89,7 +93,10 @@ func (d *Downloader) Download(ctx context.Context, dstPathRoot string, cfg *Conf
 			if err := d.downloadEdition(ctx, dstPathRoot, licenseKey, edition, account, client, clientInitialized, cfg); err != nil {
 				errs = append(errs, fmt.Errorf("edition %s: %w", edition, err))
 				log.Error(fmt.Sprintf("Failed to download GeoIP database edition %s: %v", edition, err))
+				GeoIPDownloadError.WithLabelValues(edition).Set(1)
+				continue
 			}
+			GeoIPDownloadError.WithLabelValues(edition).Set(0)
 		}
 	}
 
@@ -153,7 +160,6 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 func (d *Downloader) tryMaxMindClient(ctx context.Context, client maxmindClient.Client, edition, currentMD5, dstPathRoot string) (bool, error) {
 	downloadResp, err := client.Download(ctx, edition, currentMD5)
 	if err != nil {
-		incrementError(err)
 		return false, fmt.Errorf("maxmind client download: %w", err)
 	}
 
@@ -186,7 +192,6 @@ func (d *Downloader) downloadLegacyEdition(ctx context.Context, dstPathRoot, lic
 	skipTLS := account.Mirror.InsecureSkipVerify || account.LegacySkipTLS
 	dataDB, err := downloadDB(ctx, url, skipTLS, account.Mirror.CA)
 	if err != nil {
-		incrementError(err)
 		return fmt.Errorf("download data: %w", err)
 	}
 
@@ -234,7 +239,7 @@ func downloadDB(ctx context.Context, url string, skipTLSverify bool, caPEM strin
 		transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
 	}
 
-	client := &http.Client{Transport: transport, Timeout: time.Second * 3}
+	client := &http.Client{Transport: transport, Timeout: legacyDownloadTimeout}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
@@ -379,17 +384,6 @@ func isTarGZArchive(gzipStream io.Reader) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func incrementError(dlErr error) {
-	trimmedError := []rune(dlErr.Error())
-	if len(trimmedError) > 64 {
-		trimmedError = trimmedError[:64]
-	}
-
-	stringErr := string(trimmedError)
-
-	GeoIPErrors.WithLabelValues(stringErr, "download").Inc()
 }
 
 // saveDBFromMMDB packs a raw MMDB stream into a tar.gz archive named <edition>.mmdb

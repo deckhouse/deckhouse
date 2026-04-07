@@ -14,20 +14,14 @@ lang: ru
   * выбор профиля безопасности;
   * настройка администраторов проекта.
 
-    Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/default/default.yaml).
-
 - `secure` — включает все возможности шаблона `default`, а также дополнительные функции:
   * настройка допустимых для проекта UID/GID;
   * правила аудита обращения Linux-пользователей проекта к ядру;
   * сканирование запускаемых образов контейнеров на наличие известных уязвимостей (CVE).
 
-  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/default/secure.yaml).
-
 - `secure-with-dedicated-nodes` — включает все возможности шаблона `secure`, а также дополнительные функции:
   * определение селектора узла для всех подов в проекте: если под создан, селектор узла пода будет автоматически **заменён** на селектор узла проекта;
   * определение стандартных tolerations для всех подов в проекте: если под создан, стандартные значения tolerations **добавляются** к нему автоматически.
-
-  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/default/secure-with-dedicated-nodes.yaml).
 
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 
@@ -37,10 +31,10 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 ## Создание проекта
 
-1. Для создания проекта создайте кастомный ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename).
-2. В параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса `ProjectTemplate`.
+1. Для создания проекта создайте кастомный ресурс [Project](/modules/multitenancy-manager/cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-projecttemplatename).
+1. В параметре [.spec.parameters](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate).
 
-   Пример создания проекта с помощью [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
+   Пример создания проекта с помощью [Project](/modules/multitenancy-manager/cr.html#project) из `default` [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) представлен ниже:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -67,7 +61,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
          name: k8s-admins
    ```
 
-3. Для проверки статуса проекта выполните команду:
+1. Для проверки статуса проекта выполните команду:
 
    ```shell
    d8 k get projects my-project
@@ -119,25 +113,25 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 Для создания своего шаблона:
 
 1. Возьмите за основу один из шаблонов по умолчанию, например, `default`.
-2. Скопируйте его в отдельный файл, например, `my-project-template.yaml` при помощи команды:
+1. Скопируйте его в отдельный файл, например, `my-project-template.yaml` при помощи команды:
 
    ```shell
    d8 k get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
-3. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения.
+1. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения.
 
    > Необходимо изменить не только шаблон, но и схему входных параметров под него.
    >
    > Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
-4. Измените имя шаблона в поле `.metadata.name`.
-5. Примените полученный шаблон командой:
+1. Измените имя шаблона в поле `.metadata.name`.
+1. Примените полученный шаблон командой:
 
    ```shell
    d8 k apply -f my-project-template.yaml
    ```
 
-6. Проверьте доступность нового шаблона с помощью команды:
+1. Проверьте доступность нового шаблона с помощью команды:
 
    ```shell
    d8 k get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>

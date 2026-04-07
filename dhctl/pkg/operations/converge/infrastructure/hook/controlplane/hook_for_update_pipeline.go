@@ -21,6 +21,7 @@ import (
 	"time"
 
 	flantkubeclient "github.com/flant/kube-client/client"
+	"github.com/name212/govalue"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,12 +38,17 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
+type ClientSwitcher interface {
+	SwitchClientsToAnotherNodeIfNeed(ctx context.Context, nodeName, ip string) error
+}
+
 type HookForUpdatePipeline struct {
 	*Checker
 	kubeGetter        kubernetes.KubeClientProvider
 	nodeToConverge    string
 	oldMasterIPForSSH string
 	commanderMode     bool
+	clientSwitcher    ClientSwitcher
 }
 
 func NewHookForUpdatePipeline(
@@ -103,6 +109,11 @@ func (h *HookForUpdatePipeline) WithConfirm(confirm func(msg string) bool) *Hook
 	return h
 }
 
+func (h *HookForUpdatePipeline) WithClientSwitcher(s ClientSwitcher) *HookForUpdatePipeline {
+	h.clientSwitcher = s
+	return h
+}
+
 func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
 	if runner.GetChangesInPlan() != plan.HasDestructiveChanges {
 		return false, nil
@@ -122,15 +133,27 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("not all nodes are ready: %v", err)
 	}
 
-	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
+	// use no strict because we can have situation when vm was destroyed
+	// in previous run, but all resources not deleted. in this situation
+	// we cannot have ssh ip and internal ip in state because infra util
+	// delete output on remove vm
+	// in restart operation we will get error with strict getting
+	outputs, err := infrastructure.GetMasterNodeResultNoStrict(ctx, runner)
 	if err != nil {
 		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
 	}
 
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
+		h.oldMasterIPForSSH = ""
 		log.InfoF("Got empty master IP for ssh for node %s.\n", h.nodeToConverge)
 		return false, nil
+	}
+
+	if !govalue.IsNil(h.clientSwitcher) && h.nodeToConverge != "" {
+		if err := h.clientSwitcher.SwitchClientsToAnotherNodeIfNeed(ctx, h.nodeToConverge, masterIP); err != nil {
+			return false, err
+		}
 	}
 
 	h.oldMasterIPForSSH = masterIP
@@ -169,9 +192,10 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 			panic("Node interface is not ssh")
 		}
 
-		cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
+		if h.oldMasterIPForSSH != "" {
+			cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
+		}
 		cl.Session().AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
-
 	}
 
 	// Before waiting for the master node to be listed as a member of the etcd cluster,

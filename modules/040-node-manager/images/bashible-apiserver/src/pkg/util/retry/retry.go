@@ -33,7 +33,6 @@ var DefaultKubeAPIRetryBackoff = wait.Backoff{
 	Cap:      1 * time.Minute,
 }
 
-
 func DoWithRetry(ctx context.Context, name string, backoff wait.Backoff, fn func(ctx context.Context) (bool, error)) error {
 	if backoff.Duration <= 0 {
 		backoff.Duration = time.Second
@@ -72,8 +71,6 @@ func DoWithRetry(ctx context.Context, name string, backoff wait.Backoff, fn func
 	}
 }
 
-
 func RetryWithBackoff(ctx context.Context, name string, backoff wait.Backoff, fn func(ctx context.Context) (bool, error)) error {
 	return DoWithRetry(ctx, name, backoff, fn)
 }
-

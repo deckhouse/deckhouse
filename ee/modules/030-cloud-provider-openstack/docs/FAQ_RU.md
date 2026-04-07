@@ -4,7 +4,7 @@ title: "Cloud provider — OpenStack: FAQ"
 
 ## Как настроить LoadBalancer?
 
-> **Внимание!** Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
+> **Внимание.** Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
 
 ### Пример IngressNginxController
 

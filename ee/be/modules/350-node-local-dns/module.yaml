@@ -8,4 +8,4 @@ requirements:
     kube-dns: ">= 0.0.0"
 descriptions:
   en: Deploys a caching DNS server on each cluster node and exports data to the monitoring system for analysis.
-  ru: Разворачивает кэширующий DNS-сервер на каждом узле кластера, экспортирует данные в систему мониторинга для анализа.
+  ru: Разворачивает кеширующий DNS-сервер на каждом узле кластера, экспортирует данные в систему мониторинга для анализа.

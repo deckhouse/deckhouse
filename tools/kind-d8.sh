@@ -344,7 +344,7 @@ preinstall_checks() {
   local answer=
   local cluster_exist=true
 
-  read -rp "Specify kind cluster name [$KIND_CLUSTER_NAME]: " answer
+  read -rp "Specify kind cluster name [$KIND_CLUSTER_NAME] (the cluster name must match the regular expression \`^[a-z0-9.-]+$\`, underscore are not supported): " answer
   if [[ -n "$answer" ]]; then
     KIND_CLUSTER_NAME=$answer
   fi

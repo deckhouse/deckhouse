@@ -34,11 +34,12 @@ spec:
   enabled: true
   version: 1
   settings:
+    ingressClass: nginx # опциональный параметр
     dvcr:
       storage:
         persistentVolumeClaim:
           size: 50G
-          storageClassName: sds-replicated-thin-r1
+          storageClassName: rv-thin-r1
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
       - 10.66.10.0/24
@@ -105,7 +106,7 @@ d8 k edit mc virtualization
 Блок `.spec.settings.dvcr.storage` настраивает постоянный том для хранения образов:
 
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.size` — размер тома (например, `50G`). Для расширения хранилища увеличьте значение параметра;
-- `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `sds-replicated-thin-r1`).
+- `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `rv-thin-r1`).
 
 {% alert level="warning" %}
 Перенос образов при изменении значения параметра `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` не поддерживается.
@@ -133,6 +134,39 @@ d8 k edit mc virtualization
 Хранилище, обслуживающее данный класс хранения `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`, должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
 {% endalert %}
 
+### Настройки Ingress
+
+Параметр `.spec.settings.ingressClass` определяет класс Ingress-контроллера, который будет использоваться для загрузки образов виртуальных машин через веб-интерфейс или CLI.
+
+- Если параметр не указан, используется глобальное значение из конфигурации DVP.
+- Параметр является опциональным и указывается только при необходимости использовать Ingress-контроллер, отличный от глобального.
+
+Пример:
+
+```yaml
+spec:
+  settings:
+    ingressClass: nginx
+```
+
+{% alert level="info" %}
+
+При загрузке больших образов виртуальных машин (особенно при слабых каналах связи) рекомендуется увеличить таймаут завершения работы воркеров Ingress-контроллера. Это предотвратит прерывание загрузки при перезапуске или обновлении Ingress-контроллера.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  config:
+    worker-shutdown-timeout: 1800s  # 30 минут или более при необходимости
+```
+
+{% endalert %}
+
 ### Сетевые настройки
 
 В блоке `.spec.settings.virtualMachineCIDRs` указываются подсети в формате CIDR (например, `10.66.10.0/24`). IP-адреса для виртуальных машин распределяются из этих - диапазонов автоматически или по запросу.
@@ -148,7 +182,7 @@ spec:
       - 10.77.20.0/16
 ```
 
-Первый и последний адреса подсети зарезервированы и недоступны для использования.
+Для каждой подсети первый и последний IP-адреса зарезервированы системой и не могут быть назначены виртуальным машинам. Например, для подсети `10.66.10.0/24` адреса `10.66.10.0` и `10.66.10.255` недоступны для использования ВМ.
 
 {% alert level="warning" %}
 Подсети блока `.spec.settings.virtualMachineCIDRs` не должны пересекаться с подсетями узлов кластера, подсетью сервисов или подсетью подов (`podCIDR`).
@@ -206,18 +240,62 @@ spec:
 Недоступно в Community Edition.
 {% endalert %}
 
-{% alert level="warning" %}
-Для активации аудита требуется, чтобы были включены следующие модули:
-- `log-shipper`,
-- `runtime-audit-engine`.
-{% endalert %}
+Для активации аудита событий безопасности:
 
-Чтобы включить аудит событий безопасности, установите параметр `.spec.settings.audit.enabled` настроек модуля в `true`:
+1. Включите модули `[log-shipper`](/modules/log-shipper/) и `[runtime-audit-engine](/modules/runtime-audit-engine/)`.
+1. Включите аудит Kubernetes API, установив [`.spec.settings.apiserver.auditPolicyEnabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) в модуле `control-plane-manager`.
+1. Установите [`.spec.settings.audit.enabled: true`](/modules/virtualization/stable/configuration.html#parameters-audit-enabled) в модуле `virtualization`:
+
+   ```yaml
+   spec:
+     settings:
+       audit:
+         enabled: true
+   ```
+
+Полный перечень параметров конфигурации приведён в разделе [«Настройки»](/modules/virtualization/configuration.html).
+
+События собираются подом `virtualization-audit-*` в неймспейсе `d8-virtualization`. Чтобы перенаправить события в систему логирования кластера (например, Loki), создайте [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig):
 
 ```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: virtualization-audit-logs
 spec:
-  enabled: true
-  settings:
-    audit:
-      enabled: true
+  destinationRefs:
+    - d8-loki
+  kubernetesPods:
+    namespaceSelector:
+      matchNames:
+        - d8-virtualization
+    labelSelector:
+      matchLabels:
+        app: virtualization-audit
+  type: KubernetesPods
 ```
+
+Для просмотра событий в Grafana используйте запрос к Loki:
+
+```logql
+{namespace="d8-virtualization", pod=~"virtualization-audit-.*"}
+```
+
+Доступные поля в логах:
+- `type` — тип события (Access to VM, VM Management и т.д.);
+- `name` — описание события;
+- `request_subject` — username или ServiceAccount;
+- `datetime` — время события;
+- `virtualmachine_name` — имя ВМ;
+- `source_ip` — IP-адрес источника (для запрещённых операций).
+
+### События безопасности
+
+Система аудита фиксирует следующие события:
+
+- Доступ к ВМ — подключение через console, VNC или port forward. Включает имя ВМ, ОС, версии, хранилище и адрес узла.
+- Управление ВМ — создание, обновление, изменение или удаление ресурсов [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).
+- Управление ВМ через операции — Start, Stop, Restart, Migrate или Evict через ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation).
+- Проверка целостности — проверка SHA256 конфигурации ВМ. Логируется при изменении контрольной суммы.
+- Управление модулем — создание, обновление или удаление ModuleConfig.
+- Запрещённые операции — операции, заблокированные платформой. Включает пользователя, операцию, ресурс, IP-адрес и причину отказа.

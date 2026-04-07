@@ -1,0 +1,21 @@
+{% assign moduleKebabName = page['module-kebab-name'] | default: '' %}
+{% if moduleKebabName.size > 0 %}{% capture moduleKebabNamePlaceholder %} `{{ moduleKebabName }}`{% endcapture %}{% endif %}
+{% assign ossItems = site.data.modules.metadata.modules[moduleKebabName]['oss'] %}
+
+{%- if ossItems and ossItems.size > 0 %}
+
+{{ site.data.i18n.common['ossPageBlock1'][page.lang] | replace: ' <MODULE>', moduleKebabNamePlaceholder -}}
+
+{% for item in ossItems %}
+- {% if item.link.size >0 %}[{{ item.name }}]({{ item.link }}){% else %}{{ item.name }}{% endif %}
+  {%- if item.version %} {{ item.version }}{%- endif %}
+  {%- if item.license %}
+
+  License: {{ item.license }}
+  {%- endif %}
+  {%- if item.description %}
+
+  {{ item.description -}}
+  {%- endif %}
+{%- endfor %}
+{%- endif %}

@@ -36,7 +36,7 @@ Version %s.
 Copyright 2023 Flant JSC.
 Licensed under the Apache License, Version 2.0.
 http://www.apache.org/licenses/LICENSE-2.0
-`, os.Args[0])
+`, os.Args[0], version)
 }
 
 func main() {
@@ -45,13 +45,19 @@ func main() {
 		os.Exit(0)
 	}
 
+	if err := merge(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func merge() error {
 	inFiles := os.Args[1 : len(os.Args)-1]
 	outFile := os.Args[len(os.Args)-1]
 
 	out, err := toml.Merge(inFiles)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return fmt.Errorf("%w", err)
 	}
 
 	var f *os.File
@@ -60,8 +66,7 @@ func main() {
 	} else {
 		f, err = os.OpenFile(outFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			return fmt.Errorf("%w", err)
 		}
 		defer f.Close()
 	}
@@ -69,13 +74,12 @@ func main() {
 	writer := bufio.NewWriter(f)
 	_, err = writer.Write(out)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return fmt.Errorf("%w", err)
 	}
 
 	err = writer.Flush()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return fmt.Errorf("%w", err)
 	}
+	return nil
 }

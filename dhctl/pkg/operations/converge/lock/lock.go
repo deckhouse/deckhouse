@@ -43,7 +43,6 @@ type InLockRunner struct {
 	fullUnlock     bool
 	getter         kubernetes.KubeClientProvider
 	unlockConverge func(fullUnlock bool)
-	unlockMutex    sync.Mutex
 }
 
 func NewInLockRunner(getter kubernetes.KubeClientProvider, identity string) *InLockRunner {
@@ -211,13 +210,13 @@ func lockLease(
 	getter kubernetes.KubeClientProvider,
 	config *lease.LeaseLockConfig,
 	forceLock bool,
-) (toDefer func(fullUnlock bool), err error) {
+) (func(fullUnlock bool), error) {
 	log.DebugLn("Create converge lock and mutex")
 	mutex := &sync.Mutex{}
 	leaseLock := lease.NewLeaseLock(getter, *config)
 
 	log.DebugLn("Try to lock converge")
-	err = leaseLock.Lock(ctx, forceLock)
+	err := leaseLock.Lock(ctx, forceLock)
 	if err != nil {
 		return nil, err
 	}

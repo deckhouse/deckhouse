@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Масштабирование платформы и управление узлами"
 permalink: ru/admin/configuration/platform-scaling/overview.html
 lang: ru
 ---

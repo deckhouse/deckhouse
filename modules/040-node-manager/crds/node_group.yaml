@@ -187,13 +187,13 @@ spec:
 
                     By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
-                  x-doc-examples: ["1.31"]
+                  x-doc-examples: ["1.32"]
                   enum:
-                    - "1.30"
                     - "1.31"
                     - "1.32"
                     - "1.33"
                     - "1.34"
+                    - "1.35"
                 cri:
                   type: object
                   description: |
@@ -1536,10 +1536,74 @@ spec:
                       properties:
                         partedConfig:
                           type: string
-                          pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
                           description: |
                             MIG configuration name.
+
+                            Standard `all-*` profiles are supported (the same partitioning applied to all GPUs), as well as the `custom` value, which allows defining partitioning individually for each GPU.
                           x-doc-default: all-1g.5gb
+                        customConfigs:
+                          type: array
+                          description: |
+                            Custom MIG partitioning by GPU index.
+
+                            Used only when `partedConfig: custom` is set.
+
+                            Represents an array of devices (a map keyed by `index`), where each entry refers to a GPU by its index and describes the slices to be created.
+                          minItems: 1
+                          x-doc-examples:
+                            - profile: 3g.40gb
+                              count: 2
+                            - profile: 1g.10gb.me
+                              count: 1
+                          x-kubernetes-list-type: map
+                          x-kubernetes-list-map-keys:
+                            - index
+                          items:
+                            type: object
+                            required:
+                              - index
+                              - slices
+                            properties:
+                              index:
+                                type: integer
+                                minimum: 0
+                                description: GPU index on the node.
+                              slices:
+                                type: array
+                                description: List of MIG slices to create.
+                                items:
+                                  type: object
+                                  required:
+                                    - profile
+                                    - count
+                                  properties:
+                                    profile:
+                                      type: string
+                                      pattern: "^[0-9]+g\\.[0-9]+gb(\\.me)?$"
+                                      description: MIG profile name.
+                                      x-doc-examples:
+                                        - 3g.40gb
+                                        - 1g.10gb
+                                        - 1g.10gb.me
+                                    count:
+                                      type: integer
+                                      minimum: 1
+                                      maximum: 7
+                                      description: Number of slices in the selected profile.
+                                      x-doc-default: 1
+                      oneOf:
+                        - properties:
+                            partedConfig:
+                              pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          not:
+                            required:
+                              - customConfigs
+                        - properties:
+                            partedConfig:
+                              pattern: "^custom$"
+                          required:
+                            - partedConfig
+                            - customConfigs
                     timeSlicing:
                       description: |
                         `TimeSlicing` sharing strategy parameters.
@@ -2256,7 +2320,7 @@ spec:
                           type: string
                           description: |
                             Defines how swap memory is handled on the node:
-                            
+
                             * `NoSwap`: Swap is disabled. This is the traditional Kubernetes behavior.
                             * `LimitedSwap`: Kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
 
@@ -2271,11 +2335,11 @@ spec:
                           default: 60
                           description: |
                             Defines the kernel's tendency to use the swap.
-                            
+
                             * `0`: Minimal swap usage (only to avoid OOM).
                             * `60`: Default balanced behavior.
                             * `100`: Aggressive swap usage.
-                            
+
                             This value is set via `vm.swappiness` sysctl parameter.
                           x-doc-default: 60
                         limitedSwap:
@@ -2308,27 +2372,41 @@ spec:
                 fencing:
                   type: object
                   description: |
-                    Enable fencing controller for this group.
+                    Enable fencing controller for this node group.
                   required: [mode]
                   properties:
                     mode:
                       type: string
                       enum:
                         - "Watchdog"
+                        - "Notify"
                       description: |
-                        Fencing supports a single mode: `Watchdog`. In this mode, the watchdog kernel module (watchdog timer) is used.
+                        Fencing operating modes:
+                        - `Watchdog`: uses the kernel watchdog module to automatically reboot nodes that have lost connectivity to the cluster. Also in this mode, the fencing agent monitors the nodes available in the cluster.
+                        - `Notify`: runs the fencing-agent but does not activate the watchdog (validation mode, no reboots). In this mode, the fencing agent monitors the nodes available in the cluster.
 
-                        The Watchdog implementation includes the following components:
+                        When fencing is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin=<timeout>` and `soft_panic=1` parameters.
 
-                        - Fencing-agent — a DaemonSet that is deployed on a specific group of nodes (NodeGroups).
-
-                          Once started, the agent activates Watchdog and sets a special label `node-manager.deckhouse.io/fencing-enabled` on the node where it is functioning. The agent regularly checks if the Kubernetes API is available. If the API is available, the agent sends a signal to Watchdog, which resets the watchdog timer. The agent also monitors special service labels on the node and, depending on their presence, enables or disables the Watchdog.
-
-                          A softdog kernel module with parameters `soft_margin=60` and `soft_panic=1` is used as Watchdog. This means that the timeout period of the watchdog timer is 60 seconds. After this time expires, kernel-panic occurs and the node remains in this state until the user reboots it.
-
-                        - Fencing-controller — a controller that monitors all nodes with the `node-manager.deckhouse.io/fencing-enabled` label. If any node becomes unavailable for more than 60 seconds, the controller removes all pods from that node and then removes the node itself.
-
-
+                        How the fencing-agent works:
+                        - Opens `/dev/watchdog` and sets the `node-manager.deckhouse.io/fencing-enabled` label on the node.
+                        - Joins a gossip cluster (`memberlist`) with other fencing-agents in the same NodeGroup.
+                        - Regularly checks quorum (availability of a majority of nodes in the NodeGroup).
+                        - If quorum is not reached (`quorum=false`), performs a fallback check of Kubernetes API availability.
+                        - If quorum is present or the Kubernetes API is available, the agent resets the watchdog timer.
+                        - If neither quorum nor Kubernetes API access is available, the watchdog timer stops being reset, expires, and triggers a kernel panic followed by a node reboot.
+                        - Watches the maintenance annotations `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, and `update.node.deckhouse.io/disruption-approved` to temporarily disable the watchdog during planned maintenance operations.
+                    watchdog:
+                      type: object
+                      properties:
+                        timeout:
+                          type: string
+                          pattern: "^[0-9]+[smh]{1}$"
+                          default: 60s
+                          description: |
+                            Watchdog timeout duration. Should be specified in seconds, minutes or hours.
+                          x-doc-default: 60s
+                      required:
+                        - timeout
               oneOf:
                 - properties:
                     nodeType:

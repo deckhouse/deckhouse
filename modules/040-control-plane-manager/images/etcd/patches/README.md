@@ -2,7 +2,7 @@
 
 ### 001-gomod.patch
 
-Update dependencies
+Update dependencies (currently empty)
 
 ### 002-etcdctl-snapshot-pipe.patch
 

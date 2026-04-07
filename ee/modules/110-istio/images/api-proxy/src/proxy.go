@@ -74,10 +74,7 @@ func NewProxy(namespace string) (*Proxy, error) {
 		return nil, fmt.Errorf("[api-proxy] Error : %w", err)
 	}
 
-	httpProxyClient, err := initProxyClient(httpProxyTransport)
-	if err != nil {
-		return nil, fmt.Errorf("[api-proxy] Error : %w", err)
-	}
+	httpProxyClient := initProxyClient(httpProxyTransport)
 
 	proxy := &Proxy{
 		clientSet:                      clientSet,
@@ -87,10 +84,7 @@ func NewProxy(namespace string) (*Proxy, error) {
 		lwRemoteClustersPublicMetadata: lwRemoteClustersPublicMetadata,
 	}
 
-	reverse, err := proxy.NewReverseProxyHTTP()
-	if err != nil {
-		return nil, fmt.Errorf("[api-proxy] error creating reverse proxy: %w", err)
-	}
+	reverse := proxy.NewReverseProxyHTTP()
 
 	proxy.reverseProxy = reverse
 
@@ -129,16 +123,20 @@ func generateListenCert() (tls.Certificate, error) {
 	}
 
 	certPEM := new(bytes.Buffer)
-	pem.Encode(certPEM, &pem.Block{
+	if err := pem.Encode(certPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
-	})
+	}); err != nil {
+		return tls.Certificate{}, err
+	}
 
 	certPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(certPrivKeyPEM, &pem.Block{
+	if err := pem.Encode(certPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
-	})
+	}); err != nil {
+		return tls.Certificate{}, err
+	}
 
 	serverCert, err := tls.X509KeyPair(certPEM.Bytes(), certPrivKeyPEM.Bytes())
 	if err != nil {
@@ -180,12 +178,12 @@ func initProxyTransport() (*http.Transport, error) {
 	return httpProxyTransport, nil
 }
 
-func initProxyClient(httpProxyTransport *http.Transport) (*http.Client, error) {
+func initProxyClient(httpProxyTransport *http.Transport) *http.Client {
 	// for readiness healthcheck
 	return &http.Client{
 		Timeout:   10 * time.Second,
 		Transport: httpProxyTransport,
-	}, nil
+	}
 }
 
 func (p *Proxy) CheckAuthn(header http.Header, scope string) error {
@@ -248,7 +246,7 @@ func (p *Proxy) CheckAuthn(header http.Header, scope string) error {
 	return nil
 }
 
-func (p *Proxy) NewReverseProxyHTTP() (*httputil.ReverseProxy, error) {
+func (p *Proxy) NewReverseProxyHTTP() *httputil.ReverseProxy {
 	proxyDirector := func(req *http.Request) {
 		// impersonate as current ServiceAccount
 		saToken, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
@@ -273,7 +271,7 @@ func (p *Proxy) NewReverseProxyHTTP() (*httputil.ReverseProxy, error) {
 		},
 	}
 
-	return reverse, nil
+	return reverse
 }
 
 // ExtractRemotePublicMetadata extract remote-public-metadata.json fom Secret d8-remote-clusters-public-metadata

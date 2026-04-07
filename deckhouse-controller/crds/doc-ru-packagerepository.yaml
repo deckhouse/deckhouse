@@ -12,20 +12,31 @@ spec:
               properties:
                 registry:
                   description: |
-                    Конфигурация для реестра пакетов.
+                    Конфигурация для доступа к хранилищу пакетов.
                   properties:
                     ca:
                       description: |
                         Данные центра сертификации для проверки TLS.
                     dockerCfg:
                       description: |
-                        Конфигурация Docker для аутентификации.
+                        Конфигурация в формате Docker для аутентификации.
+                    login:
+                      description: |
+                        Логин для аутентификации.
+                    password:
+                      description: |
+                        Пароль для аутентификации.
                     repo:
                       description: |
-                        Путь к репозиторию в реестре.
+                        Путь к репозиторию.
                     scheme:
                       description: |
-                        Схема для доступа к реестру (например, https).
+                        Схема для доступа (например, https).
+                scanInterval:
+                  description: |
+                    Интервал сканирования.
+
+                    Определяет частоту проверки на наличие новых пакетов.
             status:
               description: |
                 Статус ресурса.
@@ -35,15 +46,15 @@ spec:
                     Условия представляют последние доступные наблюдения за состоянием репозитория.
                   items:
                     properties:
-                      lastProbeTime:
-                        description: |
-                          Последнее время проверки условия.
                       lastTransitionTime:
                         description: |
                           Последнее время перехода условия из одного статуса в другой.
                       message:
                         description: |
                           Человеко-читаемое сообщение, указывающее детали перехода.
+                      observedGeneration:
+                        description: |
+                          Поколение (.metadata.generation), на основе которого было установлено условие.
                       reason:
                         description: |
                           Программный идентификатор, указывающий причину последнего перехода условия.
@@ -52,7 +63,7 @@ spec:
                           Статус условия, один из True, False, Unknown.
                       type:
                         description: |
-                          Тип условия репозитория.
+                          Тип условия репозитория в CamelCase или в формате foo.example.com/CamelCase.
                 message:
                   description: |
                     Человеко-читаемое сообщение о статусе репозитория.

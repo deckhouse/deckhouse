@@ -161,7 +161,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 
 	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
-		w.logger.Errorf("Watch module sources: %v", err)
+		w.logger.Error("Watch module sources: %v", err)
 		return
 	}
 	defer moduleSourcesWatcher.Stop()
@@ -179,7 +179,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 
 			err = w.processModuleSourceEvent(event)
 			if err != nil {
-				w.logger.Errorf("Process module source event: %v", err)
+				w.logger.Error("Process module source event: %v", err)
 			}
 		}
 	}

@@ -1,5 +1,5 @@
 ---
-title: Integration with DVP
+title: Integration with Deckhouse Virtualization Platform cloud
 permalink: en/admin/integrations/virtualization/dvp/services.html
 ---
 

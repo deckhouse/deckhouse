@@ -25,7 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -99,26 +99,26 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	result, reconcileErr := r.reconcile(ctx, clusterScope)
+	reconcileErr := r.reconcile(ctx, clusterScope)
 	if reconcileErr != nil {
 		clusterScope.Logger.Error(reconcileErr, "failed to reconcile StaticCluster")
 	}
 
-	return result, reconcileErr
+	return ctrl.Result{}, reconcileErr
 }
 
 func (r *StaticClusterReconciler) reconcile(
 	ctx context.Context,
 	clusterScope *scope.ClusterScope,
-) (ctrl.Result, error) {
+) error {
 	controlPlaneEndpointURL, err := url.Parse(r.Config.Host)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to parse api server host")
+		return errors.Wrap(err, "failed to parse api server host")
 	}
 
 	port, err := strconv.Atoi(controlPlaneEndpointURL.Port())
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to parse api server port")
+		return errors.Wrap(err, "failed to parse api server port")
 	}
 
 	clusterScope.StaticCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
@@ -126,14 +126,15 @@ func (r *StaticClusterReconciler) reconcile(
 		Port: int32(port),
 	}
 
-	clusterScope.StaticCluster.Status.Ready = true
+	clusterReady := true
+	clusterScope.StaticCluster.Status.Initialization.Provisioned = &clusterReady
 
 	err = clusterScope.Patch(ctx)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticCluster")
+		return errors.Wrap(err, "failed to patch StaticCluster")
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

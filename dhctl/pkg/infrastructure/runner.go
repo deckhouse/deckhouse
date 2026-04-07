@@ -41,17 +41,17 @@ import (
 const (
 	deckhouseClusterStateSuffix = "-dhctl.*.tfstate"
 	deckhousePlanSuffix         = "-dhctl.*.tfplan"
+	deckhouseDebugPlanSuffix    = "-dhctl-debug.*.tfplan"
 	varFileName                 = "cluster-config.auto.*.tfvars.json"
-
-	infrastructurePipelineAbortedMessage = `
-Infrastructure pipeline aborted.
-If you want to drop the cache and continue, please run dhctl with "--yes-i-want-to-drop-cache" flag.
-`
 )
 
 var (
-	ErrRunnerStopped              = errors.New("Infrastructure runner was stopped.")
-	ErrInfrastructureApplyAborted = errors.New("Infrastructure apply aborted.")
+	ErrRunnerStopped                 = errors.New("Infrastructure runner was stopped.")
+	ErrInfrastructureApplyAborted    = errors.New("Infrastructure apply aborted.")
+	ErrInfrastructurePipelineAborted = errors.New(`
+Infrastructure pipeline aborted.
+If you want to drop the cache and continue, please run dhctl with "--yes-i-want-to-drop-cache" flag.
+`)
 )
 
 type (
@@ -304,7 +304,7 @@ func (r *Runner) Init(ctx context.Context) error {
 				}
 
 				if !isConfirm {
-					return fmt.Errorf(infrastructurePipelineAbortedMessage)
+					return ErrInfrastructurePipelineAborted
 				}
 			}
 
@@ -376,7 +376,7 @@ func (r *Runner) runBeforeActionAndWaitReady(ctx context.Context) error {
 	return nil
 }
 
-func (r *Runner) isSkipChanges(ctx context.Context) (skip bool, err error) {
+func (r *Runner) isSkipChanges(ctx context.Context) (bool, error) {
 	// first verify destructive change
 	if r.changesInPlan == plan.HasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
@@ -401,9 +401,7 @@ func (r *Runner) isSkipChanges(ctx context.Context) (skip bool, err error) {
 		}
 	}
 
-	err = r.runBeforeActionAndWaitReady(ctx)
-
-	return false, err
+	return false, r.runBeforeActionAndWaitReady(ctx)
 }
 
 func (r *Runner) Apply(ctx context.Context) error {
@@ -476,7 +474,9 @@ func (r *Runner) ShowPlan(ctx context.Context) ([]byte, error) {
 		return nil, ErrRunnerStopped
 	}
 
-	rawPlan, err := r.infraExecutor.Show(ctx, r.GetPlanPath())
+	rawPlan, err := r.infraExecutor.Show(ctx, ShowOpts{
+		PlanPath: r.GetPlanPath(),
+	})
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
@@ -543,6 +543,85 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 	})
 }
 
+func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target string) (string, error) {
+	if r.stopped {
+		return "", ErrRunnerStopped
+	}
+
+	executorStep := string(r.infraExecutor.Step())
+
+	if destroy {
+		log.InfoF(
+			"Skip getting debug plan for destroy: passed step %s; executor step %s; target '%s'\n",
+			step,
+			executorStep,
+			target,
+		)
+		return "", nil
+	}
+
+	if step != executorStep || target == "" {
+		log.InfoF(
+			"Skip getting debug plan for: passed step %s; executor step %s; target '%s'\n",
+			step,
+			executorStep,
+			target,
+		)
+		return "", nil
+	}
+
+	processName := fmt.Sprintf("infrastructure debug plan for %s...", target)
+
+	res := ""
+	err := r.logger.LogProcess("default", processName, func() error {
+		tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(r.infraExecutor.Step())+deckhouseDebugPlanSuffix)
+		if err != nil {
+			return fmt.Errorf("Can't create temp file for debug plan: %w", err)
+		}
+
+		tmpFileName := tmpFile.Name()
+
+		defer func() {
+			if err := os.Remove(tmpFileName); err != nil {
+				log.WarnF("Can't remove debug plan file '%s' for target %s: %v\n", tmpFileName, target, err)
+			}
+		}()
+
+		planExitCode, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
+			return r.infraExecutor.Plan(ctx, PlanOpts{
+				StatePath:     r.statePath,
+				Destroy:       false,
+				VariablesPath: r.variablesPath,
+				OutPath:       tmpFileName,
+				Target:        target,
+			})
+		})
+
+		if err != nil {
+			return fmt.Errorf("Can't get infrastructure plan for %s: '%w'. Exit code %d", target, err, planExitCode)
+		}
+
+		resBytes, err := r.infraExecutor.Show(ctx, ShowOpts{
+			PlanPath:      tmpFileName,
+			ShowSensitive: true,
+		})
+
+		if err != nil {
+			return fmt.Errorf("Can't show infrastructure plan for %s: %w\nOutput:\n%s\n", target, err, string(resBytes))
+		}
+
+		res = string(resBytes)
+
+		return nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return res, nil
+}
+
 func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]byte, error) {
 	if r.stopped {
 		return nil, ErrRunnerStopped
@@ -555,7 +634,10 @@ func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]
 	var result []byte
 
 	_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
-		res, err := r.infraExecutor.Output(ctx, r.statePath, []string{output}...)
+		res, err := r.infraExecutor.Output(ctx, OutputOpts{
+			StatePath: r.statePath,
+			OutFields: []string{output},
+		})
 		if err != nil {
 			return -1, err
 		}
@@ -660,7 +742,7 @@ func (r *Runner) ResourcesQuantityInState() int {
 	}
 	err = json.Unmarshal(data, &st)
 	if err != nil {
-		r.logger.LogErrorLn(err)
+		r.logger.LogErrorF("ResourcesQuantityInState cannot parse state: %v\n", err)
 		return 0
 	}
 
@@ -729,7 +811,9 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 	var hasVMChange bool
 
 	_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
-		res, err := r.infraExecutor.Show(ctx, planFile)
+		res, err := r.infraExecutor.Show(ctx, ShowOpts{
+			PlanPath: planFile,
+		})
 		if err != nil {
 			return 0, err
 		}

@@ -273,7 +273,7 @@ data: {}
 
 	// TODO: eliminate the following dirty hack after `ee` subdirectory will be merged to the root
 	// Used to make dhctl config function able to validate `VsphereClusterConfiguration`.
-	_ = os.Setenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS", "/deckhouse/ee/candi")
+	_ = os.Setenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS", "/deckhouse/ee/modules/030-cloud-provider-openstack/candi")
 	f := HookExecutionConfigInit(initValuesStringA, `{}`)
 
 	Context("Cluster has minimal cloudProviderOpenstack configuration and not empty discovery data", func() {

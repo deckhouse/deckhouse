@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,17 +60,16 @@ func (c *Checker) Check() checker.Result {
 	version, err := c.versionGetter()
 	if err != nil {
 		return checker.Result{
-			Enabled: false,
-			Reason:  fmt.Sprintf("get version: %s", err.Error()),
+			Reason:  "VersionLookupFailed",
+			Message: fmt.Sprintf("get version: %s", err.Error()),
 		}
 	}
 
 	// Validate returns (bool, []error) - we only use the errors
 	if _, errs := c.constraints.Validate(version); len(errs) != 0 {
 		return checker.Result{
-			Enabled: false,
 			Reason:  c.reason,
-			Message: errs[0].Error(),
+			Message: fmt.Errorf("check version error: %w", errs[0]).Error(),
 		}
 	}
 

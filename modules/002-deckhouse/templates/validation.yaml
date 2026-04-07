@@ -16,6 +16,7 @@ spec:
         resources: ["namespaces"]
   validations:
     - expression: '!(request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
+        && request.userInfo.username != "dhctl"
         && (object.metadata.name.startsWith("d8-") || object.metadata.name.startsWith("kube-")))'
       reason: Forbidden
       messageExpression: '''Creation of system namespaces is forbidden'''

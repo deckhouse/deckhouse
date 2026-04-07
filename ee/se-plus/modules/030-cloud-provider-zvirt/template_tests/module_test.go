@@ -7,7 +7,7 @@ package template_tests
 
 import (
 	"encoding/base64"
-	"os"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -20,6 +20,12 @@ func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
+
+const providerID = "zvirt"
+const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
+const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
+const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
+const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 
 // fake *-crd modules are required for backward compatibility with lib_helm library
 // TODO: remove fake crd modules
@@ -35,7 +41,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -46,7 +52,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.30.0
+    kubernetesVersion: 1.31.0
     clusterUUID: cluster
 `
 
@@ -115,19 +121,6 @@ const tolerationsAnyNodeWithUninitialized = `
 
 var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 	f := SetupHelmConfig(``)
-	BeforeSuite(func() {
-		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/se-plus/candi/cloud-providers/zvirt", "/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
-
-	AfterSuite(func() {
-		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/se-plus/candi/cloud-providers/zvirt", "/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
 
 	Context("zVirt Suite A", func() {
 		BeforeEach(func() {
@@ -140,11 +133,7 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-			Expect(regSecret.Exists()).To(BeTrue())
-			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("zvirt"))))
-
-			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "cloud-controller-manager")
+  		ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "cloud-controller-manager")
 			Expect(ccmDeployment.Exists()).To(BeTrue())
 			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
 - --leader-elect=true
@@ -169,6 +158,38 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerRegistrationSecretData := providerRegistrationSecret.Field("data").Map()
+			Expect(providerRegistrationSecretData).To(Not(BeEmpty()))
+			Expect(providerRegistrationSecretData["capiClusterName"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(providerID))))
+			Expect(providerRegistrationSecretData["sshPublicKey"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("ssh-rsa deadbeef"))))
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-node-manager-cloud-provider-%s", providerID))
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerSpecificRegistrationSecretData := providerSpecificRegistrationSecret.Field("data").Map()
+			Expect(providerSpecificRegistrationSecretData).To(Not(BeEmpty()))
+			Expect(providerSpecificRegistrationSecretData["capiClusterName"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(providerID))))
+			Expect(providerSpecificRegistrationSecretData["sshPublicKey"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("ssh-rsa deadbeef"))))
+
+			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
+			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+			Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", ephemeralNodesTemplatesLabelKey)).String()).To(Equal("capi"))
+			Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
+			Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificCAPISecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
+
+			providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
+			Expect(providerSpecificBashibleStepsSecret.Exists()).To(BeFalse())
+
+			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
+			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
 		})
 	})
 })

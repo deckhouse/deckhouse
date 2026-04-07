@@ -12,6 +12,7 @@ linters:
     - gocritic
     - govet
     - ineffassign
+    - makezero
     - misspell
     - musttag
     - nonamedreturns
@@ -40,6 +41,7 @@ linters:
         - fmt:.*[rR]ead|[wW]rite|[cC]lose
         - io:Copy
         - (io.Writer).Write
+        - (net/http.ResponseWriter).Write
     nonamedreturns:
       report-error-in-defer: false
     sloglint:

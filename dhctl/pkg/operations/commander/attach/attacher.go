@@ -117,7 +117,9 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	if err = i.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return nil, err
 	}
-	defer i.PhasedExecutionContext.Finalize(stateCache)
+	defer func() {
+		_ = i.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	if shouldStop, err := i.PhasedExecutionContext.StartPhase(phases.CommanderAttachScanPhase, false, stateCache); err != nil {
 		return nil, fmt.Errorf("unable to switch phase: %w", err)
@@ -205,6 +207,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(i.Params.Logger),
 			),
+			nil,
 		)
 		if err != nil {
 			return fmt.Errorf("unable to parse cluster config: %w", err)
@@ -378,7 +381,10 @@ func (i *Attacher) check(
 			TmpDir:                i.Params.TmpDir,
 			IsDebug:               i.Params.IsDebug,
 			Logger:                i.Params.Logger,
+			Embedded:              true,
 		})
+
+		checker.SetExternalPhasedContext(i.PhasedExecutionContext)
 
 		// provider will cleanup in Attach
 		res, _, err = checker.Check(ctx)

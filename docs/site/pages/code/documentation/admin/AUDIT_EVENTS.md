@@ -829,6 +829,124 @@ Audit events in a production environment contain full information either directl
 <td><code style="word-break: break-all; white-space: normal;">package_registry_package_deleted</code></td>
 <td>package version <code>#{package.version}</code> has been deleted</td>
 <td>A package was deleted from the package registry.</td>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">group_access_token_destroyed</code></td>
+<td>Group access token destroyed</td>
+<td>A group access token was destroyed.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">group_access_token_revoked</code></td>
+<td>Group access token revoked</td>
+<td>A group access token was revoked.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">personal_access_token_destroyed</code></td>
+<td>Personal access token destroyed</td>
+<td>A personal access token was destroyed.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">project_access_token_destroyed</code></td>
+<td>Project access token destroyed</td>
+<td>A project access token was destroyed.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">project_access_token_revoked</code></td>
+<td>Project access token revoked</td>
+<td>A project access token was revoked.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">approval_rule_created</code></td>
+<td>Merge request\Project\Group approval rule created</td>
+<td>A merge request, project, or group approval rule was created.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">approval_rule_updated</code></td>
+<td>Merge request\Project\Group approval rule updated</td>
+<td>A merge request, project, or group approval rule was updated.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">approval_rule_deleted</code></td>
+<td>Merge request\Project\Group approval rule deleted</td>
+<td>A merge request, project, or group approval rule was deleted.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">approval_rule_propagated</code></td>
+<td>Approval rules <code>#{rule_names}</code> propagated to <code>#{project_and_group_names}</code></td>
+<td>Approval rules were propagated to these projects and groups.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">variable_viewed_api</code></td>
+<td>User viewed all CI/CD variables via API for this scope or User viewed CI/CD variable <code>#{variable.key}</code> via API</td>
+<td>All CI/CD variables were viewed via API for this scope or A CI/CD variable <code>#{variable.key}</code> was viewed via API.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">group_unarchived</code></td>
+<td>User unarchived group</td>
+<td>A group was unarchived.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">group_archived</code></td>
+<td>User archived group</td>
+<td>A group was archived.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">comment_deleted</code></td>
+<td>Comment deleted</td>
+<td>A comment was deleted.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">comment_created</code></td>
+<td>Comment created</td>
+<td>A comment was created.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">comment_updated</code></td>
+<td>Comment updated</td>
+<td>A comment was updated.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">user_records_migrated_to_ghost</code></td>
+<td>User records migrated to ghost</td>
+<td>User records were migrated to a ghost user.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">user_enable_passkey</code></td>
+<td>User enable new passkey</td>
+<td>A new passkey was enabled.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">user_disable_passkey</code></td>
+<td>User disable passkey</td>
+<td>A passkey was disabled.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">push_rule_propagated</code></td>
+<td>Push rule propagated</td>
+<td>A push rule was propagated.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">push_rule_updated</code></td>
+<td>Push rule updated</td>
+<td>An existing push rule was updated.</td>
 <td></td>
 </tr>
 </tbody>

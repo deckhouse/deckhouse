@@ -24,7 +24,7 @@ type InfraActionHook interface {
 
 type DummyHook struct{}
 
-func (c *DummyHook) BeforeAction(context.Context, RunnerInterface) (runPostAction bool, err error) {
+func (c *DummyHook) BeforeAction(context.Context, RunnerInterface) (bool, error) {
 	return false, nil
 }
 

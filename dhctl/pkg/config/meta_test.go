@@ -28,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 func TestGetDNSAddress(t *testing.T) {
@@ -74,7 +76,7 @@ cloud:
   prefix: cluster
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.30"
+kubernetesVersion: "1.31"
 clusterDomain: "cluster.local"
 {{- if .proxy }}
 proxy:
@@ -217,8 +219,12 @@ func generateOldDockerCfg(host string, username, password *string) string {
 
 func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 
-	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider())
+	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), dc)
 	f := require.NoError
 	if hasErr {
 		f = require.Error
@@ -276,7 +282,7 @@ spec:
     registry:
       mode: Unmanaged
       unmanaged:
-        imagesRepo: r.example.com/test/
+        imagesRepo: r.example.com/test
         username: test-user
         password: test-password
         scheme: HTTPS

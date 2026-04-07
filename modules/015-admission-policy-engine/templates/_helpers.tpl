@@ -76,6 +76,9 @@ spec:
         - key: security.deckhouse.io/skip-pss-check
           operator: NotIn
           values: ["true"]
+        - key: gatekeeper.sh/operation
+          operator: NotIn
+          values: ["webhook"]
     namespaceSelector:
       matchExpressions:
       {{- if eq $standard "baseline" }}
@@ -134,6 +137,9 @@ spec:
         - key: security.deckhouse.io/skip-pss-check
           operator: NotIn
           values: ["true"]
+        - key: gatekeeper.sh/operation
+          operator: NotIn
+          values: ["webhook"]
     namespaceSelector:
       matchExpressions:
     {{- if eq $standard "baseline" }}
@@ -168,7 +174,8 @@ spec:
 
 {{- define "trivy.provider.enabled" }}
   {{- $context := . }}
-  {{- if and ($context.Values.global.enabledModules | has "operator-trivy") ($context.Values.admissionPolicyEngine.denyVulnerableImages.enabled) }}
+  {{- $denyEnabled := dig "operatorTrivy" "denyVulnerableImages" "enabled" false ($context.Values | merge (dict)) }}
+  {{- if and ($context.Values.global.enabledModules | has "operator-trivy") $denyEnabled }}
     {{- print "true" }}
   {{- end }}
   {{- print "" }}

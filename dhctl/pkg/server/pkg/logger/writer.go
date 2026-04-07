@@ -19,6 +19,8 @@ import (
 	"sync"
 )
 
+type LogConsumer[T any] func(lines []string) T
+
 type LogWriter[T any] struct {
 	l      *slog.Logger
 	sendCh chan T
@@ -28,7 +30,7 @@ type LogWriter[T any] struct {
 	prev []byte
 }
 
-func NewLogWriter[T any](l *slog.Logger, sendCh chan T, f func(lines []string) T) *LogWriter[T] {
+func NewLogWriter[T any](l *slog.Logger, sendCh chan T, f LogConsumer[T]) *LogWriter[T] {
 	return &LogWriter[T]{
 		l:      l,
 		sendCh: sendCh,
@@ -36,7 +38,7 @@ func NewLogWriter[T any](l *slog.Logger, sendCh chan T, f func(lines []string) T
 	}
 }
 
-func (w *LogWriter[T]) Write(p []byte) (n int, err error) {
+func (w *LogWriter[T]) Write(p []byte) (int, error) {
 	w.m.Lock()
 	defer w.m.Unlock()
 
@@ -75,7 +77,7 @@ func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
 	}
 }
 
-func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
+func (w *DebugLogWriter) Write(p []byte) (int, error) {
 	// slog is thread safe
 	w.l.Debug(string(p))
 

@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -135,7 +136,7 @@ func (c *Config) newClient() error {
 }
 
 func (c *Config) checkKubernetesVersion() error {
-	log.Infof("check desired kubernetes version %s against allowed kubernetes version list: %s", c.KubernetesVersion, c.AllowedKubernetesVersions)
+	log.Info("check desired kubernetes version against allowed kubernetes versions list", slog.String("version", c.KubernetesVersion), slog.String("allowed_versions", c.AllowedKubernetesVersions))
 
 	for _, v := range strings.Split(c.AllowedKubernetesVersions, ",") {
 		if c.KubernetesVersion == v {

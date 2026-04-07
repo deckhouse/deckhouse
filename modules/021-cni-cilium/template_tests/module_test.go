@@ -101,6 +101,16 @@ internal:
     - 192.168.0.0/16
     excludedCIDRs:
     - 192.168.3.0/24
+  - name: egp-dev-2
+    egressGatewayName: myeg
+    selectors:
+    - podSelector:
+        matchLabels:
+          app: nginx-2
+    destinationCIDRs:
+    - 192.168.100.0/16
+    excludedCIDRs:
+    - 192.168.103.0/24
 resourcesManagement:
   mode: VPA
   vpa:
@@ -192,16 +202,19 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			cegp := f.KubernetesGlobalResource("CiliumEgressGatewayPolicy", "d8.myeg")
-			Expect(cegp.Exists()).To(BeTrue())
+			cegp1 := f.KubernetesGlobalResource("CiliumEgressGatewayPolicy", "d8.egp-dev")
+			Expect(cegp1.Exists()).To(BeTrue())
+			Expect(cegp1.Field("spec.destinationCIDRs").String()).To(MatchJSON(`["192.168.0.0/16"]`))
+			Expect(cegp1.Field("spec.excludedCIDRs").String()).To(MatchJSON(`["192.168.3.0/24"]`))
+			Expect(cegp1.Field("spec.selectors").String()).To(MatchJSON(`[{"podSelector": {"matchLabels": {"app": "nginx"}}}]`))
+			Expect(cegp1.Field("spec.egressGateway.nodeSelector.matchLabels").String()).To(MatchJSON(`{"egress-gateway.network.deckhouse.io/active-for-myeg": ""}`))
 
-			Expect(cegp.Field("spec.destinationCIDRs").String()).To(MatchJSON(`["192.168.0.0/16"]`))
-
-			Expect(cegp.Field("spec.excludedCIDRs").String()).To(MatchJSON(`["192.168.3.0/24"]`))
-
-			Expect(cegp.Field("spec.selectors").String()).To(MatchJSON(`[{"podSelector": {"matchLabels": {"app": "nginx"}}}]`))
-
-			Expect(cegp.Field("spec.egressGateway.nodeSelector.matchLabels").String()).To(MatchJSON(`{"egress-gateway.network.deckhouse.io/active-for-myeg": ""}`))
+			cegp2 := f.KubernetesGlobalResource("CiliumEgressGatewayPolicy", "d8.egp-dev-2")
+			Expect(cegp2.Exists()).To(BeTrue())
+			Expect(cegp2.Field("spec.destinationCIDRs").String()).To(MatchJSON(`["192.168.100.0/16"]`))
+			Expect(cegp2.Field("spec.excludedCIDRs").String()).To(MatchJSON(`["192.168.103.0/24"]`))
+			Expect(cegp2.Field("spec.selectors").String()).To(MatchJSON(`[{"podSelector": {"matchLabels": {"app": "nginx-2"}}}]`))
+			Expect(cegp2.Field("spec.egressGateway.nodeSelector.matchLabels").String()).To(MatchJSON(`{"egress-gateway.network.deckhouse.io/active-for-myeg": ""}`))
 
 			ceds := f.KubernetesResource("Daemonset", "d8-cni-cilium", "egress-gateway-agent")
 			Expect(ceds.Exists()).To(BeTrue())

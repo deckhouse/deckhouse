@@ -140,7 +140,7 @@ func getNativeTLSMode(tlsMode string) string {
 }
 
 type PostgreSQLCredentials struct {
-	TlsMode    string
+	TLSMode    string
 	User       string
 	Password   string
 	ClientCert string

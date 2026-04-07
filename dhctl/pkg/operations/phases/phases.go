@@ -24,6 +24,25 @@ type (
 	OperationSubPhase string
 )
 
+type ProgressAction string
+
+func (a ProgressAction) IsZero() bool {
+	return a == ""
+}
+
+type PhaseWithSubPhases struct {
+	Phase     OperationPhase      `json:"phase"`
+	Action    *ProgressAction     `json:"action,omitempty,omitzero"`
+	SubPhases []OperationSubPhase `json:"subPhases,omitempty"`
+
+	includeIf func(opts phasesOpts) bool
+}
+
+const (
+	ProgressActionDefault ProgressAction = ""
+	ProgressActionSkip    ProgressAction = "skip"
+)
+
 const (
 	OperationBootstrap       Operation = "Bootstrap"
 	OperationConverge        Operation = "Converge"
@@ -32,6 +51,13 @@ const (
 	OperationCommanderAttach Operation = "CommanderAttach"
 	OperationCommanderDetach Operation = "CommanderDetach"
 )
+
+// ClusterConfig holds cluster parameters that affect phase list and progress.
+// Pass via SetClusterConfig as soon as meta config is parsed, before any phase is reported.
+// Extensible for future fields (e.g. cloud provider, features).
+type ClusterConfig struct {
+	ClusterType string
+}
 
 // Define common operations phases for such operations as bootstrap, converge and destroy.
 // Notice that each operation could define own phases (like attach operation do).
@@ -47,6 +73,7 @@ const (
 	DeleteResourcesPhase                   OperationPhase = "DeleteResources"
 	ExecPostBootstrapPhase                 OperationPhase = "ExecPostBootstrap"
 	// converge only
+	ConvergeCheckPhase          OperationPhase = "Check"
 	AllNodesPhase               OperationPhase = "AllNodes"
 	ScaleToMultiMasterPhase     OperationPhase = "ScaleToMultiMaster"
 	ScaleToSingleMasterPhase    OperationPhase = "ScaleToSingleMaster"
@@ -57,6 +84,9 @@ const (
 	WaitStaticDestroyerNodeUserPhase   OperationPhase = "WaitStaticDestroyerNodeUser"
 	SetDeckhouseResourcesDeletedPhase  OperationPhase = "SetDeckhouseResourcesDelete"
 	CommanderUUIDWasChecked            OperationPhase = "CommanderUUIDWasChecked"
+	// check only
+	CheckInfra         OperationPhase = "CheckInfra"
+	CheckConfiguration OperationPhase = "CheckConfiguration"
 	// all
 	FinalizationPhase OperationPhase = "Finalization"
 )
@@ -68,8 +98,14 @@ const (
 	CommanderAttachCheckPhase   OperationPhase = "Check"
 )
 
+// commander detach phases
+const (
+	CommanderDetachCheckPhase  OperationPhase = "Check"
+	CommanderDetachDetachPhase OperationPhase = "Detach"
+)
+
 var (
-	StopOperationCondition = errors.New("StopOperationCondition")
+	ErrStopOperationCondition = errors.New("StopOperationCondition")
 )
 
 // bootstrap sub phases
@@ -78,3 +114,110 @@ const (
 	InstallDeckhouseSubPhaseInstall OperationSubPhase = "InstallDeckhouse"
 	InstallDeckhouseSubPhaseWait    OperationSubPhase = "WaitForFirstMasterReady"
 )
+
+func BootstrapPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
+		{Phase: RegistryPackagesProxyPhase},
+		{Phase: ExecuteBashibleBundlePhase},
+		{
+			Phase: InstallDeckhousePhase,
+			SubPhases: []OperationSubPhase{
+				InstallDeckhouseSubPhaseConnect,
+				InstallDeckhouseSubPhaseInstall,
+				InstallDeckhouseSubPhaseWait,
+			},
+		},
+		{Phase: InstallAdditionalMastersAndStaticNodes},
+		{Phase: CreateResourcesPhase},
+		{Phase: ExecPostBootstrapPhase},
+		{Phase: FinalizationPhase},
+	}
+}
+
+func ConvergePhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{
+			Phase: ConvergeCheckPhase,
+			SubPhases: []OperationSubPhase{
+				OperationSubPhase(CheckInfra),
+				OperationSubPhase(CheckConfiguration),
+			},
+		},
+		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
+		{Phase: InstallDeckhousePhase},
+		{Phase: AllNodesPhase},
+		{Phase: ScaleToMultiMasterPhase},
+		{Phase: DeckhouseConfigurationPhase},
+	}
+}
+
+func CheckPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: CheckInfra},
+		{Phase: CheckConfiguration},
+	}
+}
+
+func DestroyPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: DeleteResourcesPhase},
+		{Phase: AllNodesPhase},
+		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
+	}
+}
+
+func CommanderAttachPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: CommanderAttachScanPhase},
+		{Phase: CommanderAttachCapturePhase},
+		{
+			Phase: CommanderAttachCheckPhase,
+			SubPhases: []OperationSubPhase{
+				OperationSubPhase(CheckInfra),
+				OperationSubPhase(CheckConfiguration),
+			},
+		},
+	}
+}
+
+func CommanderDetachPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{
+			Phase: CommanderDetachCheckPhase,
+			SubPhases: []OperationSubPhase{
+				OperationSubPhase(CheckInfra),
+				OperationSubPhase(CheckConfiguration),
+			},
+		},
+		{Phase: CommanderDetachDetachPhase},
+	}
+}
+
+type phasesOpts struct {
+	clusterConfig ClusterConfig
+}
+
+func operationPhases(operation Operation, opts phasesOpts) ([]PhaseWithSubPhases, bool) {
+	p, ok := map[Operation][]PhaseWithSubPhases{
+		OperationBootstrap:       BootstrapPhases(),
+		OperationConverge:        ConvergePhases(),
+		OperationCheck:           CheckPhases(),
+		OperationDestroy:         DestroyPhases(),
+		OperationCommanderAttach: CommanderAttachPhases(),
+		OperationCommanderDetach: CommanderDetachPhases(),
+	}[operation]
+
+	phases := make([]PhaseWithSubPhases, 0, len(p))
+	for _, phase := range p {
+		if phase.includeIf == nil || phase.includeIf(opts) {
+			phases = append(phases, phase)
+		}
+	}
+
+	return phases, ok
+}
+
+func ifNotStatic(opts phasesOpts) bool {
+	return opts.clusterConfig.ClusterType != "Static"
+}

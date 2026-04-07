@@ -44,7 +44,7 @@ discovery:
   d8SpecificNodeCountByRole:
     master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  kubernetesVersion: 1.30.8
+  kubernetesVersion: 1.31.8
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   cloud:
@@ -54,7 +54,7 @@ clusterConfiguration:
   clusterType: Cloud
   defaultCRI: Containerd
   kind: ClusterConfiguration
-  kubernetesVersion: "1.30"
+  kubernetesVersion: "1.31"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
@@ -80,6 +80,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   allowedBundles:
     - "ubuntu-lts"
     - "centos"
@@ -93,6 +97,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -136,7 +144,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -158,6 +166,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -191,7 +203,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -244,6 +256,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -274,7 +290,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -296,6 +312,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -328,7 +348,7 @@ internal:
     instanceClass:
       flavorName: m1.large
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -350,6 +370,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -392,7 +416,7 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -414,7 +438,7 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -435,6 +459,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -472,7 +500,7 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -499,7 +527,7 @@ internal:
         nestedHardwareVirtualization: false
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -521,6 +549,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -565,7 +597,7 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -590,6 +622,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -599,7 +635,7 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
 `
@@ -612,6 +648,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -1761,6 +1801,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -1939,6 +1983,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -2108,6 +2156,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -2152,7 +2204,7 @@ internal:
         resourceReservation:
           mode: Auto
         topologyManager: {}
-      kubernetesVersion: "1.30"
+      kubernetesVersion: "1.31"
       manualRolloutID: ""
       name: worker
       nodeType: CloudEphemeral

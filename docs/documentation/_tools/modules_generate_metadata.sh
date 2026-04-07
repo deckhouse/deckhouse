@@ -44,12 +44,13 @@ done | jq -s '
             module_id: $module.key,
             link: .link,
             description: .description,
+            version: .version,
             logo: .logo,
             license: .license
         }
     ] |
 
-    # Group by OSS name, take first occurrence for data
+    # Group by OSS name, collect all versions from all modules
     group_by(.oss_name) |
     map({
         key: .[0].oss_name,
@@ -58,6 +59,7 @@ done | jq -s '
             description: .[0].description,
             logo: .[0].logo,
             license: .[0].license,
+            versions: [.[].version] | map(select(. != null)) | unique | sort,
             modules: [.[].module_id] | unique | sort
         }
     }) |

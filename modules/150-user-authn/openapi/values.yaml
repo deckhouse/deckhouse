@@ -202,6 +202,7 @@ properties:
                       type: string
                       enum:
                         - PasswordPolicyLockout
+                        - LockedByAdministrator
                     message:
                       type: string
                     until:
@@ -358,6 +359,9 @@ properties:
                   items:
                     type: string
             bitbucketCloud:
+              type: object
+              additionalProperties: true
+            saml:
               type: object
               additionalProperties: true
       customLogo:

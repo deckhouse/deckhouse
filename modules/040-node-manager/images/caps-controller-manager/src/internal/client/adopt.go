@@ -63,10 +63,7 @@ func (c *Client) AdoptStaticInstance(ctx context.Context, instanceScope *scope.I
 		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticInstance MachineRef")
 	}
 
-	ok, err := c.adoptStaticInstance(instanceScope)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to adopt StaticInstance")
-	}
+	ok := c.adoptStaticInstance(instanceScope)
 	if !ok {
 		return ctrl.Result{}, nil
 	}
@@ -81,7 +78,7 @@ func (c *Client) AdoptStaticInstance(ctx context.Context, instanceScope *scope.I
 	return ctrl.Result{}, nil
 }
 
-func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) (bool, error) {
+func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) bool {
 	done := c.adoptTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
 		var sshCl ssh.SSH
 		var err error
@@ -117,10 +114,10 @@ func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) (bool, 
 	})
 	if done == nil || !*done {
 		instanceScope.Logger.V(1).Info("Adopting is not finished yet, waiting...")
-		return false, nil
+		return false
 	}
 
 	c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "AdoptionScriptSucceeded", "Adoption script executed successfully")
 
-	return true, nil
+	return true
 }

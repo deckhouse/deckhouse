@@ -29,8 +29,12 @@ import (
 	"github.com/go-openapi/validate"
 	"github.com/go-openapi/validate/post"
 	"github.com/hashicorp/go-multierror"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -39,6 +43,7 @@ type SchemaStore struct {
 	cache              map[SchemaIndex]*spec.Schema
 	moduleConfigsCache map[string]*spec.Schema
 	modulesCache       map[string]struct{}
+	conversionsStore   *conversion.ConversionsStore
 }
 
 var once sync.Once
@@ -88,8 +93,13 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	}
 }
 
-func NewSchemaStore(paths ...string) *SchemaStore {
+func NewSchemaStore(dc *directoryconfig.DirectoryConfig, paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
+	if _, err := os.Stat(candiDir); err != nil {
+		if dc != nil {
+			paths = append(paths, filepath.Join(dc.DownloadDir, "deckhouse", "candi"))
+		}
+	}
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
@@ -99,15 +109,24 @@ func NewSchemaStore(paths ...string) *SchemaStore {
 		}
 	}
 
-	return newOnceSchemaStore(paths)
+	return newOnceSchemaStore(dc, paths)
 }
 
-func newSchemaStore(schemasDir []string) *SchemaStore {
+func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
 		modulesCache:       make(map[string]struct{}),
 	}
+	if _, err := os.Stat(deckhouseDir); err != nil {
+		if dc != nil {
+			deckhouseDir = filepath.Join(dc.DownloadDir, "deckhouse")
+			modulesDir = filepath.Join(deckhouseDir, "modules")
+		}
+	}
+	log.DebugF("deckhouse dir: %s, modulesDir: %s\n", deckhouseDir, modulesDir)
+
+	st.conversionsStore = conversion.NewConversionsStore()
 
 	walkFunc := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
@@ -145,17 +164,30 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		return st
 	}
 
+	loadConversions := func(path string, moduleName string) error {
+		conversionPath := filepath.Join(filepath.Dir(path), "conversions")
+		stat, err := os.Stat(conversionPath)
+		if err == nil && stat.IsDir() {
+			err := st.conversionsStore.Add(moduleName, conversionPath)
+			log.DebugF("Found conversion for module %s. Latest version: %d\n", moduleName, st.conversionsStore.Get(moduleName).LatestVersion())
+
+			return err
+		}
+		return nil
+	}
+
 	loadConfigValuesSchema := func(path string, moduleName string) error {
 		content, err := os.ReadFile(path)
-		if err == nil {
-			schema := new(spec.Schema)
+		var schema *spec.Schema
 
+		switch {
+		case err == nil:
+			schema = new(spec.Schema)
 			if err := yaml.Unmarshal(content, schema); err != nil {
 				return err
 			}
 
-			err = spec.ExpandSchema(schema, schema, nil)
-			if err != nil {
+			if err := spec.ExpandSchema(schema, schema, nil); err != nil {
 				return err
 			}
 
@@ -164,10 +196,15 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 				&transformer.AdditionalPropertiesTransformer{},
 			)
 
+			if err := loadConversions(path, moduleName); err != nil {
+				return err
+			}
+
 			st.moduleConfigsCache[moduleName] = schema
-		} else if errors.Is(err, os.ErrNotExist) {
+
+		case errors.Is(err, os.ErrNotExist):
 			log.DebugF("Openapi spec not found for module %s\n", moduleName)
-		} else {
+		default:
 			return err
 		}
 
@@ -179,7 +216,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			continue
 		}
 		name := e.Name()
-		moduleName := strings.TrimLeft(name, "01234567890-")
+		moduleName := strings.TrimLeft(name, "0123456789-")
 		st.modulesCache[moduleName] = struct{}{}
 		p := path.Join(modulesDir, name, "openapi", "config-values.yaml")
 		if err := loadConfigValuesSchema(p, moduleName); err != nil {
@@ -197,9 +234,9 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	return st
 }
 
-func newOnceSchemaStore(schemasDir []string) *SchemaStore {
+func newOnceSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(schemasDir)
+		store = newSchemaStore(dc, schemasDir)
 	})
 	return store
 }
@@ -303,7 +340,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 		}
 
 		var err error
-		docForValidate, err = yaml.Marshal(mc.Spec.Settings)
+		docForValidate, err = s.applyConversions(mc)
 		if err != nil {
 			return fmt.Errorf("Setting for validation module config failed: %v", err)
 		}
@@ -375,7 +412,7 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 	return nil
 }
 
-func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (isValid bool, multiErr error) {
+func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (bool, error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
 	var blank map[string]interface{}
@@ -414,7 +451,7 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptio
 }
 
 func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOption) (bool, error) {
-	schemaStore := NewSchemaStore(paths...)
+	schemaStore := NewSchemaStore(nil, paths...)
 
 	_, err := schemaStore.Validate(config, opts...)
 	if err != nil {
@@ -430,4 +467,28 @@ func applyOptions(opts ...ValidateOption) validateOptions {
 		opt(&options)
 	}
 	return options
+}
+
+func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
+	conversion := s.conversionsStore.Get(mc.GetName())
+	log.DebugF("Starting conversion for module %s. Latest version: %d\n", mc.GetName(), conversion.LatestVersion())
+	var err error
+	var conversed map[string]interface{}
+	if mc.Spec.Version < conversion.LatestVersion() {
+		set := &mc.Spec.Settings
+		unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(set)
+		if err != nil {
+			return []byte{}, fmt.Errorf("error converting to unstructured: %w", err)
+		}
+		_, conversed, err = conversion.ConvertToLatest(mc.Spec.Version, unstructured)
+		if err != nil {
+			return []byte{}, fmt.Errorf("error converting to unstructured: %w", err)
+		}
+		log.DebugF("conversion successfully applyed for ModuleConfig %s\n", mc.GetName())
+	} else {
+		return yaml.Marshal(mc.Spec.Settings)
+	}
+
+	doc, err := yaml.Marshal(conversed)
+	return doc, err
 }

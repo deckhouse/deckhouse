@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- if include "nvidia_gpu_enabled" . }}
 apiVersion: v1
 kind: ConfigMap
@@ -9,4 +10,5 @@ data:
   nfd-master.conf: |-
     extraLabelNs:
     - nvidia.com
+{{- end }}
 {{- end }}

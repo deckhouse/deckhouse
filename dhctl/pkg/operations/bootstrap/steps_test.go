@@ -41,8 +41,7 @@ func TestNewRegistryClientConfigGetter(t *testing.T) {
 			Username:   "",
 			Password:   "",
 		}
-		getter, err := newRegistryClientConfigGetter(config)
-		require.NoError(t, err)
+		getter := newRegistryClientConfigGetter(config)
 		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
 	})
 	t.Run("Path without leading slash", func(t *testing.T) {
@@ -51,8 +50,7 @@ func TestNewRegistryClientConfigGetter(t *testing.T) {
 			Username:   "",
 			Password:   "",
 		}
-		getter, err := newRegistryClientConfigGetter(config)
-		require.NoError(t, err)
+		getter := newRegistryClientConfigGetter(config)
 		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
 	})
 	t.Run("Host with port, path with leading slash", func(t *testing.T) {
@@ -61,8 +59,7 @@ func TestNewRegistryClientConfigGetter(t *testing.T) {
 			Username:   "",
 			Password:   "",
 		}
-		getter, err := newRegistryClientConfigGetter(config)
-		require.NoError(t, err)
+		getter := newRegistryClientConfigGetter(config)
 		require.Equal(t, getter.Repository, "registry.deckhouse.io:30000/deckhouse/ee")
 	})
 	t.Run("Host with port, path without leading slash", func(t *testing.T) {
@@ -71,8 +68,7 @@ func TestNewRegistryClientConfigGetter(t *testing.T) {
 			Username:   "",
 			Password:   "",
 		}
-		getter, err := newRegistryClientConfigGetter(config)
-		require.NoError(t, err)
+		getter := newRegistryClientConfigGetter(config)
 		require.Equal(t, getter.Repository, "registry.deckhouse.io:30000/deckhouse/ee")
 	})
 }

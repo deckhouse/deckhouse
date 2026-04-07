@@ -131,3 +131,40 @@ This patch adds the --status-service-label flag, allowing the controller to defi
 ### 023-use-proxy-real-ip-cidr-v2.patch
 
 This patch updates lua ingress script to take into account the `proxy-real-ip-cidr` value when deciding if it's ok to accept x-forwarded headers values or not.
+
+### 024-cve-03022026-controller.patch
+
+Fixes the following CVEs:
+CVE-2026-1580
+CVE-2026-24512
+CVE-2026-24513
+CVE-2026-24514
+https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
+
+### 025-cve-03022026-rootfs.patch
+
+Fixes the following CVEs (rootfs part):
+CVE-2026-1580
+CVE-2026-24512
+CVE-2026-24513
+CVE-2026-24514
+https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
+
+
+### 026-lua_ingress-use-request-host-for-https-redirect.patch
+
+This patch fixes HTTP-to-HTTPS redirect host selection in `lua_ingress`: when `Host` differs from the actual request host (for example with absolute-form requests), redirect now uses the request host (`$host`) instead of raw `Host` header to prevent redirects to arbitrary domains.
+
+### 027-fix-rewrite-target-cve.patch
+
+This patch fixes rewrite-target CVE-2026-3288 in Ingress-NGINX
+
+https://github.com/kubernetes/kubernetes/issues/137560
+
+### 028-stable-config-hash-metric-02.patch
+
+This patch updates the way config_hash controller metric is calculated so that all pods of a controller report the same value
+
+### 029-fix-cve-2026-4342.patch
+
+This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issues/137893.

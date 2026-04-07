@@ -509,17 +509,25 @@ This operation is unsafe and breaks the guarantees given by the consensus protoc
 
 This method may be necessary if the `--force-new-cluster` option doesn't restore etcd work. Such a scenario can occur during an unsuccessful converge of master nodes, where a new master node was created with an old etcd disk, changed its internal address, and other master nodes are absent. Symptoms indicating the need for this method include: the etcd container being stuck in an endless restart with the log showing the error: `panic: unexpected removal of unknown remote peer`.
 
-1. Install the [etcdutl](https://github.com/etcd-io/etcd/releases) utility.
+1. Find the `etcdutl` utility on the master node and copy the executable to `/usr/local/bin/`:
+
+   ```shell
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ```
+
 1. Create a new etcd database snapshot from the current local snapshot (`/var/lib/etcd/member/snap/db`):
 
    ```shell
-   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
-   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=<HOSTNAME>=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://<ADDRESS>:2380 \
    --skip-hash-check=true --data-dir /var/lib/etcdtest
    ```
 
-   * `<HOSTNAME>` — the name of the master node;
-   * `<ADDRESS>` — the address of the master node.
+   where:
+
+   * `<HOSTNAME>`: Name of the master node.
+   * `<ADDRESS>`: Address of the master node.
 
 1. Execute the following commands to use the new snapshot:
 
@@ -895,7 +903,7 @@ Follow these steps to restore a single-master cluster on master node:
 
    ```shell
    cp $(find /var/lib/containerd/ \
-   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
    Check the version of `etcdutl` using the command:
@@ -969,29 +977,38 @@ Follow these steps to restore a single-master cluster on master node:
 
 #### Restoring a multi-master cluster
 
-Follow these steps to restore a multi-master cluster:
+To properly restore a multi-master cluster, follow these steps:
 
-1. Explicitly set the High Availability (HA) mode by specifying the [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) parameter. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
+1. Enable High Availability (HA) mode. This is necessary to preserve at least one Prometheus replica and its PVC, since HA is disabled by default in single-master clusters.
 
-1. Switch the cluster to single-master mode according to [instruction](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster) for cloud clusters or independently remove static master-node from the cluster.
+1. Switch the cluster to single-master mode:
 
-1. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions](#restoring-a-single-master-cluster) for a single-master cluster.
+   - In a cloud cluster, follow the [instructions](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master).
+   - In a static cluster, remove any unnecessary master nodes from the `control-plane` role by following the [instructions](#how-do-i-dismiss-the-master-role-while-keeping-the-node) and then remove them from the cluster.
+   - In a static cluster with the configured HA mode based on two master nodes and an arbiter node, remove the arbiter node and additional master nodes.
+   - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master) to remove the additional master nodes and the arbiter node.
 
-1. When etcd operation is restored, delete the information about the master nodes already deleted in step 1 from the cluster:
+1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-single-master-cluster) for restoring a cluster with a single master node.
+
+1. Once etcd is restored, remove the records of the previously deleted master nodes from the cluster using the following command (replace with the actual node name):
 
    ```shell
-   d8 k delete node MASTER_NODE_I
+   d8 k delete node <MASTER_NODE_NAME>
    ```
 
-1. Restart all nodes of the cluster.
+   > **Warning.** If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/nginx.conf` configuration file. It should only specify your current API server. If the configuration contains lines with IP addresses of old master nodes, remove them. Edit the configuration in a similar way on all other nodes.
 
-1. Wait for the deckhouse queue to complete:
+1. Reboot the master node. Ensure that the other nodes transition to the `Ready` state.
+
+1. Wait for Deckhouse to process all tasks in the queue:
 
    ```shell
    d8 system queue main
    ```
 
-1. Switch the cluster back to multi-master mode according to [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) for cloud clusters or [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) for static or hybrid clusters.
+1. Switch the cluster back to multi-master mode. Follow the respective instructions for [cloud clusters](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) and [static clusters](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster).
+
+Once you go through these steps, the cluster will be successfully restored in the multi-master configuration.
 
 ### How do I restore a Kubernetes object from an etcd backup?
 
@@ -1274,7 +1291,7 @@ To update the certificates, do the following on each master node:
 1. Find the `kubeadm` utility on the master node and create a symbolic link using the following command:
 
    ```shell
-   ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print) /usr/bin/kubeadm
+   ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
    ```
 
 2. Update the certificates:

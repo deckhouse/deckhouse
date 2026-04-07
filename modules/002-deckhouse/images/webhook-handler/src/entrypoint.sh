@@ -24,4 +24,5 @@ for module in $ENABLED_MODULES; do
  fi
 done
 
-exec /usr/bin/tini -- /shell-operator "$@"
+# exec /usr/bin/tini -- /shell-operator "$@"
+exec /webhook-operator

@@ -53,7 +53,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
     add: /src

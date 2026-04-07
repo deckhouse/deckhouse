@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in zVirt
 permalink: en/admin/integrations/virtualization/zvirt/authorization.html
 ---
 

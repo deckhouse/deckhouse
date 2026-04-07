@@ -17,6 +17,7 @@ shell:
         echo '[] Creating modules list...'
         export MODULES_DIR=/src/modules-metadata
         _tools/modules_list.sh > _data/modules/internal.json
+        jq 'keys' _data/modules/internal.json > _data/modules/embedded_modules_list.json
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
@@ -76,7 +77,7 @@ shell:
 
         echo '[] Converting editions structure...'
         cd /srv/jekyll-data/documentation/_data
-        yq e -o json editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
+        {{ .Files.Get (printf "%sdocs/documentation/werf-editions-convert-partials.inc.yaml" .ModulePath) | indent 8 }}
 
 {{ if eq .ModuleName "documentation" }}
         # "Converting public documentation links to modules to the internal relative..."
@@ -111,11 +112,11 @@ shell:
         find modules_en modules_ru -type d \( -path "*/docs/images" -o -path "*/docs/presentations" \) -exec sh -c 'module=$(basename $(dirname $(dirname $0)) | cut -d/ -f2-); lang=$(dirname $0 | cut -d/ -f1 | cut -d_ -f2); cp -rf "$0" "$lang/modules/$module" ; ' {} \;
         rm -rf modules_en modules_ru
 import:
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: setup
@@ -128,6 +129,8 @@ git:
     - site/_includes/head.html
 {{ if eq .ModuleName "documentation" }}
     - site/_includes/header.html
+    - site/_includes/header-mobile.liquid
+    - site/_includes/header-menu-fill-items.html
 {{ end }}
     - documentation
   excludePaths:
@@ -146,7 +149,6 @@ git:
     - documentation/*.svg
     - documentation/site.webmanifest
   stageDependencies:
-    install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
 {{ if eq .ModuleName "documentation" }}
 - add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html

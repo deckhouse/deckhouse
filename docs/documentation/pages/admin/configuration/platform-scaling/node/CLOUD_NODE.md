@@ -31,7 +31,7 @@ To add nodes:
      name: worker-instance
    spec:
      flavorName: m1.medium
-     imageName: ubuntu-22-04-cloud-amd64
+     imageName: ubuntu-24-04-cloud-amd64
      rootDiskSize: 20
      mainNetwork: default
    ```
@@ -524,7 +524,7 @@ To add CloudPermanent nodes to a DKP cloud cluster:
      replicas: 2
      instanceClass:
        flavorName: m1.large
-       imageName: ubuntu-22-04-cloud-amd64
+       imageName: ubuntu-24-04-cloud-amd64
        rootDiskSize: 20
        mainNetwork: default
      volumeTypeMap:
@@ -625,7 +625,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    * Generate a pair of SSH keys with an empty passphrase **on the server**:
 
      ```shell
-     ssh-keygen -t rsa -f caps-id -C "" -N ""
+     ssh-keygen -t ed25519 -f caps-id -C "" -N ""
      ```
 
      The public and private keys of the `caps` user will be stored in the `caps-id.pub` and `caps-id` files in the current directory on the server.
@@ -799,7 +799,7 @@ To add master nodes in a cloud cluster:
      replicas: 3
      instanceClass:
        flavorName: m1.medium
-       imageName: ubuntu-22-04-cloud-amd64
+       imageName: ubuntu-24-04-cloud-amd64
        rootDiskSize: 20
        mainNetwork: default
    ```

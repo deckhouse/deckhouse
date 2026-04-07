@@ -84,7 +84,6 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 			c.layoutStep,
 			c.name,
 			c.cloudConfig,
-			true,
 			ctx.InfrastructureContext(metaConfig),
 			log.GetDefaultLogger(),
 			false,
@@ -95,6 +94,10 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 		return err
 	}
 	return entity.WaitForNodesListBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodesToWait, nil)
+}
+
+func (c *CloudPermanentNodeGroupController) beforeUpdateNodes(*context.Context) error {
+	return nil
 }
 
 func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {
@@ -116,10 +119,9 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 	}
 
 	nodeGroupName := c.name
-	var nodeGroupSettingsFromConfig []byte
 
 	// Node group settings are only for the static node.
-	nodeGroupSettingsFromConfig = metaConfig.FindTerraNodeGroup(c.name)
+	nodeGroupSettingsFromConfig := metaConfig.FindTerraNodeGroup(c.name)
 
 	nodeRunner, err := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(ctx.Ctx(), metaConfig, infrastructure.NodeRunnerOptions{
 		NodeName:        nodeName,

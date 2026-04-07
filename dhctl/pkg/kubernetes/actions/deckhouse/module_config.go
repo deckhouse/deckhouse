@@ -30,12 +30,21 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+func removeResourceVersion(mc *unstructured.Unstructured) {
+	// try to multiple deleting
+	mc.SetResourceVersion("")
+	unstructured.RemoveNestedField(mc.Object, "metadata", "resourceVersion")
+}
+
 func createModuleConfigManifestTask(ctx context.Context, kubeCl *client.KubernetesClient, mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
 	mcUnstructMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(mc)
 	if err != nil {
 		panic(err)
 	}
+
 	mcUnstruct := &unstructured.Unstructured{Object: mcUnstructMap}
+	removeResourceVersion(mcUnstruct)
+
 	return actions.ManifestTask{
 		Name: fmt.Sprintf(`ModuleConfig "%s"`, mc.GetName()),
 		Manifest: func() interface{} {
@@ -54,8 +63,13 @@ func createModuleConfigManifestTask(ctx context.Context, kubeCl *client.Kubernet
 				}
 			}
 
-			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
-				Create(ctx, manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
+			m := manifest.(*unstructured.Unstructured)
+
+			log.DebugF("Resource version before delete field for mc %s: '%s'\n", m.GetResourceVersion(), m.GetName())
+			removeResourceVersion(m)
+			log.DebugF("Resource version after delete field for mc %s: '%s'\n", m.GetResourceVersion(), m.GetName())
+
+			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Create(ctx, m, metav1.CreateOptions{})
 			if err != nil {
 				log.DebugF("Do not create mc: %v\n", err)
 			}
@@ -181,13 +195,13 @@ func prepareGlobalMC(ctx context.Context, mc *config.ModuleConfig, res *Manifest
 		return
 	}
 
-	httpsRaw, hasHttps := modules["https"]
-	if !hasHttps {
+	HTTPSRaw, hasHTTPS := modules["https"]
+	if !hasHTTPS {
 		log.DebugLn("Not found https in global mc. Finish preparing")
 		return
 	}
 
-	httpsSettings, ok = httpsRaw.(map[string]interface{})
+	httpsSettings, ok = HTTPSRaw.(map[string]interface{})
 	if !ok {
 		log.ErrorLn("https is not map in global mc. Finish preparing")
 		return

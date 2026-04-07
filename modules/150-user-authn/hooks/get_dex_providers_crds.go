@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -72,10 +73,47 @@ func getDexProviders(_ context.Context, input *go_hook.HookInput) error {
 				continue
 			}
 		}
+
+		// Sanitize LDAP filter values to remove trailing whitespace/newlines
+		// that may appear when users use YAML literal block scalars (|) in CRDs.
+		sanitizeLDAPFilters(p)
+
 		// Keep 'enabled' field in internal values for transparency and debugging
 		filtered = append(filtered, p)
 	}
 
 	input.Values.Set("userAuthn.internal.providers", filtered)
 	return nil
+}
+
+// sanitizeLDAPFilters trims whitespace from LDAP filter fields in userSearch and groupSearch.
+// This prevents issues when users specify filters using YAML literal block scalars (|),
+// which add a trailing newline that breaks LDAP search queries.
+func sanitizeLDAPFilters(provider map[string]interface{}) {
+	ldapRaw, ok := provider["ldap"]
+	if !ok {
+		return
+	}
+	ldapMap, ok := ldapRaw.(map[string]interface{})
+	if !ok {
+		return
+	}
+	trimFilterInSearchSection(ldapMap, "userSearch")
+	trimFilterInSearchSection(ldapMap, "groupSearch")
+}
+
+// trimFilterInSearchSection trims whitespace from the "filter" field
+// within a given LDAP search section (userSearch or groupSearch).
+func trimFilterInSearchSection(ldapMap map[string]interface{}, section string) {
+	sectionRaw, ok := ldapMap[section]
+	if !ok {
+		return
+	}
+	sectionMap, ok := sectionRaw.(map[string]interface{})
+	if !ok {
+		return
+	}
+	if filter, ok := sectionMap["filter"].(string); ok {
+		sectionMap["filter"] = strings.TrimSpace(filter)
+	}
 }

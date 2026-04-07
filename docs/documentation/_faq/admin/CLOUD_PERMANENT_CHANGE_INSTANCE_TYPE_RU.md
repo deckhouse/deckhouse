@@ -1,7 +1,7 @@
 ---
 title: Как изменить тип инстанса у узлов с типом CloudPermanent?
 subsystems:
-  - сluster_infrastructure
+  - cluster_infrastructure
 lang: ru
 ---
 

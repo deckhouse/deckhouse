@@ -74,6 +74,7 @@ func (c *Command) OnCommandStart(fn func()) {
 	c.onCommandStart = fn
 }
 
+//nolint:prealloc
 func (c *Command) Sudo(ctx context.Context) {
 	cmdLine := c.Name + " " + strings.Join(c.Args, " ")
 	sudoCmdLine := fmt.Sprintf(

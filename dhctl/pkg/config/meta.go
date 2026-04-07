@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -60,6 +61,9 @@ type MetaConfig struct {
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
 	ResourceManagementTimeout string                 `json:"resourceManagementTimeout,omitempty"`
+
+	DownloadRootDir  string `json:"-"`
+	DownloadCacheDir string `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -153,7 +157,6 @@ func (m *MetaConfig) prepareRegistry() error {
 	}
 
 	switch {
-
 	// Check configuration conflict
 	case initConfig != nil && deckhouseSettings != nil:
 		return fmt.Errorf(
@@ -174,6 +177,33 @@ func (m *MetaConfig) prepareRegistry() error {
 				defaultCRI,
 				registry_const.SupportedCRI,
 			)
+		}
+
+		// Check Local and Proxy modes
+		switch deckhouseSettings.Mode {
+		case registry_const.ModeLocal:
+			return fmt.Errorf(
+				"bootstrap is not supported with registry mode '%s'. "+
+					"Please use one of the supported bootstrap modes: %v",
+				deckhouseSettings.Mode,
+				[]registry_const.ModeType{
+					registry_const.ModeUnmanaged,
+					registry_const.ModeDirect,
+					registry_const.ModeProxy,
+				},
+			)
+		case registry_const.ModeProxy:
+			if !m.IsStatic() {
+				return fmt.Errorf(
+					"bootstrap with registry mode '%s' is supported only in static cluster. "+
+						"Please use one of the supported bootstrap modes for non-static cluster: %v",
+					deckhouseSettings.Mode,
+					[]registry_const.ModeType{
+						registry_const.ModeUnmanaged,
+						registry_const.ModeDirect,
+					},
+				)
+			}
 		}
 
 		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings); err != nil {
@@ -573,8 +603,8 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 
 func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	type proxy struct {
-		HttpProxy  string   `json:"httpProxy" yaml:"httpProxy"`
-		HttpsProxy string   `json:"httpsProxy" yaml:"httpsProxy"`
+		HTTPProxy  string   `json:"httpProxy" yaml:"httpProxy"`
+		HTTPSProxy string   `json:"httpsProxy" yaml:"httpsProxy"`
 		NoProxy    []string `json:"noProxy" yaml:"noProxy"`
 	}
 
@@ -610,28 +640,23 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, podSubnetCIDR, serviceSubnetCIDR)
 
 	ret := make(map[string]interface{})
-	if p.HttpProxy != "" {
-		ret["httpProxy"] = p.HttpProxy
+	if p.HTTPProxy != "" {
+		ret["httpProxy"] = p.HTTPProxy
 	}
-	if p.HttpsProxy != "" {
-		ret["httpsProxy"] = p.HttpsProxy
+	if p.HTTPSProxy != "" {
+		ret["httpsProxy"] = p.HTTPSProxy
 	}
 	ret["noProxy"] = p.NoProxy
 
 	return ret, nil
 }
 
-func (m *MetaConfig) LoadImagesDigests(filename string) error {
+func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
 	var imagesDigests imagesDigests
 
-	imagesDigestsJSONFile, err := os.ReadFile(filename)
+	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
 	if err != nil {
-		return fmt.Errorf("%s file load: %v", filename, err)
-	}
-
-	err = yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
-	if err != nil {
-		return fmt.Errorf("%s file unmarshal: %v", filename, err)
+		return fmt.Errorf("unmarshal: %v", err)
 	}
 
 	m.Images = imagesDigests
@@ -642,7 +667,13 @@ func (m *MetaConfig) LoadImagesDigests(filename string) error {
 func (m *MetaConfig) LoadInstallerVersion() error {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
-		return err
+		// TODO param instead of hardcode path
+		versionFilePath := filepath.Join(app.DownloadDirName, "deckhouse", "version")
+		rawFile, err = os.ReadFile(versionFilePath)
+		if err != nil {
+			return fmt.Errorf("could not read both %s and %s: %w", app.VersionFile, versionFilePath, err)
+		}
+
 	}
 
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))

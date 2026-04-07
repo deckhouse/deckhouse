@@ -65,7 +65,7 @@ description: "Балансировка и терминация трафика HT
 У всех собираемых метрик есть служебные лейблы, позволяющие идентифицировать экземпляр контроллера: `controller`, `app`, `instance` и `endpoint` (они видны в `/prometheus/targets`).
 
 - Все метрики (кроме geo), экспортируемые protobuf_exporter, представлены в трех уровнях детализации:
-  - `ingress_nginx_overall_*` — «вид с вертолета», у всех метрик есть лейблы `namespace`, `vhost` и `content_kind`;
+  - `ingress_nginx_overall_*` — общий обзор, у всех метрик есть лейблы `namespace`, `vhost` и `content_kind`;
   - `ingress_nginx_detail_*` — кроме лейблов уровня `overall`, добавляются `ingress`, `service`, `service_port` и `location`;
   - `ingress_nginx_detail_backend_*` — ограниченная часть данных, собирается в разрезе по бэкендам. У этих метрик, кроме лейблов уровня detail, добавляется лейбл `pod_ip`.
 

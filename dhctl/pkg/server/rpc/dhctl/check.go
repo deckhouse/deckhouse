@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -46,8 +45,23 @@ import (
 )
 
 type checkParams struct {
-	request    *pb.CheckStart
-	logOptions logger.Options
+	request      *pb.CheckStart
+	sendProgress phases.OnProgressFunc
+	sendCh       chan *pb.CheckResponse
+}
+
+func (p *checkParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *checkParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.CheckResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.CheckResponse {
+			return &pb.CheckResponse{Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
 }
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
@@ -62,20 +76,11 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.CheckRequest)
 	sendCh := make(chan *pb.CheckResponse)
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.CheckResponse {
-			return &pb.CheckResponse{Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+	pt := progressTracker[*pb.CheckResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.CheckResponse {
+			return &pb.CheckResponse{Message: &pb.CheckResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.CheckRequest, *pb.CheckResponse](server, receiveCh, doneCh, internalErrCh)
@@ -106,9 +111,10 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.checkSafe(ctx, checkParams{
-						request:    message.Start,
-						logOptions: logOptions,
+					result := s.checkSafe(ctx, &checkParams{
+						request:      message.Start,
+						sendProgress: pt.sendProgress(),
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
@@ -125,30 +131,26 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) checkSafe(ctx context.Context, p checkParams) (result *pb.CheckResult) {
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) checkSafe(ctx context.Context, p *checkParams) (result *pb.CheckResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
 			result = &pb.CheckResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
-
 	return s.check(ctx, p)
 }
 
-func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
+func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
@@ -168,6 +170,7 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
 			),
+			s.params.DownloadDirConfig,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -230,12 +233,14 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 		Logger:                loggerFor,
 		IsDebug:               s.params.IsDebug,
 		TmpDir:                s.params.TmpDir,
+		OnPhaseFunc:           func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
+		OnProgressFunc:        p.sendProgress,
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
 		CommanderMode: p.request.Options.CommanderMode,
-		ApiServerUrl:  p.request.Options.ApiServerUrl,
-		ApiServerOptions: helper.ApiServerOptions{
+		APIServerURL:  p.request.Options.ApiServerUrl,
+		APIServerOptions: helper.APIServerOptions{
 			Token:                    p.request.Options.ApiServerToken,
 			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
 			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),

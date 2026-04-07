@@ -29,18 +29,16 @@ import (
 )
 
 func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
 	preparatorParams.WithPhaseBootstrap()
-	metaConfig, err := config.ParseConfig(
+	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		b.DirectoryConfig,
 	)
 	if err != nil {
 		return err
@@ -56,7 +54,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
 	if metaConfig.ClusterType != config.CloudClusterType {
-		return fmt.Errorf(bootstrapPhaseBaseInfraNonCloudMessage)
+		return fmt.Errorf("%s", bootstrapPhaseBaseInfraNonCloudMessage)
 	}
 
 	cachePath := metaConfig.CachePath()

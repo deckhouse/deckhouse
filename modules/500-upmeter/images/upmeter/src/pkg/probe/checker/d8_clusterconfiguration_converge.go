@@ -19,8 +19,9 @@ package checker
 import (
 	"time"
 
-	"d8.io/upmeter/pkg/check"
 	"github.com/sirupsen/logrus"
+
+	"d8.io/upmeter/pkg/check"
 )
 
 type convergeStatusChecker struct {

@@ -5,5 +5,5 @@ subsystems:
 namespace: d8-csi-vsphere
 stage: General Availability
 descriptions:
-  en: CSI vSphere Driver for provisioning disks in static clusters based on VMware vSphere.
-  ru: CSI-драйвер vSphere для организации заказа дисков в статических кластерах на базе VMware vSphere.
+  en: Provides CSI for for VMware vSphere environments.
+  ru: Предоставляет CSI для сред VMware vSphere.
