@@ -33,14 +33,14 @@ func TestCleanupsDoesNotPanic(t *testing.T) {
 	logger := libdhctl_log.NewDummyLogger(false)
 	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger)
 	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: app.IsDebug, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: app.GetDefaultTmpDir()}
-	sett := settings.NewBaseProviders(params)
+	baseProviderSettings := settings.NewBaseProviders(params)
 
 	sshProvider := testCreateDefaultTestSSHProvider(session.Host{Host: "host"}, false)
 	providerInitializer := provider.NewSimpleSSHProviderInitializer(sshProvider)
 	cfg := &kube.Config{}
-	runnerInterface, err := provider.GetRunnerInterface(context.Background(), cfg, sett, providerInitializer)
+	runnerInterface, err := provider.GetRunnerInterface(context.Background(), cfg, baseProviderSettings, providerInitializer)
 	require.NoError(t, err)
-	kubeProvider := provider.NewDefaultKubeProvider(sett, cfg, runnerInterface)
+	kubeProvider := provider.NewDefaultKubeProvider(baseProviderSettings, cfg, runnerInterface)
 	require.NoError(t, err)
 
 	provider := newKubeClientProvider(kubeProvider)
