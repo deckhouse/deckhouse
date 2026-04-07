@@ -15,34 +15,41 @@
 package registryutil
 
 import (
+	"crypto/x509"
+	"crypto/sha256"
+	"encoding/pem"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-const dockerCA = `
+const testRootCA = `
 -----BEGIN CERTIFICATE-----
-MIIDmTCCAx+gAwIBAgISBRFWf+VQa6t1mLBvtv63MpqaMAoGCCqGSM49BAMDMDIx
-CzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQDEwJF
-ODAeFw0yNjAzMTIwMjAxMjRaFw0yNjA2MTAwMjAxMjNaMBkxFzAVBgNVBAMTDmF1
-dGguZG9ja2VyLmlvMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESagTRweeO9ow
-U7FO4pLa3tH7rjZVq4XEZhQdMegc3fl50lFTbKNa2Gq+pmUWnFhCM7RDQUW0kSSh
-GW/GawvJ46OCAiwwggIoMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEF
-BQcDATAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBSUOW+i9EzHGJw7U0A2rR2mil3X
-pjAfBgNVHSMEGDAWgBSPDROi9i5+0VBsMxg4XVmOI3KRyjAyBggrBgEFBQcBAQQm
-MCQwIgYIKwYBBQUHMAKGFmh0dHA6Ly9lOC5pLmxlbmNyLm9yZy8wKwYDVR0RBCQw
-IoIQKi5hdXRoLmRvY2tlci5pb4IOYXV0aC5kb2NrZXIuaW8wEwYDVR0gBAwwCjAI
-BgZngQwBAgEwLQYDVR0fBCYwJDAioCCgHoYcaHR0cDovL2U4LmMubGVuY3Iub3Jn
-LzI3LmNybDCCAQwGCisGAQQB1nkCBAIEgf0EgfoA+AB3AJaXZL9VWJet90OHaDcI
-Qnfp8DrV9qTzNm5GpD8PyqnGAAABnN/8hjYAAAQDAEgwRgIhAPInk9lwP+1nGQ/U
-umEeEgUYC5I1HgLUYdnWuyXwr8TUAiEAnxBGiUf4ceTSfJAP93H2O2LsLw2hp2v1
-qpyhpuK0ly0AfQDjI43yjaKI4KrgrPD6kMmF8La/9dKlJ7AB/BxEWMS26AAAAZzf
-/I3rAAgAAAUANU5lnQQDAEYwRAIgTtvbfhOggi4maccZoq3EQEGYBnXxAQY+Jh2h
-1p061SMCIFCjsXy0Sd7DIVCk808DxRdpQuSRA32PRXspicr2udHZMAoGCCqGSM49
-BAMDA2gAMGUCMDezs6xgETA8aONpBMezoCvUsOnJPMoPPkRsEe1AFXNX+Q6+UqK6
-hc2cOifg6AHgzQIxAKAts5ehw2GieCxkL3B5pDidXNxtVmh1LwoUh7EqZKxHaSVD
-CRl8TSg922cXTLVt8Q==
+MIIBjzCCATagAwIBAgIUV/km/wXwIMcG5jDQfunCvkvEw9UwCgYIKoZIzj0EAwIw
+FDESMBAGA1UEAwwJdGVzdC1yb290MB4XDTI2MDQwNzEzMDQwM1oXDTM2MDQwNDEz
+MDQwM1owFDESMBAGA1UEAwwJdGVzdC1yb290MFkwEwYHKoZIzj0CAQYIKoZIzj0D
+AQcDQgAEQElWD991NP9xuFaGgX4AkpBfArT+mbN1JJJ6RziAA+/Iq0MKO5UR0xXJ
+x0MTD5AGsZ7w64roEoHOK9OwQkxHEqNmMGQwHQYDVR0OBBYEFMPONG/rtHYEvzLs
+Vqek0aV3UZBQMB8GA1UdIwQYMBaAFMPONG/rtHYEvzLsVqek0aV3UZBQMBIGA1Ud
+EwEB/wQIMAYBAf8CAQEwDgYDVR0PAQH/BAQDAgEGMAoGCCqGSM49BAMCA0cAMEQC
+IAsHvdzwmJ2iQbRmblVebWHwRWS+6OwK5sThiiaQykqTAiAMJ/Orkt/ODRVLN8K6
+ybQGqcGjzy6jkT4Id0CtXtibag==
+-----END CERTIFICATE-----
+`
+
+const testIntermediateCA = `
+-----BEGIN CERTIFICATE-----
+MIIBmTCCAT6gAwIBAgIUYMStnQvnFeu/5Io+bKgAhCDFdF8wCgYIKoZIzj0EAwIw
+FDESMBAGA1UEAwwJdGVzdC1yb290MB4XDTI2MDQwNzEzMDQwM1oXDTM2MDQwNDEz
+MDQwM1owHDEaMBgGA1UEAwwRdGVzdC1pbnRlcm1lZGlhdGUwWTATBgcqhkjOPQIB
+BggqhkjOPQMBBwNCAATBb8651k9p0jBJsitSYTuUe7hAI6XcTEACH8HzE0g1zj7z
+xqJCaIhEafBTJRWev/UD4xh3w5ob0UXI7EBR49LGo2YwZDASBgNVHRMBAf8ECDAG
+AQH/AgEAMA4GA1UdDwEB/wQEAwIBBjAdBgNVHQ4EFgQUX/05+tB13tgHdMYnSZD/
+4q27cGswHwYDVR0jBBgwFoAUw840b+u0dgS/MuxWp6TRpXdRkFAwCgYIKoZIzj0E
+AwIDSQAwRgIhAJUjIJ1RptYPRXOwHKlgp3pzFuEvm27U8HTFRQLb38TqAiEA/VvL
+ybKXVBFaqtGvrR3o9c+eo57A4wDYwFrUHVJaBo8=
 -----END CERTIFICATE-----
 `
 
@@ -58,8 +65,24 @@ func TestNewRegistryTransport_InvalidCA(t *testing.T) {
 	require.EqualError(t, err, "invalid cert in CA PEM")
 }
 
+func TestNewRegistryClient_WithMultipleCAs(t *testing.T) {
+	client, err := NewRegistryClient("HTTPS", testRootCA+"\n"+testIntermediateCA)
+	require.NoError(t, err)
+
+	transport, ok := client.Transport.(*http.Transport)
+	require.True(t, ok)
+	require.NotNil(t, transport.TLSClientConfig)
+	require.NotNil(t, transport.TLSClientConfig.RootCAs)
+
+	rootCert := parsePEMCertificate(t, testRootCA)
+	intermediateCert := parsePEMCertificate(t, testIntermediateCA)
+
+	require.True(t, certPoolContains(transport.TLSClientConfig.RootCAs, rootCert), "root CA should be added to cert pool")
+	require.True(t, certPoolContains(transport.TLSClientConfig.RootCAs, intermediateCert), "intermediate CA should be added to cert pool")
+}
+
 func TestNewRegistryClient_WithCA(t *testing.T) {
-	client, err := NewRegistryClient("HTTPS", dockerCA)
+	client, err := NewRegistryClient("HTTPS", testRootCA)
 	require.NoError(t, err)
 	require.NotNil(t, client.Transport)
 
@@ -68,4 +91,22 @@ func TestNewRegistryClient_WithCA(t *testing.T) {
 	require.NotNil(t, transport.TLSClientConfig)
 	require.NotNil(t, transport.TLSClientConfig.RootCAs)
 	require.False(t, transport.TLSClientConfig.InsecureSkipVerify)
+}
+
+func parsePEMCertificate(t *testing.T, certPEM string) *x509.Certificate {
+	t.Helper()
+
+	block, _ := pem.Decode([]byte(certPEM))
+	require.NotNil(t, block)
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err)
+
+	return cert
+}
+
+func certPoolContains(pool *x509.CertPool, cert *x509.Certificate) bool {
+	haveSum := reflect.ValueOf(pool).Elem().FieldByName("haveSum")
+	sum := sha256.Sum224(cert.Raw)
+	return haveSum.MapIndex(reflect.ValueOf(sum)).IsValid()
 }
