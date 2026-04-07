@@ -52,7 +52,10 @@ func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup) Result {
 		result.Max = ng.Spec.CloudInstances.MaxPerZone * zonesCount
 	}
 
-	result.Desired, result.Failures, result.IsFrozen = s.getMachineDeploymentInfo(ctx, ng.Name)
+	mdInfo := s.getMachineDeploymentInfo(ctx, ng.Name)
+	result.Desired = mdInfo.Desired
+	result.Failures = mdInfo.Failures
+	result.IsFrozen = mdInfo.IsFrozen
 	if result.Min > result.Desired {
 		result.Desired = result.Min
 	}
