@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 02de3bcb..850dc62e 100644
+index 02de3bcb..ebd00f67 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -33,12 +33,12 @@ require (
@@ -103,7 +103,7 @@ index 02de3bcb..850dc62e 100644
  	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
  	github.com/go-errors/errors v1.4.2 // indirect
 -	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
-+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
++	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
  	github.com/go-logr/stdr v1.2.2 // indirect
  	github.com/go-openapi/analysis v0.23.0 // indirect
  	github.com/go-openapi/jsonpointer v0.21.0 // indirect
@@ -139,7 +139,7 @@ index 02de3bcb..850dc62e 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 diff --git a/go.sum b/go.sum
-index bb271f2e..1dff0273 100644
+index bb271f2e..c5e6952e 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,5 +1,5 @@
@@ -189,8 +189,8 @@ index bb271f2e..1dff0273 100644
  github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 -github.com/go-jose/go-jose/v4 v4.0.5 h1:M6T8+mKZl/+fNNuFHvGIzDz7BTLQPIounk/b9dw3AaE=
 -github.com/go-jose/go-jose/v4 v4.0.5/go.mod h1:s3P1lRrkT8igV8D9OjyL4WRyHvjB6a4JSllnOrmmBOA=
-+github.com/go-jose/go-jose/v4 v4.1.3 h1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=
-+github.com/go-jose/go-jose/v4 v4.1.3/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
++github.com/go-jose/go-jose/v4 v4.1.4 h1:moDMcTHmvE6Groj34emNPLs/qtYXRVcd6S7NHbHz3kA=
++github.com/go-jose/go-jose/v4 v4.1.4/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
  github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 -github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 -github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
