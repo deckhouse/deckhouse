@@ -192,18 +192,14 @@ func preparePKIWithDir(_ *Controller, nodeName, nodeIP string, templateData map[
 	ip := net.ParseIP(nodeIP)
 
 	pkiDir := fmt.Sprintf("%s/pki", path)
-	// err := os.MkdirAll(pkiDir, 0755)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
 	fmt.Println(nodeName, dnsDomain, ip, serviceCIDR)
 	err := pki.CreatePKIBundle(nodeName, dnsDomain, ip, serviceCIDR, pki.WithPKIDir(pkiDir))
 	if err != nil {
 		return err
 	}
 	var files []kubeconfig.File
-	files = append(files, kubeconfig.Kubelet, kubeconfig.Admin, kubeconfig.ControllerManager, kubeconfig.Scheduler)
-	return kubeconfig.CreateKubeconfigFiles(files, kubeconfig.WithLocalAPIEndpoint(nodeIP), kubeconfig.WithOutDir(path+"/kubeconfig"), kubeconfig.WithCertificatesDir(pkiDir))
+	files = append(files, kubeconfig.Kubelet, kubeconfig.Admin, kubeconfig.ControllerManager, kubeconfig.Scheduler, kubeconfig.SuperAdmin)
+	return kubeconfig.CreateKubeconfigFiles(files, kubeconfig.WithLocalAPIEndpoint(nodeIP), kubeconfig.WithOutDir(path+"/kubeconfig"), kubeconfig.WithCertificatesDir(pkiDir), kubeconfig.WithNodeName("master-0"))
 }
 
 func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}) error {
