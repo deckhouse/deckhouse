@@ -1311,8 +1311,8 @@ entries:
                     ru: CSI-драйвер
                   url: /architecture/cluster-and-infrastructure/infrastructure/csi-driver.html
                 - title:
-                    en: CSI driver (csi-vsphere)
-                    ru: CSI-драйвер (csi-vsphere)
+                    en: CSI driver (VMware vSphere)
+                    ru: CSI-драйвер (VMware vSphere)
                   url: /architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
         - title:
             en: IAM subsystem

@@ -35,7 +35,6 @@ The module consists of the following components:
      * It checks for a VM in the cloud and deletes the Node resource in the cluster if it is missing.
 
    * When creating a LoadBalancer Service resource in Kubernetes, it creates a load balancer in the cloud that routes traffic from outside into the cluster nodes.
-   * Creates network routes for the `PodNetwork` network in the cloud.
 
    For more details about cloud-controller-manager, refer to [the Kubernetes documentation](https://kubernetes.io/docs/concepts/architecture/cloud-controller/).
 
@@ -71,7 +70,6 @@ The module interacts with the following components:
     * Collects cloud parameters.
     * Gets `ProviderId` and other information about the VMs that are cluster nodes.
     * Manages load balancers.
-    * Manages network routes for `PodNetwork` network.
     * Manages disks.
 
 The following external components interact with the module:
