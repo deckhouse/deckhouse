@@ -209,7 +209,7 @@ provider:
 sshPublicKey: |
   ssh-rsa AAAE`),
 			expectedSSHKey: "ssh-rsa AAAE",
-			prepare: false,
+			prepare:        false,
 		},
 		{
 			name: "multiline string key in the end with new line",
@@ -220,7 +220,7 @@ sshPublicKey: |
   ssh-rsa AAAF
 `),
 			expectedSSHKey: "ssh-rsa AAAF\n",
-			prepare: true,
+			prepare:        true,
 		},
 	}
 
