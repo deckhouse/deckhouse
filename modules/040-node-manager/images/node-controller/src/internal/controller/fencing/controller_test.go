@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -281,7 +282,7 @@ func TestReconcile_StaticNode_DeletesPodsButPreservesNode(t *testing.T) {
 			Name: "node-1",
 			Labels: map[string]string{
 				fencingEnabledLabel: "",
-				nodeTypeLabel:       nodeTypeStatic,
+				nodeTypeLabel:       string(v1.NodeTypeStatic),
 			},
 		},
 	}
@@ -310,7 +311,7 @@ func TestReconcile_CloudStaticNode_DeletesPodsButPreservesNode(t *testing.T) {
 			Name: "node-1",
 			Labels: map[string]string{
 				fencingEnabledLabel: "",
-				nodeTypeLabel:       nodeTypeCloudStatic,
+				nodeTypeLabel:       string(v1.NodeTypeCloudStatic),
 			},
 		},
 	}

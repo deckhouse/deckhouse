@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -46,9 +47,7 @@ const (
 	leaseNamespace      = "kube-node-lease"
 	fencingTimeout      = 60 * time.Second
 	requeueInterval     = 1 * time.Minute
-	notifyMode          = "Notify"
-	nodeTypeStatic      = "Static"
-	nodeTypeCloudStatic = "CloudStatic"
+	notifyMode = "Notify"
 )
 
 var maintenanceAnnotations = []string{
@@ -175,8 +174,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 func shouldDeleteNode(node *corev1.Node) bool {
 	fencingMode := node.Labels[fencingModeLabel]
-	nodeType := node.Labels[nodeTypeLabel]
-	return fencingMode != notifyMode && nodeType != nodeTypeStatic && nodeType != nodeTypeCloudStatic
+	nodeType := v1.NodeType(node.Labels[nodeTypeLabel])
+	return fencingMode != notifyMode && nodeType != v1.NodeTypeStatic && nodeType != v1.NodeTypeCloudStatic
 }
 
 func propagationPtr(p metav1.DeletionPropagation) *metav1.DeletionPropagation {
