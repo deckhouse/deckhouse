@@ -132,6 +132,7 @@ func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir s
 		return kubeconfig.CreateKubeconfigFiles(files,
 			kubeconfig.WithCertificatesDir(pkiDir),
 			kubeconfig.WithOutDir(kubeconfigDir),
+			kubeconfig.WithLocalAPIEndpoint(os.Getenv("MY_IP")),
 			kubeconfig.WithEncryptionAlgorithm(pkiconstants.EncryptionAlgorithmType(algo)),
 		)
 	}
@@ -139,6 +140,7 @@ func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir s
 	return kubeconfig.CreateKubeconfigFiles(files,
 		kubeconfig.WithCertificatesDir(pkiDir),
 		kubeconfig.WithOutDir(kubeconfigDir),
+		kubeconfig.WithLocalAPIEndpoint(os.Getenv("MY_IP")),
 	)
 }
 
