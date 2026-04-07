@@ -31,7 +31,12 @@ import (
 func CreateProviders(ctx context.Context, config string, logger log.Logger, isDebug bool, tmpDir string) (*providerinitializer.SSHProviderInitializer, pkg.KubeProvider, func() error, error) {
 	cleanuper := callback.NewCallback()
 
-	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.(*log.ExternalLogger).GetLogger())
+	externalLogger, ok := logger.(*log.ExternalLogger)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("cannot convert logger to ExternalLogger")
+	}
+
+	loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
 	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: isDebug, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: tmpDir}
 
 	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithConnectionConfig(config))
