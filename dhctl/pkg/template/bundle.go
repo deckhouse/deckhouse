@@ -83,9 +83,6 @@ func PrepareBundle(templateController *Controller, nodeName, nodeIP, devicePath 
 		return err
 	}
 
-	// if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
-	// 	return err
-	// }
 	if err := PreparePKI(templateController, nodeName, "127.0.0.1", kubeadmData); err != nil {
 		return err
 	}
@@ -192,14 +189,13 @@ func preparePKIWithDir(_ *Controller, nodeName, nodeIP string, templateData map[
 	ip := net.ParseIP(nodeIP)
 
 	pkiDir := fmt.Sprintf("%s/pki", path)
-	fmt.Println(nodeName, dnsDomain, ip, serviceCIDR)
 	err := pki.CreatePKIBundle(nodeName, dnsDomain, ip, serviceCIDR, pki.WithPKIDir(pkiDir))
 	if err != nil {
 		return err
 	}
 	var files []kubeconfig.File
-	files = append(files, kubeconfig.Kubelet, kubeconfig.Admin, kubeconfig.ControllerManager, kubeconfig.Scheduler, kubeconfig.SuperAdmin)
-	return kubeconfig.CreateKubeconfigFiles(files, kubeconfig.WithLocalAPIEndpoint(nodeIP), kubeconfig.WithOutDir(path+"/kubeconfig"), kubeconfig.WithCertificatesDir(pkiDir), kubeconfig.WithNodeName("master-0"))
+	files = append(files, kubeconfig.Kubelet, kubeconfig.Admin, kubeconfig.ControllerManager, kubeconfig.Scheduler)
+	return kubeconfig.CreateKubeconfigFiles(files, kubeconfig.WithLocalAPIEndpoint(nodeIP), kubeconfig.WithOutDir(path+"/kubeconfig"), kubeconfig.WithCertificatesDir(pkiDir))
 }
 
 func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}) error {
