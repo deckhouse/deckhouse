@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -146,7 +147,9 @@ func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) err
 		}
 	}
 	if enableBasicAuth, ok := authNData["enableBasicAuth"]; ok {
-		input.Values.Set(userAuthnEnableBasicAuthPath, enableBasicAuth)
+		if enabledBool, err := strconv.ParseBool(enableBasicAuth); err != nil {
+			input.Values.Set(userAuthnEnableBasicAuthPath, enabledBool)
+		}
 	}
 
 	authnWebhookURLExists := input.ConfigValues.Exists(userAuthenticationWebhookURLPath)
