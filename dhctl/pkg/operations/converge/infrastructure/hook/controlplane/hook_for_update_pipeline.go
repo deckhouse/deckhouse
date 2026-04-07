@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
@@ -203,6 +204,11 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	err = h.saveKubernetesDataDevicePath(ctx, outputs.KubeDataDevicePath)
 	if err != nil {
 		return fmt.Errorf("failed to save kubernetes data device path: %v", err)
+	}
+
+	err = entity.WaitForSingleNodeBecomeReady(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
+	if err != nil {
+		return fmt.Errorf("failed to wait for the master node '%s' to become Ready: %w", h.nodeToConverge, err)
 	}
 
 	err = waitEtcdHasMember(ctx, h.kubeGetter.KubeClient().KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
