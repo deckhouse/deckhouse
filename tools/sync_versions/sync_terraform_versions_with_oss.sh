@@ -238,7 +238,7 @@ sync_tf_versions() {
   VERSIONS_LIST="$(yq e ".[] | select(.id == \"$FULL_ID\") | .versions[].version" "$OSS_FILE")"
   CONDITIONS_COUNT="$(yq e ".[] | select(.id == \"$FULL_ID\") | [.versions[]? | select(has(\"condition\"))] | length" "$OSS_FILE")"
 
-  update_yaml_version "GLOBAL_TF_YAML_FILE"
+  update_yaml_version "$GLOBAL_TF_YAML_FILE"
   update_yaml_version "$MODULE_TF_YAML_FILE"
 
   if [[ -n "$SINGLE_VERSION" ]]; then
