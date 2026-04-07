@@ -7,10 +7,10 @@
   versions:
     - condition:
         mode: "new"
-      version: v1.2.0
+      version: v1.3.2
     - condition:
         mode: "legacy"
-      version: v1.3.2
+      version: v1.2.0
 
 - name: VMware Cloud Director Cloud provider
   link: https://github.com/vmware/cloud-provider-for-cloud-director
