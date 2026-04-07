@@ -51,7 +51,7 @@ func (CloudSystemRequirementsCheck) RetryPolicy() preflight.RetryPolicy {
 	return preflight.RetryPolicy{Attempts: 1}
 }
 
-func (c CloudSystemRequirementsCheck) Run(ctx context.Context) error {
+func (c CloudSystemRequirementsCheck) Run(_ context.Context) error {
 	configObject := make(map[string]any)
 	configKind, err := unmarshalProviderClusterConfiguration(c.InstallConfig.ProviderClusterConfig, configObject)
 	if err != nil {

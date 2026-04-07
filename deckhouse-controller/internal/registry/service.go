@@ -130,17 +130,7 @@ func (s *Service) GetImageDigest(ctx context.Context, remote Remote, packageName
 	}
 
 	// get <registry>/<packageName>:<tag>
-	img, err := cli.Image(ctx, tag)
-	if err != nil {
-		return "", fmt.Errorf("get image: %w", err)
-	}
-
-	digest, err := img.Digest()
-	if err != nil {
-		return "", fmt.Errorf("get package image digest: %w", err)
-	}
-
-	return digest.String(), nil
+	return cli.Digest(ctx, tag)
 }
 
 // GetImageRootHash downloads package manifest to parse rootHash from manifest annotations

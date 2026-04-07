@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const ZOOM_STEP = 0.25;
   const ZOOM_MIN = 1;
   const ZOOM_MAX = 4;
+  const DESKTOP_BREAKPOINT = 1024;
 
   function stopEvent(e) {
     e.preventDefault();
@@ -29,6 +30,10 @@ document.addEventListener('DOMContentLoaded', function () {
     pollUntilReady(function () {
       return document.querySelector('.glightbox-container');
     }, cb, 60);
+  }
+
+  function isDesktopViewport() {
+    return window.innerWidth > DESKTOP_BREAKPOINT;
   }
 
   function isSvgUrl(url) {
@@ -229,7 +234,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!img || img.dataset.zoomImageBound === '1') return;
     img.dataset.zoomImageBound = '1';
 
+    const isDesktop = isDesktopViewport();
     const state = getState(container);
+    const closeBtn = container.querySelector('.gclose');
+    const wrapper = img.closest('.gslide-inner-content');
     let pointerId = null;
     let startX = 0;
     let startY = 0;
@@ -303,12 +311,22 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
+    function clickWrapperToClose(e) {
+      if (!closeBtn) return;
+      if (e.target === img || (e.target.closest && e.target.closest('.zoom-image-toolbar'))) return;
+      stopEvent(e);
+      closeBtn.click();
+    }
+
     img.addEventListener('pointerdown', pointerDown, true);
     img.addEventListener('pointermove', pointerMove, true);
     img.addEventListener('pointerup', pointerUp, true);
     img.addEventListener('pointercancel', pointerUp, true);
-    img.addEventListener('click', clickZoom, true);
-    img.addEventListener('wheel', wheelZoom, { passive: false });
+    if (isDesktop) {
+      img.addEventListener('click', clickZoom, true);
+      img.addEventListener('wheel', wheelZoom, { passive: false });
+    }
+    if (wrapper) wrapper.addEventListener('click', clickWrapperToClose, true);
 
     applyTransform(container);
   }
@@ -331,12 +349,13 @@ document.addEventListener('DOMContentLoaded', function () {
     img.addEventListener('click', function (e) {
       e.preventDefault();
       const url = img.currentSrc || img.src;
+      const isDesktop = isDesktopViewport();
       const lb = GLightbox({
         elements: [{ href: url, type: 'image' }],
-        touchNavigation: false,
+        touchNavigation: !isDesktop,
         loop: false,
         zoomable: false,
-        draggable: false,
+        draggable: !isDesktop,
         closeButton: true,
         openEffect: 'zoom',
         closeEffect: 'fade'
