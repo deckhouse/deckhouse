@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, req.NamespacedName, node); err != nil {
 		if apierrors.IsNotFound(err) {
-			nodeDrainingGauge.DeletePartialMatch(prometheus.Labels{"node": req.Name})
+			clearDrainMetric(req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -93,23 +92,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	if drainingSource == "" && drainedSource == "" {
-		logger.V(1).Info("skipping: no draining/drained annotations", "node", node.Name)
-		nodeDrainingGauge.DeletePartialMatch(prometheus.Labels{"node": node.Name})
-		return ctrl.Result{}, nil
-	}
-
-	if drainingSource == "" && drainedSource == "user" && !node.Spec.Unschedulable {
-		logger.Info("removing stale drained=user annotation from schedulable node", "node", node.Name)
-		nodeDrainingGauge.DeletePartialMatch(prometheus.Labels{"node": node.Name})
-		return ctrl.Result{}, r.patchAnnotations(ctx, node.Name, map[string]interface{}{
-			nodecommon.DrainedAnnotation: nil,
-		})
-	}
-
 	if drainingSource == "" {
+		clearDrainMetric(node.Name)
+
+		if drainedSource == "user" && !node.Spec.Unschedulable {
+			logger.Info("removing stale drained=user annotation from schedulable node", "node", node.Name)
+			return ctrl.Result{}, r.patchAnnotations(ctx, node.Name, map[string]interface{}{
+				nodecommon.DrainedAnnotation: nil,
+			})
+		}
+
 		logger.V(1).Info("skipping: no draining annotation", "node", node.Name, "drainedSource", drainedSource)
-		nodeDrainingGauge.DeletePartialMatch(prometheus.Labels{"node": node.Name})
 		return ctrl.Result{}, nil
 	}
 
@@ -157,7 +150,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, err
 		}
 	} else {
-		nodeDrainingGauge.DeletePartialMatch(prometheus.Labels{"node": node.Name})
+		clearDrainMetric(node.Name)
 	}
 
 	logger.Info("drain completed, updating annotations",

@@ -32,3 +32,7 @@ var nodeDrainingGauge = prometheus.NewGaugeVec(
 func init() {
 	ctrlmetrics.Registry.MustRegister(nodeDrainingGauge)
 }
+
+func clearDrainMetric(nodeName string) {
+	nodeDrainingGauge.DeletePartialMatch(prometheus.Labels{"node": nodeName})
+}
