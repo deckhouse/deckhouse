@@ -26,8 +26,8 @@ fromCacheVersion: "2025-07-25-3"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/deckhouse
-  to: /deckhouse
+  add: /src
+  to: /src
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /go_lib/controlplane
