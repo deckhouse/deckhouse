@@ -21,7 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-func DateTime() *DynamicTransform {
+func dateTime() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "splunk_datetime",

@@ -27,20 +27,22 @@ import (
 
 func TestDropLabelsVRL(t *testing.T) {
 	t.Run("delete paths", func(t *testing.T) {
-		got, err := DropLabelsVRL(v1alpha1.DropLabelsSpec{
+		got, paths, err := DropLabelsVRL(v1alpha1.DropLabelsSpec{
 			Labels: []string{".first", ".second"},
 		})
 		require.NoError(t, err)
+		assert.Equal(t, []string{".first", ".second"}, paths)
 		assert.Equal(t, "if exists(.first) {\n  del(.first)\n}\n"+
 			"if exists(.second) {\n  del(.second)\n}", got)
 	})
 
 	t.Run("keepChildKeys", func(t *testing.T) {
-		got, err := DropLabelsVRL(v1alpha1.DropLabelsSpec{
+		got, paths, err := DropLabelsVRL(v1alpha1.DropLabelsSpec{
 			Labels:        []string{".pod_labels"},
 			KeepChildKeys: []string{"app", "group"},
 		})
 		require.NoError(t, err)
+		assert.Nil(t, paths)
 		assert.Equal(t, `obj, err = get(., ["pod_labels"])
 if err == null && is_object(obj) {
   filtered = {}

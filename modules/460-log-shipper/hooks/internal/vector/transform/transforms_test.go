@@ -88,13 +88,12 @@ func TestTransformSnippet(t *testing.T) {
 			},
 		})
 
-		filterTransforms, err := CreateLogFilterTransforms(filters)
+		filterTransforms, err := createLogFilterTransforms(filters)
 		require.NoError(t, err)
 
 		transforms = append(transforms, filterTransforms...)
 
-		tr, err := BuildFromMapSlice("prefix", "testit", "File", transforms)
-		require.NoError(t, err)
+		tr := buildFromMapSlice("transform/File/prefix/testit", transforms)
 
 		assert.Len(t, tr, 6)
 		assert.Len(t, tr[0].GetInputs(), 0)
@@ -119,10 +118,9 @@ func TestTransformSnippet(t *testing.T) {
 			"dba": `{{ parsed_data }}`,
 		}
 
-		transforms = append(transforms, ExtraFieldTransform(extraLabels))
+		transforms = append(transforms, extraFieldTransform(extraLabels))
 
-		tr, err := BuildFromMapSlice("prefix", "testit", "File", transforms)
-		require.NoError(t, err)
+		tr := buildFromMapSlice("transform/File/prefix/testit", transforms)
 
 		assert.Len(t, tr, 1)
 		assert.Len(t, tr[0].GetInputs(), 0)
@@ -134,14 +132,13 @@ func TestTransformSnippet(t *testing.T) {
 	})
 
 	t.Run("Test multiline None", func(t *testing.T) {
-		multilineTransforms, err := CreateMultiLineTransforms(v1alpha1.MultiLineParserNone, v1alpha1.MultilineParserCustom{})
+		multilineTransforms, err := createMultiLineTransforms(v1alpha1.MultiLineParserNone, v1alpha1.MultilineParserCustom{})
 		assert.NoError(t, err)
 
 		transforms := make([]apis.LogTransform, 0)
 		transforms = append(transforms, multilineTransforms...)
 
-		tr, err := BuildFromMapSlice("prefix", "testit", "File", transforms)
-		require.NoError(t, err)
+		tr := buildFromMapSlice("transform/File/prefix/testit", transforms)
 
 		assert.Len(t, tr, 0)
 
@@ -154,13 +151,12 @@ func TestTransformSnippet(t *testing.T) {
 	t.Run("Test multiline General", func(t *testing.T) {
 		transforms := make([]apis.LogTransform, 0)
 
-		multilineTransforms, err := CreateMultiLineTransforms(v1alpha1.MultiLineParserGeneral, v1alpha1.MultilineParserCustom{})
+		multilineTransforms, err := createMultiLineTransforms(v1alpha1.MultiLineParserGeneral, v1alpha1.MultilineParserCustom{})
 		assert.NoError(t, err)
 
 		transforms = append(transforms, multilineTransforms...)
 
-		tr, err := BuildFromMapSlice("prefix", "testit", "File", transforms)
-		require.NoError(t, err)
+		tr := buildFromMapSlice("transform/File/prefix/testit", transforms)
 
 		assert.Len(t, tr, 1)
 		assert.Len(t, tr[0].GetInputs(), 0)
@@ -197,13 +193,12 @@ func TestTransformSnippet(t *testing.T) {
 			},
 		}
 		for _, cfg := range customConfigs {
-			multilineTransforms, err := CreateMultiLineTransforms(v1alpha1.MultiLineParserCustom, cfg)
+			multilineTransforms, err := createMultiLineTransforms(v1alpha1.MultiLineParserCustom, cfg)
 			assert.NoError(t, err)
 			transforms = append(transforms, multilineTransforms...)
 		}
 
-		tr, err := BuildFromMapSlice("prefix", "testit", "File", transforms)
-		require.NoError(t, err)
+		tr := buildFromMapSlice("transform/File/prefix/testit", transforms)
 
 		assert.Len(t, tr, 4)
 		assert.Len(t, tr[0].GetInputs(), 0)

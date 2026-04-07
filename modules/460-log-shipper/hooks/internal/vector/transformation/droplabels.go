@@ -32,35 +32,36 @@ func isKeepChildKeysKey(s string) bool {
 	return keepChildKeysKeyRe.MatchString(s)
 }
 
-func DropLabelsVRL(d v1alpha1.DropLabelsSpec) (string, error) {
+func DropLabelsVRL(d v1alpha1.DropLabelsSpec) (string, []string, error) {
 	if len(d.Labels) == 0 {
-		return "", fmt.Errorf("dropLabels: labels is empty")
+		return "", nil, fmt.Errorf("dropLabels: labels is empty")
 	}
 	if len(d.KeepChildKeys) == 0 {
 		paths, err := parser.MapLabelPaths(d.Labels, parser.PathSegmentsToVRLDotPath)
 		if err != nil {
-			return "", fmt.Errorf("dropLabels: %w", err)
+			return "", nil, fmt.Errorf("dropLabels: %w", err)
 		}
-		return vrl.DropLabels.Render(vrl.Args{"spec": struct {
+		s, err := vrl.DropLabels.Render(vrl.Args{"spec": struct {
 			Paths []string
 		}{Paths: paths}})
+		return s, paths, err
 	}
 	for _, k := range d.KeepChildKeys {
 		if !isKeepChildKeysKey(k) {
-			return "", fmt.Errorf("dropLabels: invalid keepChildKeys key %q", k)
+			return "", nil, fmt.Errorf("dropLabels: invalid keepChildKeys key %q", k)
 		}
 	}
 	pathArrays, err := parser.MapLabelPaths(d.Labels, parser.PathSegmentsToVRLArray)
 	if err != nil {
-		return "", fmt.Errorf("dropLabels: %w", err)
+		return "", nil, fmt.Errorf("dropLabels: %w", err)
 	}
 	parts := make([]string, 0, len(pathArrays))
 	for _, pa := range pathArrays {
 		s, err := vrl.DropLabelsKeepChildKeys.Render(vrl.Args{"pathArray": pa, "keepKeys": d.KeepChildKeys})
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 		parts = append(parts, s)
 	}
-	return strings.Join(parts, "\n"), nil
+	return strings.Join(parts, "\n"), nil, nil
 }

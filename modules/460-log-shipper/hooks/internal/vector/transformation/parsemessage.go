@@ -49,7 +49,7 @@ func GenerateParseMessageVRL(spec v1alpha1.ParseMessageSpec) (string, error) {
 	if targetLabel == "" {
 		targetLabel = v1alpha1.DefaultParseMessageTargetLabel
 	}
-	root := parser.IsRootLabel(targetLabel)
+	root := targetLabel == "."
 	var segs []string
 	var err error
 	if !root {

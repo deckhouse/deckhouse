@@ -96,7 +96,7 @@ func parseRightValue(s string) (string, error) {
 		return "", fmt.Errorf("when: empty when value")
 	}
 	if strings.HasPrefix(s, "'") || strings.HasPrefix(s, `"`) {
-		end, seg, err := ReadQuotedSegment(s, s[0])
+		end, seg, err := readQuotedSegment(s, s[0])
 		if err != nil {
 			return "", fmt.Errorf("when: %w", err)
 		}

@@ -21,7 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-func SyslogEncoding() *DynamicTransform {
+func syslogEncoding() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "syslog_encoding",

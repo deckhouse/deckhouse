@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
-// Kubernetes label field names used in kubernetes_logs source annotation_fields.
 const (
 	K8sLabelPod        = "pod"
 	K8sLabelPodLabels  = "pod_labels"
@@ -37,11 +36,14 @@ const (
 	K8sLabelNode       = "node"
 	K8sLabelPodOwner   = "pod_owner"
 	K8sLabelNodeLabels = "node_labels"
+	K8sLabelStream     = "stream"
+	K8sLabelNodeGroup  = "node_group"
 )
 
-const podLabelsStar = "pod_labels_*"
+const podLabelsLokiKey = "pod_labels_*"
 
-// K8sLabels contains default Kubernetes labels for log destinations.
+const splunkIndexedFieldDatetime = "datetime"
+
 var K8sLabels = map[string]string{
 	K8sLabelNamespace: "{{ namespace }}",
 	K8sLabelContainer: "{{ container }}",
@@ -49,27 +51,126 @@ var K8sLabels = map[string]string{
 	K8sLabelPod:       "{{ pod }}",
 	K8sLabelNode:      "{{ node }}",
 	K8sLabelPodIP:     "{{ pod_ip }}",
-	"stream":          "{{ stream }}",
-	"node_group":      "{{ node_group }}",
+	K8sLabelStream:    "{{ stream }}",
+	K8sLabelNodeGroup: "{{ node_group }}",
 	K8sLabelPodOwner:  "{{ pod_owner }}",
 }
 
-// K8sLabelsWithPodLabels contains K8sLabels plus pod_labels_*.
-var K8sLabelsWithPodLabels = func() map[string]string {
-	result := make(map[string]string, len(K8sLabels)+1)
-	maps.Copy(result, K8sLabels)
-	result[podLabelsStar] = "{{ pod_labels }}"
-	return result
-}()
-
-// FilesLabels contains default file labels for log destinations.
 var FilesLabels = map[string]string{
 	"host":    "{{ .host }}",
 	"host_ip": "{{ .host_ip }}",
 	"file":    "{{ file }}",
 }
 
-// SortedMapKeys returns sorted keys from a map for deterministic order.
+type DestinationSinkArtifacts struct {
+	LokiLabels          map[string]string
+	SplunkIndexedFields map[string]string
+	CEFExtensions       map[string]string
+}
+
+// DestinationSinkBuildInput is the single input for building Loki labels, Splunk indexed_fields, or CEF extensions.
+type DestinationSinkInput struct {
+	Spec           v1alpha1.ClusterLogDestinationSpec
+	SourceType     string
+	AddLabelKeys   []string
+	DropLabelPaths []string
+	WithPodLabels  bool
+}
+
+func (in DestinationSinkInput) sourceLabels() map[string]string {
+	switch in.SourceType {
+	case v1alpha1.SourceFile:
+		return FilesLabels
+	case v1alpha1.SourceKubernetesPods:
+		if in.WithPodLabels {
+			return K8sLabelsWithPodLabels
+		}
+		return K8sLabels
+	default:
+		return make(map[string]string)
+	}
+}
+
+func (in DestinationSinkInput) orderedSinkKeys() []string {
+	src := in.sourceLabels()
+	extra := in.Spec.ExtraLabels
+	keys := make([]string, 0, len(src)+len(extra)+len(in.AddLabelKeys))
+	keys = append(keys, SortedMapKeys(src)...)
+	keys = append(keys, SortedMapKeys(extra)...)
+	for _, addKey := range in.AddLabelKeys {
+		if addKeyRedundantWithList(keys, addKey) {
+			continue
+		}
+		keys = append(keys, addKey)
+	}
+	return in.withoutDroppedKeys(keys)
+}
+
+func (in DestinationSinkInput) sinkMapKeyDropped(k string) bool {
+	for _, dropPath := range in.DropLabelPaths {
+		if sinkKeyMatchesDropPath(k, dropPath) {
+			return true
+		}
+	}
+	return false
+}
+
+func (in DestinationSinkInput) withoutDroppedKeys(keys []string) []string {
+	if len(in.DropLabelPaths) == 0 {
+		return keys
+	}
+	out := make([]string, 0, len(keys))
+	for _, k := range keys {
+		if !in.sinkMapKeyDropped(k) {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+func (in DestinationSinkInput) splunkIndexedFields() map[string]string {
+	base := sinkTemplateMapFromKeys(in, in.orderedSinkKeys())
+	out := make(map[string]string, len(base)+1)
+	maps.Copy(out, base)
+	out[splunkIndexedFieldDatetime] = ""
+	return out
+}
+
+func (in DestinationSinkInput) cefExtensions() map[string]string {
+	keys := in.orderedSinkKeys()
+	ext := make(map[string]string, len(keys)+2)
+	ext["message"] = "message"
+	ext["timestamp"] = "timestamp"
+	for _, k := range keys {
+		n := normalizeKey(k)
+		if n == "cef.name" || n == "cef.severity" {
+			continue
+		}
+		ext[n] = k
+	}
+	return ext
+}
+
+func BuildDestinationSinkArtifacts(in DestinationSinkInput) DestinationSinkArtifacts {
+	spec := in.Spec
+	var a DestinationSinkArtifacts
+	switch spec.Type {
+	case v1alpha1.DestLoki:
+		a.LokiLabels = sinkTemplateMapFromKeys(in, in.orderedSinkKeys())
+	case v1alpha1.DestSplunk:
+		a.SplunkIndexedFields = in.splunkIndexedFields()
+	case v1alpha1.DestKafka:
+		if spec.Kafka.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+			a.CEFExtensions = in.cefExtensions()
+		}
+	case v1alpha1.DestSocket:
+		if spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+			a.CEFExtensions = in.cefExtensions()
+		}
+	}
+	return a
+}
+
 func SortedMapKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -79,93 +180,59 @@ func SortedMapKeys(m map[string]string) []string {
 	return keys
 }
 
-// FieldRefTemplate is the Vector mustache-style reference for a top-level field name (extra labels / sinks).
-func FieldRefTemplate(key string) string {
-	return fmt.Sprintf("{{ %s }}", key)
-}
-
-// GetLokiLabels returns labels for Loki: source labels (with pod_labels for K8s) + extraLabels.
-func GetLokiLabels(sourceType string, extraLabels map[string]string) map[string]string {
-	return mergeLabels(sourceLabels(sourceType, true), extraLabels)
-}
-
-// GetSplunkLabels returns indexed fields for Splunk: datetime + source labels (K8s without pod_labels) + extraLabels.
-func GetSplunkLabels(sourceType string, extraLabels map[string]string) map[string]string {
-	result := make(map[string]string, 1+len(FilesLabels)+len(extraLabels))
-	result["datetime"] = ""
-	maps.Copy(result, mergeLabels(sourceLabels(sourceType, false), extraLabels))
+var K8sLabelsWithPodLabels = func() map[string]string {
+	result := make(map[string]string, len(K8sLabels)+1)
+	maps.Copy(result, K8sLabels)
+	result[podLabelsLokiKey] = "{{ pod_labels }}"
 	return result
-}
+}()
 
-// GetCEFExtensions returns CEF extensions map: source labels (K8s without pod_labels) + extraLabels, with message/timestamp.
-func GetCEFExtensions(sourceType string, extraLabels map[string]string) map[string]string {
-	sourceLabels := sourceLabels(sourceType, false)
-	extensions := make(map[string]string, len(sourceLabels)+len(extraLabels)+5)
-	extensions["message"] = "message"
-	extensions["timestamp"] = "timestamp"
-	for k := range sourceLabels {
-		if k == podLabelsStar {
-			continue
+func sinkTemplateMapFromKeys(in DestinationSinkInput, keys []string) map[string]string {
+	src := in.sourceLabels()
+	out := make(map[string]string, len(keys))
+	for _, k := range keys {
+		if v, ok := src[k]; ok {
+			out[k] = v
+		} else {
+			out[k] = fieldRefTemplate(k)
 		}
-		if k == K8sLabelNode {
-			extensions["node"] = "node"
-			continue
-		}
-		extensions[normalizeKey(k)] = k
 	}
-	for _, k := range SortedMapKeys(extraLabels) {
-		n := normalizeKey(k)
-		if n == "cef.name" || n == "cef.severity" {
-			continue
+	return out
+}
+
+func addKeyRedundantWithList(existingKeys []string, addKey string) bool {
+	for _, existing := range existingKeys {
+		root := existing
+		if root == podLabelsLokiKey {
+			root = K8sLabelPodLabels
 		}
-		extensions[n] = k
-	}
-	return extensions
-}
-
-func sourceLabels(sourceType string, withPodLabels bool) map[string]string {
-	switch sourceType {
-	case v1alpha1.SourceFile:
-		return FilesLabels
-	case v1alpha1.SourceKubernetesPods:
-		if withPodLabels {
-			return K8sLabelsWithPodLabels
-		}
-		return K8sLabels
-	default:
-		return make(map[string]string)
-	}
-}
-
-func mergeLabels(sourceLabels map[string]string, extraLabels map[string]string) map[string]string {
-	result := make(map[string]string, len(sourceLabels)+len(extraLabels))
-	maps.Copy(result, sourceLabels)
-	for _, k := range SortedMapKeys(extraLabels) {
-		result[k] = FieldRefTemplate(k)
-	}
-	return result
-}
-
-// isKeyUnderOrEqualSourceLabel checks if a label is under or equal to a source label.
-func isKeyUnderOrEqualSourceLabel(label, sourceLabel string) bool {
-	return label == sourceLabel || strings.HasPrefix(label, sourceLabel+".")
-}
-
-// IsSinkKeyRedundantBySourceLabels checks if a sink key is redundant by source labels.
-func IsSinkKeyRedundantBySourceLabels(l string, sourceType string) bool {
-	labels := sourceLabels(sourceType, true)
-	for k := range labels {
-		if k == podLabelsStar {
-			if isKeyUnderOrEqualSourceLabel(l, K8sLabelPodLabels) {
-				return true
-			}
-			continue
-		}
-		if isKeyUnderOrEqualSourceLabel(l, k) {
+		if pathEqualsOrNestedUnder(addKey, root) {
 			return true
 		}
 	}
 	return false
+}
+
+func pathEqualsOrNestedUnder(label, path string) bool {
+	if label == path {
+		return true
+	}
+	return strings.HasPrefix(label, path+".")
+}
+
+func sinkKeyMatchesDropPath(sinkMapKey string, dropPath string) bool {
+	if dropPath == "" {
+		return false
+	}
+	candidate := sinkMapKey
+	if candidate == podLabelsLokiKey {
+		candidate = K8sLabelPodLabels
+	}
+	return pathEqualsOrNestedUnder(candidate, dropPath)
+}
+
+func fieldRefTemplate(key string) string {
+	return fmt.Sprintf("{{ %s }}", key)
 }
 
 func normalizeKey(key string) string {

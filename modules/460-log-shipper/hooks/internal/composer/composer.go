@@ -18,7 +18,7 @@ package composer
 
 import (
 	"fmt"
-	"maps"
+	"slices"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
@@ -34,8 +34,9 @@ import (
 )
 
 type Composer struct {
-	Source []v1alpha1.ClusterLoggingConfig
-	Dest   []v1alpha1.ClusterLogDestination
+	Source     []v1alpha1.ClusterLoggingConfig
+	Dest       []v1alpha1.ClusterLogDestination
+	destByName map[string]v1alpha1.ClusterLogDestination
 }
 
 // FromInput collects ClusterLoggingConfig sources from snapshots and combines them with provided destinations.
@@ -45,12 +46,15 @@ func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDesti
 	namespacedSourceSnap := input.Snapshots.Get("namespaced_log_source")
 
 	res := &Composer{
-		Source: make([]v1alpha1.ClusterLoggingConfig, 0, len(sourceSnap)+len(namespacedSourceSnap)),
-		Dest:   make([]v1alpha1.ClusterLogDestination, 0, len(destinations)),
+		Source:     make([]v1alpha1.ClusterLoggingConfig, 0, len(sourceSnap)+len(namespacedSourceSnap)),
+		Dest:       slices.Clone(destinations),
+		destByName: make(map[string]v1alpha1.ClusterLogDestination, len(destinations)),
 	}
 
-	for _, dest := range destinations {
-		res.Dest = append(res.Dest, dest)
+	for _, dest := range res.Dest {
+		if _, ok := res.destByName[dest.Name]; !ok {
+			res.destByName[dest.Name] = dest
+		}
 		customResourceMetric(input, "ClusterLogDestination", dest.Name, dest.Namespace, dest.Spec.Type)
 	}
 
@@ -133,12 +137,11 @@ func newLogSource(typ, name string, spec v1alpha1.ClusterLoggingConfigSpec) apis
 }
 
 func (c *Composer) getDestinationSpecByName(name string) *v1alpha1.ClusterLogDestination {
-	for _, d := range c.Dest {
-		if d.Name == name {
-			return &d
-		}
+	d, ok := c.destByName[name]
+	if !ok {
+		return nil
 	}
-	return nil
+	return &d
 }
 
 // composeDestinations resolves destination references, creates destination instances, and applies transforms.
@@ -152,17 +155,13 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 			continue
 		}
 
-		transforms, addLabelSinkKeys, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec, sourceType)
+		transforms, sinkArtifacts, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec, sourceType)
 		if err != nil {
 			return nil, err
 		}
 
-		spec := destSpec.Spec
-		// merge add labels with extra labels and source labels, but skip redundant keys
-		// This need for destinations like Loki, where source labels are added to the event
-		spec.ExtraLabels = mergeExtraLabelsKeys(destSpec.Spec.ExtraLabels, addLabelSinkKeys, sourceType)
-
-		dest := newLogDest(destSpec.Spec.Type, destSpec.Name, spec, sourceType)
+		sinkName := destination.ComposeNameWithSourceType(destSpec.Name, sourceType)
+		dest := newLogDest(destSpec.Spec.Type, sinkName, destSpec.Spec, sinkArtifacts)
 		if dest == nil {
 			continue
 		}
@@ -176,34 +175,23 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 	return destinations, nil
 }
 
-func mergeExtraLabelsKeys(extra map[string]string, addLabels []string, sourceType string) map[string]string {
-	result := make(map[string]string, len(extra)+len(addLabels))
-	maps.Copy(result, extra)
-	for _, label := range addLabels {
-		if !loglabels.IsSinkKeyRedundantBySourceLabels(label, sourceType) {
-			result[label] = loglabels.FieldRefTemplate(label)
-		}
-	}
-	return result
-}
-
 // newLogDest creates a log destination instance based on the destination type.
-func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec, sourceType string) apis.LogDestination {
+func newLogDest(typ, sinkName string, spec v1alpha1.ClusterLogDestinationSpec, art loglabels.DestinationSinkArtifacts) apis.LogDestination {
 	switch typ {
 	case v1alpha1.DestLoki:
-		return destination.NewLoki(name, spec, sourceType)
+		return destination.NewLoki(sinkName, spec, art.LokiLabels)
 	case v1alpha1.DestElasticsearch:
-		return destination.NewElasticsearch(name, spec, sourceType)
+		return destination.NewElasticsearch(sinkName, spec)
 	case v1alpha1.DestLogstash:
-		return destination.NewLogstash(name, spec, sourceType)
+		return destination.NewLogstash(sinkName, spec)
 	case v1alpha1.DestVector:
-		return destination.NewVector(name, spec, sourceType)
+		return destination.NewVector(sinkName, spec)
 	case v1alpha1.DestKafka:
-		return destination.NewKafka(name, spec, sourceType)
+		return destination.NewKafka(sinkName, spec, art.CEFExtensions)
 	case v1alpha1.DestSplunk:
-		return destination.NewSplunk(name, spec, sourceType)
+		return destination.NewSplunk(sinkName, spec, art.SplunkIndexedFields)
 	case v1alpha1.DestSocket:
-		return destination.NewSocket(name, spec, sourceType)
+		return destination.NewSocket(sinkName, spec, art.CEFExtensions)
 	}
 	return nil
 }

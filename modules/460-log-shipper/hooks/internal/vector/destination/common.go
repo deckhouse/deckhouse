@@ -104,8 +104,55 @@ func decodeB64(input string) string {
 	return string(res)
 }
 
-func ComposeName(n string) string {
-	return "destination/cluster/" + n
+func commonTLSFromSpec(spec v1alpha1.CommonTLSSpec) CommonTLS {
+	tls := CommonTLS{
+		CAFile:            decodeB64(spec.CAFile),
+		CertFile:          decodeB64(spec.CertFile),
+		KeyFile:           decodeB64(spec.KeyFile),
+		KeyPass:           decodeB64(spec.KeyPass),
+		VerifyCertificate: true,
+		VerifyHostname:    true,
+	}
+	if spec.VerifyCertificate != nil {
+		tls.VerifyCertificate = *spec.VerifyCertificate
+	}
+	if spec.VerifyHostname != nil {
+		tls.VerifyHostname = *spec.VerifyHostname
+	}
+	return tls
+}
+
+func commonTLSFromSpecWithClientEnabled(spec v1alpha1.CommonTLSSpec) CommonTLS {
+	tls := commonTLSFromSpec(spec)
+	if len(tls.CAFile) > 0 || len(tls.CertFile) > 0 {
+		tls.Enabled = true
+	}
+	return tls
+}
+
+func cefEncodingFromCRD(cef v1alpha1.CEFEncoding, extensions map[string]string) CEFEncoding {
+	deviceVendor := "Deckhouse"
+	if cef.DeviceVendor != "" {
+		deviceVendor = cef.DeviceVendor
+	}
+	deviceProduct := "log-shipper-agent"
+	if cef.DeviceProduct != "" {
+		deviceProduct = cef.DeviceProduct
+	}
+	deviceVersion := "1"
+	if cef.DeviceVersion != "" {
+		deviceVersion = cef.DeviceVersion
+	}
+	return CEFEncoding{
+		Version:            "V1",
+		DeviceVendor:       deviceVendor,
+		DeviceProduct:      deviceProduct,
+		DeviceVersion:      deviceVersion,
+		DeviceEventClassID: "Log event",
+		Name:               "cef.name",
+		Severity:           "cef.severity",
+		Extensions:         extensions,
+	}
 }
 
 // ComposeNameWithSourceType creates a unique sink name by including the source type.

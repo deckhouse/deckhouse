@@ -21,7 +21,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
 type Loki struct {
@@ -51,33 +50,14 @@ type LokiAuth struct {
 	User     string `json:"user,omitempty"`
 }
 
-func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Loki {
+func NewLoki(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec, labels map[string]string) *Loki {
 	spec := cspec.Loki
 
-	// default labels
-	//
-	// Asterisk is required here to expand all pod labels
-	// See https://github.com/vectordotdev/vector/pull/12041
-	labels := loglabels.GetLokiLabels(sourceType, cspec.ExtraLabels)
-
-	tls := CommonTLS{
-		CAFile:            decodeB64(spec.TLS.CAFile),
-		CertFile:          decodeB64(spec.TLS.CertFile),
-		KeyFile:           decodeB64(spec.TLS.KeyFile),
-		KeyPass:           decodeB64(spec.TLS.KeyPass),
-		VerifyCertificate: true,
-		VerifyHostname:    true,
-	}
-	if spec.TLS.VerifyCertificate != nil {
-		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
-	}
-	if spec.TLS.VerifyHostname != nil {
-		tls.VerifyHostname = *spec.TLS.VerifyHostname
-	}
+	tls := commonTLSFromSpec(spec.TLS)
 
 	return &Loki{
 		CommonSettings: CommonSettings{
-			Name:   ComposeNameWithSourceType(name, sourceType),
+			Name:   sinkName,
 			Type:   "loki",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

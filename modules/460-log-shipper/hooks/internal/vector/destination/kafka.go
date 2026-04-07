@@ -21,7 +21,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
 type Kafka struct {
@@ -48,26 +47,10 @@ type KafkaSASL struct {
 	Enabled bool `json:"enabled,omitempty"`
 }
 
-func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Kafka {
+func NewKafka(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec, cefExtensions map[string]string) *Kafka {
 	spec := cspec.Kafka
 
-	tls := CommonTLS{
-		CAFile:            decodeB64(spec.TLS.CAFile),
-		CertFile:          decodeB64(spec.TLS.CertFile),
-		KeyFile:           decodeB64(spec.TLS.KeyFile),
-		KeyPass:           decodeB64(spec.TLS.KeyPass),
-		VerifyCertificate: true,
-		VerifyHostname:    true,
-	}
-	if spec.TLS.VerifyCertificate != nil {
-		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
-	}
-	if spec.TLS.VerifyHostname != nil {
-		tls.VerifyHostname = *spec.TLS.VerifyHostname
-	}
-	if len(tls.CAFile) > 0 || len(tls.CertFile) > 0 {
-		tls.Enabled = true
-	}
+	tls := commonTLSFromSpecWithClientEnabled(spec.TLS)
 
 	sasl := KafkaSASL{
 		Enabled:   false,
@@ -84,39 +67,13 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType 
 		TimestampFormat: "rfc3339",
 	}
 	if spec.Encoding.Codec == v1alpha1.EncodingCodecCEF {
-		deviceVendor := "Deckhouse"
-		if spec.Encoding.CEF.DeviceVendor != "" {
-			deviceVendor = spec.Encoding.CEF.DeviceVendor
-		}
-
-		deviceProduct := "log-shipper-agent"
-		if spec.Encoding.CEF.DeviceProduct != "" {
-			deviceProduct = spec.Encoding.CEF.DeviceProduct
-		}
-
-		deviceVersion := "1"
-		if spec.Encoding.CEF.DeviceVersion != "" {
-			deviceVersion = spec.Encoding.CEF.DeviceVersion
-		}
-		// Get CEF extensions based on source type (uses K8sLabels and FilesLabels)
-		extensions := loglabels.GetCEFExtensions(sourceType, cspec.ExtraLabels)
-
 		encoding.Codec = "cef"
-		encoding.CEF = CEFEncoding{
-			Version:            "V1",
-			DeviceVendor:       deviceVendor,
-			DeviceProduct:      deviceProduct,
-			DeviceVersion:      deviceVersion,
-			DeviceEventClassID: "Log event",
-			Name:               "cef.name",
-			Severity:           "cef.severity",
-			Extensions:         extensions,
-		}
+		encoding.CEF = cefEncodingFromCRD(spec.Encoding.CEF, cefExtensions)
 	}
 
 	return &Kafka{
 		CommonSettings: CommonSettings{
-			Name:   ComposeNameWithSourceType(name, sourceType),
+			Name:   sinkName,
 			Type:   "kafka",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

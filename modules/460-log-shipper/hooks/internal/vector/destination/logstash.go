@@ -39,30 +39,14 @@ type LogstashKeepalive struct {
 	TimeSecs int `json:"time_secs"`
 }
 
-func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Logstash {
+func NewLogstash(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstash {
 	spec := cspec.Logstash
 
-	tls := CommonTLS{
-		CAFile:            decodeB64(spec.TLS.CAFile),
-		CertFile:          decodeB64(spec.TLS.CertFile),
-		KeyFile:           decodeB64(spec.TLS.KeyFile),
-		KeyPass:           decodeB64(spec.TLS.KeyPass),
-		VerifyCertificate: true,
-		VerifyHostname:    true,
-	}
-	if spec.TLS.VerifyCertificate != nil {
-		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
-	}
-	if spec.TLS.VerifyHostname != nil {
-		tls.VerifyHostname = *spec.TLS.VerifyHostname
-	}
-	if len(tls.CAFile) > 0 || len(tls.CertFile) > 0 {
-		tls.Enabled = true
-	}
+	tls := commonTLSFromSpecWithClientEnabled(spec.TLS)
 
 	return &Logstash{
 		CommonSettings: CommonSettings{
-			Name:   ComposeNameWithSourceType(name, sourceType),
+			Name:   sinkName,
 			Type:   "socket",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

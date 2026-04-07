@@ -49,9 +49,18 @@ func TestParseLabelPath(t *testing.T) {
 	}
 }
 
-func TestIsRootLabel(t *testing.T) {
-	assert.True(t, IsRootLabel("."))
-	assert.False(t, IsRootLabel(".foo.bar"))
+func TestSinkKeysFromVRLPaths(t *testing.T) {
+	got, err := SinkKeysFromVRLPaths([]string{".pod_labels", ".a.b.c"})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"pod_labels", "a.b.c"}, got)
+
+	got, err = SinkKeysFromVRLPaths([]string{`.msg."x-y".z`})
+	require.NoError(t, err)
+	assert.Equal(t, []string{`msg."x-y".z`}, got)
+
+	got, err = SinkKeysFromVRLPaths(nil)
+	require.NoError(t, err)
+	assert.Nil(t, got)
 }
 
 func TestMatchMustachePath(t *testing.T) {

@@ -27,9 +27,9 @@ var vrlBarePathSegmentRe = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 var mustachePathRe = regexp.MustCompile(`^\{\{\s*(\.[a-zA-Z0-9\[\]_\\\-\."']+)\s*\}\}$`)
 var mustacheGroupRe = regexp.MustCompile(`^\s*\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}\s*$`)
 
-// IsVRLBarePathSegment returns true for simple identifiers like `foo`, `my_key`.
+// isVRLBarePathSegment returns true for simple identifiers like `foo`, `my_key`.
 // Segments containing special characters (e.g. `foo-bar`) require quoting in VRL.
-func IsVRLBarePathSegment(s string) bool {
+func isVRLBarePathSegment(s string) bool {
 	return vrlBarePathSegmentRe.MatchString(s)
 }
 
@@ -71,13 +71,13 @@ func parsePathSegments(s string) ([]string, error) {
 func nextPathSegment(s string) (string, string, error) {
 	switch {
 	case strings.HasPrefix(s, `"`):
-		end, seg, err := ReadQuotedSegment(s, '"')
+		end, seg, err := readQuotedSegment(s, '"')
 		if err != nil {
 			return "", "", err
 		}
 		return seg, s[end:], nil
 	case strings.HasPrefix(s, "'"):
-		end, seg, err := ReadQuotedSegment(s, '\'')
+		end, seg, err := readQuotedSegment(s, '\'')
 		if err != nil {
 			return "", "", err
 		}
@@ -95,11 +95,11 @@ func nextPathSegment(s string) (string, string, error) {
 	}
 }
 
-// ReadQuotedSegment reads a quoted segment starting at s[0]==q.
+// readQuotedSegment reads a quoted segment starting at s[0]==q.
 // Returns consumed length, unescaped content, and error.
 // example: `"foo-bar".rest`  → (9, "foo-bar", nil)
 // example: `"a\"b"`          → (6, `a"b`, nil)
-func ReadQuotedSegment(s string, q byte) (int, string, error) {
+func readQuotedSegment(s string, q byte) (int, string, error) {
 	if len(s) < 2 {
 		return 0, "", fmt.Errorf("unclosed quoted segment")
 	}
@@ -114,14 +114,14 @@ func ReadQuotedSegment(s string, q byte) (int, string, error) {
 			pos = idx + 1
 			continue
 		}
-		return idx + 1, Unescape(s[1:idx], q), nil
+		return idx + 1, unescape(s[1:idx], q), nil
 	}
 }
 
-// Unescape replaces \q → q and \\ → \ in a raw segment content.
-// example: Unescape(`a\"b`, '"') → `a"b`
-// example: Unescape(`no_esc`, '"') → `no_esc`
-func Unescape(s string, q byte) string {
+// unescape replaces \q → q and \\ → \ in a raw segment content.
+// example: unescape(`a\"b`, '"') → `a"b`
+// example: unescape(`no_esc`, '"') → `no_esc`
+func unescape(s string, q byte) string {
 	if !strings.Contains(s, `\`) {
 		return s
 	}
@@ -146,7 +146,7 @@ func PathSegmentsToVRLArray(segments []string) string {
 func PathSegmentsToVRLDotPath(segments []string) string {
 	parts := make([]string, len(segments))
 	for i, seg := range segments {
-		if IsVRLBarePathSegment(seg) {
+		if isVRLBarePathSegment(seg) {
 			parts[i] = "." + seg
 			continue
 		}
@@ -164,6 +164,25 @@ func MapLabelPaths(labels []string, f func([]string) string) ([]string, error) {
 			return nil, fmt.Errorf("path %q: %w", pl, err)
 		}
 		out = append(out, f(segs))
+	}
+	return out, nil
+}
+
+// SinkKeysFromVRLPaths returns each path as a VRL dot path without the leading dot (for loglabels drop prefixes; same rule as addLabels sink keys).
+func SinkKeysFromVRLPaths(paths []string) ([]string, error) {
+	if len(paths) == 0 {
+		return nil, nil
+	}
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		segs, err := ParseLabelPath(p)
+		if err != nil {
+			return nil, fmt.Errorf("path %q: %w", p, err)
+		}
+		k := strings.TrimPrefix(PathSegmentsToVRLDotPath(segs), ".")
+		if k != "" {
+			out = append(out, k)
+		}
 	}
 	return out, nil
 }
@@ -188,8 +207,4 @@ func MatchMustacheGroup(s string) (string, bool) {
 		return "", false
 	}
 	return m[1], true
-}
-
-func IsRootLabel(tl string) bool {
-	return strings.TrimSpace(tl) == "."
 }

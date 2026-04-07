@@ -21,7 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-func DeDotTransform() *DynamicTransform {
+func deDotTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "elastic_dedot",
@@ -35,7 +35,7 @@ func DeDotTransform() *DynamicTransform {
 	}
 }
 
-func DataStreamTransform() *DynamicTransform {
+func dataStreamTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "elastic_stream",
@@ -49,7 +49,7 @@ func DataStreamTransform() *DynamicTransform {
 	}
 }
 
-func CleanUpParsedDataTransform() *DynamicTransform {
+func cleanUpParsedDataTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "del_parsed_data",
