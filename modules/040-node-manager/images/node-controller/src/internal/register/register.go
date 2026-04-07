@@ -36,7 +36,7 @@ func RegisterController(name string, obj client.Object, r Reconciler) {
 	entries = append(entries, entry{name: name, obj: obj, reconciler: r})
 }
 
-func SetupAll(mgr ctrl.Manager, disabledControllers string, maxConcurrentReconciles int) error {
+func SetupAll(mgr ctrl.Manager, disabledControllers string, defaultMaxConcurrent int, perControllerMaxConcurrent map[string]int) error {
 	setupLog := ctrl.Log.WithName("setup")
 
 	disabled := make(map[string]bool)
@@ -47,16 +47,41 @@ func SetupAll(mgr ctrl.Manager, disabledControllers string, maxConcurrentReconci
 		}
 	}
 
+	registered := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		registered[e.name] = true
+	}
+
+	for name := range perControllerMaxConcurrent {
+		if !registered[name] {
+			return fmt.Errorf("unknown controller %q in max-concurrent-reconciles; registered controllers: %s", name, registeredNames())
+		}
+	}
+
 	for _, e := range entries {
 		if disabled[e.name] {
 			setupLog.Info("controller disabled", "controller", e.name)
 			continue
 		}
-		if err := setupController(mgr, e.name, e.obj, e.reconciler, maxConcurrentReconciles); err != nil {
+
+		maxConcurrent := defaultMaxConcurrent
+		if v, ok := perControllerMaxConcurrent[e.name]; ok {
+			maxConcurrent = v
+		}
+
+		if err := setupController(mgr, e.name, e.obj, e.reconciler, maxConcurrent); err != nil {
 			return fmt.Errorf("setting up controller %s: %w", e.name, err)
 		}
-		setupLog.Info("controller enabled", "controller", e.name, "maxConcurrentReconciles", maxConcurrentReconciles)
+		setupLog.Info("controller enabled", "controller", e.name, "maxConcurrentReconciles", maxConcurrent)
 	}
 
 	return nil
+}
+
+func registeredNames() string {
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		names = append(names, e.name)
+	}
+	return strings.Join(names, ", ")
 }

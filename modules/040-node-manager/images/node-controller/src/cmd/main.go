@@ -18,7 +18,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -58,13 +61,13 @@ func main() {
 	var metricsAddr string
 	var probeAddr string
 	var disabledControllers string
-	var maxConcurrentReconciles int
+	var maxConcurrentReconcilesRaw string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
 	flag.StringVar(&disabledControllers, "disable-controllers", "", "Comma-separated list of controllers to disable")
-	flag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", 10, "Maximum number of concurrent reconciles per controller")
+	flag.StringVar(&maxConcurrentReconcilesRaw, "max-concurrent-reconciles", "10", "Maximum number of concurrent reconciles per controller. Format: N or N,controller1=M,controller2=K")
 
 	logs.AddGoFlags(flag.CommandLine)
 
@@ -92,7 +95,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = register.SetupAll(mgr, disabledControllers, maxConcurrentReconciles); err != nil {
+	defaultMaxConcurrent, perControllerMaxConcurrent, err := parseMaxConcurrentReconciles(maxConcurrentReconcilesRaw)
+	if err != nil {
+		setupLog.Error(err, "invalid --max-concurrent-reconciles value")
+		os.Exit(1)
+	}
+
+	if err = register.SetupAll(mgr, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}
@@ -118,4 +127,48 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+const defaultMaxConcurrentReconciles = 10
+
+// parseMaxConcurrentReconciles parses the --max-concurrent-reconciles flag value.
+// Supported formats:
+//   - "N" — global default for all controllers (e.g. "10")
+//   - "controller1=N,controller2=M" — per-controller values, global default is 10
+//   - "N,controller1=M" — global default N with per-controller overrides
+func parseMaxConcurrentReconciles(raw string) (int, map[string]int, error) {
+	globalDefault := defaultMaxConcurrentReconciles
+	perController := make(map[string]int)
+
+	parts := strings.Split(raw, ",")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		if k, v, ok := strings.Cut(part, "="); ok {
+			name := strings.TrimSpace(k)
+			valStr := strings.TrimSpace(v)
+			val, err := strconv.Atoi(valStr)
+			if err != nil {
+				return 0, nil, fmt.Errorf("invalid value for controller %q: %q", name, valStr)
+			}
+			if val < 1 {
+				return 0, nil, fmt.Errorf("max-concurrent-reconciles for controller %q must be >= 1, got %d", name, val)
+			}
+			perController[name] = val
+		} else {
+			val, err := strconv.Atoi(part)
+			if err != nil {
+				return 0, nil, fmt.Errorf("invalid max-concurrent-reconciles value: %q", part)
+			}
+			if val < 1 {
+				return 0, nil, fmt.Errorf("max-concurrent-reconciles must be >= 1, got %d", val)
+			}
+			globalDefault = val
+		}
+	}
+
+	return globalDefault, perController, nil
 }

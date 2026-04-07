@@ -107,7 +107,7 @@ Controller names are the first argument to `RegisterController()`.
 | `--metrics-bind-address` | `:8080` | Prometheus metrics endpoint |
 | `--health-probe-bind-address` | `:8081` | Health/readiness probes |
 | `--disable-controllers` | `""` | Comma-separated controllers to skip |
-| `--max-concurrent-reconciles` | `1` | Max parallel reconciles per controller |
+| `--max-concurrent-reconciles` | `10` | Max parallel reconciles per controller. Supports per-controller overrides: `N,ctrl1=M,ctrl2=K` |
 | `--logging-format` | `text` | `text` or `json` |
 
 ## Shared Informer Cache
