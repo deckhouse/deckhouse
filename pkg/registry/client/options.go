@@ -74,6 +74,10 @@ type Options struct {
 	// When nil, proxy settings are taken from the environment (HTTP_PROXY / HTTPS_PROXY).
 	ProxyURL *url.URL
 
+	// Middlewares are transport middlewares applied in order around the base
+	// HTTP transport. Use WithMiddleware to add them via functional options.
+	Middlewares []TransportMiddleware
+
 	// Logger for client operations
 	Logger *log.Logger
 }
@@ -175,15 +179,22 @@ func resolveLogger(logger *log.Logger) *log.Logger {
 
 // resolveTransport returns the base HTTP transport from options.
 func resolveTransport(opts *Options) http.RoundTripper {
+	var rt http.RoundTripper
+
 	if opts.Transport != nil {
-		return opts.Transport
+		rt = opts.Transport
+	} else if opts.CA != "" || needsCustomTransport(opts) {
+		rt = buildTransport(opts)
+	} else {
+		rt = http.DefaultTransport
 	}
 
-	if opts.CA != "" || needsCustomTransport(opts) {
-		return buildTransport(opts)
+	// Apply transport middlewares in order (first middleware = outermost).
+	for i := len(opts.Middlewares) - 1; i >= 0; i-- {
+		rt = opts.Middlewares[i](rt)
 	}
 
-	return http.DefaultTransport
+	return rt
 }
 
 // buildRemoteOptions constructs remote options including auth and transport configuration.

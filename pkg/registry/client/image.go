@@ -63,7 +63,7 @@ type ManifestResult struct {
 }
 
 func (m *ManifestResult) IsIndex() bool {
-	return m.descriptor.MediaType.IsIndex()
+	return m.descriptor != nil && m.descriptor.MediaType.IsIndex()
 }
 
 var ErrIsIndexManifest = fmt.Errorf("manifest is an index")
