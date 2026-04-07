@@ -128,14 +128,14 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 			},
 		}, {
 			group:  groupExtensions,
-			probe:  "label-proxy",
+			probe:  "label-enforcer",
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
 				Access:           access,
 				Timeout:          5 * time.Second,
 				Namespace:        "d8-observability",
-				LabelSelector:    "app=label-proxy",
+				LabelSelector:    "app=label-enforcer",
 				PreflightChecker: controlPlanePinger,
 			},
 		}, {

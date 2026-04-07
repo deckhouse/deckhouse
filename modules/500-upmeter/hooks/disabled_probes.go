@@ -188,7 +188,7 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 		disabledProbes.Add("extensions/alert-kube-api")
 		disabledProbes.Add("extensions/observability-controller")
 		disabledProbes.Add("extensions/grafana")
-		disabledProbes.Add("extensions/label-proxy")
+		disabledProbes.Add("extensions/label-enforcer")
 		disabledProbes.Add("extensions/observability-webhook")
 	}
 }
