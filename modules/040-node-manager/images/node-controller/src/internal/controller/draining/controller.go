@@ -148,17 +148,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		clearDrainMetric(node.Name)
 	}
 
-	logger.Info("drain completed, updating annotations",
-		"node", node.Name,
-		"removingAnnotation", nodecommon.DrainingAnnotation,
-		"settingAnnotation", nodecommon.DrainedAnnotation,
-		"value", drainingSource,
-	)
-
-	return ctrl.Result{}, r.patchAnnotations(ctx, node.Name, map[string]interface{}{
+	if err := r.patchAnnotations(ctx, node.Name, map[string]interface{}{
 		nodecommon.DrainingAnnotation: nil,
 		nodecommon.DrainedAnnotation:  drainingSource,
-	})
+	}); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("drain completed, annotations updated",
+		"node", node.Name,
+		"source", drainingSource,
+	)
+	r.Recorder.Eventf(node, corev1.EventTypeNormal, "DrainSucceeded", "node %q drained successfully", node.Name)
+
+	return ctrl.Result{}, nil
 }
 
 func (r *Reconciler) getDrainTimeout(ctx context.Context, ngName string) time.Duration {
