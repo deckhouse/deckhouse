@@ -16,6 +16,10 @@
 
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=log.sh
+source "${SCRIPT_DIR}/log.sh"
+
 MODULE=""
 TF_FILE="/deckhouse/candi/terraform_versions.yml"
 OSS_FILE=""
@@ -48,7 +52,7 @@ parse_args() {
         if [[ $# -gt 0 ]]; then
           MODULE="$1"
         else
-          echo "Error occurred: --module requires value"
+          log_error "--module requires value"
           help
           exit 1
         fi
@@ -58,7 +62,7 @@ parse_args() {
         exit 0
         ;;
       *)
-        echo "Error occurred: illegal argument $1"
+        log_error "illegal argument $1"
         help
         exit 1
         ;;
@@ -69,17 +73,17 @@ parse_args() {
 
 check_requirements() {
   if ! type yq >/dev/null 2>&1; then
-    echo "Error occurred: yq is required"
+    log_error "yq is required"
     exit 1
   fi
 
   if ! type perl >/dev/null 2>&1; then
-    echo "Error occurred: perl is required"
+    log_error "perl is required"
     exit 1
   fi
 
   if [[ -z "$MODULE" ]]; then
-    echo "Error occurred: --module is required"
+    log_error "--module is required"
     exit 1
   fi
 
@@ -88,12 +92,12 @@ check_requirements() {
   MODULE_TF_DIR="${MODULE}/candi/terraform-modules"
 
   if [[ ! -f "$OSS_FILE" ]]; then
-    echo "Error occurred: oss.yaml not found: $OSS_FILE"
+    log_error "oss.yaml not found: $OSS_FILE"
     exit 1
   fi
 
   if [[ ! -f "$TF_FILE" ]]; then
-    echo "Error occurred: terraform versions file not found: $TF_FILE"
+    log_error "terraform versions file not found: $TF_FILE"
     exit 1
   fi
 }
@@ -102,7 +106,7 @@ update_yaml_version() {
   local yaml_file="$1"
 
   [[ -f "$yaml_file" ]] || {
-    echo "Warning: file not found, skip: $yaml_file" >&2
+    log_warn "file not found, skip: $yaml_file"
     return 0
   }
 
@@ -121,11 +125,11 @@ update_yaml_version() {
       del(.${PROVIDER_ID}.version)
     " "$yaml_file"
   else
-    echo "Error occurred: neither version nor versions found for $FULL_ID in $OSS_FILE" >&2
+    log_error "neither version nor versions found for $FULL_ID in $OSS_FILE"
     exit 1
   fi
 
-  echo "Updated YAML: $yaml_file"
+  log_info "updated YAML: $yaml_file"
 }
 
 update_tf_single_version() {
@@ -133,12 +137,12 @@ update_tf_single_version() {
   local version="$2"
 
   [[ -f "$tf_path" ]] || {
-    echo "Warning: file not found, skip: $tf_path" >&2
+    log_warn "file not found, skip: $tf_path"
     return 0
   }
 
   perl -0pi -e 's/version\s*=\s*"[^"]+"/version = "'"$version"'"/s' "$tf_path"
-  echo "Updated TF: $tf_path"
+  log_info "updated TF: $tf_path"
 }
 
 update_tf_versions_list() {
@@ -147,7 +151,7 @@ update_tf_versions_list() {
   local versions=( "$@" )
 
   [[ -f "$tf_path" ]] || {
-    echo "Warning: file not found, skip: $tf_path" >&2
+    log_warn "file not found, skip: $tf_path"
     return 0
   }
 
@@ -170,18 +174,18 @@ update_tf_versions_list() {
     perl -0pi -e 's/version\s*=\s*"[^"]+"/versions = ['"$joined"']/s' "$tf_path"
   fi
 
-  echo "Updated TF: $tf_path"
+  log_info "updated TF: $tf_path"
 }
 
 update_tf_versions_by_condition() {
   local suffix version tf_path
   while IFS=$'\t' read -r suffix version; do
     [[ -n "$suffix" && "$suffix" != "null" ]] || {
-      echo "Error occurred: condition suffix is empty for $FULL_ID in $OSS_FILE" >&2
+      log_error "condition suffix is empty for $FULL_ID in $OSS_FILE"
       exit 1
     }
     [[ -n "$version" && "$version" != "null" ]] || {
-      echo "Error occurred: version for condition suffix '$suffix' not found in $OSS_FILE" >&2
+      log_error "version for condition suffix '$suffix' not found in $OSS_FILE"
       exit 1
     }
     tf_path="${MODULE_TF_DIR}/versions-${suffix}.tf"
@@ -197,11 +201,11 @@ update_tf_versions_by_condition() {
 }
 
 sync_tf_versions() {
-  echo "Sync terraform versions with $OSS_FILE"
+  log_info "sync terraform versions with $OSS_FILE"
 
   FULL_ID="$(yq e '.[] | select(.id | test("^terraform-provider-")) | .id' "$OSS_FILE" | head -n1)"
   [[ -n "$FULL_ID" && "$FULL_ID" != "null" ]] || {
-    echo "Error occurred: terraform provider id not found in $OSS_FILE" >&2
+    log_error "terraform provider id not found in $OSS_FILE"
     exit 1
   }
 
@@ -225,12 +229,12 @@ sync_tf_versions() {
   fi
 
   if [[ "$VERSIONS_COUNT" == "0" ]]; then
-    echo "Error occurred: neither version nor versions found for $FULL_ID in $OSS_FILE" >&2
+    log_error "neither version nor versions found for $FULL_ID in $OSS_FILE"
     exit 1
   fi
 
   if [[ -z "$VERSIONS_LIST" ]]; then
-    echo "Error occurred: versions list is empty for $FULL_ID" >&2
+    log_error "versions list is empty for $FULL_ID in $OSS_FILE"
     exit 1
   fi
 
