@@ -153,7 +153,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	if err := r.ensureObserveExists(ctx, cpn, ops.Items, logger); err != nil {
+	if err := r.ensureCertObserverExists(ctx, cpn, ops.Items, logger); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.ensureCertRenewalExists(ctx, cpn, ops.Items, logger); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -327,7 +331,10 @@ func determineCommands(state componentState, configChanged, pkiChanged, caChange
 		if !isJoin {
 			commands = append(commands, controlplanev1alpha1.CommandSyncManifests)
 		}
-		commands = append(commands, controlplanev1alpha1.CommandWaitPodReady)
+		commands = append(commands,
+			controlplanev1alpha1.CommandWaitPodReady,
+			controlplanev1alpha1.CommandCertObserve,
+		)
 		return commands
 	case controlplanev1alpha1.OperationComponentKubeAPIServer:
 		var commands []controlplanev1alpha1.CommandName
@@ -341,6 +348,7 @@ func determineCommands(state componentState, configChanged, pkiChanged, caChange
 		commands = append(commands,
 			controlplanev1alpha1.CommandSyncManifests,
 			controlplanev1alpha1.CommandWaitPodReady,
+			controlplanev1alpha1.CommandCertObserve,
 		)
 		return commands
 	default:
@@ -355,6 +363,7 @@ func determineCommands(state componentState, configChanged, pkiChanged, caChange
 		commands = append(commands,
 			controlplanev1alpha1.CommandSyncManifests,
 			controlplanev1alpha1.CommandWaitPodReady,
+			controlplanev1alpha1.CommandCertObserve,
 		)
 		return commands
 	}
@@ -448,15 +457,12 @@ func (r *Reconciler) updateStatusFromOperations(
 		}
 	}
 
-	// Consume completed Observe operation and delete it for free the name (for next periodic run)
+	// Apply cert expiration dates from any completed CPO that has ObservedState.
+	// This covers standalone CertObserver and regular operations with CertObserve as last command.
 	for i := range ops {
 		op := &ops[i]
-		if op.Spec.Component == controlplanev1alpha1.OperationComponentObserver && isCompleted(op) {
-			applyObserveResult(cpn, op)
-			if err := r.client.Delete(ctx, op); err != nil {
-				return fmt.Errorf("delete completed Observe operation %s: %w", op.Name, err)
-			}
-			break
+		if isCompleted(op) && op.Status.ObservedState != nil {
+			applyCertDates(cpn, op.Status.ObservedState)
 		}
 	}
 
@@ -494,6 +500,9 @@ func (r *Reconciler) updateStatusFromOperations(
 			cpn.Status.CAChecksum = cpn.Spec.CAChecksum
 		}
 	}
+
+	// CertsRenewal condition
+	meta.SetStatusCondition(&cpn.Status.Conditions, renewalCondition(cpn, ops))
 
 	if reflect.DeepEqual(original.Status, cpn.Status) {
 		return nil
@@ -676,54 +685,30 @@ func failureMessage(op *controlplanev1alpha1.ControlPlaneOperation) string {
 	return ""
 }
 
-// ensureObserveExists creates an Observe CPO if needed (bootstrap or periodic).
-func (r *Reconciler) ensureObserveExists(
-	ctx context.Context,
-	cpn *controlplanev1alpha1.ControlPlaneNode,
-	ops []controlplanev1alpha1.ControlPlaneOperation,
-	logger *log.Logger,
-) error {
-	for i := range ops {
-		if ops[i].Spec.Component == controlplanev1alpha1.OperationComponentObserver && !isCompleted(&ops[i]) {
-			return nil
-		}
-	}
-
-	for i := range ops {
-		if ops[i].Spec.Component != controlplanev1alpha1.OperationComponentObserver &&
-			ops[i].Spec.Approved && !isCompleted(&ops[i]) && !isFailed(&ops[i]) {
-			return nil
-		}
-	}
-
-	needsObserve := false
-
+// ensureCertObserverExists creates a CertObserver CPO if needed (weekly CertObserver operation).
+func (r *Reconciler) ensureCertObserverExists(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation, logger *log.Logger) error {
 	if cpn.Status.LastObservedAt == nil {
-		needsObserve = true
+		return nil
 	}
-
-	if cpn.Status.LastObservedAt != nil && time.Since(cpn.Status.LastObservedAt.Time) > constants.ObserveInterval {
-		needsObserve = true
-	}
-
-	if !needsObserve {
+	if time.Since(cpn.Status.LastObservedAt.Time) <= constants.CertObserverInterval {
 		return nil
 	}
 
-	opName := fmt.Sprintf("%s-observer", cpn.Name)
-
 	for i := range ops {
-		if ops[i].Name == opName {
+		if ops[i].Spec.Component == controlplanev1alpha1.OperationComponentCertObserver &&
+			!isCompleted(&ops[i]) && !isFailed(&ops[i]) {
 			return nil
 		}
 	}
+
+	opName := fmt.Sprintf("%s-certobserve-%s", cpn.Name, short(cpn.Spec.ConfigVersion))
 
 	op := &controlplanev1alpha1.ControlPlaneOperation{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: opName,
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey:  cpn.Name,
-				constants.ControlPlaneComponentLabelKey: string(controlplanev1alpha1.OperationComponentObserver),
+				constants.ControlPlaneComponentLabelKey: string(controlplanev1alpha1.OperationComponentCertObserver),
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -739,8 +724,8 @@ func (r *Reconciler) ensureObserveExists(
 		Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
 			ConfigVersion: cpn.Spec.ConfigVersion,
 			NodeName:      cpn.Name,
-			Component:     controlplanev1alpha1.OperationComponentObserver,
-			Commands:      []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandObserve},
+			Component:     controlplanev1alpha1.OperationComponentCertObserver,
+			Commands:      []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandCertObserve},
 			Approved:      false,
 		},
 	}
@@ -749,31 +734,264 @@ func (r *Reconciler) ensureObserveExists(
 		if apierrors.IsAlreadyExists(err) {
 			return nil
 		}
-		return fmt.Errorf("create Observe operation %s: %w", opName, err)
+		return fmt.Errorf("create CertObserver operation %s: %w", opName, err)
 	}
-	logger.Info("Observe operation created", slog.String("operation", opName))
+	logger.Info("CertObserver operation created", slog.String("operation", opName))
 	return nil
 }
 
-// applyObserveResult copies certificate expiration from completed Observe CPO into CPN status.
-func applyObserveResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *controlplanev1alpha1.ControlPlaneOperation) {
-	if op.Status.ObservedState == nil {
-		return
-	}
-
-	if observed, ok := op.Status.ObservedState["etcd"]; ok && len(observed.CertificatesExpirationDate) > 0 {
+// applyCertDates copies certificate expiration dates from ObservedState into CPN status.
+func applyCertDates(cpn *controlplanev1alpha1.ControlPlaneNode, observedState map[string]controlplanev1alpha1.ObservedComponentState) {
+	if observed, ok := observedState["etcd"]; ok && len(observed.CertificatesExpirationDate) > 0 {
 		cpn.Status.Components.Etcd.CertificatesExpirationDate = observed.CertificatesExpirationDate
 	}
-	if observed, ok := op.Status.ObservedState["kube-apiserver"]; ok && len(observed.CertificatesExpirationDate) > 0 {
+	if observed, ok := observedState["kube-apiserver"]; ok && len(observed.CertificatesExpirationDate) > 0 {
 		cpn.Status.Components.KubeAPIServer.CertificatesExpirationDate = observed.CertificatesExpirationDate
 	}
-	if observed, ok := op.Status.ObservedState["kube-controller-manager"]; ok && len(observed.CertificatesExpirationDate) > 0 {
+	if observed, ok := observedState["kube-controller-manager"]; ok && len(observed.CertificatesExpirationDate) > 0 {
 		cpn.Status.Components.KubeControllerManager.CertificatesExpirationDate = observed.CertificatesExpirationDate
 	}
-	if observed, ok := op.Status.ObservedState["kube-scheduler"]; ok && len(observed.CertificatesExpirationDate) > 0 {
+	if observed, ok := observedState["kube-scheduler"]; ok && len(observed.CertificatesExpirationDate) > 0 {
 		cpn.Status.Components.KubeScheduler.CertificatesExpirationDate = observed.CertificatesExpirationDate
 	}
 
 	now := metav1.Now()
 	cpn.Status.LastObservedAt = &now
+}
+
+// ensureCertRenewalExists creates CertRenew CPOs for components whose certs expire within CertRenewalThreshold.
+func (r *Reconciler) ensureCertRenewalExists(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation, logger *log.Logger) error {
+	for component := range controlplanev1alpha1.ComponentRegistry() {
+		dates := certDatesForComponent(cpn, component)
+		if len(dates) == 0 {
+			continue
+		}
+
+		minExpiry := minExpirationDate(dates)
+		if minExpiry.IsZero() || time.Until(minExpiry) >= constants.CertRenewalThreshold {
+			continue
+		}
+
+		if hasPendingCertRenewal(ops, component) {
+			continue
+		}
+
+		opName := fmt.Sprintf("%s-%s-certrenewal-%s",
+			cpn.Name,
+			strings.ToLower(string(component)),
+			time.Now().Format("20060102"))
+
+		if operationExists(ops, opName) {
+			continue
+		}
+
+		commands := certRenewalCommands(component)
+		op := newCertRenewalOperation(cpn, opName, component, commands)
+		if err := r.client.Create(ctx, op); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				continue
+			}
+			return fmt.Errorf("create cert renewal %s: %w", opName, err)
+		}
+		logger.Info("cert renewal created",
+			slog.String("op", opName),
+			slog.String("component", string(component)),
+			slog.String("minExpiry", minExpiry.Format(time.RFC3339)))
+	}
+	return nil
+}
+
+// certRenewalCommands returns the command pipeline for a cert renewal operation.
+func certRenewalCommands(component controlplanev1alpha1.OperationComponent) []controlplanev1alpha1.CommandName {
+	switch component {
+	case controlplanev1alpha1.OperationComponentEtcd:
+		return []controlplanev1alpha1.CommandName{
+			controlplanev1alpha1.CommandRenewPKICerts,
+			controlplanev1alpha1.CommandSyncManifests,
+			controlplanev1alpha1.CommandWaitPodReady,
+			controlplanev1alpha1.CommandCertObserve,
+		}
+	default:
+		return []controlplanev1alpha1.CommandName{
+			controlplanev1alpha1.CommandRenewPKICerts,
+			controlplanev1alpha1.CommandRenewKubeconfigs,
+			controlplanev1alpha1.CommandSyncManifests,
+			controlplanev1alpha1.CommandWaitPodReady,
+			controlplanev1alpha1.CommandCertObserve,
+		}
+	}
+}
+
+func newCertRenewalOperation(
+	cpn *controlplanev1alpha1.ControlPlaneNode,
+	name string,
+	component controlplanev1alpha1.OperationComponent,
+	commands []controlplanev1alpha1.CommandName,
+) *controlplanev1alpha1.ControlPlaneOperation {
+	return &controlplanev1alpha1.ControlPlaneOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				constants.ControlPlaneNodeNameLabelKey:  cpn.Name,
+				constants.ControlPlaneComponentLabelKey: string(component),
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         controlplanev1alpha1.GroupVersion.String(),
+					Kind:               "ControlPlaneNode",
+					Name:               cpn.Name,
+					UID:                cpn.UID,
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(false),
+				},
+			},
+		},
+		Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
+			ConfigVersion: cpn.Spec.ConfigVersion,
+			NodeName:      cpn.Name,
+			Component:     component,
+			Commands:      commands,
+			Approved:      false,
+		},
+	}
+}
+
+// certDatesForComponent returns cert expiration dates from CPN status for a given component.
+func certDatesForComponent(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent) map[string]metav1.Time {
+	switch component {
+	case controlplanev1alpha1.OperationComponentEtcd:
+		return cpn.Status.Components.Etcd.CertificatesExpirationDate
+	case controlplanev1alpha1.OperationComponentKubeAPIServer:
+		return cpn.Status.Components.KubeAPIServer.CertificatesExpirationDate
+	case controlplanev1alpha1.OperationComponentKubeControllerManager:
+		return cpn.Status.Components.KubeControllerManager.CertificatesExpirationDate
+	case controlplanev1alpha1.OperationComponentKubeScheduler:
+		return cpn.Status.Components.KubeScheduler.CertificatesExpirationDate
+	default:
+		return nil
+	}
+}
+
+// minExpirationDate returns the earliest expiration time from the given dates map.
+func minExpirationDate(dates map[string]metav1.Time) time.Time {
+	var min time.Time
+	for _, t := range dates {
+		if min.IsZero() || t.Time.Before(min) {
+			min = t.Time
+		}
+	}
+	return min
+}
+
+// hasPendingCertRenewal checks if there is an active (not completed, not failed) cert renewal CPO for the component.
+func hasPendingCertRenewal(ops []controlplanev1alpha1.ControlPlaneOperation, component controlplanev1alpha1.OperationComponent) bool {
+	for i := range ops {
+		if ops[i].Spec.Component != component {
+			continue
+		}
+		if !isRenewalOperation(&ops[i]) {
+			continue
+		}
+		if !isCompleted(&ops[i]) && !isFailed(&ops[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+// isRenewalOperation detects if CPO is a cert renewal operation by name
+func isRenewalOperation(op *controlplanev1alpha1.ControlPlaneOperation) bool {
+	return strings.Contains(op.Name, "-certrenewal-")
+}
+
+func operationExists(ops []controlplanev1alpha1.ControlPlaneOperation, name string) bool {
+	for i := range ops {
+		if ops[i].Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// renewalCondition computes the CertsRenewal condition for CPN status.
+func renewalCondition(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) metav1.Condition {
+	gen := cpn.Generation
+
+	var latest *controlplanev1alpha1.ControlPlaneOperation
+	for i := range ops {
+		if !isRenewalOperation(&ops[i]) {
+			continue
+		}
+		if latest == nil || ops[i].CreationTimestamp.After(latest.CreationTimestamp.Time) {
+			latest = &ops[i]
+		}
+	}
+
+	if latest == nil {
+		if msg := findExpiringCertsMessage(cpn); msg != "" {
+			return metav1.Condition{
+				Type:               constants.ConditionCertsRenewal,
+				Status:             metav1.ConditionFalse,
+				Reason:             constants.ReasonCertExpiring,
+				Message:            msg,
+				ObservedGeneration: gen,
+			}
+		}
+		return metav1.Condition{
+			Type:               constants.ConditionCertsRenewal,
+			Status:             metav1.ConditionTrue,
+			Reason:             constants.ReasonHealthy,
+			ObservedGeneration: gen,
+		}
+	}
+
+	switch {
+	case isCompleted(latest):
+		return metav1.Condition{
+			Type:               constants.ConditionCertsRenewal,
+			Status:             metav1.ConditionTrue,
+			Reason:             constants.ReasonRenewed,
+			Message:            "renewed by " + latest.Name,
+			ObservedGeneration: gen,
+		}
+	case isFailed(latest):
+		return metav1.Condition{
+			Type:               constants.ConditionCertsRenewal,
+			Status:             metav1.ConditionFalse,
+			Reason:             constants.ReasonRenewalFailed,
+			Message:            failureMessage(latest),
+			ObservedGeneration: gen,
+		}
+	case latest.Spec.Approved:
+		return metav1.Condition{
+			Type:               constants.ConditionCertsRenewal,
+			Status:             metav1.ConditionFalse,
+			Reason:             constants.ReasonRenewing,
+			Message:            latest.Name + " in progress",
+			ObservedGeneration: gen,
+		}
+	default:
+		return metav1.Condition{
+			Type:               constants.ConditionCertsRenewal,
+			Status:             metav1.ConditionFalse,
+			Reason:             constants.ReasonCertExpiring,
+			Message:            latest.Name + " pending approval",
+			ObservedGeneration: gen,
+		}
+	}
+}
+
+// findExpiringCertsMessage checks all components for certs expiring within threshold.
+func findExpiringCertsMessage(cpn *controlplanev1alpha1.ControlPlaneNode) string {
+	for component := range controlplanev1alpha1.ComponentRegistry() {
+		dates := certDatesForComponent(cpn, component)
+		if len(dates) == 0 {
+			continue
+		}
+		minExpiry := minExpirationDate(dates)
+		if !minExpiry.IsZero() && time.Until(minExpiry) < constants.CertRenewalThreshold {
+			return fmt.Sprintf("%s cert expires at %s", component, minExpiry.Format(time.RFC3339))
+		}
+	}
+	return ""
 }

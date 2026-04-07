@@ -276,23 +276,23 @@ func (s *ControllerTestSuite) TestReconcileConfigVersionMismatch() {
 	})
 }
 
-func (s *ControllerTestSuite) TestReconcileObserverNoSecrets() {
-	s.Run("observer component runs pipeline without reading secrets", func() {
+func (s *ControllerTestSuite) TestReconcileCertObserveNoSecrets() {
+	s.Run("CertObserver component runs CertObserve command without reading secrets", func() {
 		var calls []execCall
 		withMockRegistry(s.T(), map[controlplanev1alpha1.CommandName]PipelineCommand{
-			controlplanev1alpha1.CommandObserve: {controlplanev1alpha1.CommandObserve, constants.ReasonObserving, mockExecForName(&calls, controlplanev1alpha1.CommandObserve)},
+			controlplanev1alpha1.CommandCertObserve: {controlplanev1alpha1.CommandCertObserve, constants.ReasonCertObserving, mockExecForName(&calls, controlplanev1alpha1.CommandCertObserve)},
 		})
 
-		op := testOperation(controlplanev1alpha1.OperationComponentObserver,
-			[]controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandObserve}, true)
-		// No secrets in cluster — observer should not need them
+		op := testOperation(controlplanev1alpha1.OperationComponentCertObserver,
+			[]controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandCertObserve}, true)
+		// No secrets in cluster — CertObserve should not need them
 		r := s.newReconciler(op)
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
 		require.Equal(s.T(), reconcile.Result{}, result)
 		require.Len(s.T(), calls, 1)
-		require.Equal(s.T(), controlplanev1alpha1.CommandObserve, calls[0].name)
+		require.Equal(s.T(), controlplanev1alpha1.CommandCertObserve, calls[0].name)
 	})
 }
 

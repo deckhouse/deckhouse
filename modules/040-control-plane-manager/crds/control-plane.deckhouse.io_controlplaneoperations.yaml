@@ -86,7 +86,7 @@ spec:
                   - JoinEtcdCluster
                   - WaitPodReady
                   - SyncHotReload
-                  - Observe
+                  - CertObserve
                   type: string
                 minItems: 1
                 type: array
@@ -100,7 +100,7 @@ spec:
                 - KubeScheduler
                 - HotReload
                 - CA
-                - Observer
+                - CertObserver
                 type: string
               configVersion:
                 description: |-
@@ -210,7 +210,7 @@ spec:
                       type: object
                   type: object
                 description: |-
-                  ObservedState holds per-component observed state from completed Observer operation.
+                  ObservedState holds per-component observed state from completed CertObserve command (CertObserver component).
                   For static pod components only: etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
                 type: object
             type: object

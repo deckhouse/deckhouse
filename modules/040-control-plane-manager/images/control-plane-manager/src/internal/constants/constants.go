@@ -75,7 +75,7 @@ const (
 	ConditionCommandJoinEtcdCluster  = "JoinEtcdCluster"
 	ConditionCommandWaitPodReady     = "WaitPodReady"
 	ConditionCommandSyncHotReload    = "SyncHotReload"
-	ConditionCommandObserve          = "Observe"
+	ConditionCommandCertObserve      = "CertObserve"
 
 	// Approved condition reasons
 	ReasonApproved             = "Approved"
@@ -98,7 +98,7 @@ const (
 	ReasonJoiningEtcd        = "JoiningEtcd"
 	ReasonWaitingForPod      = "WaitingForPod"
 	ReasonSyncingHotReload   = "SyncingHotReload"
-	ReasonObserving          = "Observing"
+	ReasonCertObserving      = "CertObserving"
 	ReasonCancelled          = "Cancelled"
 
 	// Failed condition reasons
@@ -122,8 +122,20 @@ const (
 	// Not configurable endpoint for local control plane
 	LocalControlPlaneEndpoint = "127.0.0.1:6445"
 
-	// ObserveInterval is the minimum duration between periodic Observe operations.
-	ObserveInterval = 24 * time.Hour
+	// CertObserverInterval - minimum duration between periodic CertObserver(all) operations.
+	CertObserverInterval = 7 * 24 * time.Hour
+
+	// Cert renewal
+	CertRenewalIDAnnotationKey = "control-plane.deckhouse.io/cert-renewal-id"
+	CertRenewalThreshold       = 30 * 24 * time.Hour
+
+	// CertsRenewal - ControlPlaneNode condition
+	ConditionCertsRenewal = "CertsRenewal"
+	ReasonHealthy         = "Healthy"
+	ReasonCertExpiring    = "CertExpiring"
+	ReasonRenewing        = "Renewing"
+	ReasonRenewed         = "Renewed"
+	ReasonRenewalFailed   = "RenewalFailed"
 )
 
 // ToRelativePath returns path without leading slash for using in tmp directory sync

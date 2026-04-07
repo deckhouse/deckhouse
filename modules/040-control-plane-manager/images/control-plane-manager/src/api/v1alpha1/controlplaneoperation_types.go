@@ -21,7 +21,7 @@ import (
 )
 
 // CommandName defines a single unit of work in the operation pipeline.
-// +kubebuilder:validation:Enum=SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;SyncHotReload;Observe
+// +kubebuilder:validation:Enum=SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;SyncHotReload;CertObserve
 type CommandName string
 
 const (
@@ -32,11 +32,11 @@ const (
 	CommandJoinEtcdCluster  CommandName = "JoinEtcdCluster"
 	CommandWaitPodReady     CommandName = "WaitPodReady"
 	CommandSyncHotReload    CommandName = "SyncHotReload"
-	CommandObserve          CommandName = "Observe"
+	CommandCertObserve      CommandName = "CertObserve"
 )
 
 // OperationComponent identifies a control plane component targeted by the operation.
-// +kubebuilder:validation:Enum=Etcd;KubeAPIServer;KubeControllerManager;KubeScheduler;HotReload;CA;Observer
+// +kubebuilder:validation:Enum=Etcd;KubeAPIServer;KubeControllerManager;KubeScheduler;HotReload;CA;CertObserver
 type OperationComponent string
 
 const (
@@ -46,7 +46,7 @@ const (
 	OperationComponentKubeScheduler         OperationComponent = "KubeScheduler"
 	OperationComponentHotReload             OperationComponent = "HotReload"
 	OperationComponentCA                    OperationComponent = "CA"
-	OperationComponentObserver              OperationComponent = "Observer"
+	OperationComponentCertObserver          OperationComponent = "CertObserver"
 )
 
 var componentRegistry = map[OperationComponent]string{
@@ -67,7 +67,7 @@ func init() {
 }
 
 // PodComponentName returns the static pod component name used as pod label "component" in kube-system ns.
-// Returns "" for non-static-pod components - HotReload, PKI, Observer
+// Returns "" for non-static-pod components - HotReload, CA, CertObserver
 func (c OperationComponent) PodComponentName() string {
 	return componentRegistry[c]
 }
@@ -160,7 +160,7 @@ type ControlPlaneOperationStatus struct {
 	// +patchStrategy=merge
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	// ObservedState holds per-component observed state from completed Observer operation.
+	// ObservedState holds per-component observed state from completed CertObserve command (CertObserver component).
 	// For static pod components only: etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
 	// +optional
 	ObservedState map[string]ObservedComponentState `json:"observedState,omitempty"`
