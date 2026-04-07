@@ -52,7 +52,7 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	var config *libcon_config.ConnectionConfig
 	var err error
 	if len(options.connectionConfig) > 0 {
-		config, err = libcon_config.ParseConnectionConfig(strings.NewReader(options.connectionConfig), sett, libcon_config.ParseWithRequiredSSHHost(true))
+		config, err = libcon_config.ParseConnectionConfig(strings.NewReader(options.connectionConfig), sett, libcon_config.ParseWithRequiredSSHHost(false))
 		if err != nil {
 			return nil, nil, err
 		}
