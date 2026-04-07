@@ -1534,7 +1534,7 @@ spec:
                             Name of the MIG configuration to be applied on the node.
 
                             Supported values:
-                            - standard profiles in the `all-*` format, which define the same partitioning layout for all GPUs on the node;
+                            - standard profiles in the `all-*` format, which define the same partitioning layout for all GPUs on the node
                             - the `custom` value, which allows specifying an individual partitioning layout for each GPU separately.
                           x-doc-default: all-1g.5gb
                         customConfigs:
