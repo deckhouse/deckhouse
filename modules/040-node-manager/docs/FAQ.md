@@ -1971,7 +1971,7 @@ Select the profile that matches your accelerator and set its name in `spec.gpu.m
 
 ## How to set a custom per-GPU MIG layout on a node?
 
-Set the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter in NodeGroup to `custom` and define MIG partitioning per GPU index:
+To define a separate MIG partitioning layout for each GPU on a node, set the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter of the NodeGroup to `custom` and specify the configuration for GPUs by their indexes:
 
 ```yaml
 spec:
@@ -1993,12 +1993,16 @@ spec:
         # Add more indexes as needed.
 ```
 
-As a result, the `node-manager` module automatically:
+After the configuration is applied, the `node-manager` module automatically:
 
-- Adds a configuration named `custom-<node-group-name>-<hash>` into the `mig-parted-config` ConfigMap, where `<hash>` is calculated based on the partitioning scheme (long NodeGroup names are truncated with a hash suffix to fit into a label).
-- Sets the label `nvidia.com/mig.config=custom-<node-group-name>-<hash>` to the nodes in the corresponding group.
+- adds a configuration named `custom-<node-group-name>-<hash>` to the `mig-parted-config` ConfigMap, where `<hash>` is calculated from the partitioning layout
+- sets the `nvidia.com/mig.config=custom-<node-group-name>-<hash>` label on the nodes in this group.
 
-A separate `custom-<ng>-<hash>` configuration is created for each group of nodes, and configuration names do not overlap.
+{% alert level="info" %}
+If the NodeGroup name is too long, it is shortened and a hash is added so that the resulting configuration name fits into the label value.
+{% endalert %}
+
+A separate configuration in the `custom-<node-group-name>-<hash>` format is created for each NodeGroup. These configuration names are unique and do not overlap between node groups.
 
 ## MIG profile does not activate — what to check?
 

@@ -1531,14 +1531,16 @@ spec:
                         partedConfig:
                           type: string
                           description: |
-                            MIG configuration name.
+                            Name of the MIG configuration to be applied on the node.
 
-                            Standard `all-*` profiles are supported (the same partitioning applied to all GPUs), as well as the `custom` value, which allows defining partitioning individually for each GPU.
+                            Supported values:
+                            - standard profiles in the `all-*` format, which define the same partitioning layout for all GPUs on the node;
+                            - the `custom` value, which allows specifying an individual partitioning layout for each GPU separately.
                           x-doc-default: all-1g.5gb
                         customConfigs:
                           type: array
                           description: |
-                            Custom MIG partitioning by GPU index.
+                            Custom MIG partitioning layout for individual GPUs by their indexes.
 
                             Used only when `partedConfig: custom` is set.
 
