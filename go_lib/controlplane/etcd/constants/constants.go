@@ -46,6 +46,13 @@ const (
 	// advertise client URLs
 	EtcdAdvertiseClientUrlsAnnotationKey = "control-plane-manager.deckhouse.io/etcd.advertise-client-urls"
 
+	// LegacyEtcdAdvertiseClientUrlsAnnotationKey is the kubeadm-era annotation key.
+	// Used as fallback during migration from kubeadm-managed to CPM-managed manifests.
+	LegacyEtcdAdvertiseClientUrlsAnnotationKey = "kubeadm.kubernetes.io/etcd.advertise-client-urls"
+
+	// EtcdAPICallTimeout specifies how much time to wait for completion of requests against the etcd API.
+	EtcdAPICallTimeout = 2 * time.Minute
+
 	// EtcdAPICallRetryInterval defines how long etcd should wait before retrying a failed API operation
 	EtcdAPICallRetryInterval = 500 * time.Millisecond
 
@@ -61,4 +68,4 @@ const (
 
 // KubernetesAPICallTimeout is the maximum time to wait for a Kubernetes API call to complete.
 // Declared as a variable (not const) so tests can override it with a shorter duration.
-var KubernetesAPICallTimeout = 1 * time.Minute
+var KubernetesAPICallTimeout = 5 * time.Minute

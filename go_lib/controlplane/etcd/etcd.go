@@ -39,10 +39,7 @@ func InitCluster(podManifest []byte, nodeName string, options ...option) error {
 
 	logger.Info("Creating static Pod manifest during init cluster", slog.String("component", constants.Etcd))
 
-	if err := prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName, []*etcdserverpb.Member{}); err != nil {
-		return err
-	}
-	return nil
+	return prepareAndWriteEtcdStaticPod(podManifest, opt, nodeName, []*etcdserverpb.Member{})
 }
 
 func JoinCluster(podManifest []byte, ip string, nodeName string, options ...option) error {
@@ -65,7 +62,7 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 
 	//nolint:sloglint
 	logger.Info("Adding etcd member", slog.String("etcdPeerAddress", etcdPeerAddress))
-	clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), []string{etcdPeerAddress})
+	clusterResponse, err := etcdClient.MemberAddAsLearner(context.Background(), etcdPeerAddress)
 	if err != nil {
 		return err
 	}
