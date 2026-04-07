@@ -7,7 +7,7 @@ search: d8, deckhouse cli, d8 utility, command line interface
 
 Deckhouse CLI (`d8`) is a command-line interface for working with products in the Deckhouse ecosystem. It combines commands for working with Kubernetes, administering Deckhouse Kubernetes Platform, delivering applications, mirroring images, creating backups, collecting diagnostic information, virtualization, working with user data, and other tasks.
 
-Starting from release 1.59, `d8` is automatically installed on all DKP cluster nodes. The utility can also be [installed](#how-to-install-the-deckhouse-cli) on a separate administrator machine.
+Starting from release 1.59, `d8` is automatically installed on all DKP cluster nodes. The utility can also be [installed](#how-do-i-install-the-deckhouse-cli) on a separate administrator machine.
 
 ## Main command groups
 
@@ -34,7 +34,7 @@ The `d8 delivery-kit` and `d8 mirror` command groups are not available in Commun
 | [`d8 tools`](../d8/reference/#d8-tools) | Auxiliary utilities. |
 | [`d8 help`](../d8/reference/#d8-help) | Built-in help. |
 
-## How to install the Deckhouse CLI
+## How do I install the Deckhouse CLI?
 
 There are two ways to install the Deckhouse CLI:
 
