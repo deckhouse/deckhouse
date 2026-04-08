@@ -1080,7 +1080,7 @@ echo "$MYRESULTSTRING"
 ### Использование прокси-сервера
 
 {% alert level="warning" %}
-Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite, CSE Pro.
 {% endalert %}
 
 {% offtopic title="Пример шагов по настройке прокси-сервера на базе Squid..." %}
