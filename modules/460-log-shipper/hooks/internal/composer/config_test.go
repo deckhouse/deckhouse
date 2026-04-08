@@ -79,8 +79,12 @@ func TestConfig(t *testing.T) {
 					},
 				}
 
-				sinkLabelMaps := loglabels.BuildDestinationSinkLabelMaps(loglabels.DestinationSinkInput{
-					Spec: spec, SourceType: v1alpha1.SourceKubernetesPods, WithPodLabels: true,
+				keys := loglabels.MergedSourceAndExtraLables(v1alpha1.SourceKubernetesPods, spec.ExtraLabels, true)
+				sinkLabelMaps := loglabels.BuildDestinationSinkLabelMaps(spec, loglabels.DestinationSinkBuild{
+					SourceType:    v1alpha1.SourceKubernetesPods,
+					WithPodLabels: true,
+					Keys:          keys,
+					Length:        len(keys),
 				})
 				dest := destination.NewLoki(destination.ComposeNameWithSourceType("testoutput", v1alpha1.SourceKubernetesPods), spec, sinkLabelMaps.LokiLabels)
 				return src, dest

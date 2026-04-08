@@ -42,8 +42,6 @@ const (
 
 const podLabelsLokiKey = "pod_labels_*"
 
-const splunkIndexedFieldDatetime = "datetime"
-
 var K8sLabels = map[string]string{
 	K8sLabelNamespace: "{{ namespace }}",
 	K8sLabelContainer: "{{ container }}",
@@ -68,80 +66,31 @@ type DestinationSinkLabelMaps struct {
 	CEFExtensions       map[string]string
 }
 
-// DestinationSinkBuildInput is the single input for building Loki labels, Splunk indexed_fields, or CEF extensions.
-type DestinationSinkInput struct {
-	Spec           v1alpha1.ClusterLogDestinationSpec
-	SourceType     string
-	AddLabelKeys   []string
-	DropLabelPaths []string
-	WithPodLabels  bool
+type DestinationSinkBuild struct {
+	SourceType    string
+	WithPodLabels bool
+	Keys          []string
+	Length        int
 }
 
-func (in DestinationSinkInput) sourceLabels() map[string]string {
-	switch in.SourceType {
-	case v1alpha1.SourceFile:
-		return FilesLabels
-	case v1alpha1.SourceKubernetesPods:
-		if in.WithPodLabels {
-			return K8sLabelsWithPodLabels
-		}
-		return K8sLabels
-	default:
-		return make(map[string]string)
-	}
-}
-
-func (in DestinationSinkInput) orderedSinkKeys() []string {
-	src := in.sourceLabels()
-	extra := in.Spec.ExtraLabels
-	keys := make([]string, 0, len(src)+len(extra)+len(in.AddLabelKeys))
-	keys = append(keys, SortedMapKeys(src)...)
-	keys = append(keys, SortedMapKeys(extra)...)
-	for _, addKey := range in.AddLabelKeys {
-		if addKeyRedundantWithList(keys, addKey) {
-			continue
-		}
-		keys = append(keys, addKey)
-	}
-	return in.sinkKeysExcludingDropPaths(keys)
-}
-
-func (in DestinationSinkInput) sinkMapKeyDropped(k string) bool {
-	for _, dropPath := range in.DropLabelPaths {
-		if sinkKeyMatchesDropPath(k, dropPath) {
-			return true
-		}
-	}
-	return false
-}
-
-func (in DestinationSinkInput) sinkKeysExcludingDropPaths(keys []string) []string {
-	if len(in.DropLabelPaths) == 0 {
-		return keys
-	}
-	out := make([]string, 0, len(keys))
-	for _, k := range keys {
-		if !in.sinkMapKeyDropped(k) {
-			out = append(out, k)
+func (b DestinationSinkBuild) sinkTemplateMapFromKeys() map[string]string {
+	src := sourceLabelsMap(b.SourceType, b.WithPodLabels)
+	out := make(map[string]string, b.Length)
+	for _, k := range b.Keys {
+		if v, ok := src[k]; ok {
+			out[k] = v
+		} else {
+			out[k] = fieldRefTemplate(k)
 		}
 	}
 	return out
 }
 
-func (in DestinationSinkInput) splunkIndexedFields() map[string]string {
-	base := sinkTemplateMapFromKeys(in, in.orderedSinkKeys())
-	out := make(map[string]string, len(base)+1)
-	maps.Copy(out, base)
-	out[splunkIndexedFieldDatetime] = ""
-	return out
-}
-
-func (in DestinationSinkInput) cefExtensions() map[string]string {
-	keys := in.orderedSinkKeys()
-	ext := make(map[string]string, len(keys)+2)
+func (b DestinationSinkBuild) cefExtensionsFromKeys() map[string]string {
+	ext := make(map[string]string, b.Length+2)
 	ext["message"] = "message"
 	ext["timestamp"] = "timestamp"
-	for _, k := range keys {
+	for _, k := range b.Keys {
 		n := normalizeKey(k)
 		if n == "cef.name" || n == "cef.severity" {
 			continue
@@ -151,24 +100,80 @@ func (in DestinationSinkInput) cefExtensions() map[string]string {
 	return ext
 }
 
-func BuildDestinationSinkLabelMaps(in DestinationSinkInput) DestinationSinkLabelMaps {
-	spec := in.Spec
+func BuildDestinationSinkLabelMaps(spec v1alpha1.ClusterLogDestinationSpec, b DestinationSinkBuild) DestinationSinkLabelMaps {
 	var a DestinationSinkLabelMaps
 	switch spec.Type {
 	case v1alpha1.DestLoki:
-		a.LokiLabels = sinkTemplateMapFromKeys(in, in.orderedSinkKeys())
+		a.LokiLabels = b.sinkTemplateMapFromKeys()
 	case v1alpha1.DestSplunk:
-		a.SplunkIndexedFields = in.splunkIndexedFields()
+		b.Length += 1
+		base := b.sinkTemplateMapFromKeys()
+		base["datetime"] = ""
+		a.SplunkIndexedFields = base
 	case v1alpha1.DestKafka:
 		if spec.Kafka.Encoding.Codec == v1alpha1.EncodingCodecCEF {
-			a.CEFExtensions = in.cefExtensions()
+			a.CEFExtensions = b.cefExtensionsFromKeys()
 		}
 	case v1alpha1.DestSocket:
 		if spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecCEF {
-			a.CEFExtensions = in.cefExtensions()
+			a.CEFExtensions = b.cefExtensionsFromKeys()
 		}
 	}
 	return a
+}
+
+func MergedSourceAndExtraLables(sourceType string, extra map[string]string, withPodLabels bool) []string {
+	src := sourceLabelsMap(sourceType, withPodLabels)
+	keys := make([]string, 0, len(src)+len(extra))
+	keys = append(keys, SortedMapKeys(src)...)
+	keys = append(keys, SortedMapKeys(extra)...)
+	return keys
+}
+
+func sourceLabelsMap(sourceType string, withPodLabels bool) map[string]string {
+	switch sourceType {
+	case v1alpha1.SourceFile:
+		return FilesLabels
+	case v1alpha1.SourceKubernetesPods:
+		if withPodLabels {
+			return K8sLabelsWithPodLabels
+		}
+		return K8sLabels
+	default:
+		return make(map[string]string)
+	}
+}
+
+func AppendAddLables(keys []string, addKeys []string) []string {
+	if len(addKeys) == 0 {
+		return keys
+	}
+	out := make([]string, len(keys), len(keys)+len(addKeys))
+	copy(out, keys)
+	for _, k := range addKeys {
+		if pathEqualsOrNestedUnder(k, "message") {
+			continue
+		}
+		if sinkLabelMatchesAnyCandidate(k, out) {
+			continue
+		}
+		out = append(out, k)
+	}
+	return out
+}
+
+func RemoveDropLables(keys []string, dropKeys []string) []string {
+	if len(dropKeys) == 0 {
+		return keys
+	}
+	kept := make([]string, 0, len(keys))
+	for _, k := range keys {
+		if sinkLabelMatchesAnyCandidate(k, dropKeys) {
+			continue
+		}
+		kept = append(kept, k)
+	}
+	return kept
 }
 
 func SortedMapKeys(m map[string]string) []string {
@@ -187,30 +192,13 @@ var K8sLabelsWithPodLabels = func() map[string]string {
 	return result
 }()
 
-func sinkTemplateMapFromKeys(in DestinationSinkInput, keys []string) map[string]string {
-	src := in.sourceLabels()
-	out := make(map[string]string, len(keys))
-	for _, k := range keys {
-		if v, ok := src[k]; ok {
-			out[k] = v
-		} else {
-			out[k] = fieldRefTemplate(k)
-		}
+// Convert Loki pod labels wildcard key to the real key.
+// pod_labels_* → pod_labels
+func lokiPodLabels(k string) string {
+	if k == podLabelsLokiKey {
+		return K8sLabelPodLabels
 	}
-	return out
-}
-
-func addKeyRedundantWithList(existingKeys []string, addKey string) bool {
-	for _, existing := range existingKeys {
-		root := existing
-		if root == podLabelsLokiKey {
-			root = K8sLabelPodLabels
-		}
-		if pathEqualsOrNestedUnder(addKey, root) {
-			return true
-		}
-	}
-	return false
+	return k
 }
 
 func pathEqualsOrNestedUnder(label, path string) bool {
@@ -220,15 +208,16 @@ func pathEqualsOrNestedUnder(label, path string) bool {
 	return strings.HasPrefix(label, path+".")
 }
 
-func sinkKeyMatchesDropPath(sinkMapKey string, dropPath string) bool {
-	if dropPath == "" {
-		return false
+func sinkLabelMatchesAnyCandidate(label string, candidates []string) bool {
+	for _, c := range candidates {
+		if c == "" {
+			continue
+		}
+		if pathEqualsOrNestedUnder(lokiPodLabels(label), lokiPodLabels(c)) {
+			return true
+		}
 	}
-	candidate := sinkMapKey
-	if candidate == podLabelsLokiKey {
-		candidate = K8sLabelPodLabels
-	}
-	return pathEqualsOrNestedUnder(candidate, dropPath)
+	return false
 }
 
 func fieldRefTemplate(key string) string {

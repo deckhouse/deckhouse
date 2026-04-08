@@ -29,8 +29,8 @@ import (
 
 func buildTransformations(destSpec v1alpha1.ClusterLogDestinationSpec, sourceType string) ([]apis.LogTransform, loglabels.DestinationSinkLabelMaps, error) {
 	transforms := make([]apis.LogTransform, 0, len(destSpec.Transformations))
-	var addLabelKeys []string
-	var dropLabelPaths []string
+	withPodLabels := destSpec.Type == v1alpha1.DestLoki
+	labelKeys := loglabels.MergedSourceAndExtraLables(sourceType, destSpec.ExtraLabels, withPodLabels)
 	for _, tm := range destSpec.Transformations {
 		var lt apis.LogTransform
 		switch tm.Action {
@@ -39,7 +39,7 @@ func buildTransformations(destSpec v1alpha1.ClusterLogDestinationSpec, sourceTyp
 			if err != nil {
 				return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("transformations addLabels: %w", err)
 			}
-			addLabelKeys = append(addLabelKeys, keys...)
+			labelKeys = loglabels.AppendAddLables(labelKeys, keys)
 			lt = newTransformation("tf_addLabels", source)
 		case v1alpha1.ReplaceKeys:
 			source, err := transformation.ReplaceKeysVRL(tm.ReplaceKeys)
@@ -59,11 +59,11 @@ func buildTransformations(destSpec v1alpha1.ClusterLogDestinationSpec, sourceTyp
 			if err != nil {
 				return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("transformations dropLabels: %w", err)
 			}
-			prefs, err := parser.SinkKeysFromVRLPaths(dropVRLPaths)
+			dropSinkKeys, err := parser.SinkKeysFromVRLPaths(dropVRLPaths)
 			if err != nil {
 				return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("transformations dropLabels: %w", err)
 			}
-			dropLabelPaths = append(dropLabelPaths, prefs...)
+			labelKeys = loglabels.RemoveDropLables(labelKeys, dropSinkKeys)
 			lt = newTransformation("tf_dropLabels", source)
 		case v1alpha1.ReplaceValue:
 			source, err := transformation.ReplaceValueVRL(tm.ReplaceValue)
@@ -78,12 +78,11 @@ func buildTransformations(destSpec v1alpha1.ClusterLogDestinationSpec, sourceTyp
 			transforms = append(transforms, lt)
 		}
 	}
-	sinkLabelMaps := loglabels.BuildDestinationSinkLabelMaps(loglabels.DestinationSinkInput{
-		Spec:           destSpec,
-		SourceType:     sourceType,
-		AddLabelKeys:   addLabelKeys,
-		DropLabelPaths: dropLabelPaths,
-		WithPodLabels:  destSpec.Type == v1alpha1.DestLoki,
+	sinkLabelMaps := loglabels.BuildDestinationSinkLabelMaps(destSpec, loglabels.DestinationSinkBuild{
+		SourceType:    sourceType,
+		WithPodLabels: withPodLabels,
+		Keys:          labelKeys,
+		Length:        len(labelKeys),
 	})
 	return transforms, sinkLabelMaps, nil
 }
