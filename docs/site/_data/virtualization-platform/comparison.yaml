@@ -155,19 +155,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
 - title:
     ru: Возможности управления
     en: Management capabilities
@@ -281,19 +281,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Кастомизация ОС ВМ при первом запуске
       en: Customization of the VM OS at first launch
@@ -342,19 +342,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: supported
-      dkp-cse-pro: supported
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Экспорт дисков и снимков
       en: Disk and snapshot export
@@ -373,19 +373,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: not_supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Живая миграция ВМ на автоматически выбранный узел
       en: Live migration of VMs to an automatically selected node
@@ -404,19 +404,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: not_supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Живая миграция ВМ с подключенными USB-устройствами
       en: Live migration of VMs with attached USB devices
@@ -425,19 +425,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: not_supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Политики для оптимизации живой миграции ВМ
       en: Policies for optimizing live VM migration
@@ -456,19 +456,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Живая миграция между узлами при использовании локального хранилища
       en: Live migration between nodes when using local storage
@@ -477,19 +477,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Политики запуска ВМ (Always On/Always Off/Manual)
       en: VM launch policies (Always On/Always Off/Manual)
@@ -522,19 +522,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Поддержка сторонних SDS (Ceph)
       en: Support for third-party SDS (Ceph)
@@ -587,19 +587,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: not_supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Несколько сетевых интерфейсов для ВМ
       en: Multiple network interfaces for VMs
@@ -608,19 +608,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: not_supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Общие VLAN-сети для ВМ в кластере
       en: Shared VLAN networks for VMs in a cluster
@@ -629,19 +629,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: not_supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Изолированные VLAN-сети для ВМ в рамках проекта
       en: Isolated VLAN networks for VMs within a project
@@ -650,19 +650,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: not_supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Агрегирование сетевых интерфейсов узлов гипервизора (Bonding)
       en: Hypervisor node network interface aggregation (Bonding)
@@ -671,19 +671,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: not_supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
   - title:
       ru: Автоматическое назначение IP-адресов для ВМ
       en: Automatic IP address assignment for VMs
@@ -768,19 +768,19 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: planned
+      dkp-cse-pro: planned
     restriction_message:
       dvp-cse:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
       dkp-cse-pro:
         en: |
-          Planned for this edition
+          Planned for inclusion
         ru: |
-          Планируется в данной редакции
+          Планируется к включению
 - title:
     ru: Мониторинг
     en: Monitoring

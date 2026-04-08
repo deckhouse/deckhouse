@@ -64,8 +64,12 @@
               {{ supported }}
             {% when "not_supported" %}
               {{ not_supported }}
+            {% when "planned" %}
+              <img src="/images/icons/clock.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+            {% when "partly" %}
+              <img src="/images/icons/partly_supported.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
             {% else %}
-              <img src="/images/icons/intermediate_v2.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+              <img src="/images/icons/partly_supported.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
           {% endcase %}
         </div>
       </td>
