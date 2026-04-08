@@ -31,7 +31,7 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd {{ $appAbsPath }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go run gotest.tools/gotestsum@latest -- ./...
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /mirrorer ./cmd/mirrorer
     - chown 64535:64535 /mirrorer
     - chmod 0755 /mirrorer

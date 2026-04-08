@@ -60,7 +60,7 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
-  - go test ./... -v
+  - go run gotest.tools/gotestsum@latest -- ./... -v
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X registry-packages-proxy/internal/app.RppSignCheck={{ $rppSignCheck }}" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go
   - chown 64535:64535 /registry-packages-proxy
   - chmod 0755 /registry-packages-proxy

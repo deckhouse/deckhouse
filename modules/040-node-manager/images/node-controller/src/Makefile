@@ -36,7 +36,7 @@ lint: ## Run golangci-lint against code.
 
 .PHONY: test
 test: ## Run tests.
-	go test ./... -coverprofile cover.out
+	go run gotest.tools/gotestsum@latest -- ./... -coverprofile cover.out
 
 ##@ Build
 
