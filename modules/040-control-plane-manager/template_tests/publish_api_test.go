@@ -23,10 +23,68 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
+const globalValues = `
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    cloud:
+      prefix: sandbox
+      provider: vSphere
+    clusterDomain: cluster.local
+    clusterType: Cloud
+    defaultCRI: Containerd
+    kind: ClusterConfiguration
+    kubernetesVersion: "Automatic"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
+  modulesImages:
+    digests:
+      controlPlaneManager:
+        controlPlaneManager131: sha256:abcdefgh
+        controlPlaneManager132: sha256:abcdefgh
+        controlPlaneManager133: sha256:abcdefgh
+        controlPlaneManager134: sha256:abcdefgh
+        controlPlaneManager135: sha256:abcdefgh
+        etcd: sha256:abcdefgh
+        etcdBackup: sha256:abcdefgh
+        kubeApiserver131: sha256:abcdefgh
+        kubeApiserver132: sha256:abcdefgh
+        kubeApiserver133: sha256:abcdefgh
+        kubeApiserver134: sha256:abcdefgh
+        kubeApiserver135: sha256:abcdefgh
+        kubeControllerManager131: sha256:abcdefgh
+        kubeControllerManager132: sha256:abcdefgh
+        kubeControllerManager133: sha256:abcdefgh
+        kubeControllerManager134: sha256:abcdefgh
+        kubeControllerManager135: sha256:abcdefgh
+        kubeScheduler131: sha256:abcdefgh
+        kubeScheduler132: sha256:abcdefgh
+        kubeScheduler133: sha256:abcdefgh
+        kubeScheduler134: sha256:abcdefgh
+        kubeScheduler135: sha256:abcdefgh
+        updateObserver: sha256:abcdefgh
+  internal:
+    modules:
+      resourcesRequests:
+        milliCpuControlPlane: 1024
+        memoryControlPlane: 536870912
+  modules:
+    placement: {}
+  discovery:
+    d8SpecificNodeCountByRole:
+      worker: 1
+      master:
+        __ConstantChoices__: "3"
+    podSubnet: 10.0.1.0/16
+    kubernetesVersion: 1.32.13
+`
+
 var _ = Describe("Module :: control-plane-manager :: helm template :: publish api", func() {
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
+		var emptyObj struct{}
+		hec.ValuesSetFromYaml("global", globalValues)
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.32.13")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.ingressClass", "nginx")
@@ -39,13 +97,16 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 		hec.ValuesSet("controlPlaneManager.internal.effectiveKubernetesVersion", "1.32")
 		hec.ValuesSet("controlPlaneManager.internal.pkiChecksum", "4da1e937a9acd5475640d55cec899e77865e51ce2ab86d372c3ed1e19a532d19")
 		hec.ValuesSet("controlPlaneManager.internal.rolloutEpoch", 2.049844452e+09)
-		// hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
-		// hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
-		// hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
+		hec.ValuesSet("controlPlaneManager.internal.authn.enableBasicAuth", true)
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.cert", "test")
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.key", "test")
-
+		hec.ValuesSet("controlPlaneManager.apiserver", emptyObj)
+		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI", emptyObj)
+		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress", emptyObj)
+		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.loadBalancer", emptyObj)
+		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https", emptyObj)
 		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.enabled", true)
+		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "SelfSigned")
 		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.addKubeconfigGeneratorEntry", true)
 	})
 
@@ -54,31 +115,12 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 			hec.HelmRender()
 		})
 		It("Should deploy publish api and kubeconfig generator", func() {
-			// Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
 			certificate := hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls-selfsigned")
 			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("Issuer"))
 			Expect(certificate.Field("spec.issuerRef.name").String()).To(Equal("kubernetes-api"))
 			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
 		})
 	})
-
-	// Context("With discovered dex cluster ip", func() {
-	// 	BeforeEach(func() {
-	// 		hec.ValuesSet("userAuthn.internal.discoveredDexClusterIP", "10.10.10.10")
-	// 		hec.HelmRender()
-	// 	})
-
-	// 	It("Should add dex to hosts aliases", func() {
-	// 		Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
-	// 		kgDeployment := hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator")
-
-	// 		Expect(len(kgDeployment.Field("spec.template.spec.hostAliases").Array())).To(Equal(1))
-	// 		Expect(kgDeployment.Field("spec.template.spec.hostAliases.0.ip").String()).To(Equal("10.10.10.10"))
-
-	// 		Expect(len(kgDeployment.Field("spec.template.spec.hostAliases.0.hostnames").Array())).To(Equal(1))
-	// 		Expect(kgDeployment.Field("spec.template.spec.hostAliases.0.hostnames.0").String()).To(Equal("dex.example.com"))
-	// 	})
-	// })
 
 	Context("With global mode CustomCertificate", func() {
 		BeforeEach(func() {
@@ -101,13 +143,12 @@ tls.key: KEYKEYKEY
 
 	Context("With publish API global mode", func() {
 		BeforeEach(func() {
-			hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
-			hec.ValuesSet("userAuthn.publishAPI.ingressClass", "my-ingress-class")
-			hec.ValuesSet("userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA", "simplecastring")
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.ingressClass", "my-ingress-class")
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.global.kubeconfigGeneratorMasterCA", "simplecastring")
 			hec.HelmRender()
 		})
 		It("Should use cluster issuer", func() {
-			// Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
 			certificate := hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls")
 			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("ClusterIssuer"))
 			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
@@ -116,84 +157,34 @@ tls.key: KEYKEYKEY
 
 	Context("With publish API global mode and route53 issuer", func() {
 		BeforeEach(func() {
-			hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
-			hec.ValuesSet("userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA", "simplecastring")
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.global.kubeconfigGeneratorMasterCA", "simplecastring")
 			hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "route53")
 			hec.HelmRender()
 		})
 		It("Should use cluster issuer and dns challenge", func() {
-			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
-			certificate := hec.KubernetesResource("Certificate", "d8-user-authn", "kubernetes-tls")
+			certificate := hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls")
 			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("ClusterIssuer"))
 			Expect(certificate.Field("spec.issuerRef.name").String()).To(Equal("route53"))
-			Expect(hec.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("With LDAP provider with enableBasicAuth option", func() {
-		BeforeEach(func() {
-			hec.ValuesSet("userAuthn.internal.basicAuthProxyCert", "dGVzdA==")
-			hec.ValuesSet("userAuthn.internal.basicAuthProxyKey", "dGVzdA==")
-			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
-- id: ldapID
-  displayName: ldapDisplay
-  type: LDAP
-  ldap:
-    enableBasicAuth: true
-    host: ldap.example.com:636
-    userSearch:
-      baseDN: cn=users,dc=example,dc=com
-      username: uid
-      idAttr: uid
-      emailAttr: mail
-    groupSearch:
-      baseDN: cn=groups,dc=example,dc=com
-      userMatchers:
-      - userAttr: uid
-        groupAttr: member
-      nameAttr: name
-`)
-			hec.HelmRender()
-		})
-
-		It("Should deploy basic auth proxy deployment and ingress for LDAP", func() {
-			Expect(hec.RenderError).ToNot(HaveOccurred())
-
-			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
 		})
 	})
 
 	Context("With provider with enableBasicAuth option", func() {
 		BeforeEach(func() {
-			hec.ValuesSet("userAuthn.internal.basicAuthProxyCert", "dGVzdA==")
-			hec.ValuesSet("userAuthn.internal.basicAuthProxyKey", "dGVzdA==")
-			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
-- id: crowdNexID
-  displayName: crowdNextName
-  type: Crowd
-  crowd:
-    enableBasicAuth: true
-    clientID: clientID
-    clientSecret: secret
-    baseURL: https://example.com`)
-			hec.ValuesSetFromYaml("userAuthn.publishAPI.whitelistSourceRanges", `
+			hec.ValuesSet("controlPlaneManager.internal.authn.enableBasicAuth", true)
+			hec.ValuesSetFromYaml("controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges", `
 - 1.1.1.1
 - 192.168.0.0/24
 `)
 			hec.HelmRender()
 		})
-		It("Should deploy basic auth proxy deployment and ingress", func() {
+		It("Should deploy basic auth ingress with rewrite", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
-
-			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
-
-			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field(
+			Expect(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()).To(
 				Equal("if ($http_authorization ~ \"^(.*)Basic(.*)$\") {\n  rewrite ^(.*)$ /basic-auth$1;\n}\nlocation ~ ^/(healthz|livez|readyz) {\n  deny all;\n  return 403;\n}\n"))
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field(
+			Expect(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
 				Equal("1.1.1.1,192.168.0.0/24"))
 		})

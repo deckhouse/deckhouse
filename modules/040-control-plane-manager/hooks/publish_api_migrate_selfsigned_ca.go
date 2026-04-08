@@ -43,12 +43,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"kubernetes-api-ca-key-pair"},
 			},
-			FilterFunc: filterApiCASecret,
+			FilterFunc: filterAPICASecret,
 		},
 	},
 }, copyCAPairToModuleValues)
 
-func filterApiCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func filterAPICASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
