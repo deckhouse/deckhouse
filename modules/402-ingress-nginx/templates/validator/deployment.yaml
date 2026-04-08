@@ -185,6 +185,8 @@ spec:
           - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
           - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
           - --watch-namespace=d8-ingress-nginx
+          - --update-status=false
+          - --update-status-on-shutdown=false
         lifecycle:
           preStop:
             exec:

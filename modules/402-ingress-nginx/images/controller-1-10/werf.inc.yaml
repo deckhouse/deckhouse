@@ -67,6 +67,7 @@ shell:
   - patch -p1 < /patches/026-lua_ingress-use-request-host-for-https-redirect.patch
   - patch -p1 < /patches/027-fix-rewrite-target-cve.patch
   - patch -p1 < /patches/028-stable-config-hash-metric-02.patch
+  - patch -p1 < /patches/030-fix-ingress-store-initial-sync.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
