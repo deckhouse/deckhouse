@@ -38,6 +38,10 @@ lint: ## Run golangci-lint against code.
 test: ## Run tests.
 	go test ./... -coverprofile cover.out
 
+.PHONY: test-ai
+test-ai: ## Run tests.
+	go test -tags=ai_tests ./... -coverprofile cover.out
+
 ##@ Build
 
 .PHONY: build
