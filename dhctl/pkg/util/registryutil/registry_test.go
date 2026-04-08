@@ -15,6 +15,7 @@
 package registryutil
 
 import (
+	"errors"
 	"crypto/x509"
 	"crypto/sha256"
 	"encoding/pem"
@@ -91,6 +92,25 @@ func TestNewRegistryClient_WithCA(t *testing.T) {
 	require.NotNil(t, transport.TLSClientConfig)
 	require.NotNil(t, transport.TLSClientConfig.RootCAs)
 	require.False(t, transport.TLSClientConfig.InsecureSkipVerify)
+}
+
+func TestNewRegistryClient_WithCAAndSystemPoolError(t *testing.T) {
+	originalSystemCertPool := systemCertPool
+	systemCertPool = func() (*x509.CertPool, error) {
+		return nil, errors.New("boom")
+	}
+	t.Cleanup(func() {
+		systemCertPool = originalSystemCertPool
+	})
+
+	client, err := NewRegistryClient("HTTPS", testRootCA)
+	require.NoError(t, err)
+
+	transport, ok := client.Transport.(*http.Transport)
+	require.True(t, ok)
+	require.NotNil(t, transport.TLSClientConfig)
+	require.NotNil(t, transport.TLSClientConfig.RootCAs)
+	require.True(t, certPoolContains(transport.TLSClientConfig.RootCAs, parsePEMCertificate(t, testRootCA)))
 }
 
 func parsePEMCertificate(t *testing.T, certPEM string) *x509.Certificate {

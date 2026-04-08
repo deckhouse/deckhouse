@@ -20,7 +20,11 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
+
+var systemCertPool = x509.SystemCertPool
 
 func NewRegistryClient(scheme, ca string) (*http.Client, error) {
 	transport, err := NewRegistryTransport(scheme, ca)
@@ -43,9 +47,10 @@ func NewRegistryTransport(scheme, ca string) (*http.Transport, error) {
 		return transport, nil
 	}
 
-	certPool, err := x509.SystemCertPool()
+	certPool, err := systemCertPool()
 	if err != nil {
-		return nil, fmt.Errorf("cannot get system CAs pool: %w", err)
+		log.WarnF("Cannot get system CAs pool, fallback to custom CA pool only: %v\n", err)
+		certPool = x509.NewCertPool()
 	}
 	if certPool == nil {
 		certPool = x509.NewCertPool()
