@@ -6,48 +6,6 @@
   "statements": [
     {
       "vulnerability": {
-        "name": "CVE-2026-24051"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.35.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "OpenTelemetry SDK resource detection path hijacking vulnerability (macOS ioreg) - Уязвимость, связанная с потенциальным path hijacking в механизме определения ресурсов (resource detection) при использовании ioreg в среде macOS/Darwin, не применима в типичном сценарии эксплуатации webhook-handler в Kubernetes-окружении на базе Linux. Уязвимый участок кода задействуется исключительно при определении host id на macOS и не входит в исполняемый путь в целевой среде, что исключает возможность практической реализации угрозы.",
-      "timestamp": "2026-03-04T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-47914"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
-        }
-      ],
-      "status": "affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость в пакете golang.org/x/crypto затрагивает функции шифрования, однако в рамках архитектуры Deckhouse и используемых паттернов эксплуатации данной уязвимости невозможно из-за отсутствия прямого контроля над входными данными для уязвимых функций.",
-      "timestamp": "2026-01-20T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-58181"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
-        }
-      ],
-      "status": "affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость в пакете golang.org/x/crypto затрагивает функции шифрования, однако в рамках архитектуры Deckhouse и используемых паттернов эксплуатации данной уязвимости невозможно из-за отсутствия прямого контроля над входными данными для уязвимых функций.",
-      "timestamp": "2026-01-20T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2025-8869"
       },
       "products": [
