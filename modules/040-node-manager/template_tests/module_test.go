@@ -68,6 +68,9 @@ clusterConfiguration:
 // Defaults from openapi/config-values.yaml.
 const nodeManagerConfigValues = `
 mcmEmergencyBrake: false
+clusterAutoscaler:
+  minReplicaCount: 1
+  newPodScaleUpDelay: "0s"
 `
 
 const nodeManagerValues = `

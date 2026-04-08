@@ -109,8 +109,9 @@ spec:
         - --stderrthreshold=info
         - --skip-nodes-with-system-pods=false
         - --skip-nodes-with-local-storage=false
-        - --min-replica-count=1
+        - --min-replica-count={{ .Values.nodeManager.clusterAutoscaler.minReplicaCount | default 1 }}
         - --expendable-pods-priority-cutoff=-10
+        - --new-pod-scale-up-delay={{ .Values.nodeManager.clusterAutoscaler.newPodScaleUpDelay | default "0s" }}
         - --scale-down-unneeded-time=5m
         - --scale-down-unready-time=4m
         - --scale-down-delay-after-failure=1m
