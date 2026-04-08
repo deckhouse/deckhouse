@@ -145,3 +145,17 @@ properties:
         properties:
           enableBasicAuth:
             type: boolean
+      customCertificateData:
+        type: object
+        default: {}
+        x-examples:
+        - tls.crt: plainstring
+          tls.key: plainstring
+          ca.crt: plainstring
+        properties:
+          ca.crt:
+            type: string
+          tls.key:
+            type: string
+          tls.crt:
+            type: string
