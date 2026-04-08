@@ -62,8 +62,9 @@ spec:
   packageVersion: v1.0.1
 status:
   conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
     status: "True"
     type: IsEnriched
   packageMetadata:
@@ -92,8 +93,9 @@ spec:
   packageVersion: v1.0.2
 status:
   conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
     status: "True"
     type: IsEnriched
   packageMetadata:

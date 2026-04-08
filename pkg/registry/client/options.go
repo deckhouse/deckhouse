@@ -74,6 +74,10 @@ type Options struct {
 	// When nil, proxy settings are taken from the environment (HTTP_PROXY / HTTPS_PROXY).
 	ProxyURL *url.URL
 
+	// Middlewares are transport middlewares applied in order around the base
+	// HTTP transport. Use WithMiddleware to add them via functional options.
+	Middlewares []TransportMiddleware
+
 	// Logger for client operations
 	Logger *log.Logger
 }
@@ -173,9 +177,28 @@ func resolveLogger(logger *log.Logger) *log.Logger {
 	return logger
 }
 
+// resolveTransport returns the base HTTP transport from options.
+func resolveTransport(opts *Options) http.RoundTripper {
+	var rt = http.DefaultTransport
+
+	if opts.Transport != nil {
+		rt = opts.Transport
+	}
+
+	if opts.CA != "" || needsCustomTransport(opts) {
+		rt = buildTransport(opts)
+	}
+
+	// Apply transport middlewares in order (first middleware = outermost).
+	for i := len(opts.Middlewares) - 1; i >= 0; i-- {
+		rt = opts.Middlewares[i](rt)
+	}
+
+	return rt
+}
+
 // buildRemoteOptions constructs remote options including auth and transport configuration.
-// logger is used to warn about ignored options when a custom transport is provided.
-func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
+func buildRemoteOptions(opts *Options, logger *log.Logger, baseTransport http.RoundTripper) []remote.Option {
 	remoteOptions := []remote.Option{}
 
 	if opts.Auth != nil {
@@ -207,12 +230,12 @@ func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 			logger.Warn("WithCustomTransport is set: TLSSkipVerify option will be ignored")
 		}
 
-		remoteOptions = append(remoteOptions, remote.WithTransport(opts.Transport))
+		remoteOptions = append(remoteOptions, remote.WithTransport(baseTransport))
 
 		return remoteOptions
 	}
 
-	if opts.CA != "" || needsCustomTransport(opts) {
+	if baseTransport != nil && baseTransport != http.DefaultTransport {
 		if opts.TLSSkipVerify {
 			logger.Debug("TLS certificate verification disabled")
 		}
@@ -221,8 +244,7 @@ func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 			logger.Debug("Insecure HTTP mode enabled")
 		}
 
-		transport := buildTransport(opts)
-		remoteOptions = append(remoteOptions, remote.WithTransport(transport))
+		remoteOptions = append(remoteOptions, remote.WithTransport(baseTransport))
 	}
 
 	return remoteOptions

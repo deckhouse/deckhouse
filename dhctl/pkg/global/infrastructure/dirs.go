@@ -14,7 +14,12 @@
 
 package infrastructure
 
-import "path/filepath"
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+)
 
 var (
 	dhctlPath              = "/"
@@ -35,7 +40,12 @@ func GetDhctlPath() string {
 }
 
 func GetInfrastructureProviderDir(provider string) string {
-	return filepath.Join(candiDir, "cloud-providers", provider)
+	_, err := os.Stat(filepath.Join(candiDir, "cloud-providers", provider))
+	if err == nil {
+		return filepath.Join(candiDir, "cloud-providers", provider)
+	}
+
+	return filepath.Join(app.DownloadDirName, "deckhouse", "candi", "cloud-providers", provider)
 }
 
 func GetInfrastructureModulesDir(provider string) string {
@@ -47,5 +57,10 @@ func GetInfrastructureModulesForRunningDir(provider, layout, module string) stri
 }
 
 func GetInfrastructureVersions() string {
-	return infrastructureVersions
+	_, err := os.Stat(infrastructureVersions)
+	if err == nil {
+		return infrastructureVersions
+	}
+
+	return filepath.Join(app.DownloadDirName, "deckhouse", "candi", "terraform_versions.yml")
 }

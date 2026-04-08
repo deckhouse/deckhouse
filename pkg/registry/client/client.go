@@ -16,15 +16,20 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -35,7 +40,13 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/registry"
 )
 
-var ErrImageNotFound = errors.New("image not found")
+// Ensure Client implements registry.Client at compile time.
+var _ registry.Client = (*Client)(nil)
+
+var ErrImageNotFound = registry.ErrImageNotFound
+
+// maxTagsResponseBytes limits the size of a single tags/list JSON response (8 MiB).
+const maxTagsResponseBytes = 8 << 20
 
 // isNotFound reports whether err is an HTTP 404 response from the registry.
 func isNotFound(err error) bool {
@@ -55,6 +66,11 @@ type Client struct {
 	constructedSegmentsOnce sync.Once
 	// remote options for go-containerregistry
 	options []remote.Option
+	// auth is stored separately from remote options to build authenticated
+	// HTTP transports for direct registry requests (listTagsPage).
+	auth authn.Authenticator
+	// baseTransport carries CA/TLS/proxy settings for direct HTTP requests.
+	baseTransport http.RoundTripper
 	// insecure flag for HTTP connections
 	insecure bool
 
@@ -92,12 +108,16 @@ func NewClientWithOptions(host string, opts *Options) *Client {
 		opts.Insecure = true
 	}
 
+	baseTransport := resolveTransport(opts)
+
 	return &Client{
-		registryHost: host,
-		options:      buildRemoteOptions(opts, logger),
-		timeout:      opts.Timeout,
-		logger:       logger,
-		insecure:     opts.Insecure,
+		registryHost:  host,
+		options:       buildRemoteOptions(opts, logger, baseTransport),
+		auth:          opts.Auth,
+		baseTransport: baseTransport,
+		timeout:       opts.Timeout,
+		logger:        logger,
+		insecure:      opts.Insecure,
 	}
 }
 
@@ -108,6 +128,20 @@ func (c *Client) nameOptions() []name.Option {
 		return []name.Option{name.Insecure}
 	}
 	return nil
+}
+
+// buildReference constructs a full image reference string from the registry path
+// and a tag or digest. Handles both tag references ("v1.0.0") and digest
+// references ("@sha256:abc..." or "sha256:abc...").
+func (c *Client) buildReference(tag string) string {
+	fullRegistry := c.GetRegistry()
+	if strings.HasPrefix(tag, "@sha256:") {
+		return fullRegistry + tag
+	}
+	if strings.HasPrefix(tag, "sha256:") {
+		return fullRegistry + "@" + tag
+	}
+	return fullRegistry + ":" + tag
 }
 
 func (c *Client) withContext(ctx context.Context) remote.Option {
@@ -128,7 +162,7 @@ func (c *Client) withContext(ctx context.Context) remote.Option {
 // WithSegment creates a new client with an additional scope path segment
 // This method can be chained to build complex paths:
 // client.WithSegment("deckhouse").WithSegment("ee").WithSegment("modules")
-func (c *Client) WithSegment(segments ...string) *Client {
+func (c *Client) WithSegment(segments ...string) registry.Client {
 	for idx, scope := range segments {
 		segments[idx] = strings.TrimSuffix(strings.TrimPrefix(scope, "/"), "/")
 	}
@@ -138,12 +172,14 @@ func (c *Client) WithSegment(segments ...string) *Client {
 	}
 
 	return &Client{
-		registryHost: c.registryHost,
-		segments:     append(append([]string(nil), c.segments...), segments...),
-		options:      c.options,
-		logger:       c.logger,
-		insecure:     c.insecure,
-		timeout:      c.timeout,
+		registryHost:  c.registryHost,
+		segments:      append(append([]string(nil), c.segments...), segments...),
+		options:       c.options,
+		auth:          c.auth,
+		baseTransport: c.baseTransport,
+		logger:        c.logger,
+		insecure:      c.insecure,
+		timeout:       c.timeout,
 	}
 }
 
@@ -162,8 +198,6 @@ func (c *Client) GetRegistry() string {
 
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) GetDigest(ctx context.Context, tag string) (*v1.Hash, error) {
-	fullRegistry := c.GetRegistry()
-
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
@@ -172,7 +206,7 @@ func (c *Client) GetDigest(ctx context.Context, tag string) (*v1.Hash, error) {
 
 	logentry.Debug("Getting manifest")
 
-	ref, err := name.ParseReference(fullRegistry+":"+tag, c.nameOptions()...)
+	ref, err := name.ParseReference(c.buildReference(tag), c.nameOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -185,8 +219,19 @@ func (c *Client) GetDigest(ctx context.Context, tag string) (*v1.Hash, error) {
 		return &head.Digest, nil
 	}
 
+	// If HEAD returned 404, don't bother with GET — the image doesn't exist.
+	if isNotFound(err) {
+		return nil, fmt.Errorf("%w: %w", ErrImageNotFound, err)
+	}
+
+	logentry.Debug("HEAD failed, retrying with GET", slog.String("error", err.Error()))
+
 	desc, err := remote.Get(ref, opts...)
 	if err != nil {
+		if isNotFound(err) {
+			return nil, fmt.Errorf("%w: %w", ErrImageNotFound, err)
+		}
+
 		return nil, fmt.Errorf("failed to get manifest: %w", err)
 	}
 
@@ -198,8 +243,6 @@ func (c *Client) GetDigest(ctx context.Context, tag string) (*v1.Hash, error) {
 // GetManifest retrieves the manifest for a specific image tag
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) GetManifest(ctx context.Context, tag string) (registry.ManifestResult, error) {
-	fullRegistry := c.GetRegistry()
-
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
@@ -208,7 +251,7 @@ func (c *Client) GetManifest(ctx context.Context, tag string) (registry.Manifest
 
 	logentry.Debug("Getting manifest")
 
-	ref, err := name.ParseReference(fullRegistry+":"+tag, c.nameOptions()...)
+	ref, err := name.ParseReference(c.buildReference(tag), c.nameOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -247,8 +290,6 @@ func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.Imag
 		opt.ApplyToImageGet(getImageOptions)
 	}
 
-	fullRegistry := c.GetRegistry()
-
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
@@ -257,13 +298,7 @@ func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.Imag
 
 	logentry.Debug("Getting image")
 
-	imagepath := fullRegistry + ":" + tag
-	if strings.HasPrefix(tag, "@sha256:") {
-		logentry.Debug("tag contains digest reference")
-		imagepath = fullRegistry + tag
-	}
-
-	ref, err := name.ParseReference(imagepath, c.nameOptions()...)
+	ref, err := name.ParseReference(c.buildReference(tag), c.nameOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -298,8 +333,6 @@ func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts .
 		opt.ApplyToImagePush(putImageOptions)
 	}
 
-	fullRegistry := c.GetRegistry()
-
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
@@ -308,7 +341,7 @@ func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts .
 
 	logentry.Debug("Pushing image")
 
-	ref, err := name.ParseReference(fullRegistry+":"+tag, c.nameOptions()...)
+	ref, err := name.ParseReference(c.buildReference(tag), c.nameOptions()...)
 	if err != nil {
 		return fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -351,7 +384,7 @@ func (c *Client) GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile
 	return configFile, nil
 }
 
-// WithLast sets the pagination continuation token for tags
+// WithTagsLast sets the pagination cursor; only tags after last are returned.
 func WithTagsLast(last string) registry.ListTagsOption {
 	return &withTagsLast{last: last}
 }
@@ -364,7 +397,7 @@ func (w *withTagsLast) ApplyToListTags(opts *registry.ListTagsOptions) {
 	opts.Last = w.last
 }
 
-// WithTagsLimit sets the maximum number of tag results to return
+// WithTagsLimit caps the number of tags returned to n (single page).
 func WithTagsLimit(n int) registry.ListTagsOption {
 	return &withTagsLimit{n: n}
 }
@@ -377,52 +410,179 @@ func (w *withTagsLimit) ApplyToListTags(opts *registry.ListTagsOptions) {
 	opts.N = w.n
 }
 
-// ListTags lists tags for the current scope with pagination
-// The repository is determined by the chained WithSegment() calls
+// ListTags returns tags for the repository built by WithSegment calls.
+//
+// Without options, all tags are returned. WithTagsLimit(n) returns at most one page
+// of n tags. WithTagsLast(tag) returns tags lexicographically after tag.
+// Both options can be combined.
 func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 	listOptions := &registry.ListTagsOptions{}
-
 	for _, opt := range opts {
 		opt.ApplyToListTags(listOptions)
 	}
 
-	fullRegistry := c.GetRegistry()
-
-	logentry := c.logger.With(
+	c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
 		slog.Int("limit", listOptions.N),
 		slog.String("last", listOptions.Last),
-	)
+	).Debug("Listing tags")
 
-	logentry.Debug("Listing tags")
-
-	ref, err := name.ParseReference(fullRegistry, c.nameOptions()...)
+	ref, err := name.ParseReference(c.GetRegistry(), c.nameOptions()...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse reference: %w", err)
+		return nil, fmt.Errorf("parse reference: %w", err)
 	}
 
 	repo := ref.Context()
-	remoteOpts := append([]remote.Option{}, c.options...)
-	remoteOpts = append(remoteOpts, c.withContext(ctx))
 
-	// Add pagination options
-	if listOptions.N > 0 {
-		remoteOpts = append(remoteOpts, remote.WithPageSize(listOptions.N))
-	}
-	if listOptions.Last != "" {
-		remoteOpts = append(remoteOpts, remote.WithFilter("last", listOptions.Last))
+	if listOptions.N > 0 || listOptions.Last != "" {
+		if c.timeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, c.timeout)
+			defer cancel()
+		}
+
+		tags, err := c.listTagsPage(ctx, repo, listOptions.Last, listOptions.N)
+		if err != nil {
+			return nil, err
+		}
+
+		c.logger.Debug("Tags listed", slog.Int("count", len(tags)))
+
+		return tags, nil
 	}
 
-	// Get tags with server-side pagination
+	remoteOpts := append(append([]remote.Option{}, c.options...), c.withContext(ctx))
 	tags, err := remote.List(repo, remoteOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list tags: %w", err)
+		return nil, err
 	}
 
-	logentry.Debug("Tags retrieved", slog.Int("returned_count", len(tags)))
+	c.logger.Debug("Tags listed", slog.Int("count", len(tags)))
 
 	return tags, nil
+}
+
+// listTagsPage fetches a single page of tags (pageSize > 0) or all remaining pages via direct HTTP.
+// When pageSize is 0, the registry picks its own page size and all pages are collected via Link headers.
+func (c *Client) listTagsPage(ctx context.Context, repo name.Repository, last string, pageSize int) ([]string, error) {
+	httpClient, err := c.registryHTTPClient(ctx, repo)
+	if err != nil {
+		return nil, fmt.Errorf("create registry client: %w", err)
+	}
+
+	nextURL := tagsURL(repo, last, pageSize)
+	var allTags []string
+
+	for nextURL != "" {
+		tags, next, err := c.fetchTagsPage(ctx, httpClient, nextURL)
+		if err != nil {
+			return nil, err
+		}
+
+		allTags = append(allTags, tags...)
+
+		if pageSize > 0 {
+			return allTags, nil
+		}
+
+		nextURL = next
+	}
+
+	return allTags, nil
+}
+
+// registryHTTPClient creates an authenticated HTTP client for direct registry requests.
+func (c *Client) registryHTTPClient(ctx context.Context, repo name.Repository) (*http.Client, error) {
+	auth := c.auth
+	if auth == nil {
+		auth = authn.Anonymous
+	}
+
+	rt, err := transport.NewWithContext(ctx, repo.Registry, auth, c.baseTransport, []string{repo.Scope(transport.PullScope)})
+	if err != nil {
+		return nil, fmt.Errorf("build transport: %w", err)
+	}
+
+	return &http.Client{Transport: rt}, nil
+}
+
+// tagsURL builds the /v2/<repo>/tags/list URL with optional last and n query parameters.
+func tagsURL(repo name.Repository, last string, pageSize int) string {
+	uri := &url.URL{
+		Scheme: repo.Scheme(),
+		Host:   repo.RegistryStr(),
+		Path:   fmt.Sprintf("/v2/%s/tags/list", repo.RepositoryStr()),
+	}
+
+	q := url.Values{}
+	if last != "" {
+		q.Set("last", last)
+	}
+
+	if pageSize > 0 {
+		q.Set("n", strconv.Itoa(pageSize))
+	}
+
+	uri.RawQuery = q.Encode()
+
+	return uri.String()
+}
+
+// tagsResponse represents the JSON body of GET /v2/<name>/tags/list (OCI Distribution Spec).
+type tagsResponse struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
+}
+
+// fetchTagsPage performs a single GET and returns tags with the next-page URL from the Link header.
+func (c *Client) fetchTagsPage(ctx context.Context, httpClient *http.Client, pageURL string) ([]string, string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pageURL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("create request: %w", err)
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := transport.CheckError(resp, http.StatusOK); err != nil {
+		return nil, "", err
+	}
+
+	var parsed tagsResponse
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxTagsResponseBytes)).Decode(&parsed); err != nil {
+		return nil, "", fmt.Errorf("decode response: %w", err)
+	}
+
+	return parsed.Tags, nextPageURL(resp), nil
+}
+
+// nextPageURL extracts the URL from a Link: <url>; rel="next" header.
+// Handles the common OCI registry format only; RFC 8288 multi-value headers are not supported.
+func nextPageURL(resp *http.Response) string {
+	link := resp.Header.Get("Link")
+	if link == "" || link[0] != '<' {
+		return ""
+	}
+
+	end := strings.Index(link, ">")
+	if end == -1 {
+		return ""
+	}
+
+	linkURL, err := url.Parse(link[1:end])
+	if err != nil {
+		return ""
+	}
+
+	if resp.Request != nil && resp.Request.URL != nil {
+		linkURL = resp.Request.URL.ResolveReference(linkURL)
+	}
+
+	return linkURL.String()
 }
 
 // WithReposLast sets the pagination continuation token for repositories
@@ -515,8 +675,6 @@ func (c *Client) ListRepositories(ctx context.Context, opts ...registry.ListRepo
 // If image not found, return an error
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) CheckImageExists(ctx context.Context, tag string) error {
-	fullRegistry := c.GetRegistry()
-
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
@@ -525,7 +683,7 @@ func (c *Client) CheckImageExists(ctx context.Context, tag string) error {
 
 	logentry.Debug("Checking if image exists")
 
-	ref, err := name.ParseReference(fullRegistry+":"+tag, c.nameOptions()...)
+	ref, err := name.ParseReference(c.buildReference(tag), c.nameOptions()...)
 	if err != nil {
 		return fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -561,8 +719,6 @@ func (c *Client) CheckImageExists(ctx context.Context, tag string) error {
 // Returns ErrImageNotFound if the tag does not exist.
 // The repository is determined by the chained WithSegment() calls.
 func (c *Client) DeleteTag(ctx context.Context, tag string) error {
-	fullRegistry := c.GetRegistry()
-
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
@@ -571,7 +727,7 @@ func (c *Client) DeleteTag(ctx context.Context, tag string) error {
 
 	logentry.Debug("Deleting tag")
 
-	ref, err := name.ParseReference(fullRegistry+":"+tag, c.nameOptions()...)
+	ref, err := name.ParseReference(c.buildReference(tag), c.nameOptions()...)
 	if err != nil {
 		return fmt.Errorf("failed to parse reference: %w", err)
 	}
@@ -597,8 +753,6 @@ func (c *Client) DeleteTag(ctx context.Context, tag string) error {
 // promotion pattern (e.g. :latest → :v1.2.3).
 // The repository is determined by the chained WithSegment() calls.
 func (c *Client) TagImage(ctx context.Context, sourceTag, destTag string) error {
-	fullRegistry := c.GetRegistry()
-
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
@@ -608,7 +762,7 @@ func (c *Client) TagImage(ctx context.Context, sourceTag, destTag string) error 
 
 	logentry.Debug("Retagging image")
 
-	srcRef, err := name.ParseReference(fullRegistry+":"+sourceTag, c.nameOptions()...)
+	srcRef, err := name.ParseReference(c.buildReference(sourceTag), c.nameOptions()...)
 	if err != nil {
 		return fmt.Errorf("failed to parse source reference: %w", err)
 	}
@@ -626,7 +780,7 @@ func (c *Client) TagImage(ctx context.Context, sourceTag, destTag string) error 
 		return fmt.Errorf("failed to get source manifest: %w", err)
 	}
 
-	dstTag, err := name.NewTag(fullRegistry+":"+destTag, c.nameOptions()...)
+	dstTag, err := name.NewTag(c.buildReference(destTag), c.nameOptions()...)
 	if err != nil {
 		return fmt.Errorf("failed to parse destination tag: %w", err)
 	}
@@ -637,6 +791,149 @@ func (c *Client) TagImage(ctx context.Context, sourceTag, destTag string) error 
 	}
 
 	logentry.Debug("Image retagged successfully", slog.String("dest_tag", destTag))
+
+	return nil
+}
+
+// PushIndex pushes a multi-architecture image index to the registry at the specified tag.
+// The repository is determined by the chained WithSegment() calls.
+func (c *Client) PushIndex(ctx context.Context, tag string, idx v1.ImageIndex, opts ...registry.ImagePushOption) error {
+	pushOptions := &registry.ImagePushOptions{}
+	for _, opt := range opts {
+		opt.ApplyToImagePush(pushOptions)
+	}
+
+	logentry := c.logger.With(
+		slog.String("registry_host", c.registryHost),
+		slog.String("segments", c.constructedSegments),
+		slog.String("tag", tag),
+	)
+
+	logentry.Debug("Pushing image index")
+
+	ref, err := name.ParseReference(c.buildReference(tag), c.nameOptions()...)
+	if err != nil {
+		return fmt.Errorf("failed to parse reference: %w", err)
+	}
+
+	remoteOptions := append([]remote.Option{}, c.options...)
+	remoteOptions = append(remoteOptions, c.withContext(ctx))
+
+	if err := remote.WriteIndex(ref, idx, remoteOptions...); err != nil {
+		return fmt.Errorf("failed to push image index: %w", err)
+	}
+
+	logentry.Debug("Image index pushed successfully")
+
+	return nil
+}
+
+// DeleteByDigest deletes a manifest by its digest from the registry.
+// The repository is determined by the chained WithSegment() calls.
+func (c *Client) DeleteByDigest(ctx context.Context, digest v1.Hash) error {
+	logentry := c.logger.With(
+		slog.String("registry_host", c.registryHost),
+		slog.String("segments", c.constructedSegments),
+		slog.String("digest", digest.String()),
+	)
+
+	logentry.Debug("Deleting manifest by digest")
+
+	ref, err := name.ParseReference(c.GetRegistry()+"@"+digest.String(), c.nameOptions()...)
+	if err != nil {
+		return fmt.Errorf("failed to parse digest reference: %w", err)
+	}
+
+	opts := append([]remote.Option{}, c.options...)
+	opts = append(opts, c.withContext(ctx))
+
+	if err := remote.Delete(ref, opts...); err != nil {
+		if isNotFound(err) {
+			return fmt.Errorf("%w: %w", ErrImageNotFound, err)
+		}
+
+		return fmt.Errorf("failed to delete manifest: %w", err)
+	}
+
+	logentry.Debug("Manifest deleted successfully")
+
+	return nil
+}
+
+// CopyImage copies an image from this client's repository to a destination
+// client's repository. It fetches the remote descriptor and writes it to the
+// destination without pulling layers through the local machine when possible
+// (server-side mount). Both source and destination must be accessible.
+func (c *Client) CopyImage(ctx context.Context, srcTag string, dest registry.Client, destTag string) error {
+	logentry := c.logger.With(
+		slog.String("src_registry", c.GetRegistry()),
+		slog.String("src_tag", srcTag),
+		slog.String("dest_registry", dest.GetRegistry()),
+		slog.String("dest_tag", destTag),
+	)
+
+	logentry.Debug("Copying image")
+
+	srcRef, err := name.ParseReference(c.buildReference(srcTag), c.nameOptions()...)
+	if err != nil {
+		return fmt.Errorf("failed to parse source reference: %w", err)
+	}
+
+	opts := append([]remote.Option{}, c.options...)
+	opts = append(opts, c.withContext(ctx))
+
+	desc, err := remote.Get(srcRef, opts...)
+	if err != nil {
+		if isNotFound(err) {
+			return fmt.Errorf("%w: %w", ErrImageNotFound, err)
+		}
+
+		return fmt.Errorf("failed to get source image: %w", err)
+	}
+
+	// If the destination is our concrete Client type, we can use its remote options
+	// directly for an efficient server-side copy.
+	destClient, ok := dest.(*Client)
+	if !ok {
+		// Fallback: pull the image and push it via the interface.
+		img, err := desc.Image()
+		if err != nil {
+			return fmt.Errorf("failed to read source image: %w", err)
+		}
+
+		return dest.PushImage(ctx, destTag, img)
+	}
+
+	dstRef, err := name.ParseReference(destClient.buildReference(destTag), destClient.nameOptions()...)
+	if err != nil {
+		return fmt.Errorf("failed to parse destination reference: %w", err)
+	}
+
+	destOpts := append([]remote.Option{}, destClient.options...)
+	destOpts = append(destOpts, destClient.withContext(ctx))
+
+	// Use the appropriate write method based on media type.
+	if desc.MediaType.IsIndex() {
+		idx, err := desc.ImageIndex()
+		if err != nil {
+			return fmt.Errorf("failed to read source image index: %w", err)
+		}
+
+		if err := remote.WriteIndex(dstRef, idx, destOpts...); err != nil {
+			return fmt.Errorf("failed to write index to destination: %w", err)
+		}
+	} else {
+		img, err := desc.Image()
+		if err != nil {
+			return fmt.Errorf("failed to read source image: %w", err)
+		}
+
+		if err := remote.Write(dstRef, img, destOpts...); err != nil {
+			return fmt.Errorf("failed to write image to destination: %w", err)
+		}
+	}
+
+	logentry.Debug("Image copied successfully")
 
 	return nil
 }

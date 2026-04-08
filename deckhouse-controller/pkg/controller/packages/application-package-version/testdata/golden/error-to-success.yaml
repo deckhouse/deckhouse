@@ -5,23 +5,27 @@ metadata:
   creationTimestamp: null
   finalizers:
   - applicationpackageversion.deckhouse.io/used-by-application
+  labels:
+    packages.deckhouse.io/exist-in-registry: "true"
   name: deckhouse-test-v1.0.0
-  resourceVersion: "4"
+  resourceVersion: "3"
 spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: v1.0.0
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Succeeded
     status: "True"
     type: MetadataLoaded
   packageMetadata:
-    category: Test
+    changelog: {}
     description:
       en: Test package
       ru: Ru Test package
+    requirements: {}
     stage: Preview
 ---
 apiVersion: deckhouse.io/v1alpha1

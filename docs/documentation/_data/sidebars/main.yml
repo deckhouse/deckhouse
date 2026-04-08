@@ -1283,6 +1283,14 @@ entries:
                     ru: Модуль cloud-provider-openstack
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-openstack.html
                 - title:
+                    en: Cloud-provider-vcd module
+                    ru: Модуль cloud-provider-vcd
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vcd.html
+                - title:
+                    en: Cloud-provider-vsphere module
+                    ru: Модуль cloud-provider-vsphere
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vsphere.html
+                - title:
                     en: Cloud-provider-yandex module
                     ru: Модуль cloud-provider-yandex
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html
@@ -1302,6 +1310,10 @@ entries:
                     en: CSI driver
                     ru: CSI-драйвер
                   url: /architecture/cluster-and-infrastructure/infrastructure/csi-driver.html
+                - title:
+                    en: CSI driver (VMware vSphere)
+                    ru: CSI-драйвер (VMware vSphere)
+                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1381,11 +1393,15 @@ entries:
             - title:
                 en: Snapshot-controller module
                 ru: Модуль snapshot-controller
-              url: /architecture/storage/snapshot-controller.html          
+              url: /architecture/storage/snapshot-controller.html
             - title:
                 en: Sds-local-volume module
                 ru: Модуль sds-local-volume
-              url: /architecture/storage/sds-local-volume.html      
+              url: /architecture/storage/sds-local-volume.html
+            - title:
+                en: Sds-node-configurator module
+                ru: Модуль sds-node-configurator
+              url: /architecture/storage/sds-node-configurator.html               
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
