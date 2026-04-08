@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -44,11 +44,11 @@ type StaticMachineTemplateSpecTemplateSpec struct {
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:metadata:labels="heritage=deckhouse"
-//+kubebuilder:metadata:labels="module=node-manager"
-//+kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
-//+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta2=v1alpha1"
+// +kubebuilder:object:root=true
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="module=node-manager"
+// +kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
+// +kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta2=v1alpha1"
 
 // StaticMachineTemplate is the Schema for the Cluster API Provider Static.
 type StaticMachineTemplate struct {
@@ -58,7 +58,7 @@ type StaticMachineTemplate struct {
 	Spec StaticMachineTemplateSpec `json:"spec,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // StaticMachineTemplateList contains a list of StaticMachineTemplate.
 type StaticMachineTemplateList struct {
