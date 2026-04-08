@@ -216,6 +216,7 @@ func (c *Checker) curlHealthz(ctx context.Context, url string) (bool, string) {
 		return false, fmt.Sprintf("request build failed: %v", err)
 	}
 	req.Header.Set("User-Agent", allianceHealthcheckUserAgent)
+	req.Header.Set("X-alliance-healthcheck-from", c.config.ClusterUUID)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
