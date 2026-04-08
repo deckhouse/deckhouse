@@ -20,7 +20,7 @@ import (
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/lib-connection/pkg"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -40,7 +40,7 @@ type GetAbortDestroyerParams struct {
 	InfrastructureContext  *infrastructure.Context
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
-	SSHClientProvider pkg.SSHProvider
+	SSHClientProvider libcon.SSHProvider
 	LoggerProvider    log.LoggerProvider
 
 	TmpDir        string

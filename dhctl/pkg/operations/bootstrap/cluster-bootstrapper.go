@@ -23,7 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/lib-connection/pkg"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -91,7 +91,7 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 type Params struct {
 	NodeInterface              node.Interface
 	SSHProviderInitializer     *providerinitializer.SSHProviderInitializer
-	KubeProvider               pkg.KubeProvider
+	KubeProvider               libcon.KubeProvider
 	InitialState               phases.DhctlState
 	ResetInitialState          bool
 	DisableBootstrapClearCache bool

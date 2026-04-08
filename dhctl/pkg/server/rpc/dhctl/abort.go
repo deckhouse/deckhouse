@@ -26,7 +26,7 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/utils/ptr"
 
-	"github.com/deckhouse/lib-connection/pkg"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -232,7 +232,7 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 	}
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
-	var kubeProvider pkg.KubeProvider
+	var kubeProvider libcon.KubeProvider
 	var sshClient node.SSHClient
 	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(

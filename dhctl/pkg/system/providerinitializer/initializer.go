@@ -21,7 +21,7 @@ import (
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/lib-connection/pkg"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/kube"
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
@@ -32,7 +32,7 @@ import (
 )
 
 type SSHProviderInitializer struct {
-	provider             pkg.SSHProvider
+	provider             libcon.SSHProvider
 	baseProviderSettings *settings.BaseProviders
 	config               *sshconfig.ConnectionConfig
 
@@ -65,7 +65,7 @@ func NewSSHProviderInitializer(baseProviderSettings *settings.BaseProviders, con
 	return initializer
 }
 
-func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (pkg.SSHProvider, error) {
+func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (libcon.SSHProvider, error) {
 	i.mut.Lock()
 	defer i.mut.Unlock()
 
@@ -92,7 +92,7 @@ func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {
 	return i.provider.Cleanup(ctx)
 }
 
-func (i *SSHProviderInitializer) GetKubeProvider(ctx context.Context) pkg.KubeProvider {
+func (i *SSHProviderInitializer) GetKubeProvider(ctx context.Context) libcon.KubeProvider {
 	cfg := &kube.Config{}
 	runnerInterface, err := provider.GetRunnerInterface(ctx, cfg, i.baseProviderSettings, i)
 	if err != nil {

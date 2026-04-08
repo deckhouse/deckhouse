@@ -21,7 +21,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/deckhouse/lib-connection/pkg"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/kube"
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
@@ -41,7 +41,7 @@ func WithConnectionConfig(s string) ProviderOptions {
 }
 
 // func to initialize both SSHProviderInitializer and KubeProvider
-func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, pkg.KubeProvider, error) {
+func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, libcon.KubeProvider, error) {
 	baseProviderSettings := settings.NewBaseProviders(params)
 
 	options := &providerOptions{}
