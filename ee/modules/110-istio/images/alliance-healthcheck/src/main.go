@@ -67,7 +67,7 @@ func main() {
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
 
 	server := &http.Server{
-		Addr:         "0.0.0.0:80",
+		Addr:         "0.0.0.0:8080",
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -86,7 +86,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		logger.Println("Server starting on 0.0.0.0:80")
+		logger.Println("Server starting on 0.0.0.0:8080")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Printf("Server error: %v", err)
 			select {
