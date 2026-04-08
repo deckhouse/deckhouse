@@ -184,12 +184,15 @@ spec:
   {{- end }}
       - name: node
         securityContext:
+          allowPrivilegeEscalation: true
           privileged: true
           readOnlyRootFilesystem: true
           seccompProfile:
             type: RuntimeDefault
-        {{- if $setSysAdminCapability }}
           capabilities:
+            drop:
+              - ALL
+        {{- if $setSysAdminCapability }}
             add:
             - SYS_ADMIN
         {{- end }}
