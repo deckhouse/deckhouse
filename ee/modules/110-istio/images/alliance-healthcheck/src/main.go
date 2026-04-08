@@ -62,10 +62,14 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Ok.")
-		if r.UserAgent() == "alliance-healthcheck/1.0" {
-			logger.Printf("Remote cluster '%s' healthchecking us: %s %s %s", r.Response.Request.Header.Get("X-alliance-healthcheck-from"), r.Method, r.UserAgent(), r.URL.Path)
+		reqPath := ""
+		if r.URL != nil {
+			reqPath = r.URL.Path
+		}
+		if r.UserAgent() == allianceHealthcheckUserAgent {
+			logger.Printf("Remote cluster '%s' healthchecking us: %s %s %s", r.Header.Get("X-alliance-healthcheck-from"), r.Method, r.UserAgent(), reqPath)
 		} else {
-			logger.Printf("%s %s %s %s", r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+			logger.Printf("%s %s %s %s", r.RemoteAddr, r.Method, r.UserAgent(), reqPath)
 		}
 	})
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))

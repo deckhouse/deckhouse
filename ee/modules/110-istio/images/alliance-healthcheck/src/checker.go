@@ -125,7 +125,7 @@ func (c *Checker) checkFederations(ctx context.Context) {
 		c.metric.WithLabelValues("federation", name, target).Set(boolToFloat(healthy))
 		c.patchDataPlaneHealth(ctx, federationGVR, name, healthy, msg)
 
-		logger.Printf("Federation cluster '%s' check: %s target=%s healthy=%v msg=%s", name, target, healthy, msg)
+		logger.Printf("Federation cluster '%s' check: target=%s healthy=%v msg=%s", name, target, healthy, msg)
 	}
 }
 
