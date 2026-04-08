@@ -94,7 +94,8 @@ spec:
         - "--v"
         - "6"
         - "--descheduling-interval"
-        - "15m"
+        {{- $intervalMap := dict "frequent" "5m" "moderate" "15m" "rare" "30m" }}
+        - {{ index $intervalMap (.Values.descheduler.deschedulingInterval | default "moderate") | quote }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}

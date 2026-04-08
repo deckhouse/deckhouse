@@ -2,6 +2,24 @@
 title: "The descheduler module: examples"
 ---
 
+## Configuring the descheduling interval
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: descheduler
+spec:
+  enabled: true
+  settings:
+    deschedulingInterval: "frequent"
+```
+
+Available presets:
+- `frequent` — every 5 minutes;
+- `moderate` — every 15 minutes (default);
+- `rare` — every 30 minutes.
+
 ## Example LowNodeUtilization strategy
 
 ```yaml

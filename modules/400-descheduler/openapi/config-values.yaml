@@ -1,3 +1,12 @@
 x-config-version: 2
 type: object
-properties: {}
+properties:
+  deschedulingInterval:
+    type: string
+    enum: ["frequent", "moderate", "rare"]
+    default: "moderate"
+    description: |
+      Preset for the interval between descheduler runs.
+      - `frequent` — every 5 minutes;
+      - `moderate` — every 15 minutes;
+      - `rare` — every 30 minutes.
