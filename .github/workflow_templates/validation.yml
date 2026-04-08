@@ -162,7 +162,7 @@ jobs:
 
   pull_request_changes_validation:
     name: Pull Request Changes validation
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     needs:
       - discover
       - pull_request_info

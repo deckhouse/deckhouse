@@ -103,7 +103,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -181,7 +181,7 @@ jobs:
   # </template: block-until-image-is-not-ready>
   block-until-image-is-not-ready:
     name: Block until the docker image is not ready
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     permissions:
       contents: read
       actions: read
@@ -248,7 +248,7 @@ jobs:
   # <template: check_e2e_labels_job>
   check_e2e_labels:
     name: Check e2e labels
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     permissions:
       contents: read
       issues: write
