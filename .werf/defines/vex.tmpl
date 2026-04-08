@@ -46,14 +46,12 @@ git:
   stageDependencies:
     install:
     - "**/*"
-  {{- if ne $imageName "dev" }}
-  {{- if ne $imageName "dev/install" }}
+  {{- if contains $imageName "terraform-manager" }}
 - add: /dhctl/known_vulnerabilities.vex
   to: /dhctl_vulnerabilities.vex
   stageDependencies:
     install:
     - "**/*"
-  {{- end }}
   {{- end }}
 dependencies:
 - image: {{ $imageName }}
