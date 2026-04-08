@@ -29,7 +29,7 @@
       "inputs": [
         "transform/File/destination/test-ext-loki/01_tf_parseMessage_JSON"
       ],
-      "source": "val, err = get(., [\"message\", \"user_id\"])\nb_0 = false\nif err == null {\n  s, err_s = to_string(val)\n  b_0 = err_s == null && s == \"123\"\n}\nif b_0 {\n.from_addlabels = \"yes\"\nv, err = get(., [\"message\", \"user_id\"])\nif err == null {\n  .from_path = v\n}\n}",
+      "source": "val, err = get(., [\"message\", \"user_id\"])\nb_0 = false\nif err == null {\n  s, err_s = to_string(val)\n  b_0 = err_s == null \u0026\u0026 s == \"123\"\n}\nif b_0 {\n.from_addlabels = \"yes\"\nv, err = get(., [\"message\", \"user_id\"])\nif err == null {\n  .from_path = v\n}\n}",
       "type": "remap"
     },
     "transform/File/destination/test-ext-loki/03_tf_addLabels": {

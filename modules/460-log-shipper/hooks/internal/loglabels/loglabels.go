@@ -61,9 +61,10 @@ var FilesLabels = map[string]string{
 }
 
 type DestinationSinkLabelMaps struct {
-	LokiLabels          map[string]string
-	SplunkIndexedFields map[string]string
-	CEFExtensions       map[string]string
+	LokiLabels               map[string]string
+	SplunkIndexedFields      map[string]string
+	CEFExtensions            map[string]string
+	SyslogStructuredDataKeys []string
 }
 
 type DestinationSinkBuild struct {
@@ -118,8 +119,17 @@ func BuildDestinationSinkLabelMaps(spec v1alpha1.ClusterLogDestinationSpec, b De
 		if spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecCEF {
 			a.CEFExtensions = b.cefExtensionsFromKeys()
 		}
+		if spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
+			a.SyslogStructuredDataKeys = syslogStructuredDataKeysSorted(b.Keys)
+		}
 	}
 	return a
+}
+
+func syslogStructuredDataKeysSorted(labelKeys []string) []string {
+	out := slices.Clone(labelKeys)
+	slices.Sort(out)
+	return out
 }
 
 func MergedSourceAndExtraLables(sourceType string, extra map[string]string, withPodLabels bool) []string {
