@@ -88,8 +88,8 @@ featureSections:
       dvp-cse: supported
       dkp-cse-pro: supported
   - title:
-      ru: Централизованное управление кластерами DVP c помощью Commander
-      en: Centralized management of DVP clusters using Commander
+      ru: Централизованное управление кластерами DVP c помощью <a target='_blank' href='/products/commander/'>Commander</a>
+      en: Centralized management of DVP clusters using <a target='_blank' href='/products/commander/'>Commander</a>
     editions:
       dkp-ce: partly
       dvp-ee: supported
@@ -229,8 +229,8 @@ featureSections:
         ru: |
           Некоторые функции доступны только в коммерческих редакциях
   - title:
-      ru: Возможность запуска контейнеров (полный список возможностей DKP)
-      en: Ability to run containers (full list of DKP capabilities)
+      ru: Возможность запуска контейнеров (<a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>полный список возможностей DKP</a>)
+      en: Ability to run containers
     editions:
       dkp-ce: partly
       dvp-ee: partly
@@ -315,7 +315,7 @@ featureSections:
       dvp-cse: supported
       dkp-cse-pro: supported
   - title:
-      ru: Консистентные снимки дисков и конфигурации ВМ (хранилище должно поддерживать снимки)
+      ru: Консистентные снимки дисков и конфигурации ВМ (<a target='_blank' href='/wp-content/uploads/2025/05/storage-table.png'>хранилище</a> должно поддерживать снимки)
       en: Consistent snapshots of VM disks and configuration (storage must support snapshots)
     editions:
       dkp-ce: supported
