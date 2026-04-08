@@ -1306,14 +1306,6 @@ entries:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
-                - title:
-                    en: CSI driver
-                    ru: CSI-драйвер
-                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-driver.html
-                - title:
-                    en: CSI driver (VMware vSphere)
-                    ru: CSI-драйвер (VMware vSphere)
-                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1401,7 +1393,19 @@ entries:
             - title:
                 en: Sds-node-configurator module
                 ru: Модуль sds-node-configurator
-              url: /architecture/storage/sds-node-configurator.html               
+              url: /architecture/storage/sds-node-configurator.html 
+            - title:
+                en: CSI drivers
+                ru: CSI-драйверы
+              folders:
+                - title:
+                    en: CSI driver
+                    ru: CSI-драйвер
+                  url: /architecture/storage/csi-drivers/csi-driver.html
+                - title:
+                    en: CSI driver (VMware vSphere)
+                    ru: CSI-драйвер (VMware vSphere)
+                  url: /architecture/storage/csi-drivers/csi-driver-vsphere.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
