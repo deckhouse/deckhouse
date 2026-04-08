@@ -82,6 +82,15 @@ func NewClient(repo string, options ...Option) (Client, error) {
 		opt(opts)
 	}
 
+	var nameOpts []name.Option
+	if opts.useHTTP {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+
+	if _, err := name.NewRepository(repo, nameOpts...); err != nil {
+		return nil, fmt.Errorf("parse repo %q: %w", repo, err)
+	}
+
 	r := &client{
 		registryURL: repo,
 		options:     opts,
