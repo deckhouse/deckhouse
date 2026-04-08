@@ -179,14 +179,14 @@ func resolveLogger(logger *log.Logger) *log.Logger {
 
 // resolveTransport returns the base HTTP transport from options.
 func resolveTransport(opts *Options) http.RoundTripper {
-	var rt http.RoundTripper
+	var rt = http.DefaultTransport
 
 	if opts.Transport != nil {
 		rt = opts.Transport
-	} else if opts.CA != "" || needsCustomTransport(opts) {
+	}
+
+	if opts.CA != "" || needsCustomTransport(opts) {
 		rt = buildTransport(opts)
-	} else {
-		rt = http.DefaultTransport
 	}
 
 	// Apply transport middlewares in order (first middleware = outermost).
