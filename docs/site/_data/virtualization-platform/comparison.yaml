@@ -59,7 +59,7 @@ featureSections:
       dkp-cse-pro: supported
   - title:
       ru: Поддержка российских ОС на гипервизоре
-      en: Support for Russian OS on the hypervisor
+      en: Support for Russian operating systems on the hypervisor
     editions:
       dkp-ce: supported
       dvp-ee: supported
