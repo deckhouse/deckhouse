@@ -281,7 +281,7 @@ Then, in order to fulfill the requirements of the above security policies, the f
 ## Verification of image signatures
 
 {% alert level="warning" %}
-Available in the following DKP editions: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Available in the following DKP editions: SE+, EE.
 
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
