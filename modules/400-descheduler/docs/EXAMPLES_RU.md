@@ -12,13 +12,13 @@ metadata:
 spec:
   enabled: true
   settings:
-    deschedulingInterval: "frequent"
+    deschedulingInterval: "Frequent"
 ```
 
 Доступные пресеты:
-- `frequent` — каждые 5 минут;
-- `moderate` — каждые 15 минут (по умолчанию);
-- `rare` — каждые 30 минут.
+- `Frequent` — каждые 5 минут;
+- `Moderate` — каждые 15 минут (по умолчанию);
+- `Rare` — каждые 30 минут.
 
 ## Пример стратегии LowNodeUtilization
 

@@ -130,7 +130,7 @@ internal:
 			f.HelmRender()
 		})
 
-		It("Should use default moderate interval (15m)", func() {
+		It("Should use default Moderate interval (15m)", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			deploy := f.KubernetesResource("Deployment", "d8-descheduler", "descheduler")
 			Expect(deploy.Exists()).To(BeTrue())
@@ -293,10 +293,10 @@ profiles:
 		})
 	})
 
-	Context("With deschedulingInterval set to frequent", func() {
+	Context("With deschedulingInterval set to Frequent", func() {
 		BeforeEach(func() {
 			moduleValues := `
-deschedulingInterval: "frequent"
+deschedulingInterval: "Frequent"
 internal:
   deschedulers:
   - name: test1
@@ -323,10 +323,10 @@ internal:
 		})
 	})
 
-	Context("With deschedulingInterval set to rare", func() {
+	Context("With deschedulingInterval set to Rare", func() {
 		BeforeEach(func() {
 			moduleValues := `
-deschedulingInterval: "rare"
+deschedulingInterval: "Rare"
 internal:
   deschedulers:
   - name: test1

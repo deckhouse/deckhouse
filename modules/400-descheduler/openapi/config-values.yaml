@@ -3,10 +3,10 @@ type: object
 properties:
   deschedulingInterval:
     type: string
-    enum: ["frequent", "moderate", "rare"]
-    default: "moderate"
+    enum: ["Frequent", "Moderate", "Rare"]
+    default: "Moderate"
     description: |
       Preset for the interval between descheduler runs.
-      - `frequent` — every 5 minutes;
-      - `moderate` — every 15 minutes;
-      - `rare` — every 30 minutes.
+      - `Frequent` — every 5 minutes;
+      - `Moderate` — every 15 minutes;
+      - `Rare` — every 30 minutes.

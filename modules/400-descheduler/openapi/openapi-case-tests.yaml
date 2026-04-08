@@ -1,12 +1,12 @@
 positive:
   values:
-    - deschedulingInterval: "frequent"
+    - deschedulingInterval: "Frequent"
       internal:
         deschedulers: []
-    - deschedulingInterval: "moderate"
+    - deschedulingInterval: "Moderate"
       internal:
         deschedulers: []
-    - deschedulingInterval: "rare"
+    - deschedulingInterval: "Rare"
       internal:
         deschedulers: []
     - internal:
@@ -68,7 +68,7 @@ negative:
     - deschedulingInterval: "invalid"
       internal:
         deschedulers: []
-    - deschedulingInterval: "5m"
+    - deschedulingInterval: "frequent"
       internal:
         deschedulers: []
     - deschedulingInterval: 15
