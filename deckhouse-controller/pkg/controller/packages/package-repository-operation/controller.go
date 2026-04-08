@@ -23,8 +23,8 @@ import (
 	"sort"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -275,7 +275,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 
 		var reason, message string
 		// Check if the underlying error is NotFound (works with wrapped errors)
@@ -297,12 +297,13 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			message = fmt.Sprintf("Failed to create operation service: %v", err)
 		}
 
-		r.SetConditionFalse(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionCompleted,
-			reason,
-			message,
-		)
+		metautils.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+			Type:               v1alpha1.PackageRepositoryOperationConditionCompleted,
+			Status:             metav1.ConditionTrue,
+			Reason:             reason,
+			Message:            message,
+			LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
+		})
 
 		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 			return ctrl.Result{}, patchErr
@@ -322,15 +323,16 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 		message := fmt.Sprintf("Failed to list packages: %v", err)
 
-		r.SetConditionFalse(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionCompleted,
-			v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
-			message,
-		)
+		metautils.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+			Type:               v1alpha1.PackageRepositoryOperationConditionCompleted,
+			Status:             metav1.ConditionTrue,
+			Reason:             v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
+			Message:            message,
+			LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
+		})
 
 		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 			return ctrl.Result{}, patchErr
@@ -362,7 +364,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 	// Check if operation already has a failed condition - skip processing if so
 	for _, cond := range operation.Status.Conditions {
-		if cond.Type == v1alpha1.PackageRepositoryOperationConditionCompleted && cond.Status == corev1.ConditionFalse {
+		if cond.Type == v1alpha1.PackageRepositoryOperationConditionCompleted && cond.Status == metav1.ConditionFalse {
 			logger.Debug("operation already has failed condition, skipping processing")
 			return res, nil
 		}
@@ -374,6 +376,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 
 		var reason, message string
 		// Check if the underlying error is NotFound (works with wrapped errors)
@@ -395,12 +398,13 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 			message = fmt.Sprintf("Failed to create operation service: %v", err)
 		}
 
-		r.SetConditionFalse(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionCompleted,
-			reason,
-			message,
-		)
+		metautils.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+			Type:               v1alpha1.PackageRepositoryOperationConditionCompleted,
+			Status:             metav1.ConditionTrue,
+			Reason:             reason,
+			Message:            message,
+			LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
+		})
 
 		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 			return ctrl.Result{}, patchErr
@@ -431,10 +435,13 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
 
-		r.SetConditionTrue(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionCompleted,
-		)
+		metautils.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+			Type:               v1alpha1.PackageRepositoryOperationConditionCompleted,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Succeeded",
+			Message:            "",
+			LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
+		})
 
 		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
@@ -617,64 +624,6 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 	}
 
 	return nil
-}
-
-func (r *reconciler) SetConditionTrue(operation *v1alpha1.PackageRepositoryOperation, condType string) *v1alpha1.PackageRepositoryOperation {
-	time := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range operation.Status.Conditions {
-		if cond.Type == condType {
-			operation.Status.Conditions[idx].LastProbeTime = time
-			if cond.Status != corev1.ConditionTrue {
-				operation.Status.Conditions[idx].LastTransitionTime = time
-				operation.Status.Conditions[idx].Status = corev1.ConditionTrue
-			}
-
-			operation.Status.Conditions[idx].Reason = ""
-			operation.Status.Conditions[idx].Message = ""
-
-			return operation
-		}
-	}
-
-	operation.Status.Conditions = append(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationStatusCondition{
-		Type:               condType,
-		Status:             corev1.ConditionTrue,
-		LastProbeTime:      time,
-		LastTransitionTime: time,
-	})
-
-	return operation
-}
-
-func (r *reconciler) SetConditionFalse(operation *v1alpha1.PackageRepositoryOperation, condType string, reason string, message string) *v1alpha1.PackageRepositoryOperation {
-	time := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range operation.Status.Conditions {
-		if cond.Type == condType {
-			operation.Status.Conditions[idx].LastProbeTime = time
-			if cond.Status != corev1.ConditionFalse {
-				operation.Status.Conditions[idx].LastTransitionTime = time
-				operation.Status.Conditions[idx].Status = corev1.ConditionFalse
-			}
-
-			operation.Status.Conditions[idx].Reason = reason
-			operation.Status.Conditions[idx].Message = message
-
-			return operation
-		}
-	}
-
-	operation.Status.Conditions = append(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationStatusCondition{
-		Type:               condType,
-		Status:             corev1.ConditionFalse,
-		Reason:             reason,
-		Message:            message,
-		LastProbeTime:      time,
-		LastTransitionTime: time,
-	})
-
-	return operation
 }
 
 func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoName string, success bool, reason, message string) error {

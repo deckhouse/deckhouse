@@ -24,14 +24,13 @@ spec:
 status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'Failed to create registry client: create package service: failed to
       get auth from docker config: there is no authorization data'
     reason: RegistryClientCreationFailed
-    status: "False"
+    status: "True"
     type: Completed
-  phase: Processing
+  phase: Completed
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
