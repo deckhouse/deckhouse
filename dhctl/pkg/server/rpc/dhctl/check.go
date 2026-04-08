@@ -218,6 +218,19 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 		IsDebug:          s.params.IsDebug,
 	})
 
+	loggerFor.LogInfoF("DEBUG CHECK: ProviderSpecificClusterConfig received from commander (len=%d):\n%s\n",
+		len(p.request.ProviderSpecificClusterConfig),
+		p.request.ProviderSpecificClusterConfig,
+	)
+	loggerFor.LogInfoF("DEBUG CHECK: ClusterConfig received from commander (len=%d):\n%s\n",
+		len(p.request.ClusterConfig),
+		p.request.ClusterConfig,
+	)
+	loggerFor.LogInfoF("DEBUG CHECK: ConnectionConfig received from commander (len=%d):\n%s\n",
+		len(p.request.ConnectionConfig),
+		p.request.ConnectionConfig,
+	)
+
 	checkParams := &check.Params{
 		StateCache:    cache.Global(),
 		CommanderMode: p.request.Options.CommanderMode,
