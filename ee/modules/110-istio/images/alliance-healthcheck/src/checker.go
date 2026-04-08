@@ -21,6 +21,8 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
+const allianceHealthcheckUserAgent = "alliance-healthcheck/1.0"
+
 var (
 	federationGVR = schema.GroupVersionResource{
 		Group:    "deckhouse.io",
@@ -118,7 +120,7 @@ func (c *Checker) checkFederations(ctx context.Context) {
 		}
 
 		url := fmt.Sprintf("http://%s:80/healthz", target)
-		healthy, msg := c.curlHealthz(url)
+		healthy, msg := c.curlHealthz(ctx, url)
 
 		c.metric.WithLabelValues("federation", name, target).Set(boolToFloat(healthy))
 		c.patchDataPlaneHealth(ctx, federationGVR, name, healthy, msg)
@@ -147,7 +149,7 @@ func (c *Checker) checkMulticlusters(ctx context.Context) {
 
 		target := fmt.Sprintf("alliance-healthcheck-%s.d8-istio.svc.%s", remoteUUID, c.config.ClusterDomain)
 		url := fmt.Sprintf("http://%s:80/healthz", target)
-		healthy, msg := c.curlHealthz(url)
+		healthy, msg := c.curlHealthz(ctx, url)
 
 		c.metric.WithLabelValues("multicluster", name, target).Set(boolToFloat(healthy))
 		c.patchDataPlaneHealth(ctx, multiclusterGVR, name, healthy, msg)
@@ -208,8 +210,14 @@ func (c *Checker) extractRemoteClusterUUID(obj unstructured.Unstructured) (strin
 	return pm.ClusterUUID, nil
 }
 
-func (c *Checker) curlHealthz(url string) (bool, string) {
-	resp, err := c.httpClient.Get(url)
+func (c *Checker) curlHealthz(ctx context.Context, url string) (bool, string) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false, fmt.Sprintf("request build failed: %v", err)
+	}
+	req.Header.Set("User-Agent", allianceHealthcheckUserAgent)
+
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return false, fmt.Sprintf("request failed: %v", err)
 	}
