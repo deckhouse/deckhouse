@@ -248,15 +248,19 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1al
 		cmdLogger := logger.With(slog.String("command", string(cmd.Name)))
 		cmdLogger.Info("executing command")
 
-		_ = r.setConditions(ctx, op,
+		if err := r.setConditions(ctx, op,
 			commandCondition(cmd.Name, metav1.ConditionFalse, constants.ReasonCommandInProgress, ""),
 			readyCondition(metav1.ConditionFalse, cmd.ReadyReason,
-				fmt.Sprintf("executing command %s", cmd.Name)))
+				fmt.Sprintf("executing command %s", cmd.Name))); err != nil {
+			cmdLogger.Warn("failed to set in-progress condition", log.Err(err))
+		}
 
 		result, err := cmd.Exec(ctx, cc, cmdLogger)
 		if err != nil {
-			_ = r.setConditions(ctx, op,
-				commandCondition(cmd.Name, metav1.ConditionFalse, constants.ReasonCommandFailed, err.Error()))
+			if setErr := r.setConditions(ctx, op,
+				commandCondition(cmd.Name, metav1.ConditionFalse, constants.ReasonCommandFailed, err.Error())); setErr != nil {
+				cmdLogger.Error("failed to set failed condition", log.Err(setErr))
+			}
 			return result, err
 		}
 
@@ -264,8 +268,10 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1al
 			return result, nil
 		}
 
-		_ = r.setConditions(ctx, op,
-			commandCondition(cmd.Name, metav1.ConditionTrue, constants.ReasonCommandCompleted, ""))
+		if err := r.setConditions(ctx, op,
+			commandCondition(cmd.Name, metav1.ConditionTrue, constants.ReasonCommandCompleted, "")); err != nil {
+			return reconcile.Result{Requeue: true}, fmt.Errorf("set completed condition for %s: %w", cmd.Name, err)
+		}
 	}
 
 	// All commands completed successfully — mark operation as ready.
