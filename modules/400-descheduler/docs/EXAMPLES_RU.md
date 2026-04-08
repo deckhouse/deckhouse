@@ -15,7 +15,7 @@ spec:
     deschedulingInterval: "Frequent"
 ```
 
-Доступные пресеты:
+Доступные presets:
 - `Frequent` — каждые 5 минут;
 - `Moderate` — каждые 15 минут (по умолчанию);
 - `Rare` — каждые 30 минут.
