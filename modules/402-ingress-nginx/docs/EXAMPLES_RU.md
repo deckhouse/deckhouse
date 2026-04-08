@@ -101,7 +101,7 @@ spec:
 
 ## Пример для bare metal (балансировщик MetalLB в режиме BGP LoadBalancer)
 
-{% alert level="warning" %}Доступно в следующих редакциях: EE, CSE Pro (1.67).{% endalert %}
+{% alert level="warning" %}Доступно в следующих редакциях: EE, CSE Pro.{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
