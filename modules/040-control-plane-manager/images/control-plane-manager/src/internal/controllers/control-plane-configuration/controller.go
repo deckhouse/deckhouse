@@ -342,10 +342,12 @@ func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pki
 	spec := controlplanev1alpha1.ControlPlaneNodeSpec{
 		CAChecksum:    caChecksum,
 		ConfigVersion: fmt.Sprintf("%s.%s", cpmSecret.ResourceVersion, pkiSecret.ResourceVersion),
-		Components: controlplanev1alpha1.ComponentChecksums{
-			Etcd: controlplanev1alpha1.ComponentChecksum{
-				ConfigChecksum: configChecksums["etcd"],
-				PKIChecksum:    pkiChecksums["etcd"],
+		Components: controlplanev1alpha1.ComponentsSpec{
+			Etcd: controlplanev1alpha1.ComponentSpec{
+				Checksums: controlplanev1alpha1.Checksums{
+					Config: configChecksums["etcd"],
+					PKI:    pkiChecksums["etcd"],
+				},
 			},
 		},
 	}
@@ -356,15 +358,21 @@ func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pki
 			return nil, fmt.Errorf("failed to calculate hot reload checksum: %w", err)
 		}
 		spec.HotReloadChecksum = hotReloadChecksum
-		spec.Components.KubeAPIServer = controlplanev1alpha1.ComponentChecksum{
-			ConfigChecksum: configChecksums["kube-apiserver"],
-			PKIChecksum:    pkiChecksums["kube-apiserver"],
+		spec.Components.KubeAPIServer = controlplanev1alpha1.ComponentSpec{
+			Checksums: controlplanev1alpha1.Checksums{
+				Config: configChecksums["kube-apiserver"],
+				PKI:    pkiChecksums["kube-apiserver"],
+			},
 		}
-		spec.Components.KubeControllerManager = controlplanev1alpha1.ComponentChecksum{
-			ConfigChecksum: configChecksums["kube-controller-manager"],
+		spec.Components.KubeControllerManager = controlplanev1alpha1.ComponentSpec{
+			Checksums: controlplanev1alpha1.Checksums{
+				Config: configChecksums["kube-controller-manager"],
+			},
 		}
-		spec.Components.KubeScheduler = controlplanev1alpha1.ComponentChecksum{
-			ConfigChecksum: configChecksums["kube-scheduler"],
+		spec.Components.KubeScheduler = controlplanev1alpha1.ComponentSpec{
+			Checksums: controlplanev1alpha1.Checksums{
+				Config: configChecksums["kube-scheduler"],
+			},
 		}
 	}
 

@@ -211,7 +211,7 @@ spec:
                   type: object
                 description: |-
                   ObservedState holds per-component observed state from completed CertObserve command (CertObserver component).
-                  For static pod components only: etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
+                  For static pod components only: Etcd, KubeAPIServer, KubeControllerManager, KubeScheduler.
                 type: object
             type: object
         type: object

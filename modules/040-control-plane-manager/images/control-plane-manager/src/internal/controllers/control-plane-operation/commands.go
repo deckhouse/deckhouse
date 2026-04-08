@@ -29,14 +29,10 @@ import (
 )
 
 type commandContext struct {
-	r              *Reconciler
-	op             *controlplanev1alpha1.ControlPlaneOperation
-	component      controlplanev1alpha1.OperationComponent
-	cpmSecretData  map[string][]byte
-	pkiSecretData  map[string][]byte
-	configChecksum string
-	pkiChecksum    string
-	caChecksum     string
+	r             *Reconciler
+	op            *controlplanev1alpha1.ControlPlaneOperation
+	cpmSecretData map[string][]byte
+	pkiSecretData map[string][]byte
 }
 
 type PipelineCommand struct {
@@ -83,7 +79,7 @@ func execSyncCA(ctx context.Context, cc *commandContext, logger *log.Logger) (re
 // execRenewPKICerts renews leaf certificates for the component.
 // No-op for KCM/Scheduler (certTree=nil).
 func execRenewPKICerts(ctx context.Context, cc *commandContext, logger *log.Logger) (reconcile.Result, error) {
-	certTree := certTreeForComponent(cc.component)
+	certTree := certTreeForComponent(cc.op.Spec.Component)
 	if certTree != nil {
 		logger.Info("renewing leaf certificates if needed")
 		params := parsePKIParams(constants.KubernetesPkiPath, cc.cpmSecretData)
@@ -99,13 +95,14 @@ func execRenewPKICerts(ctx context.Context, cc *commandContext, logger *log.Logg
 // execRenewKubeconfigs renews kubeconfig files for the component.
 // No-op for Etcd (no kubeconfigs). For KubeAPIServer also updates the root kubeconfig symlink.
 func execRenewKubeconfigs(ctx context.Context, cc *commandContext, logger *log.Logger) (reconcile.Result, error) {
+	component := cc.op.Spec.Component
 	kubeconfigDir := kubeconfigDirPath()
-	if err := renewKubeconfigsForComponent(cc.component, cc.cpmSecretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
+	if err := renewKubeconfigsForComponent(component, cc.cpmSecretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
 		logger.Error("failed to renew kubeconfigs", log.Err(err))
 		return reconcile.Result{}, err
 	}
 	// dont return error if failed to update root kubeconfig symlink, maybe return reconcile.Result{}, err later.
-	if needsRootKubeconfig(cc.component) {
+	if needsRootKubeconfig(component) {
 		if err := updateRootKubeconfig(kubeconfigDir); err != nil {
 			logger.Warn("failed to update root kubeconfig symlink", log.Err(err))
 		}
@@ -118,7 +115,7 @@ func execRenewKubeconfigs(ctx context.Context, cc *commandContext, logger *log.L
 // When join is needed, executes the full flow (cleanup -> ensureAdminKubeconfig -> JoinCluster -> waitForPod)
 // No-op for non-etcd components. No-op if already in cluster.
 func execJoinEtcdCluster(ctx context.Context, cc *commandContext, logger *log.Logger) (reconcile.Result, error) {
-	if cc.component != controlplanev1alpha1.OperationComponentEtcd {
+	if cc.op.Spec.Component != controlplanev1alpha1.OperationComponentEtcd {
 		return reconcile.Result{}, nil
 	}
 
@@ -141,24 +138,29 @@ func execJoinEtcdCluster(ctx context.Context, cc *commandContext, logger *log.Lo
 	}
 	logger.Info("etcd needs join, executing join flow")
 	return cc.r.reconcileEtcdJoin(cc.op, cc.cpmSecretData,
-		cc.configChecksum, cc.pkiChecksum, cc.caChecksum, logger)
+		cc.op.Spec.DesiredConfigChecksum, cc.op.Spec.DesiredPKIChecksum, cc.op.Spec.DesiredCAChecksum, logger)
 }
 
 // execSyncManifests writes the static pod manifest (or patches annotations for PKI-only updates).
 func execSyncManifests(ctx context.Context, cc *commandContext, logger *log.Logger) (reconcile.Result, error) {
-	if cc.configChecksum != "" {
-		if err := writeExtraFiles(cc.component, cc.cpmSecretData, constants.ExtraFilesPath); err != nil {
+	component := cc.op.Spec.Component
+	configChecksum := cc.op.Spec.DesiredConfigChecksum
+	pkiChecksum := cc.op.Spec.DesiredPKIChecksum
+	caChecksum := cc.op.Spec.DesiredCAChecksum
+
+	if configChecksum != "" {
+		if err := writeExtraFiles(component, cc.cpmSecretData, constants.ExtraFilesPath); err != nil {
 			logger.Error("failed to write extra-files", log.Err(err))
 			return reconcile.Result{}, err
 		}
-		if err := writeStaticPodManifest(cc.component, cc.cpmSecretData,
-			cc.configChecksum, cc.pkiChecksum, cc.caChecksum, constants.ManifestsPath); err != nil {
+		if err := writeStaticPodManifest(component, cc.cpmSecretData,
+			configChecksum, pkiChecksum, caChecksum, constants.ManifestsPath); err != nil {
 			logger.Error("failed to write manifest", log.Err(err))
 			return reconcile.Result{}, err
 		}
 	} else {
-		if err := updateChecksumAnnotations(cc.component,
-			cc.pkiChecksum, cc.caChecksum, cc.op.CertRenewalID(), constants.ManifestsPath); err != nil {
+		if err := updateChecksumAnnotations(component,
+			pkiChecksum, caChecksum, cc.op.CertRenewalID(), constants.ManifestsPath); err != nil {
 			logger.Error("failed to update checksum annotations", log.Err(err))
 			return reconcile.Result{}, err
 		}
@@ -172,9 +174,9 @@ func execWaitPodReady(ctx context.Context, cc *commandContext, logger *log.Logge
 	if err := cc.r.setConditions(ctx, cc.op,
 		readyCondition(metav1.ConditionFalse, constants.ReasonWaitingForPod,
 			fmt.Sprintf("waiting for %s pod with config-checksum %s pki-checksum %s",
-				cc.component.PodComponentName(),
-				shortChecksum(cc.configChecksum),
-				shortChecksum(cc.pkiChecksum))),
+				cc.op.Spec.Component.PodComponentName(),
+				shortChecksum(cc.op.Spec.DesiredConfigChecksum),
+				shortChecksum(cc.op.Spec.DesiredPKIChecksum))),
 	); err != nil {
 		return reconcile.Result{}, err
 	}

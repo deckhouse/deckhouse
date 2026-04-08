@@ -20,41 +20,100 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ComponentChecksum holds checksums for a single control plane component.
-type ComponentChecksum struct {
-	// ConfigChecksum is the hash of the component static pod template and extra-files.
-	// +kubebuilder:validation:Required
-	ConfigChecksum string `json:"configChecksum"`
-
-	// PKIChecksum is the hash of PKI-related config keys (certSANs, encryption-algorithm)
+// Checksums holds config/pki/ca hashes for a single control plane component.
+type Checksums struct {
+	// Config is the hash of the component static pod template and extra-files.
 	// +optional
-	PKIChecksum string `json:"pkiChecksum,omitempty"`
+	Config string `json:"config,omitempty"`
 
-	// CAChecksum is the hash of CA certificates applied to this component.
-	// Set when the component's pod restarts with the new CA.
+	// PKI is the hash of PKI-related config keys (certSANs, encryption-algorithm).
 	// +optional
-	CAChecksum string `json:"caChecksum,omitempty"`
+	PKI string `json:"pki,omitempty"`
+
+	// CA is the hash of CA certificates applied to this component.
+	// In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+	// +optional
+	CA string `json:"ca,omitempty"`
+}
+
+// ComponentSpec holds the desired state of a single control plane component (used in CPN spec).
+type ComponentSpec struct {
+	// +optional
+	Checksums Checksums `json:"checksums,omitempty"`
+}
+
+// ComponentStatus holds the observed state of a single control plane component (used in CPN status).
+type ComponentStatus struct {
+	// +optional
+	Checksums Checksums `json:"checksums,omitempty"`
 
 	// CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
-	// Only populated in status via Observe operation. Absent in spec.
+	// Populated via CertObserve command.
 	// +optional
 	CertificatesExpirationDate map[string]metav1.Time `json:"certificatesExpirationDate,omitempty"`
 }
 
-// ComponentChecksums holds checksums for all control plane components.
-// Zero values are allowed for etcd-arbiter nodes(etcd only).
-type ComponentChecksums struct {
+// ComponentsSpec holds spec checksums for all control plane components.
+// Zero values are allowed for etcd-arbiter nodes (etcd only).
+type ComponentsSpec struct {
 	// +optional
-	Etcd ComponentChecksum `json:"etcd,omitempty"`
+	Etcd ComponentSpec `json:"etcd,omitempty"`
 
 	// +optional
-	KubeAPIServer ComponentChecksum `json:"kube-apiserver,omitempty"`
+	KubeAPIServer ComponentSpec `json:"kube-apiserver,omitempty"`
 
 	// +optional
-	KubeControllerManager ComponentChecksum `json:"kube-controller-manager,omitempty"`
+	KubeControllerManager ComponentSpec `json:"kube-controller-manager,omitempty"`
 
 	// +optional
-	KubeScheduler ComponentChecksum `json:"kube-scheduler,omitempty"`
+	KubeScheduler ComponentSpec `json:"kube-scheduler,omitempty"`
+}
+
+// ComponentsStatus holds status checksums and observed state for all control plane components.
+type ComponentsStatus struct {
+	// +optional
+	Etcd ComponentStatus `json:"etcd,omitempty"`
+
+	// +optional
+	KubeAPIServer ComponentStatus `json:"kube-apiserver,omitempty"`
+
+	// +optional
+	KubeControllerManager ComponentStatus `json:"kube-controller-manager,omitempty"`
+
+	// +optional
+	KubeScheduler ComponentStatus `json:"kube-scheduler,omitempty"`
+}
+
+// Component returns a pointer to the ComponentSpec for the given component.
+// Returns nil for non-static-pod components (HotReload, CA, CertObserver).
+func (c *ComponentsSpec) Component(comp OperationComponent) *ComponentSpec {
+	switch comp {
+	case OperationComponentEtcd:
+		return &c.Etcd
+	case OperationComponentKubeAPIServer:
+		return &c.KubeAPIServer
+	case OperationComponentKubeControllerManager:
+		return &c.KubeControllerManager
+	case OperationComponentKubeScheduler:
+		return &c.KubeScheduler
+	}
+	return nil
+}
+
+// Component returns a pointer to the ComponentStatus for the given component.
+// Returns nil for non-static-pod components (HotReload, CA, CertObserver).
+func (c *ComponentsStatus) Component(comp OperationComponent) *ComponentStatus {
+	switch comp {
+	case OperationComponentEtcd:
+		return &c.Etcd
+	case OperationComponentKubeAPIServer:
+		return &c.KubeAPIServer
+	case OperationComponentKubeControllerManager:
+		return &c.KubeControllerManager
+	case OperationComponentKubeScheduler:
+		return &c.KubeScheduler
+	}
+	return nil
 }
 
 type ControlPlaneNodeSpec struct {
@@ -68,7 +127,7 @@ type ControlPlaneNodeSpec struct {
 
 	// Checksums per component
 	// +optional
-	Components ComponentChecksums `json:"components,omitempty"`
+	Components ComponentsSpec `json:"components,omitempty"`
 
 	// For reload mechanisms (e.g. in-place reload)
 	// +optional
@@ -84,7 +143,7 @@ type ControlPlaneNodeStatus struct {
 	CAChecksum string `json:"caChecksum,omitempty"`
 
 	// +optional
-	Components ComponentChecksums `json:"components,omitempty"`
+	Components ComponentsStatus `json:"components,omitempty"`
 
 	// +optional
 	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
