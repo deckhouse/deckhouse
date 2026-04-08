@@ -1,0 +1,229 @@
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
+index 61efeae69ca..30b55c8ab95 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
+@@ -149,6 +149,13 @@ type JSONSchemaProps struct {
+ 	// +listType=map
+ 	// +listMapKey=rule
+ 	XValidations ValidationRules
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++	XSensitiveData bool
+ }
+ 
+ // ValidationRules describes a list of validation rules written in the CEL expression language.
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
+index 1bbd0ce13e1..1e4c551b58b 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
+@@ -578,6 +578,13 @@ message JSONSchemaProps {
+   // +listType=map
+   // +listMapKey=rule
+   repeated ValidationRule xKubernetesValidations = 44;
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++  optional bool xKubernetesSensitiveData = 45
+ }
+ 
+ // JSONSchemaPropsOrArray represents a value that can either be a JSONSchemaProps
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
+index 197bd1b7a88..cdcaaf84c5c 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
+@@ -194,6 +194,13 @@ type JSONSchemaProps struct {
+ 	// +listType=map
+ 	// +listMapKey=rule
+ 	XValidations ValidationRules `json:"x-kubernetes-validations,omitempty" patchStrategy:"merge" patchMergeKey:"rule" protobuf:"bytes,44,rep,name=xKubernetesValidations"`
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++	XSensitiveData bool `json:"x-kubernetes-sensitive-data,omitempty" protobuf:"bytes,45,opt,name=xKubernetesSensitiveData"`
+ }
+ 
+ // ValidationRules describes a list of validation rules written in the CEL expression language.
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
+index bb1d7e01429..7fa45006e09 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
+@@ -912,6 +912,7 @@ func autoConvert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(in *JSONSch
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*apiextensions.ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+@@ -1101,6 +1102,7 @@ func autoConvert_apiextensions_JSONSchemaProps_To_v1_JSONSchemaProps(in *apiexte
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
+index f9e5600345a..37fc3603a5c 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
+@@ -639,6 +639,13 @@ message JSONSchemaProps {
+   // +listType=map
+   // +listMapKey=rule
+   repeated ValidationRule xKubernetesValidations = 44;
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++  optional bool xKubernetesSensitiveData = 45
+ }
+ 
+ // JSONSchemaPropsOrArray represents a value that can either be a JSONSchemaProps
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
+index 3ed584dd9de..b723c134253 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
+@@ -194,6 +194,13 @@ type JSONSchemaProps struct {
+ 	// +listType=map
+ 	// +listMapKey=rule
+ 	XValidations ValidationRules `json:"x-kubernetes-validations,omitempty" patchStrategy:"merge" patchMergeKey:"rule" protobuf:"bytes,44,rep,name=xKubernetesValidations"`
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	// +featureGate=CRDSensitiveData
++	XSensitiveData bool `json:"x-kubernetes-sensitive-data,omitempty" protobuf:"bytes,45,opt,name=xKubernetesSensitiveData"`
+ }
+ 
+ // ValidationRules describes a list of validation rules written in the CEL expression language.
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
+index d59274e8da6..f964ae93fe3 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
+@@ -961,6 +961,7 @@ func autoConvert_v1beta1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(in *JS
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*apiextensions.ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+@@ -1150,6 +1151,7 @@ func autoConvert_apiextensions_JSONSchemaProps_To_v1beta1_JSONSchemaProps(in *ap
+ 	out.XListType = (*string)(unsafe.Pointer(in.XListType))
+ 	out.XMapType = (*string)(unsafe.Pointer(in.XMapType))
+ 	out.XValidations = *(*ValidationRules)(unsafe.Pointer(&in.XValidations))
++	out.XSensitiveData = in.XSensitiveData
+ 	return nil
+ }
+ 
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
+index 78350c135fc..01c1f3bfd3f 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
+@@ -272,6 +272,7 @@ func newExtensions(s *apiextensions.JSONSchemaProps) (*Extensions, error) {
+ 		XListMapKeys:      s.XListMapKeys,
+ 		XListType:         s.XListType,
+ 		XMapType:          s.XMapType,
++		XSensitiveData:    s.XSensitiveData,
+ 	}
+ 
+ 	if s.XPreserveUnknownFields != nil {
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
+index df78ba77e61..56e0c94ca95 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
+@@ -87,6 +87,9 @@ func (x *Extensions) toKubeOpenAPI(ret *spec.Schema) {
+ 	if x.XMapType != nil {
+ 		ret.VendorExtensible.AddExtension("x-kubernetes-map-type", *x.XMapType)
+ 	}
++	if x.XSensitiveData {
++		ret.VendorExtensible.AddExtension("x-kubernetes-sensitive-data", true)
++	}
+ }
+ 
+ func (x *ValidationExtensions) toKubeOpenAPI(ret *spec.Schema) {
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
+index 5688c2ac40b..24eff61025a 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
+@@ -129,6 +129,12 @@ type Extensions struct {
+ 	//      Atomic maps will be entirely replaced when updated.
+ 	// +optional
+ 	XMapType *string
++
++	// x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
++	// When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets)
++	// hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource
++	// and unconditionally mask the value in audit logs.
++	XSensitiveData bool
+ }
+ 
+ // +k8s:deepcopy-gen=true
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
+index c562263f32c..1272d2fd277 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
+@@ -40,6 +40,11 @@ const (
+ 	// CustomResourceDefinitions may include SelectableFields to declare which fields
+ 	// may be used as field selectors.
+ 	CustomResourceFieldSelectors featuregate.Feature = "CustomResourceFieldSelectors"
++
++	// owner: @team-deckhouse-kubernetes
++	//
++	// Hide and protect sensitive data fields in etcd for CRDs marked as x-kubernetes-sensitive-data
++	CRDSensitiveData featuregate.Feature = "CRDSensitiveData"
+ )
+ 
+ func init() {
+@@ -62,4 +67,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
+ 		{Version: version.MustParse("1.31"), Default: true, PreRelease: featuregate.Beta},
+ 		{Version: version.MustParse("1.32"), Default: true, LockToDefault: true, PreRelease: featuregate.GA},
+ 	},
++	CRDSensitiveData: {
++		{Version: version.MustParse("1.31"), Default: false, PreRelease: featuregate.Alpha},
++	},
+ }
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
+index 0d7157096e8..88ee55338c4 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
+@@ -2313,6 +2313,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
+ 							},
+ 						},
+ 					},
++					"x-kubernetes-sensitive-data": {
++						SchemaProps: spec.SchemaProps{
++							Description: "x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys). When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets) hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource and unconditionally mask the value in audit logs.",
++							Type:        []string{"boolean"},
++							Format:      "",
++						},
++					},
+ 				},
+ 			},
+ 		},
+@@ -3868,6 +3875,13 @@ func schema_pkg_apis_apiextensions_v1beta1_JSONSchemaProps(ref common.ReferenceC
+ 							},
+ 						},
+ 					},
++					"x-kubernetes-sensitive-data": {
++						SchemaProps: spec.SchemaProps{
++							Description: "x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys). When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets) hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource and unconditionally mask the value in audit logs.",
++							Type:        []string{"boolean"},
++							Format:      "",
++						},
++					},
+ 				},
+ 			},
+ 		},
