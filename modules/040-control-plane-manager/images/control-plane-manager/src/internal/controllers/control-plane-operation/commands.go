@@ -82,7 +82,7 @@ func execRenewPKICerts(ctx context.Context, cc *commandContext, logger *log.Logg
 	certTree := certTreeForComponent(cc.op.Spec.Component)
 	if certTree != nil {
 		logger.Info("renewing leaf certificates if needed")
-		params := parsePKIParams(constants.KubernetesPkiPath, cc.cpmSecretData)
+		params := parsePKIParams(constants.KubernetesPkiPath, cc.cpmSecretData, cc.r.node)
 		if err := renewCertsIfNeeded(params, certTree); err != nil {
 			logger.Error("failed to renew certs", log.Err(err))
 			return reconcile.Result{}, err
@@ -96,14 +96,14 @@ func execRenewPKICerts(ctx context.Context, cc *commandContext, logger *log.Logg
 // No-op for Etcd (no kubeconfigs). For KubeAPIServer also updates the root kubeconfig symlink.
 func execRenewKubeconfigs(ctx context.Context, cc *commandContext, logger *log.Logger) (reconcile.Result, error) {
 	component := cc.op.Spec.Component
-	kubeconfigDir := kubeconfigDirPath()
-	if err := renewKubeconfigsForComponent(component, cc.cpmSecretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
+	kubeconfigDir := cc.r.node.KubeconfigDir
+	if err := renewKubeconfigsForComponent(component, cc.cpmSecretData, constants.KubernetesPkiPath, kubeconfigDir, cc.r.node.AdvertiseIP); err != nil {
 		logger.Error("failed to renew kubeconfigs", log.Err(err))
 		return reconcile.Result{}, err
 	}
 	// dont return error if failed to update root kubeconfig symlink, maybe return reconcile.Result{}, err later.
 	if needsRootKubeconfig(component) {
-		if err := updateRootKubeconfig(kubeconfigDir); err != nil {
+		if err := updateRootKubeconfig(kubeconfigDir, cc.r.node.HomeDir); err != nil {
 			logger.Warn("failed to update root kubeconfig symlink", log.Err(err))
 		}
 	}
@@ -119,16 +119,16 @@ func execJoinEtcdCluster(ctx context.Context, cc *commandContext, logger *log.Lo
 		return reconcile.Result{}, nil
 	}
 
-	kubeconfigDir := kubeconfigDirPath()
+	kubeconfigDir := cc.r.node.KubeconfigDir
 
 	// Ensure admin.conf exists before checking membership on fresh nodes (including etcd-arbiter)
 	// admin.conf is absent until created here, ensureAdminKubeconfig is idempotent.
-	if err := ensureAdminKubeconfig(cc.cpmSecretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
+	if err := ensureAdminKubeconfig(cc.cpmSecretData, constants.KubernetesPkiPath, kubeconfigDir, cc.r.node.AdvertiseIP); err != nil {
 		logger.Error("failed to ensure admin kubeconfig", log.Err(err))
 		return reconcile.Result{}, fmt.Errorf("ensure admin kubeconfig: %w", err)
 	}
 
-	needsJoin, err := etcdNeedsJoin(cc.r.nodeName, constants.KubernetesPkiPath, kubeconfigDir)
+	needsJoin, err := etcdNeedsJoin(cc.r.node, constants.KubernetesPkiPath, kubeconfigDir)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("check etcd join need: %w", err)
 	}

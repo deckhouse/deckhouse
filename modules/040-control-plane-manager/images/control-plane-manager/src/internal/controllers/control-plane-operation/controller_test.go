@@ -157,9 +157,9 @@ func (s *ControllerTestSuite) newReconciler(objs ...client.Object) *Reconciler {
 		WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
 		Build()
 	return &Reconciler{
-		client:   c,
-		log:      log.NewNop(),
-		nodeName: testNodeName,
+		client: c,
+		log:    log.NewNop(),
+		node:   NodeIdentity{Name: testNodeName},
 	}
 }
 

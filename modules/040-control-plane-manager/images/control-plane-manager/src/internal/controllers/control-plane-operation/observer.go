@@ -101,7 +101,7 @@ func readKubeconfigCertExpiration(kubeconfigPath string) (metav1.Time, error) {
 }
 
 // observeCertExpirationsForStaticPod reads leaf cert and kubeconfig client cert expirations for one static pod component.
-func observeCertExpirationsForStaticPod(component controlplanev1alpha1.OperationComponent, logger *log.Logger) (state controlplanev1alpha1.ObservedComponentState, ok bool) {
+func observeCertExpirationsForStaticPod(component controlplanev1alpha1.OperationComponent, kubeconfigDir string, logger *log.Logger) (state controlplanev1alpha1.ObservedComponentState, ok bool) {
 	if !component.IsStaticPodComponent() {
 		return controlplanev1alpha1.ObservedComponentState{}, false
 	}
@@ -121,7 +121,6 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 		}
 	}
 
-	kubeconfigDir := kubeconfigDirPath()
 	for _, file := range kubeconfigFilesForComponent(component) {
 		kubeconfigPath := filepath.Join(kubeconfigDir, string(file))
 		expiry, err := readKubeconfigCertExpiration(kubeconfigPath)
@@ -145,9 +144,10 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 func execCertObserve(ctx context.Context, cc *commandContext, logger *log.Logger) (reconcile.Result, error) {
 	observedState := make(map[controlplanev1alpha1.OperationComponent]controlplanev1alpha1.ObservedComponentState)
 
+	kubeconfigDir := cc.r.node.KubeconfigDir
 	if cc.op.Spec.Component == controlplanev1alpha1.OperationComponentCertObserver {
 		for component := range controlplanev1alpha1.ComponentRegistry() {
-			state, ok := observeCertExpirationsForStaticPod(component, logger)
+			state, ok := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
 			if !ok {
 				continue
 			}
@@ -157,7 +157,7 @@ func execCertObserve(ctx context.Context, cc *commandContext, logger *log.Logger
 		}
 	} else {
 		component := cc.op.Spec.Component
-		state, ok := observeCertExpirationsForStaticPod(component, logger)
+		state, ok := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
 		if !ok {
 			logger.Warn("CertObserve skipped: not a static pod component",
 				slog.String("component", string(component)))

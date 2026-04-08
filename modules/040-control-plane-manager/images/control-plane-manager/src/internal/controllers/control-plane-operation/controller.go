@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"reflect"
 	"time"
 
@@ -54,26 +53,26 @@ const (
 )
 
 type Reconciler struct {
-	client   client.Client
-	log      *log.Logger
-	nodeName string
+	client client.Client
+	log    *log.Logger
+	node   NodeIdentity
 }
 
 func Register(mgr manager.Manager) error {
-	nodeName := os.Getenv(constants.NodeNameEnvVar)
-	if nodeName == "" {
-		return fmt.Errorf("env %s is not set", constants.NodeNameEnvVar)
+	node, err := nodeIdentityFromEnv()
+	if err != nil {
+		return fmt.Errorf("read node identity: %w", err)
 	}
 
 	r := &Reconciler{
-		client:   mgr.GetClient(),
-		log:      log.Default(),
-		nodeName: nodeName,
+		client: mgr.GetClient(),
+		log:    log.Default(),
+		node:   node,
 	}
 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			constants.ControlPlaneNodeNameLabelKey: nodeName,
+			constants.ControlPlaneNodeNameLabelKey: node.Name,
 		},
 	})
 	if err != nil {
@@ -104,10 +103,10 @@ func Register(mgr manager.Manager) error {
 	// React to pod status/annotation changes for control-plane pods on this node
 	podPredicate := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			return isNodeControlPlanePod(e.Object, nodeName)
+			return isNodeControlPlanePod(e.Object, node.Name)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			if !isNodeControlPlanePod(e.ObjectNew, nodeName) {
+			if !isNodeControlPlanePod(e.ObjectNew, node.Name) {
 				return false
 			}
 			oldPod, okOld := e.ObjectOld.(*corev1.Pod)
@@ -291,7 +290,7 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1al
 // All expected values are derived from op (Spec.Desired* + CertRenewalID), so the function
 // is independent of any pipeline state and produces the same result on requeue.
 func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, logger *log.Logger) (reconcile.Result, error) {
-	podName := fmt.Sprintf("%s-%s", op.Spec.Component.PodComponentName(), r.nodeName)
+	podName := fmt.Sprintf("%s-%s", op.Spec.Component.PodComponentName(), r.node.Name)
 	pod := &corev1.Pod{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: podName, Namespace: constants.KubeSystemNamespace}, pod); err != nil {
 		logger.Info("pod not found yet, requeue", slog.String("pod", podName))
@@ -343,7 +342,7 @@ func (r *Reconciler) mapPodToOperations(ctx context.Context, obj client.Object) 
 
 	ops := &controlplanev1alpha1.ControlPlaneOperationList{}
 	if err := r.client.List(ctx, ops, client.MatchingLabels{
-		constants.ControlPlaneNodeNameLabelKey:  r.nodeName,
+		constants.ControlPlaneNodeNameLabelKey:  r.node.Name,
 		constants.ControlPlaneComponentLabelKey: string(opComponent),
 	}); err != nil {
 		return nil
@@ -360,13 +359,6 @@ func (r *Reconciler) mapPodToOperations(ctx context.Context, obj client.Object) 
 	return reqs
 }
 
-// kubeconfigDirPath returns the kubeconfig output directory, allowing override via env var for dev/testing.
-func kubeconfigDirPath() string {
-	if dir := os.Getenv(constants.KubeconfigDirEnvVar); dir != "" {
-		return dir
-	}
-	return constants.KubernetesConfigPath
-}
 
 // condition helpers
 

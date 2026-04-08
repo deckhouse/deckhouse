@@ -48,9 +48,9 @@ const (
 //	data dir exists but not in cluster -> orphan, needs join (cleanup)
 //
 // must ensure admin.conf exists before calling (for ensureAdminKubeconfig).
-func etcdNeedsJoin(nodeName, pkiDir, kubeconfigDir string) (bool, error) {
-	peerURL := etcd.GetPeerURL(os.Getenv("MY_IP"))
-	exists, err := checkEtcdMemberExists(nodeName, peerURL, pkiDir, kubeconfigDir)
+func etcdNeedsJoin(node NodeIdentity, pkiDir, kubeconfigDir string) (bool, error) {
+	peerURL := etcd.GetPeerURL(node.AdvertiseIP)
+	exists, err := checkEtcdMemberExists(node.Name, peerURL, pkiDir, kubeconfigDir)
 	if err != nil {
 		return false, fmt.Errorf("check etcd membership: %w", err)
 	}
@@ -119,7 +119,7 @@ func checkEtcdMemberExists(nodeName, peerURL, pkiDir, kubeconfigDir string) (boo
 
 // ensureAdminKubeconfig creates admin.conf if it does not exist.
 // CA files must be on disk (CA operation completed)
-func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir string) error {
+func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir, advertiseIP string) error {
 	adminConfPath := filepath.Join(kubeconfigDir, "admin.conf")
 	if _, err := os.Stat(adminConfPath); err == nil {
 		return nil // already exists
@@ -132,7 +132,7 @@ func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir s
 		return kubeconfig.CreateKubeconfigFiles(files,
 			kubeconfig.WithCertificatesDir(pkiDir),
 			kubeconfig.WithOutDir(kubeconfigDir),
-			kubeconfig.WithLocalAPIEndpoint(os.Getenv("MY_IP")),
+			kubeconfig.WithLocalAPIEndpoint(advertiseIP),
 			kubeconfig.WithEncryptionAlgorithm(pkiconstants.EncryptionAlgorithmType(algo)),
 		)
 	}
@@ -140,7 +140,7 @@ func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir s
 	return kubeconfig.CreateKubeconfigFiles(files,
 		kubeconfig.WithCertificatesDir(pkiDir),
 		kubeconfig.WithOutDir(kubeconfigDir),
-		kubeconfig.WithLocalAPIEndpoint(os.Getenv("MY_IP")),
+		kubeconfig.WithLocalAPIEndpoint(advertiseIP),
 	)
 }
 
@@ -170,13 +170,8 @@ func (r *Reconciler) reconcileEtcdJoin(
 		return reconcile.Result{}, fmt.Errorf("prepare etcd manifest: %w", err)
 	}
 
-	ip := os.Getenv("MY_IP")
-	if ip == "" {
-		return reconcile.Result{}, fmt.Errorf("MY_IP env var is not set")
-	}
-
-	logger.Info("etcd join: calling JoinCluster", slog.String("ip", ip))
-	if err := etcd.JoinCluster(manifest, ip, r.nodeName,
+	logger.Info("etcd join: calling JoinCluster", slog.String("ip", r.node.AdvertiseIP))
+	if err := etcd.JoinCluster(manifest, r.node.AdvertiseIP, r.node.Name,
 		etcd.WithManifestDir(constants.ManifestsPath),
 		etcd.WithCertificatesDir(constants.KubernetesPkiPath),
 	); err != nil {
