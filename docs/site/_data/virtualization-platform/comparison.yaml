@@ -1,9 +1,9 @@
 editions:
-- dkp-ce
 - dvp-ee
+- dvp-cse
+- dkp-ce
 - dkp-se-plus
 - dkp-ee
-- dvp-cse
 - dkp-cse-pro
 featureSections:
 - features:
@@ -155,19 +155,8 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: planned
-      dkp-cse-pro: planned
-    restriction_message:
-      dvp-cse:
-        en: |
-          Planned for inclusion
-        ru: |
-          Планируется к включению
-      dkp-cse-pro:
-        en: |
-          Planned for inclusion
-        ru: |
-          Планируется к включению
+      dvp-cse: supported
+      dkp-cse-pro: supported
 - title:
     ru: Возможности управления
     en: Management capabilities
@@ -342,19 +331,8 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: planned
-      dkp-cse-pro: planned
-    restriction_message:
-      dvp-cse:
-        en: |
-          Planned for inclusion
-        ru: |
-          Планируется к включению
-      dkp-cse-pro:
-        en: |
-          Planned for inclusion
-        ru: |
-          Планируется к включению
+      dvp-cse: supported
+      dkp-cse-pro: supported
   - title:
       ru: Экспорт дисков и снимков
       en: Disk and snapshot export
