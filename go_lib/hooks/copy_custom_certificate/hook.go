@@ -73,6 +73,11 @@ func RegisterHook(moduleName string) bool {
 						Operator: metav1.LabelSelectorOpNotIn,
 						Values:   []string{"helm"},
 					},
+					{
+						Key:      "heritage",
+						Operator: metav1.LabelSelectorOpNotIn,
+						Values:   []string{"deckhouse"},
+					},
 				}},
 				FilterFunc: applyCustomCertificateFilter,
 			},
@@ -98,6 +103,15 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 		}
 
 		httpsMode := module.GetHTTPSMode(moduleName, input)
+		fmt.Printf("Getting httpsmode for %s\n", moduleName)
+		fmt.Println(httpsMode)
+		// case for control-plane-manager publishAPI which is not usual https.mode but requires CustomCertificate
+		if httpsMode == "" {
+			rawHttpsMode, _ := module.GetValuesFirstDefined(input, fmt.Sprintf("%s.apiserver.publishAPI.ingress.https.mode", moduleName))
+			fmt.Println(rawHttpsMode)
+			httpsMode = rawHttpsMode.String()
+			fmt.Println(httpsMode)
+		}
 
 		if httpsMode != "CustomCertificate" {
 			input.Values.Remove(fmt.Sprintf("%s.internal.customCertificateData", moduleName))
