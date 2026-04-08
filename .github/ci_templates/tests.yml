@@ -35,7 +35,7 @@ docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse -v ~/go-pkg-c
 
 {!{ define "validators_run_args" }!}
 # <template: validators_run_args>
-args: 'go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
+args: 'go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
 docker_options: '-w /deckhouse -v ~/go-pkg-cache:/go/pkg'
 # </template: validators_run_args>
 {!{- end -}!}
