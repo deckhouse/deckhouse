@@ -15,7 +15,7 @@ static int is_compiler(const char *filename) {
         strstr(filename, "/g++") ||
         strstr(filename, "/clang") ||
         strstr(filename, "/clang++") ||
-        strstr(filename, "/cc") ||
+        strstr(filename, "/cc")
     )
 
     && !strstr(filename, "cc1")
