@@ -73,12 +73,14 @@ shell:
   - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
   - |
     # todo: rm RUSTFLAGS afte update to 0.50.0
-    export RUSTFLAGS="-A mismatched_lifetime_syntaxes -A dead_code --cap-lints warn"
-    cargo build \
+    export RUSTFLAGS="-C overflow-checks=yes -C strip=symbols -C opt-level=2 -D warnings -A mismatched_lifetime_syntaxes -A dead_code --cap-lints warn"
+    cargo rustc \
     --release \
+    --bin vector \
     -j $(($(nproc) /2)) \
     --no-default-features \
-    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored,aws-core"
+    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored,aws-core" \
+    -- -C link-arg=-pie -C link-arg=-Wl,-z,relro,-z,now
   - strip target/release/vector
   - mkdir -p /relocate/etc /relocate/usr/bin
   - cp target/release/vector /vector
