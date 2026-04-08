@@ -12,6 +12,7 @@ spec:
   - name: http
     protocol: TCP
     port: 80
+    targetPort: http
   selector:
     app: alliance-healthcheck
   {{- end }}
@@ -28,6 +29,7 @@ spec:
   - name: http
     protocol: TCP
     port: 80
+    targetPort: http
   selector:
     app: alliance-healthcheck
   {{- end }}
