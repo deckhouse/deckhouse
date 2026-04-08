@@ -107,9 +107,6 @@ spec:
                     total:
                       description: |
                         Общее количество найденных пакетов.
-                phase:
-                  description: |
-                    Текущая фаза операции.
                 startTime:
                   description: |
                     Время начала операции.

@@ -23,8 +23,8 @@ import (
 	"sort"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +33,6 @@ import (
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -51,19 +50,16 @@ const (
 
 type reconciler struct {
 	client client.Client
-	dc     dependency.Container
 	psm    registryService.ServiceManagerInterface[registryService.PackagesService]
 	logger *log.Logger
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
-	dc dependency.Container,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
 		client: runtimeManager.GetClient(),
-		dc:     dc,
 		psm:    registryService.NewPackageServiceManager(logger.Named("packages_manager")),
 		logger: logger,
 	}
@@ -205,26 +201,24 @@ func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepo
 	var res ctrl.Result
 	var err error
 
-	// State machine based on phase
-	switch operation.Status.Phase {
-	case "": // Initial state
-		res, err = r.handleInitialState(ctx, operation)
-	case v1alpha1.PackageRepositoryOperationPhasePending:
-		res, err = r.handlePendingState(ctx, operation)
-	case v1alpha1.PackageRepositoryOperationPhaseDiscover:
-		res, err = r.handleDiscoverState(ctx, operation)
-	case v1alpha1.PackageRepositoryOperationPhaseProcessing:
-		res, err = r.handleProcessingState(ctx, operation)
-	case v1alpha1.PackageRepositoryOperationPhaseCompleted:
+	// State machine based on conditions
+	switch {
+	case apimeta.IsStatusConditionTrue(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationConditionCompleted):
 		err = r.handleCompletedState(ctx, operation)
-	default:
-		r.logger.Warn("unknown phase", slog.String("phase", operation.Status.Phase))
-
+	case apimeta.FindStatusCondition(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationConditionCompleted) != nil:
+		// Completed=False means failed, nothing more to do
 		return ctrl.Result{}, nil
+	case apimeta.IsStatusConditionTrue(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationConditionDiscovered):
+		res, err = r.handleProcessingState(ctx, operation)
+	case apimeta.IsStatusConditionTrue(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationConditionPending):
+		res, err = r.handleDiscoverState(ctx, operation)
+	default:
+		// Initial state - no conditions set yet
+		res, err = r.handleInitialState(ctx, operation)
 	}
 
 	if err != nil {
-		return res, fmt.Errorf("handle %s state: %w", operation.Status.Phase, err)
+		return res, fmt.Errorf("handle state: %w", err)
 	}
 
 	return res, nil
@@ -233,27 +227,16 @@ func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepo
 func (r *reconciler) handleInitialState(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
 	r.logger.Debug("handling initial state", slog.String("name", operation.Name))
 
-	// Move to Pending phase
+	// Set Pending condition
 	original := operation.DeepCopy()
 
-	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhasePending
+	apimeta.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+		Type:   v1alpha1.PackageRepositoryOperationConditionPending,
+		Status: metav1.ConditionTrue,
+		Reason: v1alpha1.PackageRepositoryOperationReasonReady,
+	})
 	now := metav1.Now()
 	operation.Status.StartTime = &now
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
-	}
-
-	return ctrl.Result{Requeue: true}, nil
-}
-
-func (r *reconciler) handlePendingState(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	r.logger.Debug("handling pending state", slog.String("name", operation.Name))
-
-	// Move to Processing phase
-	original := operation.DeepCopy()
-
-	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseDiscover
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
@@ -275,7 +258,6 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
 
 		var reason, message string
 		// Check if the underlying error is NotFound (works with wrapped errors)
@@ -297,12 +279,12 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			message = fmt.Sprintf("Failed to create operation service: %v", err)
 		}
 
-		r.SetConditionFalse(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionCompleted,
-			reason,
-			message,
-		)
+		apimeta.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+			Type:    v1alpha1.PackageRepositoryOperationConditionCompleted,
+			Status:  metav1.ConditionFalse,
+			Reason:  reason,
+			Message: message,
+		})
 
 		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 			return ctrl.Result{}, patchErr
@@ -322,15 +304,14 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 		original := operation.DeepCopy()
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
 		message := fmt.Sprintf("Failed to list packages: %v", err)
 
-		r.SetConditionFalse(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionCompleted,
-			v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
-			message,
-		)
+		apimeta.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+			Type:    v1alpha1.PackageRepositoryOperationConditionCompleted,
+			Status:  metav1.ConditionFalse,
+			Reason:  v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
+			Message: message,
+		})
 
 		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 			return ctrl.Result{}, patchErr
@@ -354,19 +335,9 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 }
 
 func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
 	logger := r.logger.With(slog.String("name", operation.Name))
 
 	logger.Debug("handling processing state")
-
-	// Check if operation already has a failed condition - skip processing if so
-	for _, cond := range operation.Status.Conditions {
-		if cond.Type == v1alpha1.PackageRepositoryOperationConditionCompleted && cond.Status == corev1.ConditionFalse {
-			logger.Debug("operation already has failed condition, skipping processing")
-			return res, nil
-		}
-	}
 
 	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
@@ -395,12 +366,12 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 			message = fmt.Sprintf("Failed to create operation service: %v", err)
 		}
 
-		r.SetConditionFalse(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionCompleted,
-			reason,
-			message,
-		)
+		apimeta.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+			Type:    v1alpha1.PackageRepositoryOperationConditionCompleted,
+			Status:  metav1.ConditionFalse,
+			Reason:  reason,
+			Message: message,
+		})
 
 		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 			return ctrl.Result{}, patchErr
@@ -427,14 +398,14 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		original := operation.DeepCopy()
 
 		// All packages processed, mark as completed
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
 
-		r.SetConditionTrue(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionCompleted,
-		)
+		apimeta.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+			Type:   v1alpha1.PackageRepositoryOperationConditionCompleted,
+			Status: metav1.ConditionTrue,
+			Reason: v1alpha1.PackageRepositoryOperationReasonReady,
+		})
 
 		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
@@ -475,7 +446,12 @@ func (r *reconciler) handleOperationDiscoverResult(ctx context.Context, operatio
 	operation.Status.Packages.Discovered = operationStatusPackages
 	operation.Status.Packages.Total = len(discovered.Packages)
 	operation.Status.Packages.ProcessedOverall = 0
-	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
+
+	apimeta.SetStatusCondition(&operation.Status.Conditions, metav1.Condition{
+		Type:   v1alpha1.PackageRepositoryOperationConditionDiscovered,
+		Status: metav1.ConditionTrue,
+		Reason: v1alpha1.PackageRepositoryOperationReasonReady,
+	})
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("update operation status: %w", err)
@@ -619,64 +595,6 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 	return nil
 }
 
-func (r *reconciler) SetConditionTrue(operation *v1alpha1.PackageRepositoryOperation, condType string) *v1alpha1.PackageRepositoryOperation {
-	time := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range operation.Status.Conditions {
-		if cond.Type == condType {
-			operation.Status.Conditions[idx].LastProbeTime = time
-			if cond.Status != corev1.ConditionTrue {
-				operation.Status.Conditions[idx].LastTransitionTime = time
-				operation.Status.Conditions[idx].Status = corev1.ConditionTrue
-			}
-
-			operation.Status.Conditions[idx].Reason = ""
-			operation.Status.Conditions[idx].Message = ""
-
-			return operation
-		}
-	}
-
-	operation.Status.Conditions = append(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationStatusCondition{
-		Type:               condType,
-		Status:             corev1.ConditionTrue,
-		LastProbeTime:      time,
-		LastTransitionTime: time,
-	})
-
-	return operation
-}
-
-func (r *reconciler) SetConditionFalse(operation *v1alpha1.PackageRepositoryOperation, condType string, reason string, message string) *v1alpha1.PackageRepositoryOperation {
-	time := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range operation.Status.Conditions {
-		if cond.Type == condType {
-			operation.Status.Conditions[idx].LastProbeTime = time
-			if cond.Status != corev1.ConditionFalse {
-				operation.Status.Conditions[idx].LastTransitionTime = time
-				operation.Status.Conditions[idx].Status = corev1.ConditionFalse
-			}
-
-			operation.Status.Conditions[idx].Reason = reason
-			operation.Status.Conditions[idx].Message = message
-
-			return operation
-		}
-	}
-
-	operation.Status.Conditions = append(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationStatusCondition{
-		Type:               condType,
-		Status:             corev1.ConditionFalse,
-		Reason:             reason,
-		Message:            message,
-		LastProbeTime:      time,
-		LastTransitionTime: time,
-	})
-
-	return operation
-}
-
 func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoName string, success bool, reason, message string) error {
 	repo := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: repoName}, repo); err != nil {
@@ -687,38 +605,18 @@ func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoN
 	}
 
 	original := repo.DeepCopy()
-	now := metav1.NewTime(r.dc.GetClock().Now())
 
 	status := metav1.ConditionTrue
 	if !success {
 		status = metav1.ConditionFalse
 	}
 
-	conditionExists := false
-	for idx, cond := range repo.Status.Conditions {
-		if cond.Type == v1alpha1.PackageRepositoryConditionLastOperationScanFinished {
-			conditionExists = true
-
-			if cond.Status != status {
-				repo.Status.Conditions[idx].LastTransitionTime = now
-				repo.Status.Conditions[idx].Status = status
-			}
-
-			repo.Status.Conditions[idx].Reason = reason
-			repo.Status.Conditions[idx].Message = message
-			break
-		}
-	}
-
-	if !conditionExists {
-		repo.Status.Conditions = append(repo.Status.Conditions, metav1.Condition{
-			Type:               v1alpha1.PackageRepositoryConditionLastOperationScanFinished,
-			Status:             status,
-			Reason:             reason,
-			Message:            message,
-			LastTransitionTime: now,
-		})
-	}
+	apimeta.SetStatusCondition(&repo.Status.Conditions, metav1.Condition{
+		Type:    v1alpha1.PackageRepositoryConditionLastOperationScanFinished,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
+	})
 
 	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("update package repository status: %w", err)

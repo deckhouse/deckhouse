@@ -16,7 +16,12 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Completed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -35,7 +40,12 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Completed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -54,7 +64,12 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Completed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -71,7 +86,12 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Completed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -88,7 +108,12 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Completed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -105,7 +130,12 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Completed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -122,7 +152,12 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Completed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -141,7 +176,12 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Completed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -160,7 +200,12 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Completed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -179,4 +224,9 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Completed
