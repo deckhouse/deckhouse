@@ -274,10 +274,21 @@ func (r *Reconciler) ensureOperationsExist(
 		operationName := operationNameForNode(cpn.Name, state)
 
 		if ownerUID, exists := existingOwners[operationName]; exists && ownerUID == cpn.UID {
-			logger.Debug("ControlPlaneOperation already exists, skipping",
+			existingOp := findOpByName(ops, operationName)
+			if existingOp == nil || !isCancelled(existingOp) {
+				logger.Debug("ControlPlaneOperation already exists, skipping",
+					slog.String("operation", operationName),
+					slog.String("component", string(state.component)))
+				continue
+			}
+			// Operation name not using configVersion
+			// delete to recreate with the current configVersion if operation stuck in cancelled state (already approved)
+			logger.Info("deleting cancelled ControlPlaneOperation to recreate with current configVersion",
 				slog.String("operation", operationName),
 				slog.String("component", string(state.component)))
-			continue
+			if err := r.client.Delete(ctx, existingOp); err != nil && !apierrors.IsNotFound(err) {
+				return fmt.Errorf("delete cancelled ControlPlaneOperation %s: %w", operationName, err)
+			}
 		}
 
 		// building operation object
@@ -874,6 +885,24 @@ func renewalCondition(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlp
 			ObservedGeneration: gen,
 		}
 	}
+}
+
+func findOpByName(ops []controlplanev1alpha1.ControlPlaneOperation, name string) *controlplanev1alpha1.ControlPlaneOperation {
+	for i := range ops {
+		if ops[i].Name == name {
+			return &ops[i]
+		}
+	}
+	return nil
+}
+
+func isCancelled(op *controlplanev1alpha1.ControlPlaneOperation) bool {
+	for _, cond := range op.Status.Conditions {
+		if cond.Type == constants.ConditionReady && cond.Reason == constants.ReasonCancelled {
+			return true
+		}
+	}
+	return false
 }
 
 // findExpiringCertsMessage checks all components for certs expiring within threshold.
