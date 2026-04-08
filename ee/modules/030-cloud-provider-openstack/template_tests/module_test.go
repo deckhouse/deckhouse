@@ -7,7 +7,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
-2. There are applications which must be deployed — cloud-controller-manager, cinder-csi-driver.
+2. There are applications which must be deployed — cloud-controller-manager, cinder-csi-driver
 
 */
 
