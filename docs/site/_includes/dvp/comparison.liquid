@@ -1,19 +1,37 @@
-{% assign not_supported = '<img src="/images/icons/not_supported_v2.svg">' %}
-{% assign supported = '<img src="/images/icons/supported_v2.svg">' %}
+{% assign not_supported = '<img class="zoom-image-disable" src="/images/icons/not_supported_v2.svg" alt="">' %}
+{% assign supported = '<img class="zoom-image-disable" src="/images/icons/supported_v2.svg" alt="">' %}
+{% assign comparison_colspan = 7 %}
+{% if page.lang == 'en' %}
+  {% assign comparison_colspan = 5 %}
+{% endif %}
 
 <div markdown="0">
-<table class="supported_versions table__small" style="table-layout: fixed; min-width: 600px; width: 100%;">
+<table class="supported_versions table__small" style="width: 100%; max-width: 100%; table-layout: auto;">
   <colgroup>
-    <col style="width: auto; min-width: 250px; max-width: 400px;">
-    <col style="width: 100px; min-width: 100px;">
-    <col style="width: 100px; min-width: 100px;">
-    <col style="width: 100px; min-width: 100px;">
-    <col style="width: 100px; min-width: 100px;">
+    <col style="width: {% if page.lang == 'en' %}36%{% else %}38%{% endif %};">
+    {% if page.lang == 'en' %}
+    <col style="width: 16%;">
+    <col style="width: 16%;">
+    <col style="width: 16%;">
+    <col style="width: 16%;">
+    {% else %}
+    <col style="width: 10.33%;">
+    <col style="width: 10.33%;">
+    <col style="width: 10.33%;">
+    <col style="width: 10.33%;">
+    <col style="width: 10.34%;">
+    <col style="width: 10.34%;">
+    {% endif %}
   </colgroup>
 <thead class="versioning-table">
   <tr>
     <th style="text-align: left; white-space: nowrap;">{{site.data.i18n.common['features'][page.lang] }}</th>
     {%- for edition in site.data.virtualization-platform.comparison.editions %}
+    {%- if page.lang == 'en' %}
+    {%- if edition == 'dvp-cse' or edition == 'dkp-cse-pro' %}
+    {%- continue %}
+    {%- endif %}
+    {%- endif %}
     <th style="text-align: center; white-space: nowrap;">{{site.data.i18n[edition]}}</th>
     {%- endfor %}
   </tr>
@@ -22,7 +40,7 @@
 {%- for featureSection in site.data.virtualization-platform.comparison.featureSections %}
   {% if featureSection['title'][page.lang] %}
   <tr>
-    <td style="text-align: left; white-space: nowrap;" colspan="5">
+    <td style="text-align: left; white-space: nowrap;" colspan="{{ comparison_colspan }}">
       <strong>{{ featureSection['title'][page.lang] }}</strong>
     </td>
   </tr>
@@ -34,6 +52,11 @@
         {{ feature['title'][page.lang] }}
       </td>
       {%- for edition in site.data.virtualization-platform.comparison.editions %}
+      {%- if page.lang == 'en' %}
+      {%- if edition == 'dvp-cse' or edition == 'dkp-cse-pro' %}
+      {%- continue %}
+      {%- endif %}
+      {%- endif %}
       <td style="text-align: center;">
         <div class="icon" style="padding: 0 0;">
           {% case feature.editions[edition] %}
@@ -41,8 +64,12 @@
               {{ supported }}
             {% when "not_supported" %}
               {{ not_supported }}
+            {% when "planned" %}
+              <img class="zoom-image-disable" src="/images/icons/clock.svg" alt="" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+            {% when "partly" %}
+              <img class="zoom-image-disable" src="/images/icons/partly_supported.svg" alt="" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
             {% else %}
-              <img src="/images/icons/intermediate_v2.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+              <img class="zoom-image-disable" src="/images/icons/partly_supported.svg" alt="" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
           {% endcase %}
         </div>
       </td>
