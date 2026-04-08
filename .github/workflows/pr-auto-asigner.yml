@@ -28,6 +28,6 @@ permissions:
 
 jobs:
   assign-author:
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     steps:
       - uses: toshimaru/auto-author-assign@v2.1.0
