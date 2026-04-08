@@ -1,15 +1,15 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
 package main
 
 type DataPlaneHealthStatus struct {
-	Connected           bool   `json:"connected"`
+	Connected            bool   `json:"connected"`
 	LastCheckTimestamp   string `json:"lastCheckTimestamp"`
 	LastSuccessTimestamp string `json:"lastSuccessTimestamp,omitempty"`
-	Message             string `json:"message,omitempty"`
+	Message              string `json:"message,omitempty"`
 }
 
 type FederationPrivateMetadata struct {
