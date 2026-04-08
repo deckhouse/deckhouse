@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-0a7dee882b0213b53ce1f13791d223657afca21285b99e07e15b935fa0456093",
   "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 4,
+  "version": 5,
   "statements": [
     {
       "vulnerability": {
@@ -59,8 +59,53 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Функционал TUF клиента с использованием уязвимого кода sigstore версии v1.8.8 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2026-03-04T12:00:38Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-34040 невозможно эксплуатировать в рамках Deckhouse: уязвимость относится к работе с запуском dockerd, обслуживанием API Docker Engine и подключением плагинов AuthZ. Соответственно, уязвимый код в патчах привносящих данную зависиомсть в containerd не выполняется.",
+      "timestamp": "2026-04-07T10:43:26.143812Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33997 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает часть по работе с Docker Engine при установке устаревших (legacy) плагинов Docker - установка плагинов и проверка их привилегий в патчах привносящих данную зависиомсть в containerd не выполняются.",
+      "timestamp": "2026-04-07T10:45:27.439571Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34986"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-jose/go-jose/v3@v3.0.4"
+        },
+        {
+          "@id": "pkg:golang/github.com/go-jose/go-jose/v4@v4.0.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-34986 невозможно эксплуатировать в рамках Deckhouse: плтаформа не использует шифрование образов, в ней не настроен и не используется ctd-decoder, цепочка вызовов которого (containerd -> imgcrypt -> ocicrypt -> go-jose) и может привести к эксплуатации уязвимости, при всех воплощённых в ней условиях.",
+      "timestamp": "2026-04-07T13:06:33.386247Z"
     }
   ],
   "timestamp": "2026-03-04T12:00:38Z",
-  "last_updated": "2026-03-24T14:28:43Z"
+  "last_updated": "2026-04-07T13:06:33Z"
 }
