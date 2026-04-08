@@ -1,0 +1,7 @@
+properties:
+  deschedulingInterval:
+    description: |
+      Preset интервала между запусками descheduler.
+      - `Frequent` — каждые 5 минут;
+      - `Moderate` — каждые 15 минут;
+      - `Rare` — каждые 30 минут.
