@@ -131,3 +131,16 @@ spec:
                     privateLastFetchTimestamp:
                       format: date-time
                       type: string
+                dataPlaneHealth:
+                  type: object
+                  properties:
+                    connected:
+                      type: boolean
+                    lastCheckTimestamp:
+                      type: string
+                      format: date-time
+                    lastSuccessTimestamp:
+                      type: string
+                      format: date-time
+                    message:
+                      type: string
