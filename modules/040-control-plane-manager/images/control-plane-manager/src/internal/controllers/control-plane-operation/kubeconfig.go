@@ -48,7 +48,7 @@ func kubeconfigFilesForComponent(c controlplanev1alpha1.OperationComponent) []ku
 func renewKubeconfigsForComponent(
 	component controlplanev1alpha1.OperationComponent,
 	secretData map[string][]byte,
-	pkiDir, kubeconfigDir string,
+	pkiDir, kubeconfigDir, advertiseIP string,
 ) error {
 	files := kubeconfigFilesForComponent(component)
 	if len(files) == 0 {
@@ -60,7 +60,7 @@ func renewKubeconfigsForComponent(
 		return kubeconfig.CreateKubeconfigFiles(files,
 			kubeconfig.WithCertificatesDir(pkiDir),
 			kubeconfig.WithOutDir(kubeconfigDir),
-			kubeconfig.WithLocalAPIEndpoint(os.Getenv("MY_IP")),
+			kubeconfig.WithLocalAPIEndpoint(advertiseIP),
 			kubeconfig.WithEncryptionAlgorithm(pkiconstants.EncryptionAlgorithmType(algo)),
 		)
 	}
@@ -68,7 +68,7 @@ func renewKubeconfigsForComponent(
 	return kubeconfig.CreateKubeconfigFiles(files,
 		kubeconfig.WithCertificatesDir(pkiDir),
 		kubeconfig.WithOutDir(kubeconfigDir),
-		kubeconfig.WithLocalAPIEndpoint(os.Getenv("MY_IP")),
+		kubeconfig.WithLocalAPIEndpoint(advertiseIP),
 	)
 }
 
@@ -78,9 +78,9 @@ func needsRootKubeconfig(c controlplanev1alpha1.OperationComponent) bool {
 }
 
 // updateRootKubeconfig ensures /root/.kube/config is a symlink to admin.conf.
-func updateRootKubeconfig(kubeconfigDir string) error {
+func updateRootKubeconfig(kubeconfigDir, homeDir string) error {
 	var symlinkPath string
-	if homeDir, ok := os.LookupEnv("HOME"); ok && homeDir != "/" {
+	if homeDir != "" && homeDir != "/" {
 		symlinkPath = filepath.Join(homeDir, ".kube", "config")
 	} else {
 		symlinkPath = "/root/.kube/config"

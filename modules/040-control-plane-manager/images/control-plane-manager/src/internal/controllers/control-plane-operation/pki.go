@@ -153,12 +153,12 @@ func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.Le
 	)
 }
 
-func parsePKIParams(pkiDir string, secretData map[string][]byte) PKIParams {
+func parsePKIParams(pkiDir string, secretData map[string][]byte, node NodeIdentity) PKIParams {
 	params := PKIParams{
-		NodeName:          os.Getenv("NODE_NAME"),
-		AdvertiseAddress:  os.Getenv("MY_IP"),
-		ClusterDomain:     os.Getenv("CLUSTER_DOMAIN"),
-		ServiceSubnetCIDR: os.Getenv("SERVICE_SUBNET_CIDR"),
+		NodeName:          node.Name,
+		AdvertiseAddress:  node.AdvertiseIP,
+		ClusterDomain:     node.ClusterDomain,
+		ServiceSubnetCIDR: node.ServiceSubnetCIDR,
 		PKIDir:            pkiDir,
 	}
 
