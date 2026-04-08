@@ -45,8 +45,8 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: not_supported
-      dkp-cse-pro: not_supported
+      dvp-cse: supported
+      dkp-cse-pro: supported
   - title:
       ru: Режим обслуживания гипервизоров
       en: Hypervisor maintenance mode
@@ -342,8 +342,8 @@ featureSections:
       dvp-ee: supported
       dkp-se-plus: supported
       dkp-ee: supported
-      dvp-cse: partly
-      dkp-cse-pro: partly
+      dvp-cse: supported
+      dkp-cse-pro: supported
     restriction_message:
       dvp-cse:
         en: |
