@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,6 +37,7 @@ import (
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/monitor/hookprobe"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
 const svcName = "deckhouse-leader"
@@ -99,6 +101,12 @@ func (c *D8ClusterConfiguration) Checker() check.Checker {
 		c.ObjectChangeTimeout,
 	)
 
+	cleanupExtraHookProbes := &cleanupExtraHookProbesChecker{
+		access:        c.Access,
+		dynamicClient: dynamicClient,
+		logger:        c.Logger.WithField("component", "cleanup"),
+	}
+
 	checkMirrorValue := withRetryEachSeconds(
 		&checkMirrorValueChecker{
 			name:   c.CustomResourceName,
@@ -112,6 +120,7 @@ func (c *D8ClusterConfiguration) Checker() check.Checker {
 	return sequence(
 		c.PreflightChecker,
 		checkDeckhouse,
+		cleanupExtraHookProbes,
 		setInitedValue,
 		checkMirrorValue,
 	)
@@ -245,6 +254,54 @@ func (c *setInitedValueChecker) create(value string) check.Error {
 	opts := metav1.CreateOptions{FieldManager: c.fieldManager}
 	if _, err := c.dynamicClient.Create(context.TODO(), obj, opts); err != nil {
 		return check.ErrFail("cannot create UpmeterHookProbe object in cluster: %v", err)
+	}
+
+	return nil
+}
+
+type cleanupExtraHookProbesChecker struct {
+	access        kubernetes.Access
+	dynamicClient dynamic.ResourceInterface
+	logger        *logrus.Entry
+}
+
+func (c *cleanupExtraHookProbesChecker) Check() check.Error {
+	ctx := context.TODO()
+
+	pods, err := c.access.Kubernetes().CoreV1().Pods("d8-upmeter").List(ctx, metav1.ListOptions{
+		LabelSelector: "app=upmeter-agent",
+	})
+	if err != nil {
+		c.logger.Warnf("cannot list upmeter-agent pods: %v", err)
+		return nil
+	}
+
+	expectedNames := make(map[string]struct{})
+	for _, pod := range pods.Items {
+		if pod.Spec.NodeName == "" {
+			continue
+		}
+		expectedNames[run.NodeNameHash(pod.Spec.NodeName)] = struct{}{}
+	}
+
+	list, err := c.dynamicClient.List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		c.logger.Warnf("cannot list UpmeterHookProbe objects: %v", err)
+		return nil
+	}
+
+	threshold := time.Now().Add(-5 * time.Minute)
+	for i := range list.Items {
+		obj := &list.Items[i]
+		if _, ok := expectedNames[obj.GetName()]; ok {
+			continue
+		}
+		if ts := obj.GetCreationTimestamp(); !ts.IsZero() && ts.Time.After(threshold) {
+			continue
+		}
+		if err := c.dynamicClient.Delete(ctx, obj.GetName(), metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+			c.logger.Warnf("cannot delete UpmeterHookProbe %q: %v", obj.GetName(), err)
+		}
 	}
 
 	return nil
