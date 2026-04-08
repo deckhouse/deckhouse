@@ -9,19 +9,30 @@ extern char **environ;
 
 static int is_compiler(const char *filename) {
     if (!filename) return 0;
-    return strstr(filename, "gcc") ||
-           strstr(filename, "g++") ||
-           strstr(filename, "clang") ||
-           strstr(filename, "clang++");
+
+    return (
+        strstr(filename, "/gcc") ||
+        strstr(filename, "/g++") ||
+        strstr(filename, "/clang") ||
+        strstr(filename, "/clang++") ||
+        strstr(filename, "/cc") ||
+    )
+
+    && !strstr(filename, "cc1")
+    && !strstr(filename, "collect2")
+    && !strstr(filename, "/as")
+    && !strstr(filename, "/ld");
 }
 
 static void log_argv(const char *tag, const char *file, char *const argv[]) {
     if (!is_compiler(file)) return;
 
-    fprintf(stderr, "\n[%s][PID %d] %s\n", tag, getpid(), file);
+    fprintf(stderr, "[CC][PID %d] ", getpid());
+
     for (int i = 0; argv && argv[i]; i++) {
-        fprintf(stderr, "  argv[%d]: %s\n", i, argv[i]);
+        fprintf(stderr, "%s ", argv[i]);
     }
+
     fprintf(stderr, "\n");
     fflush(stderr);
 }
