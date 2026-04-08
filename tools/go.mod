@@ -1,6 +1,6 @@
 module tools
 
-go 1.24.10
+go 1.25.0
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
@@ -146,9 +146,9 @@ require (
 	github.com/sourcegraph/go-diff v0.6.1 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
-	github.com/spf13/cobra v1.9.1 // indirect
+	github.com/spf13/cobra v1.10.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/spf13/viper v1.8.1 // indirect
 	github.com/ssgreg/nlreturn/v2 v2.1.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
@@ -180,7 +180,7 @@ require (
 	golang.org/x/tools v0.39.0 // indirect
 	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	helm.sh/helm/v3 v3.15.4 // indirect
