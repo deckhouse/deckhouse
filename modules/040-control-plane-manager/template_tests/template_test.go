@@ -136,6 +136,10 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     kubernetesVersion: 1.15.4
 `
 	const moduleValues = `
+  apiserver:
+    publishAPI:
+      ingress: {}
+      loadBalancer: {}
   internal:
     effectiveKubernetesVersion: "1.32"
     etcdServers:
@@ -146,6 +150,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     rolloutEpoch: 1857
     nodesCount: 0
     kubeSchedulerExtenders: []
+    authn: {}
+    selfSignedCA: {}
 `
 
 	const defultAudience = "https://kubernetes.default.svc.cluster.local"
@@ -157,9 +163,14 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
   serviceAccount:
     issuer: https://api.example.com
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 	const moduleValuesIssuerAdditionalAudiences = `
 internal:
@@ -168,12 +179,17 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
   serviceAccount:
     issuer: https://api.example.com
     additionalAPIAudiences:
       - https://api.example.com
       - https://bob.com
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 
 	const moduleValuesAdditionalIssuerOnly = `
@@ -183,7 +199,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     issuer: https://api.example.com
     additionalAPIIssuers:
@@ -197,7 +218,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     additionalAPIIssuers:
       - https://api.example.com
@@ -213,7 +239,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     issuer: https://api.example.com
     additionalAPIIssuers:
@@ -231,7 +262,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     issuer: https://kubernetes.default.svc.cluster.local
     additionalAPIIssuers:
@@ -248,7 +284,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     additionalAPIIssuers:
       - https://kubernetes.default.svc.cluster.local
@@ -265,6 +306,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 
 	const apiServerWithOidcFull = `
@@ -274,8 +321,13 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authn:
     oidcIssuerURL: https://dex.example.com
     oidcCA: |
@@ -290,8 +342,13 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authn:
     oidcIssuerURL: https://dex.example.com
 `
@@ -303,8 +360,13 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authn: {}
 `
 	f := SetupHelmConfig(`controlPlaneManager: {}`)
@@ -828,6 +890,8 @@ resources:
 		testKubeadmVersion := func(k8sVersion, expectedApiVersion string) {
 			testValues := fmt.Sprintf(`
 internal:
+  authn: {}
+  selfSignedCA: {}
   effectiveKubernetesVersion: "%s"
   etcdServers:
     - https://192.168.199.186:2379
@@ -835,6 +899,10 @@ internal:
     - master-0
   pkiChecksum: checksum
   rolloutEpoch: 1857
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `, k8sVersion)
 
 			BeforeEach(func() {
@@ -879,10 +947,15 @@ internal:
     - master-0
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit:
     webhookURL: "https://audit.example.com"
     webhookCA: "LS0tLS1CRUdJTi..."
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authz:
     webhookURL: "https://authz.example.com"
     webhookCA: "LS0tLS1CRUdJTi..."
@@ -901,7 +974,12 @@ internal:
     - master-0
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authz:
     webhookURL: "https://authz.example.com"
 `
@@ -918,7 +996,12 @@ internal:
   audit:
     webhookURL: "https://audit.example.com"
     webhookCA: "LS0tLS1CRUdJTi..."
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authz:
     webhookURL: "https://authz.example.com"
     webhookCA: "LS0tLS1CRUdJTi..."
@@ -1051,6 +1134,12 @@ internal:
   rolloutEpoch: 1857
   nodesCount: %d
   kubeSchedulerExtenders: []
+  authn: {}
+  selfSignedCA: {}
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 
 				testValues := fmt.Sprintf(testValuesTemplate, nodesCount)

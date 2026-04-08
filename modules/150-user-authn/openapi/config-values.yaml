@@ -3,6 +3,7 @@ type: object
 properties:
   publishAPI:
     type: object
+    x-doc-deprecated: true
     default: {}
     description: 'Settings for exposing the API server using Ingress.'
     properties:
