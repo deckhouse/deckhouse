@@ -1,0 +1,19 @@
+{{- if and (.Values.cniCilium.evpn) (.Values.cniCilium.evpn.enabled) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: evpn-rr
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "evpn-rr")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: bgp
+    port: 179
+    targetPort: 179
+    protocol: TCP
+  selector:
+    app: evpn-rr
+{{- end }}

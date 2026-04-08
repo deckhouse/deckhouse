@@ -1,0 +1,141 @@
+{{- $frrVersion := "10.5.1" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch frr-{{ $frrVersion }} $(cat /run/secrets/SOURCE_REPO)/FRRouting/frr.git /src/frr
+  - cd /src/frr
+  - echo $(git rev-parse --short=10 HEAD) > .GITREV
+  - rm -rf /src/frr/.git
+---
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-alpine-builder
+fromImage: builder/alpine
+final: false
+shell:
+  install:
+  - |
+    apk add --update-cache \
+      abuild \
+      alpine-conf \
+      alpine-sdk
+  - setup-apkcache /var/cache/apk
+  - mkdir -p /pkgs/apk
+  - echo 'builder ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+  - adduser -D -G abuild builder
+  - su builder -c 'abuild-keygen -a -n'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-alpine-apk-builder-libyang
+fromImage: {{ .ModuleName }}/{{ .ImageName }}-artifact-alpine-builder
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/frr/docker/alpine/libyang/APKBUILD
+  to: /src/libyang/APKBUILD
+  before: install
+shell:
+  install:
+  - chown -R builder /pkgs /src
+  - cd /src/libyang
+  - su builder -c 'abuild checksum'
+  - su builder -c 'git init'
+  - su builder -c 'abuild -r -P /pkgs/apk'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-source-builder
+fromImage: builder/alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/frr/alpine/APKBUILD.in
+  to: /src/alpine/APKBUILD.in
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-alpine-apk-builder-libyang
+  add: /pkgs/apk/src
+  to: /pkgs/apk
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/frr
+  to: /src/frr
+  before: install
+shell:
+  install:
+  - cd /pkgs/apk
+  - apk add --allow-untrusted */*.apk
+  - source /src/alpine/APKBUILD.in
+  - apk add --no-cache --update-cache $makedepends
+  - export GITREV="$(cat /src/frr/.GITREV)"
+  - export PKGVER="$(printf '%u\n' 0x$GITREV)"
+  - cd /src/frr
+  - ./bootstrap.sh
+  - |
+    ./configure \
+      --enable-multipath=256 \
+      --enable-numeric-version \
+      --with-pkg-extra-version="_git$PKGVER"
+  - make dist
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-alpine-apk-builder
+fromImage: {{ .ModuleName }}/{{ .ImageName }}-artifact-alpine-builder
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-source-builder
+  add: /src
+  to: /dist
+  includePaths:
+  - alpine/*
+  - frr/frr-*.tar.gz
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-alpine-apk-builder-libyang
+  add: /pkgs/apk/src
+  to: /pkgs/apk
+  before: install
+shell:
+  install:
+  - cd /pkgs/apk
+  - apk add --allow-untrusted */*.apk
+  - find /pkgs/apk -type f -name APKINDEX.tar.gz -delete
+  - chown -R builder /dist /pkgs
+  - cd /dist
+  - su builder -c 'abuild checksum'
+  - su builder -c 'git init'
+  - su builder -c 'abuild -r -P /pkgs/apk'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-final-origin
+fromImage: builder/alpine
+final: true
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-alpine-apk-builder
+  add: /pkgs/apk
+  to: /pkgs/apk/
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/frr/docker/alpine/docker-start
+  to: /usr/lib/frr/docker-start
+  before: install
+shell:
+  install:
+  - mkdir -p /pkgs/apk
+  - apk add --no-cache --update-cache tini
+  - apk add --no-cache --allow-untrusted /pkgs/apk/*/*.apk
+  - rm -rf /pkgs
+  - mkdir -p /var/run/frr
+  - chown -R frr:frr /etc/frr /var/run/frr
+imageSpec:
+  config:
+    entrypoint: ["/sbin/tini", "--"]
+    cmd: ["/usr/lib/frr/docker-start"]
+---
+---
+image: {{ .ModuleName }}/alpine
+fromImage: builder/alpine
+final: true
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: quay.io/frrouting/frr:{{ $frrVersion }}
+final: true
+---

@@ -1,0 +1,363 @@
+{{- define "evpn_client_resources" }}
+cpu: 100m
+memory: 128Mi
+{{- end }}
+
+{{- if and (.Values.cniCilium.evpn) (.Values.cniCilium.evpn.enabled) }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: evpn-client
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "evpn-client")) | nindent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: evpn-client
+  template:
+    metadata:
+      annotations:
+        configmap-checksum: {{ include (print $.Template.BasePath "/evpn-client/configmap.yaml") . | sha256sum | quote }}
+      labels:
+        app: evpn-client
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized") | nindent 6 }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      imagePullSecrets:
+      - name: deckhouse-registry
+      initContainers:
+      - name: config-renderer
+        image: {{ include "helm_lib_module_image" (list . "alpine") }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          CLUSTER_DOMAIN="{{ .Values.global.discovery.clusterDomain }}"
+          SERVICE_NAME="evpn-rr"
+          SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
+          NODE_NAME=${NODE_NAME:-$(hostname)}
+
+          cp /etc/frr-template/daemons /etc/frr/daemons
+          cp /etc/frr-template/vtysh.conf /etc/frr/vtysh.conf
+
+          RR_NEIGHBORS=""
+          REPLICAS={{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+          for i in $(seq 0 $((REPLICAS - 1))); do
+            RR_HOSTNAME="${SERVICE_NAME}-${i}.${SERVICE_FQDN}"
+            RR_IP=$(getent hosts ${RR_HOSTNAME} | awk '{print $1}' | head -n1)
+            if [ -n "$RR_IP" ]; then
+              RR_NEIGHBORS="${RR_NEIGHBORS} neighbor ${RR_IP} peer-group EVPN_RR
+          "
+            else
+              echo "Warning: Could not resolve ${RR_HOSTNAME}"
+            fi
+          done
+
+          cat > /etc/frr/frr.conf <<FRREOF
+          frr version 10.5
+          frr defaults traditional
+          hostname ${NODE_NAME}
+          log file /var/log/frr/frr.log informational
+          service integrated-vtysh-config
+          service password-encryption
+          no ipv6 forwarding
+          !
+          router bgp {{ .Values.cniCilium.evpn.bgpAsn | default 65000 }}
+           bgp router-id ${NODE_IP}
+           no bgp default ipv4-unicast
+           bgp bestpath as-path multipath-relax
+           bgp log-neighbor-changes
+           !
+           neighbor EVPN_RR peer-group
+           neighbor EVPN_RR remote-as {{ .Values.cniCilium.evpn.bgpAsn | default 65000 }}
+           neighbor EVPN_RR update-source ${NODE_IP}
+           neighbor EVPN_RR password PassW0RD
+          ${RR_NEIGHBORS} !
+           address-family l2vpn evpn
+            neighbor EVPN_RR activate
+            advertise-all-vni
+            advertise-default-gw
+           exit-address-family
+          !
+          end
+          FRREOF
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        volumeMounts:
+        - name: frr-config-template
+          mountPath: /etc/frr-template
+          readOnly: true
+        - name: frr-conf
+          mountPath: /etc/frr
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+      shareProcessNamespace: true
+      containers:
+      - name: frr
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            - SYS_ADMIN
+            - NET_BIND_SERVICE
+        image: {{ include "helm_lib_module_image" (list . "frr") }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          ulimit -Sn 100000
+          /sbin/tini -- /usr/lib/frr/docker-start &
+          attempts=0
+          until [[ -f /var/log/frr/frr.log || $attempts -eq 60 ]]; do
+            sleep 1
+            attempts=$(( $attempts + 1 ))
+          done
+          tail -f /var/log/frr/frr.log
+        env:
+        - name: TINI_SUBREAPER
+          value: "true"
+        - name: FRR_CONF
+          value: /etc/frr/frr.conf
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        volumeMounts:
+        - name: frr-conf
+          mountPath: /etc/frr
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        - name: frr-run
+          mountPath: /var/run/frr
+        - name: frr-logs
+          mountPath: /var/log/frr
+        - name: frr-tmp
+          mountPath: /var/tmp/frr
+        - name: frr-lib
+          mountPath: /var/lib/frr
+        - name: lib-modules
+          mountPath: /lib/modules
+          readOnly: true
+        - name: sys
+          mountPath: /sys
+        ports:
+        - containerPort: 179
+          name: bgp
+          protocol: TCP
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "evpn_client_resources" . | nindent 12 }}
+{{- end }}
+      - name: config-updater
+        image: {{ include "helm_lib_module_image" (list . "alpine") }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          CLUSTER_DOMAIN="{{ .Values.global.discovery.clusterDomain }}"
+          SERVICE_NAME="evpn-rr"
+          SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
+          CONFIG_FILE="/etc/frr/frr.conf"
+
+          generate_config() {
+            RR_NEIGHBORS=""
+            REPLICAS={{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+            for i in $(seq 0 $((REPLICAS - 1))); do
+              RR_HOSTNAME="${SERVICE_NAME}-${i}.${SERVICE_FQDN}"
+              RR_IP=$(getent hosts ${RR_HOSTNAME} 2>/dev/null | awk '{print $1}' | head -n1)
+              if [ -n "$RR_IP" ]; then
+                RR_NEIGHBORS="${RR_NEIGHBORS} neighbor ${RR_IP} peer-group EVPN_RR
+          "
+              else
+                echo "Warning: Could not resolve ${RR_HOSTNAME}" >&2
+              fi
+            done
+
+            cat <<FRREOF
+          frr version 10.5
+          frr defaults traditional
+          hostname ${NODE_NAME}
+          log file /var/log/frr/frr.log informational
+          service integrated-vtysh-config
+          service password-encryption
+          no ipv6 forwarding
+          !
+          router bgp {{ .Values.cniCilium.evpn.bgpAsn | default 65000 }}
+           bgp router-id ${NODE_IP}
+           no bgp default ipv4-unicast
+           bgp bestpath as-path multipath-relax
+           bgp log-neighbor-changes
+           !
+           neighbor EVPN_RR peer-group
+           neighbor EVPN_RR remote-as {{ .Values.cniCilium.evpn.bgpAsn | default 65000 }}
+           neighbor EVPN_RR update-source ${NODE_IP}
+           neighbor EVPN_RR password PassW0RD
+          ${RR_NEIGHBORS} !
+           address-family l2vpn evpn
+            neighbor EVPN_RR activate
+            advertise-all-vni
+            advertise-default-gw
+           exit-address-family
+          !
+          end
+          FRREOF
+          }
+
+          reload_frr() {
+            touch /etc/frr/.reload-trigger 2>/dev/null || true
+            echo "Configuration file updated, trigger file created for FRR reloader"
+          }
+
+          echo "Waiting for initial configuration..."
+          for i in $(seq 1 30); do
+            if [ -f ${CONFIG_FILE} ]; then
+              echo "Initial configuration found"
+              break
+            fi
+            sleep 1
+          done
+
+          while true; do
+            NEW_CONFIG=$(generate_config)
+            NEW_CONFIG_HASH=$(echo "$NEW_CONFIG" | md5sum | awk '{print $1}')
+            CURRENT_CONFIG_HASH=$(md5sum ${CONFIG_FILE} 2>/dev/null | awk '{print $1}' || echo "")
+
+            if [ "$NEW_CONFIG_HASH" != "$CURRENT_CONFIG_HASH" ] && [ -n "$NEW_CONFIG" ]; then
+              echo "Configuration changed, updating..."
+              echo "$NEW_CONFIG" > ${CONFIG_FILE}.new
+
+              if [ -s ${CONFIG_FILE}.new ]; then
+                mv ${CONFIG_FILE}.new ${CONFIG_FILE}
+                reload_frr
+              else
+                echo "Error: Generated configuration is empty"
+                rm -f ${CONFIG_FILE}.new
+              fi
+            fi
+
+            sleep 10
+          done
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        volumeMounts:
+        - name: frr-conf
+          mountPath: /etc/frr
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+      - name: frr-reloader
+        image: {{ include "helm_lib_module_image" (list . "frr") }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          CONFIG_FILE="/etc/frr/frr.conf"
+          TRIGGER_FILE="/etc/frr/.reload-trigger"
+          LAST_RELOAD_TIME=0
+
+          reload_frr() {
+            if command -v /usr/lib/frr/frr-reload.py > /dev/null 2>&1; then
+              /usr/lib/frr/frr-reload.py --reload 2>&1 || echo "Warning: frr-reload.py failed"
+            elif command -v /usr/bin/frr-reload.py > /dev/null 2>&1; then
+              /usr/bin/frr-reload.py --reload 2>&1 || echo "Warning: frr-reload.py failed"
+            else
+              echo "Warning: frr-reload.py not found"
+            fi
+          }
+
+          echo "Waiting for initial configuration..."
+          for i in $(seq 1 30); do
+            if [ -f ${CONFIG_FILE} ]; then
+              echo "Initial configuration found"
+              break
+            fi
+            sleep 1
+          done
+
+          while true; do
+            if [ -f ${TRIGGER_FILE} ]; then
+              CURRENT_TIME=$(stat -c %Y ${TRIGGER_FILE} 2>/dev/null || echo "0")
+              if [ "$CURRENT_TIME" != "$LAST_RELOAD_TIME" ]; then
+                echo "Trigger file changed, reloading FRR configuration..."
+                LAST_RELOAD_TIME=$CURRENT_TIME
+                reload_frr
+              fi
+            fi
+            sleep 2
+          done
+        volumeMounts:
+        - name: frr-conf
+          mountPath: /etc/frr
+          readOnly: true
+        - name: frr-run
+          mountPath: /var/run/frr
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: frr-config-template
+        configMap:
+          name: evpn-client-config
+      - name: frr-conf
+        emptyDir: {}
+      - name: frr-run
+        emptyDir: {}
+      - name: frr-lib
+        emptyDir: {}
+      - name: frr-tmp
+        emptyDir: {}
+      - name: frr-logs
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules
+      - name: sys
+        hostPath:
+          path: /sys
+{{- end }}
