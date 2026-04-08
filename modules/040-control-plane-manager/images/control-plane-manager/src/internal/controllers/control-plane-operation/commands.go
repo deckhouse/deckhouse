@@ -130,7 +130,6 @@ func execJoinEtcdCluster(ctx context.Context, cc *commandContext, logger *log.Lo
 
 	needsJoin, err := etcdNeedsJoin(cc.r.nodeName, constants.KubernetesPkiPath, kubeconfigDir)
 	if err != nil {
-		logger.Error("failed to check etcd join need", log.Err(err))
 		return reconcile.Result{}, fmt.Errorf("check etcd join need: %w", err)
 	}
 	if !needsJoin {

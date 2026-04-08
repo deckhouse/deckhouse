@@ -275,19 +275,37 @@ func (r *Reconciler) ensureOperationsExist(
 
 		if ownerUID, exists := existingOwners[operationName]; exists && ownerUID == cpn.UID {
 			existingOp := findOpByName(ops, operationName)
-			if existingOp == nil || !isCancelled(existingOp) {
+			if existingOp == nil {
+				continue
+			}
+
+			needsRecreate := false
+			switch {
+			case isCancelled(existingOp):
+				// Cancelled (approved but configVersion changed at executor) — recreate with current configVersion
+				logger.Info("deleting cancelled ControlPlaneOperation to recreate with current configVersion",
+					slog.String("operation", operationName),
+					slog.String("component", string(state.component)))
+				needsRecreate = true
+			case !existingOp.Spec.Approved && existingOp.Spec.ConfigVersion != cpn.Spec.ConfigVersion:
+				// Not yet approved but configVersion stale (another components config changed) — recreate
+				logger.Info("deleting not-approved ControlPlaneOperation with stale configVersion",
+					slog.String("operation", operationName),
+					slog.String("component", string(state.component)),
+					slog.String("oldConfigVersion", existingOp.Spec.ConfigVersion),
+					slog.String("newConfigVersion", cpn.Spec.ConfigVersion))
+				needsRecreate = true
+			default:
 				logger.Debug("ControlPlaneOperation already exists, skipping",
 					slog.String("operation", operationName),
 					slog.String("component", string(state.component)))
 				continue
 			}
-			// Operation name not using configVersion
-			// delete to recreate with the current configVersion if operation stuck in cancelled state (already approved)
-			logger.Info("deleting cancelled ControlPlaneOperation to recreate with current configVersion",
-				slog.String("operation", operationName),
-				slog.String("component", string(state.component)))
-			if err := r.client.Delete(ctx, existingOp); err != nil && !apierrors.IsNotFound(err) {
-				return fmt.Errorf("delete cancelled ControlPlaneOperation %s: %w", operationName, err)
+
+			if needsRecreate {
+				if err := r.client.Delete(ctx, existingOp); err != nil && !apierrors.IsNotFound(err) {
+					return fmt.Errorf("delete ControlPlaneOperation %s: %w", operationName, err)
+				}
 			}
 		}
 
