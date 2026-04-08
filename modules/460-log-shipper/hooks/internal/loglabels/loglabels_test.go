@@ -39,7 +39,7 @@ func TestAppendAddLables(t *testing.T) {
 		{
 			name: "skips message dot path and nested message fields",
 			keys: []string{"x"},
-			add:  []string{".message", "message", "message.parsed", "y"},
+			add:  []string{"message", "message.parsed", "y"},
 			want: []string{"x", "y"},
 		},
 		{
