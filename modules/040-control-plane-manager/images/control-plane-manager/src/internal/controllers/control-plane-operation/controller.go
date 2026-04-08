@@ -232,14 +232,10 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1al
 	}
 
 	cc := &commandContext{
-		r:              r,
-		op:             op,
-		component:      op.Spec.Component,
-		cpmSecretData:  cpmSecretData,
-		pkiSecretData:  pkiSecretData,
-		configChecksum: op.Spec.DesiredConfigChecksum,
-		pkiChecksum:    op.Spec.DesiredPKIChecksum,
-		caChecksum:     op.Spec.DesiredCAChecksum,
+		r:             r,
+		op:            op,
+		cpmSecretData: cpmSecretData,
+		pkiSecretData: pkiSecretData,
 	}
 
 	//Skip already completed commands here (testing purposes)

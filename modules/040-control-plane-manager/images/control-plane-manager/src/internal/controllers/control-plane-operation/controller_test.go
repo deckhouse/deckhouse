@@ -54,28 +54,28 @@ type execCall struct {
 
 func mockExecOK(calls *[]execCall) func(context.Context, *commandContext, *log.Logger) (reconcile.Result, error) {
 	return func(_ context.Context, cc *commandContext, _ *log.Logger) (reconcile.Result, error) {
-		*calls = append(*calls, execCall{name: cc.op.Spec.Commands[len(*calls)], component: cc.component})
+		*calls = append(*calls, execCall{name: cc.op.Spec.Commands[len(*calls)], component: cc.op.Spec.Component})
 		return reconcile.Result{}, nil
 	}
 }
 
 func mockExecForName(calls *[]execCall, name controlplanev1alpha1.CommandName) func(context.Context, *commandContext, *log.Logger) (reconcile.Result, error) {
 	return func(_ context.Context, cc *commandContext, _ *log.Logger) (reconcile.Result, error) {
-		*calls = append(*calls, execCall{name: name, component: cc.component})
+		*calls = append(*calls, execCall{name: name, component: cc.op.Spec.Component})
 		return reconcile.Result{}, nil
 	}
 }
 
 func mockExecError(calls *[]execCall, name controlplanev1alpha1.CommandName, err error) func(context.Context, *commandContext, *log.Logger) (reconcile.Result, error) {
 	return func(_ context.Context, cc *commandContext, _ *log.Logger) (reconcile.Result, error) {
-		*calls = append(*calls, execCall{name: name, component: cc.component})
+		*calls = append(*calls, execCall{name: name, component: cc.op.Spec.Component})
 		return reconcile.Result{}, err
 	}
 }
 
 func mockExecRequeue(calls *[]execCall, name controlplanev1alpha1.CommandName, after time.Duration) func(context.Context, *commandContext, *log.Logger) (reconcile.Result, error) {
 	return func(_ context.Context, cc *commandContext, _ *log.Logger) (reconcile.Result, error) {
-		*calls = append(*calls, execCall{name: name, component: cc.component})
+		*calls = append(*calls, execCall{name: name, component: cc.op.Spec.Component})
 		return reconcile.Result{RequeueAfter: after}, nil
 	}
 }

@@ -174,71 +174,57 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 // componentState holds spec and status checksums for a single component.
 type componentState struct {
-	component            controlplanev1alpha1.OperationComponent
-	conditionType        string
-	specConfigChecksum   string
-	statusConfigChecksum string
-	specPKIChecksum      string
-	statusPKIChecksum    string
-	specCAChecksum       string
-	statusCAChecksum     string
-	hasPKI               bool
+	component     controlplanev1alpha1.OperationComponent
+	conditionType string
+	spec          controlplanev1alpha1.Checksums // Config, PKI from component; CA absent (global)
+	status        controlplanev1alpha1.Checksums // Config, PKI, CA from component status
+	specCA        string                         // global spec.CAChecksum
+	hasPKI        bool
 }
 
 func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componentState {
 	all := []componentState{
 		{
-			component:            controlplanev1alpha1.OperationComponentEtcd,
-			conditionType:        constants.ConditionEtcdReady,
-			specConfigChecksum:   cpn.Spec.Components.Etcd.ConfigChecksum,
-			statusConfigChecksum: cpn.Status.Components.Etcd.ConfigChecksum,
-			specPKIChecksum:      cpn.Spec.Components.Etcd.PKIChecksum,
-			statusPKIChecksum:    cpn.Status.Components.Etcd.PKIChecksum,
-			specCAChecksum:       cpn.Spec.CAChecksum,
-			statusCAChecksum:     cpn.Status.Components.Etcd.CAChecksum,
-			hasPKI:               true,
+			component:     controlplanev1alpha1.OperationComponentEtcd,
+			conditionType: constants.ConditionEtcdReady,
+			spec:          cpn.Spec.Components.Etcd.Checksums,
+			status:        cpn.Status.Components.Etcd.Checksums,
+			specCA:        cpn.Spec.CAChecksum,
+			hasPKI:        true,
 		},
 		{
-			component:            controlplanev1alpha1.OperationComponentKubeAPIServer,
-			conditionType:        constants.ConditionAPIServerReady,
-			specConfigChecksum:   cpn.Spec.Components.KubeAPIServer.ConfigChecksum,
-			statusConfigChecksum: cpn.Status.Components.KubeAPIServer.ConfigChecksum,
-			specPKIChecksum:      cpn.Spec.Components.KubeAPIServer.PKIChecksum,
-			statusPKIChecksum:    cpn.Status.Components.KubeAPIServer.PKIChecksum,
-			specCAChecksum:       cpn.Spec.CAChecksum,
-			statusCAChecksum:     cpn.Status.Components.KubeAPIServer.CAChecksum,
-			hasPKI:               true,
+			component:     controlplanev1alpha1.OperationComponentKubeAPIServer,
+			conditionType: constants.ConditionAPIServerReady,
+			spec:          cpn.Spec.Components.KubeAPIServer.Checksums,
+			status:        cpn.Status.Components.KubeAPIServer.Checksums,
+			specCA:        cpn.Spec.CAChecksum,
+			hasPKI:        true,
 		},
 		{
-			component:            controlplanev1alpha1.OperationComponentKubeControllerManager,
-			conditionType:        constants.ConditionControllerManagerReady,
-			specConfigChecksum:   cpn.Spec.Components.KubeControllerManager.ConfigChecksum,
-			statusConfigChecksum: cpn.Status.Components.KubeControllerManager.ConfigChecksum,
-			specCAChecksum:       cpn.Spec.CAChecksum,
-			statusCAChecksum:     cpn.Status.Components.KubeControllerManager.CAChecksum,
-			hasPKI:               false,
+			component:     controlplanev1alpha1.OperationComponentKubeControllerManager,
+			conditionType: constants.ConditionControllerManagerReady,
+			spec:          cpn.Spec.Components.KubeControllerManager.Checksums,
+			status:        cpn.Status.Components.KubeControllerManager.Checksums,
+			specCA:        cpn.Spec.CAChecksum,
 		},
 		{
-			component:            controlplanev1alpha1.OperationComponentKubeScheduler,
-			conditionType:        constants.ConditionSchedulerReady,
-			specConfigChecksum:   cpn.Spec.Components.KubeScheduler.ConfigChecksum,
-			statusConfigChecksum: cpn.Status.Components.KubeScheduler.ConfigChecksum,
-			specCAChecksum:       cpn.Spec.CAChecksum,
-			statusCAChecksum:     cpn.Status.Components.KubeScheduler.CAChecksum,
-			hasPKI:               false,
+			component:     controlplanev1alpha1.OperationComponentKubeScheduler,
+			conditionType: constants.ConditionSchedulerReady,
+			spec:          cpn.Spec.Components.KubeScheduler.Checksums,
+			status:        cpn.Status.Components.KubeScheduler.Checksums,
+			specCA:        cpn.Spec.CAChecksum,
 		},
 		{
-			component:            controlplanev1alpha1.OperationComponentHotReload,
-			conditionType:        constants.ConditionHotReloadSynced,
-			specConfigChecksum:   cpn.Spec.HotReloadChecksum,
-			statusConfigChecksum: cpn.Status.HotReloadChecksum,
-			hasPKI:               false,
+			component:     controlplanev1alpha1.OperationComponentHotReload,
+			conditionType: constants.ConditionHotReloadSynced,
+			spec:          controlplanev1alpha1.Checksums{Config: cpn.Spec.HotReloadChecksum},
+			status:        controlplanev1alpha1.Checksums{Config: cpn.Status.HotReloadChecksum},
 		},
 		{
-			component:        controlplanev1alpha1.OperationComponentCA,
-			conditionType:    constants.ConditionCASynced,
-			specCAChecksum:   cpn.Spec.CAChecksum,
-			statusCAChecksum: cpn.Status.CAChecksum,
+			component:     controlplanev1alpha1.OperationComponentCA,
+			conditionType: constants.ConditionCASynced,
+			specCA:        cpn.Spec.CAChecksum,
+			status:        controlplanev1alpha1.Checksums{CA: cpn.Status.CAChecksum},
 		},
 	}
 
@@ -246,10 +232,10 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 	result := make([]componentState, 0, len(all))
 	for _, s := range all {
 		if s.component.IsStaticPodComponent() {
-			if s.specConfigChecksum == "" && s.specPKIChecksum == "" {
+			if s.spec.Config == "" && s.spec.PKI == "" {
 				continue
 			}
-		} else if s.specConfigChecksum == "" && s.specPKIChecksum == "" && s.specCAChecksum == "" {
+		} else if s.spec.Config == "" && s.spec.PKI == "" && s.specCA == "" {
 			continue
 		}
 		result = append(result, s)
@@ -276,15 +262,15 @@ func (r *Reconciler) ensureOperationsExist(
 	}
 
 	for _, state := range states {
-		configChanged := state.specConfigChecksum != state.statusConfigChecksum
-		pkiChanged := state.hasPKI && state.specPKIChecksum != state.statusPKIChecksum
-		caChanged := state.specCAChecksum != state.statusCAChecksum
+		configChanged := state.spec.Config != state.status.Config
+		pkiChanged := state.hasPKI && state.spec.PKI != state.status.PKI
+		caChanged := state.specCA != state.status.CA
 
 		if !configChanged && !pkiChanged && !caChanged {
 			continue
 		}
 
-		commands := determineCommands(state, configChanged, pkiChanged, caChanged)
+		commands := determineCommands(state, pkiChanged, caChanged)
 		operationName := operationNameForNode(cpn.Name, state)
 
 		if ownerUID, exists := existingOwners[operationName]; exists && ownerUID == cpn.UID {
@@ -296,9 +282,9 @@ func (r *Reconciler) ensureOperationsExist(
 
 		// building operation object
 		op := operationBase(cpn, operationName, state.component, commands)
-		op.Spec.DesiredConfigChecksum = state.specConfigChecksum
-		op.Spec.DesiredPKIChecksum = state.specPKIChecksum
-		op.Spec.DesiredCAChecksum = state.specCAChecksum
+		op.Spec.DesiredConfigChecksum = state.spec.Config
+		op.Spec.DesiredPKIChecksum = state.spec.PKI
+		op.Spec.DesiredCAChecksum = state.specCA
 
 		created, err := r.createIfNotExists(ctx, op)
 		if err != nil {
@@ -317,7 +303,7 @@ func (r *Reconciler) ensureOperationsExist(
 }
 
 // determineCommands returns the list of commands to execute based on what changed and the component type.
-func determineCommands(state componentState, configChanged, pkiChanged, caChanged bool) []controlplanev1alpha1.CommandName {
+func determineCommands(state componentState, pkiChanged, caChanged bool) []controlplanev1alpha1.CommandName {
 	switch state.component {
 	case controlplanev1alpha1.OperationComponentCA:
 		return []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandSyncCA}
@@ -335,7 +321,7 @@ func determineCommands(state componentState, configChanged, pkiChanged, caChange
 		commands = append(commands, controlplanev1alpha1.CommandJoinEtcdCluster)
 		// Join (empty status): JoinEtcdCluster writes manifest with correct --initial-cluster.
 		// Update (non-empty status): SyncManifests overwrites manifest from template.
-		isJoin := state.statusConfigChecksum == "" && state.statusPKIChecksum == ""
+		isJoin := state.status.Config == "" && state.status.PKI == ""
 		if !isJoin {
 			commands = append(commands, controlplanev1alpha1.CommandSyncManifests)
 		}
@@ -384,14 +370,14 @@ func operationNameForNode(nodeName string, state componentState) string {
 	compName := strings.ToLower(string(state.component))
 
 	var parts []string
-	if state.specConfigChecksum != "" {
-		parts = append(parts, short(state.specConfigChecksum))
+	if state.spec.Config != "" {
+		parts = append(parts, short(state.spec.Config))
 	}
-	if state.specPKIChecksum != "" {
-		parts = append(parts, short(state.specPKIChecksum))
+	if state.spec.PKI != "" {
+		parts = append(parts, short(state.spec.PKI))
 	}
-	if state.specCAChecksum != "" {
-		parts = append(parts, short(state.specCAChecksum))
+	if state.specCA != "" {
+		parts = append(parts, short(state.specCA))
 	}
 
 	if len(parts) == 0 {
@@ -487,30 +473,16 @@ func (r *Reconciler) updateStatusFromOperations(
 	if cpn.Spec.CAChecksum != "" && cpn.Status.CAChecksum != cpn.Spec.CAChecksum {
 		allMatch := true
 		for _, state := range states {
-			if state.component == controlplanev1alpha1.OperationComponentCA ||
-				state.component == controlplanev1alpha1.OperationComponentHotReload {
+			if state.specCA == "" {
 				continue
 			}
-			if state.specCAChecksum == "" {
+			compStatus := cpn.Status.Components.Component(state.component)
+			if compStatus == nil {
 				continue
 			}
-			switch state.component {
-			case controlplanev1alpha1.OperationComponentEtcd:
-				if cpn.Status.Components.Etcd.CAChecksum != cpn.Spec.CAChecksum {
-					allMatch = false
-				}
-			case controlplanev1alpha1.OperationComponentKubeAPIServer:
-				if cpn.Status.Components.KubeAPIServer.CAChecksum != cpn.Spec.CAChecksum {
-					allMatch = false
-				}
-			case controlplanev1alpha1.OperationComponentKubeControllerManager:
-				if cpn.Status.Components.KubeControllerManager.CAChecksum != cpn.Spec.CAChecksum {
-					allMatch = false
-				}
-			case controlplanev1alpha1.OperationComponentKubeScheduler:
-				if cpn.Status.Components.KubeScheduler.CAChecksum != cpn.Spec.CAChecksum {
-					allMatch = false
-				}
+			if compStatus.Checksums.CA != cpn.Spec.CAChecksum {
+				allMatch = false
+				break
 			}
 		}
 		if allMatch {
@@ -553,9 +525,9 @@ func findOperationForState(ops []controlplanev1alpha1.ControlPlaneOperation, sta
 
 // matchesDesiredChecksums returns true if the operation targets the current spec checksums.
 func matchesDesiredChecksums(op *controlplanev1alpha1.ControlPlaneOperation, state componentState) bool {
-	return op.Spec.DesiredConfigChecksum == state.specConfigChecksum &&
-		op.Spec.DesiredPKIChecksum == state.specPKIChecksum &&
-		op.Spec.DesiredCAChecksum == state.specCAChecksum
+	return op.Spec.DesiredConfigChecksum == state.spec.Config &&
+		op.Spec.DesiredPKIChecksum == state.spec.PKI &&
+		op.Spec.DesiredCAChecksum == state.specCA
 }
 
 func (r *Reconciler) conditionForState(
@@ -567,9 +539,9 @@ func (r *Reconciler) conditionForState(
 
 	if op == nil {
 		// No operation — either synced or unknown
-		if state.specConfigChecksum == state.statusConfigChecksum &&
-			(!state.hasPKI || state.specPKIChecksum == state.statusPKIChecksum) &&
-			state.specCAChecksum == state.statusCAChecksum {
+		if state.spec.Config == state.status.Config &&
+			(!state.hasPKI || state.spec.PKI == state.status.PKI) &&
+			state.specCA == state.status.CA {
 			return metav1.Condition{
 				Type:               state.conditionType,
 				Status:             metav1.ConditionTrue,
@@ -588,7 +560,7 @@ func (r *Reconciler) conditionForState(
 	if isCompleted(op) {
 		// this condition reflects aggregate state: synced only when status.caChecksum matches (all pods restarted with new CA)
 		if state.component == controlplanev1alpha1.OperationComponentCA &&
-			state.specCAChecksum != state.statusCAChecksum {
+			state.specCA != state.status.CA {
 			return metav1.Condition{
 				Type:               state.conditionType,
 				Status:             metav1.ConditionFalse,
@@ -637,51 +609,24 @@ func (r *Reconciler) conditionForState(
 // applyOperationResult updates CPN status checksums based on a completed operation.
 // All non-empty desired checksums are applied - no need to switch on command type.
 func applyOperationResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *controlplanev1alpha1.ControlPlaneOperation) {
+	if op.Spec.Component == controlplanev1alpha1.OperationComponentHotReload {
+		if op.Spec.DesiredConfigChecksum != "" {
+			cpn.Status.HotReloadChecksum = op.Spec.DesiredConfigChecksum
+		}
+		return
+	}
+	compStatus := cpn.Status.Components.Component(op.Spec.Component)
+	if compStatus == nil {
+		return
+	}
 	if op.Spec.DesiredConfigChecksum != "" {
-		setConfigChecksum(cpn, op.Spec.Component, op.Spec.DesiredConfigChecksum)
+		compStatus.Checksums.Config = op.Spec.DesiredConfigChecksum
 	}
 	if op.Spec.DesiredPKIChecksum != "" {
-		setPKIChecksum(cpn, op.Spec.Component, op.Spec.DesiredPKIChecksum)
+		compStatus.Checksums.PKI = op.Spec.DesiredPKIChecksum
 	}
 	if op.Spec.DesiredCAChecksum != "" {
-		setCAChecksum(cpn, op.Spec.Component, op.Spec.DesiredCAChecksum)
-	}
-}
-
-func setConfigChecksum(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent, checksum string) {
-	switch component {
-	case controlplanev1alpha1.OperationComponentEtcd:
-		cpn.Status.Components.Etcd.ConfigChecksum = checksum
-	case controlplanev1alpha1.OperationComponentKubeAPIServer:
-		cpn.Status.Components.KubeAPIServer.ConfigChecksum = checksum
-	case controlplanev1alpha1.OperationComponentKubeControllerManager:
-		cpn.Status.Components.KubeControllerManager.ConfigChecksum = checksum
-	case controlplanev1alpha1.OperationComponentKubeScheduler:
-		cpn.Status.Components.KubeScheduler.ConfigChecksum = checksum
-	case controlplanev1alpha1.OperationComponentHotReload:
-		cpn.Status.HotReloadChecksum = checksum
-	}
-}
-
-func setPKIChecksum(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent, checksum string) {
-	switch component {
-	case controlplanev1alpha1.OperationComponentEtcd:
-		cpn.Status.Components.Etcd.PKIChecksum = checksum
-	case controlplanev1alpha1.OperationComponentKubeAPIServer:
-		cpn.Status.Components.KubeAPIServer.PKIChecksum = checksum
-	}
-}
-
-func setCAChecksum(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent, checksum string) {
-	switch component {
-	case controlplanev1alpha1.OperationComponentEtcd:
-		cpn.Status.Components.Etcd.CAChecksum = checksum
-	case controlplanev1alpha1.OperationComponentKubeAPIServer:
-		cpn.Status.Components.KubeAPIServer.CAChecksum = checksum
-	case controlplanev1alpha1.OperationComponentKubeControllerManager:
-		cpn.Status.Components.KubeControllerManager.CAChecksum = checksum
-	case controlplanev1alpha1.OperationComponentKubeScheduler:
-		cpn.Status.Components.KubeScheduler.CAChecksum = checksum
+		compStatus.Checksums.CA = op.Spec.DesiredCAChecksum
 	}
 }
 
@@ -738,17 +683,15 @@ func (r *Reconciler) ensureCertObserverExists(ctx context.Context, cpn *controlp
 
 // applyCertDates copies certificate expiration dates from ObservedState into CPN status.
 func applyCertDates(cpn *controlplanev1alpha1.ControlPlaneNode, observedState map[controlplanev1alpha1.OperationComponent]controlplanev1alpha1.ObservedComponentState) {
-	if observed, ok := observedState[controlplanev1alpha1.OperationComponentEtcd]; ok && len(observed.CertificatesExpirationDate) > 0 {
-		cpn.Status.Components.Etcd.CertificatesExpirationDate = observed.CertificatesExpirationDate
-	}
-	if observed, ok := observedState[controlplanev1alpha1.OperationComponentKubeAPIServer]; ok && len(observed.CertificatesExpirationDate) > 0 {
-		cpn.Status.Components.KubeAPIServer.CertificatesExpirationDate = observed.CertificatesExpirationDate
-	}
-	if observed, ok := observedState[controlplanev1alpha1.OperationComponentKubeControllerManager]; ok && len(observed.CertificatesExpirationDate) > 0 {
-		cpn.Status.Components.KubeControllerManager.CertificatesExpirationDate = observed.CertificatesExpirationDate
-	}
-	if observed, ok := observedState[controlplanev1alpha1.OperationComponentKubeScheduler]; ok && len(observed.CertificatesExpirationDate) > 0 {
-		cpn.Status.Components.KubeScheduler.CertificatesExpirationDate = observed.CertificatesExpirationDate
+	for comp, observed := range observedState {
+		if len(observed.CertificatesExpirationDate) == 0 {
+			continue
+		}
+		compStatus := cpn.Status.Components.Component(comp)
+		if compStatus == nil {
+			continue
+		}
+		compStatus.CertificatesExpirationDate = observed.CertificatesExpirationDate
 	}
 
 	now := metav1.Now()
@@ -822,18 +765,11 @@ func certRenewalCommands(component controlplanev1alpha1.OperationComponent) []co
 
 // certDatesForComponent returns cert expiration dates from CPN status for a given component.
 func certDatesForComponent(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent) map[string]metav1.Time {
-	switch component {
-	case controlplanev1alpha1.OperationComponentEtcd:
-		return cpn.Status.Components.Etcd.CertificatesExpirationDate
-	case controlplanev1alpha1.OperationComponentKubeAPIServer:
-		return cpn.Status.Components.KubeAPIServer.CertificatesExpirationDate
-	case controlplanev1alpha1.OperationComponentKubeControllerManager:
-		return cpn.Status.Components.KubeControllerManager.CertificatesExpirationDate
-	case controlplanev1alpha1.OperationComponentKubeScheduler:
-		return cpn.Status.Components.KubeScheduler.CertificatesExpirationDate
-	default:
+	compStatus := cpn.Status.Components.Component(component)
+	if compStatus == nil {
 		return nil
 	}
+	return compStatus.CertificatesExpirationDate
 }
 
 // minExpirationDate returns the earliest expiration time from the given dates map.
