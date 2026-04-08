@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-container-exception-nginx-only
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception/nginx: allow-net-admin-container
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        capabilities:
+          add:
+            - NET_ADMIN
+    - name: redis
+      image: redis
+      securityContext:
+        capabilities:
+          add:
+            - NET_ADMIN

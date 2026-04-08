@@ -164,6 +164,21 @@ tests:
     object: test_samples/security_policy_exceptions/pods/019-allowed-by-exception-mismatch-but-constraint-allows.yaml
     assertions:
     - violations: no
+  - name: 018-028-allowed-by-container-specific-exception-unconfined
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/018-allow-unconfined-container.yaml
+    object: test_samples/security_policy_exceptions/pods/028-allowed-by-container-exception-unconfined.yaml
+    assertions:
+    - violations: no
+  - name: 015-016-018-029-allowed-by-merged-exception-container-overrides-global
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/015-allow-runtime-default.yaml
+    - test_samples/security_policy_exceptions/exceptions/018-allow-unconfined-container.yaml
+    object: test_samples/security_policy_exceptions/pods/029-allowed-by-merged-exception-container-overrides-global.yaml
+    assertions:
+    - violations: no
   - name: 017-027-disallowed-by-exception-empty-spec
     inventory:
     - ../common/test_samples/ns.yaml

@@ -58,44 +58,50 @@ spec:
               }
 
               get_exception_allowed_apparmor(pod, container) := out if {
-                label := pod.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label(pod, container)
+                label != ""
                 namespace := pod.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 has_field(exception.spec.securityContext, "appArmorProfile")
                 has_field(exception.spec.securityContext.appArmorProfile, "allowedValues")
                 allowed_profiles := exception.spec.securityContext.appArmorProfile.allowedValues
-                out := sprintf("SecurityPolicyException allowed profiles: %v", [allowed_profiles])
+                out := sprintf("SecurityPolicyException allowed profiles: %v (source: %v)", [allowed_profiles, label])
               }
 
-              get_exception_allowed_apparmor(_, _) := "" if {
-                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              get_exception_allowed_apparmor(pod, container) := "" if {
+                label := get_exception_label(pod, container)
+                label == ""
               }
 
-              get_exception_allowed_apparmor(_, _) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
+              get_exception_allowed_apparmor(pod, container) := "" if {
+                label := get_exception_label(pod, container)
+                label != ""
+                namespace := pod.metadata.namespace
                 not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
               }
 
-              get_exception_allowed_apparmor(_, _) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
+              get_exception_allowed_apparmor(pod, container) := "" if {
+                label := get_exception_label(pod, container)
+                label != ""
+                namespace := pod.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 not has_field(exception.spec, "securityContext")
               }
 
-              get_exception_allowed_apparmor(_, _) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
+              get_exception_allowed_apparmor(pod, container) := "" if {
+                label := get_exception_label(pod, container)
+                label != ""
+                namespace := pod.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 not has_field(exception.spec.securityContext, "appArmorProfile")
               }
 
-              get_exception_allowed_apparmor(_, _) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
+              get_exception_allowed_apparmor(pod, container) := "" if {
+                label := get_exception_label(pod, container)
+                label != ""
+                namespace := pod.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 has_field(exception.spec.securityContext, "appArmorProfile")
@@ -120,8 +126,27 @@ spec:
                 allowed_by_securitypolicy(pod, container)
               }
 
-              allowed_by_securitypolicyexception(pod, container) if {
+              # Get exception label - container-specific takes precedence over global
+              get_exception_label(pod, container) := label if {
+                key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                label := pod.metadata.labels[key]
+                label != ""
+              }
+
+              get_exception_label(pod, container) := label if {
+                not pod.metadata.labels[sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])]
                 label := pod.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label != ""
+              }
+
+              get_exception_label(pod, container) := "" if {
+                not pod.metadata.labels[sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])]
+                not pod.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              allowed_by_securitypolicyexception(pod, container) if {
+                label := get_exception_label(pod, container)
+                label != ""
                 namespace := pod.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
@@ -188,10 +213,6 @@ spec:
               }
 
               # has_field returns whether an object has a field
-              has_field(object, field) if {
-                object[field]
-              }
-
-              has_field(object, field) := false if {
-                not object[field]
+              has_field(obj, field) if {
+                object.get(obj, field, {"__missing__": true}) != {"__missing__": true}
               }

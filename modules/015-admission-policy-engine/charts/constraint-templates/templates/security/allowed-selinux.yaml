@@ -80,36 +80,60 @@ spec:
                 msg := build_selinux_message(input.review.object.metadata.name, c.name, actual_value, allowed_by_policy, exception_allowed)
               }
 
+              get_exception_label(container_name) := label if {
+                container_name != ""
+                label := input.review.object.metadata.labels[sprintf("security.deckhouse.io/security-policy-exception/%v", [container_name])]
+              }
+
+              get_exception_label(container_name) := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"] if {
+                container_name == ""
+              }
+
+              get_exception_label(container_name) := "" if {
+                container_name != ""
+                not input.review.object.metadata.labels[sprintf("security.deckhouse.io/security-policy-exception/%v", [container_name])]
+              }
+
+              get_exception_label(container_name) := "" if {
+                container_name == ""
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
               exception_allowed_selinux_value := out if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label("")
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 has_field(exception.spec.securityContext, "seLinuxOptions")
                 has_field(exception.spec.securityContext.seLinuxOptions, "allowedValues")
                 allowed_options := exception.spec.securityContext.seLinuxOptions.allowedValues
-                out := sprintf("SecurityPolicyException allowed options: %v", [allowed_options])
+                out := sprintf("SecurityPolicyException allowed options: %v (source: global)", [allowed_options])
               }
 
               exception_allowed_selinux_value := "" if {
-                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label("")
+                label == ""
               }
 
               exception_allowed_selinux_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label("")
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
               }
 
               exception_allowed_selinux_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label("")
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 not has_field(exception.spec, "securityContext")
               }
 
               exception_allowed_selinux_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label("")
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
@@ -117,7 +141,8 @@ spec:
               }
 
               exception_allowed_selinux_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label("")
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
@@ -158,7 +183,8 @@ spec:
               }
 
               allowed_by_securitypolicyexception(options) if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                label := get_exception_label("")
+                label != ""
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
