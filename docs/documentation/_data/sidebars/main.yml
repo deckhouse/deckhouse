@@ -1287,6 +1287,10 @@ entries:
                     ru: Модуль cloud-provider-vcd
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vcd.html
                 - title:
+                    en: Cloud-provider-vsphere module
+                    ru: Модуль cloud-provider-vsphere
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vsphere.html
+                - title:
                     en: Cloud-provider-yandex module
                     ru: Модуль cloud-provider-yandex
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html
@@ -1306,6 +1310,10 @@ entries:
                     en: CSI driver
                     ru: CSI-драйвер
                   url: /architecture/cluster-and-infrastructure/infrastructure/csi-driver.html
+                - title:
+                    en: CSI driver (VMware vSphere)
+                    ru: CSI-драйвер (VMware vSphere)
+                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
