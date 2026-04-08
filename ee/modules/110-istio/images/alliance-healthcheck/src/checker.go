@@ -111,19 +111,19 @@ func (c *Checker) checkFederations(ctx context.Context) {
 
 		target, err := c.findFederationHealthcheckTarget(item)
 		if err != nil {
-			logger.Printf("Federation %s: cannot determine healthcheck target: %v", name, err)
+			logger.Printf("Federation cluster '%s' check: cannot determine healthcheck target: %v", name, err)
 			c.metric.WithLabelValues("federation", name, "unknown").Set(0)
 			c.patchDataPlaneHealth(ctx, federationGVR, name, false, err.Error())
 			continue
 		}
 
-		url := fmt.Sprintf("http://%s:8080/healthz", target)
+		url := fmt.Sprintf("http://%s:80/healthz", target)
 		healthy, msg := c.curlHealthz(url)
 
 		c.metric.WithLabelValues("federation", name, target).Set(boolToFloat(healthy))
 		c.patchDataPlaneHealth(ctx, federationGVR, name, healthy, msg)
 
-		logger.Printf("Federation %s target=%s healthy=%v msg=%s", name, target, healthy, msg)
+		logger.Printf("Federation cluster '%s' check: %s target=%s healthy=%v msg=%s", name, target, healthy, msg)
 	}
 }
 
@@ -139,20 +139,20 @@ func (c *Checker) checkMulticlusters(ctx context.Context) {
 
 		remoteUUID, err := c.extractRemoteClusterUUID(item)
 		if err != nil {
-			logger.Printf("Multicluster %s: cannot determine remote UUID: %v", name, err)
+			logger.Printf("Multicluster '%s' check: cannot determine remote UUID: %v", name, err)
 			c.metric.WithLabelValues("multicluster", name, "unknown").Set(0)
 			c.patchDataPlaneHealth(ctx, multiclusterGVR, name, false, err.Error())
 			continue
 		}
 
 		target := fmt.Sprintf("alliance-healthcheck-%s.d8-istio.svc.%s", remoteUUID, c.config.ClusterDomain)
-		url := fmt.Sprintf("http://%s:8080/healthz", target)
+		url := fmt.Sprintf("http://%s:80/healthz", target)
 		healthy, msg := c.curlHealthz(url)
 
 		c.metric.WithLabelValues("multicluster", name, target).Set(boolToFloat(healthy))
 		c.patchDataPlaneHealth(ctx, multiclusterGVR, name, healthy, msg)
 
-		logger.Printf("Multicluster %s target=%s healthy=%v msg=%s", name, target, healthy, msg)
+		logger.Printf("Multicluster '%s' check: target=%s healthy=%v msg=%s", name, target, healthy, msg)
 	}
 }
 
@@ -225,9 +225,9 @@ func (c *Checker) patchDataPlaneHealth(ctx context.Context, gvr schema.GroupVers
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	status := DataPlaneHealthStatus{
-		Connected:         connected,
+		Connected:          connected,
 		LastCheckTimestamp: now,
-		Message:           message,
+		Message:            message,
 	}
 	if connected {
 		status.LastSuccessTimestamp = now

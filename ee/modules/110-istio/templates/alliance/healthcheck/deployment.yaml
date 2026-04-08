@@ -79,14 +79,14 @@ spec:
   {{- end }}
         ports:
         - name: http
-          containerPort: 8080
+          containerPort: 80
         readinessProbe:
           httpGet:
             path: /healthz
             port: http
             scheme: HTTP
           initialDelaySeconds: 5
-          periodSeconds: 10
+          periodSeconds: 60
           successThreshold: 1
           timeoutSeconds: 5
           failureThreshold: 3
@@ -96,7 +96,7 @@ spec:
             port: http
             scheme: HTTP
           initialDelaySeconds: 5
-          periodSeconds: 10
+          periodSeconds: 60
           successThreshold: 1
           timeoutSeconds: 5
           failureThreshold: 3
