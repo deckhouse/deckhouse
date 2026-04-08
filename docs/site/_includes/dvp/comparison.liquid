@@ -1,5 +1,5 @@
-{% assign not_supported = '<img src="/images/icons/not_supported_v2.svg">' %}
-{% assign supported = '<img src="/images/icons/supported_v2.svg">' %}
+{% assign not_supported = '<img class="zoom-image-disable" src="/images/icons/not_supported_v2.svg" alt="">' %}
+{% assign supported = '<img class="zoom-image-disable" src="/images/icons/supported_v2.svg" alt="">' %}
 {% assign comparison_colspan = 7 %}
 {% if page.lang == 'en' %}
   {% assign comparison_colspan = 5 %}
@@ -65,11 +65,11 @@
             {% when "not_supported" %}
               {{ not_supported }}
             {% when "planned" %}
-              <img src="/images/icons/clock.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+              <img class="zoom-image-disable" src="/images/icons/clock.svg" alt="" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
             {% when "partly" %}
-              <img src="/images/icons/partly_supported.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+              <img class="zoom-image-disable" src="/images/icons/partly_supported.svg" alt="" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
             {% else %}
-              <img src="/images/icons/partly_supported.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+              <img class="zoom-image-disable" src="/images/icons/partly_supported.svg" alt="" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
           {% endcase %}
         </div>
       </td>
