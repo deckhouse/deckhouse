@@ -34,29 +34,31 @@ import (
 )
 
 func waitEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, nodeName string) error {
-	printed := false
+	attempt := 0
 
 	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to join etcd", nodeName), 100, 20*time.Second).RunContext(ctx, func() error {
+		attempt++
+
 		members, err := getEtcdMembers(ctx, client, "")
 		if err != nil {
 			return fmt.Errorf("getting etcd members: %w", err)
 		}
 
 		names := make([]string, 0, len(members))
+		hasMember := false
 		for _, m := range members {
 			names = append(names, m.Name)
+			if m.Name == nodeName {
+				hasMember = true
+			}
 		}
 
-		if !printed {
-			printed = true
+		if attempt == 1 || hasMember {
 			log.InfoF("Current members: [%s]\n", strings.Join(names, ", "))
 		}
 
-		for _, m := range members {
-			if m.Name == nodeName {
-				log.InfoF("Current members: [%s]\n", strings.Join(names, ", "))
-				return nil
-			}
+		if hasMember {
+			return nil
 		}
 
 		return fmt.Errorf("'%s' is not yet a member", nodeName)
