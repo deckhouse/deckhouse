@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -161,9 +163,9 @@ type ControlPlaneOperationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// ObservedState holds per-component observed state from completed CertObserve command (CertObserver component).
-	// For static pod components only: etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
+	// For static pod components only: Etcd, KubeAPIServer, KubeControllerManager, KubeScheduler.
 	// +optional
-	ObservedState map[string]ObservedComponentState `json:"observedState,omitempty"`
+	ObservedState map[OperationComponent]ObservedComponentState `json:"observedState,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -183,6 +185,20 @@ type ControlPlaneOperation struct {
 
 	Spec   ControlPlaneOperationSpec   `json:"spec,omitempty"`
 	Status ControlPlaneOperationStatus `json:"status,omitempty"`
+}
+
+// IsRenewalOperation reports whether this CPO is a cert renewal operation (detected by name).
+func (op *ControlPlaneOperation) IsRenewalOperation() bool {
+	return strings.Contains(op.Name, "-certrenewal-")
+}
+
+// CertRenewalID returns op.Name if this is renewal operation, otherwise "".
+// For cert-renewal-id annotation on the static pod manifest to force kubelet restart.
+func (op *ControlPlaneOperation) CertRenewalID() string {
+	if op.IsRenewalOperation() {
+		return op.Name
+	}
+	return ""
 }
 
 // +kubebuilder:object:root=true

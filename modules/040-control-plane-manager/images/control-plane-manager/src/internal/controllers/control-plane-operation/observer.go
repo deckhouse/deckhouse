@@ -35,15 +35,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// observeCertFiles maps component names to leaf cert file base names relative to pki dir.
-var observeCertFiles = map[string][]string{
-	"etcd": {
+// observeCertFiles maps components to leaf cert file base names relative to pki dir.
+var observeCertFiles = map[controlplanev1alpha1.OperationComponent][]string{
+	controlplanev1alpha1.OperationComponentEtcd: {
 		"etcd/server",
 		"etcd/peer",
 		"etcd/healthcheck-client",
 		"apiserver-etcd-client",
 	},
-	"kube-apiserver": {
+	controlplanev1alpha1.OperationComponentKubeAPIServer: {
 		"apiserver",
 		"apiserver-kubelet-client",
 		"front-proxy-client",
@@ -101,15 +101,14 @@ func readKubeconfigCertExpiration(kubeconfigPath string) (metav1.Time, error) {
 }
 
 // observeCertExpirationsForStaticPod reads leaf cert and kubeconfig client cert expirations for one static pod component.
-func observeCertExpirationsForStaticPod(component controlplanev1alpha1.OperationComponent, logger *log.Logger) (compName string, state controlplanev1alpha1.ObservedComponentState, ok bool) {
-	compName = component.PodComponentName()
-	if compName == "" {
-		return "", controlplanev1alpha1.ObservedComponentState{}, false
+func observeCertExpirationsForStaticPod(component controlplanev1alpha1.OperationComponent, logger *log.Logger) (state controlplanev1alpha1.ObservedComponentState, ok bool) {
+	if !component.IsStaticPodComponent() {
+		return controlplanev1alpha1.ObservedComponentState{}, false
 	}
 
 	certExpiry := make(map[string]metav1.Time)
 
-	if files, hasPKI := observeCertFiles[compName]; hasPKI {
+	if files, hasPKI := observeCertFiles[component]; hasPKI {
 		for _, baseName := range files {
 			certPath := filepath.Join(constants.KubernetesPkiPath, baseName+".crt")
 			expiry, err := readCertExpiration(certPath)
@@ -135,34 +134,35 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 	}
 
 	if len(certExpiry) == 0 {
-		return compName, controlplanev1alpha1.ObservedComponentState{}, true
+		return controlplanev1alpha1.ObservedComponentState{}, true
 	}
-	return compName, controlplanev1alpha1.ObservedComponentState{
+	return controlplanev1alpha1.ObservedComponentState{
 		CertificatesExpirationDate: certExpiry,
 	}, true
 }
 
 // execCertObserve collects certificate expiration dates from disk and writes them to CPO status.
 func execCertObserve(ctx context.Context, cc *commandContext, logger *log.Logger) (reconcile.Result, error) {
-	observedState := make(map[string]controlplanev1alpha1.ObservedComponentState)
+	observedState := make(map[controlplanev1alpha1.OperationComponent]controlplanev1alpha1.ObservedComponentState)
 
 	if cc.op.Spec.Component == controlplanev1alpha1.OperationComponentCertObserver {
 		for component := range controlplanev1alpha1.ComponentRegistry() {
-			compName, state, ok := observeCertExpirationsForStaticPod(component, logger)
+			state, ok := observeCertExpirationsForStaticPod(component, logger)
 			if !ok {
 				continue
 			}
 			if len(state.CertificatesExpirationDate) > 0 {
-				observedState[compName] = state
+				observedState[component] = state
 			}
 		}
 	} else {
-		compName, state, ok := observeCertExpirationsForStaticPod(cc.op.Spec.Component, logger)
+		component := cc.op.Spec.Component
+		state, ok := observeCertExpirationsForStaticPod(component, logger)
 		if !ok {
 			logger.Warn("CertObserve skipped: not a static pod component",
-				slog.String("component", string(cc.op.Spec.Component)))
+				slog.String("component", string(component)))
 		} else if len(state.CertificatesExpirationDate) > 0 {
-			observedState[compName] = state
+			observedState[component] = state
 		}
 	}
 
