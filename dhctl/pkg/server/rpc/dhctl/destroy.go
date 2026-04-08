@@ -25,7 +25,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/deckhouse/lib-connection/pkg"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -237,8 +237,8 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 	}
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
-	var sshProvider pkg.SSHProvider
-	var kubeProvider pkg.KubeProvider
+	var sshProvider libcon.SSHProvider
+	var kubeProvider libcon.KubeProvider
 	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		var cleanup func() error
 		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)

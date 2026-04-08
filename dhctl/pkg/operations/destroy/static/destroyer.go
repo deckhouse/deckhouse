@@ -27,7 +27,7 @@ import (
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/lib-connection/pkg"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
@@ -47,7 +47,7 @@ type LoopsParams struct {
 }
 
 type DestroyerParams struct {
-	SSHClientProvider    pkg.SSHProvider
+	SSHClientProvider    libcon.SSHProvider
 	KubeProvider         kube.ClientProviderWithCleanup
 	State                *State
 	LoggerProvider       log.LoggerProvider
@@ -275,7 +275,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	return nil
 }
 
-func (d *Destroyer) processStaticHost(ctx context.Context, sshClient pkg.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
+func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
 	d.logger().LogDebugF("Starting cleanup process for host %s\n", host)
 
 	err := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).RunContext(ctx, func() error {
@@ -308,7 +308,7 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient pkg.SSHClie
 	return d.addHostAsProcessed(ctx, host)
 }
 
-func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider pkg.SSHProvider, settings *session.Session) (pkg.SSHClient, error) {
+func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSHProvider, settings *session.Session) (libcon.SSHClient, error) {
 	if d.nodesWithCredentials == nil {
 		return nil, fmt.Errorf("Internal error. No nodes with credentials in destroyer. Probably Prepare did not call or try destroy when abort")
 	}

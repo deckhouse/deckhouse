@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/lib-connection/pkg"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
@@ -28,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-func CreateProviders(ctx context.Context, config string, logger log.Logger, isDebug bool, tmpDir string) (*providerinitializer.SSHProviderInitializer, pkg.KubeProvider, func() error, error) {
+func CreateProviders(ctx context.Context, config string, logger log.Logger, isDebug bool, tmpDir string) (*providerinitializer.SSHProviderInitializer, libcon.KubeProvider, func() error, error) {
 	cleanuper := callback.NewCallback()
 
 	externalLogger, ok := logger.(*log.ExternalLogger)

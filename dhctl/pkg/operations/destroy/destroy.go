@@ -21,7 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/lib-connection/pkg"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -56,8 +56,8 @@ type metaConfigPopulator interface {
 
 type Params struct {
 	StateCache   dhctlstate.Cache
-	SSHProvider  pkg.SSHProvider
-	KubeProvider pkg.KubeProvider
+	SSHProvider  libcon.SSHProvider
+	KubeProvider libcon.KubeProvider
 
 	// todo pass pipeline provider here
 	OnPhaseFunc            phases.DefaultOnPhaseFunc

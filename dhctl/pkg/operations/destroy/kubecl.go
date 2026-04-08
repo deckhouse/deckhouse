@@ -18,16 +18,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/lib-connection/pkg"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
 type kubeClientProvider struct {
-	kubeProvider pkg.KubeProvider
+	kubeProvider libcon.KubeProvider
 }
 
-func newKubeClientProvider(kubeProvider pkg.KubeProvider) *kubeClientProvider {
+func newKubeClientProvider(kubeProvider libcon.KubeProvider) *kubeClientProvider {
 	return &kubeClientProvider{
 		kubeProvider: kubeProvider,
 	}
