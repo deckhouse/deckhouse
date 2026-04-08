@@ -1,0 +1,27 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-source
+spec:
+  type: File
+  file:
+    include:
+      - /var/log/kube-audit/audit.log
+  destinationRefs:
+    - syslog-dest
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: syslog-dest
+spec:
+  type: Socket
+  socket:
+    address: 192.168.1.1:514
+    mode: UDP
+    encoding:
+      codec: Syslog
+  extraLabels:
+    env: prod
+    test: "{{ test }}"
