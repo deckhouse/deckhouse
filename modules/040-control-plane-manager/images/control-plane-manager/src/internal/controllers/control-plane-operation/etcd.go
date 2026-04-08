@@ -145,7 +145,7 @@ func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir s
 }
 
 // reconcileEtcdJoin handles etcd join for a fresh or orphaned node.
-// Flow: ensureAdminKubeconfig -> prepare manifest with annotations -> JoinCluster -> waitForPod
+// Precondition: caller must ensure admin.conf exists - see execJoinEtcdCluster.
 func (r *Reconciler) reconcileEtcdJoin(
 	op *controlplanev1alpha1.ControlPlaneOperation,
 	secretData map[string][]byte,
@@ -153,7 +153,6 @@ func (r *Reconciler) reconcileEtcdJoin(
 	logger *log.Logger,
 ) (reconcile.Result, error) {
 	component := op.Spec.Component
-	kubeconfigDir := kubeconfigDirPath()
 
 	// Cleanup stale etcd data dir if it exists (orphaned node case)
 	if _, err := os.Stat(etcdDataDir); err == nil {
@@ -162,13 +161,6 @@ func (r *Reconciler) reconcileEtcdJoin(
 			logger.Error("failed to cleanup etcd data dir", log.Err(err))
 			return reconcile.Result{}, fmt.Errorf("cleanup etcd data dir: %w", err)
 		}
-	}
-
-	// admin.conf is already created by execJoinEtcdCluster, idempotency check is not needed, maybe remove this check later.
-	logger.Info("etcd join: ensuring admin kubeconfig")
-	if err := ensureAdminKubeconfig(secretData, constants.KubernetesPkiPath, kubeconfigDir); err != nil {
-		logger.Error("failed to ensure admin kubeconfig", log.Err(err))
-		return reconcile.Result{}, fmt.Errorf("ensure admin kubeconfig: %w", err)
 	}
 
 	logger.Info("etcd join: preparing manifest")
