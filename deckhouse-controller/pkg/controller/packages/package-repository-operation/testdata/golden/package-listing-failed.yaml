@@ -51,4 +51,5 @@ status:
     reason: PackageListingFailed
     status: "False"
     type: LastOperationScanFinished
+  partialScanAvailable: false
   syncTime: null

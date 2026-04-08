@@ -137,6 +137,10 @@ type PackageRepositoryStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// PartialScanAvailable indicates whether the registry supports pagination for tag listing.
+	// +optional
+	PartialScanAvailable bool `json:"partialScanAvailable"`
 }
 
 type PackageRepositoryStatusPackage struct {
