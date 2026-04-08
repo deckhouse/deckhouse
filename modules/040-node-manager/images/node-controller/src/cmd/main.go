@@ -97,9 +97,11 @@ func main() {
 
 	defaultMaxConcurrent, perControllerMaxConcurrent, err := parseMaxConcurrentReconciles(maxConcurrentReconcilesRaw)
 	if err != nil {
-		setupLog.Error(err, "invalid --max-concurrent-reconciles value")
-		os.Exit(1)
+		setupLog.Error(err, "invalid --max-concurrent-reconciles value, falling back to defaults")
+		defaultMaxConcurrent = defaultMaxConcurrentReconciles
+		perControllerMaxConcurrent = nil
 	}
+	setupLog.V(1).Info("max-concurrent-reconciles parsed", "default", defaultMaxConcurrent, "perController", perControllerMaxConcurrent)
 
 	if err = register.SetupAll(mgr, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
 		setupLog.Error(err, "unable to setup controllers")

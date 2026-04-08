@@ -54,7 +54,8 @@ func SetupAll(mgr ctrl.Manager, disabledControllers string, defaultMaxConcurrent
 
 	for name := range perControllerMaxConcurrent {
 		if !registered[name] {
-			return fmt.Errorf("unknown controller %q in max-concurrent-reconciles; registered controllers: %s", name, registeredNames())
+			setupLog.Info("WARNING: unknown controller in max-concurrent-reconciles, ignoring", "controller", name, "registeredControllers", registeredNames())
+			delete(perControllerMaxConcurrent, name)
 		}
 	}
 
