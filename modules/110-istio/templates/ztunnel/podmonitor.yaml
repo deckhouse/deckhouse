@@ -1,5 +1,9 @@
+{{- $version := $.Values.istio.internal.globalVersion }}
+{{- $versionInfo := get .Values.istio.internal.versionMap $version }}
+{{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
+
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
-{{- if (.Values.istio.internal.enableAmbientMode) }}
+{{- if and ($.Values.istio.internal.enableAmbientMode) ($supportsAmbient) }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -10,19 +14,17 @@ metadata:
 spec:
   jobLabel: app
   podMetricsEndpoints:
-    - port: https-metrics
-      scheme: https
-      tlsConfig:
-        insecureSkipVerify: true
-      bearerTokenSecret:
-        name: "prometheus-token"
-        key: "token"
-      honorLabels: true
-      relabelings:
-        - targetLabel: tier
-          replacement: cluster
-        - targetLabel: job
-          replacement: "ztunnel"
+  - port: ztunnel-stats
+    scheme: http
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    honorLabels: true
+    relabelings:
+    - targetLabel: tier
+      replacement: cluster
+    - targetLabel: job
+      replacement: "ztunnel"
   selector:
     matchLabels:
       app: ztunnel

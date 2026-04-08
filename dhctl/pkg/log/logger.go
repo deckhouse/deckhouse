@@ -641,11 +641,11 @@ func (e *ExternalLogger) LogProcess(p, t string, run func() error) error {
 }
 
 func (e *ExternalLogger) LogInfoF(format string, a ...interface{}) {
-	e.logger.InfoF(format, a...)
+	e.logger.InfoFWithoutLn(format, a...)
 }
 
 func (e *ExternalLogger) LogInfoLn(a ...interface{}) {
-	e.logger.InfoLn(a...)
+	e.logger.InfoF("%v", a...)
 }
 
 func (e *ExternalLogger) LogErrorF(format string, a ...interface{}) {
@@ -681,7 +681,7 @@ func (e *ExternalLogger) LogWarnLn(a ...interface{}) {
 }
 
 func (e *ExternalLogger) LogWarnF(format string, a ...interface{}) {
-	e.logger.WarnF(format, a...)
+	e.logger.WarnFWithoutLn(format, a...)
 }
 
 func (e *ExternalLogger) LogJSON(content []byte) {
