@@ -41,73 +41,18 @@ function nodeuser_patch() {
   local failure_count=0
   local failure_limit=1
 
-  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    json_file=$( mktemp -t patch_json.XXXXX )
-    echo "${data}" > $json_file
-
-    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${username}" --type=json --patch-file="${json_file}" --subresource=status; do
-      failure_count=$((failure_count + 1))
-      if [[ $failure_count -eq $failure_limit ]]; then
-        bb-log-error "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
-        break
-      fi
-      bb-log-error "failed to NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
-      sleep 10
-    done
-    rm $json_file
-
-  elif [ -f /var/lib/bashible/bootstrap-token ]; then
-    local patch_pending=true
-
-    while [ "$patch_pending" = true ] ; do
-      if [ ${#AVAILABLE_API_SERVERS[@]} -eq 0 ]; then
-        read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
-        bb-log-info "All servers failed once, resetting to original list and retrying"
-      fi
-      bb-log-info "Current AVAILABLE_API_SERVERS: ${AVAILABLE_API_SERVERS[*]}"
-      for server in "${AVAILABLE_API_SERVERS[@]}"; do
-        local server_addr=$(echo $server | cut -f1 -d":")
-        until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
-          bb-log-info "The network is not ready for connecting to apiserver yet, waiting..."
-          sleep 1
-        done
-
-        if d8-curl -sS --fail -x "" \
-          --max-time 10 \
-          -XPATCH \
-          -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
-          -H "Accept: application/json" \
-          -H "Content-Type: application/json-patch+json" \
-          --cacert "$BOOTSTRAP_DIR/ca.crt" \
-          --data "${data}" \
-          "https://$server/apis/deckhouse.io/v1/nodeusers/${username}/status" > /dev/null; then
-
-          bb-log-info "Successfully patched NodeUser."
-          patch_pending=false
-          break
-        else
-
-          AVAILABLE_API_SERVERS=($(printf '%s\n' "${AVAILABLE_API_SERVERS[@]}" | grep -v "^$server$"))
-          bb-log-info "Server $server failed once, removing from current list"
-
-          failure_count=$((failure_count + 1))
-
-          if [[ $failure_count -eq $failure_limit ]]; then
-            bb-log-error "Failed to patch NodeUser. Number of attempts exceeded. NodeUser patch will be skipped."
-            patch_pending=false
-            break
-          fi
-
-          bb-log-error "Failed to patch NodeUser via $server. ${failure_count} of ${failure_limit} attempts..."
-          sleep 3
-        fi
-      done
-    done
-
-  else
-    bb-log-error "failed to patch NodeUser can't find kubelet.conf or bootstrap-token"
-    exit 1
-  fi
+  until bb-curl-kube "/apis/deckhouse.io/v1/nodeusers/${username}/status" \
+        -X PATCH \
+        -H "Content-Type: application/json-patch+json" \
+        --data "${data}" >/dev/null; do
+    failure_count=$((failure_count + 1))
+    if [[ $failure_count -eq $failure_limit ]]; then
+      bb-log-error "Failed to patch NodeUser. Number of attempts exceeded. NodeUser patch will be skipped."
+      break
+    fi
+    bb-log-error "Failed to patch NodeUser. Retrying..."
+    sleep 3
+  done
 }
 
 # $1 - username $2 - error message

@@ -16,24 +16,12 @@
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
 function get_data_device_secret() {
-  secret="d8-masters-kubernetes-data-device-path"
+  local secret="d8-masters-kubernetes-data-device-path"
 
-  if [ -f /var/lib/bashible/bootstrap-token ]; then
-    while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        if d8-curl -s -f --connect-timeout 10 -X GET "https://$server/api/v1/namespaces/d8-system/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
-        then
-          return 0
-        else
-          >&2 echo "failed to get secret $secret from server $server"
-        fi
-      done
-      sleep 10
-    done
-  else
-    >&2 echo "failed to get secret $secret: can't find bootstrap-token"
-    return 1
-  fi
+  until bb-curl-kube "/api/v1/namespaces/d8-system/secrets/$secret"; do
+    >&2 echo "failed to get secret $secret"
+    sleep 10
+  done
 }
 
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then

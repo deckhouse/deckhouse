@@ -43,42 +43,12 @@ bb-discover-node-name() {
   fi
 }
 
-bb-kube-apiserver-healthy() {
-  local kubeconfig="$1"
-  local server="$2"
-  kubectl get --raw='/healthz' --kubeconfig="$kubeconfig" --request-timeout 3s --server="$server" >/dev/null 2>&1
-}
-
-bb-kubectl-exec() {
-  local kubeconfig="/etc/kubernetes/kubelet.conf"
-  local args=""
-{{ if eq .runType "Normal" }}
-  local kube_server
-  kube_server=$(kubectl --kubeconfig="$kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
-  if [[ -n "$kube_server" ]]; then
-    # checking local kubernetes-api-proxy availability
-    if bb-kube-apiserver-healthy "$kubeconfig" "$kube_server"; then
-      args="--server=$kube_server"
-    else
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        # select the first available control plane
-        if bb-kube-apiserver-healthy "$kubeconfig" "https://$server"; then
-          args="--server=https://$server"
-          break
-        fi
-      done
-    fi
-  fi
-{{ end }}
-  kubectl --request-timeout 60s --kubeconfig=$kubeconfig $args ${@}
-}
-
 bb-label-node-bashible-first-run-finished() {
   local max_attempts=25
   local attempt=1
 
   while [ $attempt -le $max_attempts ]; do
-    if bb-kubectl-exec label nodes "$(bb-d8-node-name)" node.deckhouse.io/bashible-first-run-finished=true; then
+    if bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/bashible-first-run-finished=true"; then
       echo "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
       return 0
     fi
@@ -97,7 +67,7 @@ bb-node-has-bashible-uninitialized-taint() {
   local attempt=1
 
   while [[ $attempt -le $max_attempts ]]; do
-    if node_json="$(bb-kubectl-exec get no "$(bb-d8-node-name)" -o json 2>/dev/null)"; then
+    if node_json="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" 2>/dev/null)"; then
       if echo "$node_json" | jq -e '.spec.taints[]? | select(.key == "node.deckhouse.io/bashible-uninitialized")' >/dev/null 2>&1; then
         return 0
       else
@@ -114,8 +84,13 @@ bb-node-has-bashible-uninitialized-taint() {
 }
 
 # make the function available in $step
-export -f bb-kubectl-exec
-export -f bb-kube-apiserver-healthy
+export -f bb-curl-kube
+export -f bb-curl-kube-healthz
+export -f bb-curl-kube-patch-node-metadata
+export -f bb-curl-kube-detect-auth
+export -f bb-curl-kube-resolve-endpoint
+export -f bb-curl-kube-build-curl-auth-args
+export -f bb-curl-kube-extract-admin-certs
 export -f bb-label-node-bashible-first-run-finished
 export -f bb-node-has-bashible-uninitialized-taint
 
@@ -130,16 +105,12 @@ bb-indent-text() {
 function bb-event-error-create() {
     # This function is used for creating event in the default namespace with reference of
     # bashible step and used events.k8s.io/v1 apiVersion.
-    # eventName aggregates hostname with bashible step - sed keep only name and replace
-    # underscore with dash due to regexp.
     # nodeName is used for both .name and .uid fields intentionally as putting a real node uid
     # has proven to have some side effects like missing events when describing objects
-    # using kubectl versions 1.23.x (https://github.com/deckhouse/deckhouse/issues/4609).
-    # All of stderr outputs are stored in the eventLog file.
-    # step is used as argument for function call.
-    # If event creation failed, error from kubectl suppressed.
+    # (https://github.com/deckhouse/deckhouse/issues/4609).
+    # If event creation failed, error is suppressed.
     step="$1"
-    eventName="$(echo -n $(bb-d8-node-name))-$(echo $step | sed 's#.*/##; s/_/-/g')"
+    eventName="$(echo -n "$(bb-d8-node-name)")-$(echo "$step" | sed 's#.*/##; s/_/-/g')"
     nodeName=$(bb-d8-node-name)
     eventLog="/var/lib/bashible/step.log"
     if [[ -f "${eventLog}" ]]; then
@@ -147,67 +118,72 @@ function bb-event-error-create() {
     else
       eventNote="bashible step log is not available."
     fi
-    if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      indent="            " # 12 spaces
-      logs="$(bb-indent-text "$indent" <<<"${eventNote}")"
-      bb-kubectl-exec create -f - <<EOF || true
-          apiVersion: events.k8s.io/v1
-          kind: Event
-          metadata:
-            generateName: bashible-error-${eventName}-
-          regarding:
-            apiVersion: v1
-            kind: Node
-            name: ${nodeName}
-            uid: ${nodeName}
-          note: |
-${logs}
-          reason: BashibleStepFailed
-          type: Warning
-          reportingController: bashible
-          reportingInstance: "$(bb-d8-node-name)"
-          eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
-          action: "BashibleStepExecution"
-EOF
+    if test -f /etc/kubernetes/kubelet.conf ; then
+      local json
+      json=$(jq -nc \
+        --arg eventName "bashible-error-${eventName}-" \
+        --arg nodeName "$nodeName" \
+        --arg note "$eventNote" \
+        --arg instance "$(bb-d8-node-name)" \
+        --arg eventTime "$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")" \
+        '{
+          "apiVersion": "events.k8s.io/v1",
+          "kind": "Event",
+          "metadata": {"generateName": $eventName},
+          "regarding": {"apiVersion": "v1", "kind": "Node", "name": $nodeName, "uid": $nodeName},
+          "note": $note,
+          "reason": "BashibleStepFailed",
+          "type": "Warning",
+          "reportingController": "bashible",
+          "reportingInstance": $instance,
+          "eventTime": $eventTime,
+          "action": "BashibleStepExecution"
+        }')
+      bb-curl-kube "/apis/events.k8s.io/v1/namespaces/default/events" \
+        -X POST -H "Content-Type: application/json" --data "$json" >/dev/null 2>&1 || true
     fi
 }
 
 function bb-event-info-create() {
-    eventName="$(echo -n "$(bb-d8-node-name)")-$(echo $1 | sed 's#.*/##; s/_/-/g')"
+    eventName="$(echo -n "$(bb-d8-node-name)")-$(echo "$1" | sed 's#.*/##; s/_/-/g')"
     nodeName="$(bb-d8-node-name)"
-    if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      bb-kubectl-exec create -f - <<EOF || true
-          apiVersion: events.k8s.io/v1
-          kind: Event
-          metadata:
-            generateName: bashible-info-${eventName}-update-
-          regarding:
-            apiVersion: v1
-            kind: Node
-            name: ${nodeName}
-            uid: ${nodeName}
-          reason: BashibleNodeUpdate
-          type: Normal
-          note: "$1 steps update on ${nodeName}"
-          reportingController: bashible
-          reportingInstance: "$(bb-d8-node-name)"
-          eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
-          action: "BashibleStepExecution"
-EOF
+    if test -f /etc/kubernetes/kubelet.conf ; then
+      local json
+      json=$(jq -nc \
+        --arg eventName "bashible-info-${eventName}-update-" \
+        --arg nodeName "$nodeName" \
+        --arg note "$1 steps update on ${nodeName}" \
+        --arg instance "$(bb-d8-node-name)" \
+        --arg eventTime "$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")" \
+        '{
+          "apiVersion": "events.k8s.io/v1",
+          "kind": "Event",
+          "metadata": {"generateName": $eventName},
+          "regarding": {"apiVersion": "v1", "kind": "Node", "name": $nodeName, "uid": $nodeName},
+          "reason": "BashibleNodeUpdate",
+          "type": "Normal",
+          "note": $note,
+          "reportingController": "bashible",
+          "reportingInstance": $instance,
+          "eventTime": $eventTime,
+          "action": "BashibleStepExecution"
+        }')
+      bb-curl-kube "/apis/events.k8s.io/v1/namespaces/default/events" \
+        -X POST -H "Content-Type: application/json" --data "$json" >/dev/null 2>&1 || true
     fi
 }
 
 function annotate_node() {
   echo "Annotate node $(bb-d8-node-name) with annotation ${@}"
   attempt=0
-  until error=$(bb-kubectl-exec annotate node $(bb-d8-node-name) --overwrite ${@} 2>&1); do
+  until error=$(bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${@}" 2>&1); do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Failed to annotate node $(bb-d8-node-name) with annotation ${@} after ${MAX_RETRIES} retries. Last error from kubectl: ${error}"
+      >&2 echo "ERROR: Failed to annotate node $(bb-d8-node-name) with annotation ${@} after ${MAX_RETRIES} retries. Last error: ${error}"
       exit 1
     fi
     if [ "$attempt" -gt "2" ]; then
-      >&2 echo "Failed to annotate node $(bb-d8-node-name) with annotation ${@} after 3 tries. Last message from kubectl: ${error}"
+      >&2 echo "Failed to annotate node $(bb-d8-node-name) with annotation ${@} after 3 tries. Last message: ${error}"
       >&2 echo "Retrying..."
       attempt=0
     fi
@@ -217,76 +193,34 @@ function annotate_node() {
 }
 
 function get_secret() {
-  secret="$1"
+  local secret="$1"
+  local attempt=0
 
-  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    attempt=0
-    until bb-kubectl-exec -n d8-cloud-instance-manager get secret "$secret" -o json; do
-      attempt=$(( attempt + 1 ))
-      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        >&2 echo "ERROR: Failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
-        exit 1
-      fi
-      >&2 echo "failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
-      sleep 10
-    done
-{{ if eq .runType "Normal" }}
-  elif [ -f /var/lib/bashible/bootstrap-token ]; then
-    token="$(</var/lib/bashible/bootstrap-token)"
-    while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        url="https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"
-        if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
-        then
-          return 0
-        else
-          >&2 echo "failed to get secret $secret with curl https://$server..."
-        fi
-      done
-      sleep 10
-    done
-{{ end }}
-  else
-    >&2 echo "failed to get secret $secret: can't find kubelet.conf or bootstrap-token"
-    exit 1
-  fi
+  until bb-curl-kube "/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"; do
+    attempt=$(( attempt + 1 ))
+    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+      >&2 echo "ERROR: Failed to get secret $secret"
+      exit 1
+    fi
+    >&2 echo "failed to get secret $secret"
+    sleep 10
+  done
 }
 
 function get_bundle() {
-  resource="$1"
-  name="$2"
+  local resource="$1"
+  local name="$2"
+  local attempt=0
 
-  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    attempt=0
-    until bb-kubectl-exec get "$resource" "$name" -o json; do
-      attempt=$(( attempt + 1 ))
-      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        >&2 echo "ERROR: Failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
-        exit 1
-      fi
-      >&2 echo "failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
-      sleep 10
-    done
-{{ if eq .runType "Normal" }}
-  elif [ -f /var/lib/bashible/bootstrap-token ]; then
-    token="$(</var/lib/bashible/bootstrap-token)"
-    while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-        if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
-        then
-         return 0
-        else
-          >&2 echo "failed to get $resource $name with curl https://$server..."
-        fi
-      done
-      sleep 10
-    done
-{{ end }}
-  else
-    >&2 echo "failed to get $resource $name: can't find kubelet.conf or bootstrap-token"
-    exit 1
-  fi
+  until bb-curl-kube "/apis/bashible.deckhouse.io/v1alpha1/${resource}s/$name"; do
+    attempt=$(( attempt + 1 ))
+    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+      >&2 echo "ERROR: Failed to get $resource $name"
+      exit 1
+    fi
+    >&2 echo "failed to get $resource $name"
+    sleep 10
+  done
 }
 
 log_configuration_checksum() {
@@ -302,36 +236,25 @@ function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
 
-# curl request to get list of pods with labelSelector
+# Get list of pods with labelSelector
 # $1 namespace
 # $2 labelSelector
-# $3 token
 function get_pods() {
   local namespace=$1
   local labelSelector=$2
-  local token=$3
 
-  while true; do
-    for server in {{ .normal.apiserverEndpoints | join " " }}; do
-      url="https://$server/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"
-      if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
-      then
-      return 0
-      else
-        >&2 echo "failed to get $resource $name with curl https://$server..."
-      fi
-    done
+  until bb-curl-kube "/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"; do
+    >&2 echo "failed to get pods in $namespace with selector $labelSelector"
     sleep 10
   done
 }
 
 function get_rpp_address() {
   if [ -f /var/lib/bashible/bootstrap-token ]; then
-    local token="$(</var/lib/bashible/bootstrap-token)"
     local namespace="d8-cloud-instance-manager"
     local labelSelector="app%3Dregistry-packages-proxy"
 
-    rpp_ips=$(get_pods $namespace $labelSelector $token | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
+    rpp_ips=$(get_pods "$namespace" "$labelSelector" | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
     port=4219
     ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
     echo "$ips_csv"
@@ -357,6 +280,9 @@ function main() {
   export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
   export REGISTRY_MODULE_ADDRESS="registry.d8-system.svc:5001" # Deprecated
   export REGISTRY_MODULE_IGNITER_DIR="$TMPDIR/registry_module_igniter"
+{{ if eq .runType "Normal" }}
+  export BB_KUBE_APISERVER_FALLBACK_ENDPOINTS="{{ .normal.apiserverEndpoints | join " " }}"
+{{ end }}
 {{- if .packagesProxy }}
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
@@ -379,8 +305,8 @@ function main() {
   {{- end }}
 {{- end }}
 
-  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    if tmp="$(bb-kubectl-exec get node $(bb-d8-node-name) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
+  if test -f /etc/kubernetes/kubelet.conf ; then
+    if tmp="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
       NODE_GROUP="$tmp"
       if [ "${NODE_GROUP}" == "null" ] ; then
         >&2 echo "failed to get node group. Forgot set label 'node.deckhouse.io/group'"
@@ -419,8 +345,8 @@ function main() {
   fi
 
 {{ if eq .runType "Normal" }}
-  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      REBOOT_ANNOTATION="$( bb-kubectl-exec get no "$D8_NODE_HOSTNAME" -o json |jq -r '.metadata.annotations."update.node.deckhouse.io/reboot"' )"
+  if test -f /etc/kubernetes/kubelet.conf ; then
+      REBOOT_ANNOTATION="$( bb-curl-kube "/api/v1/nodes/$D8_NODE_HOSTNAME" |jq -r '.metadata.annotations."update.node.deckhouse.io/reboot"' )"
     else
       REBOOT_ANNOTATION=null
   fi
@@ -428,7 +354,7 @@ function main() {
      bb-label-node-bashible-first-run-finished
      touch $BASHIBLE_INITIALIZED_FILE
   fi
-  if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]] && [[ -f "$BASHIBLE_INITIALIZED_FILE" ]] && type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf; then
+  if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]] && [[ -f "$BASHIBLE_INITIALIZED_FILE" ]] && test -f /etc/kubernetes/kubelet.conf; then
     if bb-node-has-bashible-uninitialized-taint; then
       echo "WARNING: Node is initialized but bashible-uninitialized taint is still present. Re-applying first-run-finished label..."
       bb-label-node-bashible-first-run-finished

@@ -20,7 +20,6 @@ fi
 if [ ! -f /var/lib/bashible/bootstrap-token ]; then
   exit 0
 fi
-token="$(</var/lib/bashible/bootstrap-token)"
 
 counter=0
 limit=3
@@ -29,19 +28,16 @@ while true; do
     bb-log-error "ERROR: Retry limit reached"
     exit 1
   fi
-  for server in {{ .normal.apiserverEndpoints | join " " }}; do
-    url="https://$server/api/v1/nodes/$(bb-d8-node-name)"
-    if out="$(d8-curl --connect-timeout 10 -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt" 2>&1)"; then
-      # got node info from API, node exists, should fail
-      bb-log-error "ERROR: A node with the hostname $(bb-d8-node-name) already exists in the cluster\nPlease change the hostname, it should be unique in the cluster.\nThen clean up the server by running the script /var/lib/bashible/cleanup_static_node.sh and try again."
-      exit 1
-    fi
-    if grep -q "The requested URL returned error: 404" <<< "$out"; then
-      # cannot got node info from API, but got valid 404 response from API, node doesn't exists, finish successfully
-      exit 0
-    fi
-    bb-log-error "ERROR: The request the $url returned an error: $out"
-  done
+  if out="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" 2>&1)"; then
+    # got node info from API, node exists, should fail
+    bb-log-error "ERROR: A node with the hostname $(bb-d8-node-name) already exists in the cluster\nPlease change the hostname, it should be unique in the cluster.\nThen clean up the server by running the script /var/lib/bashible/cleanup_static_node.sh and try again."
+    exit 1
+  fi
+  if grep -q "The requested URL returned error: 404" <<< "$out"; then
+    # cannot got node info from API, but got valid 404 response from API, node doesn't exists, finish successfully
+    exit 0
+  fi
+  bb-log-error "ERROR: The request returned an error: $out"
   sleep 10
   counter=$((counter + 1))
 done
