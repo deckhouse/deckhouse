@@ -307,7 +307,7 @@ func (r *StaticMachineReconciler) reconcileNormal(
 
 	_, shouldSkipBootstrap := newStaticInstance.Annotations[deckhousev1.SkipBootstrapPhaseAnnotation]
 	if shouldSkipBootstrap {
-		result, err := r.HostClient.AdoptStaticInstance(ctx, newStaticInstance)
+		result, err := r.HostClient.AdoptStaticInstance(ctx, newStaticInstance, staticMachine)
 		if err != nil {
 			logger.Error(err, "failed to adopt StaticInstance")
 		}
@@ -449,7 +449,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, StaticMachineAdoptTimedOut
 		}
 
-		result, err := r.HostClient.AdoptStaticInstance(ctx, staticInstance)
+		result, err := r.HostClient.AdoptStaticInstance(ctx, staticInstance, staticMachine)
 		if err != nil {
 			logger.Error(err, "failed to adopt StaticInstance")
 		}
