@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,39 +20,57 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
-	"caps-controller-manager/internal/scope"
+	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/ssh"
 	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
 )
 
 // Cleanup runs the cleanup script on StaticInstance.
-func (c *Client) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	phase := instanceScope.GetPhase()
+func (c *Client) Cleanup(ctx context.Context,
+	staticInstance *deckhousev1.StaticInstance,
+	staticMachine *infrav1.StaticMachine,
+	machine *clusterv1.Machine) error {
+	logger := ctrl.LoggerFrom(ctx)
+	phase := staticInstance.GetPhase()
+
+	credentials := &deckhousev1.SSHCredentials{}
+	if err := c.client.Get(ctx, client.ObjectKey{Name: staticInstance.Spec.CredentialsRef.Name}, credentials); err != nil {
+		logger.Error(err, "failed to load SSHCredentials")
+		return errors.Wrap(err, "failed to load SSHCredentials")
+	}
+
+	sshLegacyMode := true
+	if len(credentials.Spec.PrivateSSHKey) == 0 {
+		sshLegacyMode = false
+	}
 
 	switch phase {
 	case
 		deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping,
 		deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
-		err := c.cleanupFromBootstrappingOrRunningPhase(ctx, instanceScope)
+		err := c.cleanup(ctx, staticInstance, staticMachine, credentials.Spec, sshLegacyMode)
 		if err != nil {
 			return errors.Wrap(err, "failed to clean up StaticInstance from running phase")
 		}
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
-		err := c.cleanupFromCleaningPhase(ctx, instanceScope)
+		err := c.cleanup(ctx, staticInstance, staticMachine, credentials.Spec, sshLegacyMode)
 		if err != nil {
 			return errors.Wrap(err, "failed to clean up StaticInstance from cleaning phase")
 		}
 	case
 		deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
-		if !canSkipCleanupForPendingPhase(instanceScope) {
+		if !canSkipCleanupForPendingPhase(staticInstance, staticMachine, machine) {
 			return errors.New("StaticInstance is pending outside delete flow")
 		}
 		// During machine deletion, StaticInstance can still be Pending.
 		// In this case cleanup is a no-op and deletion should proceed.
-		instanceScope.Logger.V(1).Info("Skipping cleanup for StaticInstance in pending phase during deletion", "phase", phase)
+		logger.V(1).Info("Skipping cleanup for StaticInstance in pending phase during deletion", "phase", phase)
 	default:
 		return errors.New("StaticInstance is not running or cleaning")
 	}
@@ -60,76 +78,83 @@ func (c *Client) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope
 	return nil
 }
 
-func canSkipCleanupForPendingPhase(instanceScope *scope.InstanceScope) bool {
-	if instanceScope.MachineScope == nil || instanceScope.MachineScope.StaticMachine == nil || instanceScope.MachineScope.Machine == nil {
+func canSkipCleanupForPendingPhase(staticInstance *deckhousev1.StaticInstance, staticMachine *infrav1.StaticMachine, machine *clusterv1.Machine) bool {
+	if staticMachine == nil || machine == nil {
 		return false
 	}
 
-	if instanceScope.MachineScope.StaticMachine.DeletionTimestamp.IsZero() || instanceScope.MachineScope.Machine.DeletionTimestamp.IsZero() {
+	if staticMachine.DeletionTimestamp.IsZero() || machine.DeletionTimestamp.IsZero() {
 		return false
 	}
 
-	if instanceScope.Instance.Status.MachineRef == nil {
+	if staticInstance.Status.MachineRef == nil {
 		return true
 	}
 
-	return instanceScope.Instance.Status.MachineRef.UID == instanceScope.MachineScope.StaticMachine.UID
+	return staticInstance.Status.MachineRef.UID == staticMachine.UID
 }
 
-func (c *Client) cleanupFromBootstrappingOrRunningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning)
-
-	err := instanceScope.Patch(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to patch StaticInstance phase")
+func (c *Client) cleanup(ctx context.Context,
+	staticInstance *deckhousev1.StaticInstance,
+	staticMachine *infrav1.StaticMachine,
+	credentials deckhousev1.SSHCredentialsSpec,
+	sshLegacyMode bool) error {
+	type taskDataStr struct {
+		address       string
+		credentials   deckhousev1.SSHCredentialsSpec
+		sshLegacyMode bool
 	}
 
-	c.cleanup(instanceScope)
+	taskFunc := func(tCtx context.Context, data any) error {
+		tLogger := ctrl.LoggerFrom(tCtx)
+		dataStr, ok := data.(taskDataStr)
+		if !ok {
+			return errors.New("invalid task data")
+		}
 
-	return nil
-}
-
-// cleanupFromCleaningPhase finishes the cleanup process by checking if the cleanup script was successfully executed and patching StaticInstance.
-func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	done := c.cleanup(instanceScope)
-	if !done {
+		var sshCl ssh.SSH
+		var err error
+		if dataStr.sshLegacyMode {
+			tLogger.V(1).Info("using clissh")
+			sshCl = clissh.CreateSSHClient(dataStr.address, dataStr.credentials)
+		} else {
+			tLogger.V(1).Info("using gossh")
+			sshCl, err = gossh.CreateSSHClient(dataStr.address, dataStr.credentials)
+		}
+		if err != nil {
+			tLogger.Error(err, "Failed to clean up StaticInstance: failed to create ssh client")
+			return errors.Wrap(err, "failed to clean up StaticInstance: failed to create ssh client")
+		}
+		err = sshCl.ExecSSHCommand("if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
+		if err != nil {
+			tLogger.Error(err, "Failed to clean up StaticInstance: failed to exec ssh command")
+			return errors.Wrap(err, "failed to clean up StaticInstance: failed to exec ssh command")
+		}
 		return nil
 	}
 
-	err := instanceScope.ToPending(ctx)
+	staticInstance.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning)
+
+	taskData := taskDataStr{
+		address:       staticInstance.Spec.Address,
+		credentials:   credentials,
+		sshLegacyMode: sshLegacyMode,
+	}
+
+	taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
+	err, finished := c.taskManager.Spawn(taskCtx, string(staticMachine.Spec.ProviderID), "cleanup", taskData, taskFunc)
 	if err != nil {
-		return errors.Wrap(err, "failed to set StaticInstance to Pending phase")
+		return err
 	}
 
+	logger := ctrl.LoggerFrom(ctx)
+	if finished {
+		logger.V(1).Info("Cleanup script executed successfully")
+		c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "CleanupScriptSucceeded", "Cleanup script executed successfully")
+		staticInstance.ToPending()
+		return nil
+	}
+
+	logger.V(1).Info("Cleaning is not finished yet, waiting...")
 	return nil
-}
-
-func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
-	done := c.cleanupTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
-		var sshCl ssh.SSH
-		var err error
-		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.V(1).Info("using clissh")
-			sshCl, err = clissh.CreateSSHClient(instanceScope)
-		} else {
-			instanceScope.Logger.V(1).Info("using gossh")
-			sshCl, err = gossh.CreateSSHClient(instanceScope)
-		}
-		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to create ssh client")
-			return false
-		}
-		err = sshCl.ExecSSHCommand(instanceScope, "if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
-		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to exec ssh command")
-			return false
-		}
-		return true
-	})
-	if done != nil && *done {
-		c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "CleanupScriptSucceeded", "Cleanup script executed successfully")
-		return true
-	}
-	instanceScope.Logger.V(1).Info("Cleaning is not finished yet, waiting...")
-	return false
 }

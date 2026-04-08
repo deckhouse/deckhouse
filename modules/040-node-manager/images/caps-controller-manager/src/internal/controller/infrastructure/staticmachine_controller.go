@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -212,7 +212,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Handle deleted machines
 	if !staticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		logger.Info("Reconciling delete StaticMachine")
-		return r.reconcileDelete(ctx, cluster, machine, staticMachine, staticInstance)
+		return r.reconcileDelete(ctx, machine, staticMachine, staticInstance)
 	}
 
 	return r.reconcileNormal(ctx, cluster, machine, staticMachine, staticInstance)
@@ -307,7 +307,7 @@ func (r *StaticMachineReconciler) reconcileNormal(
 
 	_, shouldSkipBootstrap := newStaticInstance.Annotations[deckhousev1.SkipBootstrapPhaseAnnotation]
 	if shouldSkipBootstrap {
-		result, err := r.HostClient.AdoptStaticInstance(ctx, newStaticInstance)
+		result, err := r.HostClient.AdoptStaticInstance(ctx, newStaticInstance, staticMachine, machine)
 		if err != nil {
 			logger.Error(err, "failed to adopt StaticInstance")
 		}
@@ -315,7 +315,7 @@ func (r *StaticMachineReconciler) reconcileNormal(
 		return result, nil
 	}
 
-	result, err := r.HostClient.Bootstrap(ctx, newStaticInstance)
+	result, err := r.HostClient.Bootstrap(ctx, newStaticInstance, staticMachine, machine)
 	if err != nil {
 		logger.Error(err, "failed to bootstrap StaticInstance")
 	}
@@ -323,13 +323,10 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	return result, nil
 }
 
-func (r *StaticMachineReconciler) reconcileDelete(
-	ctx context.Context,
-	cluster *clusterv1.Cluster,
+func (r *StaticMachineReconciler) reconcileDelete(ctx context.Context,
 	machine *clusterv1.Machine,
 	staticMachine *infrav1.StaticMachine,
-	staticInstance *deckhousev1.StaticInstance,
-) (ctrl.Result, error) {
+	staticInstance *deckhousev1.StaticInstance) (ctrl.Result, error) {
 	if staticInstance != nil {
 		result, err := r.cleanup(ctx, machine, staticMachine, staticInstance)
 		if err != nil {
@@ -384,7 +381,7 @@ func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv
 
 		cond := conditions.Get(machine, clusterv1.DeletingCondition)
 		if cond != nil && cond.Status == metav1.ConditionTrue {
-			err = r.HostClient.Cleanup(ctx, staticInstance)
+			err = r.HostClient.Cleanup(ctx, staticInstance, staticMachine, machine)
 			if err != nil {
 				// don't return here
 				logger.Error(err, "failed to clean up StaticInstance")
@@ -412,7 +409,7 @@ func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv
 		return ctrl.Result{}, nil
 	}
 
-	err := r.HostClient.Cleanup(ctx, staticInstance)
+	err := r.HostClient.Cleanup(ctx, staticInstance, staticMachine, machine)
 	if err != nil {
 		logger.Error(err, "failed to clean up StaticInstance")
 	}
@@ -449,7 +446,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, StaticMachineAdoptTimedOut
 		}
 
-		result, err := r.HostClient.AdoptStaticInstance(ctx, staticInstance)
+		result, err := r.HostClient.AdoptStaticInstance(ctx, staticInstance, staticMachine, machine)
 		if err != nil {
 			logger.Error(err, "failed to adopt StaticInstance")
 		}
@@ -469,7 +466,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, StaticMachineBootstrapTimedOut
 		}
 
-		result, err := r.HostClient.Bootstrap(ctx, staticInstance)
+		result, err := r.HostClient.Bootstrap(ctx, staticInstance, staticMachine, machine)
 		if err != nil {
 			logger.Error(err, "failed to bootstrap StaticInstance")
 		}
