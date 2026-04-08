@@ -18,7 +18,8 @@ shell:
     - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
     - cd /src
-    - git apply /patches/*.patch --verbose
+    - git apply /patches/001-*.patch --verbose
+    - mkdir -p /src/.vendor-patches && cp /patches/002-*.patch /src/.vendor-patches/ 2>/dev/null || true
     - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -38,6 +39,7 @@ shell:
   - cd /src
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - if [ -d /src/.vendor-patches ] && ls /src/.vendor-patches/*.patch 1>/dev/null 2>&1; then for p in /src/.vendor-patches/*.patch; do patch -p1 < "$p"; done; fi
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
