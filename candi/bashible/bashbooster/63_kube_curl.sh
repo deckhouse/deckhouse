@@ -118,10 +118,16 @@ bb-curl-kube() {
   bb-curl-kube-build-curl-auth-args
   auth_args=("${BB_KUBE_AUTH_ARGS[@]}")
 
+  local rc=0
   d8-curl -sS -f -x "" --connect-timeout 10 --max-time 60 \
     "${auth_args[@]}" \
     "$@" \
-    "${BB_KUBE_APISERVER_URL}${api_path}"
+    "${BB_KUBE_APISERVER_URL}${api_path}" || rc=$?
+
+  if [[ $rc -ne 0 ]]; then
+    BB_KUBE_APISERVER_URL=""
+  fi
+  return $rc
 }
 
 bb-curl-kube-healthz() {
