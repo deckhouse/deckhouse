@@ -8,8 +8,8 @@
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $resourcesManagement := $crd.spec.resourcesManagement | default dict }}
 {{- $validationSandboxMode := $crd.spec.validationSandboxMode | default "Disabled" }}
-{{- $validationSandboxEnabled := and (eq $controllerVersion "1.14") (ne $validationSandboxMode "Disabled") }}
-{{- $fullValidation := $validationSandboxEnabled }}
+{{- $validationSandboxEnabled := eq $controllerVersion "1.14" }}
+{{- $fullValidation := and $validationSandboxEnabled (not (eq $validationSandboxMode "Disabled")) }}
 {{- $validatorServiceAccountName := "validator" }}
 {{- if $fullValidation }}
   {{- $validatorServiceAccountName = "validator-full" }}
@@ -81,16 +81,14 @@ spec:
           name: etc-ingress-controller
         - mountPath: /chroot/tmp
           name: tmp
+        {{- if $validationSandboxEnabled }}
+        - mountPath: /chroot/validation-chroot/tmp
+          name: validation-tmp
+        {{- end }}
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
           name: var-log-nginx
-{{- if eq $validationSandboxMode "Standard" }}
-        - mountPath: /chroot/validation-chroot/etc/ingress-controller
-          name: etc-ingress-controller
-        - mountPath: /chroot/validation-chroot/tmp
-          name: validation-tmp
-{{- end }}
         command:
         - /bin/bash
         - -ec
@@ -99,17 +97,12 @@ spec:
             /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl \
             /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx /chroot/etc/ingress-controller/resolv \
             /chroot/etc/ingress-controller/geoip /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
+        {{- if $validationSandboxEnabled }}
+            /chroot/validation-chroot/tmp/nginx \
+        {{- end }}
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
           echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
-{{- if eq $validationSandboxMode "Standard" }}
-          mkdir -vp /chroot/validation-chroot/etc/ingress-controller/ssl /chroot/validation-chroot/etc/ingress-controller/lua \
-            /chroot/validation-chroot/etc/ingress-controller/nginx /chroot/validation-chroot/etc/ingress-controller/resolv \
-            /chroot/validation-chroot/etc/ingress-controller/geoip /chroot/validation-chroot/etc/ingress-controller/auth \
-            /chroot/validation-chroot/etc/ingress-controller/telemetry \
-            /chroot/validation-chroot/tmp/nginx
-          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/validation-chroot/etc/ingress-controller/nginx/nginx.conf
-{{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -143,10 +136,6 @@ spec:
           {{- if $validationSandboxEnabled }}
           - name: VALIDATION_SANDBOX_MODE
             value: {{ $validationSandboxMode | quote }}
-          {{- if eq $validationSandboxMode "Standard" }}
-          - name: VALIDATION_NGINX_TMPDIR
-            value: /chroot/validation-chroot/tmp/nginx
-          {{- end }}
           {{- end }}
           {{- if $geoIP2 }}
           - name: LUA_USE_GEOIP2
@@ -226,34 +215,38 @@ spec:
             containerPort: 8443
             protocol: TCP
         volumeMounts:
-          - name: secret-nginx-auth-tls
-            mountPath: /chroot/etc/nginx/ssl/
-          - name: webhook-cert
-            mountPath: /chroot/etc/nginx/webhook-ssl/
-            readOnly: true
-          - mountPath: /chroot/var/lib/nginx
-            name: var-lib-nginx
-          - mountPath: /chroot/var/log/nginx
-            name: var-log-nginx
-          - mountPath: /chroot/tmp
-            name: tmp
-          - mountPath: /chroot/etc/ingress-controller
-            name: etc-ingress-controller
-{{- if eq $validationSandboxMode "Standard" }}
-          - name: secret-nginx-auth-tls
-            mountPath: /chroot/validation-chroot/etc/nginx/ssl/
+        {{- if $validationSandboxEnabled }}
+          - mountPath: /chroot/validation-chroot/etc/nginx/ssl/
+            name: secret-nginx-auth-tls
           - mountPath: /chroot/validation-chroot/tmp
             name: validation-tmp
           - mountPath: /chroot/validation-chroot/etc/ingress-controller
             name: etc-ingress-controller
-{{- end }}
+          - name: webhook-cert
+            mountPath: /chroot/validation-chroot/etc/nginx/webhook-ssl/
+            readOnly: true
+          {{- else }}
+          - mountPath: /chroot/etc/nginx/ssl/
+            name: secret-nginx-auth-tls
+          - mountPath: /chroot/etc/ingress-controller
+            name: etc-ingress-controller
+          - name: webhook-cert
+            mountPath: /chroot/etc/nginx/webhook-ssl/
+            readOnly: true
+          {{- end }}
+          - mountPath: /chroot/tmp
+            name: tmp
+          - mountPath: /chroot/var/lib/nginx
+            name: var-lib-nginx
+          - mountPath: /chroot/var/log/nginx
+            name: var-log-nginx
       volumes:
         - name: tmp
           emptyDir: {}
-{{- if eq $validationSandboxMode "Standard" }}
+        {{- if $validationSandboxEnabled }}
         - name: validation-tmp
           emptyDir: {}
-{{- end }}
+        {{- end }}
         - name: etc-ingress-controller
           emptyDir: {}
         - name: var-lib-nginx

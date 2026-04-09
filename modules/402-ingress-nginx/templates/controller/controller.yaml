@@ -31,7 +31,7 @@ memory: 10Mi
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
 {{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 -}}
 {{- $validationSandboxMode := $crd.spec.validationSandboxMode | default "Disabled" }}
-{{- $validationSandboxEnabled := and (eq $controllerVersion "1.14") (ne $validationSandboxMode "Disabled") }}
+{{- $validationSandboxEnabled := eq $controllerVersion "1.14" }}
 
 {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -173,7 +173,7 @@ spec:
           name: etc-ingress-controller
         - mountPath: /chroot/tmp
           name: tmp
-        {{- if (eq $controllerVersion "1.14") }}
+        {{- if $validationSandboxEnabled }}
         - mountPath: /chroot/validation-chroot/tmp
           name: validation-tmp
         {{- end }}
@@ -190,8 +190,8 @@ spec:
             /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx \
             /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip \
             /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
-        {{- if (eq $controllerVersion "1.14") }}
-            /chroot/validation-chroot/tmp/nginx
+        {{- if $validationSandboxEnabled }}
+            /chroot/validation-chroot/tmp/nginx \
         {{- end }}
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
@@ -249,10 +249,6 @@ spec:
         {{- if $validationSandboxEnabled }}
         - name: VALIDATION_SANDBOX_MODE
           value: {{ $validationSandboxMode | quote }}
-        {{- if eq $validationSandboxMode "Standard" }}
-        - name: VALIDATION_NGINX_TMPDIR
-          value: /chroot/validation-chroot/tmp/nginx
-        {{- end }}
         {{- end }}
         {{- if $geoIP2 }}
         - name: LUA_USE_GEOIP2
@@ -411,7 +407,7 @@ spec:
     {{- end }}
   {{- end }}
         volumeMounts:
-        {{- if (eq $controllerVersion "1.14") }}
+        {{- if $validationSandboxEnabled }}
         - mountPath: /chroot/validation-chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
         - mountPath: /chroot/validation-chroot/tmp
@@ -507,7 +503,7 @@ spec:
       volumes:
       - name: tmp
         emptyDir: {}
-      {{- if (eq $controllerVersion "1.14") }}
+      {{- if $validationSandboxEnabled }}
       - name: validation-tmp
         emptyDir: {}
       {{- end }}

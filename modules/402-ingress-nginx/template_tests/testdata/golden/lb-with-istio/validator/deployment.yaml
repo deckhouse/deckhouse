@@ -144,17 +144,17 @@ spec:
         volumeMounts:
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
         - mountPath: /chroot/etc/nginx/webhook-ssl/
           name: webhook-cert
           readOnly: true
+        - mountPath: /chroot/tmp
+          name: tmp
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
           name: var-log-nginx
-        - mountPath: /chroot/tmp
-          name: tmp
-        - mountPath: /chroot/etc/ingress-controller
-          name: etc-ingress-controller
       imagePullSecrets:
       - name: deckhouse-registry
       initContainers:

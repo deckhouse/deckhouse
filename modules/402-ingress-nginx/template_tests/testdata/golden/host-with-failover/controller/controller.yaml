@@ -313,8 +313,6 @@ spec:
       - emptyDir: {}
         name: tmp
       - emptyDir: {}
-        name: validation-tmp
-      - emptyDir: {}
         name: etc-ingress-controller
       - emptyDir: {}
         name: var-lib-nginx
@@ -637,8 +635,6 @@ spec:
       volumes:
       - emptyDir: {}
         name: tmp
-      - emptyDir: {}
-        name: validation-tmp
       - emptyDir: {}
         name: etc-ingress-controller
       - emptyDir: {}
