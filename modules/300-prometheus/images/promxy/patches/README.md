@@ -5,3 +5,11 @@
 Update dependencies to fix CVEs
 - [CVE-2025-47914](https://github.com/advisories/GHSA-f6x5-jh6r-wrfv)
 - [CVE-2025-58181](https://github.com/advisories/GHSA-j5w8-q4qc-rx2x)
+
+### 002-fix-cves.patch
+
+Fix CVE-2026-33186 (`google.golang.org/grpc`).
+```sh
+go get google.golang.org/grpc@v1.79.3
+go mod tidy
+```

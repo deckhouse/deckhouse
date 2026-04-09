@@ -26,7 +26,6 @@ import (
 
 	"github.com/prometheus/prometheus/prompb"
 	log "github.com/sirupsen/logrus"
-	"go.opentelemetry.io/contrib/exporters/metric/cortex"
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/db/dao"
@@ -210,7 +209,7 @@ func (s *syncer) Add(origin string, episodes []*check.Episode) error {
 
 // exportingConfig is the configuration of metrics exporting
 type exportingConfig struct {
-	exporterConfig *cortex.Config
+	exporterConfig *Config
 	labels         []*prompb.Label
 	slotSize       time.Duration
 }
@@ -236,7 +235,7 @@ func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exp
 	}
 
 	return exportingConfig{
-		exporterConfig: &cortex.Config{
+		exporterConfig: &Config{
 			Name:        rw.Name,
 			Endpoint:    rw.Spec.Config.Endpoint,
 			BasicAuth:   rw.Spec.Config.BasicAuth,

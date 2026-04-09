@@ -1,0 +1,37 @@
+diff --git a/go.mod b/go.mod
+index d422436..60198eb 100644
+--- a/go.mod
++++ b/go.mod
+@@ -45,7 +45,7 @@ require (
+ 	golang.org/x/net v0.48.0
+ 	golang.org/x/sync v0.19.0
+ 	golang.org/x/time v0.6.0
+-	google.golang.org/grpc v1.66.0
++	google.golang.org/grpc v1.79.3
+ 	gopkg.in/yaml.v2 v2.4.0
+ 	gopkg.in/yaml.v3 v3.0.1
+ )
+@@ -102,7 +102,7 @@ require (
+ 	github.com/bboreham/go-loser v0.0.0-20230920113527-fcc2c21820a3 // indirect
+ 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
+ 	github.com/go-ini/ini v1.67.0 // indirect
+-	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
++	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
+ 	github.com/go-ole/go-ole v1.2.6 // indirect
+ 	github.com/go-test/deep v1.1.0 // indirect
+ 	github.com/goccy/go-json v0.10.3 // indirect
+diff --git a/go.sum b/go.sum
+index 5670e6c..72d2132 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1023,8 +1023,8 @@ github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2
+ github.com/go-ini/ini v1.67.0 h1:z6ZrTEZqSWOTyH2FlglNbNgARyHG8oLW9gMELqKr06A=
+ github.com/go-ini/ini v1.67.0/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
+ github.com/go-jose/go-jose/v3 v3.0.0/go.mod h1:RNkWWRld676jZEYoV3+XK8L2ZnNSvIsxFMht0mSX+u8=
+-github.com/go-jose/go-jose/v4 v4.0.5 h1:M6T8+mKZl/+fNNuFHvGIzDz7BTLQPIounk/b9dw3AaE=
+-github.com/go-jose/go-jose/v4 v4.0.5/go.mod h1:s3P1lRrkT8igV8D9OjyL4WRyHvjB6a4JSllnOrmmBOA=
++github.com/go-jose/go-jose/v4 v4.1.4 h1:moDMcTHmvE6Groj34emNPLs/qtYXRVcd6S7NHbHz3kA=
++github.com/go-jose/go-jose/v4 v4.1.4/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
+ github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
+ github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
+ github.com/go-kit/log v0.2.1 h1:MRVx0/zhvdseW+Gza6N9rVzU/IVzaeE1SFI4raAhmBU=
