@@ -109,6 +109,7 @@ spec:
                 validationEnabled:
                   description: |
                     Включает валидацию Ingress-правил.
+                    
                     > **Внимание.** Включение валидации увеличивает нагрузку на master-узлы кластера.
                 annotationValidationEnabled:
                   description: |
@@ -117,7 +118,7 @@ spec:
                   description: |
                     Аналогично параметру `spec.nodeSelector` у подов.
 
-                    Если значение не указано или указано `false`, Deckhouse попытается определить значение [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, DKP попытается определить значение [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     Используйте формат стандартного списка `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
@@ -137,8 +138,8 @@ spec:
 
                         > **Внимание.** Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
                         >
-                        > - Провайдеры поддерживающие опцию: AWS, Azure, GCP.
-                        > - Провайдеры игнорирующие опцию: Yandex Cloud.
+                        > Провайдеры поддерживающие опцию: AWS, Azure, GCP.
+                        > Провайдеры игнорирующие опцию: Yandex Cloud.
                         >
                         > Для остальных облачных провайдеров поведение может зависеть от особенностей реализации облака. Протестируйте работу опции перед использованием в production-среде.
                     annotations:
@@ -365,7 +366,9 @@ spec:
                     > По умолчанию к контроллеру можно подключаться с любых адресов.
                 hsts:
                   description: |
-                    Включает использование заголовков ответа HTTP Strict-Transport-Security (HSTS). Подробнее о заголовках HSTS — [в статье на портале MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
+                    Включает использование заголовков ответа HTTP Strict-Transport-Security (HSTS).
+                    
+                    Подробнее о заголовках HSTS — [в статье на портале MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
                 hstsOptions:
                   description: |
                     Параметры HSTS.
@@ -388,6 +391,7 @@ spec:
                     maxmindMirror:
                       description: |
                         Настройки зеркала для скачивания баз GeoIP.
+                        
                         Если параметр не указан или имеет пустое значение, то по умолчанию будет использоваться `https://download.maxmind.com`.
 
                         Пример корректного URL: https://mirror.local/GeoLite2-City.tar.gz.
@@ -412,7 +416,9 @@ spec:
                       description: |
                         Лицензионный ключ для скачивания базы данных GeoIP2.
 
-                        При наличии ключа в конфигурации база GeoIP2 скачивается при каждом старте контроллера. Подробнее о получении ключа — [в статье в блоге MaxMind](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/).
+                        При наличии ключа в конфигурации база GeoIP2 скачивается при каждом старте контроллера.
+                        
+                        Подробнее о получении ключа — [в статье в блоге MaxMind](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/).
                     maxmindEditionIDs:
                       description: |
                         Список ревизий баз данных, которые будут скачаны при старте.
@@ -446,7 +452,9 @@ spec:
                     > Используйте опцию с осторожностью, поскольку обратная совместимость и работоспособность Ingress-контроллера не гарантируются.
                 additionalHeaders:
                   description: |
-                    Дополнительные заголовки, которые будут добавлены к каждому запросу. Указываются в формате `ключ: значение(строка)`.
+                    Дополнительные заголовки, которые будут добавлены к каждому запросу.
+                    
+                    Указываются в формате `ключ: значение(строка)`.
                 additionalLogFields:
                   description: |
                     Дополнительные поля, которые будут добавлены в логи nginx. Указываются в формате `ключ: значение(строка)`.
@@ -589,6 +597,7 @@ spec:
                   type: boolean
                   description: |
                     Включает профилирование NGINX с помощью Valgrind.
+                    
                     Отчет об анализе памяти сохраняется в каталоге `/var/log/valgrind` на хосте.
                     При включении Valgrind создает файл с именем `memcheck.${timestamp}.log`.
 
@@ -1051,7 +1060,9 @@ spec:
                     Дополнительные поля, которые будут добавлены в логи nginx. Указываются в формате `ключ: значение(строка)`.
                 resourcesRequests:
                   description: |
-                    Настройки CPU и памяти для подов контроллера. В режиме VPA задаются границы (min/max) и при необходимости коэффициенты limits/requests для автоматически выставляемых запросов. В статическом режиме запросы и ограничения задаются в секции static.
+                    Настройки CPU и памяти для подов контроллера.
+                    
+                    В режиме VPA задаются границы (min/max) и при необходимости коэффициенты limits/requests для автоматически выставляемых запросов. В статическом режиме запросы и ограничения задаются в секции `static`.
                   properties:
                     mode:
                       description: |
