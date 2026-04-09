@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+bb-kubectl() {
+  kubectl --request-timeout 60s ${@}
+}
+
 bb-deckhouse-get-disruptive-update-approval() {
     if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
         return 0
