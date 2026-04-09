@@ -173,3 +173,10 @@ func ComponentHasPKIChecksum(component string) bool {
 	fm, ok := componentChecksumDeps[component]
 	return ok && len(fm.pkiChecksumDependsOn) > 0
 }
+
+func ShortChecksum(checksum string) string {
+	if len(checksum) > 8 {
+		return checksum[:8]
+	}
+	return checksum
+}

@@ -145,47 +145,6 @@ func writeHotReloadFiles(secretData map[string][]byte, extraFilesDir string) err
 	return writeSecretExtraFiles(secretData, extraFilesDir, checksum.HotReloadChecksumDependsOn)
 }
 
-// isPodReadyWithChecksums returns true if the pod has the expected checksum annotations and is in Ready condition.
-func isPodReadyWithChecksums(pod *corev1.Pod, configChecksum, pkiChecksum, caChecksum, certRenewalID string) bool {
-	if pod == nil {
-		return false
-	}
-
-	if configChecksum != "" && pod.Annotations[constants.ConfigChecksumAnnotationKey] != configChecksum {
-		return false
-	}
-	if pkiChecksum != "" && pod.Annotations[constants.PKIChecksumAnnotationKey] != pkiChecksum {
-		return false
-	}
-	if caChecksum != "" && pod.Annotations[constants.CAChecksumAnnotationKey] != caChecksum {
-		return false
-	}
-	if certRenewalID != "" && pod.Annotations[constants.CertRenewalIDAnnotationKey] != certRenewalID {
-		return false
-	}
-
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-
-	return false
-}
-
-// isPodCrashLooping returns true if any container in the pod is in CrashLoopBackOff.
-func isPodCrashLooping(pod *corev1.Pod) bool {
-	if pod == nil {
-		return false
-	}
-	for _, cs := range pod.Status.ContainerStatuses {
-		if cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff" {
-			return true
-		}
-	}
-	return false
-}
-
 // writeFileAtomically writes data via tmp file + rename.
 func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(dst)

@@ -140,9 +140,9 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 }
 
 // certObserveCommand collects certificate expiration dates from disk and writes them to CPO status.
-type certObserveCommand struct{ baseCommand }
+type certObserveCommand struct{}
 
-func (c *certObserveCommand) Execute(ctx context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
+func (c *certObserveCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	observedState := make(map[controlplanev1alpha1.OperationComponent]controlplanev1alpha1.ObservedComponentState)
 
 	kubeconfigDir := env.Node.KubeconfigDir
@@ -168,10 +168,6 @@ func (c *certObserveCommand) Execute(ctx context.Context, env *CommandEnv, logge
 	}
 
 	env.State.SetObservedState(observedState)
-	if err := env.FlushStatus(ctx); err != nil {
-		return reconcile.Result{}, fmt.Errorf("patch observed state: %w", err)
-	}
-
 	logger.Info("observed certificate expiration", slog.Int("components", len(observedState)))
 	return reconcile.Result{}, nil
 }
