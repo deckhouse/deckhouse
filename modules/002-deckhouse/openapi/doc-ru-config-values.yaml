@@ -198,6 +198,7 @@ properties:
           - `EE` — Enterprise Edition.
           - `SE` — Standard Edition.
           - `SE-plus` — Standard Edition+.
+          - `CSE` — Certified Security Edition.
         default: "CE"
 
   registry:
