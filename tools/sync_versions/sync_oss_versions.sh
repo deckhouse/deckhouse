@@ -223,7 +223,12 @@ sync_dependency_versions() {
   exit 1
 }
 
-parse_args "$@"
-check_requirements
-check_source_and_target_ids
-sync_dependency_versions
+main() {
+  parse_args "$@"
+  check_requirements
+  check_source_and_target_ids
+  sync_dependency_versions
+}
+
+main "$@"
+

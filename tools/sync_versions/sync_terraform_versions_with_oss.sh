@@ -270,6 +270,10 @@ sync_tf_versions() {
   update_tf_versions_list "${MODULE_TF_DIR}/versions.tf" "$@"
 }
 
-parse_args "$@"
-check_requirements
-sync_tf_versions
+main() {
+  parse_args "$@"
+  check_requirements
+  sync_tf_versions
+}
+
+main "$@"
