@@ -220,12 +220,6 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 			spec:          controlplanev1alpha1.Checksums{Config: cpn.Spec.HotReloadChecksum},
 			status:        controlplanev1alpha1.Checksums{Config: cpn.Status.HotReloadChecksum},
 		},
-		{
-			component:     controlplanev1alpha1.OperationComponentCA,
-			conditionType: constants.ConditionCASynced,
-			specCA:        cpn.Spec.CAChecksum,
-			status:        controlplanev1alpha1.Checksums{CA: cpn.Status.CAChecksum},
-		},
 	}
 
 	// Filter components with empty spec checksums (etcd-arbiter nodes only have Etcd + CA)
@@ -334,8 +328,6 @@ func (r *Reconciler) ensureOperationsExist(
 // determineCommands returns the list of commands to execute based on what changed and the component type.
 func determineCommands(state componentState, pkiChanged, caChanged bool) []controlplanev1alpha1.CommandName {
 	switch state.component {
-	case controlplanev1alpha1.OperationComponentCA:
-		return []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandSyncCA}
 	case controlplanev1alpha1.OperationComponentHotReload:
 		return []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandSyncHotReload}
 	case controlplanev1alpha1.OperationComponentEtcd:
@@ -519,6 +511,9 @@ func (r *Reconciler) updateStatusFromOperations(
 		}
 	}
 
+	// CASynced condition - true when all static pods restarted with new CA.
+	meta.SetStatusCondition(&cpn.Status.Conditions, caSyncedCondition(cpn))
+
 	// CertsRenewal condition
 	meta.SetStatusCondition(&cpn.Status.Conditions, renewalCondition(cpn, ops))
 
@@ -587,17 +582,6 @@ func (r *Reconciler) conditionForState(
 	}
 
 	if op.IsCompleted() {
-		// this condition reflects aggregate state: synced only when status.caChecksum matches (all pods restarted with new CA)
-		if state.component == controlplanev1alpha1.OperationComponentCA &&
-			state.specCA != state.status.CA {
-			return metav1.Condition{
-				Type:               state.conditionType,
-				Status:             metav1.ConditionFalse,
-				Reason:             constants.ReasonWaitingForComponents,
-				Message:            "CA files installed, waiting for all components to restart with new CA",
-				ObservedGeneration: gen,
-			}
-		}
 		return metav1.Condition{
 			Type:               state.conditionType,
 			Status:             metav1.ConditionTrue,
@@ -658,7 +642,6 @@ func applyOperationResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *contro
 		compStatus.Checksums.CA = op.Spec.DesiredCAChecksum
 	}
 }
-
 
 // ensureCertObserverExists creates a CertObserver CPO if needed (weekly CertObserver operation).
 func (r *Reconciler) ensureCertObserverExists(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation, logger *log.Logger) error {
@@ -821,6 +804,27 @@ func operationExists(ops []controlplanev1alpha1.ControlPlaneOperation, name stri
 	return false
 }
 
+// caSyncedCondition reports whether all static pods have restarted with the current CA.
+// True when spec.CAChecksum == status.CAChecksum (status.CAChecksum is derived from aggregated per static pod statuses).
+func caSyncedCondition(cpn *controlplanev1alpha1.ControlPlaneNode) metav1.Condition {
+	gen := cpn.Generation
+	if cpn.Spec.CAChecksum == "" || cpn.Spec.CAChecksum == cpn.Status.CAChecksum {
+		return metav1.Condition{
+			Type:               constants.ConditionCASynced,
+			Status:             metav1.ConditionTrue,
+			Reason:             constants.ReasonSynced,
+			ObservedGeneration: gen,
+		}
+	}
+	return metav1.Condition{
+		Type:               constants.ConditionCASynced,
+		Status:             metav1.ConditionFalse,
+		Reason:             constants.ReasonWaitingForComponents,
+		Message:            "waiting for all components to restart with new CA",
+		ObservedGeneration: gen,
+	}
+}
+
 // renewalCondition computes the CertsRenewal condition for CPN status.
 func renewalCondition(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) metav1.Condition {
 	gen := cpn.Generation
@@ -897,7 +901,6 @@ func findOpByName(ops []controlplanev1alpha1.ControlPlaneOperation, name string)
 	}
 	return nil
 }
-
 
 // findExpiringCertsMessage checks all components for certs expiring within threshold.
 func findExpiringCertsMessage(cpn *controlplanev1alpha1.ControlPlaneNode) string {

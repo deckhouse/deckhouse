@@ -461,7 +461,7 @@ func (s *ControllerTestSuite) TestPipelineSingleCommand() {
 func (s *ControllerTestSuite) TestConditionsAfterSuccessfulPipeline() {
 	s.Run("successful pipeline sets per-command conditions and Ready", func() {
 		var calls []execCall
-		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentCA,
+		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeAPIServer,
 			newMockOK(&calls, controlplanev1alpha1.CommandSyncCA),
 			newMockOK(&calls, controlplanev1alpha1.CommandSyncManifests),
 		)
@@ -498,7 +498,7 @@ func (s *ControllerTestSuite) TestConditionsAfterSuccessfulPipeline() {
 func (s *ControllerTestSuite) TestConditionsAfterError() {
 	s.Run("error sets first command completed, second command failed", func() {
 		var calls []execCall
-		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentCA,
+		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeAPIServer,
 			newMockOK(&calls, controlplanev1alpha1.CommandSyncCA),
 			newMockError(&calls, controlplanev1alpha1.CommandSyncManifests, fmt.Errorf("write failed")),
 		)

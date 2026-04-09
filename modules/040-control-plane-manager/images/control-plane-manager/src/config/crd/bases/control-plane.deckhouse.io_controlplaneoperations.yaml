@@ -96,7 +96,6 @@ spec:
                 - KubeControllerManager
                 - KubeScheduler
                 - HotReload
-                - CA
                 - CertObserver
                 type: string
               configVersion:
