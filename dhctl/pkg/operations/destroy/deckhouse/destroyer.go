@@ -156,7 +156,7 @@ func (d *Destroyer) deleteResources(ctx context.Context, logger log.Logger) erro
 }
 
 func (d *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	err := deckhouse.DeleteWebhookConfigurations(ctx, kubeCl)
+	err := deckhouse.DeleteValidatingWebhookConfigurations(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func (d *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.Kubernete
 		return err
 	}
 
-	err = deckhouse.DeleteWebhookConfigurations(ctx, kubeCl)
+	err = deckhouse.DeleteValidatingWebhookConfigurations(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
