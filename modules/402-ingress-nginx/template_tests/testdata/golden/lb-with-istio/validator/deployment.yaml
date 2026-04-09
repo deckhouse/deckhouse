@@ -38,7 +38,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: e035f863def4d1e0565139317193a7f6e4222f9880ec6522e8a7479022e0f41b
+    ingress-nginx-controller.deckhouse.io/checksum: c86b1c30807395a33e44cd42b34d3504b2d412b2990834b2cba1757fc8a86092
     ingress-nginx-controller.deckhouse.io/validator-version: "1.10"
   labels:
     app: validator
@@ -125,6 +125,8 @@ spec:
           periodSeconds: 2
           timeoutSeconds: 5
         resources:
+          limits:
+            cpu: 100m
           requests:
             cpu: 100m
             ephemeral-storage: 150Mi
