@@ -21,21 +21,15 @@ import (
 	"fmt"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// podWaiter waits for static pod readiness.
-type podWaiter interface {
-	waitForPod(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (reconcile.Result, error)
-}
-
 // Compile-time checks.
 var (
-	_ podWaiter = (*Reconciler)(nil)
-
 	_ Command = (*syncCACommand)(nil)
 	_ Command = (*renewPKICertsCommand)(nil)
 	_ Command = (*renewKubeconfigsCommand)(nil)
@@ -46,67 +40,50 @@ var (
 	_ Command = (*certObserveCommand)(nil)
 )
 
-// CommandEnv is everything a command needs to run: operation state, node identity,
-// and a flush callback for commands that need to persist status mid-execution.
-type CommandEnv struct {
-	State         *controlplanev1alpha1.OperationState
-	CPMSecretData map[string][]byte
-	PKISecretData map[string][]byte
-	Node          NodeIdentity
-	FlushStatus   func(ctx context.Context) error
-}
-
 // Command is the interface each pipeline step must satisfy.
 type Command interface {
-	CommandName() controlplanev1alpha1.CommandName
-	ReadyReason() string
 	Execute(ctx context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error)
 }
 
-// baseCommand provides shared Name/ReadyReason for all commands.
-type baseCommand struct {
-	name        controlplanev1alpha1.CommandName
-	readyReason string
+// commandReadyReasons maps command names to their ready reason strings for status reporting.
+var commandReadyReasons = map[controlplanev1alpha1.CommandName]string{
+	controlplanev1alpha1.CommandSyncCA:           constants.ReasonSyncingCA,
+	controlplanev1alpha1.CommandRenewPKICerts:    constants.ReasonRenewingPKI,
+	controlplanev1alpha1.CommandRenewKubeconfigs: constants.ReasonRenewingKubeconfigs,
+	controlplanev1alpha1.CommandSyncManifests:    constants.ReasonSyncingManifests,
+	controlplanev1alpha1.CommandJoinEtcdCluster:  constants.ReasonJoiningEtcd,
+	controlplanev1alpha1.CommandWaitPodReady:     constants.ReasonWaitingForPod,
+	controlplanev1alpha1.CommandSyncHotReload:    constants.ReasonSyncingHotReload,
+	controlplanev1alpha1.CommandCertObserve:      constants.ReasonCertObserving,
 }
-
-func (b baseCommand) CommandName() controlplanev1alpha1.CommandName { return b.name }
-func (b baseCommand) ReadyReason() string                           { return b.readyReason }
 
 // defaultCommands returns a fresh command registry with all known commands.
 // Reconciler-level deps (podWaiter) must be injected after construction.
 func defaultCommands() map[controlplanev1alpha1.CommandName]Command {
-	cmds := []Command{
-		&syncCACommand{baseCommand: baseCommand{name: controlplanev1alpha1.CommandSyncCA, readyReason: constants.ReasonSyncingCA}},
-		&renewPKICertsCommand{baseCommand: baseCommand{name: controlplanev1alpha1.CommandRenewPKICerts, readyReason: constants.ReasonRenewingPKI}},
-		&renewKubeconfigsCommand{baseCommand: baseCommand{name: controlplanev1alpha1.CommandRenewKubeconfigs, readyReason: constants.ReasonRenewingKubeconfigs}},
-		&syncManifestsCommand{baseCommand: baseCommand{name: controlplanev1alpha1.CommandSyncManifests, readyReason: constants.ReasonSyncingManifests}},
-		&joinEtcdClusterCommand{baseCommand: baseCommand{name: controlplanev1alpha1.CommandJoinEtcdCluster, readyReason: constants.ReasonJoiningEtcd}},
-		&waitPodReadyCommand{baseCommand: baseCommand{name: controlplanev1alpha1.CommandWaitPodReady, readyReason: constants.ReasonWaitingForPod}},
-		&syncHotReloadCommand{baseCommand: baseCommand{name: controlplanev1alpha1.CommandSyncHotReload, readyReason: constants.ReasonSyncingHotReload}},
-		&certObserveCommand{baseCommand: baseCommand{name: controlplanev1alpha1.CommandCertObserve, readyReason: constants.ReasonCertObserving}},
+	return map[controlplanev1alpha1.CommandName]Command{
+		controlplanev1alpha1.CommandSyncCA:           &syncCACommand{},
+		controlplanev1alpha1.CommandRenewPKICerts:    &renewPKICertsCommand{},
+		controlplanev1alpha1.CommandRenewKubeconfigs: &renewKubeconfigsCommand{},
+		controlplanev1alpha1.CommandSyncManifests:    &syncManifestsCommand{},
+		controlplanev1alpha1.CommandJoinEtcdCluster:  &joinEtcdClusterCommand{},
+		controlplanev1alpha1.CommandWaitPodReady:     &waitPodReadyCommand{},
+		controlplanev1alpha1.CommandSyncHotReload:    &syncHotReloadCommand{},
+		controlplanev1alpha1.CommandCertObserve:      &certObserveCommand{},
 	}
-	registry := make(map[controlplanev1alpha1.CommandName]Command, len(cmds))
-	for _, cmd := range cmds {
-		registry[cmd.CommandName()] = cmd
-	}
-	return registry
 }
 
-// resolveCommands looks up Command entries for the given command names.
-func resolveCommands(registry map[controlplanev1alpha1.CommandName]Command, names []controlplanev1alpha1.CommandName) ([]Command, error) {
-	commands := make([]Command, 0, len(names))
+// resolveCommands validates that all command names exist in the registry.
+func resolveCommands(registry map[controlplanev1alpha1.CommandName]Command, names []controlplanev1alpha1.CommandName) error {
 	for _, name := range names {
-		cmd, ok := registry[name]
-		if !ok {
-			return nil, fmt.Errorf("unknown command: %s", name)
+		if _, ok := registry[name]; !ok {
+			return fmt.Errorf("unknown command: %s", name)
 		}
-		commands = append(commands, cmd)
 	}
-	return commands, nil
+	return nil
 }
 
 // syncCACommand installs CA files from the d8-pki secret to disk.
-type syncCACommand struct{ baseCommand }
+type syncCACommand struct{}
 
 func (c *syncCACommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	logger.Info("installing CA files from secret")
@@ -119,7 +96,7 @@ func (c *syncCACommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 
 // renewPKICertsCommand renews leaf certificates for the component.
 // No-op for KCM/Scheduler (certTree=nil).
-type renewPKICertsCommand struct{ baseCommand }
+type renewPKICertsCommand struct{}
 
 func (c *renewPKICertsCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	certTree := certTreeForComponent(env.State.Raw().Spec.Component)
@@ -136,7 +113,7 @@ func (c *renewPKICertsCommand) Execute(_ context.Context, env *CommandEnv, logge
 
 // renewKubeconfigsCommand renews kubeconfig files for the component.
 // No-op for Etcd (no kubeconfigs). For KubeAPIServer also updates the root kubeconfig symlink.
-type renewKubeconfigsCommand struct{ baseCommand }
+type renewKubeconfigsCommand struct{}
 
 func (c *renewKubeconfigsCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	component := env.State.Raw().Spec.Component
@@ -156,7 +133,7 @@ func (c *renewKubeconfigsCommand) Execute(_ context.Context, env *CommandEnv, lo
 
 // joinEtcdClusterCommand checks if etcd needs to join the cluster and handles the full join flow.
 // No-op for non-etcd components. No-op if already in cluster.
-type joinEtcdClusterCommand struct{ baseCommand }
+type joinEtcdClusterCommand struct{}
 
 func (c *joinEtcdClusterCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	op := env.State.Raw()
@@ -185,7 +162,7 @@ func (c *joinEtcdClusterCommand) Execute(_ context.Context, env *CommandEnv, log
 }
 
 // syncManifestsCommand writes the static pod manifest (or patches annotations for PKI-only updates).
-type syncManifestsCommand struct{ baseCommand }
+type syncManifestsCommand struct{}
 
 func (c *syncManifestsCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	op := env.State.Raw()
@@ -216,8 +193,7 @@ func (c *syncManifestsCommand) Execute(_ context.Context, env *CommandEnv, logge
 
 // waitPodReadyCommand waits for the static pod to become ready with the expected checksum annotations.
 type waitPodReadyCommand struct {
-	baseCommand
-	pods podWaiter
+	waitForPod func(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (reconcile.Result, error)
 }
 
 func (c *waitPodReadyCommand) Execute(ctx context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
@@ -225,16 +201,13 @@ func (c *waitPodReadyCommand) Execute(ctx context.Context, env *CommandEnv, logg
 	env.State.SetReadyReason(constants.ReasonWaitingForPod,
 		fmt.Sprintf("waiting for %s pod with config-checksum %s pki-checksum %s",
 			op.Spec.Component.PodComponentName(),
-			shortChecksum(op.Spec.DesiredConfigChecksum),
-			shortChecksum(op.Spec.DesiredPKIChecksum)))
-	if err := env.FlushStatus(ctx); err != nil {
-		return reconcile.Result{}, err
-	}
-	return c.pods.waitForPod(ctx, env.State, logger)
+			checksum.ShortChecksum(op.Spec.DesiredConfigChecksum),
+			checksum.ShortChecksum(op.Spec.DesiredPKIChecksum)))
+	return c.waitForPod(ctx, env.State, logger)
 }
 
 // syncHotReloadCommand writes config files that kube-apiserver picks up without restart.
-type syncHotReloadCommand struct{ baseCommand }
+type syncHotReloadCommand struct{}
 
 func (c *syncHotReloadCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	logger.Info("writing hot-reload files")
