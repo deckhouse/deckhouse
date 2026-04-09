@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -140,12 +139,15 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 	}, true
 }
 
-// execCertObserve collects certificate expiration dates from disk and writes them to CPO status.
-func execCertObserve(ctx context.Context, cc *commandContext, logger *log.Logger) (reconcile.Result, error) {
+// certObserveCommand collects certificate expiration dates from disk and writes them to CPO status.
+type certObserveCommand struct{ baseCommand }
+
+func (c *certObserveCommand) Execute(ctx context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	observedState := make(map[controlplanev1alpha1.OperationComponent]controlplanev1alpha1.ObservedComponentState)
 
-	kubeconfigDir := cc.r.node.KubeconfigDir
-	if cc.op.Spec.Component == controlplanev1alpha1.OperationComponentCertObserver {
+	kubeconfigDir := env.Node.KubeconfigDir
+	component := env.State.Raw().Spec.Component
+	if component == controlplanev1alpha1.OperationComponentCertObserver {
 		for component := range controlplanev1alpha1.ComponentRegistry() {
 			state, ok := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
 			if !ok {
@@ -156,7 +158,6 @@ func execCertObserve(ctx context.Context, cc *commandContext, logger *log.Logger
 			}
 		}
 	} else {
-		component := cc.op.Spec.Component
 		state, ok := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
 		if !ok {
 			logger.Warn("CertObserve skipped: not a static pod component",
@@ -166,9 +167,8 @@ func execCertObserve(ctx context.Context, cc *commandContext, logger *log.Logger
 		}
 	}
 
-	original := cc.op.DeepCopy()
-	cc.op.Status.ObservedState = observedState
-	if err := cc.r.client.Status().Patch(ctx, cc.op, client.MergeFrom(original)); err != nil {
+	env.State.SetObservedState(observedState)
+	if err := env.FlushStatus(ctx); err != nil {
 		return reconcile.Result{}, fmt.Errorf("patch observed state: %w", err)
 	}
 

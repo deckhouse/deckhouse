@@ -88,15 +88,10 @@ func checkEtcdMemberExists(nodeName, peerURL, pkiDir, kubeconfigDir string) (boo
 	}
 	defer etcdCli.Close()
 
-	rawCli, ok := etcdCli.(*etcdclient.Client)
-	if !ok {
-		return false, fmt.Errorf("unexpected etcd client type: %T", etcdCli)
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), etcdMemberListTimeout)
 	defer cancel()
 
-	resp, err := rawCli.Raw().MemberList(ctx)
+	resp, err := etcdCli.Raw().MemberList(ctx)
 	if err != nil {
 		return false, fmt.Errorf("etcd member list: %w", err)
 	}
@@ -146,14 +141,13 @@ func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir, 
 
 // reconcileEtcdJoin handles etcd join for a fresh or orphaned node.
 // Precondition: caller must ensure admin.conf exists - see execJoinEtcdCluster.
-func (r *Reconciler) reconcileEtcdJoin(
-	op *controlplanev1alpha1.ControlPlaneOperation,
+func reconcileEtcdJoin(
+	node NodeIdentity,
+	component controlplanev1alpha1.OperationComponent,
 	secretData map[string][]byte,
 	configChecksum, pkiChecksum, caChecksum string,
 	logger *log.Logger,
 ) (reconcile.Result, error) {
-	component := op.Spec.Component
-
 	// Cleanup stale etcd data dir if it exists (orphaned node case)
 	if _, err := os.Stat(etcdDataDir); err == nil {
 		logger.Info("etcd join: cleaning up stale etcd data dir")
@@ -170,8 +164,8 @@ func (r *Reconciler) reconcileEtcdJoin(
 		return reconcile.Result{}, fmt.Errorf("prepare etcd manifest: %w", err)
 	}
 
-	logger.Info("etcd join: calling JoinCluster", slog.String("ip", r.node.AdvertiseIP))
-	if err := etcd.JoinCluster(manifest, r.node.AdvertiseIP, r.node.Name,
+	logger.Info("etcd join: calling JoinCluster", slog.String("ip", node.AdvertiseIP))
+	if err := etcd.JoinCluster(manifest, node.AdvertiseIP, node.Name,
 		etcd.WithManifestDir(constants.ManifestsPath),
 		etcd.WithCertificatesDir(constants.KubernetesPkiPath),
 	); err != nil {

@@ -281,7 +281,7 @@ func (r *Reconciler) ensureOperationsExist(
 
 			needsRecreate := false
 			switch {
-			case isCancelled(existingOp):
+			case existingOp.IsCancelled():
 				// Cancelled (approved but configVersion changed at executor) — recreate with current configVersion
 				logger.Info("deleting cancelled ControlPlaneOperation to recreate with current configVersion",
 					slog.String("operation", operationName),
@@ -484,7 +484,7 @@ func (r *Reconciler) updateStatusFromOperations(
 		cond := r.conditionForState(state, op, cpn)
 		meta.SetStatusCondition(&cpn.Status.Conditions, cond)
 
-		if op != nil && isCompleted(op) {
+		if op != nil && op.IsCompleted() {
 			applyOperationResult(cpn, op)
 		}
 	}
@@ -493,7 +493,7 @@ func (r *Reconciler) updateStatusFromOperations(
 	// This covers standalone CertObserver and regular operations with CertObserve as last command.
 	for i := range ops {
 		op := &ops[i]
-		if isCompleted(op) && op.Status.ObservedState != nil {
+		if op.IsCompleted() && op.Status.ObservedState != nil {
 			applyCertDates(cpn, op.Status.ObservedState)
 		}
 	}
@@ -586,7 +586,7 @@ func (r *Reconciler) conditionForState(
 		}
 	}
 
-	if isCompleted(op) {
+	if op.IsCompleted() {
 		// this condition reflects aggregate state: synced only when status.caChecksum matches (all pods restarted with new CA)
 		if state.component == controlplanev1alpha1.OperationComponentCA &&
 			state.specCA != state.status.CA {
@@ -606,8 +606,8 @@ func (r *Reconciler) conditionForState(
 		}
 	}
 
-	if isFailed(op) {
-		msg := failureMessage(op)
+	if op.IsFailed() {
+		msg := op.FailureMessage()
 		return metav1.Condition{
 			Type:               state.conditionType,
 			Status:             metav1.ConditionFalse,
@@ -659,22 +659,6 @@ func applyOperationResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *contro
 	}
 }
 
-func isCompleted(op *controlplanev1alpha1.ControlPlaneOperation) bool {
-	return meta.IsStatusConditionTrue(op.Status.Conditions, constants.ConditionReady)
-}
-
-func isFailed(op *controlplanev1alpha1.ControlPlaneOperation) bool {
-	return meta.IsStatusConditionTrue(op.Status.Conditions, constants.ConditionFailed)
-}
-
-func failureMessage(op *controlplanev1alpha1.ControlPlaneOperation) string {
-	for _, cond := range op.Status.Conditions {
-		if cond.Type == constants.ConditionFailed && cond.Status == metav1.ConditionTrue {
-			return cond.Message
-		}
-	}
-	return ""
-}
 
 // ensureCertObserverExists creates a CertObserver CPO if needed (weekly CertObserver operation).
 func (r *Reconciler) ensureCertObserverExists(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation, logger *log.Logger) error {
@@ -687,7 +671,7 @@ func (r *Reconciler) ensureCertObserverExists(ctx context.Context, cpn *controlp
 
 	for i := range ops {
 		if ops[i].Spec.Component == controlplanev1alpha1.OperationComponentCertObserver &&
-			!isCompleted(&ops[i]) && !isFailed(&ops[i]) {
+			!ops[i].IsCompleted() && !ops[i].IsFailed() {
 			return nil
 		}
 	}
@@ -821,7 +805,7 @@ func hasPendingCertRenewal(ops []controlplanev1alpha1.ControlPlaneOperation, com
 		if !ops[i].IsRenewalOperation() {
 			continue
 		}
-		if !isCompleted(&ops[i]) && !isFailed(&ops[i]) {
+		if !ops[i].IsCompleted() && !ops[i].IsFailed() {
 			return true
 		}
 	}
@@ -870,7 +854,7 @@ func renewalCondition(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlp
 	}
 
 	switch {
-	case isCompleted(latest):
+	case latest.IsCompleted():
 		return metav1.Condition{
 			Type:               constants.ConditionCertsRenewal,
 			Status:             metav1.ConditionTrue,
@@ -878,12 +862,12 @@ func renewalCondition(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlp
 			Message:            "renewed by " + latest.Name,
 			ObservedGeneration: gen,
 		}
-	case isFailed(latest):
+	case latest.IsFailed():
 		return metav1.Condition{
 			Type:               constants.ConditionCertsRenewal,
 			Status:             metav1.ConditionFalse,
 			Reason:             constants.ReasonRenewalFailed,
-			Message:            failureMessage(latest),
+			Message:            latest.FailureMessage(),
 			ObservedGeneration: gen,
 		}
 	case latest.Spec.Approved:
@@ -914,14 +898,6 @@ func findOpByName(ops []controlplanev1alpha1.ControlPlaneOperation, name string)
 	return nil
 }
 
-func isCancelled(op *controlplanev1alpha1.ControlPlaneOperation) bool {
-	for _, cond := range op.Status.Conditions {
-		if cond.Type == constants.ConditionReady && cond.Reason == constants.ReasonCancelled {
-			return true
-		}
-	}
-	return false
-}
 
 // findExpiringCertsMessage checks all components for certs expiring within threshold.
 func findExpiringCertsMessage(cpn *controlplanev1alpha1.ControlPlaneNode) string {

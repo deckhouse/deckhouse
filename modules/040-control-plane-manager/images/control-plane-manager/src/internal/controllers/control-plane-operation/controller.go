@@ -29,7 +29,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
@@ -53,9 +52,10 @@ const (
 )
 
 type Reconciler struct {
-	client client.Client
-	log    *log.Logger
-	node   NodeIdentity
+	client   client.Client
+	log      *log.Logger
+	node     NodeIdentity
+	commands map[controlplanev1alpha1.CommandName]Command
 }
 
 func Register(mgr manager.Manager) error {
@@ -65,10 +65,13 @@ func Register(mgr manager.Manager) error {
 	}
 
 	r := &Reconciler{
-		client: mgr.GetClient(),
-		log:    log.Default(),
-		node:   node,
+		client:   mgr.GetClient(),
+		log:      log.Default(),
+		node:     node,
+		commands: defaultCommands(),
 	}
+	// Inject Reconciler-level deps into commands that need them.
+	r.commands[controlplanev1alpha1.CommandWaitPodReady].(*waitPodReadyCommand).pods = r
 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{
@@ -79,49 +82,8 @@ func Register(mgr manager.Manager) error {
 		return fmt.Errorf("create node label predicate: %w", err)
 	}
 
-	// React to CPO when Approved set to true
-	cpoPredicate := predicate.And(
-		nodeLabelPredicate,
-		predicate.Funcs{
-			CreateFunc: func(e event.CreateEvent) bool {
-				op, ok := e.Object.(*controlplanev1alpha1.ControlPlaneOperation)
-				return ok && op.Spec.Approved
-			},
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				oldOp, okOld := e.ObjectOld.(*controlplanev1alpha1.ControlPlaneOperation)
-				newOp, okNew := e.ObjectNew.(*controlplanev1alpha1.ControlPlaneOperation)
-				if !okOld || !okNew {
-					return false
-				}
-				return !oldOp.Spec.Approved && newOp.Spec.Approved
-			},
-			DeleteFunc:  func(event.DeleteEvent) bool { return false },
-			GenericFunc: func(event.GenericEvent) bool { return false },
-		},
-	)
-
-	// React to pod status/annotation changes for control-plane pods on this node
-	podPredicate := predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			return isNodeControlPlanePod(e.Object, node.Name)
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			if !isNodeControlPlanePod(e.ObjectNew, node.Name) {
-				return false
-			}
-			oldPod, okOld := e.ObjectOld.(*corev1.Pod)
-			newPod, okNew := e.ObjectNew.(*corev1.Pod)
-			if !okOld || !okNew {
-				return false
-			}
-			return !reflect.DeepEqual(oldPod.Status.Conditions, newPod.Status.Conditions) ||
-				oldPod.Annotations[constants.ConfigChecksumAnnotationKey] != newPod.Annotations[constants.ConfigChecksumAnnotationKey] ||
-				oldPod.Annotations[constants.PKIChecksumAnnotationKey] != newPod.Annotations[constants.PKIChecksumAnnotationKey] ||
-				oldPod.Annotations[constants.CAChecksumAnnotationKey] != newPod.Annotations[constants.CAChecksumAnnotationKey]
-		},
-		DeleteFunc:  func(event.DeleteEvent) bool { return false },
-		GenericFunc: func(event.GenericEvent) bool { return false },
-	}
+	cpoPredicate := predicate.And(nodeLabelPredicate, approvedCPOPredicate())
+	podPredicate := controlPlanePodPredicate(node.Name)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.TypedOptions[reconcile.Request]{
@@ -149,6 +111,48 @@ func Register(mgr manager.Manager) error {
 		Complete(r)
 }
 
+// approvedCPOPredicate triggers on CPO that become Approved.
+func approvedCPOPredicate() predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			op, ok := e.Object.(*controlplanev1alpha1.ControlPlaneOperation)
+			return ok && op.Spec.Approved
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldOp, okOld := e.ObjectOld.(*controlplanev1alpha1.ControlPlaneOperation)
+			newOp, okNew := e.ObjectNew.(*controlplanev1alpha1.ControlPlaneOperation)
+			return okOld && okNew && !oldOp.Spec.Approved && newOp.Spec.Approved
+		},
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
+}
+
+// controlPlanePodPredicate triggers on pod condition/annotation changes for control-plane pods on given node.
+func controlPlanePodPredicate(nodeName string) predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return isNodeControlPlanePod(e.Object, nodeName)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			if !isNodeControlPlanePod(e.ObjectNew, nodeName) {
+				return false
+			}
+			oldPod, okOld := e.ObjectOld.(*corev1.Pod)
+			newPod, okNew := e.ObjectNew.(*corev1.Pod)
+			if !okOld || !okNew {
+				return false
+			}
+			return !reflect.DeepEqual(oldPod.Status.Conditions, newPod.Status.Conditions) ||
+				oldPod.Annotations[constants.ConfigChecksumAnnotationKey] != newPod.Annotations[constants.ConfigChecksumAnnotationKey] ||
+				oldPod.Annotations[constants.PKIChecksumAnnotationKey] != newPod.Annotations[constants.PKIChecksumAnnotationKey] ||
+				oldPod.Annotations[constants.CAChecksumAnnotationKey] != newPod.Annotations[constants.CAChecksumAnnotationKey]
+		},
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
+}
+
 func isNodeControlPlanePod(obj client.Object, nodeName string) bool {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
@@ -165,7 +169,7 @@ func isNodeControlPlanePod(obj client.Object, nodeName string) bool {
 	return known
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, err error) {
 	logger := r.log.With(slog.String("operation", req.Name))
 
 	op := &controlplanev1alpha1.ControlPlaneOperation{}
@@ -173,21 +177,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if !op.Spec.Approved {
+	if !op.Spec.Approved || op.IsTerminal() {
 		return reconcile.Result{}, nil
 	}
 
-	if isCompleted(op) || isFailed(op) {
-		return reconcile.Result{}, nil
-	}
+	state := controlplanev1alpha1.NewOperationState(op)
 
 	logger.Info("reconciling operation",
 		slog.String("component", string(op.Spec.Component)),
 		slog.Any("commands", op.Spec.Commands))
+	defer func() {
+		if err != nil {
+			logger.Error("reconcile failed", log.Err(err))
+		} else {
+			logger.Info("reconcile finished")
+		}
+	}()
 
 	// CertObserver read only, no secrets or configVersion needed
 	if op.Spec.Component == controlplanev1alpha1.OperationComponentCertObserver {
-		return r.reconcilePipeline(ctx, op, nil, nil, logger)
+		return r.reconcilePipeline(ctx, state, nil, nil, logger)
 	}
 
 	cpmSecret := &corev1.Secret{}
@@ -212,84 +221,100 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		logger.Info("configVersion mismatch, cancelling",
 			slog.String("expected", op.Spec.ConfigVersion),
 			slog.String("actual", currentConfigVersion))
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			readyCondition(metav1.ConditionFalse,
-				constants.ReasonCancelled,
-				fmt.Sprintf("configVersion mismatch: operation has %s, current is %s", op.Spec.ConfigVersion, currentConfigVersion)))
+		state.SetReadyReason(constants.ReasonCancelled,
+			fmt.Sprintf("configVersion mismatch: operation has %s, current is %s", op.Spec.ConfigVersion, currentConfigVersion))
+		return reconcile.Result{}, r.patchStatus(ctx, state)
 	}
 
-	return r.reconcilePipeline(ctx, op, cpmSecret.Data, pkiSecret.Data, logger)
+	return r.reconcilePipeline(ctx, state, cpmSecret.Data, pkiSecret.Data, logger)
 }
 
 // reconcilePipeline executes the command-based pipeline for component operations.
-// Completed commands (condition=True) are skipped on requeue
+// Completed commands (condition=True) are skipped on requeue.
 // On command failure the failed command condition stays False, so it re-executes on next reconcile.
-func (r *Reconciler) reconcilePipeline(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData, pkiSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
-	commands, err := resolveCommands(op.Spec.Commands)
+func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev1alpha1.OperationState, cpmSecretData, pkiSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
+	commands, err := resolveCommands(r.commands, state.Raw().Spec.Commands)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	cc := &commandContext{
-		r:             r,
-		op:            op,
-		cpmSecretData: cpmSecretData,
-		pkiSecretData: pkiSecretData,
+	env := &CommandEnv{
+		State:         state,
+		CPMSecretData: cpmSecretData,
+		PKISecretData: pkiSecretData,
+		Node:          r.node,
+		FlushStatus:   func(ctx context.Context) error { return r.patchStatus(ctx, state) },
 	}
 
-	//Skip already completed commands here (testing purposes)
 	for _, cmd := range commands {
-		if meta.IsStatusConditionTrue(op.Status.Conditions, string(cmd.Name)) {
-			logger.Info("command already completed, skipping", slog.String("command", string(cmd.Name)))
-			continue
-		}
-
-		cmdLogger := logger.With(slog.String("command", string(cmd.Name)))
-		cmdLogger.Info("executing command")
-
-		if err := r.setConditions(ctx, op,
-			commandCondition(cmd.Name, metav1.ConditionFalse, constants.ReasonCommandInProgress, ""),
-			readyCondition(metav1.ConditionFalse, cmd.ReadyReason,
-				fmt.Sprintf("executing command %s", cmd.Name))); err != nil {
-			cmdLogger.Warn("failed to set in-progress condition", log.Err(err))
-		}
-
-		result, err := cmd.Exec(ctx, cc, cmdLogger)
+		result, err := r.executeCommand(ctx, state, cmd, env, logger)
 		if err != nil {
-			if setErr := r.setConditions(ctx, op,
-				commandCondition(cmd.Name, metav1.ConditionFalse, constants.ReasonCommandFailed, err.Error())); setErr != nil {
-				cmdLogger.Error("failed to set failed condition", log.Err(setErr))
-			}
 			return result, err
 		}
-
-		if result.Requeue || result.RequeueAfter > 0 {
+		if result.RequeueAfter > 0 {
 			return result, nil
-		}
-
-		if err := r.setConditions(ctx, op,
-			commandCondition(cmd.Name, metav1.ConditionTrue, constants.ReasonCommandCompleted, "")); err != nil {
-			return reconcile.Result{Requeue: true}, fmt.Errorf("set completed condition for %s: %w", cmd.Name, err)
 		}
 	}
 
 	// All commands completed successfully — mark operation as ready.
 	// For static pod components this is typically done by WaitPodReady,
 	// but for CA/HotReload the pipeline may not include WaitPodReady.
-	if !isCompleted(op) {
-		return reconcile.Result{}, r.setConditions(ctx, op,
-			readyCondition(metav1.ConditionTrue, constants.ReasonOperationSucceeded, "operation completed"),
-			failedCondition(metav1.ConditionFalse, constants.ReasonNoFailure, ""),
-		)
+	if !state.IsCompleted() {
+		state.MarkSucceeded()
+		return reconcile.Result{}, r.patchStatus(ctx, state)
 	}
 
 	return reconcile.Result{}, nil
 }
 
+// executeCommand runs a single pipeline command with status tracking and start/finish logging.
+func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1alpha1.OperationState, cmd Command, env *CommandEnv, logger *log.Logger) (result reconcile.Result, err error) {
+	name := cmd.CommandName()
+	cmdLogger := logger.With(slog.String("command", string(name)))
+
+	if state.IsCommandCompleted(name) {
+		cmdLogger.Info("command already completed, skipping")
+		return reconcile.Result{}, nil
+	}
+
+	cmdLogger.Info("executing command")
+	defer func() {
+		if err != nil {
+			cmdLogger.Error("command failed", log.Err(err))
+		} else {
+			cmdLogger.Info("command finished")
+		}
+	}()
+
+	state.MarkCommandInProgress(name)
+	state.SetReadyReason(cmd.ReadyReason(), fmt.Sprintf("executing command %s", name))
+	if patchErr := r.patchStatus(ctx, state); patchErr != nil {
+		cmdLogger.Warn("failed to set in-progress condition", log.Err(patchErr))
+	}
+
+	result, err = cmd.Execute(ctx, env, cmdLogger)
+	if err != nil {
+		state.MarkCommandFailed(name, err.Error())
+		if setErr := r.patchStatus(ctx, state); setErr != nil {
+			cmdLogger.Error("failed to set failed condition", log.Err(setErr))
+		}
+		return result, err
+	}
+
+	if result.RequeueAfter > 0 {
+		return result, nil
+	}
+
+	state.MarkCommandCompleted(name)
+	if err = r.patchStatus(ctx, state); err != nil {
+		return result, fmt.Errorf("set completed condition for %s: %w", name, err)
+	}
+	return result, nil
+}
+
 // waitForPod checks if the static pod is ready with the expected checksums annotations.
-// All expected values are derived from op (Spec.Desired* + CertRenewalID), so the function
-// is independent of any pipeline state and produces the same result on requeue.
-func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, logger *log.Logger) (reconcile.Result, error) {
+func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (reconcile.Result, error) {
+	op := state.Raw()
 	podName := fmt.Sprintf("%s-%s", op.Spec.Component.PodComponentName(), r.node.Name)
 	pod := &corev1.Pod{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: podName, Namespace: constants.KubeSystemNamespace}, pod); err != nil {
@@ -299,9 +324,9 @@ func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.Co
 
 	if isPodCrashLooping(pod) {
 		logger.Warn("pod is crash looping, will retry", slog.String("pod", podName))
-		_ = r.setConditions(ctx, op,
-			readyCondition(metav1.ConditionFalse, constants.ReasonWaitingForPod,
-				fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName)))
+		state.SetReadyReason(constants.ReasonWaitingForPod,
+			fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName))
+		_ = r.patchStatus(ctx, state)
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
 
@@ -317,10 +342,20 @@ func (r *Reconciler) waitForPod(ctx context.Context, op *controlplanev1alpha1.Co
 
 	logger.Info("pod ready with matching checksums", slog.String("pod", podName))
 
-	return reconcile.Result{}, r.setConditions(ctx, op,
-		readyCondition(metav1.ConditionTrue, constants.ReasonOperationSucceeded, "operation completed"),
-		failedCondition(metav1.ConditionFalse, constants.ReasonNoFailure, ""),
-	)
+	state.MarkSucceeded()
+	return reconcile.Result{}, r.patchStatus(ctx, state)
+}
+
+// patchStatus flushes OperationState status changes to the API server.
+func (r *Reconciler) patchStatus(ctx context.Context, state *controlplanev1alpha1.OperationState) error {
+	if !state.HasStatusChanges() {
+		return nil
+	}
+	if err := r.client.Status().Patch(ctx, state.Raw(), client.MergeFrom(state.Original())); err != nil {
+		return err
+	}
+	state.ResetBaseline()
+	return nil
 }
 
 // mapPodToOperations finds in-progress CPOs for the component matching this pod.
@@ -350,62 +385,13 @@ func (r *Reconciler) mapPodToOperations(ctx context.Context, obj client.Object) 
 
 	var reqs []reconcile.Request
 	for i := range ops.Items {
-		if ops.Items[i].Spec.Approved && !isCompleted(&ops.Items[i]) {
+		if ops.Items[i].Spec.Approved && !ops.Items[i].IsCompleted() {
 			reqs = append(reqs, reconcile.Request{
 				NamespacedName: types.NamespacedName{Name: ops.Items[i].Name},
 			})
 		}
 	}
 	return reqs
-}
-
-
-// condition helpers
-
-func readyCondition(status metav1.ConditionStatus, reason, message string) metav1.Condition {
-	return metav1.Condition{
-		Type:    constants.ConditionReady,
-		Status:  status,
-		Reason:  reason,
-		Message: message,
-	}
-}
-
-func commandCondition(name controlplanev1alpha1.CommandName, status metav1.ConditionStatus, reason, message string) metav1.Condition {
-	return metav1.Condition{
-		Type:    string(name),
-		Status:  status,
-		Reason:  reason,
-		Message: message,
-	}
-}
-
-func failedCondition(status metav1.ConditionStatus, reason, message string) metav1.Condition {
-	return metav1.Condition{
-		Type:    constants.ConditionFailed,
-		Status:  status,
-		Reason:  reason,
-		Message: message,
-	}
-}
-
-func (r *Reconciler) setConditions(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, conditions ...metav1.Condition) error {
-	original := op.DeepCopy()
-	for _, c := range conditions {
-		meta.SetStatusCondition(&op.Status.Conditions, c)
-	}
-	if reflect.DeepEqual(original.Status.Conditions, op.Status.Conditions) {
-		return nil
-	}
-	return r.client.Status().Patch(ctx, op, client.MergeFrom(original))
-}
-
-func isCompleted(op *controlplanev1alpha1.ControlPlaneOperation) bool {
-	return meta.IsStatusConditionTrue(op.Status.Conditions, constants.ConditionReady)
-}
-
-func isFailed(op *controlplanev1alpha1.ControlPlaneOperation) bool {
-	return meta.IsStatusConditionTrue(op.Status.Conditions, constants.ConditionFailed)
 }
 
 func shortChecksum(checksum string) string {
