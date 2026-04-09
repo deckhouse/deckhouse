@@ -136,23 +136,28 @@
   {% endif %}
   {%- assign page_meta_url = page_url_without_lang | relative_url | prepend: '/products' %}
 {% endif %}
+{%- capture raw_keywords %}{{page.tags}}{% if page.tags %}, {% endif %}{% if page.keywords %}{{page.keywords}}, {% endif %}{% if page.search %}{{page.search}}{% endif %}{% endcapture -%}
+{%- assign escaped_page_meta_url = page_meta_url | escape_once -%}
+{%- assign escaped_meta_title = meta_title | strip | escape_once -%}
+{%- assign escaped_description = description | strip | escape_once -%}
+{%- assign escaped_keywords = raw_keywords | strip | escape_once -%}
 <!-- multilang -->
 {%- if page.multilang %}
-    <link data-proofer-ignore rel="alternate" hreflang="ru" href="{{ site.urls['ru'] }}{{ page_meta_url }}" />
-    <link data-proofer-ignore rel="alternate" hreflang="en" href="{{ site.urls['en'] }}{{ page_meta_url }}" />
+    <link data-proofer-ignore rel="alternate" hreflang="ru" href="{{ site.urls['ru'] }}{{ escaped_page_meta_url }}" />
+    <link data-proofer-ignore rel="alternate" hreflang="en" href="{{ site.urls['en'] }}{{ escaped_page_meta_url }}" />
 {%- endif %}
 
 <!-- Primary Meta Tags -->
-<link rel="canonical" href="{{ site.urls[page.lang] }}{{ page_meta_url }}" />
-<meta name="title" content="{{ meta_title }}">
-<meta name="description" content="{{ description }}">
-<meta name="keywords" content="{{page.tags}}{% if page.tags %}, {% endif %}{% if page.keywords %}{{page.keywords}}, {% endif %}{% if page.search %}{{page.search}}{% endif %}">
+<link rel="canonical" href="{{ site.urls[page.lang] }}{{ escaped_page_meta_url }}" />
+<meta name="title" content="{{ escaped_meta_title }}">
+<meta name="description" content="{{ escaped_description }}">
+<meta name="keywords" content="{{ escaped_keywords }}">
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="article">
-<meta property="og:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
-<meta property="og:title" content="{{ meta_title }}">
-<meta property="og:description" content="{{ description }}">
+<meta property="og:url" content="{{ site.urls[page.lang] }}{{ escaped_page_meta_url }}">
+<meta property="og:title" content="{{ escaped_meta_title }}">
+<meta property="og:description" content="{{ escaped_description }}">
 
 {%- if page.product_code == 'stronghold' or page.product_code == "virtualization-platform" or page.product_code == "code" or page.product_code == "delivery-kit" or page.product_code == "kubernetes-platform" or page.product_code == "observability-platform" or page.product_code == "prompp" %}
 <meta property="og:image" content="{{ site.urls[page.lang] }}/images/og/{{ page.product_code }}.png">
