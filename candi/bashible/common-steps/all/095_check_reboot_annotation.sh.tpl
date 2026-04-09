@@ -30,7 +30,7 @@ if [[ $REBOOT_ANNOTATION != "null" ]]
           then
             # node is drained, could be rebooted asap
             bb-flag-set reboot
-            bb-curl-helper-patch-node-metadata "${D8_NODE_HOSTNAME}" "annotations" "update.node.deckhouse.io/reboot"
+            bb-curl-helper-patch-node-metadata "${D8_NODE_HOSTNAME}" "annotations" "update.node.deckhouse.io/reboot-"
             break
           else
             # node should be drained first

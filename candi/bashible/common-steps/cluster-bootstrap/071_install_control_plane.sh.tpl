@@ -73,7 +73,7 @@ bb-curl-helper-extract-admin-certs
 
 # This phase add 'node.kubernetes.io/exclude-from-external-load-balancers' label to node
 # with this label we cannot use target load balancers to control-plane nodes, so we manually remove them
-if ! bb-curl-helper-patch-node-metadata "$(hostname)" "labels" "node.kubernetes.io/exclude-from-external-load-balancers"; then
+if ! bb-curl-helper-patch-node-metadata "$(hostname)" "labels" "node.kubernetes.io/exclude-from-external-load-balancers-"; then
   echo "Cannot remove node.kubernetes.io/exclude-from-external-load-balancers label from node" 1>&2
   exit 1
 fi

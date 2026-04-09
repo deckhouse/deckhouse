@@ -128,8 +128,7 @@ LABELS_ANNOTATION="$( fetch-local-labels "$LABEL_DIRECTORY_PATH" add "$LABELS_FR
 if [[ $LABLES_TO_REMOVE ]]
   then
     for label in $LABLES_TO_REMOVE; do
-        key="${label%-}"
-        bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "$key"
+        bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "$label"
     done
 fi
 
@@ -138,7 +137,7 @@ if [[ -z $LABELS ]]
     # No labels to apply, exit 0
     if [[ $LABELS_FROM_ANNOTATION ]]
       then
-        bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/last-applied-local-labels"
+        bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/last-applied-local-labels-"
     fi
     exit 0
   else
