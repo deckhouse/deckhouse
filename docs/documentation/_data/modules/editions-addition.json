@@ -35,12 +35,7 @@
     "admission-policy-engine",
     "cert-manager",
     "chrony",
-    "cloud-provider-dvp",
     "cni-cilium",
-    "csi-yadro-tatlin-unified",
-    "csi-scsi-generic",
-    "commander",
-    "commander-agent",
     "control-plane-manager",
     "console",
     "deckhouse",
@@ -83,8 +78,7 @@
     "upmeter",
     "user-authn",
     "user-authn-crd",
-    "user-authz",
-    "virtualization"
+    "user-authz"
     ]
   },
   "cse-pro": {
