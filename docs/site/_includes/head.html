@@ -27,10 +27,9 @@
     {%- assign title_parts = title_parts | push: title -%}
 {%- endif -%}
 {%- endfor %}
-
 {%- assign module_readme_page = false -%}
-{%- assign _readme_name = page.name | default: '' | downcase -%}
-{%- if _readme_name == 'readme.md' or _readme_name == 'readme_ru.md' -%}
+{%- assign _readme_name = page.name | default: '' | downcase | regex_replace_once: '(_ru)?\.md$', '' -%}
+{%- if _readme_name == 'readme' -%}
   {%- assign module_readme_page = true -%}
 {%- endif -%}
 
@@ -99,7 +98,7 @@
 {%- if page.description %}
     {%- assign raw_description = page.description | strip_html | strip_newlines | strip %}
 {%- else %}
-    {%- assign pageCommonName = page.name | replace: '_RU.md', '' | replace: '.md', '' | downcase %}
+    {%- assign pageCommonName = page.name | downcase | regex_replace_once: '(_ru)?\.md$', '' %}
     {%- if pageCommonName == "configuration" or pageCommonName == "cr" or pageCommonName == "examples" or pageCommonName == "usage" or pageCommonName == "faq"  %}
         {%- assign i18nKey = 'description_' | append: pageCommonName %}
         {%- assign raw_description = site.data.i18n.common[i18nKey][page.lang] | replace: '<MODULENAME>', page['module-kebab-name'] %}
