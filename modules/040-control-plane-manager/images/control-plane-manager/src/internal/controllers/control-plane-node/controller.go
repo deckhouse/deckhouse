@@ -69,7 +69,7 @@ func Register(mgr manager.Manager) error {
 
 	r := &Reconciler{
 		client: mgr.GetClient(),
-		log:    log.Default(),
+		log:    log.Default().With(slog.String("controller", constants.CpnControllerName)),
 	}
 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{

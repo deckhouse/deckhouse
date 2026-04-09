@@ -53,11 +53,13 @@ const (
 
 type Reconciler struct {
 	client client.Client
+	log    *log.Logger
 }
 
 func Register(mgr manager.Manager) error {
 	r := &Reconciler{
 		client: mgr.GetClient(),
+		log:    log.Default().With(slog.String("controller", constants.CpcControllerName)),
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).

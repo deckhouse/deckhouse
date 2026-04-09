@@ -63,7 +63,7 @@ func Register(mgr manager.Manager) error {
 
 	r := &Reconciler{
 		client:   mgr.GetClient(),
-		log:      log.Default(),
+		log:      log.Default().With(slog.String("controller", constants.CpoControllerName)),
 		node:     node,
 		commands: defaultCommands(),
 	}
