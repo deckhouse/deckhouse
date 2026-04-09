@@ -299,7 +299,7 @@ func removeRootKubeconfigSymlink(path, adminConfPath string) error {
 		return nil
 	}
 
-	log.Info("removing root kubeconfig symlink to admin.conf (nodeAdminKubeconfig is disabled)", slog.String("path", path))
+	log.Info("removing root kubeconfig symlink to admin.conf (NODE_ADMIN_KUBECONFIG=false)", slog.String("path", path))
 	return os.Remove(path)
 }
 

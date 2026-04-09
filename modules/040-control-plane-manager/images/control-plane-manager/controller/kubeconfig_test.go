@@ -281,8 +281,8 @@ func TestNodeAdminKubeconfigEnvParsing(t *testing.T) {
 	}
 }
 
-// TestNodeAdminKubeconfigReversibility verifies that toggling nodeAdminKubeconfig
-// true→false→true correctly removes and then restores the /root/.kube/config symlink.
+// TestNodeAdminKubeconfigReversibility verifies that toggling Config.NodeAdminKubeconfig (driven by NODE_ADMIN_KUBECONFIG)
+// removes and restores the /root/.kube/config -> admin.conf symlink.
 func TestNodeAdminKubeconfigReversibility(t *testing.T) {
 	originalKubeConfigPath := kubernetesConfigPath
 	originalConfig := config
@@ -311,7 +311,7 @@ func TestNodeAdminKubeconfigReversibility(t *testing.T) {
 
 	config = &Config{}
 
-	// Phase 1: nodeAdminKubeconfig=true — symlink should be created
+	// Phase 1: NODE_ADMIN_KUBECONFIG unset — symlink should be created
 	config.NodeAdminKubeconfig = true
 	if err := updateRootKubeconfig(); err != nil {
 		t.Fatalf("Phase 1 (true): failed to create symlink: %v", err)
@@ -331,7 +331,7 @@ func TestNodeAdminKubeconfigReversibility(t *testing.T) {
 		t.Fatalf("Phase 1 (true): symlink target %q should point to admin.conf %q", target, realAdminConf)
 	}
 
-	// Phase 2: nodeAdminKubeconfig=false — symlink should be removed
+	// Phase 2: NODE_ADMIN_KUBECONFIG=false — symlink should be removed
 	config.NodeAdminKubeconfig = false
 	if err := updateRootKubeconfig(); err != nil {
 		t.Fatalf("Phase 2 (false): failed to remove symlink: %v", err)
@@ -345,7 +345,7 @@ func TestNodeAdminKubeconfigReversibility(t *testing.T) {
 		t.Fatal("Phase 2 (false): admin.conf must still exist")
 	}
 
-	// Phase 3: nodeAdminKubeconfig=true — symlink should be recreated
+	// Phase 3: NODE_ADMIN_KUBECONFIG unset again — symlink should be recreated
 	config.NodeAdminKubeconfig = true
 	if err := updateRootKubeconfig(); err != nil {
 		t.Fatalf("Phase 3 (true again): failed to recreate symlink: %v", err)

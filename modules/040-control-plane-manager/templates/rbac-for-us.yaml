@@ -72,97 +72,23 @@ roleRef:
   kind: ClusterRole
   name: d8:control-plane-manager
   apiGroup: rbac.authorization.k8s.io
+{{- if ($.Values.global.enabledModules | default list | has "user-authz") }}
 ---
+# Extra rules for identity kubernetes-admin (group kubeadm:cluster-admins) beyond user-authz:cluster-admin.
+# No user-authz.deckhouse.io/access-level annotation: that pattern is for optional ClusterRoles merged into
+# ClusterAuthorizationRule bindings; this role must apply only to kubeadm:cluster-admins via explicit bindings below.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:control-plane-manager:admin-kubeconfig
+  name: d8:control-plane-manager:admin-kubeconfig-supplement
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups: [""]
-  resources: ["pods", "pods/log"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: [""]
-  resources: ["pods/attach", "pods/exec", "pods/portforward"]
+  resources: ["pods/portforward"]
   verbs: ["create", "get"]
 - apiGroups: [""]
-  resources: ["pods/eviction"]
-  verbs: ["create"]
-- apiGroups: ["", "events.k8s.io"]
-  resources: ["events"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["configmaps", "endpoints", "persistentvolumeclaims", "services", "serviceaccounts"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: [""]
-  resources: ["secrets"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: [""]
-  resources: ["namespaces"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: [""]
-  resources: ["limitranges", "resourcequotas"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: [""]
   resources: ["nodes"]
-  verbs: ["get", "list", "watch", "patch", "update"]
-- apiGroups: [""]
-  resources: ["persistentvolumes"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["apps", "extensions"]
-  resources: ["deployments", "statefulsets", "replicasets", "daemonsets"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["", "extensions"]
-  resources: ["replicationcontrollers"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["batch"]
-  resources: ["cronjobs", "jobs"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["extensions", "networking.k8s.io"]
-  resources: ["ingresses"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["networking.k8s.io"]
-  resources: ["networkpolicies"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["discovery.k8s.io"]
-  resources: ["endpointslices"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["rbac.authorization.k8s.io"]
-  resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["policy"]
-  resources: ["poddisruptionbudgets"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["autoscaling"]
-  resources: ["horizontalpodautoscalers"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["autoscaling.k8s.io"]
-  resources: ["verticalpodautoscalers"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["metrics.k8s.io"]
-  resources: ["pods", "nodes"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["storage.k8s.io"]
-  resources: ["storageclasses"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["apiextensions.k8s.io"]
-  resources: ["customresourcedefinitions"]
-  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
-- apiGroups: ["coordination.k8s.io"]
-  resources: ["leases"]
-  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
-- apiGroups: ["admissionregistration.k8s.io"]
-  resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
-  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
-- apiGroups: ["scheduling.k8s.io"]
-  resources: ["priorityclasses"]
-  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
-- apiGroups: ["apiregistration.k8s.io"]
-  resources: ["apiservices"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["apps", "extensions"]
-  resources: ["deployments/scale", "statefulsets/scale", "replicasets/scale"]
-  verbs: ["get", "patch", "update"]
+  verbs: ["patch", "update"]
 - apiGroups: [""]
   resources: ["nodes/proxy"]
   verbs: ["get", "create"]
@@ -207,3 +133,69 @@ rules:
   verbs: ["update"]
 - nonResourceURLs: ["/api", "/api/*", "/apis", "/apis/*", "/healthz", "/healthz/*", "/version", "/openapi/*", "/logs", "/metrics"]
   verbs: ["get"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+- apiGroups: ["scheduling.k8s.io"]
+  resources: ["priorityclasses"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+- apiGroups: ["apiregistration.k8s.io"]
+  resources: ["apiservices"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps", "extensions"]
+  resources: ["deployments/scale", "statefulsets/scale", "replicasets/scale"]
+  verbs: ["get", "patch", "update"]
+{{/*
+  ClusterRoleBinding kubeadm:cluster-admins: binds group from admin.conf to RBAC roles.
+  - With user-authz: two bindings so the union matches high-level ClusterAdmin + machine-only extras (same group).
+  - Without user-authz: single binding to built-in cluster-admin (wildcard).
+  The global hook migrate_k8s_upgrade may create/update the same binding name on upgrade; Helm reconcile keeps it aligned.
+*/}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeadm:cluster-admins
+  labels:
+    heritage: deckhouse
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user-authz:cluster-admin
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:control-plane-manager:kubeadm-cluster-admins-supplement
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:control-plane-manager:admin-kubeconfig-supplement
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+{{- else }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeadm:cluster-admins
+  labels:
+    heritage: deckhouse
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+{{- end }}

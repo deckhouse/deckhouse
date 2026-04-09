@@ -13,3 +13,14 @@ properties:
           Передавать ли в [control-plane-manager](https://deckhouse.ru/modules/control-plane-manager/) параметры для настройки authz-webhook (см. [параметры control-plane-manager'а](https://deckhouse.ru/modules/control-plane-manager/configuration.html#параметры)).
 
           При выключении этого параметра модуль `control-plane-manager` будет считать, что по умолчанию webhook-авторизация выключена, и, соответственно, если не будет дополнительных настроек, `control-plane-manager` будет стремиться вычеркнуть упоминания webhook-плагина из манифеста. Даже если вы настроите манифест вручную.
+  rootKubeconfigSymlink:
+    description: |
+      Поддерживать ли символическую ссылку `/root/.kube/config` на `/etc/kubernetes/admin.conf` на узлах control-plane.
+
+      Параметр используется модулем [control-plane-manager](https://deckhouse.ru/modules/control-plane-manager/), когда включён модуль `user-authz`.
+
+      При значении `false` символическая ссылка удаляется, в Pod'ах control-plane-manager выставляется переменная окружения `NODE_ADMIN_KUBECONFIG` соответствующим образом. Для доступа к API с узла используйте `d8 k` с `--kubeconfig=/etc/kubernetes/admin.conf` (или другие учётные данные).
+
+      Если модуль `user-authz` выключен, `control-plane-manager` этот параметр не учитывает и сохраняет поведение по умолчанию (симлинк создаётся).
+
+      Переключение обратно на `true` восстанавливает симлинк при следующем цикле согласования.

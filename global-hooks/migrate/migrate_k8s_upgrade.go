@@ -37,12 +37,14 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
 const (
 	clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
-	adminKubeconfigClusterRoleName          = "d8:control-plane-manager:admin-kubeconfig"
+	clusterAdminWildcardClusterRoleName  = "cluster-admin"
+	userAuthzClusterAdminClusterRoleName = "user-authz:cluster-admin"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -118,6 +120,11 @@ func k8sPostUpgrade(_ context.Context, input *go_hook.HookInput, dc dependency.C
 		return nil
 	}
 
+	desiredRoleName := clusterAdminWildcardClusterRoleName
+	if module.IsEnabled("user-authz", input) {
+		desiredRoleName = userAuthzClusterAdminClusterRoleName
+	}
+
 	desiredCRB := &rbac.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -132,7 +139,7 @@ func k8sPostUpgrade(_ context.Context, input *go_hook.HookInput, dc dependency.C
 		RoleRef: rbac.RoleRef{
 			APIGroup: rbac.GroupName,
 			Kind:     "ClusterRole",
-			Name:     adminKubeconfigClusterRoleName,
+			Name:     desiredRoleName,
 		},
 		Subjects: []rbac.Subject{
 			{
@@ -144,7 +151,7 @@ func k8sPostUpgrade(_ context.Context, input *go_hook.HookInput, dc dependency.C
 
 	existing, err := kubeCl.RbacV1().ClusterRoleBindings().Get(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
-		input.Logger.Info("creating clusterrolebinding", slog.String("name", clusterAdminsGroupAndClusterRoleBinding), slog.String("roleRef", adminKubeconfigClusterRoleName))
+		input.Logger.Info("creating clusterrolebinding", slog.String("name", clusterAdminsGroupAndClusterRoleBinding), slog.String("roleRef", desiredRoleName))
 		_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), desiredCRB, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error create clusterrolebinding %s: %v", clusterAdminsGroupAndClusterRoleBinding, err)
@@ -156,11 +163,11 @@ func k8sPostUpgrade(_ context.Context, input *go_hook.HookInput, dc dependency.C
 	}
 
 	// roleRef is immutable — if it points to the wrong role, delete and recreate
-	if existing.RoleRef.Name != adminKubeconfigClusterRoleName {
-		input.Logger.Info("rebinding clusterrolebinding to granular role",
+	if existing.RoleRef.Name != desiredRoleName {
+		input.Logger.Info("rebinding clusterrolebinding",
 			slog.String("name", clusterAdminsGroupAndClusterRoleBinding),
 			slog.String("from", existing.RoleRef.Name),
-			slog.String("to", adminKubeconfigClusterRoleName))
+			slog.String("to", desiredRoleName))
 
 		err = kubeCl.RbacV1().ClusterRoleBindings().Delete(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.DeleteOptions{})
 		if err != nil {

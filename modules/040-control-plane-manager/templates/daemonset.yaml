@@ -313,9 +313,9 @@ spec:
         - name: ETCD_ARBITER
           value: "true"
         {{- end }}
-        {{- if hasKey $.Values.controlPlaneManager "nodeAdminKubeconfig" }}
+        {{- if eq (include "cpm.disableRootKubeconfigSymlink" . | trim) "true" }}
         - name: NODE_ADMIN_KUBECONFIG
-          value: {{ $.Values.controlPlaneManager.nodeAdminKubeconfig | quote }}
+          value: "false"
         {{- end }}
         livenessProbe:
           httpGet:

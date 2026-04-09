@@ -323,18 +323,3 @@ properties:
       type: string
       pattern: '^[a-zA-Z]+$'
     default: []
-  nodeAdminKubeconfig:
-    type: boolean
-    default: true
-    description: |
-      **Experimental**. This feature may change or be removed in the future.
-
-      Whether to create a symlink from `/root/.kube/config` to `/etc/kubernetes/admin.conf` on control-plane nodes.
-
-      When set to `true` (default), the root user can run `kubectl` on a master node without explicitly specifying a kubeconfig path. This is the legacy behavior.
-
-      When set to `false`, the symlink is removed and administrators must use personalized credentials (e.g., OIDC via `user-authn` module) or explicitly specify `--kubeconfig=/etc/kubernetes/admin.conf` when needed.
-
-      Setting this to `false` improves security by preventing implicit use of the shared cluster-admin certificate and encouraging personalized, auditable access.
-
-      This setting is fully reversible: switching back to `true` will recreate the symlink on the next reconciliation cycle.

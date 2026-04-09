@@ -31,3 +31,18 @@ properties:
           If this parameter is disabled, the `control-plane-manager` module assumes that Webhook-based authorization is disabled by default. In this case (if no additional settings are provided), the `control-plane-manager` module will try to delete all references to the Webhook plugin from the manifest (even if you configure the manifest manually).
         x-doc-default: true
         x-examples: [true, false]
+  rootKubeconfigSymlink:
+    type: boolean
+    default: true
+    description: |
+      Whether to maintain a symlink from `/root/.kube/config` to `/etc/kubernetes/admin.conf` on control-plane nodes.
+
+      Applied by the [control-plane-manager](https://deckhouse.io/modules/control-plane-manager/) module when the `user-authz` module is enabled.
+
+      When set to `false`, the symlink is removed and the `NODE_ADMIN_KUBECONFIG` environment variable is set on control-plane-manager Pods accordingly. Use `d8 k` with `--kubeconfig=/etc/kubernetes/admin.conf` (or other credentials) when you need API access from the node.
+
+      When the `user-authz` module is disabled, control-plane-manager ignores this parameter and keeps the default (symlink present).
+
+      Setting the value back to `true` restores the symlink on the next reconciliation.
+    x-doc-default: true
+    x-examples: [true, false]

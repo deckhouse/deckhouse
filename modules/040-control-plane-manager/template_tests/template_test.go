@@ -1089,10 +1089,11 @@ internal:
 		testTerminatedPodGcThreshold(500, "6000")
 	})
 
-	Context("nodeAdminKubeconfig setting", func() {
-		Context("when nodeAdminKubeconfig is set to false", func() {
+	Context("rootKubeconfigSymlink (user-authz module values)", func() {
+		Context("when user-authz is enabled and userAuthz.rootKubeconfigSymlink is false", func() {
 			BeforeEach(func() {
-				f.ValuesSet("controlPlaneManager.nodeAdminKubeconfig", false)
+				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
+				f.ValuesSet("userAuthz.rootKubeconfigSymlink", false)
 				f.HelmRender()
 			})
 
@@ -1118,8 +1119,10 @@ internal:
 			})
 		})
 
-		Context("when nodeAdminKubeconfig is not set (default true)", func() {
+		Context("when user-authz is enabled and userAuthz.rootKubeconfigSymlink is true", func() {
 			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
+				f.ValuesSet("userAuthz.rootKubeconfigSymlink", true)
 				f.HelmRender()
 			})
 
@@ -1137,6 +1140,65 @@ internal:
 						Expect(env.Get("name").String()).ToNot(Equal("NODE_ADMIN_KUBECONFIG"))
 					}
 				}
+			})
+		})
+
+		Context("when user-authz is not enabled but userAuthz.rootKubeconfigSymlink is false", func() {
+			BeforeEach(func() {
+				f.ValuesSet("userAuthz.rootKubeconfigSymlink", false)
+				f.HelmRender()
+			})
+
+			It("should not set NODE_ADMIN_KUBECONFIG (parameter ignored without user-authz module)", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+				Expect(ds.Exists()).To(BeTrue())
+
+				containers := ds.Field("spec.template.spec.containers").Array()
+				for _, container := range containers {
+					if container.Get("name").String() != "control-plane-manager" {
+						continue
+					}
+					for _, env := range container.Get("env").Array() {
+						Expect(env.Get("name").String()).ToNot(Equal("NODE_ADMIN_KUBECONFIG"))
+					}
+				}
+			})
+		})
+	})
+
+	Context("kubeadm ClusterRoleBinding for admin.conf", func() {
+		Context("when user-authz module is disabled", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("should bind kubeadm:cluster-admins to cluster-admin", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				crb := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
+				Expect(crb.Exists()).To(BeTrue())
+				Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-admin"))
+			})
+		})
+
+		Context("when user-authz module is enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
+				f.HelmRender()
+			})
+
+			It("should bind kubeadm:cluster-admins to user-authz:cluster-admin and add supplement binding", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
+				Expect(main.Exists()).To(BeTrue())
+				Expect(main.Field("roleRef.name").String()).To(Equal("user-authz:cluster-admin"))
+
+				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
+				Expect(sup.Exists()).To(BeTrue())
+				Expect(sup.Field("roleRef.name").String()).To(Equal("d8:control-plane-manager:admin-kubeconfig-supplement"))
+
+				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
+				Expect(supCR.Exists()).To(BeTrue())
 			})
 		})
 	})

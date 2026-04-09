@@ -714,32 +714,18 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
 | Файл | Идентификация | Назначение |
 | --- | --- | --- |
-| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для внутренних операций kubeadm (join, обновление). Имеет гранулярный доступ через RBAC ClusterRole `d8:control-plane-manager:admin-kubeconfig` (отзываемый). |
-| `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (группа `system:masters`) | Аварийный доступ (break-glass). Обходит RBAC полностью. Должен храниться в защищённом месте. |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для внутренних операций kubeadm (join, обновление). При включённом модуле [user-authz](/modules/user-authz/) RBAC использует `user-authz:cluster-admin` и дополнительную ClusterRole; при выключенном `user-authz` группа привязана к встроенной роли `cluster-admin`. |
+| `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (группа `system:masters`) | Аварийный доступ (break-glass). Обходит RBAC полностью. Ограничьте доступ к файлу сценариями восстановления. |
 | `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Используется kube-controller-manager. |
 | `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Используется kube-scheduler. |
 
 ### Административный доступ на основе RBAC
 
-Начиная с Kubernetes 1.29, kubeadm генерирует `admin.conf` с группой `kubeadm:cluster-admins` вместо `system:masters`. Это обеспечивает управляемый через RBAC административный доступ, который может быть отозван путём удаления ClusterRoleBinding `kubeadm:cluster-admins`.
+Начиная с Kubernetes 1.29, kubeadm генерирует `admin.conf` с группой `kubeadm:cluster-admins` вместо `system:masters`. Это обеспечивает управляемый через RBAC административный доступ, который может быть отозван путём удаления ClusterRoleBinding `kubeadm:cluster-admins` (или нескольких привязок).
 
-Deckhouse перепривязывает группу `kubeadm:cluster-admins` к гранулярной ClusterRole вместо wildcard-роли `cluster-admin`:
+Если модуль [user-authz](/modules/user-authz/) **выключен**, Deckhouse привязывает группу `kubeadm:cluster-admins` к встроенной роли `cluster-admin` с wildcard-правами (как в обычном кластере kubeadm без дополнительной настройки RBAC).
 
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: kubeadm:cluster-admins
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: d8:control-plane-manager:admin-kubeconfig
-subjects:
-- kind: Group
-  name: kubeadm:cluster-admins
-```
-
-ClusterRole `d8:control-plane-manager:admin-kubeconfig` предоставляет гранулярные разрешения для типичных задач администрирования кластера без использования wildcard-правил. Для полного неограниченного доступа используйте `super-admin.conf`.
+Если модуль **user-authz** **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая ClusterRoleBinding добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
 
 ### Рекомендуемый административный доступ
 
@@ -748,28 +734,30 @@ ClusterRole `d8:control-plane-manager:admin-kubeconfig` предоставляе
 Когда `user-authn` отключён, администраторы могут явно использовать admin kubeconfig на master-узле:
 
 ```bash
-kubectl --kubeconfig=/etc/kubernetes/admin.conf <команда>
+d8 k --kubeconfig=/etc/kubernetes/admin.conf <команда>
 ```
 
 ### Символическая ссылка root kubeconfig
 
-По умолчанию модуль CPM создаёт символическую ссылку `/root/.kube/config` -> `/etc/kubernetes/admin.conf` на master-узлах, что позволяет root-пользователю запускать `kubectl` без указания `--kubeconfig`.
+По умолчанию модуль CPM создаёт символическую ссылку `/root/.kube/config` -> `/etc/kubernetes/admin.conf` на master-узлах, что позволяет root-пользователю запускать `d8 k` без указания `--kubeconfig`.
 
-Это поведение можно отключить, установив `nodeAdminKubeconfig: false` в конфигурации модуля:
+Когда модуль **user-authz** включён, это поведение можно отключить, задав `rootKubeconfigSymlink: false` в конфигурации модуля **user-authz**:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: control-plane-manager
+  name: user-authz
 spec:
   version: 2
   enabled: true
   settings:
-    nodeAdminKubeconfig: false
+    rootKubeconfigSymlink: false
 ```
 
-При отключении символическая ссылка удаляется (если она указывает на `admin.conf`). Администраторы должны использовать персонализированные учётные данные или явно указывать `--kubeconfig`.
+Если модуль **user-authz** выключен, CPM этот параметр не использует и сохраняет поведение по умолчанию (симлинк создаётся).
+
+При отключении симлинка (при включённом **user-authz**) ссылка удаляется, если она указывала на `admin.conf`. Используйте персонализированные учётные данные или явно указывайте `--kubeconfig`.
 
 ### Усиление безопасности
 
@@ -780,10 +768,10 @@ spec:
 В экстренных ситуациях (ошибки конфигурации RBAC, отказ webhook'ов) используйте `super-admin.conf`:
 
 ```bash
-kubectl --kubeconfig=/etc/kubernetes/super-admin.conf <команда>
+d8 k --kubeconfig=/etc/kubernetes/super-admin.conf <команда>
 ```
 
-Эти учётные данные обходят все проверки RBAC. Их следует использовать только в крайнем случае, и доступ к ним должен быть ограничен.
+Эти учётные данные обходят все проверки RBAC. Используйте их только в крайнем случае и ограничьте круг лиц с доступом к файлу.
 
 ## Как настроить дополнительные политики аудита?
 
