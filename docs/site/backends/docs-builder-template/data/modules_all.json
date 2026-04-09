@@ -5,7 +5,8 @@
       "se",
       "se-plus",
       "ee",
-      "ce"
+      "ce",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "ce",
@@ -36,7 +37,8 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "path": "",
     "tags": [
@@ -193,7 +195,8 @@
   },
   "csi-scsi-generic": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "tags": [
       "storage"
@@ -203,7 +206,8 @@
   },
   "csi-yadro-tatlin-unified": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "tags": [
       "storage"
@@ -526,7 +530,8 @@
   },
   "storage-volume-data-manager": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "tags": [
       "storage"
@@ -574,7 +579,8 @@
     "editions": [
       "ce",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "ce"
