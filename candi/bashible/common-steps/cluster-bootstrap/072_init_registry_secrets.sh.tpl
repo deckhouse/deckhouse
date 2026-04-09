@@ -23,7 +23,7 @@ EOF
 # Force admin-cert auth for operations requiring elevated privileges
 export BB_KUBE_AUTH_TYPE="admin-cert"
 export BB_KUBE_APISERVER_URL=""
-bb-curl-kube-extract-admin-certs
+bb-curl-helper-extract-admin-certs
 
 # Create d8-system namespace if it doesn't exist
 bb-curl-kube "/api/v1/namespaces/d8-system" >/dev/null 2>&1 || \

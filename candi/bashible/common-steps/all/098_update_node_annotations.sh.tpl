@@ -18,7 +18,7 @@ function add_node_annotation() {
   local failure_count=0
   local failure_limit=5
 
-  until bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${annotation}"; do
+  until bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${annotation}"; do
     failure_count=$((failure_count + 1))
     if [[ $failure_count -eq $failure_limit ]]; then
       bb-log-error "ERROR: Failed to annotate node $(bb-d8-node-name)"
@@ -35,7 +35,7 @@ function remove_node_annotation() {
   local failure_count=0
   local failure_limit=5
 
-  until bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${annotation}"; do
+  until bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${annotation}"; do
     failure_count=$((failure_count + 1))
     if [[ $failure_count -eq $failure_limit ]]; then
       bb-log-error "ERROR: Failed to annotate node $(bb-d8-node-name)"

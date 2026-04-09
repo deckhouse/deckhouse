@@ -30,14 +30,14 @@ if [[ $REBOOT_ANNOTATION != "null" ]]
           then
             # node is drained, could be rebooted asap
             bb-flag-set reboot
-            bb-curl-kube-patch-node-metadata "${D8_NODE_HOSTNAME}" "annotations" "update.node.deckhouse.io/reboot"
+            bb-curl-helper-patch-node-metadata "${D8_NODE_HOSTNAME}" "annotations" "update.node.deckhouse.io/reboot"
             break
           else
             # node should be drained first
             if [[ $DRAINING_ANNOTATION == "null" ]]
               then
                 # draining annotation didn't set, removing reboot annotation, drain node and set reboot flag after that
-                bb-curl-kube-patch-node-metadata "${D8_NODE_HOSTNAME}" "annotations" "update.node.deckhouse.io/draining=bashible"
+                bb-curl-helper-patch-node-metadata "${D8_NODE_HOSTNAME}" "annotations" "update.node.deckhouse.io/draining=bashible"
             fi
         fi
         sleep 20

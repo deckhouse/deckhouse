@@ -32,7 +32,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
       >&2 echo "ERROR: Can't set update.node.deckhouse.io/waiting-for-approval= annotation on our Node."
       exit 1
     fi
-    bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "annotations" \
+    bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" \
       "--resource-version=$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
       "update.node.deckhouse.io/waiting-for-approval=" "node.deckhouse.io/configuration-checksum-" \
       || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }

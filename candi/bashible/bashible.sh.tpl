@@ -48,7 +48,7 @@ bb-label-node-bashible-first-run-finished() {
   local attempt=1
 
   while [ $attempt -le $max_attempts ]; do
-    if bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/bashible-first-run-finished=true"; then
+    if bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/bashible-first-run-finished=true"; then
       echo "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
       return 0
     fi
@@ -83,111 +83,50 @@ bb-node-has-bashible-uninitialized-taint() {
   return 1
 }
 
-bb-curl-kube-detect-auth() {
-  if [[ -f /var/lib/kubelet/pki/kubelet-client-current.pem ]] && [[ -f /etc/kubernetes/kubelet.conf ]]; then
-    BB_KUBE_AUTH_TYPE="cert"
-  elif [[ -f /etc/kubernetes/admin.conf ]]; then
-    BB_KUBE_AUTH_TYPE="admin-cert"
-    bb-curl-kube-extract-admin-certs
-  elif [[ -f /var/lib/bashible/bootstrap-token ]]; then
-    BB_KUBE_AUTH_TYPE="bootstrap-token"
-  else
-    >&2 echo "bb-curl-kube: cannot detect auth — no kubelet cert, admin.conf, or bootstrap-token found"
-    return 1
-  fi
-  export BB_KUBE_AUTH_TYPE
-}
-
-bb-curl-kube-extract-admin-certs() {
-  local admin_conf="/etc/kubernetes/admin.conf"
-  local cert_file="${TMPDIR}/bb-kube-admin-cert.pem"
-  local key_file="${TMPDIR}/bb-kube-admin-key.pem"
-
-  awk '/client-certificate-data:/{print $2}' "$admin_conf" | base64 -d > "$cert_file"
-  awk '/client-key-data:/{print $2}' "$admin_conf" | base64 -d > "$key_file"
-  chmod 600 "$cert_file" "$key_file"
-}
-
-bb-curl-kube-build-curl-auth-args() {
-  BB_KUBE_AUTH_ARGS=()
-  case "${BB_KUBE_AUTH_TYPE}" in
-    cert)
-      BB_KUBE_AUTH_ARGS=(
-        --cacert /etc/kubernetes/pki/ca.crt
-        --cert /var/lib/kubelet/pki/kubelet-client-current.pem
-      )
-      ;;
-    admin-cert)
-      BB_KUBE_AUTH_ARGS=(
-        --cacert /etc/kubernetes/pki/ca.crt
-        --cert "${TMPDIR}/bb-kube-admin-cert.pem"
-        --key "${TMPDIR}/bb-kube-admin-key.pem"
-      )
-      ;;
-    bootstrap-token)
-      BB_KUBE_AUTH_ARGS=(
-        --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)"
-        --cacert "${BOOTSTRAP_DIR:-/var/lib/bashible}/ca.crt"
-      )
-      ;;
-    *)
-      >&2 echo "bb-curl-kube: unknown auth type: ${BB_KUBE_AUTH_TYPE}"
-      return 1
-      ;;
-  esac
-}
-
-bb-curl-kube-resolve-endpoint() {
-  case "${BB_KUBE_AUTH_TYPE}" in
-    cert)
-      local kube_server
-      kube_server="$(grep -m1 'server:' /etc/kubernetes/kubelet.conf | awk '{print $2}')"
-      if [[ -n "$kube_server" ]] && bb-curl-kube-healthz "$kube_server"; then
-        BB_KUBE_APISERVER_URL="$kube_server"
-      else
-        for server in ${BB_KUBE_APISERVER_FALLBACK_ENDPOINTS:-}; do
-          if bb-curl-kube-healthz "https://$server"; then
-            BB_KUBE_APISERVER_URL="https://$server"
-            break
-          fi
-        done
-      fi
-      ;;
-    admin-cert)
-      BB_KUBE_APISERVER_URL="$(grep -m1 'server:' /etc/kubernetes/admin.conf | awk '{print $2}')"
-      ;;
-    bootstrap-token)
-      for server in ${BB_KUBE_APISERVER_FALLBACK_ENDPOINTS:-}; do
-        if bb-curl-kube-healthz "https://$server"; then
-          BB_KUBE_APISERVER_URL="https://$server"
-          break
-        fi
-      done
-      ;;
-  esac
-
-  if [[ -z "${BB_KUBE_APISERVER_URL:-}" ]]; then
-    >&2 echo "bb-curl-kube: cannot resolve API server endpoint"
-    return 1
-  fi
-  export BB_KUBE_APISERVER_URL
+bb-curl-kube-healthz() {
+  local server="$1"
+  d8-curl -sS -f -x "" --connect-timeout 3 --max-time 3 "${auth_args[@]}" "${server}/healthz" >/dev/null 2>&1
 }
 
 bb-curl-kube() {
   local api_path="$1"
   shift
 
-  if [[ -z "${BB_KUBE_AUTH_TYPE:-}" ]]; then
-    bb-curl-kube-detect-auth || return 1
+  local kubeconfig="/etc/kubernetes/kubelet.conf"
+  local -a auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem)
+
+  # If auth type is overridden (admin-cert for cluster-bootstrap), use those creds
+  if [[ "${BB_KUBE_AUTH_TYPE:-}" == "admin-cert" ]]; then
+    auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-admin-cert.pem" --key "${TMPDIR}/bb-kube-admin-key.pem")
+    kubeconfig="/etc/kubernetes/admin.conf"
   fi
 
   if [[ -z "${BB_KUBE_APISERVER_URL:-}" ]]; then
-    bb-curl-kube-resolve-endpoint || return 1
+    local kube_server
+    kube_server="$(grep -m1 'server:' "$kubeconfig" | awk '{print $2}')"
+{{ if eq .runType "Normal" }}
+    if [[ -n "$kube_server" ]]; then
+      if bb-curl-kube-healthz "$kube_server"; then
+        export BB_KUBE_APISERVER_URL="$kube_server"
+      else
+        for server in {{ .normal.apiserverEndpoints | join " " }}; do
+          if bb-curl-kube-healthz "https://$server"; then
+            export BB_KUBE_APISERVER_URL="https://$server"
+            break
+          fi
+        done
+      fi
+    fi
+{{ end }}
+    if [[ -z "${BB_KUBE_APISERVER_URL:-}" ]]; then
+      if [[ -n "${kube_server:-}" ]]; then
+        export BB_KUBE_APISERVER_URL="$kube_server"
+      else
+        >&2 echo "bb-curl-kube: cannot resolve API server endpoint"
+        return 1
+      fi
+    fi
   fi
-
-  local -a auth_args=()
-  bb-curl-kube-build-curl-auth-args
-  auth_args=("${BB_KUBE_AUTH_ARGS[@]}")
 
   local rc=0
   d8-curl -sS -f -x "" --connect-timeout 10 --max-time 60 \
@@ -201,21 +140,7 @@ bb-curl-kube() {
   return $rc
 }
 
-bb-curl-kube-healthz() {
-  local server_url="$1"
-
-  local -a auth_args=()
-  if [[ -n "${BB_KUBE_AUTH_TYPE:-}" ]]; then
-    bb-curl-kube-build-curl-auth-args
-    auth_args=("${BB_KUBE_AUTH_ARGS[@]}")
-  fi
-
-  d8-curl -sS -f -x "" --connect-timeout 3 --max-time 3 \
-    "${auth_args[@]}" \
-    "${server_url}/healthz" >/dev/null 2>&1
-}
-
-bb-curl-kube-patch-node-metadata() {
+bb-curl-helper-patch-node-metadata() {
   local node_name="$1"
   local field="$2"
   shift 2
@@ -254,13 +179,9 @@ bb-curl-kube-patch-node-metadata() {
 }
 
 # make the function available in $step
-export -f bb-curl-kube
 export -f bb-curl-kube-healthz
-export -f bb-curl-kube-patch-node-metadata
-export -f bb-curl-kube-detect-auth
-export -f bb-curl-kube-resolve-endpoint
-export -f bb-curl-kube-build-curl-auth-args
-export -f bb-curl-kube-extract-admin-certs
+export -f bb-curl-kube
+export -f bb-curl-helper-patch-node-metadata
 export -f bb-label-node-bashible-first-run-finished
 export -f bb-node-has-bashible-uninitialized-taint
 
@@ -346,7 +267,7 @@ function bb-event-info-create() {
 function annotate_node() {
   echo "Annotate node $(bb-d8-node-name) with annotation ${@}"
   attempt=0
-  until error=$(bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${@}" 2>&1); do
+  until error=$(bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${@}" 2>&1); do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
       >&2 echo "ERROR: Failed to annotate node $(bb-d8-node-name) with annotation ${@} after ${MAX_RETRIES} retries. Last error: ${error}"
@@ -364,33 +285,77 @@ function annotate_node() {
 
 function get_secret() {
   local secret="$1"
-  local attempt=0
 
-  until bb-curl-kube "/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"; do
-    attempt=$(( attempt + 1 ))
-    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Failed to get secret $secret"
-      exit 1
-    fi
-    >&2 echo "failed to get secret $secret"
-    sleep 10
-  done
+  if test -f /etc/kubernetes/kubelet.conf ; then
+    local attempt=0
+    until bb-curl-kube "/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"; do
+      attempt=$(( attempt + 1 ))
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+        >&2 echo "ERROR: Failed to get secret $secret"
+        exit 1
+      fi
+      >&2 echo "failed to get secret $secret"
+      sleep 10
+    done
+{{ if eq .runType "Normal" }}
+  elif [ -f /var/lib/bashible/bootstrap-token ]; then
+    local token="$(</var/lib/bashible/bootstrap-token)"
+    while true; do
+      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+        if d8-curl -sS -f -x "" --connect-timeout 10 \
+          --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt" \
+          "https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"
+        then
+          return 0
+        else
+          >&2 echo "failed to get secret $secret with curl https://$server..."
+        fi
+      done
+      sleep 10
+    done
+{{ end }}
+  else
+    >&2 echo "failed to get secret $secret: can't find kubelet.conf or bootstrap-token"
+    exit 1
+  fi
 }
 
 function get_bundle() {
   local resource="$1"
   local name="$2"
-  local attempt=0
 
-  until bb-curl-kube "/apis/bashible.deckhouse.io/v1alpha1/${resource}s/$name"; do
-    attempt=$(( attempt + 1 ))
-    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Failed to get $resource $name"
-      exit 1
-    fi
-    >&2 echo "failed to get $resource $name"
-    sleep 10
-  done
+  if test -f /etc/kubernetes/kubelet.conf ; then
+    local attempt=0
+    until bb-curl-kube "/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"; do
+      attempt=$(( attempt + 1 ))
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+        >&2 echo "ERROR: Failed to get $resource $name"
+        exit 1
+      fi
+      >&2 echo "failed to get $resource $name"
+      sleep 10
+    done
+{{ if eq .runType "Normal" }}
+  elif [ -f /var/lib/bashible/bootstrap-token ]; then
+    local token="$(</var/lib/bashible/bootstrap-token)"
+    while true; do
+      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+        if d8-curl -sS -f -x "" --connect-timeout 10 \
+          --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt" \
+          "https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
+        then
+         return 0
+        else
+          >&2 echo "failed to get $resource $name with curl https://$server..."
+        fi
+      done
+      sleep 10
+    done
+{{ end }}
+  else
+    >&2 echo "failed to get $resource $name: can't find kubelet.conf or bootstrap-token"
+    exit 1
+  fi
 }
 
 log_configuration_checksum() {
@@ -406,25 +371,37 @@ function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
 
-# Get list of pods with labelSelector
+# curl request to get list of pods with labelSelector
 # $1 namespace
 # $2 labelSelector
+# $3 token
 function get_pods() {
   local namespace=$1
   local labelSelector=$2
+  local token=$3
 
-  until bb-curl-kube "/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"; do
-    >&2 echo "failed to get pods in $namespace with selector $labelSelector"
+  while true; do
+    for server in {{ .normal.apiserverEndpoints | join " " }}; do
+      if d8-curl -sS -f -x "" --connect-timeout 10 \
+        --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt" \
+        "https://$server/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"
+      then
+        return 0
+      else
+        >&2 echo "failed to get pods in $namespace with selector $labelSelector from https://$server..."
+      fi
+    done
     sleep 10
   done
 }
 
 function get_rpp_address() {
   if [ -f /var/lib/bashible/bootstrap-token ]; then
+    local token="$(</var/lib/bashible/bootstrap-token)"
     local namespace="d8-cloud-instance-manager"
     local labelSelector="app%3Dregistry-packages-proxy"
 
-    rpp_ips=$(get_pods "$namespace" "$labelSelector" | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
+    rpp_ips=$(get_pods "$namespace" "$labelSelector" "$token" | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
     port=4219
     ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
     echo "$ips_csv"
@@ -450,9 +427,6 @@ function main() {
   export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
   export REGISTRY_MODULE_ADDRESS="registry.d8-system.svc:5001" # Deprecated
   export REGISTRY_MODULE_IGNITER_DIR="$TMPDIR/registry_module_igniter"
-{{ if eq .runType "Normal" }}
-  export BB_KUBE_APISERVER_FALLBACK_ENDPOINTS="{{ .normal.apiserverEndpoints | join " " }}"
-{{ end }}
 {{- if .packagesProxy }}
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"

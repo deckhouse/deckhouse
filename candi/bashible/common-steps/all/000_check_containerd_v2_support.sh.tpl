@@ -108,16 +108,16 @@ function set_labels() {
 
   while true; do
     if (( unsupported )); then
-      bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/containerd-v2-unsupported="
+      bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/containerd-v2-unsupported="
     else
-      bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/containerd-v2-unsupported"
+      bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/containerd-v2-unsupported"
     fi
     local label_status=$?
 
     if [[ -n $errs ]]; then
-      bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/containerd-v2-err=$errs"
+      bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/containerd-v2-err=$errs"
     else
-      bb-curl-kube-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/containerd-v2-err"
+      bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/containerd-v2-err"
     fi
     local annotate_status=$?
 

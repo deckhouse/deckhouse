@@ -31,7 +31,7 @@ fi
 if [ -f /etc/kubernetes/admin.conf ]; then
   export BB_KUBE_AUTH_TYPE="admin-cert"
   export BB_KUBE_APISERVER_URL=""
-  bb-curl-kube-extract-admin-certs
+  bb-curl-helper-extract-admin-certs
 
   if ! bb-curl-kube "/version" > /dev/null 2>&1; then
     for i in $(seq 60 -1 1); do
