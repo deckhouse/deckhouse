@@ -174,7 +174,10 @@
   - прекращена поддержка IngressNginxController v1.9;
   - добавлена поддержка IngressNginxController v1.14.
 
-- Прекращена поддержка Istio 1.19.
+- Изменения в поддержке версий Istio:
+  - прекращена поддержка Istio 1.19;
+  - версия Istio 1.21 признана устаревшей, и её поддержка будет прекращена в будущих версиях DKP.
+    Чтобы обновить Istio, воспользуйтесь [инструкцией](https://deckhouse.ru/modules/istio/v1.75/examples.html#обновление-istio).
 
 Полный список изменений, включая перечень обновлённых компонентов,
 доступен в [журнале изменений (changelog)](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.75.md) на GitHub.

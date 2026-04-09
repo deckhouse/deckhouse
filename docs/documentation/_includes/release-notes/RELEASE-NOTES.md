@@ -163,7 +163,10 @@
   - Support for v1.9 has been discontinued.
   - Support for v1.14 has been added.
 
-- Support for Istio 1.19 has been discontinued.
+- Istio version support changes:
+  - Support for Istio 1.19 has been discontinued.
+  - Istio 1.21 is now considered deprecated, and support for this version will be discontinued in the upcoming DKP releases.
+    To update Istio, follow the [instruction](https://deckhouse.io/modules/istio/v1.75/examples.html#upgrading-istio).
 
 The complete list of changes, including the updated components,
 is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.75.md) on GitHub.
