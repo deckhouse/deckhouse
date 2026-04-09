@@ -1,0 +1,28 @@
+#!/bin/sh
+
+# Current wrapper
+SELF="$(readlink -f "$0")"
+
+# Are looking for the real gcc, skipping ourselves
+REAL=""
+for p in $(echo "$PATH" | tr ':' ' '); do
+    CAND="$p/gcc"
+    if [ -x "$CAND" ]; then
+        CAND_REAL="$(readlink -f "$CAND")"
+        if [ "$CAND_REAL" != "$SELF" ]; then
+            REAL="$CAND_REAL"
+            break
+        fi
+    fi
+done
+
+if [ -z "$REAL" ]; then
+    echo "gcc wrapper: real gcc not found" >&2
+    exit 1
+fi
+
+# Logging
+echo "[CC] gcc $@" >&2
+
+# Transfer control
+exec "$REAL" "$@"
