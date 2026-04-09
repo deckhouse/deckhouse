@@ -43,8 +43,8 @@ import (
 
 const (
 	clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
-	clusterAdminWildcardClusterRoleName  = "cluster-admin"
-	userAuthzClusterAdminClusterRoleName = "user-authz:cluster-admin"
+	clusterAdminWildcardClusterRoleName     = "cluster-admin"
+	userAuthzClusterAdminClusterRoleName    = "user-authz:cluster-admin"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
