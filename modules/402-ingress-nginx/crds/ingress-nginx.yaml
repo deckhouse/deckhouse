@@ -146,6 +146,7 @@ spec:
                   default: true
                   description: |
                     Enables validation for Ingress rules.
+                    
                     > **Warning.** Enabling validation increases the load on the master nodes of the cluster.
                 annotationValidationEnabled:
                   type: boolean
@@ -160,7 +161,7 @@ spec:
                   description: |
                     Same as the `spec.nodeSelector` parameter in Kubernetes Pods.
 
-                    If the parameter is omitted or set to `false`, Deckhouse will try to determine the value [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or set to `false`, DKP will try to determine the value [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     Use the format of a standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
@@ -554,7 +555,9 @@ spec:
                 hsts:
                   type: boolean
                   description: |
-                    Enables HTTP Strict-Transport-Security (HSTS) response headers. For details on HSTS headers, refer to the [MDN Web Docs article](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
+                    Enables HTTP Strict-Transport-Security (HSTS) response headers.
+                    
+                    For details on HSTS headers, refer to the [MDN Web Docs article](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
                   default: false
                 hstsOptions:
                   type: object
@@ -585,6 +588,7 @@ spec:
                       type: object
                       description: |
                         Mirror configuration for downloading GeoIP databases.
+                        
                         If no parameter is specified or the parameter has an empty value, the default value will be used, which is `https://download.maxmind.com`.
 
                         If this mirror is used to host preloaded archives, the `licenseKey` parameter may be omitted.
@@ -902,6 +906,7 @@ spec:
                   type: boolean
                   description: |
                     Enables NGINX profiling using Valgrind.
+                    
                     A memory analysis report is saved to the `/var/log/valgrind` directory on the host.
                     When enabled, Valgrind creates a file named `memcheck.${timestamp}.log`.
 
@@ -1651,7 +1656,9 @@ spec:
                   required: ['mode']
                   type: object
                   description: |
-                    Configures CPU and memory for controller Pods. In VPA mode, set bounds (min/max) and optional limit ratios for requests that VPA manages. In Static mode, set pod requests and optional limits under static.
+                    Configures CPU and memory for controller Pods.
+                    
+                    In VPA mode, set bounds (min/max) and optional limit ratios for requests that VPA manages. In Static mode, set pod requests and optional limits under static.
                   properties:
                     mode:
                       type: string
