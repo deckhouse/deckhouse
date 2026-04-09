@@ -30,6 +30,8 @@ spec:
               properties:
                 loadBalancer:
                   type: object
+                  description: |
+                    Contains IP address and hostname of the associated load balancer.
                   properties:
                     ip:
                       type: string

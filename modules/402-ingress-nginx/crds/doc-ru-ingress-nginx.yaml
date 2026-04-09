@@ -11,6 +11,8 @@ spec:
             status:
               properties:
                 loadBalancer:
+                  description: |
+                    Содержит IP-адрес и DNS-имя используемого балансировщика нагрузки.
                   properties:
                     ip:
                       description: |
