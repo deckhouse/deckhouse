@@ -313,6 +313,10 @@ spec:
         - name: ETCD_ARBITER
           value: "true"
         {{- end }}
+        {{- if hasKey $.Values.controlPlaneManager "nodeAdminKubeconfig" }}
+        - name: NODE_ADMIN_KUBECONFIG
+          value: {{ $.Values.controlPlaneManager.nodeAdminKubeconfig | quote }}
+        {{- end }}
         livenessProbe:
           httpGet:
             host: 127.0.0.1

@@ -1088,4 +1088,56 @@ internal:
 		testTerminatedPodGcThreshold(300, "6000")
 		testTerminatedPodGcThreshold(500, "6000")
 	})
+
+	Context("nodeAdminKubeconfig setting", func() {
+		Context("when nodeAdminKubeconfig is set to false", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.nodeAdminKubeconfig", false)
+				f.HelmRender()
+			})
+
+			It("should set NODE_ADMIN_KUBECONFIG env var to false in DaemonSet", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+				Expect(ds.Exists()).To(BeTrue())
+
+				containers := ds.Field("spec.template.spec.containers").Array()
+				foundEnv := false
+				for _, container := range containers {
+					if container.Get("name").String() != "control-plane-manager" {
+						continue
+					}
+					for _, env := range container.Get("env").Array() {
+						if env.Get("name").String() == "NODE_ADMIN_KUBECONFIG" {
+							foundEnv = true
+							Expect(env.Get("value").String()).To(Equal("false"))
+						}
+					}
+				}
+				Expect(foundEnv).To(BeTrue())
+			})
+		})
+
+		Context("when nodeAdminKubeconfig is not set (default true)", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("should not set NODE_ADMIN_KUBECONFIG env var in DaemonSet", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+				Expect(ds.Exists()).To(BeTrue())
+
+				containers := ds.Field("spec.template.spec.containers").Array()
+				for _, container := range containers {
+					if container.Get("name").String() != "control-plane-manager" {
+						continue
+					}
+					for _, env := range container.Get("env").Array() {
+						Expect(env.Get("name").String()).ToNot(Equal("NODE_ADMIN_KUBECONFIG"))
+					}
+				}
+			})
+		})
+	})
 })

@@ -697,6 +697,85 @@ To defragment etcd in a cluster with multiple master nodes:
 
    > If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
 
+## Cluster admin access model
+
+The control-plane-manager module maintains several kubeconfig files on master nodes. Understanding their purpose is important for secure cluster administration.
+
+### Kubeconfig files on master nodes
+
+| File | Identity | Purpose |
+| --- | --- | --- |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for kubeadm internals (join, renewal). Has granular admin access via RBAC ClusterRole `d8:control-plane-manager:admin-kubeconfig` (revocable). |
+| `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (`system:masters` group) | Break-glass emergency credential. Bypasses RBAC entirely. Must be stored securely. |
+| `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Used by kube-controller-manager. |
+| `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Used by kube-scheduler. |
+
+### RBAC-based admin access
+
+Starting from Kubernetes 1.29, kubeadm generates `admin.conf` with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the `kubeadm:cluster-admins` ClusterRoleBinding.
+
+Deckhouse rebinds the `kubeadm:cluster-admins` group to a granular ClusterRole instead of the wildcard `cluster-admin`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeadm:cluster-admins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:control-plane-manager:admin-kubeconfig
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+```
+
+The `d8:control-plane-manager:admin-kubeconfig` ClusterRole provides granular permissions for typical cluster administration tasks without using wildcards. For full unrestricted access, use `super-admin.conf`.
+
+### Recommended admin access
+
+When the [user-authn](/modules/user-authn/) module is enabled, use personalized OIDC-based kubeconfig obtained through the kubeconfig generator. This provides individual accountability and audit trail.
+
+When `user-authn` is disabled, administrators can explicitly use the admin kubeconfig on a master node:
+
+```bash
+kubectl --kubeconfig=/etc/kubernetes/admin.conf <command>
+```
+
+### Root kubeconfig symlink
+
+By default, the CPM module creates a symlink `/root/.kube/config` -> `/etc/kubernetes/admin.conf` on master nodes, allowing root to run `kubectl` without specifying `--kubeconfig`.
+
+This behavior can be disabled by setting `nodeAdminKubeconfig: false` in the module configuration:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    nodeAdminKubeconfig: false
+```
+
+When disabled, the symlink is removed (if it was a symlink to `admin.conf`). Administrators must use personalized credentials or explicitly specify `--kubeconfig`.
+
+### Security hardening
+
+The CPM module automatically restricts file permissions on `admin.conf` and `super-admin.conf` to `0600` (owner read/write only) during every reconciliation cycle. This prevents unauthorized users from reading these sensitive credentials.
+
+### Break-glass access
+
+In emergency situations (RBAC misconfiguration, webhook failures), use `super-admin.conf`:
+
+```bash
+kubectl --kubeconfig=/etc/kubernetes/super-admin.conf <command>
+```
+
+This credential bypasses all RBAC checks. It should only be used as a last resort and access to it should be restricted.
+
 ## How do I configure additional audit policies?
 
 1. Enable [the auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) flag in the module configuration:

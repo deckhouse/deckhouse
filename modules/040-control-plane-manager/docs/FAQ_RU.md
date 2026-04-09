@@ -706,6 +706,85 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
    > При появлении ошибки из-за таймаута увеличивайте значение параметра `–command-timeout` из команды выше, пока дефрагментация не выполнится успешно.
 
+## Модель административного доступа к кластеру
+
+Модуль control-plane-manager поддерживает несколько файлов kubeconfig на master-узлах. Понимание их назначения важно для безопасного администрирования кластера.
+
+### Файлы kubeconfig на master-узлах
+
+| Файл | Идентификация | Назначение |
+| --- | --- | --- |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для внутренних операций kubeadm (join, обновление). Имеет гранулярный доступ через RBAC ClusterRole `d8:control-plane-manager:admin-kubeconfig` (отзываемый). |
+| `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (группа `system:masters`) | Аварийный доступ (break-glass). Обходит RBAC полностью. Должен храниться в защищённом месте. |
+| `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Используется kube-controller-manager. |
+| `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Используется kube-scheduler. |
+
+### Административный доступ на основе RBAC
+
+Начиная с Kubernetes 1.29, kubeadm генерирует `admin.conf` с группой `kubeadm:cluster-admins` вместо `system:masters`. Это обеспечивает управляемый через RBAC административный доступ, который может быть отозван путём удаления ClusterRoleBinding `kubeadm:cluster-admins`.
+
+Deckhouse перепривязывает группу `kubeadm:cluster-admins` к гранулярной ClusterRole вместо wildcard-роли `cluster-admin`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeadm:cluster-admins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:control-plane-manager:admin-kubeconfig
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+```
+
+ClusterRole `d8:control-plane-manager:admin-kubeconfig` предоставляет гранулярные разрешения для типичных задач администрирования кластера без использования wildcard-правил. Для полного неограниченного доступа используйте `super-admin.conf`.
+
+### Рекомендуемый административный доступ
+
+Когда модуль [user-authn](/modules/user-authn/) включён, используйте персонализированный kubeconfig на основе OIDC, получаемый через kubeconfig-генератор. Это обеспечивает индивидуальную ответственность и журнал аудита.
+
+Когда `user-authn` отключён, администраторы могут явно использовать admin kubeconfig на master-узле:
+
+```bash
+kubectl --kubeconfig=/etc/kubernetes/admin.conf <команда>
+```
+
+### Символическая ссылка root kubeconfig
+
+По умолчанию модуль CPM создаёт символическую ссылку `/root/.kube/config` -> `/etc/kubernetes/admin.conf` на master-узлах, что позволяет root-пользователю запускать `kubectl` без указания `--kubeconfig`.
+
+Это поведение можно отключить, установив `nodeAdminKubeconfig: false` в конфигурации модуля:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    nodeAdminKubeconfig: false
+```
+
+При отключении символическая ссылка удаляется (если она указывает на `admin.conf`). Администраторы должны использовать персонализированные учётные данные или явно указывать `--kubeconfig`.
+
+### Усиление безопасности
+
+Модуль CPM автоматически ограничивает права доступа к файлам `admin.conf` и `super-admin.conf` до `0600` (чтение/запись только для владельца) при каждом цикле согласования. Это предотвращает несанкционированный доступ к этим конфиденциальным учётным данным.
+
+### Аварийный доступ (break-glass)
+
+В экстренных ситуациях (ошибки конфигурации RBAC, отказ webhook'ов) используйте `super-admin.conf`:
+
+```bash
+kubectl --kubeconfig=/etc/kubernetes/super-admin.conf <команда>
+```
+
+Эти учётные данные обходят все проверки RBAC. Их следует использовать только в крайнем случае, и доступ к ним должен быть ограничен.
+
 ## Как настроить дополнительные политики аудита?
 
 1. Включите параметр [auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) в настройках модуля:
