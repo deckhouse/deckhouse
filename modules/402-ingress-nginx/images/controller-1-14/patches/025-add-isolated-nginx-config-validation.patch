@@ -1,54 +1,51 @@
 diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
-index 703bf35fe..3cbde3c47 100644
+index d05307838..b45c0a589 100644
 --- a/internal/ingress/controller/nginx.go
 +++ b/internal/ingress/controller/nginx.go
-@@ -70,8 +70,9 @@ import (
+@@ -70,8 +70,11 @@ import (
  )
  
  const (
 -	tempNginxPattern = "nginx-cfg"
 -	emptyUID         = "-1"
-+	tempNginxPattern    = "nginx-cfg"
-+	validationTmpDirEnv = "VALIDATION_NGINX_TMPDIR"
-+	emptyUID            = "-1"
++	tempNginxPattern      = "nginx-cfg"
++	validationTmpDir      = "/chroot/validation-chroot/tmp/nginx"
++	nginxValidationTmpDir = "/validation-chroot/tmp/nginx"
++	validationModeEnv     = "VALIDATION_SANDBOX_MODE"
++	emptyUID              = "-1"
  )
  
  // NewNGINXController creates a new NGINX Ingress controller.
-@@ -650,7 +651,11 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
+@@ -650,7 +653,8 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
  	if len(cfg) == 0 {
  		return fmt.Errorf("invalid NGINX configuration (empty)")
  	}
 -	tmpfile, err := os.CreateTemp(filepath.Join(os.TempDir(), "nginx"), tempNginxPattern)
-+	tmpDir := filepath.Join(os.TempDir(), "nginx")
-+	if validationTmpDir := os.Getenv(validationTmpDirEnv); validationTmpDir != "" {
-+		tmpDir = validationTmpDir
-+	}
++	tmpDir := validationTmpDir
 +	tmpfile, err := os.CreateTemp(tmpDir, tempNginxPattern)
  	if err != nil {
  		return err
  	}
-@@ -659,7 +664,11 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
+@@ -659,7 +663,12 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
  	if err != nil {
  		return err
  	}
 -	out, err := n.command.Test(tmpfile.Name())
-+	cfgPathForTest := tmpfile.Name()
-+	if os.Getenv(validationTmpDirEnv) != "" {
-+		cfgPathForTest = filepath.Join("/tmp", "nginx", filepath.Base(tmpfile.Name()))
++	cfgPathForTest := filepath.Join("/tmp", "nginx", filepath.Base(tmpfile.Name()))
++	if os.Getenv(validationModeEnv) == "Disabled" {
++		cfgPathForTest = filepath.Join(nginxValidationTmpDir, filepath.Base(tmpfile.Name()))
 +	}
++
 +	out, err := n.command.Test(cfgPathForTest)
  	if err != nil {
  		// this error is different from the rest because it must be clear why nginx is not working
  		oe := fmt.Sprintf(`
-@@ -1129,11 +1138,15 @@ func (n *NGINXController) createLuaConfig(cfg *ngx_config.Configuration) error {
+@@ -1133,11 +1142,12 @@ func (n *NGINXController) createLuaConfig(cfg *ngx_config.Configuration) error {
  func cleanTempNginxCfg() error {
  	var files []string
  
 -	err := filepath.Walk(filepath.Join(os.TempDir(), "nginx"), func(path string, info os.FileInfo, err error) error {
-+	tempDir := filepath.Join(os.TempDir(), "nginx")
-+	if validationTmpDir := os.Getenv(validationTmpDirEnv); validationTmpDir != "" {
-+		tempDir = validationTmpDir
-+	}
++	tempDir := validationTmpDir
 +	err := filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
  		if err != nil {
  			return err
@@ -59,7 +56,7 @@ index 703bf35fe..3cbde3c47 100644
  		}
  
 diff --git a/internal/ingress/controller/util.go b/internal/ingress/controller/util.go
-index 776440658..1700036ac 100644
+index 776440658..e9f2d0924 100644
 --- a/internal/ingress/controller/util.go
 +++ b/internal/ingress/controller/util.go
 @@ -98,9 +98,10 @@ func rlimitMaxNumFiles() int {
