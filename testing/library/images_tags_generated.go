@@ -318,6 +318,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"proxyFailoverIptables":    "imageHash-ingressNginx-proxyFailoverIptables",
 	},
 	"istio": map[string]interface{}{
+		"allianceHealthcheck":        "imageHash-istio-allianceHealthcheck",
 		"apiProxy":                   "imageHash-istio-apiProxy",
 		"cniV1x21x6":                 "imageHash-istio-cniV1x21x6",
 		"cniV1x25x2":                 "imageHash-istio-cniV1x25x2",

@@ -35,6 +35,14 @@ type IstioMulticlusterStatus struct {
 		PublicLastFetchTimestamp  string                       `json:"publicLastFetchTimestamp"`
 		PrivateLastFetchTimestamp string                       `json:"privateLastFetchTimestamp"`
 	} `json:"metadataCache,omitempty"`
+	DataPlaneHealth *DataPlaneHealthStatus `json:"dataPlaneHealth,omitempty"`
+}
+
+type DataPlaneHealthStatus struct {
+	Connected           bool   `json:"connected"`
+	LastCheckTimestamp   string `json:"lastCheckTimestamp"`
+	LastSuccessTimestamp string `json:"lastSuccessTimestamp,omitempty"`
+	Message             string `json:"message,omitempty"`
 }
 
 // Warning! This struct is duplicated in images/metadata-exporter

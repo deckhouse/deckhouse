@@ -1,0 +1,61 @@
+- name: d8.istio.alliance.dataplane.health
+  rules:
+    - alert: D8IstioFederationDataPlaneNotConnected
+      expr: max by (name, target) (d8_istio_alliance_dataplane_health_check{type="federation"}) == 0
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_federation_dataplane_failed: D8IstioFederationDataPlaneFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_federation_dataplane_failed: D8IstioFederationDataPlaneFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Federation data-plane connectivity check failed for `{{$labels.name}}`.
+        description: |
+          The data-plane health check for IstioFederation `{{$labels.name}}` to target `{{$labels.target}}` has been failing for more than 5 minutes.
+
+          This means that actual service mesh traffic between federated clusters is not flowing properly, even though the control plane metadata exchange may be working.
+
+          Possible causes:
+
+          - The remote cluster's `alliance-healthcheck` pod is not running.
+          - Istio sidecar injection is not working properly on the healthcheck pods.
+          - The ingress gateway between federated clusters is misconfigured or unreachable.
+          - mTLS or trust domain configuration issues between clusters.
+
+          To check the status:
+
+          ```bash
+          d8 k get istiofederation {{$labels.name}} -o jsonpath='{.status.dataPlaneHealth}'
+          ```
+
+    - alert: D8IstioMulticlusterDataPlaneNotConnected
+      expr: max by (name, target) (d8_istio_alliance_dataplane_health_check{type="multicluster"}) == 0
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_multicluster_dataplane_failed: D8IstioMulticlusterDataPlaneFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_multicluster_dataplane_failed: D8IstioMulticlusterDataPlaneFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Multicluster data-plane connectivity check failed for `{{$labels.name}}`.
+        description: |
+          The data-plane health check for IstioMulticluster `{{$labels.name}}` to target `{{$labels.target}}` has been failing for more than 5 minutes.
+
+          This means that actual service mesh traffic between multicluster peers is not flowing properly, even though the control plane metadata exchange may be working.
+
+          Possible causes:
+
+          - The remote cluster's `alliance-healthcheck` pod is not running.
+          - Istio sidecar injection is not working properly on the healthcheck pods.
+          - Cross-cluster service discovery is not functioning.
+          - Network connectivity issues between cluster meshes.
+
+          To check the status:
+
+          ```bash
+          d8 k get istiomulticluster {{$labels.name}} -o jsonpath='{.status.dataPlaneHealth}'
+          ```
