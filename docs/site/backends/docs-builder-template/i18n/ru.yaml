@@ -138,6 +138,7 @@ currency_sign: "₽"
 commercial: Доступно в некоторых коммерческих редакциях.
 notAvailableInThisEdition: Доступно в других коммерческих редакциях.
 default_value: по умолчанию
+default_empty_string_value: ‘’
 platform: платформа
 example: пример
 examples: примеры
