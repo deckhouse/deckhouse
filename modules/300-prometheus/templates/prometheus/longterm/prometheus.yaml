@@ -66,6 +66,8 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
+    - name: storage.tsdb.max-block-duration
+      value: 24h
   {{- include "prometheus_init_containers" (list . "prometheus-longterm-db") | nindent 2 }}
   containers:
   - name: prometheus
