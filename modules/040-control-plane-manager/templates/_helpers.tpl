@@ -7,6 +7,6 @@
 */}}
 {{- define "cpm.disableRootKubeconfigSymlink" -}}
 {{- $mods := $.Values.global.enabledModules | default list -}}
-{{- $wantSymlink := dig "userAuthz" "rootKubeconfigSymlink" true $.Values -}}
+{{- $wantSymlink := dig "userAuthz" "rootKubeconfigSymlink" true ($.Values | merge (dict)) -}}
 {{- if and (has "user-authz" $mods) (eq $wantSymlink false) -}}true{{- end -}}
 {{- end -}}
