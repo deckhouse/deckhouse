@@ -46,7 +46,7 @@ git:
   stageDependencies:
     install:
     - "**/*"
-  {{- if contains $imageName "terraform-manager" }}
+  {{- if contains $imageName "terraform-manager-dvp" }}
 - add: /dhctl/known_vulnerabilities.vex
   to: /dhctl_vulnerabilities.vex
   stageDependencies:
