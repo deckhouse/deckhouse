@@ -732,13 +732,13 @@ d8 k --kubeconfig=/etc/kubernetes/admin.conf <command>
 
 By default, the CPM module creates a symlink `/root/.kube/config` -> `/etc/kubernetes/admin.conf` on master nodes, allowing root to run `d8 k` without specifying `--kubeconfig`.
 
-When the **user-authz** module is enabled, you can disable this symlink by setting `rootKubeconfigSymlink: false` in the **user-authz** module configuration:
+When the **user-authz** module is enabled, you can disable this symlink by setting `rootKubeconfigSymlink: false` in the **control-plane-manager** module configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: user-authz
+  name: control-plane-manager
 spec:
   version: 2
   enabled: true

@@ -1089,11 +1089,11 @@ internal:
 		testTerminatedPodGcThreshold(500, "6000")
 	})
 
-	Context("rootKubeconfigSymlink (user-authz module values)", func() {
-		Context("when user-authz is enabled and userAuthz.rootKubeconfigSymlink is false", func() {
+	Context("rootKubeconfigSymlink (control-plane-manager module values)", func() {
+		Context("when user-authz is enabled and controlPlaneManager.rootKubeconfigSymlink is false", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
-				f.ValuesSet("userAuthz.rootKubeconfigSymlink", false)
+				f.ValuesSet("controlPlaneManager.rootKubeconfigSymlink", false)
 				f.HelmRender()
 			})
 
@@ -1119,10 +1119,10 @@ internal:
 			})
 		})
 
-		Context("when user-authz is enabled and userAuthz.rootKubeconfigSymlink is true", func() {
+		Context("when user-authz is enabled and controlPlaneManager.rootKubeconfigSymlink is true", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
-				f.ValuesSet("userAuthz.rootKubeconfigSymlink", true)
+				f.ValuesSet("controlPlaneManager.rootKubeconfigSymlink", true)
 				f.HelmRender()
 			})
 
@@ -1143,9 +1143,9 @@ internal:
 			})
 		})
 
-		Context("when user-authz is not enabled but userAuthz.rootKubeconfigSymlink is false", func() {
+		Context("when user-authz is not enabled but controlPlaneManager.rootKubeconfigSymlink is false", func() {
 			BeforeEach(func() {
-				f.ValuesSet("userAuthz.rootKubeconfigSymlink", false)
+				f.ValuesSet("controlPlaneManager.rootKubeconfigSymlink", false)
 				f.HelmRender()
 			})
 

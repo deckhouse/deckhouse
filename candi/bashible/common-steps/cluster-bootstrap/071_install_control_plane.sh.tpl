@@ -89,7 +89,7 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system create secret 
   --from-file=etcd-ca.key=/etc/kubernetes/pki/etcd/ca.key
 
 # Setup kubectl for root user during bootstrap.
-# The control-plane-manager manages this symlink; when the user-authz module is enabled, see userAuthz.rootKubeconfigSymlink.
+# The control-plane-manager manages this symlink; when the user-authz module is enabled, see controlPlaneManager.rootKubeconfigSymlink.
 if [ ! -f /root/.kube/config ]; then
   mkdir -p /root/.kube
   ln -s /etc/kubernetes/admin.conf /root/.kube/config
