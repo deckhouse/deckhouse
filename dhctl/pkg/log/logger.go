@@ -137,25 +137,27 @@ func initKlog(logger Logger) {
 	klog.SetOutput(newKlogWriterWrapper(logger))
 }
 
-func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
-	var l Logger
-	switch loggerType {
-	case "pretty":
-		l = NewPrettyLogger(opts)
-	// todo: add simple logger when our slog implementation will be support not only json formatter
-	// case "simple":
-	// 	defaultLogger = NewSimpleLogger(opts)
-	case "json":
-		l = NewJSONLogger(opts)
-	case "silent":
-		l = emptyLogger
-	default:
-		panic("unknown logger type: " + app.LoggerType)
+func getExternalOpts(opts LoggerOptions) external.LoggerOptions {
+	return external.LoggerOptions{
+		OutStream:   opts.OutStream,
+		DebugStream: opts.DebugStream,
+		IsDebug:     opts.IsDebug,
+		Width:       opts.Width,
 	}
+}
 
+func InitLoggerWithOptions(loggerType string, opts LoggerOptions) error {
+	extLogger, err := external.NewLoggerWithOptions(external.Type(loggerType), getExternalOpts(opts))
+	if err != nil {
+		return err
+	}
+	l := &ExternalLogger{logger: extLogger}
 	defaultLogger = l
 
-	initKlog(l)
+	err = initExternalKlog(l)
+	if err != nil {
+		return err
+	}
 
 	// Mute Shell-Operator logs
 	log.Default().SetLevel(log.LevelFatal)
@@ -166,6 +168,8 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 		// Wrap them with our default logger
 		log.Default().SetOutput(defaultLogger)
 	}
+
+	return nil
 }
 
 func WrapWithTeeLogger(writer io.WriteCloser, bufSize int) error {
@@ -882,6 +886,10 @@ type TeeLogger struct {
 	bufMutex sync.Mutex
 	buf      *bufio.Writer
 	out      io.WriteCloser
+}
+
+func (d *TeeLogger) GetLogger() Logger {
+	return d.l
 }
 
 func NewTeeLogger(l Logger, writer io.WriteCloser, bufferSize int) (*TeeLogger, error) {

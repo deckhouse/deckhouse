@@ -25,12 +25,12 @@ import (
 	"net/url"
 	"time"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/utils"
 	cca "github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/utils/check-cloud-api"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 var ErrCloudAPIUnreachable = errors.New("could not reach Cloud API from master node")
@@ -38,8 +38,8 @@ var ErrCloudAPIUnreachable = errors.New("could not reach Cloud API from master n
 const ProxyTunnelPort = "22323"
 
 type CloudAPICheck struct {
-	MetaConfig *config.MetaConfig
-	Node       node.Interface
+	MetaConfig  *config.MetaConfig
+	SSHProvider libcon.SSHProvider
 }
 
 const CloudAPICheckName preflight.CheckName = "cloud-api-accessibility"
@@ -61,8 +61,8 @@ func (c CloudAPICheck) Run(ctx context.Context) error {
 		return nil
 	}
 
-	wrapper, ok := c.Node.(*ssh.NodeInterfaceWrapper)
-	if !ok {
+	sshClient, err := c.SSHProvider.Client(ctx)
+	if err != nil {
 		return nil
 	}
 
@@ -85,7 +85,7 @@ func (c CloudAPICheck) Run(ctx context.Context) error {
 		proxyURL = nil
 	}
 
-	tun, err := utils.SetupSSHTunnelToProxyAddr(wrapper.Client(), targetURL)
+	tun, err := utils.SetupSSHTunnelToProxyAddr(sshClient, targetURL, ctx)
 	if err != nil {
 		return wrapTunnelErr(err)
 	}
@@ -195,10 +195,10 @@ func wrapTunnelErr(err error) error {
 Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
 }
 
-func CloudAPIAccess(meta *config.MetaConfig, nodeInterface node.Interface) preflight.Check {
+func CloudAPIAccess(meta *config.MetaConfig, sshProvider libcon.SSHProvider) preflight.Check {
 	check := CloudAPICheck{
-		MetaConfig: meta,
-		Node:       nodeInterface,
+		MetaConfig:  meta,
+		SSHProvider: sshProvider,
 	}
 	return preflight.Check{
 		Name:        CloudAPICheckName,

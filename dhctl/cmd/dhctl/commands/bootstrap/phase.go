@@ -17,16 +17,17 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
+
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -43,21 +44,32 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 		logger := log.GetDefaultLogger()
 		ctx := context.Background()
 
-		var sshClient node.SSHClient
-		var err error
-		if len(app.SSHHosts) != 0 {
-			sshClient, err = sshclient.NewClientFromFlags(ctx)
-			if err != nil {
+		teeLogger, ok := logger.(*log.TeeLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to TeeLogger")
+		}
+
+		externalLogger, ok := teeLogger.GetLogger().(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
 			}
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:          app.TmpDirName,
-			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
-			Logger:          logger,
-			IsDebug:         app.IsDebug,
-			DirectoryConfig: app.GetDirConfig(),
+			TmpDir:                 app.TmpDirName,
+			Logger:                 logger,
+			IsDebug:                app.IsDebug,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
+			DirectoryConfig:        app.GetDirConfig(),
 		})
 		return bootstraper.InstallDeckhouse(ctx)
 	})
@@ -75,17 +87,32 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 		logger := log.GetDefaultLogger()
 		ctx := context.Background()
 
-		sshClient, err := sshclient.NewClientFromFlagsWithHosts(ctx)
+		teeLogger, ok := logger.(*log.TeeLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to TeeLogger")
+		}
+
+		externalLogger, ok := teeLogger.GetLogger().(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			return fmt.Errorf("unable to create ssh-client: %w", err)
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:          app.TmpDirName,
-			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
-			Logger:          logger,
-			IsDebug:         app.IsDebug,
-			DirectoryConfig: app.GetDirConfig(),
+			TmpDir:                 app.TmpDirName,
+			Logger:                 logger,
+			IsDebug:                app.IsDebug,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
+			DirectoryConfig:        app.GetDirConfig(),
 		})
 		return bootstraper.ExecuteBashible(ctx)
 	})
@@ -104,22 +131,32 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		logger := log.GetDefaultLogger()
 		ctx := context.Background()
 
-		var sshClient node.SSHClient
-		var err error
+		teeLogger, ok := logger.(*log.TeeLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to TeeLogger")
+		}
 
-		if len(app.SSHHosts) != 0 {
-			sshClient, err = sshclient.NewClientFromFlags(ctx)
-			if err != nil {
+		externalLogger, ok := teeLogger.GetLogger().(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
 			}
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:          app.TmpDirName,
-			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
-			Logger:          logger,
-			IsDebug:         app.IsDebug,
-			DirectoryConfig: app.GetDirConfig(),
+			TmpDir:                 app.TmpDirName,
+			Logger:                 logger,
+			IsDebug:                app.IsDebug,
+			DirectoryConfig:        app.GetDirConfig(),
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
 		})
 		return bootstraper.CreateResources(ctx)
 	})
@@ -139,17 +176,32 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		logger := log.GetDefaultLogger()
 		ctx := context.Background()
 
-		sshClient, err := sshclient.NewClientFromFlags(ctx)
+		teeLogger, ok := logger.(*log.TeeLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to TeeLogger")
+		}
+
+		externalLogger, ok := teeLogger.GetLogger().(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			return err
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:          app.TmpDirName,
-			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
-			Logger:          logger,
-			IsDebug:         app.IsDebug,
-			DirectoryConfig: app.GetDirConfig(),
+			TmpDir:                 app.TmpDirName,
+			Logger:                 logger,
+			IsDebug:                app.IsDebug,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
+			DirectoryConfig:        app.GetDirConfig(),
 		})
 
 		err = bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
@@ -172,15 +224,37 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
+		ctx := context.Background()
+
+		teeLogger, ok := logger.(*log.TeeLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to TeeLogger")
+		}
+
+		externalLogger, ok := teeLogger.GetLogger().(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
+		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:          app.TmpDirName,
-			Logger:          logger,
-			IsDebug:         app.IsDebug,
-			DirectoryConfig: app.GetDirConfig(),
+			TmpDir:                 app.TmpDirName,
+			Logger:                 logger,
+			IsDebug:                app.IsDebug,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
+			DirectoryConfig:        app.GetDirConfig(),
 		})
 
-		err := bootstraper.BaseInfrastructure(context.Background())
+		err = bootstraper.BaseInfrastructure(context.Background())
 		cache.GetGlobalTmpCleaner().DisableCleanup("Create base infra for cluster")
 		return err
 	})
@@ -197,14 +271,8 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		logger := log.GetDefaultLogger()
 		ctx := context.Background()
 
-		sshClient, err := sshclient.NewClientFromFlagsWithHosts(ctx)
-		if err != nil {
-			return fmt.Errorf("unable to create ssh-client: %w", err)
-		}
-
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:          app.TmpDirName,
-			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
 			Logger:          logger,
 			IsDebug:         app.IsDebug,
 			DirectoryConfig: app.GetDirConfig(),

@@ -21,13 +21,16 @@ import (
 	"os/exec"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type PortsCheck struct {
-	Node node.Interface
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 }
 
 const PortsCheckName preflight.CheckName = "ports-availability"
@@ -45,13 +48,14 @@ func (PortsCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c PortsCheck) Run(ctx context.Context) error {
-	if c.Node == nil {
-		return fmt.Errorf("ports check: node interface is nil")
+	nodeInterface, err := helper.GetNodeInterface(c.SSHProviderInitializer, ctx, c.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return err
 	}
-	return checkAvailabilityPorts(ctx, c.Node)
+	return checkAvailabilityPorts(ctx, nodeInterface)
 }
 
-func checkAvailabilityPorts(ctx context.Context, nodeInterface node.Interface) error {
+func checkAvailabilityPorts(ctx context.Context, nodeInterface libcon.Interface) error {
 	file, err := template.RenderAndSavePreflightCheckPortsScript(nil)
 	if err != nil {
 		return err
@@ -75,8 +79,8 @@ func checkAvailabilityPorts(ctx context.Context, nodeInterface node.Interface) e
 	return nil
 }
 
-func Ports(nodeInterface node.Interface) preflight.Check {
-	check := PortsCheck{Node: nodeInterface}
+func Ports(sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
+	check := PortsCheck{SSHProviderInitializer: sshProviderInitializer}
 	return preflight.Check{
 		Name:        PortsCheckName,
 		Description: check.Description(),

@@ -18,20 +18,26 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math/rand"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -42,8 +48,8 @@ type staticInstance struct {
 }
 
 type StaticInstancesSSHCredentialsCheck struct {
-	Node       node.Interface
-	MetaConfig *config.MetaConfig
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	MetaConfig             *config.MetaConfig
 }
 
 const StaticInstancesSSHCredentialsCheckName preflight.CheckName = "static-instances-ssh-credentials"
@@ -73,7 +79,7 @@ func (c StaticInstancesSSHCredentialsCheck) Run(ctx context.Context) error {
 			return fmt.Errorf("Instance %s: SSHCredentials %s not found", inst.Name, inst.CredName)
 		}
 		log.InfoF("Checking StaticInstance %s (%s)\n", inst.Name, inst.Address)
-		if err := testSSHConnection(ctx, c.Node, inst.Address, cred); err != nil {
+		if err := testSSHConnection(ctx, c.SSHProviderInitializer, inst.Address, cred); err != nil {
 			return fmt.Errorf("Cannot connect to %s (%s:%d): %w", inst.Name, inst.Address, cred.SSHPort, err)
 		}
 	}
@@ -192,34 +198,79 @@ func parseSSHCredentials(sc *v1alpha2.SSHCredentials) (*v1alpha2.SSHCredentialsS
 	}, nil
 }
 
-func testSSHConnection(ctx context.Context, nodeInterface node.Interface, address string, cred *v1alpha2.SSHCredentialsSpec) error {
-	sshClient := nodeInterface.(*ssh.NodeInterfaceWrapper).Client()
-	sess := sshClient.Session()
+func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinitializer.SSHProviderInitializer, address string, cred *v1alpha2.SSHCredentialsSpec) error {
+	nodeInterface, err := helper.GetNodeInterface(sshProviderInitializer, ctx, sshProviderInitializer.GetSettings())
+	if err != nil {
+		return err
+	}
+	_, remote := nodeInterface.(*ssh.NodeInterfaceWrapper)
 
-	config := sshclient.ClientConfig{
-		User:                cred.User,
-		SSHPort:             cred.SSHPort,
-		PrivateSSHKey:       cred.PrivateSSHKey,
-		SudoPasswordEncoded: cred.SudoPasswordEncoded,
-		BastionKeys:         sshClient.PrivateKeys(),
+	sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+	if err != nil {
+		return err
 	}
 
-	if sess.BastionHost != "" {
-		config.BastionHost = sess.BastionHost
-		config.BastionPort = sess.BastionPort
-		config.BastionUser = sess.BastionUser
-		config.BastionPassword = sess.BastionPassword
-	} else {
-		config.BastionHost = sess.AvailableHosts()[0].Host
-		config.BastionPort = sess.Port
-		config.BastionUser = sess.User
-		config.BastionPassword = sess.BecomePass
+	var sess *session.Session
+	pkeys := make([]session.AgentPrivateKey, 0)
+
+	if remote {
+		sshClient, err := sshProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+		sess = sshClient.Session()
+		pkeys = sshClient.PrivateKeys()
 	}
 
-	client, err := sshclient.NewClientFromConfig(ctx, address, config)
+	becomePass, err := base64.StdEncoding.DecodeString(cred.SudoPasswordEncoded)
+	if err != nil {
+		return err
+	}
+
+	config := session.NewSession(session.Input{
+		User:       cred.User,
+		Port:       strconv.Itoa(cred.SSHPort),
+		BecomePass: string(becomePass),
+	})
+	config.AddAvailableHosts(session.Host{Host: address})
+
+	if remote {
+		if sess.BastionHost != "" {
+			config.BastionHost = sess.BastionHost
+			config.BastionPort = sess.BastionPort
+			config.BastionUser = sess.BastionUser
+			config.BastionPassword = sess.BastionPassword
+		} else {
+			config.BastionHost = sess.AvailableHosts()[0].Host
+			config.BastionPort = sess.Port
+			config.BastionUser = sess.User
+			config.BastionPassword = sess.BecomePass
+		}
+	}
+
+	tmpDir := filepath.Join(os.Getenv("TMPDIR"), "preflight")
+
+	err = os.MkdirAll(tmpDir, 0o755)
+	if err != nil {
+		return fmt.Errorf("failed to create tmp directory: %w", err)
+	}
+
+	privateKeyPrefixPathWithoutSuffix := filepath.Join(tmpDir, "id_rsa_preflight.key")
+
+	n := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	privateKeyPath := fmt.Sprintf("%s.%d", privateKeyPrefixPathWithoutSuffix, n)
+
+	err = os.WriteFile(privateKeyPath, []byte(cred.PrivateSSHKey), 0o600)
+	if err != nil {
+		return fmt.Errorf("Failed to write private key: %w", err)
+	}
+
+	pkeys = append(pkeys, session.AgentPrivateKey{Key: privateKeyPath})
+	client, err := sshProvider.SwitchClient(ctx, config, pkeys)
 	if err != nil {
 		return fmt.Errorf("Cannot create SSH client: %w", err)
 	}
+	defer sshProvider.SwitchToDefault(ctx)
 
 	if err := client.Start(); err != nil {
 		return fmt.Errorf("Cannot connect to SSH host %s: %w", address, err)
@@ -235,10 +286,10 @@ func testSSHConnection(ctx context.Context, nodeInterface node.Interface, addres
 	return nil
 }
 
-func StaticInstancesSSHCredentials(metaConfig *config.MetaConfig, nodeInterface node.Interface) preflight.Check {
+func StaticInstancesSSHCredentials(metaConfig *config.MetaConfig, sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
 	check := StaticInstancesSSHCredentialsCheck{
-		Node:       nodeInterface,
-		MetaConfig: metaConfig,
+		SSHProviderInitializer: sshProviderInitializer,
+		MetaConfig:             metaConfig,
 	}
 	return preflight.Check{
 		Name:        StaticInstancesSSHCredentialsCheckName,

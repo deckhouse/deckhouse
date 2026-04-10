@@ -17,6 +17,8 @@ package state
 import (
 	"sort"
 
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
@@ -53,4 +55,18 @@ func GetMasterHostsIPs(cache Cache) ([]session.Host, error) {
 	sort.Sort(session.SortByName(mastersIPs))
 
 	return mastersIPs, nil
+}
+
+func GetMasterHosts(cache Cache) ([]sshconfig.Host, error) {
+	hostsToReturn := make([]sshconfig.Host, 0)
+	hosts, err := GetMasterHostsIPs(cache)
+	if err != nil {
+		return hostsToReturn, err
+	}
+
+	for _, h := range hosts {
+		hostsToReturn = append(hostsToReturn, sshconfig.Host{Host: h.Host})
+	}
+
+	return hostsToReturn, nil
 }

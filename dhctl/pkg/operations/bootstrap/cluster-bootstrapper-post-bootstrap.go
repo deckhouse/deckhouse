@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -28,7 +30,12 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 	restore := b.applyParams()
 	defer restore()
 
-	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+	nodeInterface, err := helper.GetNodeInterface(b.SSHProviderInitializer, ctx, b.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return err
+	}
+
+	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return fmt.Errorf("post bootstrap executor is not supported for local execution contexts")
 	}
@@ -47,7 +54,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 
 	bootstrapState := NewBootstrapState(cache.Global())
 
-	postScriptExecutor := NewPostBootstrapScriptExecutor(wrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
+	postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, app.PostBootstrapScriptPath, bootstrapState).
 		WithTimeout(app.PostBootstrapScriptTimeout)
 
 	if err := postScriptExecutor.Execute(ctx); err != nil {

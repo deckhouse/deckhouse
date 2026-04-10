@@ -20,27 +20,27 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 )
 
 type MockNodeInterface struct {
 	mock.Mock
 }
 
-func (m *MockNodeInterface) Command(name string, arg ...string) node.Command {
+func (m *MockNodeInterface) Command(name string, arg ...string) libcon.Command {
 	args := m.Called(name, arg)
-	return args.Get(0).(node.Command)
+	return args.Get(0).(libcon.Command)
 }
 
-func (m *MockNodeInterface) File() node.File {
+func (m *MockNodeInterface) File() libcon.File {
 	args := m.Called()
-	return args.Get(0).(node.File)
+	return args.Get(0).(libcon.File)
 }
 
-func (m *MockNodeInterface) UploadScript(scriptPath string, args ...string) node.Script {
+func (m *MockNodeInterface) UploadScript(scriptPath string, args ...string) libcon.Script {
 	mockArgs := m.Called(scriptPath, args)
-	return mockArgs.Get(0).(node.Script)
+	return mockArgs.Get(0).(libcon.Script)
 }
 
 type MockScript struct {
@@ -160,46 +160,46 @@ func (m *MockSSHClient) Start() error {
 	return args.Error(0)
 }
 
-func (m *MockSSHClient) Tunnel(address string) node.Tunnel {
+func (m *MockSSHClient) Tunnel(address string) libcon.Tunnel {
 	args := m.Called(address)
-	return args.Get(0).(node.Tunnel)
+	return args.Get(0).(libcon.Tunnel)
 }
 
-func (m *MockSSHClient) ReverseTunnel(address string) node.ReverseTunnel {
+func (m *MockSSHClient) ReverseTunnel(address string) libcon.ReverseTunnel {
 	args := m.Called(address)
-	return args.Get(0).(node.ReverseTunnel)
+	return args.Get(0).(libcon.ReverseTunnel)
 }
 
-func (m *MockSSHClient) Command(name string, arg ...string) node.Command {
+func (m *MockSSHClient) Command(name string, arg ...string) libcon.Command {
 	args := m.Called(name, arg)
-	return args.Get(0).(node.Command)
+	return args.Get(0).(libcon.Command)
 }
 
-func (m *MockSSHClient) KubeProxy() node.KubeProxy {
+func (m *MockSSHClient) KubeProxy() libcon.KubeProxy {
 	args := m.Called()
-	return args.Get(0).(node.KubeProxy)
+	return args.Get(0).(libcon.KubeProxy)
 }
 
-func (m *MockSSHClient) File() node.File {
+func (m *MockSSHClient) File() libcon.File {
 	args := m.Called()
-	return args.Get(0).(node.File)
+	return args.Get(0).(libcon.File)
 }
 
-func (m *MockSSHClient) UploadScript(scriptPath string, args ...string) node.Script {
+func (m *MockSSHClient) UploadScript(scriptPath string, args ...string) libcon.Script {
 	mockArgs := m.Called(scriptPath, args)
-	return mockArgs.Get(0).(node.Script)
+	return mockArgs.Get(0).(libcon.Script)
 }
 
-func (m *MockSSHClient) Check() node.Check {
+func (m *MockSSHClient) Check() libcon.Check {
 	args := m.Called()
-	return args.Get(0).(node.Check)
+	return args.Get(0).(libcon.Check)
 }
 
 func (m *MockSSHClient) Stop() {
 	m.Called()
 }
 
-func (m *MockSSHClient) Loop(fn node.SSHLoopHandler) error {
+func (m *MockSSHClient) Loop(fn libcon.SSHLoopHandler) error {
 	args := m.Called(fn)
 	return args.Error(0)
 }
@@ -219,13 +219,17 @@ func (m *MockSSHClient) RefreshPrivateKeys() error {
 	return args.Error(0)
 }
 
+func (m *MockSSHClient) IsStopped() bool {
+	return false
+}
+
 type MockCheck struct {
 	mock.Mock
 }
 
-func (m *MockCheck) WithDelaySeconds(seconds int) node.Check {
+func (m *MockCheck) WithDelaySeconds(seconds int) libcon.Check {
 	args := m.Called(seconds)
-	return args.Get(0).(node.Check)
+	return args.Get(0).(libcon.Check)
 }
 
 func (m *MockCheck) AwaitAvailability(ctx context.Context) error {
@@ -266,7 +270,7 @@ func (m *mockReverseTunnel) Up() error {
 	return args.Error(0)
 }
 
-func (m *mockReverseTunnel) StartHealthMonitor(ctx context.Context, checker node.ReverseTunnelChecker, killer node.ReverseTunnelKiller) {
+func (m *mockReverseTunnel) StartHealthMonitor(ctx context.Context, checker libcon.ReverseTunnelChecker, killer libcon.ReverseTunnelKiller) {
 	m.Called(ctx, checker, killer)
 }
 
@@ -281,25 +285,25 @@ func (m *mockReverseTunnel) String() string {
 
 type MockNodeInterfaceWrapper struct {
 	mock.Mock
-	client node.SSHClient
+	client libcon.SSHClient
 }
 
-func (m *MockNodeInterfaceWrapper) Command(name string, arg ...string) node.Command {
+func (m *MockNodeInterfaceWrapper) Command(name string, arg ...string) libcon.Command {
 	args := m.Called(name, arg)
-	return args.Get(0).(node.Command)
+	return args.Get(0).(libcon.Command)
 }
 
-func (m *MockNodeInterfaceWrapper) File() node.File {
+func (m *MockNodeInterfaceWrapper) File() libcon.File {
 	args := m.Called()
-	return args.Get(0).(node.File)
+	return args.Get(0).(libcon.File)
 }
 
-func (m *MockNodeInterfaceWrapper) UploadScript(scriptPath string, args ...string) node.Script {
+func (m *MockNodeInterfaceWrapper) UploadScript(scriptPath string, args ...string) libcon.Script {
 	mockArgs := m.Called(scriptPath, args)
-	return mockArgs.Get(0).(node.Script)
+	return mockArgs.Get(0).(libcon.Script)
 }
 
-func (m *MockNodeInterfaceWrapper) Client() node.SSHClient {
+func (m *MockNodeInterfaceWrapper) Client() libcon.SSHClient {
 	return m.client
 }
 
@@ -346,3 +350,52 @@ func (m *MockState) StaticPreflightchecksWasRan() (bool, error) {
 	args := m.Called()
 	return args.Bool(0), args.Error(1)
 }
+
+// type MockSSHProviderInitializer struct {
+// 	mock.Mock
+// 	provider libcon.SSHProvider
+// }
+
+// func NewMockSSHProviderInitializer(p libcon.SSHProvider) *MockSSHProviderInitializer {
+// 	return &MockSSHProviderInitializer{provider: p}
+// }
+
+// func (i *MockSSHProviderInitializer) GetSSHProvider() libcon.SSHProvider {
+// 	return i.provider
+// }
+
+// type MockSSHProvider struct {
+// 	mock.Mock
+// 	client libcon.SSHClient
+// }
+
+// func NewMockSSHProvider(c libcon.SSHClient) *MockSSHProvider {
+// 	return &MockSSHProvider{client: c}
+// }
+
+// func (p *MockSSHProvider) Client(ctx context.Context) (libcon.SSHClient, error) {
+// 	return p.client, nil
+// }
+
+// func (p *MockSSHProvider) NewAdditionalClient(ctx context.Context) (libcon.SSHClient, error) {
+// 	mockClient := &MockSSHClient{}
+// 	return mockClient, nil
+// }
+
+// func (p *MockSSHProvider) NewStandaloneClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey, opts ...libcon.StandaloneClientOpt) (libcon.SSHClient, error) {
+// 	mockClient := &MockSSHClient{}
+// 	return mockClient, nil
+// }
+
+// func (p *MockSSHProvider) SwitchClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey) (libcon.SSHClient, error) {
+// 	mockClient := &MockSSHClient{}
+// 	return mockClient, nil
+// }
+
+// func (p *MockSSHProvider) SwitchToDefault(ctx context.Context) (libcon.SSHClient, error) {
+// 	return p.client, nil
+// }
+
+// func (p *MockSSHProvider) Cleanup(ctx context.Context) error {
+// 	return nil
+// }
