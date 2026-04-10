@@ -39,14 +39,14 @@ var _ = Describe("Istio EE hooks :: alliance_metadata_endpoint_depricated_subdom
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
 metadata:
-  name: mc-legacy
+  name: mc-depricated
 spec:
   metadataEndpoint: "https://istio.example.com/metadata/"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
 metadata:
-  name: fed-legacy
+  name: fed-depricated
 spec:
   trustDomain: remote.test
   metadataEndpoint: "https://istio.example.com/metadata/"
@@ -74,7 +74,7 @@ var _ = Describe("Istio EE hooks :: alliance_metadata_endpoint_depricated_subdom
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
 metadata:
-  name: mc-legacy
+  name: mc-depricated
 spec:
   metadataEndpoint: "https://istio.example.com/metadata/"
 `))
@@ -89,7 +89,7 @@ spec:
 		Expect(m[1].Name).To(Equal(metadataExporterDepricatedSubdomainMetricName))
 		Expect(m[1].Labels).To(Equal(map[string]string{
 			"alliance_kind": "IstioMulticluster",
-			"name":          "mc-legacy",
+			"name":          "mc-depricated",
 		}))
 		Expect(m[1].Value).To(Equal(ptr.To(1.0)))
 	})
@@ -134,7 +134,7 @@ var _ = Describe("Istio EE hooks :: alliance_metadata_endpoint_depricated_subdom
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
 metadata:
-  name: mc-legacy-remote-tld
+  name: mc-depricated-remote-tld
 spec:
   metadataEndpoint: "https://istio.cluster-b.partner.example.net/metadata/"
 `))
@@ -146,7 +146,7 @@ spec:
 		m := f.MetricsCollector.CollectedMetrics()
 		Expect(m).To(HaveLen(2))
 		Expect(m[1].Name).To(Equal(metadataExporterDepricatedSubdomainMetricName))
-		Expect(m[1].Labels["name"]).To(Equal("mc-legacy-remote-tld"))
+		Expect(m[1].Labels["name"]).To(Equal("mc-depricated-remote-tld"))
 	})
 })
 
@@ -162,7 +162,7 @@ var _ = Describe("Istio EE hooks :: alliance_metadata_endpoint_depricated_subdom
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
 metadata:
-  name: fed-legacy
+  name: fed-depricated
 spec:
   trustDomain: remote.test
   metadataEndpoint: "https://istio.example.com/metadata/"
@@ -176,7 +176,7 @@ spec:
 		Expect(m).To(HaveLen(2))
 		Expect(m[1].Labels).To(Equal(map[string]string{
 			"alliance_kind": "IstioFederation",
-			"name":          "fed-legacy",
+			"name":          "fed-depricated",
 		}))
 	})
 })

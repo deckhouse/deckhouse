@@ -128,6 +128,7 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		if err != nil {
 			return fmt.Errorf("failed to iterate over multiclusters: %v", err)
 		}
+		alertIfHasDeprecatedMetadataSubdomain(input, "IstioMulticluster", multiclusterInfo.Name, multiclusterInfo.PublicMetadataEndpoint)
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.MulticlusterPrivateMetadata

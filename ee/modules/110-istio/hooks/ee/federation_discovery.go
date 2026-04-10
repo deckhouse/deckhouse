@@ -138,6 +138,8 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			continue
 		}
 
+		alertIfHasDeprecatedMetadataSubdomain(input, "IstioFederation", federationInfo.Name, federationInfo.PublicMetadataEndpoint)
+
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.FederationPrivateMetadata
 		var httpOption []http.Option

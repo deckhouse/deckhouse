@@ -6,29 +6,64 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"strings"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
-	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
-
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-
-	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
-	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
 
+// this file contains just common for both federation and multicluster helpers without implementation
+// tests have to be deleted if no functions below using anymore
 const (
 	metadataExporterDepricatedSubdomainMetricsGroup = "d8_istio_metadata_exporter_endpoint_issues"
 	metadataExporterDepricatedSubdomainMetricName   = "d8_istio_metadata_exporter_endpoint_uses_depricated_subdomain"
-	depricatedMetadataEndpointSubdomain             = "istio"
+	depricatedMetadataEndpointLeftmostSubdomain     = "istio"
 )
 
+func alertIfHasDeprecatedMetadataSubdomain(input *go_hook.HookInput, allianceKind string, clusterName string, endpointURL string) {
+	isDeprecated, err := hasDepricatedSubdomainInURL(endpointURL)
+	if err != nil {
+		input.Logger.Warn("failed to validate metadataEndpoint subdomain: %v", err)
+		return
+	}
+	if !isDeprecated {
+		return
+	}
+	input.MetricsCollector.Set(metadataExporterDepricatedSubdomainMetricName, 1, map[string]string{
+		"alliance_kind": allianceKind,
+		"name":          clusterName,
+	}, metrics.WithGroup(metadataExporterDepricatedSubdomainMetricsGroup))
+}
+
+func hasDepricatedSubdomainInURL(url string) (bool, error) {
+	usingSubdomain, err := retriveLeftmostSubdomain(url)
+	if err != nil {
+		return false, err
+	}
+	return usingSubdomain == depricatedMetadataEndpointLeftmostSubdomain, nil
+}
+
+func retriveLeftmostSubdomain(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", fmt.Errorf("empty metadataEndpoint")
+	}
+	if !strings.Contains(raw, "://") {
+		raw = "https://" + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", err
+	}
+	h := u.Hostname()
+	if h == "" {
+		return "", fmt.Errorf("no host in metadataEndpoint")
+	}
+	h = strings.TrimSpace(strings.ToLower(h))
+	sub, _, _ := strings.Cut(strings.TrimSuffix(h, "."), ".")
+	return sub, nil
+}
+
+/*
 type allianceMetadataEndpointSnapshot struct {
 	AllianceKind string
 	Name         string
@@ -124,37 +159,4 @@ func allianceMetadataEndpointDepricatedSubdomain(_ context.Context, input *go_ho
 
 	return nil
 }
-
-func hasDepricatedSubdomainInHost(endpoint string) bool {
-	host, err := prepareEndpointString(endpoint)
-	if err != nil {
-		return false
-	}
-	host = strings.TrimSpace(strings.ToLower(host))
-
-	if host == "" {
-		return false
-	}
-	host = strings.TrimSuffix(host, ".")
-	subdomain, _, _ := strings.Cut(host, ".")
-	return subdomain == depricatedMetadataEndpointSubdomain
-}
-
-func prepareEndpointString(raw string) (string, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", fmt.Errorf("empty metadataEndpoint")
-	}
-	if !strings.Contains(raw, "://") {
-		raw = "https://" + raw
-	}
-	u, err := url.Parse(raw)
-	if err != nil {
-		return "", err
-	}
-	host := u.Hostname()
-	if host == "" {
-		return "", fmt.Errorf("no host in metadataEndpoint")
-	}
-	return strings.ToLower(host), nil
-}
+*/
