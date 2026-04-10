@@ -72,6 +72,10 @@ shell:
   - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
   - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
   - |
+    echo "DEBUG ls /:" && ls /
+    echo "DEBUG dhctl check:" && ls /dhctl_vulnerabilities.vex 2>&1 || echo "NOT FOUND"
+    echo "DEBUG known check:" && ls /known_vulnerabilities.vex 2>&1 || echo "NOT FOUND"
+  - |
     # Merge VEX files from dhctl if it exists
     VEX_FILES="/known_vulnerabilities.vex"
     [ -f /dhctl_vulnerabilities.vex ] && VEX_FILES="$VEX_FILES /dhctl_vulnerabilities.vex"
