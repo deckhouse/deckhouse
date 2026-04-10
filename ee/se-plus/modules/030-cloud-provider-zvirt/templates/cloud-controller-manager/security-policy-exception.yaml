@@ -1,0 +1,19 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-zvirt
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host network access for Cloud Controller Manager.
+          The Cloud Controller Manager requires host network access to communicate
+          with the zVirt (oVirt) API for managing infrastructure resources, including
+          node lifecycle management and storage operations.
+{{- end }}
