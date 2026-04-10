@@ -1,7 +1,7 @@
 linters-settings:
   module:
     oss:
-      disable: true
+      disable: false
   openapi:
     exclude-rules:
       enum:

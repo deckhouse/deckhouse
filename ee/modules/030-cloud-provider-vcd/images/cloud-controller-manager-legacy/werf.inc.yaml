@@ -1,4 +1,4 @@
-{{- $version := "1.5.0"}}
+{{- $version := include "get_oss_version_by_id_and_condition" (list "ccm-vcd" (dict "mode" "legacy") $) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless

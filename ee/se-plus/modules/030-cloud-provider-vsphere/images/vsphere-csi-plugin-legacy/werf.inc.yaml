@@ -1,3 +1,5 @@
+{{- $ccm_version := "v0.2.1" }}
+{{- $csi_commit := "6189afc2522d83a96d3857110c61478710110347" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -31,9 +33,9 @@ secrets:
 shell:
   install:
   - git clone $(cat /run/secrets/SOURCE_REPO)/flant/vsphere-csi-driver.git /src
-  - git clone --depth 1 --branch v0.2.1 $(cat /run/secrets/SOURCE_REPO)/flant/cloud-provider-vsphere.git /src/ccm
+  - git clone --depth 1 --branch {{ $ccm_version }} $(cat /run/secrets/SOURCE_REPO)/flant/cloud-provider-vsphere.git /src/ccm
   - cd /src
-  - git checkout 6189afc2522d83a96d3857110c61478710110347
+  - git checkout {{ $csi_commit }}
   - git apply /patches/csi/*.patch --verbose
   - rm -rf .git vendor
   - cd /src/ccm
