@@ -15,18 +15,22 @@
 package suites
 
 import (
+	"context"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type StaticAbortDeps struct {
-	Node node.Interface
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 }
 
-func NewStaticAbortSuite(deps StaticAbortDeps) preflight.Suite {
+func NewStaticAbortSuite(deps StaticAbortDeps, ctx context.Context) (preflight.Suite, error) {
+	nodeInterface, err := helper.GetNodeInterface(deps.SSHProviderInitializer, ctx, deps.SSHProviderInitializer.GetSettings())
 	return preflight.NewSuite(
-		checks.SSHCredential(deps.Node),
-		checks.SudoAllowed(deps.Node),
-	)
+		checks.SSHCredential(deps.SSHProviderInitializer),
+		checks.SudoAllowed(nodeInterface),
+	), err
 }

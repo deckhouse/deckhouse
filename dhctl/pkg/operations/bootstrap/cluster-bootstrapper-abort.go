@@ -17,7 +17,6 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/name212/govalue"
 
@@ -34,9 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
@@ -48,45 +44,6 @@ func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache boo
 	}
 
 	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(ctx, forceAbortFromCache) })
-}
-
-func (b *ClusterBootstrapper) initSSHClient() error {
-	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
-	if !ok {
-		return nil // Local runs don't use ssh client.
-	}
-
-	if err := terminal.AskBecomePassword(); err != nil {
-		return err
-	}
-	if err := terminal.AskBastionPassword(); err != nil {
-		return err
-	}
-
-	sshClient := wrapper.Client()
-
-	if len(sshClient.Session().AvailableHosts()) == 0 {
-		mastersIPs, err := state.GetMasterHostsIPs(cache.Global())
-		if err != nil {
-			log.ErrorF("Can not load available ssh hosts: %v\n", err)
-			return err
-		}
-		if len(mastersIPs) > 0 {
-			sshClient.Session().SetAvailableHosts(mastersIPs)
-		}
-	}
-
-	bastionHost, err := GetBastionHostFromCache()
-	if err != nil {
-		log.ErrorF("Can not load bastion host: %v\n", err)
-		return fmt.Errorf("unable to load bastion host: %w", err)
-	}
-
-	if bastionHost != "" {
-		sshClient.Session().BastionHost = bastionHost
-	}
-
-	return nil
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
@@ -156,22 +113,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 
 	// init ssh client is safe if master hosts not found (error in base infra)
-	if err := b.initSSHClient(); err != nil {
-		return err
-	}
-
-	staticSSHClientProvider := sync.OnceValues(func() (node.SSHClient, error) {
-		wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
-		if !ok {
-			return nil, fmt.Errorf("destroy operations are not supported for local execution contexts")
-		}
-
-		client := wrapper.Client()
-		if err := client.Start(); err != nil {
-			return nil, err
-		}
-		return client, nil
-	})
 
 	var destroyer destroy.Destroyer
 
@@ -216,14 +157,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			log.InfoLn(logMsg)
 
 			return nil
-		}
-
-		if !b.CommanderMode {
-			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-				if err = cache.InitWithOptions(wrapper.Client().Check().String(), cache.CacheOptions{}); err != nil {
-					return fmt.Errorf(bootstrapAbortInvalidCacheMessage, wrapper.Client().Check().String(), err)
-				}
-			}
 		}
 
 		destroyParams := &destroy.Params{
@@ -277,12 +210,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			deckhouseInstallConfig.CommanderMode = b.CommanderMode
 			deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
 		}
-		// start client todo refactor it
-		if _, err = staticSSHClientProvider(); err != nil {
-			return err
-		}
 
-		staticAbortSuite := suites.NewStaticAbortSuite(suites.StaticAbortDeps{Node: b.NodeInterface})
+		staticAbortSuite, err := suites.NewStaticAbortSuite(suites.StaticAbortDeps{SSHProviderInitializer: b.SSHProviderInitializer}, ctx)
 		preflightRunner := preflight.New(staticAbortSuite)
 		preflightRunner.UseCache(bootstrapState)
 		preflightRunner.SetCacheSalt(state.ConfigHash(app.ConfigPaths))

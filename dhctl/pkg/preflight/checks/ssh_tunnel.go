@@ -25,12 +25,17 @@ import (
 	"time"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+
+	"github.com/deckhouse/lib-connection/pkg/ssh"
+	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 )
 
-type SSHTunnelCheck struct{ Node node.Interface }
+type SSHTunnelCheck struct {
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+}
 
 const (
 	defaultTunnelLocalPort  = 27322
@@ -54,11 +59,14 @@ func (SSHTunnelCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c SSHTunnelCheck) Run(ctx context.Context) error {
-	wrapper, ok := c.Node.(*ssh.NodeInterfaceWrapper)
+	nodeInterface, err := helper.GetNodeInterface(c.SSHProviderInitializer, ctx, c.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return err
+	}
+	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return nil
 	}
-
 	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthURL(defaultTunnelRemotePort), nil)
 	if err != nil {
 		return fmt.Errorf("render reverse tunnel script: %w", err)
@@ -75,6 +83,7 @@ func (c SSHTunnelCheck) Run(ctx context.Context) error {
 	defer shutdown()
 
 	sshCl := wrapper.Client()
+
 	addr := strings.Join([]string{
 		net.JoinHostPort(localhost, strconv.Itoa(defaultTunnelLocalPort)),
 		net.JoinHostPort(localhost, strconv.Itoa(defaultTunnelRemotePort)),
@@ -86,13 +95,13 @@ func (c SSHTunnelCheck) Run(ctx context.Context) error {
 	}
 	defer tun.Stop()
 
-	if _, err := ssh.NewRunScriptReverseTunnelChecker(sshCl, checkScript).
+	if _, err := utils.NewRunScriptReverseTunnelChecker(sshCl, checkScript).
 		SetUploadDirAndCleanup("/tmp").
 		CheckTunnel(ctx); err != nil {
 		return fmt.Errorf("ssh tunnel health check failed: %w", err)
 	}
 
-	if _, err := ssh.NewRunScriptReverseTunnelKiller(sshCl, killScript).
+	if _, err := utils.NewRunScriptReverseTunnelKiller(sshCl, killScript).
 		SetUploadDirAndCleanup("/tmp").
 		KillTunnel(ctx); err != nil {
 		return fmt.Errorf("error killing ssh tunnel on remote port %d: %v", defaultTunnelRemotePort, err)
@@ -132,8 +141,8 @@ func startHTTPServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 	return func() { _ = server.Shutdown(ctx) }, nil
 }
 
-func SSHTunnel(nodeInterface node.Interface) preflight.Check {
-	check := SSHTunnelCheck{Node: nodeInterface}
+func SSHTunnel(sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
+	check := SSHTunnelCheck{SSHProviderInitializer: sshProviderInitializer}
 	return preflight.Check{
 		Name:        SSHTunnelCheckName,
 		Description: check.Description(),

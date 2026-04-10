@@ -19,11 +19,15 @@ import (
 	"fmt"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+
+	"github.com/deckhouse/lib-connection/pkg/ssh"
 )
 
-type SingleSSHHostCheck struct{ Node node.Interface }
+type SingleSSHHostCheck struct {
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+}
 
 const SingleSSHHostCheckName preflight.CheckName = "static-single-ssh-host"
 
@@ -40,7 +44,11 @@ func (SingleSSHHostCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c SingleSSHHostCheck) Run(ctx context.Context) error {
-	wrapper, ok := c.Node.(*ssh.NodeInterfaceWrapper)
+	nodeInterface, err := helper.GetNodeInterface(c.SSHProviderInitializer, ctx, c.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return err
+	}
+	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return nil
 	}
@@ -50,8 +58,8 @@ func (c SingleSSHHostCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func SingleSSHHost(nodeInterface node.Interface) preflight.Check {
-	check := SingleSSHHostCheck{Node: nodeInterface}
+func SingleSSHHost(sshProvider *providerinitializer.SSHProviderInitializer) preflight.Check {
+	check := SingleSSHHostCheck{SSHProviderInitializer: sshProvider}
 	return preflight.Check{
 		Name:        SingleSSHHostCheckName,
 		Description: check.Description(),

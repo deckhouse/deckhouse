@@ -76,7 +76,16 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 
 	sshProviderInitializer := NewSSHProviderInitializer(baseProviderSettings, config)
 
-	cfg := &kube.Config{}
+	parser := kube.NewFlagsParser(baseProviderSettings)
+	fset := flag.NewFlagSet("my-set", flag.ExitOnError)
+	flags, err := parser.InitFlags(fset)
+	if err != nil {
+		return nil, nil, err
+	}
+	cfg, err := flags.ExtractConfig()
+	if err != nil {
+		return nil, nil, err
+	}
 	runnerInterface, err := provider.GetRunnerInterface(ctx,
 		cfg,
 		baseProviderSettings,
