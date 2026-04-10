@@ -26,7 +26,7 @@ Main node configuration stages:
 * Downloading required packages from `registrypackages`.
 * Installing and configuring the containerd CRI.
 * Downloading and configuring **kubernetes-api-proxy**. This component provides access to the Kubernetes API and is implemented as an NGINX instance with upstream servers pointing to master nodes. This ensures high availability of the API in case one master node is unavailable, as well as load balancing.
-* Installing, configuring, and starting [kubelet](../kubernetes-and-scheduling/kubelet.html).
+* Installing, configuring, and starting [kubelet](kubernetes-and-scheduling/kubelet.html).
 * Starting the bashible service, which runs `bashible.sh` every minute.
 * Rebooting the node if required.
 
