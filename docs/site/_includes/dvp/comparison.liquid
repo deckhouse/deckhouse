@@ -1,5 +1,19 @@
-{% assign not_supported = '<img class="zoom-image-disable" src="/images/icons/not_supported_v2.svg" alt="">' %}
-{% assign supported = '<img class="zoom-image-disable" src="/images/icons/supported_v2.svg" alt="">' %}
+{% assign not_supported_img_url = '/images/icons/not_supported_v2.svg' %}
+{% assign supported_img_url = '/images/icons/supported_v2.svg' %}
+{% assign planned_img_url = '/images/icons/clock.svg' %}
+{% assign partly_supported_img_url = '/images/icons/partly_supported.svg' %}
+{% capture not_supported %}
+<svg class="zoom-image-disable" viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ not_supported_img_url }}" width="32" height="32" /></svg>
+{% endcapture %}
+{% capture supported %}
+<svg class="zoom-image-disable" viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ supported_img_url }}" width="32" height="32" /></svg>
+{% endcapture %}
+{% capture planned %}
+<svg class="zoom-image-disable" viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ planned_img_url }}" width="32" height="32" /></svg>
+{% endcapture %}
+{% capture partly_supported %}
+<svg class="zoom-image-disable" viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ partly_supported_img_url }}" width="32" height="32" /></svg>
+{% endcapture %}
 {% assign comparison_colspan = 7 %}
 {% if page.lang == 'en' %}
   {% assign comparison_colspan = 5 %}
@@ -61,15 +75,15 @@
         <div class="icon" style="padding: 0 0;">
           {% case feature.editions[edition] %}
             {% when "supported" %}
-              {{ supported }}
+              <span>{{ supported }}</span>
             {% when "not_supported" %}
-              {{ not_supported }}
+              <span>{{ not_supported }}</span>
             {% when "planned" %}
-              <img class="zoom-image-disable" src="/images/icons/clock.svg" alt="" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+              <span data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">{{ planned }}</span>
             {% when "partly" %}
-              <img class="zoom-image-disable" src="/images/icons/partly_supported.svg" alt="" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+              <span data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">{{ partly_supported }}</span>
             {% else %}
-              <img class="zoom-image-disable" src="/images/icons/partly_supported.svg" alt="" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+              <span data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">{{ partly_supported }}</span>
           {% endcase %}
         </div>
       </td>

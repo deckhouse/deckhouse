@@ -111,11 +111,11 @@
                   <span class="table__asterisk"
                         data-tippy-content="{{ restrictionComment }}">{{ partially_supported_img_inline }}</span>
                {%- else %}
-                 {{ supported_img_inline }}
+                 <span>{{ supported_img_inline }}</span>
                {%- endif %}
 
           {%- else %}
-            {{ notsupported_img_inline }}
+            <span>{{ notsupported_img_inline }}</span>
           {%- endif %}
         </td>
       {%- endfor %}
