@@ -26,7 +26,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 
-	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
+	infrav1 "caps-controller-manager/api/infrastructure/v1beta2"
 )
 
 var allowBootstrapRequirement *labels.Requirement
