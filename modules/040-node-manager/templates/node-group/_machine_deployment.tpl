@@ -5,7 +5,7 @@
   {{- if hasKey $ng "instanceClass" -}}
     {{- if hasKey $ng.instanceClass "spot" -}}
       {{- if $ng.instanceClass.spot -}}
-3m
+5m
       {{- end -}}
     {{- end -}}
   {{- end -}}
