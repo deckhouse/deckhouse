@@ -22,8 +22,8 @@ spec:
       rego: |
         package d8.security_policies
 
-        is_connect {
-          input.review.operation == "CONNECT"
+        is_connect { 
+          input.review.operation == "CONNECT" 
         }
         
         subresource_is(sub) {
@@ -35,29 +35,21 @@ spec:
           input.review.resource.resource == "pods"
           subresource_is("exec")
         }
-
         is_pod_exec_or_attach {
           input.review.resource.resource == "pods"
           subresource_is("attach")
         }
 
-        # Check if the target pod has heritage: deckhouse label via inventory
         is_heritage_pod {
-          namespace := input.review.namespace
-          podName := input.review.name
-          pod := data.inventory.namespace[namespace]["v1"].Pod[podName]
-          pod.metadata.labels["heritage"] == "deckhouse"
+          input.review.object.metadata.labels["heritage"] == "deckhouse"
         }
 
-        # allow-list
         is_allowed_user {
           input.review.userInfo.username == "system:sudouser"
         }
-
         is_allowed_user {
           startswith(input.review.userInfo.username, "system:serviceaccount:d8-")
         }
-
         is_allowed_user {
           startswith(input.review.userInfo.username, "system:serviceaccount:kube-")
         }
@@ -67,8 +59,6 @@ spec:
           is_pod_exec_or_attach
           is_heritage_pod
           not is_allowed_user
-          pod  := input.review.name
-          ns   := input.review.namespace
-          user := input.review.userInfo.username
-          msg  := sprintf("Exec/attach to Pod %q in namespace %q with label 'heritage: deckhouse' is forbidden for user %q", [pod, ns, user])
+          
+          msg := sprintf("Exec/attach to Pod %q is forbidden for user %q", [input.review.name, input.review.userInfo.username])
         }

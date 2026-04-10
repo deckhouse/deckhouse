@@ -584,7 +584,7 @@ spec:
   match:
     kinds:
       - apiGroups: ["*"]
-        kinds: ["*"]
+        kinds: ["Pod"]
     scope: Namespaced
   {{- end }}
 {{- end }}
