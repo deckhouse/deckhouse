@@ -17,6 +17,7 @@ package helper
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
@@ -41,7 +42,9 @@ func CreateProviders(ctx context.Context, config string, logger log.Logger, isDe
 
 	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithConnectionConfig(config))
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("initializing providers: %w", err)
+		if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			return nil, nil, nil, fmt.Errorf("initializing providers: %w", err)
+		}
 	}
 	cleanuper.Add(func() error {
 		return sshProviderInitializer.Cleanup(ctx)
