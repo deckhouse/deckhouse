@@ -31,8 +31,7 @@ status:
   packages:
     failed:
     - errors:
-      - error: 'release image is too old to process: no type labels, no package.yaml,
-          no module.yaml: test-package'
+      - message: 'version image has no type labels and no package.yaml: test-package'
         version: ""
       name: test-package
     processed:

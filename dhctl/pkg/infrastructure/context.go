@@ -384,6 +384,7 @@ type BootstrapNodeRunnerOptions struct {
 	NodeCloudConfig                  string
 	AdditionalStateSaverDestinations []SaverDestination
 	RunnerLogger                     log.Logger
+	AllowUseStateCache               bool
 }
 
 func (f *Context) GetBootstrapNodeRunner(ctx context.Context, metaConfig *config.MetaConfig, stateCache dstate.Cache, opts BootstrapNodeRunnerOptions) (RunnerInterface, error) {
@@ -406,6 +407,11 @@ func (f *Context) GetBootstrapNodeRunner(ctx context.Context, metaConfig *config
 		WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
 	addProviderAfterCleanupFuncForRunner(cloudProvider, opts.NodeName, r)
+
+	if opts.AllowUseStateCache {
+		r.WithAllowedCachedState(true)
+	}
+
 	return applyAutomaticSettingsForBootstrap(r, f.stateChecker), nil
 }
 

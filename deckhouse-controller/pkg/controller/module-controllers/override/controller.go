@@ -367,9 +367,9 @@ func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSo
 			values = addonutils.Values(settings)
 		}
 	}
-	if err = def.Validate(values, r.log); err != nil {
+	if err := def.Validate(values, r.log); err != nil {
 		mpo.Status.Message = fmt.Sprintf("Validation error: %v", err)
-		if err = r.updateModulePullOverrideStatus(ctx, mpo); err != nil {
+		if err := r.updateModulePullOverrideStatus(ctx, mpo); err != nil {
 			return fmt.Errorf("update mpo status: %w", err)
 		}
 

@@ -2,8 +2,16 @@
 {{- $moduleChannel := .channel }}
 {{- $versionPrev := "" }}
 {{- $moduleChannelsData := (index .ctx.Site.Data.modules.channels $module).channels }}
+{{- $embeddedModulesHistory := .ctx.Site.Data.embedded_modules_list }}
 {{- $channelsInfo := .ctx.Site.Data.channels.info }}
 {{- $urlFileName := replaceRE `^.*/` "" .ctx.Page.RelPermalink 1 }}
+{{- $embeddedModuleVersions := slice }}
+
+{{- range $productVersion, $modules := $embeddedModulesHistory }}
+  {{- if and (ne $productVersion "latest") (in $modules $module) }}
+    {{- $embeddedModuleVersions = $embeddedModuleVersions | append $productVersion }}
+  {{- end }}
+{{- end }}
 
 {{- if and $moduleChannelsData ( eq site.Params.mode "module" ) }}
   {{- $version := "" }}
@@ -35,17 +43,26 @@
     {{- $versionPrev = $version }}
   {{- end }}
 {{- end }}
+{{- if gt (len $embeddedModuleVersions) 0 }}
+    <li class="submenu-divider" aria-hidden="true"></li>
+    <li class="submenu-caption">{{ T "embedded_in_dkp" }}</li>
+    <li class="submenu-embedded-list">
+    {{- range sort $embeddedModuleVersions "value" "desc" }}
+        <a data-proofer-ignore='' class='submenu-embedded-link' href='../{{ . }}/{{ replaceRE "^readme.html$" "" $urlFileName }}'>{{ . }}</a>
+    {{- end }}
+    </li>
+{{- end }}
     </ul>
 </div>
 {{ "<!--/noindex-->" | safeHTML }}
 <script>
-  // Fix version menu item URLs for cases where the URL lacks a channel (e.g., /modules/MODULE/).
+  // Fix version menu item URLs for cases where the URL lacks a channel or product version (e.g., /modules/MODULE/).
   const currentUrl = window.location.pathname;
 
-  if (!currentUrl.match(/\/modules\/[^\/]+\/(alpha|beta|early-access|stable|rock-solid|latest)\//)
+  if (!currentUrl.match(/\/modules\/[^\/]+\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)\//)
       && currentUrl.includes('/modules/')) {
     document.querySelectorAll('#doc-versions-menu a.submenu-item-link').forEach(link => {
-        link.href = link.href.replace(/.*\/(alpha|beta|early-access|stable|rock-solid|latest)\//, `$1/`);
+        link.href = link.href.replace(/.*\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)\//, `$1/`);
     });
   }
 </script>

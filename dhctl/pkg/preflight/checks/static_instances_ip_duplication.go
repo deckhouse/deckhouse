@@ -54,13 +54,6 @@ func (StaticInstancesIPDuplicationCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c StaticInstancesIPDuplicationCheck) Run(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, preflight.DefaultPreflightCheckTimeout)
-	defer cancel()
-
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
 	if c.MetaConfig == nil || c.MetaConfig.ResourcesYAML == "" {
 		return nil
 	}

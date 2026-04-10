@@ -64,7 +64,7 @@ To change the release channel for a module from a source, follow these steps:
      name: my-module
    spec:
      enabled: true
-     # ModuleUpdatePolicy name
+     # ModuleUpdatePolicy name.
      updatePolicy: my-module-policy
    ```
 

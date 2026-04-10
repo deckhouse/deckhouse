@@ -27,14 +27,17 @@ The architecture of the [`user-authn`](/modules/user-authn/) module at Level 2 o
 
 Using dex-authenticator:
 
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![User-authn module architecture with dex-authenticator authentication](../../../images/architecture/iam/c4-l2-user-authn.png)
 
 Using the Dex client (for simplicity, the interaction between the `prometheus-main` module and dex is not shown in the diagram):
 
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![User-authn module architecture with Dex authentication](../../../images/architecture/iam/c4-l2-user-authn-dex-client.png)
 
 When connecting to the Kubernetes API using `kubectl` or other Kubernetes clients with a generated kubeconfig, a separate authentication scheme is used. It is described in detail in the [corresponding documentation section](authentication.html#connecting-to-kubernetes-api-using-a-generated-kubeconfig):
 
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![User-authn module architecture when using a generated kubeconfig](../../../images/architecture/iam/c4-l2-user-authn-kubeconfig.png)
 
 ## Module components

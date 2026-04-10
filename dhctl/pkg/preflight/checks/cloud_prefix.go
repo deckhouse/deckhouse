@@ -42,13 +42,6 @@ func (CloudPrefixCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c CloudPrefixCheck) Run(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, preflight.DefaultPreflightCheckTimeout)
-	defer cancel()
-
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
 	if c.MetaConfig == nil {
 		return fmt.Errorf("meta config is nil")
 	}

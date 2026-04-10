@@ -4,13 +4,104 @@ permalink: ru/virtualization-platform/documentation/release-notes.html
 lang: ru
 ---
 
+## v1.7.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 31 марта 2026.
+</span>
+
+### Новые возможности
+
+- [vm] Порядок дополнительных сетевых интерфейсов теперь детерминирован и не меняется при рестартах виртуальных машин.
+- [vm] Добавлен механизм, предотвращающий разрыв TCP-соединений при живой миграции виртуальной машины.
+- [vm] Сокращено время недоступности USB-устройств во время миграции виртуальной машины.
+- [vm] Добавлен сборщик завершившихся и неуспешных подов виртуальных машин:
+  - поды старше 24 часов удаляются;
+  - хранится не более 2 завершённых подов.
+- [usb] При планировании размещения виртуальных машин на узлах теперь учитывается, использует ли USB-устройство USB 2.0 (High-Speed) или USB 3.0 (SuperSpeed).
+
+### Исправления
+
+- [vm] Исправлено двойное потребление квоты на хранилище при миграции виртуальной машины с локальным хранилищем.
+- [vm] При использовании [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типом `Clone` или `Restore` диски теперь также восстанавливают свою принадлежность к виртуальной машине (owner reference).
+- [vm] Исправлено вытеснение виртуальных машин при выполнении drain узла: поды, отвечающие за подключение блочных устройств, больше не удаляются с узла, для которого выполнен cordon, до окончания миграции виртуальной машины.
+- [vm] Блочные устройства можно подключать и отключать, даже если виртуальная машина работает на узле, для которого выполнен cordon.
+- [vm] Исправлена валидация для политики миграции виртуальной машины `AlwaysForced`: операции [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типами `Evict` или `Migrate` без явного `force=true` теперь отклоняются для этой политики.
+- [vm] Исправлена проблема, из-за которой виртуальная машина могла зависнуть в состоянии `Maintenance` во время восстановления из снимка.
+- [vm] В статус виртуальной машины добавлено отображение сообщений об ошибках, произошедших на стороне хранилища (CSI-драйвера) при подключении блочных устройств.
+- [vd,vi,cvi] Исправлено создание блочных устройств из файлов VMDK (в особенности для VMDK в формате `streamOptimized`, используемых в экспортах из VMware).
+- [usb] Стабилизирована работа USB-устройств для виртуализации на Deckhouse Kubernetes Platform версии `>=1.76` и Kubernetes версии `>=1.33`.
+- [usb] Исправлено обнаружение USB-устройств на хосте: ранее могли появляться дубликаты USB-устройств.
+
+## v1.6.1
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 10 марта 2026.
+</span>
+
+### Исправления
+
+- [observability] Восстановлено прежнее расположение дашбордов виртуальных машин из-за проблемы с их валидацией, которая могла приводить к блокировке очереди Deckhouse.
+- [vm] Исправлено обнаружение USB-устройств на узлах: соответствующие ресурсы [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) могли не создаваться.
+- [vm] Исправлено клонирование виртуальной машины с подключенными USB-устройствами при использовании [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типом `Clone` в режиме `BestEffort`.
+
+### Безопасность
+
+- [module] Исправлены уязвимости CVE-2026-24051, CVE-2025-15558.
+
+## v1.6.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 2 марта 2026.
+</span>
+
+### Новые возможности
+
+- [vm] Добавлена поддержка подключения USB-устройств к виртуальным машинам через `.spec.usbDevices`.
+- [usb] Добавлены ресурсы [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) и [USBDevice](/modules/virtualization/cr.html#usbdevice), позволяющие управлять USB-устройствами в кластере:
+  - [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) (cluster-scoped) — представляет USB-устройство, обнаруженное на конкретном узле. Позволяет назначить USB-устройство для использования в конкретном неймспейсе.
+  - [USBDevice](/modules/virtualization/cr.html#usbdevice) (namespace-scoped) — представляет USB-устройство, доступное для подключения к виртуальным машинам в заданном неймспейсе.
+- [observability] Добавлен дашборд `Virtualization / Overview` с обзором состояния платформы виртуализации.
+- [observability] На дашборд виртуальной машины добавлена информация о подах виртуальных машин.
+- [dvcr] Включена очистка DVCR в кластерах по умолчанию: ежедневно в 02:00. Расписание можно переопределить через `dvcr.gc.schedule` в ModuleConfig модуля `virtualization`.
+
+### Исправления
+
+- [vd] Исправлено зависание при создании виртуальных дисков в режиме `WaitForFirstConsumer` на узлах с taints.
+- [vm] Если в `.spec.networks` указана только сеть `Main`, то больше не требуется включенный модуль `sdn`.
+- [vm] Исправлена миграция виртуальной машины с дисками, подключенными через [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) (hotplug): целевой под мог превысить лимиты по памяти (`OOMKilled`).
+- [vmbda] Исправлена некорректная фаза `Pending` ресурса [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) во время миграции виртуальной машины.
+- [vmbda] Чтобы удалить диски и образы, подключенные к виртуальной машине через [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) (hotplug), сначала нужно отсоединить их от виртуальной машины, удалив соответствующий `vmbda`. Эта информация добавлена в статус `vmbda`.
+
+### Прочее
+
+- [vm] Для утилиты `vlctl` добавлен флаг `--from-file` для просмотра информации о домене из локального libvirt XML-файла.
+
+## v1.5.2
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 5 марта 2026.
+</span>
+
+### Исправления
+
+- [vd] Исправлен возможный `OOMKill` при создании виртуального диска на NFS.
+
 ## v1.5.1
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 16 февраля 2026.
+</span>
 
 ### Исправления
 
 - [vd] Исправлена проблема при создании виртуального диска из виртуального образа, хранящегося на `PersistentVolumeClaim` (при значении `.spec.storage=PersistentVolumeClaim`).
 
 ## v1.5.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 9 февраля 2026.
+</span>
 
 ### Новые возможности
 
@@ -34,11 +125,19 @@ lang: ru
 
 ## v1.4.1
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 16 февраля 2026.
+</span>
+
 ### Безопасность
 
 - [module] Исправлены уязвимости CVE-2025-61726, CVE-2025-61728, CVE-2025-61730 и CVE-2025-68121.
 
 ## v1.4.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 23 января 2026.
+</span>
 
 ### Новые возможности
 
@@ -55,6 +154,10 @@ lang: ru
 
 ## v1.3.0
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 16 декабря 2025.
+</span>
+
 ### Новые возможности
 
 - [vmclass] В ресурсе [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) добавлено поле `.spec.sizingPolicies.defaultCoreFraction`, позволяющее задать значение `coreFraction` по умолчанию для виртуальных машин, использующих этот класс.
@@ -63,10 +166,14 @@ lang: ru
 
 - [vi/cvi] Добавлена возможность использования системных узлов для создания проектных и кластерных образов.
 - [vd] Ускорено подключение дисков в режиме `WaitForFirstConsumer` к виртуальной машине.
-- [vd] Исправлена проблема с восстановлением лейблов и аннотаций на диске, созданном из снимка.
+- [vd] Исправлена проблема с восстановлением меток и аннотаций на диске, созданном из снимка.
 - [observability] В кластерах, работающих в HA режиме, исправлено отображение графиков по виртуальным машинам.
 
 ## v1.2.2
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 5 декабря 2025.
+</span>
 
 ### Исправления
 
@@ -74,11 +181,19 @@ lang: ru
 
 ## v1.2.1
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 4 декабря 2025.
+</span>
+
 ### Исправления
 
 - [module] Удалена устаревшая часть конфигурации, из‑за которой обновление модуля виртуализации могло не выполняться в кластерах с Kubernetes версии 1.34 и выше.
 
 ## v1.2.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 28 ноября 2025.
+</span>
 
 ### Новые возможности
 
@@ -115,6 +230,10 @@ lang: ru
 
 ## v1.1.3
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 21 ноября 2025.
+</span>
+
 ### Безопасность
 
 - [module] Исправлены уязвимости CVE-2025-64324, CVE-2025-64435, CVE-2025-64436, CVE-2025-58183, CVE-2025-58186, CVE-2025-58187, CVE-2025-58188, CVE-2025-52565, CVE-2025-52881, CVE-2025-31133.
@@ -125,6 +244,10 @@ lang: ru
 
 ## v1.1.2
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 5 ноября 2025.
+</span>
+
 ### Исправления
 
 - [vd] Исправлена живая миграция дисков между StorageClass, использующими разные драйверы. Ограничения:
@@ -132,6 +255,10 @@ lang: ru
 - [vm] В состоянии `Migrating` при неуспешной живой миграции виртуальной машины добавлено отображение подробной информации об ошибке.
 
 ## v1.1.1
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 16 октября 2025.
+</span>
 
 ### Исправления
 
@@ -152,6 +279,10 @@ lang: ru
 - [module] Исправлены уязвимости CVE-2025-58058 и CVE-2025-54410.
 
 ## v1.1.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 6 октября 2025.
+</span>
 
 ### Новые возможности
 
@@ -180,6 +311,10 @@ lang: ru
 
 ## v1.0.0
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 11 сентября 2025.
+</span>
+
 ### Новые возможности
 
 - [vm] Добавлена защита от подключения cloud-образа ([VirtualImage](/modules/virtualization/cr.html#virtualimage) \ [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage)) в качестве первого диска. Ранее это приводило к невозможности запуска ВМ с ошибкой "No bootable device".
@@ -187,7 +322,7 @@ lang: ru
 
 ### Исправления
 
-- [vmsnapshot] Теперь при восстановлении виртуальной машины из снимка корректно восстанавливаются все аннотации и лейблы, которые были у ресурсов в момент снимка.
+- [vmsnapshot] Теперь при восстановлении виртуальной машины из снимка корректно восстанавливаются все аннотации и метки, которые были у ресурсов в момент снимка.
 - [module] Исправлена проблема с блокировкой очереди, когда параметр `settings.modules.publicClusterDomain` был пустым в глобальном ресурсе ModuleConfig.
 - [module] Оптимизирована производительность хука во время установки модуля.
 - [vmclass] Исправлена валидация `core`/`coreFraction` в ресурсе [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass).
@@ -198,6 +333,10 @@ lang: ru
 - Устранено CVE-2025-47907.
 
 ## v0.25.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 29 августа 2025.
+</span>
 
 ### Важная информация перед обновлением
 

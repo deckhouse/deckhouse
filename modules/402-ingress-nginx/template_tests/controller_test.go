@@ -66,7 +66,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler", "operator-prometheus", "control-plane-manager"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
-		hec.ValuesSet("ingressNginx.defaultControllerVersion", "1.10")
+		hec.ValuesSet("ingressNginx.defaultControllerVersion", "1.12")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.ca", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.cert", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.key", "test")
@@ -108,6 +108,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 			hec.HelmRender(WithFilteredRenderOutput(rendered, []string{
 				"ingress-nginx/templates/controller/",
 				"ingress-nginx/templates/failover/",
+				"ingress-nginx/templates/validator/",
 			}))
 			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
@@ -132,6 +133,9 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 						continue
 					}
 					renderedFile = filepath.Join("controller", filepath.Base(path))
+
+				case strings.HasPrefix(path, "ingress-nginx/templates/validator/"):
+					renderedFile = filepath.Join("validator", filepath.Base(path))
 
 				default:
 					continue

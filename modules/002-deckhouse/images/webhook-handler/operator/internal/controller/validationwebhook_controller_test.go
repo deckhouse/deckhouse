@@ -146,7 +146,7 @@ func TestTemplateNoContext(t *testing.T) {
 	err = k8sClient.Create(context.Background(), vh)
 	assert.NoError(t, err)
 
-	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
+	err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	// test equality
@@ -166,7 +166,7 @@ func TestTemplateTwoContext(t *testing.T) {
 	err = k8sClient.Create(context.Background(), vh)
 	assert.NoError(t, err)
 
-	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
+	err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	// test equality
@@ -186,7 +186,7 @@ func TestTemplateEqual(t *testing.T) {
 	err = k8sClient.Create(context.Background(), vh)
 	assert.NoError(t, err)
 
-	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
+	err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	ref, err := os.ReadFile("testdata/validating/golden/prometheusremotewrite.py")
@@ -207,7 +207,7 @@ func TestTemplateIncludeSnapshotsFrom(t *testing.T) {
 	err = k8sClient.Create(context.Background(), vh)
 	assert.NoError(t, err)
 
-	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
+	err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	ref, err := os.ReadFile("testdata/validating/golden/publicdomaintemplate.py")

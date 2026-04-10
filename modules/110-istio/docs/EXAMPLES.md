@@ -637,6 +637,8 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 
 {% alert level="warning" %}Each of the workarounds removes traffic from Istio's control, which in turn removes encryption of traffic between application services.{% endalert %}
 
+{% alert level="warning" %}UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. Do not run your application containers with this UID — their traffic will bypass Istio completely (no routing rules, mTLS, or telemetry will be applied). Use UID `1337` only in init containers when you need to perform network requests before the sidecar is ready.{% endalert %}
+
 ## Upgrading Istio
 
 ### Upgrading Istio control-plane

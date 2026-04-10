@@ -4,6 +4,8 @@ permalink: ru/architecture/deckhouse/
 lang: ru
 search: подсистема Deckhouse, контроллер Deckhouse
 description: Общие сведения о подсистеме Deckhouse платформы Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 В данном подразделе описана архитектура контроллера Deckhouse и сопутствующих модулей, входящих в подсистему Deckhouse платформы Deckhouse Kubernetes Platform (DKP).

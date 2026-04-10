@@ -252,7 +252,7 @@ type MockSession struct {
 	mock.Mock
 }
 
-func (m MockSession) AvailableHosts() []string {
+func (m *MockSession) AvailableHosts() []string {
 	args := m.Called()
 	return args.Get(0).([]string)
 }

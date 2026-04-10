@@ -18,8 +18,6 @@ package kubeclient
 
 import (
 	"context"
-	"fencing-agent/internal/domain"
-	"fencing-agent/internal/lib/logger/sl"
 	"fmt"
 	"log/slog"
 	"sync/atomic"
@@ -37,6 +35,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	"fencing-agent/internal/domain"
+	"fencing-agent/internal/lib/logger/sl"
 	"fencing-agent/internal/lib/validators"
 )
 
@@ -62,7 +62,7 @@ var maintenanceAnnotations = [...]string{
 
 type Client struct {
 	client            kubernetes.Interface
-	logger            *log.Logger
+	Logger            *log.Logger
 	nodeName          string
 	nodeGroup         string
 	inMaintenanceMode atomic.Bool
@@ -90,7 +90,7 @@ func New(cfg Config,
 
 	client := &Client{
 		client:    kubeClient,
-		logger:    logger,
+		Logger:    logger,
 		nodeName:  nodeName,
 		nodeGroup: nodeGroup,
 	}
@@ -111,7 +111,7 @@ func (c *Client) SetNodeLabel(ctx context.Context, key, value string) error {
 		return fmt.Errorf("failed to patch node %s labels: %w", c.nodeName, err)
 	}
 
-	c.logger.Info("node label set",
+	c.Logger.Info("node label set",
 		slog.String("node", c.nodeName),
 		slog.String("label", key),
 		slog.String("value", value))
@@ -127,7 +127,7 @@ func (c *Client) RemoveNodeLabel(ctx context.Context, key string) error {
 		return fmt.Errorf("failed to patch node %s labels: %w", c.nodeName, err)
 	}
 
-	c.logger.Info("node label removed",
+	c.Logger.Info("node label removed",
 		slog.String("node", c.nodeName),
 		slog.String("label", key))
 	return nil
@@ -136,13 +136,13 @@ func (c *Client) RemoveNodeLabel(ctx context.Context, key string) error {
 func (c *Client) GetNodesIP(ctx context.Context) ([]string, error) {
 	labelSelector := fmt.Sprintf("node.deckhouse.io/group=%s", c.nodeGroup)
 
-	c.logger.Debug("get nodes", slog.String("label_selector", labelSelector))
+	c.Logger.Debug("get nodes", slog.String("label_selector", labelSelector))
 
 	nodes, err := c.client.CoreV1().Nodes().List(ctx, v1meta.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
-		c.logger.Warn("failed to get nodes from kubeapi", sl.Err(err))
+		c.Logger.Warn("failed to get nodes from kubeapi", sl.Err(err))
 		return nil, err
 	}
 
@@ -187,7 +187,7 @@ func (c *Client) StartInformer(ctx context.Context) error {
 		AddFunc: func(obj interface{}) {
 			node, ok := obj.(*v1.Node)
 			if !ok {
-				c.logger.Warn("failed to cast object to Node in AddFunc")
+				c.Logger.Warn("failed to cast object to Node in AddFunc")
 				return
 			}
 			if node.Name == c.nodeName {
@@ -197,7 +197,7 @@ func (c *Client) StartInformer(ctx context.Context) error {
 		UpdateFunc: func(_, newObj interface{}) {
 			node, ok := newObj.(*v1.Node)
 			if !ok {
-				c.logger.Warn("failed to cast object to Node in UpdateFunc")
+				c.Logger.Warn("failed to cast object to Node in UpdateFunc")
 				return
 			}
 			if node.Name == c.nodeName {
@@ -208,11 +208,11 @@ func (c *Client) StartInformer(ctx context.Context) error {
 			// If our node is deleted, we're likely shutting down anyway
 			node, ok := obj.(*v1.Node)
 			if !ok {
-				c.logger.Warn("failed to cast object to Node in DeleteFunc")
+				c.Logger.Warn("failed to cast object to Node in DeleteFunc")
 				return
 			}
 			if node.Name == c.nodeName {
-				c.logger.Warn("current node deleted from cluster")
+				c.Logger.Warn("current node deleted from cluster")
 			}
 		},
 	})
@@ -228,7 +228,7 @@ func (c *Client) StartInformer(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), nodeInformer.HasSynced) {
 		return fmt.Errorf("failed to sync node informer cache")
 	}
-	c.logger.Info("node informer cache synced successfully")
+	c.Logger.Info("node informer cache synced successfully")
 	return nil
 }
 
@@ -248,11 +248,11 @@ func (c *Client) checkMaintenanceAnnotations(node *v1.Node) {
 
 	if oldValue != hasAnnotation {
 		if hasAnnotation {
-			c.logger.Info("maintenance mode detected",
+			c.Logger.Info("maintenance mode detected",
 				slog.String("node", c.nodeName),
 				slog.String("annotation", foundAnnotation))
 		} else {
-			c.logger.Info("maintenance mode cleared",
+			c.Logger.Info("maintenance mode cleared",
 				slog.String("node", c.nodeName))
 		}
 	}
@@ -261,7 +261,7 @@ func (c *Client) checkMaintenanceAnnotations(node *v1.Node) {
 func (c *Client) StopInformer() {
 	if c.informerStopCh != nil {
 		close(c.informerStopCh)
-		c.logger.Info("node informer stopped")
+		c.Logger.Info("node informer stopped")
 	}
 }
 

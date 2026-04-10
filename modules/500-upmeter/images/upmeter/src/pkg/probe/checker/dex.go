@@ -26,14 +26,14 @@ import (
 	"d8.io/upmeter/pkg/kubernetes"
 )
 
-// DexApiAvailable is a checker constructor and configurator
-type DexApiAvailable struct {
+// DexAPIAvailable is a checker constructor and configurator
+type DexAPIAvailable struct {
 	Access   kubernetes.Access
 	Timeout  time.Duration
 	Endpoint string
 }
 
-func (c DexApiAvailable) Checker() check.Checker {
+func (c DexAPIAvailable) Checker() check.Checker {
 	verifier := dexAPIVerifier{
 		endpoint: c.Endpoint,
 		access:   c.Access,

@@ -522,9 +522,9 @@ entries:
                         ru: Настройка визуализации сетевого стека кластера
                       url: /admin/configuration/network/internal/visualization.html
                     - title:
-                        en: Switching CNI from Flannel to Cilium
-                        ru: Переключение CNI с Flannel на Cilium
-                      url: /admin/configuration/network/internal/flannel-to-cilium.html
+                        en: Switching CNI from Flannel or Simple bridge to Cilium
+                        ru: Переключение CNI с Flannel или Simple bridge на Cilium
+                      url: /admin/configuration/network/internal/flannel-simple-to-cilium.html
                 - title:
                     en: Incoming traffic balancing
                     ru: Балансировка входящего трафика
@@ -1237,43 +1237,103 @@ entries:
             - title:
                 en: Node management
                 ru: Управление узлами
-              url: /architecture/cluster-and-infrastructure/node.html
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /architecture/cluster-and-infrastructure/node-management/overview.html
+                - title:
+                    en: Bashible
+                    ru: Bashible
+                  url: /architecture/cluster-and-infrastructure/node-management/bashible.html
+                - title:
+                    en: Node-manager module
+                    ru: Модуль node-manager
+                  url: /architecture/cluster-and-infrastructure/node-management/node-manager.html
+                - title:
+                    en: CloudEphemeral node management
+                    ru: Управление CloudEphemeral-узлами
+                  url: /architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html
+                - title:
+                    en: CloudPermanent node management
+                    ru: Управление CloudPermanent-узлами
+                  url: /architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html
+                - title:
+                    en: CloudStatic node management
+                    ru: Управление CloudStatic-узлами
+                  url: /architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html
+                - title:
+                    en: Static node management
+                    ru: Управление Static-узлами
+                  url: /architecture/cluster-and-infrastructure/node-management/static-nodes.html
+                - title:
+                    en: Hybrid node group and cluster management
+                    ru: Управление гибридными группами узлов и кластерами
+                  url: /architecture/cluster-and-infrastructure/node-management/hybrid-nodegroups-and-clusters.html
             - title:
-                en: Bashible
-                ru: Bashible
-              url: /architecture/cluster-and-infrastructure/bashible.html
+                en: Cloud providers
+                ru: Облачные провайдеры
+              folders:
+                - title:
+                    en: Cloud-provider-aws module
+                    ru: Модуль cloud-provider-aws
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-aws.html
+                - title:
+                    en: Cloud-provider-azure module
+                    ru: Модуль cloud-provider-azure
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-azure.html
+                - title:
+                    en: Cloud-provider-dvp module
+                    ru: Модуль cloud-provider-dvp
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dvp.html
+                - title:
+                    en: Cloud-provider-dynamix module
+                    ru: Модуль cloud-provider-dynamix
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dynamix.html
+                - title:
+                    en: Cloud-provider-gcp module
+                    ru: Модуль cloud-provider-gcp
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-gcp.html
+                - title:
+                    en: Cloud-provider-huaweicloud module
+                    ru: Модуль cloud-provider-huaweicloud
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-huaweicloud.html
+                - title:
+                    en: Cloud-provider-openstack module
+                    ru: Модуль cloud-provider-openstack
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-openstack.html
+                - title:
+                    en: Cloud-provider-vcd module
+                    ru: Модуль cloud-provider-vcd
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vcd.html
+                - title:
+                    en: Cloud-provider-vsphere module
+                    ru: Модуль cloud-provider-vsphere
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vsphere.html
+                - title:
+                    en: Cloud-provider-yandex module
+                    ru: Модуль cloud-provider-yandex
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html
+                - title:
+                    en: Cloud-provider-zvirt module
+                    ru: Модуль cloud-provider-zvirt
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-zvirt.html
             - title:
-                en: Node-manager module
-                ru: Модуль node-manager
-              url: /architecture/cluster-and-infrastructure/node-manager.html
-            - title:
-                en: CloudEphemeral node management
-                ru: Управление CloudEphemeral-узлами
-              url: /architecture/cluster-and-infrastructure/cloud-ephemeral-nodes.html
-            - title:
-                en: CloudPermanent node management
-                ru: Управление CloudPermanent-узлами
-              url: /architecture/cluster-and-infrastructure/cloud-permanent-nodes.html
-            - title:
-                en: CloudStatic node management
-                ru: Управление CloudStatic-узлами
-              url: /architecture/cluster-and-infrastructure/cloud-static-nodes.html
-            - title:
-                en: Static node management
-                ru: Управление Static-узлами
-              url: /architecture/cluster-and-infrastructure/static-nodes.html
-            - title:
-                en: Hybrid node group and cluster management
-                ru: Управление гибридными группами узлов и кластерами
-              url: /architecture/cluster-and-infrastructure/hybrid-nodegroups-and-clusters.html
-            - title:
-                en: Terraform-manager module
-                ru: Модуль terraform-manager
-              url: /architecture/cluster-and-infrastructure/terraform-manager.html
-            - title:
-                en: CSI driver
-                ru: CSI-драйвер
-              url: /architecture/cluster-and-infrastructure/csi-driver.html
+                en: Infrastructure components
+                ru: Инфраструктурные компоненты
+              folders:
+                - title:
+                    en: Terraform-manager module
+                    ru: Модуль terraform-manager
+                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
+                - title:
+                    en: CSI driver
+                    ru: CSI-драйвер
+                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-driver.html
+                - title:
+                    en: CSI driver (VMware vSphere)
+                    ru: CSI-драйвер (VMware vSphere)
+                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1338,6 +1398,30 @@ entries:
                 en: Caching DNS server in a cluster
                 ru: Кеширующий DNS-сервер в кластере
               url: /architecture/network/dns-caching.html
+        - title:
+            en: Storage subsystem
+            ru: Подсистема Storage
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/storage/
+            - title:
+                en: Local-path-provisioner module
+                ru: Модуль local-path-provisioner
+              url: /architecture/storage/local-path-provisioner.html
+            - title:
+                en: Snapshot-controller module
+                ru: Модуль snapshot-controller
+              url: /architecture/storage/snapshot-controller.html
+            - title:
+                en: Sds-local-volume module
+                ru: Модуль sds-local-volume
+              url: /architecture/storage/sds-local-volume.html
+            - title:
+                en: Sds-node-configurator module
+                ru: Модуль sds-node-configurator
+              url: /architecture/storage/sds-node-configurator.html               
         - title:
             en: Observability subsystem
             ru: Подсистема Observability

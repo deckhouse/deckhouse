@@ -1,6 +1,6 @@
 ---
 title: CloudPermanent node management
-permalink: en/architecture/cluster-and-infrastructure/cloud-permanent-nodes.html
+permalink: en/architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html
 search: cloudpermanent nodes
 description: Architecture of the node-manager module for CloudPermanent nodes.
 ---
@@ -18,8 +18,8 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) module and its interactions with other Deckhouse Kubernetes Platform (DKP) components are shown in the following diagram:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
-![Node-manager architecture for CloudPermanent nodes](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-permanent-nodes.png)
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+![Node-manager architecture for CloudPermanent nodes](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-permanent-nodes.png)
 
 ## Module components
 
@@ -31,7 +31,7 @@ The module managing CloudPermanent nodes consists of the following components:
 
 1. **Bashible-api-server**: A [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/) deployed on master nodes. It generates bashible scripts from templates stored in custom resources. When kube-apiserver receives a request for resources containing bashible bundles, it forwards the request to bashible-api-server and returns the generated result. For more details about bashible and bashible-api-server, refer to the [corresponding documentation section](bashible.html).
 
-2. **Early-oom** (DaemonSet): A pod deployed on every node. It reads resource load metrics from `/proc` and terminates pods under high load before [kubelet](../kubernetes-and-scheduling/kubelet.html) does. Enabled by default, but can be disabled in the [module configuration](/modules/node-manager/configuration.html#parameters-earlyoomenabled) if it causes issues for normal node operation.
+2. **Early-oom** (DaemonSet): A pod deployed on every node. It reads resource load metrics from `/proc` and terminates pods under high load before [kubelet](../../kubernetes-and-scheduling/kubelet.html) does. Enabled by default, but can be disabled in the [module configuration](/modules/node-manager/configuration.html#parameters-earlyoomenabled) if it causes issues for normal node operation.
 
    Includes the following containers:
 
@@ -79,7 +79,7 @@ The following external components interact with the module:
 ## Architecture features specific to CloudPermanent nodes
 
 1. Nodes are persistent and are created, managed, and deleted by the user. Node management is performed not directly in the infrastructure but via the **dhctl** utility executed as part of the DKP installer.
-2. `Terraform-manager` is a [module](/modules/terraform-manager/) used for automated management of cloud infrastructure resources. It checks the Terraform state and applies non-destructive changes to infrastructure resources. The module architecture is described on the [corresponding documentation page](terraform-manager.html).
+2. `Terraform-manager` is a [module](/modules/terraform-manager/) used for automated management of cloud infrastructure resources. It checks the Terraform state and applies non-destructive changes to infrastructure resources. The module architecture is described on the [corresponding documentation page](../infrastructure/terraform-manager.html).
 3. **Csi-driver** is used to provision disks in the cloud infrastructure.
 4. **Cloud-controller-manager** is used to provision load balancers and other infrastructure resources according to its specification.
 5. **Infrastructure-provider** is not required. All node management operations are performed by the user via the **dhctl** utility and the `terraform-manager` module.

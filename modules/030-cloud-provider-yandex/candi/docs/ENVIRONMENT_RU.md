@@ -13,10 +13,15 @@ description: "Настройка Yandex Cloud для работы облачно
 
 Чтобы Deckhouse Kubernetes Platform могла управлять ресурсами в облаке Yandex Cloud, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Yandex Cloud доступна в [документации провайдера](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Далее представлена краткая последовательность необходимых действий:
 
-1. Создайте пользователя с именем `deckhouse`. В ответ вернутся параметры пользователя:
+1. Создайте пользователя с именем `deckhouse`:
 
-   ```yaml
+   ```shell
    yc iam service-account create --name deckhouse
+   ```
+
+   В ответ вернутся параметры пользователя:
+
+   ```console
    id: <userID>
    folder_id: <folderID>
    created_at: "YYYY-MM-DDTHH:MM:SSZ"
@@ -25,7 +30,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Назначьте необходимые роли вновь созданному пользователю для своего облака:
 
-   ```yaml
+   ```shell
    yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
@@ -33,7 +38,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будет происходить авторизация в облаке:
 
-   ```yaml
+   ```shell
    yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
    ```
 

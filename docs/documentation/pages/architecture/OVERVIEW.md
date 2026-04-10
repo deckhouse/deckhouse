@@ -21,6 +21,7 @@ The section consists of the following subsections:
   * [IAM subsystem](iam/)
   * [Security subsystem](security/)
   * [Network subsystem](network/)
+  * [Storage subsystem](storage/)
   * [Observability subsystem](observability/)
 
 {% alert level="info" %}

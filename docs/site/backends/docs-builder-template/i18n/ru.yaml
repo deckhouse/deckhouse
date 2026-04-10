@@ -90,6 +90,7 @@ module_release_channel_details_content: |
   Для смены канала обновлений модуля воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#как-сменить-канал-обновлений-для-модуля).
 module_versions: Версии модуля
 module_version: Версия модуля
+embedded_in_dkp: Встроенный в DKP
 module_crd_warning_1: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
 ossPageBlock1: |
   <h2>Внешние компоненты</h2>
@@ -106,13 +107,14 @@ search_filter: Поиск по названию модуля
 search_placeholder_text_filter: Поиск
 editions_filter: Редакция
 editions_filter_all_selected: Все редакции
-statuses_filter: Статус
-statuses_filter_all_selected: Все статусы
+stage_filter: Стадия жизненного цикла
+stage_filter_all_selected: Все стадии
 tags_filter: Тег
 tags_filter_all_selected: Все теги
 core: ядро
 community_edition_en: community edition
 commercial_editions_en: commercial editions
+requirements_for_alert: У модуля есть [требования](/modules/%s/configuration.html#требования) для установки
 requirements_title: Требования
 requirements_deckhouse_title: К версии Deckhouse
 requirements_kubernetes_title: К версии Kubernetes
@@ -120,6 +122,10 @@ requirements_modules_title: К версиям других модулей
 requirements_modules_any_version: любая версия
 requirements_version_and_above: и выше
 requirements_version_above: выше
+requirements_modules_optional_text_first: Условная зависимость от модуля
+requirements_modules_more: подробнее
+requirements_modules_optional_text_second: про условные зависимости
+requirements_modules_optional_text_for_link: условные-зависимости
 module_lifecycle_stage: "<a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля'>Стадия жизненного цикла</a> модуля"
 conversions_title: Конверсии
 conversion_action_message: Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
@@ -132,6 +138,7 @@ currency_sign: "₽"
 commercial: Доступно в некоторых коммерческих редакциях.
 notAvailableInThisEdition: Доступно в других коммерческих редакциях.
 default_value: по умолчанию
+default_empty_string_value: ‘’
 platform: платформа
 example: пример
 examples: примеры

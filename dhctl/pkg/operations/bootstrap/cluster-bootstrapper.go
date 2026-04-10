@@ -25,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -106,6 +107,8 @@ type Params struct {
 	// todo refact to logger provider
 	Logger  log.Logger
 	IsDebug bool
+
+	DirectoryConfig *directoryconfig.DirectoryConfig
 
 	*client.KubernetesInitParams
 }
@@ -232,6 +235,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		b.DirectoryConfig,
+		config.ValidateOptionValidateExtensions(true),
 	)
 	if err != nil {
 		return err
@@ -379,6 +384,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 		cloudPreflightSuite := suites.NewCloudSuite(suites.CloudDeps{
 			InstallConfig: deckhouseInstallConfig,
+			MetaConfig:    metaConfig,
 		})
 		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
 			MetaConfig: metaConfig,
@@ -545,7 +551,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath, b.CommanderMode); err != nil {
+	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath, b.CommanderMode, b.DirectoryConfig); err != nil {
 		return err
 	}
 
@@ -731,9 +737,7 @@ func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
 	bootstrapAdditionalTerraNodeGroups := BootstrapTerraNodes
-	if operations.IsSequentialNodesBootstrap() || metaConfig.ProviderName == "vcd" {
-		// vcd doesn't support parallel creating nodes in same vapp
-		// https://github.com/vmware/terraform-provider-vcd/issues/530
+	if operations.IsSequentialNodesBootstrap(metaConfig) {
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 

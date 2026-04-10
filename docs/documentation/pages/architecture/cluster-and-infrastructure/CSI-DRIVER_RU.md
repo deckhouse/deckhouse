@@ -1,6 +1,6 @@
 ---
 title: CSI-драйвер
-permalink: ru/architecture/cluster-and-infrastructure/csi-driver.html
+permalink: ru/architecture/cluster-and-infrastructure/infrastructure/csi-driver.html
 lang: ru
 search: csi driver, csi-driver, csi-драйвер, container storage interface
 description: Описание архитектуры CSI-драйвера в Deckhouse Kubernetes Platform.
@@ -25,8 +25,8 @@ CSI-драйвер входит в состав модулей `cloud-provider-*
 
 Типовая архитектура CSI-драйвера на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
-![Типовая архитектура CSI-драйвера](../../../images/architecture/cluster-and-infrastructure/c4-l2-csi-driver-common.ru.png)
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+![Типовая архитектура CSI-драйвера](../../../../images/architecture/cluster-and-infrastructure/c4-l2-csi-driver-common.ru.png)
 
 ## Компоненты драйвера
 
@@ -40,7 +40,7 @@ CSI-драйвер состоит из следующих компонентов
 
    * **сайдкар-контейнеры контроллера** — поддерживаемые сообществом Kubernetes внешние контроллеры (external controllers).
 
-     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DKP](../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
+     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DKP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
 
      Внешние контроллеры взаимодействуют c контейнером controller по gRPC через Unix-сокеты.
 
@@ -54,7 +54,7 @@ CSI-драйвер состоит из следующих компонентов
 
      * **snapshotter** ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) — работает совместно с модулем [`snapshot-controller`](/modules/snapshot-controller/), следит за ресурсами VolumeSnapshotContent, а также управляет снимками томов через RPC `CreateSnapshot`, `DeleteSnapshot` и `ListSnapshots` (если драйвер это поддерживает);
 
-     * [**livenessprobe**](https://github.com/kubernetes-csi/livenessprobe) — отслеживает состояние CSI-драйвера через RPC `Probe` из Identity Service и предоставляет HTTP-эндпоинт `/healthz`, за которым следит [kubelet](../kubernetes-and-scheduling/kubelet.html). При неуспешной *livenessProbe* kubelet перезапускает под csi-controller.
+     * [**livenessprobe**](https://github.com/kubernetes-csi/livenessprobe) — отслеживает состояние CSI-драйвера через RPC `Probe` из Identity Service и предоставляет HTTP-эндпоинт `/healthz`, за которым следит [kubelet](../../kubernetes-and-scheduling/kubelet.html). При неуспешной *livenessProbe* kubelet перезапускает под csi-controller.
 
 2. **Csi-node** (DaemonSet) — Node Plugin, работающий на всех узлах кластера и отвечающий за локальное монтирование и размонтирование томов.
 
@@ -64,26 +64,26 @@ CSI-драйвер состоит из следующих компонентов
 
    * **node** — основной контейнер, реализующий функции CSI-драйвера в виде gRPC-сервисов Identity Service и Node Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
 
-   * **node-driver-registrar** — сайдкар-контейнер, регистрирующий Node Plugin в [kubelet](../kubernetes-and-scheduling/kubelet.html). Вызывает в контейнере node RPC `GetPluginInfo` и `NodeGetInfo`, чтобы получить информацию о плагине и узле. Взаимодействуют c контейнером **node** по gRPC через Unix-сокет.
+   * **node-driver-registrar** — сайдкар-контейнер, регистрирующий Node Plugin в [kubelet](../../kubernetes-and-scheduling/kubelet.html). Вызывает в контейнере node RPC `GetPluginInfo` и `NodeGetInfo`, чтобы получить информацию о плагине и узле. Взаимодействуют c контейнером **node** по gRPC через Unix-сокет.
 
 {% alert level="info" %}
 Некоторые сайдкар-контейнеры из списка внешних контроллеров, (например, snapshotter) могут отсутствовать в Deployment определенных `*cloud-provider-*`, если соответствующая функциональность не поддерживается реализацией CSI-драйвера.
 {% endalert %}
 
-## Взаимодействия модуля
+## Взаимодействия драйвера
 
-Модуль взаимодействует со следующими компонентами:
+Драйвер взаимодействует со следующими компонентами:
 
 1. **Kube-apiserver** — мониторинг ресурсов PersistentVolumeClaim, VolumeAttachment и VolumeSnapshotContent.
 
 2. **Облачная инфраструктура** (или система виртуализации) — создание и удаление томов, подключение и отключение томов от узлов, управление снимками.
 
-С модулем взаимодействуют следующие внешние компоненты:
+С драйвером взаимодействуют следующие внешние компоненты:
 
-1. [Kubelet](../kubernetes-and-scheduling/kubelet.html):
+1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
    * проверяет livenessProbe CSI-драйвера;
    * регистрирует Node Plugin;
    * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, `NodeUnpublishVolume` и `NodeExpandVolume` в Node Plugin.
 
-   [Kubelet](../kubernetes-and-scheduling/kubelet.html) взаимодействует с Node Plugin по gRPC через Unix-сокет.
+   [Kubelet](../../kubernetes-and-scheduling/kubelet.html) взаимодействует с Node Plugin по gRPC через Unix-сокет.

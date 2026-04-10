@@ -1,6 +1,6 @@
 ---
 title: Управление CloudEphemeral-узлами
-permalink: ru/architecture/cluster-and-infrastructure/cloud-ephemeral-nodes.html
+permalink: ru/architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html
 lang: ru
 search: cloudephemeral узлы
 description: Архитектура модуля node-manager для CloudEphemeral-узлов.
@@ -19,8 +19,8 @@ description: Архитектура модуля node-manager для CloudEpheme
 
 Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
-![Архитектура модуля node-manager для CloudEphemeral-узлов](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-ephemeral-nodes.ru.png)
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+![Архитектура модуля node-manager для CloudEphemeral-узлов](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-ephemeral-nodes.ru.png)
 
 ## Компоненты модуля
 
@@ -37,14 +37,14 @@ Bashible — это ключевой компонент подсистемы Clu
    * **control-plane-manager** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера.
 
-3. **Cluster-autoscaler** (Deployment) — [дополнительный компонент Kubernetes](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler), который автоматически изменяет количество узлов в кластере в зависимости от нагрузки. Подробнее с автоматическим масштабированием узлов можно ознакомиться в [разделе документации по управлению узлами](/products/kubernetes-platform/documentation/v1/architecture/node.html#масштабирование-узлов-в-облаке).
+3. **Cluster-autoscaler** (Deployment) — [дополнительный компонент Kubernetes](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler), который автоматически изменяет количество узлов в кластере в зависимости от нагрузки. Подробнее с автоматическим масштабированием узлов можно ознакомиться в [разделе документации по управлению узлами](overview.html#масштабирование-узлов-в-облаке).
 
    Компонент включает в себя следующие контейнеры:
 
    * **cluster-autoscaler** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам **cluster-autoscaler**.
 
-4. **Early-oom** (DaemonSet) — на каждом узле разворачивается под, который считывает из каталога `/proc` метрики по загрузке ресурсов на хосте и в случае повышенной нагрузки завершает поды раньше, чем это сделает [kubelet](../kubernetes-and-scheduling/kubelet.html). **Early-oom** по умолчанию включен, но его можно отключить в [настройках модуля](/modules/node-manager/configuration.html#parameters-earlyoomenabled) в случае, если он создаёт проблемы для нормальной работы узлов.
+4. **Early-oom** (DaemonSet) — на каждом узле разворачивается под, который считывает из каталога `/proc` метрики по загрузке ресурсов на хосте и в случае повышенной нагрузки завершает поды раньше, чем это сделает [kubelet](../../kubernetes-and-scheduling/kubelet.html). **Early-oom** по умолчанию включен, но его можно отключить в [настройках модуля](/modules/node-manager/configuration.html#parameters-earlyoomenabled) в случае, если он создаёт проблемы для нормальной работы узлов.
 
    Включает в себя следующие контейнеры:
 

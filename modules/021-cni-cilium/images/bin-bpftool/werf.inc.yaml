@@ -37,7 +37,7 @@ import:
   add: /src
   to: /src
   before: install
-- image: libs/libcap-v1.2.69
+- from: {{ index $.Images "libs/libcap-v1.2.69" }}
   add: /usr/lib
   to: /usr/lib64
   before: install

@@ -76,7 +76,7 @@ jobs:
           }
           END { print "v" $1 "." prev_minor "." max_patch }' | tail -3)
           TAGS=""
-          for edition in fe ee se se-plus be ce
+          for edition in fe ee se se-plus be ce cse
           do
             for tag in $TAGS_TO_SCAN
             do
@@ -95,7 +95,7 @@ jobs:
           ref=${{ github.event.inputs.branch }}
           TAGS=""
           if [[ "${ref}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
-            for edition in fe ee se se-plus be ce
+            for edition in fe ee se se-plus be ce cse
             do
               TAGS+=$'\n'"$edition:$ref"
             done

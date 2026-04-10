@@ -1,0 +1,9 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: d8-ingress-nginx-admission
+webhooks: null

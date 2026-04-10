@@ -216,7 +216,7 @@ type exportingConfig struct {
 }
 
 func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exportingConfig {
-	var labels []*prompb.Label
+	labels := make([]*prompb.Label, 0, len(rw.Spec.AdditionalLabels))
 	for k, v := range rw.Spec.AdditionalLabels {
 		labels = append(labels, &prompb.Label{
 			Name:  k,
@@ -290,7 +290,6 @@ func (sc *syncers) start(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-
 	}
 	return nil
 }

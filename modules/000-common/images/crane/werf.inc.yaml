@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -9,7 +9,7 @@ import:
   before: install
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 secrets:
 - id: SOURCE_REPO

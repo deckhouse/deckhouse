@@ -1,5 +1,12 @@
 - name: d8.etcd-maintenance.quota-backend-bytes
   rules:
+    - record: etcd_latency:etcd_request_duration_seconds:p99
+      expr: |
+        histogram_quantile(0.99,
+          sum by (instance, le) (
+            rate(etcd_request_duration_seconds_bucket{job="kube-apiserver"}[5m])
+          )
+        )
     - alert: D8KubeEtcdDatabaseSizeCloseToTheLimit
       expr: max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) >= scalar(max(last_over_time(d8_etcd_quota_backend_total[6h])) * 0.95)
       labels:
@@ -130,3 +137,31 @@
             --key /etc/kubernetes/pki/etcd/ca.key \
             --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
           ```
+    - alert: D8EtcdHighRequestsLatency
+      expr: |
+        count_over_time(
+          (etcd_latency:etcd_request_duration_seconds:p99 > 0.8)[1h:2m]
+        ) > 2
+      labels:
+        severity_level: "5"
+        tier: cluster
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+      for: "30m"
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Etcd request latency (p99) has exceeded 800 ms multiple times in the past hour.
+        description: |
+          The 99th percentile of etcd request duration on `{{ $labels.instance }}` has exceeded 800 ms more than twice in the last hour.
+
+          High etcd latency can cause API server timeouts, slow admission webhooks, and general cluster instability.
+
+          **Investigate the following:**
+
+          - **Node disk I/O**: Etcd is extremely sensitive to disk performance. Check disk utilization and I/O wait on the control plane node.
+          - **Network-attached storage**: If the etcd data directory resides on NFS, Ceph, or another network storage, check connectivity and latency to the storage backend. Etcd requires a consistently low-latency local disk (SSD recommended).
+          - **Control plane summary**: Review the **Kubernetes Cluster → Control Plane Status** Grafana dashboard for an overall picture of API server and etcd health, request rates, and error rates.
+          - **Node base performance**: Check node CPU and RAM utilization and load average. If the node is CPU-bound (load average significantly exceeds the number of CPU cores), consider scaling up the control plane node.

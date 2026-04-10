@@ -1,6 +1,6 @@
 ---
 title: Управление гибридными группами узлов и кластерами
-permalink: ru/architecture/cluster-and-infrastructure/hybrid-nodegroups-and-clusters.html
+permalink: ru/architecture/cluster-and-infrastructure/node-management/hybrid-nodegroups-and-clusters.html
 lang: ru
 search: гибридный кластер, гибридная группа узлов
 description: Архитектура гибридных групп узлов и гибридных кластеров в Deckhouse Kubernetes Platform.

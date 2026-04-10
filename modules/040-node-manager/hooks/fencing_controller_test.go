@@ -37,6 +37,8 @@ import (
 type testCaseParams struct {
 	Name               string // The name of resource (nodegroup, namespace, lease, pod)
 	FencingEnabled     bool
+	FencingMode        string
+	NodeType           string
 	MaintanenceEnabled bool
 	RenewTime          func() time.Time
 }
@@ -63,6 +65,8 @@ metadata:
     {{ if .MaintanenceEnabled }}update.node.deckhouse.io/disruption-approved: ""{{ end }}
   labels:
     {{ if .FencingEnabled }}node-manager.deckhouse.io/fencing-enabled: "true"{{ end }}
+    {{ if .FencingMode }}node-manager.deckhouse.io/fencing-mode: "{{ .FencingMode }}"{{ end }}
+    {{ if .NodeType }}node.deckhouse.io/type: "{{ .NodeType }}"{{ end }}
   name: {{ .Name }}
 spec: {}
 `
@@ -185,6 +189,38 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 		}, testCaseResult{
 			nodeExists: true,
 			podExists:  true,
+		}),
+		Entry("Notify mode with rotten lease: pods deleted, node preserved", testCaseParams{
+			Name:               "notify-rotten-lease",
+			FencingEnabled:     true,
+			FencingMode:        "Notify",
+			MaintanenceEnabled: false,
+			RenewTime:          func() time.Time { return time.Now().Add(-time.Hour) },
+		}, testCaseResult{
+			nodeExists: true,
+			podExists:  false,
+		}),
+		Entry("Static node with rotten lease: pods deleted, node preserved", testCaseParams{
+			Name:               "static-rotten-lease",
+			FencingEnabled:     true,
+			FencingMode:        "Watchdog",
+			NodeType:           "Static",
+			MaintanenceEnabled: false,
+			RenewTime:          func() time.Time { return time.Now().Add(-time.Hour) },
+		}, testCaseResult{
+			nodeExists: true,
+			podExists:  false,
+		}),
+		Entry("CloudStatic node with rotten lease: pods deleted, node preserved", testCaseParams{
+			Name:               "cloudstatic-rotten-lease",
+			FencingEnabled:     true,
+			FencingMode:        "Watchdog",
+			NodeType:           "CloudStatic",
+			MaintanenceEnabled: false,
+			RenewTime:          func() time.Time { return time.Now().Add(-time.Hour) },
+		}, testCaseResult{
+			nodeExists: true,
+			podExists:  false,
 		}),
 	)
 })

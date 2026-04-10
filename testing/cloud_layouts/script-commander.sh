@@ -202,7 +202,7 @@ function prepare_environment() {
     CLOUD_ID=$LAYOUT_YANDEX_CLOUD_ID
     FOLDER_ID=$LAYOUT_YANDEX_FOLDER_ID
     SERVICE_ACCOUNT_JSON=$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
-    ssh_user="redos"
+    ssh_user="cloud-user"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -986,6 +986,7 @@ function wait_alerts_resolve() {
   "SecurityEventsDetected" # This is normal for e2e tests
   "D8NodeContainerdV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
   "D8NodeCgroupV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
+  "CertmanagerCertificateChallengePending" # This is normal for e2e tests
   )
 
   # Alerts

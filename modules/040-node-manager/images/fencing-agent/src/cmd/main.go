@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -39,15 +40,16 @@ import (
 )
 
 const (
-	Notify   = "Notify"
-	Watchdog = "Watchdog"
+	Notify               = "Notify"
+	Watchdog             = "Watchdog"
+	fencingNodeLabel     = "node-manager.deckhouse.io/fencing-enabled"
+	fencingNodeLabelMode = "node-manager.deckhouse.io/fencing-mode"
 )
 
 func main() {
 	var cfg config.Config
 	cfg.MustLoad()
 
-	// logging
 	log := logger.NewLogger(cfg.LogLevel)
 
 	err := AppRun(cfg, log)
@@ -101,6 +103,12 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 
 	mblist.BroadcastNodesNumber(totalNodes)
 
+	err = setNodeLabels(ctx, kubeClient, cfg.FencingMode)
+	if err != nil {
+		return fmt.Errorf("failed to set node labels: %w", err)
+	}
+	defer removeNodeLabels(kubeClient)
+
 	if cfg.FencingMode == Watchdog {
 		log.Info("Watchdog enabled, starting health monitor")
 
@@ -114,7 +122,6 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 		fallback := usecase.NewFallback(log, kubeClient)
 
 		fencingAgent := usecase.NewHealthMonitor(
-			kubeClient,
 			kubeClient,
 			mblist,
 			softdog,
@@ -157,4 +164,33 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 	})
 
 	return g.Wait()
+}
+
+func setNodeLabels(ctx context.Context, kubeClient *kubeclient.Client, fencingNodeModeValue string) error {
+	if labelErr := kubeClient.SetNodeLabel(ctx, fencingNodeLabel, ""); labelErr != nil {
+		kubeClient.Logger.Error("unable to set node label, disarming watchdog for safety", sl.Err(labelErr))
+		return labelErr
+	}
+
+	if labelErr := kubeClient.SetNodeLabel(ctx, fencingNodeLabelMode, fencingNodeModeValue); labelErr != nil {
+		kubeClient.Logger.Error("unable to set node label, disarming watchdog for safety", sl.Err(labelErr))
+		if err := kubeClient.RemoveNodeLabel(ctx, fencingNodeLabel); err != nil {
+			kubeClient.Logger.Error("unable to remove node label", sl.Err(err))
+		}
+		return labelErr
+	}
+	return nil
+}
+
+func removeNodeLabels(kubeClient *kubeclient.Client) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if labelErr := kubeClient.RemoveNodeLabel(ctx, fencingNodeLabel); labelErr != nil {
+		kubeClient.Logger.Error("unable to remove node label", sl.Err(labelErr))
+	}
+
+	if labelErr := kubeClient.RemoveNodeLabel(ctx, fencingNodeLabelMode); labelErr != nil {
+		kubeClient.Logger.Error("unable to remove node label", sl.Err(labelErr))
+	}
 }

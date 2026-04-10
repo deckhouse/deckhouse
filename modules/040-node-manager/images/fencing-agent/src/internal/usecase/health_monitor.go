@@ -20,7 +20,6 @@ package usecase
 //go:generate minimock -i NodeWatcher -o ./mock/nodewatcher_mock.go -g
 //go:generate minimock -i Decider -o ./mock/decider_mock.go -g
 //go:generate minimock -i FallbackDecider -o ./mock/fallbackdecider_mock.go -g
-//go:generate minimock -i ClusterProvider -o ./mock/clusterprovider_mock.go -g
 //go:generate minimock -i MemberlistProvider -o ./mock/memberlistprovider_mock.go -g
 
 import (
@@ -32,10 +31,6 @@ import (
 
 	"fencing-agent/internal/lib/backoff"
 	"fencing-agent/internal/lib/logger/sl"
-)
-
-const (
-	fencingNodeLabel = "node-manager.deckhouse.io/fencing-enabled"
 )
 
 type WatchDog interface {
@@ -57,11 +52,6 @@ type FallbackDecider interface {
 	ShouldFeed(ctx context.Context) bool
 }
 
-type ClusterProvider interface {
-	SetNodeLabel(ctx context.Context, key string, value string) error
-	RemoveNodeLabel(ctx context.Context, key string) error
-}
-
 type MemberlistProvider interface {
 	NumMembers() int
 }
@@ -69,7 +59,6 @@ type MemberlistProvider interface {
 type HealthMonitor struct {
 	mu         *sync.Mutex
 	logger     *log.Logger
-	cluster    ClusterProvider
 	membership MemberlistProvider
 	watchdog   WatchDog
 	decider    Decider
@@ -79,13 +68,11 @@ type HealthMonitor struct {
 
 func NewHealthMonitor(
 	watcher NodeWatcher,
-	cluster ClusterProvider,
 	membership MemberlistProvider,
 	watchdog WatchDog, decider Decider,
 	fallbacker FallbackDecider,
 	logger *log.Logger) *HealthMonitor {
 	return &HealthMonitor{
-		cluster:    cluster,
 		membership: membership,
 		watchdog:   watchdog,
 		mu:         &sync.Mutex{},
@@ -118,12 +105,10 @@ func (h *HealthMonitor) Start(ctx context.Context, watchdogTimeout int) error {
 }
 
 func (h *HealthMonitor) Stop() {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.watchdog.IsArmed() {
-		if err := h.stopWatchdog(ctx); err != nil {
+		if err := h.stopWatchdog(); err != nil {
 			h.logger.Error("unable to stop watchdog", sl.Err(err))
 		}
 	}
@@ -140,7 +125,7 @@ func (h *HealthMonitor) check(ctx context.Context) {
 		if h.watchdog.IsArmed() {
 			h.logger.Info("node is in maintenance mode, watchdog is armed, disarming watchdog")
 
-			err := h.stopWatchdog(ctx)
+			err := h.stopWatchdog()
 			if err == nil {
 				h.logger.Info("watchdog disarmed successfully")
 				return
@@ -192,28 +177,9 @@ func (h *HealthMonitor) startWatchdogBackoff(ctx context.Context) error {
 		return err
 	}
 
-	// Set node label to indicate fencing is enabled
-	if labelErr := h.cluster.SetNodeLabel(ctx, fencingNodeLabel, ""); labelErr != nil {
-		h.logger.Error("unable to set node label, disarming watchdog for safety", sl.Err(labelErr))
-
-		if stopErr := h.watchdog.Stop(); stopErr != nil {
-			h.logger.Error("failed to stop watchdog after label error", sl.Err(stopErr))
-		}
-
-		return labelErr
-	}
-
 	return nil
 }
 
-func (h *HealthMonitor) stopWatchdog(ctx context.Context) error {
-	if err := h.cluster.RemoveNodeLabel(ctx, fencingNodeLabel); err != nil {
-		h.logger.Error("Unable to remove node label", sl.Err(err))
-	}
-
-	if err := h.watchdog.Stop(); err != nil {
-		return err
-	}
-
-	return nil
+func (h *HealthMonitor) stopWatchdog() error {
+	return h.watchdog.Stop()
 }

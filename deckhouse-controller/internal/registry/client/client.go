@@ -20,22 +20,33 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"go.opentelemetry.io/otel"
 
+	internalRegistry "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/registry"
+	registryClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
 const (
 	tracerName = "registry-client"
 )
 
+// Client is a wrapper around the underlying registry client, adding tracing support.
 type Client struct {
 	wrapped registry.Client
 }
 
-func NewClient(wrapped registry.Client) *Client {
+// New creates a new wrapped internal registry client with options.
+// It mirrors the public pkg registry client builder style.
+func New(host string, opts ...registryClient.Option) internalRegistry.Interface {
+	wrapped := registryClient.New(host, opts...)
 	return &Client{wrapped: wrapped}
 }
 
-func (c *Client) WithSegment(segments ...string) registry.Client {
+// NewClientFromWrapped retains old behavior for explicit wrapping from an existing low-level client.
+func NewClientFromWrapped(wrapped *registryClient.Client) internalRegistry.Interface {
+	return &Client{wrapped: wrapped}
+}
+
+func (c *Client) WithSegment(segments ...string) internalRegistry.Interface {
 	return &Client{wrapped: c.wrapped.WithSegment(segments...)}
 }
 

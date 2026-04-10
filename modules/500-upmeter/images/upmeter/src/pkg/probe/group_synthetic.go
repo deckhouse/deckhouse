@@ -40,8 +40,8 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 			period: 5 * time.Second,
 			config: checker.SmokeMiniAvailable{
 				Path:        "/",
-				DnsTimeout:  2 * time.Second,
-				HttpTimeout: 2 * time.Second,
+				DNSTimeout:  2 * time.Second,
+				HTTPTimeout: 2 * time.Second,
 				Access:      access,
 				Logger: entry.
 					WithField("probe", "access").
@@ -54,8 +54,8 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 			period: 200 * time.Millisecond,
 			config: checker.SmokeMiniAvailable{
 				Path:        "/dns",
-				DnsTimeout:  2 * time.Second,
-				HttpTimeout: 2 * time.Second,
+				DNSTimeout:  2 * time.Second,
+				HTTPTimeout: 2 * time.Second,
 				Access:      access,
 				Logger: entry.
 					WithField("probe", "dns").
@@ -67,9 +67,9 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 			probe:  "dns",
 			check:  "internal",
 			period: 200 * time.Millisecond,
-			config: checker.DnsAvailable{
+			config: checker.DNSAvailable{
 				Domain:     access.ClusterDomain(),
-				DnsTimeout: 2 * time.Second,
+				DNSTimeout: 2 * time.Second,
 				Logger: entry.
 					WithField("probe", "dns").
 					WithField("check", "internal").
@@ -82,8 +82,8 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 			period: 5 * time.Second,
 			config: checker.SmokeMiniAvailable{
 				Path:        "/neighbor",
-				DnsTimeout:  2 * time.Second,
-				HttpTimeout: 4 * time.Second,
+				DNSTimeout:  2 * time.Second,
+				HTTPTimeout: 4 * time.Second,
 				Access:      access,
 				Logger: entry.
 					WithField("probe", "neighbor").
@@ -96,8 +96,8 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 			period: 5 * time.Second,
 			config: checker.SmokeMiniAvailable{
 				Path:        "/neighbor-via-service",
-				DnsTimeout:  2 * time.Second,
-				HttpTimeout: 4 * time.Second,
+				DNSTimeout:  2 * time.Second,
+				HTTPTimeout: 4 * time.Second,
 				Access:      access,
 				Logger: entry.
 					WithField("probe", "service").

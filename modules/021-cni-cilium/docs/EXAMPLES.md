@@ -1,5 +1,6 @@
 ---
 title: "The cni-cilium module: examples"
+description: Examples of configuring Egress Gateway and Hubble data export for the cni-cilium module.
 ---
 
 ## Egress Gateway
@@ -164,7 +165,7 @@ spec:
 
 ### Collecting Hubble flow logs with the log-shipper module
 
-To collect flow logs, use the [`log-shipper`](https://deckhouse.ru/modules/log-shipper/) module.
+To collect flow logs, use the [`log-shipper`](/modules/log-shipper/) module.
 
 Create a ClusterLoggingConfig resource that reads the log file from the node filesystem:
 

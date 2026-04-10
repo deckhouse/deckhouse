@@ -4,6 +4,8 @@ permalink: ru/architecture/iam/
 lang: ru
 search: iam, identity and access management, управление идентификацией и доступом
 description: Архитектура подсистемы Identity and Access Management в Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 В данном подразделе описывается архитектура подсистемы IAM (Identity and Access Management, идентификация и управление доступом) платформы Deckhouse Kubernetes Platform (DKP).

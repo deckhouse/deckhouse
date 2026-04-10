@@ -12,7 +12,7 @@ git:
     - '**/*.mod'
 ---
 image: {{ .ModuleName }}/geoproxy-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

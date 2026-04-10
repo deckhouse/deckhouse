@@ -28,9 +28,9 @@ To add a static node to a cluster (bare metal server or virtual machine), follow
 
    - If necessary, install additional operating system packages and configure the mount points that will be used on the node.
 
-1. Create a user with `s`udo` privileges:
+1. Create a user with `sudo` privileges:
 
-   - Add a new user (in this example, `caps`) with s`udo` privileges:
+   - Add a new user (in this example, `caps`) with `sudo` privileges:
 
      ```shell
      useradd -m -s /bin/bash caps
@@ -475,7 +475,7 @@ Refer to the description of the [NodeGroup](cr.html#nodegroup) custom resource f
 
 When the `InstanceClass` or `instancePrefix` parameters are modified, the process is similar to updating a Deployment in Kubernetes (changing `InstanceClass` results in creating a new MachineSet, and changing `instancePrefix` results in creating a new MachineDeployment). New instances will be created according to the value of the [`cloudInstances.maxSurgePerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxsurgeperzone) parameter. As the new instances are created, the old ones will be gradually removed, with a drain operation performed beforehand.
 
-During the disruption update, an evict of the pods from the node is performed. If any pod failes to evict, the evict is repeated every 20 seconds until a global timeout of 5 minutes is reached. After that, the pods that failed to evict are removed.
+During the disruption update, an evict of the pods from the node is performed. If any pod fails to evict, the evict is repeated every 20 seconds until a global timeout of 5 minutes is reached. After that, the pods that failed to evict are removed.
 
 ## How do I redeploy ephemeral machines in the cloud with a new configuration?
 
@@ -536,7 +536,7 @@ The most efficient way is to have some extra nodes "ready". In this case, you ca
 
 Here is how you should configure the target `NodeGroup`:
 
-1. Specify the number of "ready" nodes (or a percentage of the maximum number of nodes in the group) using the `cloudInstances.standby` paramter.
+1. Specify the number of "ready" nodes (or a percentage of the maximum number of nodes in the group) using the `cloudInstances.standby` parameter.
 1. If there are additional service components on nodes that are not handled by Deckhouse (e.g., the `filebeat` DaemonSet), you can specify the percentage of node resources they can consume via the `standbyHolder.overprovisioningRate` parameter.
 1. This feature requires that at least one group node is already running in the cluster. In other words, there must be either a single replica of the application, or the `cloudInstances.minPerZone` parameter must be set to `1`.
 
@@ -668,9 +668,9 @@ spec:
   - '*'
   content: |
     {{- if eq .cri "ContainerdV2" }}
-  # <Script to modify the configuration for ContainerdV2>
+  # <Script to modify the configuration for ContainerdV2>.
     {{- else }}
-  # <Script to modify the configuration for ContainerdV1>
+  # <Script to modify the configuration for ContainerdV1>.
     {{- end }}
   nodeGroups:
   - '*'
@@ -1129,7 +1129,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # The step can be arbitrary, as restarting the containerd service is not required7
+  # The step can be arbitrary, as restarting the containerd service is not required.
   weight: 0
   bundles:
     - '*'
@@ -1489,30 +1489,39 @@ Node reboots may be required after configuration changes. For example, after cha
 ## How do I work with GPU nodes?
 
 {% alert level="info" %}
-GPU-node management is available in Enterprise Edition only.
+GPU-node management is available in DKP Enterprise Edition only.
 {% endalert %}
 
 ### Step-by-step procedure for adding a GPU node to the cluster
 
-Starting with Deckhouse 1.71, if a `NodeGroup` contains the `spec.gpu` section, the `node-manager` module **automatically**:
+Starting with Deckhouse 1.71, if a NodeGroup resource contains the [`spec.gpu`](cr.html#nodegroup-v1-spec-gpu) section, the `node-manager` module **automatically**:
 
-- configures containerd with `default_runtime = "nvidia"`;
-- applies the required system settings (including fixes for the NVIDIA Container Toolkit);
-- deploys system components: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter**, and, if needed, **MIG Manager**.
+- Configures containerd with `default_runtime = "nvidia"`.
+- Applies the required system settings (including fixes for the NVIDIA Container Toolkit).
+- Deploys the following system components:
+  - NFD
+  - GFD
+  - NVIDIA Device Plugin
+  - DCGM Exporter
+  - MIG Manager (if needed)
 
-For the list of platforms supported by NVIDIA Container Toolkit, see [the official documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+For the list of platforms supported by NVIDIA Container Toolkit, see the [official documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
 
 {% alert level="info" %}
-Always specify the desired mode in `spec.gpu.sharing` (`Exclusive`, `TimeSlicing`, or `MIG`).
+To ensure correct operation, clearly specify the GPU sharing strategy in the [`spec.gpu.sharing`](cr.html#nodegroup-v1-spec-gpu-sharing) parameter (`Exclusive`, `TimeSlicing`, or `MIG`).
 
-containerd on GPU nodes is configured automatically. Do not change its configuration manually (e.g. via `NodeGroupConfiguration` or TOML config).
+Containerd on GPU nodes is configured automatically. Do not change its configuration manually (for example, via the NodeGroupConfiguration resource or a configuration on the node).
+{% endalert %}
+
+{% alert level="info" %}
+If a GPU is used in a single-node cluster and the `MIG` strategy is selected, an additional manual procedure is required after each node reboot to reapply the MIG configuration. For details, see [MIG in a single-node cluster](/products/kubernetes-platform/documentation/admin/configuration/platform-scaling/node/node-customization.html#mig-in-a-single-node-cluster) section.
 {% endalert %}
 
 To add a GPU node to the cluster, perform the following steps:
 
-1. Create a NodeGroup for GPU nodes.
+1. Create a [NodeGroup](cr.html#nodegroup) resource for GPU nodes.
 
-   An example with **TimeSlicing** enabled (`partitionCount: 4`) and typical taint/label:
+   An example with **TimeSlicing** enabled (`partitionCount: 4`) and typical `taints` and `labels`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -1520,7 +1529,7 @@ To add a GPU node to the cluster, perform the following steps:
    metadata:
      name: gpu
    spec:
-     nodeType: CloudStatic   # or Static/CloudEphemeral — depending on your infrastructure.
+     nodeType: CloudStatic   # Can also be Static or CloudEphemeral — depending on your infrastructure.
      gpu:
        sharing: TimeSlicing
        timeSlicing:
@@ -1534,16 +1543,21 @@ To add a GPU node to the cluster, perform the following steps:
          effect: NoSchedule
    ```
 
-   > If you use custom taint keys, ensure they are allowed in ModuleConfig `global` in the array [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) so workloads can add the corresponding `tolerations`.
+   > If you use custom taint keys, ensure they are allowed in the ModuleConfig `global` in the array [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys), so that workloads can add the corresponding `tolerations`.
 
-   Full field schema: see [NodeGroup CR documentation](cr.html#nodegroup-v1-spec-gpu).
+   A full field schema is available in the [NodeGroup custom resource reference](cr.html#nodegroup-v1-spec-gpu).
 
-1. Install the NVIDIA driver and nvidia-container-toolkit.
+1. Install the NVIDIA driver and NVIDIA Container Toolkit.
 
-   Install the NVIDIA driver and NVIDIA Container Toolkit on the nodes—either manually or via a NodeGroupConfiguration.
-   Below are NodeGroupConfiguration examples for the `gpu` NodeGroup.
+   Install the NVIDIA driver and NVIDIA Container Toolkit directly on the nodes, either manually or via the [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource.
+   Below are NodeGroupConfiguration examples for the `gpu` NodeGroup for various operating systems:
+
+   - [Ubuntu](#ubuntu)
+   - [Debian](#debian)
+   - [CentOS](#centos)
 
    **Ubuntu**
+   {: #ubuntu .anchored}
 
    > Tested for Ubuntu 22.04.
 
@@ -1559,7 +1573,7 @@ To add a GPU node to the cluster, perform the following steps:
        #!/bin/bash
        set -e
  
-       # Checking if curl is installed
+       # Checking if curl and wget are installed.
        if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
        then
          echo "curl or wget is not installed. Installing..."
@@ -1567,20 +1581,20 @@ To add a GPU node to the cluster, perform the following steps:
          sudo apt install -y curl wget
        fi
  
-       # Define file paths
+       # Defining file paths.
        CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
        NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
  
-       # Update repos
+       # Updating repos.
        sudo apt update
  
-       # Install CUDA keyring
+       # Installing CUDA keyring.
        if [ ! -f "$CUDA_KEYRING_DEB" ]; then
          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/$CUDA_KEYRING_DEB
          sudo dpkg -i $CUDA_KEYRING_DEB
        fi
  
-       # Add NVIDIA container toolkit repos
+       # Adding NVIDIA Container Toolkit repos.
        if [ ! -f "$NVIDIA_GPG_KEY" ]; then
          curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
            sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -1589,19 +1603,19 @@ To add a GPU node to the cluster, perform the following steps:
            sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
        fi
  
-       # Check and install Linux headers
+       # Checking and installing Linux headers.
        if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
          echo "Installing linux headers..."
          sudo apt install -y "linux-headers-$(uname -r)"
        fi
  
-       # Installation of NVIDIA drivers
+       # Installing NVIDIA drivers.
        if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
          echo "Installing CUDA drivers..."
          sudo apt install -y cuda-drivers-575
        fi
  
-       # Installation of NVIDIA Container Toolkit
+       # Installing NVIDIA Container Toolkit.
        if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
          echo "Installing NVIDIA container toolkit..."
          sudo apt install -y nvidia-container-toolkit
@@ -1613,6 +1627,7 @@ To add a GPU node to the cluster, perform the following steps:
    ```
 
    **Debian**
+   {: #debian .anchored}
 
    > Tested for Debian 12.
 
@@ -1628,7 +1643,7 @@ To add a GPU node to the cluster, perform the following steps:
        #!/bin/bash
        set -e
  
-       # Checking if curl is installed
+       # Checking if curl and wget are installed.
        if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
        then
          echo "curl or wget is not installed. Installing..."
@@ -1636,20 +1651,20 @@ To add a GPU node to the cluster, perform the following steps:
          sudo apt install -y curl wget
        fi
  
-       # Define file paths
+       # Defining file paths.
        CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
        NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
  
-       # Update repos
+       # Updating repos.
        sudo apt update
  
-       # Install CUDA keyring
+       # Installing CUDA keyring.
        if [ ! -f "$CUDA_KEYRING_DEB" ]; then
          wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/$CUDA_KEYRING_DEB
          sudo dpkg -i $CUDA_KEYRING_DEB
        fi
  
-       # Add NVIDIA container toolkit repos
+       # Adding NVIDIA Container Toolkit repos.
        if [ ! -f "$NVIDIA_GPG_KEY" ]; then
          curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
            sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -1658,19 +1673,19 @@ To add a GPU node to the cluster, perform the following steps:
            sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
        fi
  
-       # Check and install Linux headers
+       # Checking and installing Linux headers.
        if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
          echo "Installing linux headers..."
          sudo apt install -y "linux-headers-$(uname -r)"
        fi
  
-       # Installation of NVIDIA drivers
+       # Installing NVIDIA drivers.
        if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
          echo "Installing CUDA drivers..."
          sudo apt install -y cuda-drivers-575
        fi
  
-       # Installation of NVIDIA Container Toolkit
+       # Installing NVIDIA Container Toolkit.
        if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
          echo "Installing NVIDIA container toolkit..."
          sudo apt install -y nvidia-container-toolkit
@@ -1682,6 +1697,7 @@ To add a GPU node to the cluster, perform the following steps:
    ```
 
    **CentOS**
+   {: #centos .anchored}
 
    > Tested for CentOS 9.
 
@@ -1698,21 +1714,21 @@ To add a GPU node to the cluster, perform the following steps:
        set -e
        INSTALL_NEEDED=false
  
-       # Checking if curl is installed
+       # Checking if curl is installed.
        if ! command -v curl &> /dev/null; then
          echo "curl is not installed. Installing..."
          sudo dnf install -y curl
          INSTALL_NEEDED=true
        fi
  
-       # Checking another necessary packages and dependencies are installed
+       # Checking if other necessary packages and dependencies are installed.
        if ! rpm -q epel-release &> /dev/null; then
          echo "EPEL release is not installed. Installing..."
          sudo dnf install -y epel-release
          INSTALL_NEEDED=true
        fi
        
-       # Checking if dev tools are installed
+       # Checking if development tools are installed.
        if ! rpm -q gcc kernel-devel-$(uname -r) &> /dev/null; then
          echo "Development tools are not completely installed. Installing..."
          sudo dnf update -y
@@ -1720,7 +1736,7 @@ To add a GPU node to the cluster, perform the following steps:
          INSTALL_NEEDED=true
        fi
        
-       # Installation of NVIDIA drivers
+       # Installing NVIDIA drivers.
        if ! rpm -q nvidia-driver-cuda nvidia-driver-cuda-libs &> /dev/null; then
          echo "NVIDIA CUDA drivers and libs are not installed. Installing..."
          sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
@@ -1730,7 +1746,7 @@ To add a GPU node to the cluster, perform the following steps:
          INSTALL_NEEDED=true
        fi
  
-       # Installation of NVIDIA Container Toolkit
+       # Installing NVIDIA Container Toolkit.
        if ! rpm -q nvidia-container-toolkit &> /dev/null; then
          echo "NVIDIA container toolkit is not installed. Installing..."
          curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
@@ -1738,7 +1754,7 @@ To add a GPU node to the cluster, perform the following steps:
          INSTALL_NEEDED=true
        fi
  
-       # Bashible service creating if drivers were installed
+       # Creating bashible service if drivers were installed.
        if [ "$INSTALL_NEEDED" = true ]; then
          base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
          echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
@@ -1754,7 +1770,7 @@ To add a GPU node to the cluster, perform the following steps:
      weight: 5
    ```
 
-   After these configurations are applied, perform bootstrap and **reboot** the nodes so that settings are applied and the drivers get installed.
+1. After the configuration is applied, perform a bootstrap and reboot the nodes so that settings are applied and the drivers get installed.
 
 1. Verify installation on the node using the command:
 
@@ -1762,7 +1778,7 @@ To add a GPU node to the cluster, perform the following steps:
    nvidia-smi
    ```
 
-   **Expected healthy output (example):**
+   Expected proper output (example):
 
    ```console
    root@k8s-dvp-w1-gpu:~# nvidia-smi
@@ -1785,15 +1801,15 @@ To add a GPU node to the cluster, perform the following steps:
    +---------------------------------------------------------------------------------------+
    ```
 
-1. Verify infrastructure components in the cluster
+1. Verify infrastructure components in the cluster.
 
-   NVIDIA Pods in `d8-nvidia-gpu`:
+   NVIDIA Pods in the `d8-nvidia-gpu` namespace:
 
    ```bash
    d8 k -n d8-nvidia-gpu get pod
    ```
 
-   **Expected healthy output (example):**
+   Expected proper output (example):
 
    ```console
    NAME                                  READY   STATUS    RESTARTS   AGE
@@ -1803,13 +1819,13 @@ To add a GPU node to the cluster, perform the following steps:
    nvidia-device-plugin-80ceb7d-8xt8g    2/2     Running   0          2m53s
    ```
 
-   NFD Pods in `d8-cloud-instance-manager`:
+   NFD Pods in the `d8-cloud-instance-manager` namespace:
 
    ```bash
    d8 k -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
    ```
 
-   **Expected healthy output (example):**
+   Expected proper output (example):
 
    ```console
    NAME                                             READY   STATUS      RESTARTS       AGE
@@ -1824,7 +1840,7 @@ To add a GPU node to the cluster, perform the following steps:
    d8 k describe node <node-name>
    ```
 
-   **Output snippet (example):**
+   Output snippet (example):
 
    ```console
    Capacity:
@@ -1837,114 +1853,114 @@ To add a GPU node to the cluster, perform the following steps:
      nvidia.com/gpu:     4
    ```
 
-1. Run functional tests
+1. Run functional tests.
 
    **Option A. Invoke `nvidia-smi` from inside a container.**
 
-   Create a Job:
+   1. Create a Job:
 
-   ```yaml
-   apiVersion: batch/v1
-   kind: Job
-   metadata:
-     name: nvidia-cuda-test
-     namespace: default
-   spec:
-     completions: 1
-     template:
-       spec:
-         restartPolicy: Never
-         nodeSelector:
-           node.deckhouse.io/group: gpu
-           node-role/gpu: ""
-         tolerations:
-           - key: "node-role"
-             operator: "Equal"
-             value: "gpu"
-             effect: "NoSchedule"
-         containers:
-           - name: nvidia-cuda-test
-             image: nvidia/cuda:11.6.2-base-ubuntu20.04
-             imagePullPolicy: "IfNotPresent"
-             command:
-               - nvidia-smi
-   ```
+      ```yaml
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: nvidia-cuda-test
+        namespace: default
+      spec:
+        completions: 1
+        template:
+          spec:
+            restartPolicy: Never
+            nodeSelector:
+              node.deckhouse.io/group: gpu
+              node-role/gpu: ""
+            tolerations:
+              - key: "node-role"
+                operator: "Equal"
+                value: "gpu"
+                effect: "NoSchedule"
+            containers:
+              - name: nvidia-cuda-test
+                image: nvidia/cuda:11.6.2-base-ubuntu20.04
+                imagePullPolicy: "IfNotPresent"
+                command:
+                  - nvidia-smi
+      ```
 
-   Check the logs using the command:
+   1. Check the logs using the command:
 
-   ```bash
-   d8 k logs job/nvidia-cuda-test
-   ```
+      ```bash
+      d8 k logs job/nvidia-cuda-test
+      ```
 
-   Output example:
+      Output example:
 
-   ```console
-   Tue Aug  5 07:48:02 2025
-   +---------------------------------------------------------------------------------------+
-   | NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
-   |-----------------------------------------+----------------------+----------------------+
-   | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
-   | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
-   |                                         |                      |               MIG M. |
-   |=========================================+======================+======================|
-   |   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
-   | N/A   31C    P0              23W / 250W |      0MiB / 32768MiB |      0%      Default |
-   |                                         |                      |                  N/A |
-   +-----------------------------------------+----------------------+----------------------+
-   
-   +---------------------------------------------------------------------------------------+
-   | Processes:                                                                            |
-   |  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
-   |        ID   ID                                                             Usage      |
-   |=======================================================================================|
-   |  No running processes found                                                           |
-   +---------------------------------------------------------------------------------------+
-   ```
+      ```console
+      Tue Aug  5 07:48:02 2025
+      +---------------------------------------------------------------------------------------+
+      | NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
+      |-----------------------------------------+----------------------+----------------------+
+      | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+      | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+      |                                         |                      |               MIG M. |
+      |=========================================+======================+======================|
+      |   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
+      | N/A   31C    P0              23W / 250W |      0MiB / 32768MiB |      0%      Default |
+      |                                         |                      |                  N/A |
+      +-----------------------------------------+----------------------+----------------------+
+      
+      +---------------------------------------------------------------------------------------+
+      | Processes:                                                                            |
+      |  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+      |        ID   ID                                                             Usage      |
+      |=======================================================================================|
+      |  No running processes found                                                           |
+      +---------------------------------------------------------------------------------------+
+      ```
 
    **Option B. CUDA sample (vectoradd).**
 
-   Create a Job:
+   1. Create a Job:
 
-   ```yaml
-   apiVersion: batch/v1
-   kind: Job
-   metadata:
-     name: gpu-operator-test
-     namespace: default
-   spec:
-     completions: 1
-     template:
-       spec:
-         restartPolicy: Never
-         nodeSelector:
-           node.deckhouse.io/group: gpu
-         tolerations:
-           - key: "node-role"
-             operator: "Equal"
-             value: "gpu"
-             effect: "NoSchedule"
-         containers:
-           - name: gpu-operator-test
-             image: nvidia/samples:vectoradd-cuda10.2
-             imagePullPolicy: "IfNotPresent"
-   ```
+      ```yaml
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: gpu-operator-test
+        namespace: default
+      spec:
+        completions: 1
+        template:
+          spec:
+            restartPolicy: Never
+            nodeSelector:
+              node.deckhouse.io/group: gpu
+            tolerations:
+              - key: "node-role"
+                operator: "Equal"
+                value: "gpu"
+                effect: "NoSchedule"
+            containers:
+              - name: gpu-operator-test
+                image: nvidia/samples:vectoradd-cuda10.2
+                imagePullPolicy: "IfNotPresent"
+      ```
 
-   Check the logs using the command:
+   1. Check the logs using the command:
 
-   ```bash
-   d8 k logs job/gpu-operator-test
-   ```
+      ```bash
+      d8 k logs job/gpu-operator-test
+      ```
 
-   Output example:
+      Output example:
 
-   ```console
-   [Vector addition of 50000 elements]
-   Copy input data from the host memory to the CUDA device
-   CUDA kernel launch with 196 blocks of 256 threads
-   Copy output data from the CUDA device to the host memory
-   Test PASSED
-   Done
-   ```
+      ```console
+      [Vector addition of 50000 elements]
+      Copy input data from the host memory to the CUDA device
+      CUDA kernel launch with 196 blocks of 256 threads
+      Copy output data from the CUDA device to the host memory
+      Test PASSED
+      Done
+      ```
 
 ## How to monitor GPUs?
 

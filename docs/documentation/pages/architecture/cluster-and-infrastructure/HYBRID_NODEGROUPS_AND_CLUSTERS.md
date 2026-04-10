@@ -1,6 +1,6 @@
 ---
 title: Hybrid node group and cluster management
-permalink: en/architecture/cluster-and-infrastructure/hybrid-nodegroups-and-clusters.html
+permalink: en/architecture/cluster-and-infrastructure/node-management/hybrid-nodegroups-and-clusters.html
 search: hybrid cluster, hybrid node group
 description: Architecture of hybrid node groups and hybrid clusters in Deckhouse Kubernetes Platform.
 ---

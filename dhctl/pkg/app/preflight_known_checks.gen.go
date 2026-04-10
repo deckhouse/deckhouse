@@ -8,6 +8,7 @@ var generatedPreflightChecks = []string{
 	"cloud-prefix",
 	"deckhouse-user",
 	"dhctl-edition",
+	"instance-class-provider",
 	"ports-availability",
 	"public-domain-template",
 	"python-modules",

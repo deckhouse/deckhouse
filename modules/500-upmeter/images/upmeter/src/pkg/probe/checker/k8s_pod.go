@@ -22,6 +22,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
@@ -124,6 +125,16 @@ func createPodObject(podName, nodeName, agentID string, image *kubernetes.ProbeI
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Command: []string{
 						"true",
+					},
+					SecurityContext: &v1.SecurityContext{
+						ReadOnlyRootFilesystem:   ptr.To(true),
+						AllowPrivilegeEscalation: ptr.To(false),
+						Capabilities: &v1.Capabilities{
+							Drop: []v1.Capability{"ALL"},
+						},
+						SeccompProfile: &v1.SeccompProfile{
+							Type: v1.SeccompProfileTypeRuntimeDefault,
+						},
 					},
 				},
 			},

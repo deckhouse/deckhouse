@@ -1,6 +1,6 @@
 ---
 image: golangci-lint-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 secrets:
 - id: GOPROXY

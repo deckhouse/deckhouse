@@ -17,7 +17,7 @@ limitations under the License.
 package probe
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -162,7 +162,7 @@ func newDummyLogger() *log.Entry {
 	logger := log.New()
 
 	// logger.Level = log.DebugLevel
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 
 	return log.NewEntry(logger)
 }

@@ -187,7 +187,7 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 type InstallOptions struct {
 	Path        string   // Path to the chart directory
 	ValuesPaths []string // Paths to values files
-	ExtraValues string   // Extra values in json format
+	RootValues  string   // Values in JSON format
 
 	ReleaseLabels map[string]string // Labels to apply to the release
 
@@ -207,8 +207,8 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
 	var valuesSet []string
-	if len(opts.ExtraValues) > 0 {
-		valuesSet = append(valuesSet, opts.ExtraValues)
+	if len(opts.RootValues) > 0 {
+		valuesSet = append(valuesSet, opts.RootValues)
 	}
 
 	// reportCh receives progress reports from nelm during resource tracking.
@@ -272,8 +272,8 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
 	var valuesSet []string
-	if len(opts.ExtraValues) > 0 {
-		valuesSet = append(valuesSet, opts.ExtraValues)
+	if len(opts.RootValues) > 0 {
+		valuesSet = append(valuesSet, opts.RootValues)
 	}
 
 	res, err := action.ChartRender(ctx, action.ChartRenderOptions{

@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "ConfigMap",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-user-authn", "d8-user-authz", "d8-runtime-audit-engine"},
+					MatchNames: []string{"d8-user-authn", "d8-user-authz", "d8-runtime-audit-engine", "d8-system"},
 				},
 			},
 			LabelSelector: &v1.LabelSelector{
@@ -74,7 +74,7 @@ func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) err
 		return fmt.Errorf("cannot unmarshal auth-cm: %w", err)
 	}
 
-	var authZData, authNData, auditData map[string]string
+	var authZData, authNData, auditData, deckhouseData map[string]string
 
 	for _, cm := range authCMs {
 		switch cm.Namespace {
@@ -86,6 +86,9 @@ func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) err
 
 		case "d8-runtime-audit-engine":
 			auditData = cm.Data
+
+		case "d8-system":
+			deckhouseData = cm.Data
 		}
 	}
 
@@ -163,5 +166,12 @@ func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) err
 		input.Values.Remove(runtimeAuditWebhookURLPath)
 		input.Values.Remove(runtimeAuditWebhookCAPath)
 	}
+
+	if plugins, ok := deckhouseData["disableAdmissionPlugins"]; ok {
+		input.Values.Set("controlPlaneManager.internal.disableAdmissionPlugins", plugins)
+	} else {
+		input.Values.Remove("controlPlaneManager.internal.disableAdmissionPlugins")
+	}
+
 	return nil
 }

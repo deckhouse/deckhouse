@@ -22,6 +22,8 @@ import (
 	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 const (
@@ -58,6 +60,8 @@ var (
 	DoNotWriteDebugLogFile = false
 	DebugLogFilePath       = ""
 	ProgressFilePath       = ""
+	DownloadDirName        = TmpDirName
+	DownloadCacheDirName   = filepath.Join(DownloadDirName, "cache")
 )
 
 func init() {
@@ -103,6 +107,14 @@ func GlobalFlags(cmd *kingpin.Application) {
 		Envar(configEnvName("PROGRESS_LOG_FILE_PATH")).
 		Default("").
 		StringVar(&ProgressFilePath)
+	cmd.Flag("download-dir", "Set directory for downloaded images and it's content").
+		Envar(configEnvName("DOWNLOAD_DIR")).
+		Default(DownloadDirName).
+		StringVar(&DownloadDirName)
+	cmd.Flag("download-cache-dir", "Set directory for downloaded images layers cache.").
+		Envar(configEnvName("DOWNLOAD_CACHE_DIR")).
+		Default(DownloadCacheDirName).
+		StringVar(&DownloadCacheDirName)
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
@@ -141,4 +153,11 @@ func GetTmpDir() string {
 
 func GetDefaultTmpDir() string {
 	return defaultTmpAndStateDir
+}
+
+func GetDirConfig() *directoryconfig.DirectoryConfig {
+	return &directoryconfig.DirectoryConfig{
+		DownloadDir:      DownloadDirName,
+		DownloadCacheDir: DownloadCacheDirName,
+	}
 }

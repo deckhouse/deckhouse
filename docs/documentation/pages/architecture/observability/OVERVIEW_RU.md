@@ -4,6 +4,8 @@ permalink: ru/architecture/observability/
 lang: ru
 search: observability, наблюдаемость, подсистема наблюдаемости
 description: Архитектура подсистемы Observability в Deckhouse Kubernetes Platform.
+extractedLinksOnlyMax: 0
+extractedLinksMax: 0
 ---
 
 В данном подразделе описывается архитектура подсистемы Observability (подсистемы наблюдаемости) Deckhouse Kubernetes Platform (DKP).

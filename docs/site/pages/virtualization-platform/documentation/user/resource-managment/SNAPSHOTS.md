@@ -272,6 +272,15 @@ You can create a VM clone in two ways: from an existing VM or from a previously 
 The cloned VM will be assigned a new IP address for the cluster network and MAC addresses for additional network interfaces (if any), so you will need to reconfigure the guest OS network settings after cloning.
 {% endalert %}
 
+{% alert level="info" %}
+Labels are not copied from the source VM to the clone. This prevents Service traffic (Services select VMs by labels) from being routed to the clone. If the clone should be part of a Service, add the required labels after cloning. For example:
+
+```bash
+d8 k label vm <vm-name> label-name=label-value
+```
+
+{% endalert %}
+
 Cloning creates a copy of a VM, so the resources of the new VM must have unique names. To do this, use the `nameReplacements` and/or `customization` parameters:
 
 - `nameReplacements`: Allows you to replace the names of existing resources with new ones to avoid conflicts.
@@ -493,6 +502,260 @@ spec:
 ```
 
 As a result, a VM named `clone-database-prod` and a disk named `clone-database-root-prod` will be created.
+
+## USB Devices
+
+{% alert level="warning" %}
+USB device passthrough is available only in the **Enterprise Edition (EE)** of the Deckhouse Virtualization Platform.
+{% endalert %}
+
+DVP supports USB device passthrough to virtual machines using DRA (Dynamic Resource Allocation). This section describes how to use USB devices with virtual machines.
+
+### Overview
+
+DVP provides two custom resources for managing USB devices:
+
+- [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) (cluster-scoped) — represents a USB device discovered on a specific node. Created automatically by the DRA system when a USB device is detected on a node.
+- [USBDevice](/modules/virtualization/cr.html#usbdevice) (namespace-scoped) — represents a USB device available for attachment to virtual machines in a given namespace.
+
+### How It Works
+
+USB device passthrough follows a defined lifecycle — from device discovery on a node to attachment to a virtual machine:
+
+1. The DRA driver automatically discovers USB devices on cluster nodes and creates [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resources.
+
+1. An administrator assigns a namespace to the [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource by setting the `.spec.assignedNamespace` field. This makes the device available in that namespace.
+
+1. After the namespace is assigned, the controller automatically creates a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource in that namespace.
+
+1. The [USBDevice](/modules/virtualization/cr.html#usbdevice) is attached to a virtual machine by adding it to the `.spec.usbDevices` field of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
+
+### Quick Start
+
+The following steps describe the minimal workflow for attaching a USB device to a virtual machine:
+
+1. Connect the USB device to a cluster node.
+1. Verify that a NodeUSBDevice resource has been created:
+
+   ```bash
+   d8 k get nodeusbdevice
+   ```
+
+1. Assign a namespace to the [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) by setting `.spec.assignedNamespace`.
+
+   ```bash
+   d8 k apply -f - <<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: NodeUSBDevice
+   metadata:
+     name: logitech-webcam
+   spec:
+     assignedNamespace: my-project
+   EOF
+   ```
+
+1. Verify that a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource has been created in the target namespace:
+
+   ```bash
+   d8 k get usbdevice -n my-project
+   ```
+
+1. Add the device to the `.spec.usbDevices` field of a [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource and ensure that the VM is scheduled on the node where the USB device is physically connected.
+
+   ```bash
+   d8 k apply -f - <<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualMachine
+   metadata:
+     name: linux-vm
+   spec:
+     # ... other VM settings ...
+     usbDevices:
+       - name: logitech-webcam
+   EOF
+   ```
+
+### NodeUSBDevice
+
+[NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource reflects the state of a physical USB device detected on a cluster node. It is a cluster-scoped resource that represents a physical USB device on a node. It is created automatically by the DRA system.
+
+Example of viewing all discovered USB devices:
+
+```bash
+d8 k get nodeusbdevice
+```
+
+Example output:
+
+```console
+NAME                 NODE           READY   ASSIGNED   NAMESPACE   AGE
+usb-flash-drive     node-1         True    False                  10m
+logitech-webcam     node-2         True    True      my-project   15m
+```
+
+#### NodeUSBDevice Conditions
+
+The status of a [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource is represented by a set of conditions that describe its availability and assignment state:
+
+- **Ready**: Indicates whether the device is ready to use.
+  - `Ready`: Device is ready to use.
+  - `NotReady`: Device exists but is not ready.
+  - `NotFound`: Device is absent on the host.
+
+- **Assigned**: Indicates whether a namespace is assigned to the device.
+  - `Assigned`: Namespace is assigned and USBDevice resource is created.
+  - `Available`: No namespace is assigned for the device.
+  - `InProgress`: Device connection to namespace is in progress.
+
+#### Assigning a Namespace
+
+Before a USB device can be attached to a virtual machine, it must be exposed to a specific namespace. To make a USB device available in a specific namespace, set the `.spec.assignedNamespace` field:
+
+```bash
+d8 k apply -f - <<EOF
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: NodeUSBDevice
+metadata:
+  name: logitech-webcam
+spec:
+  assignedNamespace: my-project
+EOF
+```
+
+After assigning the namespace, a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is automatically created in the specified namespace.
+
+### USBDevice
+
+Once a namespace is assigned to a [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice), a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is created in automatically that namespace. It is a namespace-scoped resource that represents a USB device available for attachment to virtual machines within a given namespace.
+
+Example of viewing USB devices in a namespace:
+
+```bash
+d8 k get usbdevice -n my-project
+```
+
+Example output:
+
+```console
+NAME               NODE     MANUFACTURER   PRODUCT              SERIAL       ATTACHED   AGE
+logitech-webcam    node-2   Logitech       Webcam C920         ABC123456   False      10m
+```
+
+#### USBDevice Attributes
+
+The [USBDevice](/modules/virtualization/cr.html#usbdevice) resource exposes detailed information about the physical USB device through its status fields. This attributes are available in `.status.attributes`:
+
+- `vendorID`: USB vendor ID (hexadecimal format).
+- `productID`: USB product ID (hexadecimal format).
+- `bus`: USB bus number.
+- `deviceNumber`: USB device number on the bus.
+- `serial`: Device serial number.
+- `manufacturer`: Device manufacturer name.
+- `product`: Device product name.
+- `name`: Device name.
+
+#### USBDevice Conditions
+
+The [USBDevice](/modules/virtualization/cr.html#usbdevice) resource provides status conditions that reflect its readiness and attachment state.
+
+- **Ready**: Indicates whether the device is ready to use.
+  - `Ready`: Device is ready to use.
+  - `NotReady`: Device exists but is not ready.
+  - `NotFound`: Device is absent on the host.
+
+- **Attached**: Indicates whether the device is attached to a virtual machine.
+  - `AttachedToVirtualMachine`: Device is attached to a VM.
+  - `Available`: Device is available for attachment.
+  - `NoFreeUSBIPPort`: Device is requested by a VM but cannot be attached because there are no free USBIP ports on the target node. In this case, `Attached=False`.
+
+### Attaching USB Device to VM
+
+After the [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is available in a namespace, it can be attached to a virtual machine. To attach a USB device to a virtual machine, add the device to the `.spec.usbDevices` field of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource specification:
+
+```bash
+d8 k apply -f - <<EOF
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachine
+metadata:
+  name: linux-vm
+spec:
+  # ... other VM settings ...
+  usbDevices:
+    - name: logitech-webcam
+EOF
+```
+
+After creating or updating the VM, the USB device will be attached to the specified virtual machine.
+
+{% alert level="info" %}
+The virtual machine must be running on the same node where the USB device is physically connected.
+{% endalert %}
+
+{% alert level="warning" %}
+During VM migration, the USB device briefly disconnects and reconnects on the new node when the VM switches to it. If migration fails, the device will remain on the original node.
+{% endalert %}
+
+### Viewing USB Device Details
+
+To view detailed information about a USB device:
+
+```bash
+d8 k describe nodeusbdevice <device-name>
+```
+
+Example output:
+
+```console
+Name:         logitech-webcam
+Namespace:
+Labels:       <none>
+Annotations:  <none>
+API Version:  virtualization.deckhouse.io/v1alpha2
+Kind:         NodeUSBDevice
+Metadata:
+  Creation Timestamp:  2024-01-15T10:30:00Z
+  Generation:          1
+  UID:                 abc123-def456-ghi789
+Spec:
+  Assigned Namespace:  my-project
+Status:
+  Node Name:           node-2
+  Attributes:
+    Bus:               1
+    Device Number:     2
+    Manufacturer:      Logitech
+    Name:              Webcam C920
+    Product:           Webcam C920
+    Product ID:        082d
+    Serial:            ABC123456
+    Vendor ID:         046d
+  Conditions:
+    Type:              Ready
+    Status:            True
+    Reason:            Ready
+    Message:           Device is ready to use
+    Type:              Assigned
+    Status:            True
+    Reason:            Assigned
+    Message:           Namespace is assigned for the device
+  Observed Generation: 1
+```
+
+{% alert level="info" %}
+If a USB device is physically disconnected from the node, the `Attached` condition becomes `False`.  
+Both `USBDevice` and `NodeUSBDevice` resources update their status conditions to indicate that the device is no longer present on the host.
+{% endalert %}
+
+### Requirements and Limitations
+
+USB device passthrough has several operational requirements and limitations that must be considered before use:
+
+- The DRA driver must be installed on nodes where USB devices are to be discovered.
+- USB devices are forwarded to the VM node over the network using USBIP. The VM does not need to run on the same node where the device is physically connected. When connecting over the network, the following limitations on the number of devices and hub selection apply:
+  - Node can attach at most 16 USB devices: up to 8 on the USB 2.0 hub and up to 8 on the USB 3.0 hub.
+  - Hub is determined by the device speed and cannot be changed. A device that operates at USB 2.0 speed cannot be attached to the USB 3.0 hub, and vice versa.
+- USB devices support hot-plug — they can be attached to and detached from a running VM without stopping it.
+- USB device passthrough requires proper kernel modules on the node.
 
 ## Data export
 

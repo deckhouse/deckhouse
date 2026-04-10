@@ -289,7 +289,7 @@ func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutput
 		return nil, err
 	}
 
-	schemaStore := config.NewSchemaStore()
+	schemaStore := config.NewSchemaStore(nil)
 	_, err = schemaStore.Validate(&cloudDiscovery)
 	if err != nil {
 		return nil, fmt.Errorf("validate cloud_discovery_data: %v", err)

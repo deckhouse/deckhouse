@@ -1,0 +1,39 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - modulepackageversion.deckhouse.io/used-by-module
+  labels:
+    packages.deckhouse.io/draft: "true"
+    packages.deckhouse.io/package: test-module
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-test-module-v1.0.0
+  resourceVersion: "3"
+spec:
+  packageName: test-module
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
+status:
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'failed to get image: registry error'
+    reason: GetImageError
+    status: "False"
+    type: MetadataLoaded
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  creationTimestamp: null
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status:
+  syncTime: null

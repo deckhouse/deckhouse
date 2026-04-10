@@ -21,7 +21,7 @@ spec:
     kind: Deployment
     name: deckhouse
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: deckhouse
@@ -182,7 +182,7 @@ spec:
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
             - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
-              value: "false"
+              value: "true"
             - name: DECKHOUSE_ENABLE_MODULE_PACKAGES
               value: "false"
             - name: USE_NELM
@@ -273,6 +273,18 @@ spec:
                 secretKeyRef:
                   name: d8-otlp-tracing
                   key: token
+                  optional: true
+            - name: TRACING_OTLP_TLS_SKIP_VERIFY
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: tlsSkipVerify
+                  optional: true
+            - name: TRACING_OTLP_INSECURE
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: insecure
                   optional: true
           ports:
             - containerPort: 4222

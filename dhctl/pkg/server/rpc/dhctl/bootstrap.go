@@ -30,7 +30,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -47,7 +46,21 @@ type bootstrapParams struct {
 	request      *pb.BootstrapStart
 	switchPhase  phases.DefaultOnPhaseFunc
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.BootstrapResponse
+}
+
+func (p *bootstrapParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *bootstrapParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.BootstrapResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.BootstrapResponse {
+			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
 }
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
@@ -70,21 +83,6 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 		dataFunc: func(progress phases.Progress) *pb.BootstrapResponse {
 			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.BootstrapResponse {
-			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.BootstrapRequest, *pb.BootstrapResponse](server, receiveCh, doneCh, internalErrCh)
@@ -115,11 +113,11 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.bootstrapSafe(ctx, bootstrapParams{
+					result := s.bootstrapSafe(ctx, &bootstrapParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}}
 				}()
@@ -157,7 +155,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) bootstrapSafe(ctx context.Context, p bootstrapParams) (result *pb.BootstrapResult) {
+func (s *Service) bootstrapSafe(ctx context.Context, p *bootstrapParams) (result *pb.BootstrapResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -168,19 +166,13 @@ func (s *Service) bootstrapSafe(ctx context.Context, p bootstrapParams) (result 
 	return s.bootstrap(ctx, p)
 }
 
-func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.BootstrapResult {
+func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.BootstrapResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
@@ -310,6 +302,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		TmpDir:                     s.params.TmpDir,
 		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
+		DirectoryConfig:            s.params.DownloadDirConfig,
 	})
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)

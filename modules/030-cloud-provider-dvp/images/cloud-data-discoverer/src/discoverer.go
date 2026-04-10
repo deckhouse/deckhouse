@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"dvp-common/api"
 	"dvp-common/config"
@@ -32,6 +33,11 @@ import (
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+const (
+	stableDefaultAnnotation = "storageclass.kubernetes.io/is-default-class"
+	betaDefaultAnnotation   = "storageclass.beta.kubernetes.io/is-default-class"
 )
 
 type CloudConfig struct {
@@ -82,10 +88,20 @@ func (d *Discoverer) DiscoveryData(
 ) ([]byte, error) {
 	discoveryData := &cloudDataV1.DVPCloudProviderDiscoveryData{}
 	if len(cloudProviderDiscoveryData) > 0 {
-		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+		err := json.Unmarshal(cloudProviderDiscoveryData, discoveryData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
 		}
+	}
+
+	if discoveryData.APIVersion == "" {
+		discoveryData.APIVersion = "deckhouse.io/v1"
+	}
+	if discoveryData.Kind == "" {
+		discoveryData.Kind = "DVPCloudDiscoveryData"
+	}
+	if len(discoveryData.Zones) == 0 {
+		discoveryData.Zones = []string{"default"}
 	}
 
 	dvpClient, err := d.config.client()
@@ -176,8 +192,35 @@ func mergeStorageDomains(
 		return result[i].Name < result[j].Name
 	})
 
-	if len(result) > 0 {
-		result[0].IsDefault = true
+	for i := range result {
+		result[i].IsDefault = false
 	}
+
+	for _, sc := range cloudSds {
+		annotations := sc.GetAnnotations()
+		annotToCheck := []string{
+			stableDefaultAnnotation,
+			betaDefaultAnnotation,
+		}
+
+		isDefault := false
+		for _, annot := range annotToCheck {
+			if v, ok := annotations[annot]; ok && strings.ToLower(v) == "true" {
+				isDefault = true
+				break
+			}
+		}
+
+		if isDefault {
+			for i := range result {
+				if result[i].Name == sc.Name {
+					result[i].IsDefault = true
+					break
+				}
+			}
+			break
+		}
+	}
+
 	return result
 }

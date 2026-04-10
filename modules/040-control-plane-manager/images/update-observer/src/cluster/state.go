@@ -26,14 +26,19 @@ type State struct {
 	Status
 }
 
-func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneState, downgradeInProgress bool) *State {
+func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneState, versionSettings VersionSettings, maxUsedVersion string, downgradeInProgress bool) *State {
+	currentVersion := determineCurrentVersion(nodes.versions, controlPlane.versions, downgradeInProgress)
+
 	state := &State{
 		Spec: Spec{
 			DesiredVersion: cfg.DesiredVersion,
 			UpdateMode:     cfg.UpdateMode,
 		},
 		Status: Status{
-			CurrentVersion:    determineCurrentVersion(nodes.versions, controlPlane.versions, downgradeInProgress),
+			CurrentVersion:    currentVersion,
+			SupportedVersions: versionSettings.Supported,
+			AvailableVersions: versionSettings.Available(version.GetMax(maxUsedVersion, currentVersion)), // prevent stale list when maxUsedVersion updates post-calculation
+			AutomaticVersion:  versionSettings.Automatic,
 			ControlPlaneState: *controlPlane,
 			NodesState:        *nodes,
 		},
@@ -55,7 +60,7 @@ func (s *State) determineStatePhase() {
 	case ControlPlaneInconsistent:
 		phase = ClusterControlPlaneInconsistent
 	case ControlPlaneUpToDate:
-		if s.Spec.UpdateMode == UpdateModeAutomatic && s.CurrentVersion > s.Spec.DesiredVersion {
+		if s.Spec.UpdateMode == UpdateModeAutomatic && version.Compare(s.CurrentVersion, s.Spec.DesiredVersion) > 0 {
 			phase = ClusterVersionDrift
 			break
 		}
@@ -96,6 +101,9 @@ type Spec struct {
 
 type Status struct {
 	CurrentVersion    string
+	SupportedVersions []string
+	AvailableVersions []string
+	AutomaticVersion  string
 	ControlPlaneState ControlPlaneState
 	NodesState        NodesState
 	Phase             Phase

@@ -40,13 +40,6 @@ func (SingleSSHHostCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c SingleSSHHostCheck) Run(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, preflight.DefaultPreflightCheckTimeout)
-	defer cancel()
-
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
 	wrapper, ok := c.Node.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return nil

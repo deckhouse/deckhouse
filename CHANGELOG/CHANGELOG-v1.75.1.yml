@@ -1,0 +1,110 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix SecurityPolicyException handling for hostPorts-only exceptions
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18535
+cloud-provider-aws:
+  fixes:
+    - summary: fix CVE in cloud-provider-aws
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18057
+cloud-provider-azure:
+  fixes:
+    - summary: fix CVEs in cloud-provider-azure
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18240
+cloud-provider-dvp:
+  fixes:
+    - summary: fix CVEs in cloud-provider-dvp
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18446
+    - summary: fix CVEs in cloud-provider-dvp
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18258
+    - summary: >-
+        refactored CreateVolume to improve idempotency when disk.status.capacity is not yet reported
+        and standardized gRPC error handling
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17826
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: fix CVEs in cloud-provider-huaweicloud
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18465
+    - summary: fix CVEs in cloud-provider-huaweicloud
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18289
+cloud-provider-openstack:
+  fixes:
+    - summary: fix CVE in cloud-provider-openstack module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18253
+cloud-provider-yandex:
+  fixes:
+    - summary: fix CVEs in cloud-provider-yandex
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18291
+cloud-provider-zvirt:
+  features:
+    - summary: add customNetworkConfig
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18227
+    - summary: add customNetworkConfig
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17879
+  fixes:
+    - summary: fix CVEs in cloud-provider-zvirt
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18257
+    - summary: docs fox
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18242
+cni-cilium:
+  fixes:
+    - summary: fixed mount-points in agent
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18506
+deckhouse:
+  fixes:
+    - summary: Bump nelm version with deadlock fix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18586
+dhctl:
+  fixes:
+    - summary: Fix restart bootstrap during creating additional nodes in cloud permanent node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18525
+    - summary: Аix non-strict unmarshalling for metaconfigs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18359
+    - summary: Fix deadlock in converge.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18335
+docs:
+  fixes:
+    - summary: Added the display of all used component versions in modules on the OSS info page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18477
+    - summary: Add support for highlighting unknown code block types.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18451
+    - summary: Fix alerts rendering.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18204
+    - summary: Moving the platform update section to the top in the sidebar.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18176
+    - summary: Changing the term metka to label in Russian-language documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18164
+    - summary: Escape HTML in OpenAPI descriptions v2
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18106
+    - summary: Added info about using update-observer according to
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18100
+extended-monitoring:
+  fixes:
+    - summary: fix typo in image-availability-exporter template
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18595
+istio:
+  fixes:
+    - summary: cve fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18523
+      impact: ingressgateway, istio-cni-node, istiod, kiali, operator pods will be restarted after update
+loki:
+  features:
+    - summary: Added generation and usage of a dedicated TLS server certificate for Loki kube-rbac-proxy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18268
+registry:
+  fixes:
+    - summary: fixed path in images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18245
+    - summary: Updated auth image Go dependencies to fix Go CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18233
+      impact: Registry pods will be restarted.
+registry-packages-proxy:
+  fixes:
+    - summary: fix possible deadlock in cache retention policy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18505
+tools:
+  fixes:
+    - summary: Added HTTP client proxy support
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18579
+    - summary: Bump lib-helm version to 1.71.2
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18360
+

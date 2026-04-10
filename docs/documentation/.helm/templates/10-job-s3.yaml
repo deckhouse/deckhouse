@@ -20,20 +20,41 @@ spec:
       containers:
       - name: s3-loader
         image: {{ index .Values.werf.image "website-docs/s3-loader" }}
+        args: []
         command:
-          - aws
-        args:
-          - s3
-          - sync
-          - /embedded-modules
-          - s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/modules/
-          - --ca-bundle
-          - /.aws/s3-root.crt
-          - --delete
-          - --endpoint-url
-          - https://{{ .Values.global.doc_s3_ep }}
-          - --region
-          - {{ .Values.global.doc_s3_region }}
+          - /bin/bash
+          - -c
+          - |
+            mkdir -p /data
+            common_list_path="/data/embedded_modules_list.json"
+            common_list_changes_path="${common_list_path}-changes.json"
+            common_list_s3_path="s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/embedded_modules_list.json"
+            version="{{ .VersionURLNormalized }}"
+            version_list_path="/embedded-modules/embedded_modules_list.json"
+
+            download_error=""
+            if ! download_error="$(aws s3 cp "$common_list_s3_path" "$common_list_path" --ca-bundle /.aws/s3-root.crt --endpoint-url https://{{ .Values.global.doc_s3_ep }} --region {{ .Values.global.doc_s3_region }} 2>&1)"; then
+              if [[ "$download_error" == *"(404)"* ]] || [[ "$download_error" == *"does not exist"* ]]; then
+                echo "Common modules list is absent in S3, it will be created"
+              else
+                echo "$download_error" >&2
+                exit 1
+              fi
+            else
+              echo "Downloaded common modules list from S3"
+            fi
+
+            /bin/bash "/patch-modules-list.sh" "$common_list_path" "$version" "$version_list_path"
+
+            if [[ -f "$common_list_changes_path" ]]; then
+              echo "Uploading common modules list..."
+              aws s3 cp "$common_list_changes_path" "$common_list_s3_path" --ca-bundle /.aws/s3-root.crt --endpoint-url https://{{ .Values.global.doc_s3_ep }} --region {{ .Values.global.doc_s3_region }}
+            else
+              echo "Common modules list is up to date"
+            fi
+
+            echo "Uploading modules..."
+            aws s3 sync /embedded-modules s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/modules/ --ca-bundle /.aws/s3-root.crt --delete --endpoint-url https://{{ .Values.global.doc_s3_ep }} --region {{ .Values.global.doc_s3_region }}
         env:
           - name: AWS_ACCESS_KEY_ID
             value: {{ .Values.global.doc_s3_access_key_id }}

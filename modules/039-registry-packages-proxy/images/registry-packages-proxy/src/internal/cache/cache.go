@@ -244,13 +244,13 @@ func (c *Cache) applyRetentionPolicy() {
 		lowestTime := time.Now()
 
 		c.Lock()
-		defer c.Unlock()
 		for k, v := range c.storage {
 			if lowestTime.Compare(v.lastAccessTime) >= 0 {
 				oldestDigest = k
 			}
 		}
 		delete(c.storage, oldestDigest)
+		c.Unlock()
 	}
 }
 

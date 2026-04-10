@@ -9,23 +9,23 @@ import:
     owner: 1337
     group: 1337
     before: install
-  - image: libs/glibc-v2.41
+  - from: {{ index $.Images "libs/glibc-v2.41" }}
     add: /lib64/libc.so.6
     to: /lib64/libc.so.6
     before: install
-  - image: libs/glibc-v2.41
+  - from: {{ index $.Images "libs/glibc-v2.41" }}
     add: /lib64/libm.so.6
     to: /lib64/libm.so.6
     before: install
-  - image: libs/glibc-v2.41
+  - from: {{ index $.Images "libs/glibc-v2.41" }}
     add: /lib64/ld-linux-x86-64.so.2
     to: /lib64/ld-linux-x86-64.so.2
     before: install
-  - image: libs/xz-v5.8.1
+  - from: {{ index $.Images "libs/xz-v5.8.1" }}
     add: /usr/lib/libc.so
     to: /lib64/libc.so
     before: install
-  - image: tools/gcc-gnu-releases/gcc-14.2.0
+  - from: {{ index $.Images "tools/gcc-gnu-releases/gcc-14.2.0" }}
     add: /usr/lib/libgcc_s.so.1
     to: /lib64/libgcc_s.so.1
     before: install

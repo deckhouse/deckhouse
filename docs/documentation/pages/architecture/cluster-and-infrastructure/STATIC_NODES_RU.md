@@ -1,6 +1,6 @@
 ---
 title: Управление Static-узлами
-permalink: ru/architecture/cluster-and-infrastructure/static-nodes.html
+permalink: ru/architecture/cluster-and-infrastructure/node-management/static-nodes.html
 lang: ru
 search: static узлы, статические узлы
 description: Архитектура модуля node-manager для Static-узлов.
@@ -19,8 +19,8 @@ description: Архитектура модуля node-manager для Static-уз
 
 Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
-![Архитектура модуля node-manager для Static-узлов](../../../images/architecture/cluster-and-infrastructure/c4-l2-static-nodes.ru.png)
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+![Архитектура модуля node-manager для Static-узлов](../../../../images/architecture/cluster-and-infrastructure/c4-l2-static-nodes.ru.png)
 
 ## Компоненты модуля
 
@@ -41,7 +41,7 @@ Bashible — это ключевой компонент подсистемы Clu
 
    CAPS представляет собой дополнительный слой абстракции над существующим функционалом DKP по автоматической настройке и очистке статических узлов с помощью скриптов, генерируемых для каждой группы узлов. Компонент не привязан к конкретному облаку. Подробнее про работу CAPS можно почитать в [документации модуля `node-manager`](/modules/node-manager/#работа-со-статическими-узлами).
 
-4. **Early-oom** (DaemonSet) — на каждом узле разворачивается под, который считывает из каталога `/proc` метрики по загрузке ресурсов на хосте и в случае повышенной нагрузки завершает поды раньше, чем это сделает [kubelet](../kubernetes-and-scheduling/kubelet.html). **Early-oom** по умолчанию включен, но его можно отключить в [настройках модуля](/modules/node-manager/configuration.html#parameters-earlyoomenabled) в случае, если он создаёт проблемы для нормальной работы узлов.
+4. **Early-oom** (DaemonSet) — на каждом узле разворачивается под, который считывает из каталога `/proc` метрики по загрузке ресурсов на хосте и в случае повышенной нагрузки завершает поды раньше, чем это сделает [kubelet](../../kubernetes-and-scheduling/kubelet.html). **Early-oom** по умолчанию включен, но его можно отключить в [настройках модуля](/modules/node-manager/configuration.html#parameters-earlyoomenabled) в случае, если он создаёт проблемы для нормальной работы узлов.
 
    Включает в себя следующие контейнеры:
 

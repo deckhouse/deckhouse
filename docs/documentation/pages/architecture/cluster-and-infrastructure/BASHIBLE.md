@@ -1,6 +1,6 @@
 ---
 title: Bashible
-permalink: en/architecture/cluster-and-infrastructure/bashible.html
+permalink: en/architecture/cluster-and-infrastructure/node-management/bashible.html
 search: bashible architecture, bashible-api-server
 description: Bashible architecture in Deckhouse Kubernetes Platform — executing bash scripts for node configuration, bashible-api-server operation.
 ---

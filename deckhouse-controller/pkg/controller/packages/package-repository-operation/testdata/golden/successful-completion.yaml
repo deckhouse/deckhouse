@@ -30,7 +30,8 @@ status:
     type: Completed
   packages:
     processed:
-    - name: v1.0.0
+    - foundVersions: 1
+      name: v1.0.0
       type: Application
     processedOverall: 1
     total: 1

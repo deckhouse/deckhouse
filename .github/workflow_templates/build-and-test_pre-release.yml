@@ -49,60 +49,18 @@ jobs:
 {!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
-  build_ee:
-    name: Build EE
+{!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
+  build_{!{$werfEnv}!}:
+    name: Build {!{$werfEnv}!}
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - build_fe
     env:
-      WERF_ENV: "EE"
+      WERF_ENV: "{!{$werfEnv}!}"
 {!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  build_se:
-    name: Build SE
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "SE"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  build_se_plus:
-    name: Build SE-plus
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "SE-plus"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  build_be:
-    name: Build BE
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "BE"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  build_ce:
-    name: Build CE
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "CE"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}   
+{!{ end }!}
 
   doc_web_build:
     name: Doc web build
@@ -287,11 +245,8 @@ jobs:
     name: Compare internal modules
     needs:
       - build_fe
-      - build_ee
-      - build_ce
-      - build_be
-      - build_se
-      - build_se_plus
+{!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
+      - build_{!{$werfEnv}!}{!{ end }!}
     if: ${{ always() && needs.build_fe.result == 'success' }}
     runs-on: regular
     steps:

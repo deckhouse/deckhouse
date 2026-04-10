@@ -2,7 +2,7 @@
 layout: sidebar
 ---
 
-<div class="docs">
+<div class="docs {{ page.custom_class | default: '' }}">
     <div class="docs__wrap-title">
         <h1 class="docs__title">{{ page.title }}</h1>
     </div>
@@ -46,9 +46,8 @@ layout: sidebar
     {%- include disqus.html %}
         {%- endif %}
 
+        {%- include related_links.liquid %}
     </div>
-
-    {%- include related_links.liquid %}
 
     {%- if page.showPrevNextButton %}
       {%- include navigation.html -%}

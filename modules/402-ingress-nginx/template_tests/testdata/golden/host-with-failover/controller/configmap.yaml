@@ -32,7 +32,7 @@ data:
   proxy-send-timeout: "3600"
   proxy-set-headers: d8-ingress-nginx/solid-custom-headers
   server-name-hash-bucket-size: "256"
-  server-snippet: |-
+  server-snippet: |
     if ($d8_ingreess_nginx_access_restricted = "yes") {
       return 444;
     }

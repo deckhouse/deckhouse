@@ -1,0 +1,9 @@
+- name: Example service
+  id: example-service
+  versions:
+    - condition:
+        k8s: ["<=1.34"]
+      version: 1.2.1
+    - condition:
+        k8s: ["1.35"]
+      version: 1.3.1

@@ -154,6 +154,8 @@ spec:
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+          seccompProfile:
+            type: Unconfined
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
@@ -468,6 +470,8 @@ spec:
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+          seccompProfile:
+            type: Unconfined
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx

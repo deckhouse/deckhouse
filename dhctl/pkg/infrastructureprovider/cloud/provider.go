@@ -46,8 +46,8 @@ type InfrastructureUtilProviderParams struct {
 }
 
 type InfrastructureUtilProvider interface {
-	DownloadTerraform(ctx context.Context, params InfrastructureUtilProviderParams, destination string) error
-	DownloadOpenTofu(ctx context.Context, params InfrastructureUtilProviderParams, destination string) error
+	DownloadTerraform(ctx context.Context, params InfrastructureUtilProviderParams, destination string, conf *config.MetaConfig) error
+	DownloadOpenTofu(ctx context.Context, params InfrastructureUtilProviderParams, destination string, conf *config.MetaConfig) error
 }
 
 type InfrastructurePluginProviderParams struct {
@@ -56,7 +56,7 @@ type InfrastructurePluginProviderParams struct {
 }
 
 type InfrastructurePluginProvider interface {
-	DownloadPlugin(ctx context.Context, params InfrastructurePluginProviderParams, destination string) error
+	DownloadPlugin(ctx context.Context, params InfrastructurePluginProviderParams, destination string, conf *config.MetaConfig) error
 }
 
 type ModulesParams struct {

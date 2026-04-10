@@ -8367,6 +8367,7 @@ cape/SM
 Capet/M
 Capetown/M
 Caph/M
+capiEmergencyBrake
 capillarity/MS
 capillary/S
 Capistrano/M
@@ -16954,6 +16955,7 @@ duty/SM
 Duvalier/M
 duvet/SM
 duxes
+dvcr
 Dvina/M
 Dvor�k/M
 Dwain/M
@@ -18631,6 +18633,7 @@ Ernst/M
 Erny/M
 erode/SDG
 erodible
+EROFS
 erogenous
 erosible
 erosional
@@ -22642,6 +22645,7 @@ Gaziantep/M
 gazillion/S
 gazpacho/MS
 GB
+gb
 G/B
 Gdansk/M
 Gd/M
@@ -23675,6 +23679,7 @@ GP
 GPA
 GPO
 GPSS
+gpu
 gr
 grabbed
 grabber/SM
@@ -35674,6 +35679,7 @@ midwives
 midyear/MS
 mien/M
 miff/GDS
+mig
 mightily
 mightiness/MS
 mightn't
@@ -37679,6 +37685,7 @@ ND
 N'Djamena
 Ndjamena/M
 Nd/M
+NGC
 Ne
 NE
 Neala/M
@@ -38058,7 +38065,9 @@ NF
 NFC
 NFL
 NFS
+ng
 Ngaliema/M
+NGCs
 Nguyen/M
 NH
 NHL
@@ -39035,6 +39044,7 @@ nutting
 nutty/TRP
 nuzzle/GZRSD
 NV
+nvidia
 NW
 NWT
 NY
@@ -41117,6 +41127,7 @@ partaken
 partaker/M
 partake/ZGSR
 part/CDGS
+partedConfig
 parterre/MS
 parter/S
 parthenogeneses
@@ -41145,6 +41156,7 @@ parting/MS
 partisanship/SM
 partisan/SM
 partition/AMRDGS
+partitionCount
 partitioned/U
 partitioner/M
 partitive/S
@@ -44705,6 +44717,7 @@ Ptolemaic
 Ptolemaists
 Ptolemy/MS
 ptomaine/MS
+ptrace
 Pu
 pubbed
 pubbing
@@ -46396,6 +46409,7 @@ Reinhard/M
 Reinhardt/M
 Reinhold/M
 Reinold/M
+reinstallation
 reinstate/L
 reinstatement/MS
 reinsurance
@@ -47513,6 +47527,7 @@ Rockie/M
 rockiness/MS
 Rockland/M
 Rock/M
+ROCm
 Rockne/M
 Rockville/M
 Rockwell/M
@@ -51345,6 +51360,7 @@ smelly/TRP
 smelter/M
 smelt/SRDGZ
 Smetana/M
+smi
 smidgen/MS
 smilax/MS
 smile/GMDSR
@@ -52490,6 +52506,7 @@ sputter/DRGS
 sputum/M
 spy/DRSGM
 spyglass/MS
+sshd
 sq
 sqq
 sqrt
@@ -52707,6 +52724,7 @@ standardizer/M
 standardizes/A
 standard/YMS
 standby
+standbyHolder
 standbys
 standee/MS
 Standford/M
@@ -56477,6 +56495,7 @@ tomfoolery/MS
 tomfool/M
 Tomi/M
 Tomkin/M
+toml
 Tomlin/M
 Tom/M
 tommed
@@ -58875,6 +58894,7 @@ uttered/U
 utterer/M
 uttermost/S
 utter/TRDYGS
+uuidgen
 uucp/M
 UV
 uvula/MS
@@ -59724,6 +59744,7 @@ visualizer/M
 visualizes/A
 visualize/SRDZG
 visual/SY
+visudo
 vitae
 vitality/MS
 vitalization/AMS
@@ -61697,6 +61718,7 @@ Yalonda/M
 Yalow/M
 Yalta/M
 Yalu/M
+yama
 Yamaha/M
 yammer/RDZGS
 Yamoussoukro

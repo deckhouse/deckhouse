@@ -172,21 +172,25 @@ func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncid
 // Each group/probe should have only 1 Episode per Start.
 func combineEpisodesByTimeslot(episodes []check.Episode, slotSize time.Duration) []check.Episode {
 	// It could have been a more shallow map map[string][]check.Episode, the key being
-	//           fmt.Sprintf("%s-%d", probeId, start)
+	//           fmt.Sprintf("%s-%d", probeID, start)
 	idx := make(map[string]map[int64][]int)
 	for i, episode := range episodes {
-		probeId := episode.ProbeRef.Id()
-		if _, ok := idx[probeId]; !ok {
-			idx[probeId] = make(map[int64][]int)
+		probeID := episode.ProbeRef.Id()
+		if _, ok := idx[probeID]; !ok {
+			idx[probeID] = make(map[int64][]int)
 		}
 		start := episode.TimeSlot.Unix()
-		if _, ok := idx[probeId][start]; !ok {
-			idx[probeId][start] = make([]int, 0)
+		if _, ok := idx[probeID][start]; !ok {
+			idx[probeID][start] = make([]int, 0)
 		}
-		idx[probeId][start] = append(idx[probeId][start], i)
+		idx[probeID][start] = append(idx[probeID][start], i)
 	}
 
-	newEpisodes := make([]check.Episode, 0)
+	total := 0
+	for _, timeslots := range idx {
+		total += len(timeslots)
+	}
+	newEpisodes := make([]check.Episode, 0, total)
 	for _, timeslots := range idx {
 		for _, indices := range timeslots {
 			ep := episodes[indices[0]]

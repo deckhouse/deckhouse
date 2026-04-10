@@ -21,6 +21,7 @@ import (
 	"time"
 
 	flantkubeclient "github.com/flant/kube-client/client"
+	"github.com/name212/govalue"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,12 +38,17 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
+type ClientSwitcher interface {
+	SwitchClientsToAnotherNodeIfNeed(ctx context.Context, nodeName, ip string) error
+}
+
 type HookForUpdatePipeline struct {
 	*Checker
 	kubeGetter        kubernetes.KubeClientProvider
 	nodeToConverge    string
 	oldMasterIPForSSH string
 	commanderMode     bool
+	clientSwitcher    ClientSwitcher
 }
 
 func NewHookForUpdatePipeline(
@@ -103,6 +109,11 @@ func (h *HookForUpdatePipeline) WithConfirm(confirm func(msg string) bool) *Hook
 	return h
 }
 
+func (h *HookForUpdatePipeline) WithClientSwitcher(s ClientSwitcher) *HookForUpdatePipeline {
+	h.clientSwitcher = s
+	return h
+}
+
 func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
 	if runner.GetChangesInPlan() != plan.HasDestructiveChanges {
 		return false, nil
@@ -137,6 +148,12 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		h.oldMasterIPForSSH = ""
 		log.InfoF("Got empty master IP for ssh for node %s.\n", h.nodeToConverge)
 		return false, nil
+	}
+
+	if !govalue.IsNil(h.clientSwitcher) && h.nodeToConverge != "" {
+		if err := h.clientSwitcher.SwitchClientsToAnotherNodeIfNeed(ctx, h.nodeToConverge, masterIP); err != nil {
+			return false, err
+		}
 	}
 
 	h.oldMasterIPForSSH = masterIP

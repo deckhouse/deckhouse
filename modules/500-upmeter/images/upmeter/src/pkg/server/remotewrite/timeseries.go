@@ -27,10 +27,10 @@ import (
 )
 
 func convEpisodes2Timeseries(timeslot time.Time, episodes []*check.Episode, commonLabels []*prompb.Label) []*prompb.TimeSeries {
-	tss := make([]*prompb.TimeSeries, 0)
+	tss := make([]*prompb.TimeSeries, 0, 4*len(episodes))
 
 	for _, ep := range episodes {
-		var labels []*prompb.Label
+		labels := make([]*prompb.Label, 0, len(commonLabels)+4)
 		labels = append(labels, episodeLabels(ep)...)
 		labels = append(labels, commonLabels...)
 

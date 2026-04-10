@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 {{ include "candi_generic_imports" (dict "Env" .Env) }}
 

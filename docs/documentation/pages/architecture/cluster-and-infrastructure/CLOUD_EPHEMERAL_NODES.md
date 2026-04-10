@@ -1,6 +1,6 @@
 ---
 title: CloudEphemeral node management
-permalink: en/architecture/cluster-and-infrastructure/cloud-ephemeral-nodes.html
+permalink: en/architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html
 search: cloudephemeral nodes
 description: Architecture of the node-manager module for CloudEphemeral nodes.
 ---
@@ -18,7 +18,8 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) module and its interactions with other Deckhouse Kubernetes Platform (DKP) components are shown in the following diagram:
 
-![Node-manager architecture for CloudEphemeral nodes](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-ephemeral-nodes.png)
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
+![Node-manager architecture for CloudEphemeral nodes](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-ephemeral-nodes.png)
 
 ## Module components
 
@@ -35,14 +36,14 @@ The module managing CloudEphemeral nodes consists of the following components:
    * **control-plane-manager**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to controller metrics.
 
-3. **Cluster-autoscaler** (Deployment): An additional [Kubernetes component](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler) that automatically adjusts the number of nodes in the cluster based on workload. For more details, refer to the [node management documentation section](/products/kubernetes-platform/documentation/v1/architecture/node.html#cloud-node-scaling).
+3. **Cluster-autoscaler** (Deployment): An additional [Kubernetes component](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler) that automatically adjusts the number of nodes in the cluster based on workload. For more details, refer to the [node management documentation section](overview.html#cloud-node-scaling).
 
    The component includes:
 
    * **cluster-autoscaler**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cluster-autoscaler metrics.
 
-4. **Early-oom** (DaemonSet): A pod deployed on every node. It reads resource load metrics from `/proc` and terminates pods under high load before [kubelet](../kubernetes-and-scheduling/kubelet.html) does. Enabled by default, but can be disabled in the [module configuration](/modules/node-manager/configuration.html#parameters-earlyoomenabled) if it causes issues for normal node operation.
+4. **Early-oom** (DaemonSet): A pod deployed on every node. It reads resource load metrics from `/proc` and terminates pods under high load before [kubelet](../../kubernetes-and-scheduling/kubelet.html) does. Enabled by default, but can be disabled in the [module configuration](/modules/node-manager/configuration.html#parameters-earlyoomenabled) if it causes issues for normal node operation.
 
    Includes the following containers:
 

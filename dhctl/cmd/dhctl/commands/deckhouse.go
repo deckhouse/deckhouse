@@ -98,7 +98,9 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
-			))
+			),
+			app.GetDirConfig(),
+		)
 		if err != nil {
 			return err
 		}

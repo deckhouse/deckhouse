@@ -109,7 +109,7 @@ func TestInitStateLoader(t *testing.T) {
 					testCreateMetaConfigForInitLoaderTestInCluster(t, tst)
 					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, tst.params.LoggerProvider())
 					ctx := context.TODO()
-					_, err := loader.PopulateMetaConfig(ctx)
+					_, err := loader.PopulateMetaConfig(ctx, nil)
 					require.NoError(t, err, "populate metaconfig before test")
 					_, _, err = loader.PopulateClusterState(ctx)
 					require.NoError(t, err, "populate state before test")
@@ -311,7 +311,7 @@ func (ts *testInitStateLoader) do(t *testing.T) {
 		return
 	}
 
-	metaConfig, err := stateLoader.PopulateMetaConfig(ctx)
+	metaConfig, err := stateLoader.PopulateMetaConfig(ctx, nil)
 	createAssertError(ts.hasLoadMetaConfigError, "should load metaconfig", "should not load metaconfig")(t, err)
 
 	if !ts.hasLoadMetaConfigError {

@@ -46,6 +46,8 @@
 # - Remove old directories (based on information from deckhouse_hosts_state.json)
 # - Save the new state to deckhouse_hosts_state.json
 
+
+# Need for bootstrap Local and Proxy registry modes
 discovered_node_ip="$(bb-d8-node-ip)"
 
 {{- range $host_name, $host_values := .registry.hosts }}

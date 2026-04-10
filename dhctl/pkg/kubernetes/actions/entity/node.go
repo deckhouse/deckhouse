@@ -31,7 +31,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
@@ -451,7 +450,7 @@ var (
 )
 
 func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, loopParams retry.Params) ([]NodeIP, error) {
-	selector, err := kubernetes.GetLabelSelector(global.NodeGroupLabel, selection.Equals, []string{global.MasterNodeGroupName})
+	selector, err := kubernetes.GetMasterNodeGroupLabelSelector()
 	if err != nil {
 		return nil, err
 	}

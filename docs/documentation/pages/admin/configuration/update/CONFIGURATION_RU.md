@@ -24,7 +24,7 @@ d8 k get mc deckhouse -o yaml | grep releaseChannel
 Пример вывода:
 
 ```console
-    releaseChannel: Stable
+releaseChannel: Stable
 ```
 
 ## Смена канала обновлений

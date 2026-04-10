@@ -1,6 +1,6 @@
 ---
 title: Управление CloudPermanent-узлами
-permalink: ru/architecture/cluster-and-infrastructure/cloud-permanent-nodes.html
+permalink: ru/architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html
 lang: ru
 search: cloudpermanent узлы
 description: Архитектура модуля node-manager для CloudPermanent-узлов.
@@ -19,8 +19,8 @@ description: Архитектура модуля node-manager для CloudPerman
 
 Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
-![Архитектура модуля node-manager для CloudPermanent-узлов](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-permanent-nodes.ru.png)
+<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
+![Архитектура модуля node-manager для CloudPermanent-узлов](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-permanent-nodes.ru.png)
 
 ## Компоненты модуля
 
@@ -32,7 +32,7 @@ Bashible — это ключевой компонент подсистемы Clu
 
 1. **Bashible-api-server** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), развернутый на master-узлах. Генерирует bashible-скрипты из шаблонов, хранящихся в кастомных ресурсах. При обращении к kube-apiserver за ресурсами, содержащими бандлы bashible, kube-apiserver перенаправляет запрос в bashible-api-server и возвращает сформированный результат. Подробнее с описанием работы bashible и bashible-api-server можно ознакомиться в [соответствующем разделе документации](bashible.html).
 
-2. **Early-oom** (DaemonSet) — на каждом узле разворачивается под, который считывает из каталога `/proc` метрики по загрузке ресурсов на хосте и в случае повышенной нагрузки завершает поды раньше, чем это сделает [kubelet](../kubernetes-and-scheduling/kubelet.html). **Early-oom** по умолчанию включен, но его можно отключить в [настройках модуля](/modules/node-manager/configuration.html#parameters-earlyoomenabled) в случае, если он создаёт проблемы для нормальной работы узлов.
+2. **Early-oom** (DaemonSet) — на каждом узле разворачивается под, который считывает из каталога `/proc` метрики по загрузке ресурсов на хосте и в случае повышенной нагрузки завершает поды раньше, чем это сделает [kubelet](../../kubernetes-and-scheduling/kubelet.html). **Early-oom** по умолчанию включен, но его можно отключить в [настройках модуля](/modules/node-manager/configuration.html#parameters-earlyoomenabled) в случае, если он создаёт проблемы для нормальной работы узлов.
 
    Включает в себя следующие контейнеры:
 
@@ -78,7 +78,7 @@ Bashible — это ключевой компонент подсистемы Clu
 ## Особенности архитектуры, специфичные для CloudPermanent-узлов
 
 1. Узлы постоянны, создаются, управляются и удаляются пользователем. Пользователь управляет узлами не напрямую в инфраструктуре, а через утилиту **dhctl**, запущенную в инсталляторе DKP.
-2. `Terraform-manager` — [модуль](/modules/terraform-manager/), используемый для автоматического управления ресурсами облачной инфраструктуры. Он проверяет состояние Terraform и применяет недеструктивные изменения к инфраструктурным ресурсам. С архитектурой модуля можно ознакомиться на [соответствующей странице документации](terraform-manager.html).
+2. `Terraform-manager` — [модуль](/modules/terraform-manager/), используемый для автоматического управления ресурсами облачной инфраструктуры. Он проверяет состояние Terraform и применяет недеструктивные изменения к инфраструктурным ресурсам. С архитектурой модуля можно ознакомиться на [соответствующей странице документации](../infrastructure/terraform-manager.html).
 3. **Csi-driver** — используется для заказа дисков в облачной инфраструктуре.
 4. **Cloud-controller-manager** — используется для заказа балансировщиков и прочих инфраструктурных ресурсов согласно своей спецификации.
 5. **Infrastructure-provider** — не требуется, вся работа с узлами осуществляется пользователем через утилиту **dhctl** и модуль **terraform-manager**.
