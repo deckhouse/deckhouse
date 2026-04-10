@@ -233,26 +233,23 @@ $(document).ready(function () {
 });
 
 $(document).ready(function () {
-  const titles = $('.resources__prop_name');
-  const links = $('.resources__prop_wrap .anchorjs-link');
-
-  links.each((i, link) => {
-    $(link).click((e) => {
+  // Use delegated handlers so toggle works for dynamically rendered docs content.
+  $(document)
+    .off('click.resourcesToggleLink', '.resources__prop_wrap .anchorjs-link')
+    .on('click.resourcesToggleLink', '.resources__prop_wrap .anchorjs-link', function (e) {
       e.stopPropagation();
-    })
-  })
+    });
 
-  titles.each((i, title) => {
-    $(title).click(() => {
-      const firstList = $(title).parent('.resources__prop_wrap').parent('li').parent('ul');
+  $(document)
+    .off('click.resourcesToggle', '.resources__prop_name')
+    .on('click.resourcesToggle', '.resources__prop_name', function () {
+      const parentElem = $(this).closest('li');
+      const firstList = parentElem.parent('ul');
 
-      if (firstList.hasClass('resources')) return;
-
-      const parentElem = $(title).parent('.resources__prop_wrap').parent('li');
+      if (firstList.hasClass('resources') && !parentElem.hasClass('top-level-toggleable')) return;
 
       parentElem.toggleClass('closed');
-    })
-  })
+    });
 });
 
 const openDiagram = function () {

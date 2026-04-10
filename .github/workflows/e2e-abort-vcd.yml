@@ -83,7 +83,7 @@ jobs:
   # <template: check_e2e_labels_job>
   check_e2e_labels:
     name: Check e2e labels
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     permissions:
       contents: read
       issues: write

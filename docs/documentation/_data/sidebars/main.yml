@@ -1267,6 +1267,14 @@ entries:
                 ru: Облачные провайдеры
               folders:
                 - title:
+                    en: Cloud-provider-aws module
+                    ru: Модуль cloud-provider-aws
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-aws.html
+                - title:
+                    en: Cloud-provider-azure module
+                    ru: Модуль cloud-provider-azure
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-azure.html
+                - title:
                     en: Cloud-provider-dvp module
                     ru: Модуль cloud-provider-dvp
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dvp.html
@@ -1274,6 +1282,10 @@ entries:
                     en: Cloud-provider-dynamix module
                     ru: Модуль cloud-provider-dynamix
                   url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dynamix.html
+                - title:
+                    en: Cloud-provider-gcp module
+                    ru: Модуль cloud-provider-gcp
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-gcp.html
                 - title:
                     en: Cloud-provider-huaweicloud module
                     ru: Модуль cloud-provider-huaweicloud

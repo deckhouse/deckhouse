@@ -1264,6 +1264,27 @@ a.comparison-table__module-proprietaryOkmeter::after {
     }
 }
 
+/* Top-level CRD status block: use default expand/collapse visuals. */
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name {
+    cursor: pointer;
+}
+
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name > .plus-icon {
+    display: none;
+}
+
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name > .minus-icon {
+    display: inline-block;
+}
+
+.docs ul.resources > li.top-level-toggleable.closed > .resources__prop_wrap > .resources__prop_name > .plus-icon {
+    display: inline-block;
+}
+
+.docs ul.resources > li.top-level-toggleable.closed > .resources__prop_wrap > .resources__prop_name > .minus-icon {
+    display: none;
+}
+
 .docs ul.resources ul > li:not(.resources__prop_description li) {
     padding-top: variables.$text-spacing-l;
     padding-bottom: 16px;

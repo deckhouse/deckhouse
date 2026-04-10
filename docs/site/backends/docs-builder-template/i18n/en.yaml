@@ -139,6 +139,7 @@ currency_sign: "$"
 commercial: Available in some commercial editions.
 notAvailableInThisEdition: Available in other commercial editions.
 default_value: default
+default_empty_string_value: ‘’
 platform: platform
 pattern: pattern
 example: example

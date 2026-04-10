@@ -1,3 +1,5 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if .Values.deckhouseTools.internal.deployDexAuthenticator }}
 ---
 apiVersion: deckhouse.io/v1
@@ -10,6 +12,10 @@ spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "tools") }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "tools-ingress-tls") }}
+    {{- if $moduleGateway }}
+  gatewayAPI:
+    applicationHTTPRouteListenerSetName: "deckhouse-tools"
+    {{- end }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- with .Values.deckhouseTools.auth.allowedUserEmails }}

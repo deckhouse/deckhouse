@@ -7,6 +7,14 @@
   {{- end }}
 {{- end }}
 
+{{- define "publish_api_http_route_certificate_name" }}
+  {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
+{{- include "helm_lib_module_https_secret_name" (list . "kubernetes-httproute-tls") }}
+  {{- else }}
+{{- include "publish_api_certificate_name" . }}
+  {{- end }}
+{{- end }}
+
 
 {{- define "publish_api_deploy_certificate" }}
   {{- if .Values.userAuthn.publishAPI.enabled }}
