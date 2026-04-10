@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package rpp
 
 import (
 	"bufio"
@@ -23,47 +23,35 @@ import (
 	"sync"
 )
 
-const (
-	resultInstalled = "installed"
-	resultSkipped   = "skipped"
-	resultRemoved   = "removed"
-)
-
-type resultRecorder struct {
+type ResultRecorder struct {
 	file *os.File
 	w    *bufio.Writer
 	mu   sync.Mutex
 }
 
-func newResultRecorder(path string) *resultRecorder {
+func NewResultRecorder(path string) (*ResultRecorder, error) {
 	if path == "" {
-		return nil
+		return nil, nil
 	}
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
-		// Return a recorder that will surface the error on the first record() call.
-		// This keeps the nil-safe contract without silently dropping results.
-		return &resultRecorder{}
+		return nil, fmt.Errorf("open result file: %w", err)
 	}
 
-	return &resultRecorder{
+	return &ResultRecorder{
 		file: file,
 		w:    bufio.NewWriter(file),
-	}
+	}, nil
 }
 
-func (r *resultRecorder) record(action, packageName string) error {
+func (r *ResultRecorder) record(action, packageName string) error {
 	if r == nil {
 		return nil
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	if r.file == nil {
-		return fmt.Errorf("result file is not open")
-	}
 
 	if _, err := fmt.Fprintf(r.w, "%s %s\n", action, packageName); err != nil {
 		return fmt.Errorf("write result file: %w", err)
@@ -76,7 +64,7 @@ func (r *resultRecorder) record(action, packageName string) error {
 	return nil
 }
 
-func (r *resultRecorder) close() error {
+func (r *ResultRecorder) Close() error {
 	if r == nil || r.file == nil {
 		return nil
 	}

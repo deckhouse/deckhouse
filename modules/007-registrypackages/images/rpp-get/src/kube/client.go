@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package kube
 
 import (
 	"context"
@@ -29,12 +29,51 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-type kubeAPIClient struct {
+const (
+	defaultKubeconfigPath     = "/etc/kubernetes/kubelet.conf"
+	defaultBootstrapTokenPath = "/var/lib/bashible/bootstrap-token"
+	defaultBootstrapCAPath    = "/var/lib/bashible/ca.crt"
+
+	requestTimeout = 10 * time.Second
+
+	defaultRPPNamespace       = "d8-cloud-instance-manager"
+	defaultRPPTokenSecretName = "registry-packages-proxy-token"
+	defaultRPPLabelSelector   = "app=registry-packages-proxy"
+	defaultRPPPort            = 4219
+)
+
+var (
+	ErrNoConfig = errors.New("can't configure kube-api client: no kubelet.conf or bootstrap-token found")
+
+	errEmptyBootstrapToken = errors.New("bootstrap-token file is empty")
+	errNoEndpoints         = errors.New("no RPP endpoints found in kube")
+	errNoToken             = errors.New("no RPP token found in kube")
+)
+
+type kubeHTTPError struct {
+	url        string
+	statusCode int
+	body       string
+}
+
+func (e *kubeHTTPError) Error() string {
+	return fmt.Sprintf("kube api %s returned HTTP %d: %s", e.url, e.statusCode, e.body)
+}
+
+type Client interface {
+	GetRPPEndpoints(ctx context.Context) ([]string, error)
+	GetRPPToken(ctx context.Context) (string, error)
+}
+
+var _ Client = (*apiClient)(nil)
+
+type apiClient struct {
 	baseURL string
 	client  *http.Client
 }
@@ -52,45 +91,24 @@ type secretResponse struct {
 	Data map[string]string `json:"data"`
 }
 
-// newKubeClient detects available credentials and builds the appropriate API client
-// For bootstrap mode with multiple endpoints, the endpoint is selected round-robin based on attempt
-func newKubeClient(apiServerEndpoints []string, attempt int) (*kubeAPIClient, error) {
-	// kubelet.conf
-	exists, err := fileExists(defaultKubeconfigPath)
-	if err != nil {
+func NewKubeletClient() (Client, error) {
+	if _, err := os.Stat(defaultKubeconfigPath); err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrNoConfig
+		}
 		return nil, fmt.Errorf("stat kubelet kubeconfig: %w", err)
 	}
-	if exists {
-		return newKubeletAPIClient()
-	}
-	// /var/lib/bashible/bootstrap-token
-	exists, err = fileExists(defaultBootstrapTokenPath)
-	if err != nil {
-		return nil, fmt.Errorf("stat bootstrap token: %w", err)
-	}
-	if !exists {
-		return nil, errNoKubeAPIConfig
-	}
 
-	if len(apiServerEndpoints) == 0 {
-		return nil, errNoBootstrapAPIServerEndpoints
-	}
-
-	endpoint := apiServerEndpoints[(attempt-1)%len(apiServerEndpoints)]
-	return newBootstrapAPIClient(endpoint)
-}
-
-func newKubeletAPIClient() (*kubeAPIClient, error) {
 	cfg, err := clientcmd.BuildConfigFromFlags("", defaultKubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("build kube client config: %w", err)
 	}
-	cfg.Timeout = kubeRequestTimeout
+	cfg.Timeout = requestTimeout
 
-	return newKubeAPIClient(cfg)
+	return newAPIClient(cfg)
 }
 
-func newBootstrapAPIClient(endpoint string) (*kubeAPIClient, error) {
+func NewBootstrapClient(endpoint string) (Client, error) {
 	tokenBytes, err := os.ReadFile(defaultBootstrapTokenPath)
 	if err != nil {
 		return nil, fmt.Errorf("read bootstrap token: %w", err)
@@ -101,17 +119,17 @@ func newBootstrapAPIClient(endpoint string) (*kubeAPIClient, error) {
 		return nil, errEmptyBootstrapToken
 	}
 
-	return newKubeAPIClient(&rest.Config{
+	return newAPIClient(&rest.Config{
 		Host:        endpoint,
 		BearerToken: token,
 		TLSClientConfig: rest.TLSClientConfig{
 			CAFile: defaultBootstrapCAPath,
 		},
-		Timeout: kubeRequestTimeout,
+		Timeout: requestTimeout,
 	})
 }
 
-func newKubeAPIClient(cfg *rest.Config) (*kubeAPIClient, error) {
+func newAPIClient(cfg *rest.Config) (*apiClient, error) {
 	httpClient, err := rest.HTTPClientFor(cfg)
 	if err != nil {
 		return nil, err
@@ -119,19 +137,19 @@ func newKubeAPIClient(cfg *rest.Config) (*kubeAPIClient, error) {
 
 	baseURL := strings.TrimSpace(cfg.Host)
 	if baseURL == "" {
-		return nil, errNoKubeAPIConfig
+		return nil, ErrNoConfig
 	}
 	if !strings.HasPrefix(baseURL, "https://") && !strings.HasPrefix(baseURL, "http://") {
 		baseURL = "https://" + baseURL
 	}
 
-	return &kubeAPIClient{
+	return &apiClient{
 		baseURL: strings.TrimRight(baseURL, "/"),
 		client:  httpClient,
 	}, nil
 }
 
-func (c *kubeAPIClient) GetEndpoints(ctx context.Context) ([]string, error) {
+func (c *apiClient) GetRPPEndpoints(ctx context.Context) ([]string, error) {
 	var response podListResponse
 	if err := c.getJSON(ctx, "/api/v1/namespaces/"+defaultRPPNamespace+"/pods", url.Values{
 		"labelSelector": {defaultRPPLabelSelector},
@@ -153,7 +171,7 @@ func (c *kubeAPIClient) GetEndpoints(ctx context.Context) ([]string, error) {
 	return endpoints, nil
 }
 
-func (c *kubeAPIClient) GetToken(ctx context.Context) (string, error) {
+func (c *apiClient) GetRPPToken(ctx context.Context) (string, error) {
 	var response secretResponse
 	if err := c.getJSON(ctx, "/api/v1/namespaces/"+defaultRPPNamespace+"/secrets/"+defaultRPPTokenSecretName, nil, &response); err != nil {
 		return "", err
@@ -177,7 +195,7 @@ func (c *kubeAPIClient) GetToken(ctx context.Context) (string, error) {
 	return token, nil
 }
 
-func (c *kubeAPIClient) getJSON(ctx context.Context, path string, query url.Values, dst any) error {
+func (c *apiClient) getJSON(ctx context.Context, path string, query url.Values, dst any) error {
 	requestURL := c.baseURL + path
 	if len(query) > 0 {
 		requestURL += "?" + query.Encode()
@@ -196,7 +214,7 @@ func (c *kubeAPIClient) getJSON(ctx context.Context, path string, query url.Valu
 
 	if response.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(response.Body, 255))
-		return fmt.Errorf("kube api %s returned HTTP %d: %s", requestURL, response.StatusCode, strings.TrimSpace(string(body)))
+		return &kubeHTTPError{url: requestURL, statusCode: response.StatusCode, body: strings.TrimSpace(string(body))}
 	}
 
 	if err := json.NewDecoder(response.Body).Decode(dst); err != nil {
@@ -206,14 +224,19 @@ func (c *kubeAPIClient) getJSON(ctx context.Context, path string, query url.Valu
 	return nil
 }
 
-func shouldRetryKube(err error) bool {
+func ShouldRetry(err error) bool {
 	if err == nil {
 		return false
 	}
-
-	if errors.Is(err, context.Canceled) ||
-		errors.Is(err, errNoBootstrapAPIServerEndpoints) {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return false
+	}
+
+	var statusErr *kubeHTTPError
+	if errors.As(err, &statusErr) {
+		return statusErr.statusCode == http.StatusRequestTimeout ||
+			statusErr.statusCode == http.StatusTooManyRequests ||
+			statusErr.statusCode >= http.StatusInternalServerError
 	}
 
 	return true

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package rpp
 
 import (
 	"context"
@@ -31,19 +31,19 @@ import (
 	"time"
 )
 
+var digestRegexp = regexp.MustCompile(`^[a-z0-9]+:[a-z0-9]+$`)
+
 type httpStatusError struct {
 	packageURL string
 	statusCode int
 	body       string
 }
 
-var digestRegexp = regexp.MustCompile(`^[a-z0-9]+:[a-z0-9]+$`)
-
 func (e *httpStatusError) Error() string {
 	return fmt.Sprintf("access to %s returned HTTP %d: %s", e.packageURL, e.statusCode, e.body)
 }
 
-type rppHTTPClient struct {
+type httpClient struct {
 	client     *http.Client
 	endpoints  []string
 	token      string
@@ -51,13 +51,13 @@ type rppHTTPClient struct {
 	path       string
 }
 
-func newRPPHTTPClient(cfg config) *rppHTTPClient {
-	return &rppHTTPClient{
+func newHTTPClient(cfg Config) *httpClient {
+	return &httpClient{
 		client:     newBaseHTTPClient(),
-		endpoints:  cfg.endpoints,
-		token:      cfg.token,
-		repository: cfg.rppRepository,
-		path:       cfg.rppPath,
+		endpoints:  cfg.Endpoints,
+		token:      cfg.Token,
+		repository: cfg.Repository,
+		path:       cfg.Path,
 	}
 }
 
@@ -65,11 +65,11 @@ func newBaseHTTPClient() *http.Client {
 	transport := &http.Transport{
 		Proxy: nil,
 		DialContext: (&net.Dialer{
-			Timeout:   rppConnectTimeout,
+			Timeout:   connectTimeout,
 			KeepAlive: 30 * time.Second,
 		}).DialContext,
-		ResponseHeaderTimeout: rppResponseHeaderTimeout,
-		TLSHandshakeTimeout:   rppConnectTimeout,
+		ResponseHeaderTimeout: responseHeaderTimeout,
+		TLSHandshakeTimeout:   connectTimeout,
 		IdleConnTimeout:       90 * time.Second,
 		ExpectContinueTimeout: time.Second,
 		TLSClientConfig: &tls.Config{
@@ -80,7 +80,7 @@ func newBaseHTTPClient() *http.Client {
 	return &http.Client{Transport: transport}
 }
 
-func (c *rppHTTPClient) Get(ctx context.Context, digest string) (*http.Response, error) {
+func (c *httpClient) Get(ctx context.Context, digest string) (*http.Response, error) {
 	if err := validateDigest(digest); err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (c *rppHTTPClient) Get(ctx context.Context, digest string) (*http.Response,
 	return c.doGet(ctx, packageURL, c.token)
 }
 
-func (c *rppHTTPClient) doGet(ctx context.Context, packageURL, token string) (*http.Response, error) {
+func (c *httpClient) doGet(ctx context.Context, packageURL, token string) (*http.Response, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, packageURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
@@ -140,10 +140,7 @@ func shouldRetryFetch(err error) bool {
 		errors.Is(err, context.DeadlineExceeded) ||
 		errors.Is(err, errInvalidDigest) ||
 		errors.Is(err, errNoEndpoints) ||
-		errors.Is(err, errNoToken) ||
-		errors.Is(err, errNoKubeAPIConfig) ||
-		errors.Is(err, errNoBootstrapAPIServerEndpoints) ||
-		errors.Is(err, errEmptyBootstrapToken) {
+		errors.Is(err, errNoToken) {
 		return false
 	}
 
@@ -168,6 +165,9 @@ func buildPackageURL(endpoint, digest, repository, path string) string {
 	if path != "" {
 		values.Set("path", path)
 	}
+
+	endpoint = strings.TrimPrefix(endpoint, "https://")
+	endpoint = strings.TrimPrefix(endpoint, "http://")
 
 	return "https://" + endpoint + "/package?" + values.Encode()
 }
