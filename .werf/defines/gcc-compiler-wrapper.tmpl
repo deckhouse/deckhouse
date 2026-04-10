@@ -1,0 +1,15 @@
+{{- define "gcc compiler wrapper git" }}
+- add: /tools/gcc-wrapper/gcc
+  to: /src/gcc-wrapper/gcc
+  stageDependencies:
+    install:
+    - '**/*'
+{{- end }}
+
+{{- define "gcc compiler wrapper shell" }}
+- ln -sf gcc /src/gcc-wrapper/g++
+- chmod +x -R /src/gcc-wrapper/
+- export PATH="/src/gcc-wrapper:$PATH"
+- export CC="/src/gcc-wrapper/gcc"
+- export CXX="/src/gcc-wrapper/g++"
+{{- end }}
