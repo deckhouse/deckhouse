@@ -33,7 +33,7 @@ properties:
     description: |
       Опции Loki, доступные для изменения.
 
-      Подробнее о настройки Loki читайте в [документации Loki](https://grafana.com/docs/loki/v2.9.x/configure/).
+      Подробнее о настройки Loki читайте в [документации Loki](https://grafana.com/docs/loki/v3.5.x/configure/).
 
       > Внимание! Ошибочные  настройки могут привести к неработоспособности Loki.
     properties:
