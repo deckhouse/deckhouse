@@ -92,6 +92,11 @@ func GetSplunkLabels(sourceType string, extraLabels map[string]string) map[strin
 	return result
 }
 
+// GetSyslogLabels returns sorted label keys for syslog (for deterministic VRL order).
+func GetSyslogLabels(sourceType string, extraLabels map[string]string) []string {
+	return SortedMapKeys(mergeLabels(sourceLabels(sourceType, false), extraLabels))
+}
+
 // GetCEFExtensions returns CEF extensions map: source labels (K8s without pod_labels) + extraLabels, with message/timestamp.
 func GetCEFExtensions(sourceType string, extraLabels map[string]string) map[string]string {
 	sourceLabels := sourceLabels(sourceType, false)

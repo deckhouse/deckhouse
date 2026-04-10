@@ -54,6 +54,7 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	case v1alpha1.DestSocket:
 		switch dest.Spec.Socket.Encoding.Codec {
 		case v1alpha1.EncodingCodecSyslog:
+			transforms = append(transforms, SyslogLabelsTransform(sourceType, dest.Spec.ExtraLabels))
 			transforms = append(transforms, SyslogEncoding())
 		case v1alpha1.EncodingCodecGELF:
 			transforms = append(transforms, GELFCodecRelabeling())
