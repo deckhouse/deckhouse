@@ -105,7 +105,7 @@ func partitionOperationsByApprovalState(operations []controlplanev1alpha1.Contro
 	unapprovedOperations = make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
 
 	for _, operation := range operations {
-		if operation.Spec.Approved && !operation.IsCompleted() {
+		if operation.Spec.Approved && !operation.IsTerminal() {
 			approvedOperations = append(approvedOperations, operation)
 			continue
 		}

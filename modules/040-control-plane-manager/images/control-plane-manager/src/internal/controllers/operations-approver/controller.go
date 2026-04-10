@@ -99,6 +99,8 @@ func getPredicates() predicate.Predicate {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	logger.Info("Reconcile started")
+
 	nodes := &controlplanev1alpha1.ControlPlaneNodeList{}
 	if err := r.client.List(ctx, nodes, &client.ListOptions{}); err != nil {
 		return reconcile.Result{}, err
