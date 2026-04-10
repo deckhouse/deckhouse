@@ -3,7 +3,7 @@ module registry-packages-proxy
 go 1.25.8
 
 require (
-	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
+	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20260410150440-c39144c36532
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250704135428-7600b0581807
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0
