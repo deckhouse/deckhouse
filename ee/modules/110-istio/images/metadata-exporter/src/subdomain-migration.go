@@ -20,8 +20,8 @@ var publicJSONDepricatedSubdomainRequests prometheus.Counter
 
 func registerMetadataExporterMetrics(reg prometheus.Registerer) {
 	c := prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "d8_istio_metadata_exporter_public_json_depricated_subdomain_requests_total",
-		Help: "Requests to /metadata/public/public.json whose Host equals this cluster depricated istio public hostname (istio.<publicDomainTemplate>).",
+		Name: "d8_istio_metadata_exporter_accessed_via_depricated_subdomain",
+		Help: "Requests to `/metadata/private/<federation|multicluster>.json` whose Host equals this cluster depricated istio public hostname (istio.<publicDomainTemplate>).",
 	})
 	reg.MustRegister(c)
 	publicJSONDepricatedSubdomainRequests = c
@@ -69,7 +69,7 @@ func checkIfAccessedViaDepricatedSubdomain(r *http.Request) {
 		return
 	}
 	if got == "" || got != dontWant {
-		logger.Printf("Debug: dontWant=%s got=%s", dontWant, got)
+		logger.Printf("Log: dontWant=%s got=%s", dontWant, got)
 		return
 	}
 	publicJSONDepricatedSubdomainRequests.Inc()

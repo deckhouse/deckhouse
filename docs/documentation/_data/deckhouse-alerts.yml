@@ -1792,12 +1792,9 @@ alerts:
       moduleUrl: 110-istio
       module: istio
       edition: ee
-      description: |
-        Requests to `/metadata/public/public.json` used HTTP `Host` equal to this cluster's depricated public hostname `istio.<publicDomainTemplate>`. Remote clusters should switch `metadataEndpoint` to `istio-metadata.<publicDomainTemplate>` (same path prefix).
-
-        See Istio federation/multicluster migration notes. Pod logs may contain `metadata_exporter_public_json_accessed_via_cluster_depricated_public_host`.
+      description: "Requests to `/metadata/private/<federation|multicluster>.json` used HTTP `Host` equal to this cluster's depricated public hostname `istio.<publicDomainTemplate>`. \n\nRemote clusters should switch `metadataEndpoint` to `istio-metadata.<publicDomainTemplate>/metadata/`.\n"
       summary: |
-        Peers still call public.json on this cluster using the depricated istio public subdomain.
+        Peers still call &lt;federation|multicluster&gt;.json on this cluster using the depricated istio public subdomain.
       severity: "5"
       markupFormat: markdown
     - name: D8IstioMetadataExporterEndpointUsesDepricatedSubdomain
@@ -1805,14 +1802,7 @@ alerts:
       moduleUrl: 110-istio
       module: istio
       edition: ee
-      description: |
-        The `metadataEndpoint` of `{{$labels.alliance_kind}}` `{{$labels.name}}` uses a hostname whose leftmost label is `istio` (for example `istio.example.com` or `istio.peer.example.net`). Prefer the same path on a host whose first label is `istio-metadata` (for example `istio-metadata.example.com`), regardless of the parent domain.
-
-        Migration steps (details may be extended in documentation):
-
-        1. Ensure DNS and TLS cover the target `istio-metadata.*` hostname (the Istio module Certificate adds the `istio-metadata` SAN when federation or multicluster is enabled and CertManager is used).
-        2. Update `spec.metadataEndpoint` on this object to use that host; keep the path (e.g. `/metadata/`).
-        3. Verify remote metadata fetch and multicluster/federation health after the change.
+      description: "The `metadataEndpoint` of `{{$labels.alliance_kind}}` `{{$labels.name}}` uses a hostname whose leftmost label is `istio` (for example `istio.example.com` or `istio.peer.example.net`). \nPrefer the same path on a host whose first label is `istio-metadata` (for example `istio-metadata.example.com`), regardless of the parent domain.\n\nMigration steps (details may be extended in documentation):\n\n1. Ensure DNS to resolve the target `istio-metadata.*` hostname (the Istio module Certificate adds the `istio-metadata` SAN when federation or multicluster is enabled and CertManager is used).\n2. Update `spec.metadataEndpoint` on this object to use that host; keep the path `/metadata/`.\n3. Verify remote metadata fetch and multicluster/federation health after the change.\n"
       summary: |
         Alliance metadataEndpoint uses a host whose first DNS label is istio (depricated metadata hostname).
       severity: "5"
