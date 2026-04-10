@@ -22,33 +22,45 @@ entries:
                 ru: Описание
               url: /admin/configuration/
             - title:
-                en: Registry
-                ru: Хранилище образов контейнеров
+                en: Registry and editions
+                ru: Registries и редакции
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
                   url: /admin/configuration/registry/
                 - title:
-                    en: DKP settings
-                    ru: Настройки DKP
+                    en: DKP component image repository
+                    ru: Хранилище образов компонентов DKP
                   folders:
                   - title:
                       en: Settings in a DKP-managed cluster
                       ru: Настройки в кластере, управляемом DKP
-                    url: /admin/configuration/registry/managing-interaction.html
+                    url: /admin/configuration/registry/dkp-component/managing-interaction.html
                   - title:
                       en: Settings in a Managed Kubernetes cluster
                       ru: Настройки в Managed Kubernetes кластере
-                    url: /admin/configuration/registry/third-party.html
+                    url: /admin/configuration/registry/dkp-component/third-party.html
+                  - title:
+                      en: Restoring connection to the registry
+                      ru: Восстановление подключения к registry
+                    url: /admin/configuration/registry/dkp-component/restore-token.html
                 - title:
-                    en: Custom registry
-                    ru: Пользовательское хранилище
+                    en: Image storage
+                    ru: Хранилище образов
                   folders:
                   - title:
                       en: Custom registry (payload-registry module)
                       ru: Пользовательское хранилище (модуль payload-registry)
-                    url: /admin/configuration/registry/payload-registry.html
+                    url: /admin/configuration/registry/custom-image-storage/payload-registry.html
+                  - title:
+                      en: Custom registry (registry module)
+                      ru: Внутреннее хранилище (модуль registry)
+                    url: /admin/configuration/registry/custom-image-storage/internal.html
+                - title:
+                    en: Switching editions
+                    ru: Переключение редакций
+                  url: /admin/configuration/registry/switching-editions.html
             - title:
                 en: IAM
                 ru: IAM
