@@ -51,7 +51,7 @@ jobs:
       {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 
       {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 4 }!}
-      {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 4 }!}
+      {!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 4 }!}
       {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 4 }!}
 
     - name: RM Deckhouse image
