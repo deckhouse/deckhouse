@@ -19,7 +19,7 @@ spec:
     singular: deckhousecontrolplane
   scope: Namespaced
   versions:
-    - name: v1alpha1
+    - name: v1beta2
       schema:
         openAPIV3Schema:
           description: DeckhouseControlPlane is the Schema for the Cluster API

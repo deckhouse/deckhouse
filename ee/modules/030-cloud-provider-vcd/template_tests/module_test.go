@@ -352,7 +352,7 @@ spec:
 - --cloud-provider=vmware-cloud-director
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers=cloud-node,cloud-node-lifecycle
+- --controllers=cloud-node-controller,cloud-node-lifecycle-controller
 - --v=4`))
 			Expect(ccmDeployment.Field("spec.template.spec.containers.0.volumeMounts").String()).To(MatchYAML(`
 - mountPath: /etc/cloud
@@ -430,12 +430,6 @@ spec:
 - port: 443
   protocol: TCP
   targetPort: webhook-server`))
-
-			capcdMutatingWebhook := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "capcd-mutating-webhook")
-			Expect(capcdMutatingWebhook.Exists()).To(BeTrue())
-
-			capcdValidatingWebhook := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "capcd-validating-webhook")
-			Expect(capcdValidatingWebhook.Exists()).To(BeTrue())
 
 			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "csi-controller")
 			Expect(csiControllerDeployment.Exists()).To(BeTrue())
@@ -561,7 +555,7 @@ spec:
 - --cloud-provider=vmware-cloud-director
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers=cloud-node,cloud-node-lifecycle
+- --controllers=cloud-node-controller,cloud-node-lifecycle-controller
 - --v=4
 `))
 		})
@@ -588,7 +582,7 @@ spec:
 - --cloud-provider=vmware-cloud-director
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers=cloud-node,cloud-node-lifecycle,service
+- --controllers=cloud-node-controller,cloud-node-lifecycle-controller,service-lb-controller
 - --v=4
 `))
 		})

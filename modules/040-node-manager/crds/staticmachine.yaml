@@ -32,7 +32,7 @@ spec:
         jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
         name: Machine
         type: string
-      name: v1alpha1
+      name: v1beta2
       schema:
         openAPIV3Schema:
           description: StaticMachine is the Schema for the Cluster API Provider Static.

@@ -23,3 +23,9 @@ Update klog to klog/v2 in other files
 ### 005-add-vapptemplate-search-by-org.patch
 
 Add support for searching vAppTemplates in a given org
+
+### 006-fix-ccm-command-signature.patch
+
+Fix NewCloudControllerManagerCommand call signature for k8s.io v0.34.3
+
+In k8s.io v0.34.3, the function signature changed to include an additional `map[string]string` parameter for feature gates between `DefaultInitFuncConstructors` and `NamedFlagSets`.

@@ -19,7 +19,7 @@ spec:
     singular: staticmachinetemplate
   scope: Namespaced
   versions:
-    - name: v1alpha1
+    - name: v1beta2
       schema:
         openAPIV3Schema:
           description: StaticMachineTemplate is the Schema for the Cluster API Provider
