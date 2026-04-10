@@ -34,17 +34,16 @@ case "$NAME" in
         ;;
 esac
 
-# Environment that affects compilation (Make/autotools/pkg-config consumers)
-for _var in CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS; do
+FLAGS_PART=""
+for _var in CFLAGS CPPFLAGS CXXFLAGS LDFLAGS; do
     eval "_set=\${${_var}+x}"
     if [ -n "$_set" ]; then
         eval "_val=\$$_var"
-        echo "${LOG_TAG} ${_var}=${_val}" >&2
+        FLAGS_PART="${FLAGS_PART}${_var}=${_val} "
     fi
 done
 
-# Command line after env (flags may also appear only here)
-echo "${LOG_TAG} ${NAME} $*" >&2
+echo "${LOG_TAG} ${FLAGS_PART}${NAME} $*" >&2
 
 # Transfer control
 exec "$REAL" "$@"
