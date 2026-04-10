@@ -55,7 +55,7 @@ properties:
     description: |
       Loki configuration options available for tuning.
 
-      See [Loki documentation](https://grafana.com/docs/loki/v2.9.x/configure/) for more information.
+      See [Loki documentation](https://grafana.com/docs/loki/v3.5.x/configure/) for more information.
 
       > Caution! Incorrect settings may lead to the malfunction of Loki.
     properties:

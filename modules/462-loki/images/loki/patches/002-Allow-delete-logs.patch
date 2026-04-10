@@ -1,9 +1,8 @@
 diff --git a/pkg/loki/modules.go b/pkg/loki/modules.go
-index 573f101..9caaead 100644
 --- a/pkg/loki/modules.go
 +++ b/pkg/loki/modules.go
-@@ -1154,7 +1154,7 @@ func (t *Loki) initCompactor() (services.Service, error) {
- 		t.InternalServer.HTTP.Path("/compactor/ring").Methods("GET", "POST").Handler(t.compactor)
+@@ -1678,7 +1678,7 @@
+ 		t.InternalServer.HTTP.PathPrefix(prefix).Handler(compactorHandler)
  	}
  
 -	if t.Cfg.CompactorConfig.RetentionEnabled {
@@ -11,7 +10,7 @@ index 573f101..9caaead 100644
  		t.Server.HTTP.Path("/loki/api/v1/delete").Methods("PUT", "POST").Handler(t.addCompactorMiddleware(t.compactor.DeleteRequestsHandler.AddDeleteRequestHandler))
  		t.Server.HTTP.Path("/loki/api/v1/delete").Methods("GET").Handler(t.addCompactorMiddleware(t.compactor.DeleteRequestsHandler.GetAllDeleteRequestsHandler))
  		t.Server.HTTP.Path("/loki/api/v1/delete").Methods("DELETE").Handler(t.addCompactorMiddleware(t.compactor.DeleteRequestsHandler.CancelDeleteRequestHandler))
-@@ -1165,6 +1165,12 @@ func (t *Loki) initCompactor() (services.Service, error) {
+@@ -1689,6 +1689,12 @@
  	return t.compactor, nil
  }
  
@@ -22,5 +21,5 @@ index 573f101..9caaead 100644
 +}
 +
  func (t *Loki) addCompactorMiddleware(h http.HandlerFunc) http.Handler {
- 	return t.HTTPAuthMiddleware.Wrap(deletion.TenantMiddleware(t.Overrides, h))
+ 	return middleware.Merge(t.HTTPAuthMiddleware, deletion.TenantMiddleware(t.Overrides)).Wrap(h)
  }

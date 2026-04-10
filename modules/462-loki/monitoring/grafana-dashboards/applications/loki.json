@@ -2966,7 +2966,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(cortex_cassandra_request_duration_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le,operation))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_cassandra_request_duration_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le,operation))",
               "interval": "",
               "legendFormat": "{{operation}}",
               "refId": "A"
@@ -3165,7 +3165,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(cortex_table_manager_sync_duration_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_table_manager_sync_duration_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
