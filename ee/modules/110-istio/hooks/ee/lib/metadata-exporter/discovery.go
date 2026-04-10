@@ -5,17 +5,16 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package metadataExporter
 
-import "github.com/flant/addon-operator/pkg/module_manager/go_hook"
-
 var (
-//FederationMetricsGroup = "federation_discovery"
-//federationMetricName   = "d8_istio_federation_metadata_endpoints_fetch_error_count"
+// FederationMetricsGroup = "federation_discovery"
+// federationMetricName   = "d8_istio_federation_metadata_endpoints_fetch_error_count"
 )
 
+/*
 type AllianceKind interface {
 	AlertIfHasDeprecatedSubdomain() *go_hook.HookInput
 }
-
+*/
 /*
 	type IstioFederationDiscoveryCrdInfo struct {
 		Name                     string

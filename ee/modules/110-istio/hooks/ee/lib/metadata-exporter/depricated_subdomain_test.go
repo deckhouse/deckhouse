@@ -3,14 +3,13 @@ Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package ee
+package metadataExporter
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
-	metadataExporter "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/metadata-exporter"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -87,7 +86,7 @@ spec:
 		m := f.MetricsCollector.CollectedMetrics()
 		Expect(m).To(HaveLen(2))
 		Expect(m[0].Action).To(Equal(operation.ActionExpireMetrics))
-		Expect(m[1].Name).To(Equal(metadataExporter.DepricatedSubdomainMetricName))
+		Expect(m[1].Name).To(Equal(DepricatedSubdomainMetricName))
 		Expect(m[1].Labels).To(Equal(map[string]string{
 			"alliance_kind": "IstioMulticluster",
 			"name":          "mc-depricated",
@@ -146,7 +145,7 @@ spec:
 		Expect(f).To(ExecuteSuccessfully())
 		m := f.MetricsCollector.CollectedMetrics()
 		Expect(m).To(HaveLen(2))
-		Expect(m[1].Name).To(Equal(metadataExporter.DepricatedSubdomainMetricName))
+		Expect(m[1].Name).To(Equal(DepricatedSubdomainMetricName))
 		Expect(m[1].Labels["name"]).To(Equal("mc-depricated-remote-tld"))
 	})
 })
