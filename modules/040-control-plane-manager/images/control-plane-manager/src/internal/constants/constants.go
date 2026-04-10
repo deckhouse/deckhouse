@@ -54,9 +54,9 @@ const (
 	ConditionCASynced               = "CASynced"
 	ConditionHotReloadSynced        = "HotReloadSynced"
 
-	ReasonSynced        = "Synced"
-	ReasonOutOfSync     = "OutOfSync"
-	ReasonUpdating      = "Updating"
+	ReasonSynced               = "Synced"
+	ReasonOutOfSync            = "OutOfSync"
+	ReasonUpdating             = "Updating"
 	ReasonPendingUpdate        = "PendingUpdate"
 	ReasonUpdateFailed         = "UpdateFailed"
 	ReasonWaitingForComponents = "WaitingForComponents"
@@ -68,6 +68,7 @@ const (
 	ConditionFailed   = "Failed"
 
 	// Pipeline command condition types (observability)
+	ConditionCommandBackup           = "Backup"
 	ConditionCommandSyncCA           = "SyncCA"
 	ConditionCommandRenewPKICerts    = "RenewPKICerts"
 	ConditionCommandRenewKubeconfigs = "RenewKubeconfigs"
@@ -89,22 +90,23 @@ const (
 	ReasonCommandFailed     = "Failed"
 
 	// Ready condition reasons
-	ReasonOperationSucceeded = "OperationSucceeded"
-	ReasonWaitingForApproval = "WaitingForApproval"
-	ReasonSyncingCA          = "SyncingCA"
+	ReasonOperationSucceeded  = "OperationSucceeded"
+	ReasonWaitingForApproval  = "WaitingForApproval"
+	ReasonCreatingBackup      = "CreatingBackup"
+	ReasonSyncingCA           = "SyncingCA"
 	ReasonRenewingPKI         = "RenewingPKI"
 	ReasonRenewingKubeconfigs = "RenewingKubeconfigs"
 	ReasonSyncingManifests    = "SyncingManifests"
-	ReasonJoiningEtcd        = "JoiningEtcd"
-	ReasonWaitingForPod      = "WaitingForPod"
-	ReasonSyncingHotReload   = "SyncingHotReload"
-	ReasonCertObserving      = "CertObserving"
-	ReasonCancelled          = "Cancelled"
+	ReasonJoiningEtcd         = "JoiningEtcd"
+	ReasonWaitingForPod       = "WaitingForPod"
+	ReasonSyncingHotReload    = "SyncingHotReload"
+	ReasonCertObserving       = "CertObserving"
+	ReasonCancelled           = "Cancelled"
 
 	// Failed condition reasons
 	ReasonNoFailure         = "NoFailure"
 	ReasonHealthCheckFailed = "HealthCheckFailed"
-	ReasonTimeout            = "Timeout"
+	ReasonTimeout           = "Timeout"
 
 	// Built-in k8s label on static pods with the component name
 	StaticPodComponentLabelKey = "component"
@@ -121,6 +123,10 @@ const (
 
 	// Not configurable endpoint for local control plane
 	LocalControlPlaneEndpoint = "127.0.0.1:6445"
+
+	// Backup config
+	BackupBasePath         = DeckhousePath + "/backups"
+	MaxBackupsPerComponent = 7
 
 	// CertObserverInterval - minimum duration between periodic CertObserver(all) operations.
 	CertObserverInterval = 7 * 24 * time.Hour

@@ -329,10 +329,13 @@ func (r *Reconciler) ensureOperationsExist(
 func determineCommands(state componentState, pkiChanged, caChanged bool) []controlplanev1alpha1.CommandName {
 	switch state.component {
 	case controlplanev1alpha1.OperationComponentHotReload:
-		return []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandSyncHotReload}
+		return []controlplanev1alpha1.CommandName{
+			controlplanev1alpha1.CommandBackup,
+			controlplanev1alpha1.CommandSyncHotReload,
+		}
 	case controlplanev1alpha1.OperationComponentEtcd:
 		// Etcd has no kubeconfigs (admin.conf is handled by ensureAdminKubeconfig inside JoinEtcdCluster).
-		var commands []controlplanev1alpha1.CommandName
+		commands := []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandBackup}
 		if caChanged || pkiChanged {
 			commands = append(commands,
 				controlplanev1alpha1.CommandSyncCA,
@@ -352,7 +355,7 @@ func determineCommands(state componentState, pkiChanged, caChanged bool) []contr
 		)
 		return commands
 	case controlplanev1alpha1.OperationComponentKubeAPIServer:
-		var commands []controlplanev1alpha1.CommandName
+		commands := []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandBackup}
 		if caChanged || pkiChanged {
 			commands = append(commands,
 				controlplanev1alpha1.CommandSyncCA,
@@ -368,7 +371,7 @@ func determineCommands(state componentState, pkiChanged, caChanged bool) []contr
 		return commands
 	default:
 		// KCM, Scheduler: no leaf PKI certs
-		var commands []controlplanev1alpha1.CommandName
+		commands := []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandBackup}
 		if caChanged {
 			commands = append(commands,
 				controlplanev1alpha1.CommandSyncCA,
@@ -743,6 +746,7 @@ func certRenewalCommands(component controlplanev1alpha1.OperationComponent) []co
 	switch component {
 	case controlplanev1alpha1.OperationComponentEtcd:
 		return []controlplanev1alpha1.CommandName{
+			controlplanev1alpha1.CommandBackup,
 			controlplanev1alpha1.CommandRenewPKICerts,
 			controlplanev1alpha1.CommandSyncManifests,
 			controlplanev1alpha1.CommandWaitPodReady,
@@ -750,6 +754,7 @@ func certRenewalCommands(component controlplanev1alpha1.OperationComponent) []co
 		}
 	default:
 		return []controlplanev1alpha1.CommandName{
+			controlplanev1alpha1.CommandBackup,
 			controlplanev1alpha1.CommandRenewPKICerts,
 			controlplanev1alpha1.CommandRenewKubeconfigs,
 			controlplanev1alpha1.CommandSyncManifests,
