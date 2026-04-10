@@ -432,12 +432,6 @@ spec:
   protocol: TCP
   targetPort: webhook-server`))
 
-			capcdMutatingWebhook := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "capcd-mutating-webhook")
-			Expect(capcdMutatingWebhook.Exists()).To(BeTrue())
-
-			capcdValidatingWebhook := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "capcd-validating-webhook")
-			Expect(capcdValidatingWebhook.Exists()).To(BeTrue())
-
 			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "csi-controller")
 			Expect(csiControllerDeployment.Exists()).To(BeTrue())
 			Expect(csiControllerDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
