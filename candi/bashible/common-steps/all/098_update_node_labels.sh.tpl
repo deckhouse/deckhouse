@@ -114,7 +114,7 @@ EOF
 LABEL_DIRECTORY_PATH=/var/lib/node_labels
 mkdir -p $LABEL_DIRECTORY_PATH
 
-LABELS_FROM_ANNOTATION="$( bb-kubectl-exec get no $(bb-d8-node-name) -o json |jq -r '.metadata.annotations."node.deckhouse.io/last-applied-local-labels"' )"
+LABELS_FROM_ANNOTATION="$( bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" |jq -r '.metadata.annotations."node.deckhouse.io/last-applied-local-labels"' )"
 
 if [[ $LABELS_FROM_ANNOTATION == "null" ]]
   then
@@ -128,7 +128,7 @@ LABELS_ANNOTATION="$( fetch-local-labels "$LABEL_DIRECTORY_PATH" add "$LABELS_FR
 if [[ $LABLES_TO_REMOVE ]]
   then
     for label in $LABLES_TO_REMOVE; do
-        bb-kubectl-exec label node $(bb-d8-node-name) "$label"
+        bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "$label"
     done
 fi
 
@@ -137,11 +137,11 @@ if [[ -z $LABELS ]]
     # No labels to apply, exit 0
     if [[ $LABELS_FROM_ANNOTATION ]]
       then
-        kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(bb-d8-node-name) node.deckhouse.io/last-applied-local-labels-
+        bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/last-applied-local-labels-"
     fi
     exit 0
   else
     # Apply labels to node
-    bb-kubectl-exec label node $(bb-d8-node-name) "${LABELS}" --overwrite
-    kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(bb-d8-node-name) --overwrite node.deckhouse.io/last-applied-local-labels="${LABELS_ANNOTATION}"
+    bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" ${LABELS}
+    bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/last-applied-local-labels=${LABELS_ANNOTATION}"
 fi

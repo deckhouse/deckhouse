@@ -29,13 +29,17 @@ else
 fi
 
 if [ -f /etc/kubernetes/admin.conf ]; then
-  if ! bb-kubectl --kubeconfig /etc/kubernetes/admin.conf version > /dev/null; then
+  export BB_KUBE_AUTH_TYPE="admin-cert"
+  export BB_KUBE_APISERVER_URL=""
+  bb-curl-helper-extract-admin-certs
+
+  if ! bb-curl-kube "/version" > /dev/null 2>&1; then
     for i in $(seq 60 -1 1); do
       echo  "WARNING: Cluster will be re-bootstrapped, all data will be lost, in $i sec"
       sleep 1
     done
 
-  elif bb-kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name | grep -q -v "^node/$(bb-d8-node-name)$"; then
+  elif bb-curl-kube "/api/v1/nodes" | jq -r '.items[].metadata.name' | grep -q -v "^$(bb-d8-node-name)$"; then
     >&2 echo "ERROR: Trying to re-bootstrap cluster which has more than one node."
     exit 1
   fi

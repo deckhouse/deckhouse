@@ -20,12 +20,25 @@ bb-sync-file $INIT_CONFIG_PATH - << "EOF"
 {{ . | toYaml }}
 EOF
 
-# Create d8-system namespace
-bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf get ns d8-system || bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf create ns d8-system
+# Force admin-cert auth for operations requiring elevated privileges
+export BB_KUBE_AUTH_TYPE="admin-cert"
+export BB_KUBE_APISERVER_URL=""
+bb-curl-helper-extract-admin-certs
+
+# Create d8-system namespace if it doesn't exist
+bb-curl-kube "/api/v1/namespaces/d8-system" >/dev/null 2>&1 || \
+  bb-curl-kube "/api/v1/namespaces" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    --data '{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"d8-system"}}'
 
 # Upload init registry secret
-bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret registry-init || true
-bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic registry-init \
-  --from-file=config=$INIT_CONFIG_PATH
+bb-curl-kube "/api/v1/namespaces/d8-system/secrets/registry-init" -X DELETE || true
+
+bb-curl-kube "/api/v1/namespaces/d8-system/secrets" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  --data "$(jq -nc --arg data "$(base64 -w0 < "$INIT_CONFIG_PATH")" \
+    '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"registry-init","namespace":"d8-system"},"type":"Opaque","data":{"config":$data}}')"
 
 {{- end }}

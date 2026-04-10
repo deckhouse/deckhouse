@@ -108,16 +108,16 @@ function set_labels() {
 
   while true; do
     if (( unsupported )); then
-      bb-kubectl-exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported="
+      bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/containerd-v2-unsupported="
     else
-      bb-kubectl-exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported-"
+      bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/containerd-v2-unsupported-"
     fi
     local label_status=$?
 
     if [[ -n $errs ]]; then
-      bb-kubectl-exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$errs"
+      bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/containerd-v2-err=$errs"
     else
-      bb-kubectl-exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err-"
+      bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/containerd-v2-err-"
     fi
     local annotate_status=$?
 

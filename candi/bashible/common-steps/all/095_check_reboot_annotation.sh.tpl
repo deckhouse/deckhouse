@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-REBOOT_ANNOTATION="$( kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf get no "$D8_NODE_HOSTNAME" -o json |jq -r '.metadata.annotations."update.node.deckhouse.io/reboot"' )"
+REBOOT_ANNOTATION="$( bb-curl-kube "/api/v1/nodes/$D8_NODE_HOSTNAME" |jq -r '.metadata.annotations."update.node.deckhouse.io/reboot"' )"
 
 if [[ $REBOOT_ANNOTATION != "null" ]]
   then
@@ -24,20 +24,20 @@ if [[ $REBOOT_ANNOTATION != "null" ]]
             >&2 echo "out of attempts. exiting..."
             exit 1
         fi
-        DRAINING_ANNOTATION="$( kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf get no "$D8_NODE_HOSTNAME" -o json |jq -r '.metadata.annotations."update.node.deckhouse.io/draining"' )"
-        DRAINED_ANNOTATION="$( kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf get no "$D8_NODE_HOSTNAME" -o json |jq -r '.metadata.annotations."update.node.deckhouse.io/drained"' )"
+        DRAINING_ANNOTATION="$( bb-curl-kube "/api/v1/nodes/$D8_NODE_HOSTNAME" |jq -r '.metadata.annotations."update.node.deckhouse.io/draining"' )"
+        DRAINED_ANNOTATION="$( bb-curl-kube "/api/v1/nodes/$D8_NODE_HOSTNAME" |jq -r '.metadata.annotations."update.node.deckhouse.io/drained"' )"
         if [[ $DRAINED_ANNOTATION != "null" ]]
           then
             # node is drained, could be rebooted asap
             bb-flag-set reboot
-            kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "${D8_NODE_HOSTNAME}" update.node.deckhouse.io/reboot-
+            bb-curl-helper-patch-node-metadata "${D8_NODE_HOSTNAME}" "annotations" "update.node.deckhouse.io/reboot-"
             break
           else
             # node should be drained first
             if [[ $DRAINING_ANNOTATION == "null" ]]
               then
                 # draining annotation didn't set, removing reboot annotation, drain node and set reboot flag after that
-                kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "${D8_NODE_HOSTNAME}" update.node.deckhouse.io/draining=bashible
+                bb-curl-helper-patch-node-metadata "${D8_NODE_HOSTNAME}" "annotations" "update.node.deckhouse.io/draining=bashible"
             fi
         fi
         sleep 20

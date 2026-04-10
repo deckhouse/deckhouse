@@ -36,7 +36,7 @@ fi
 max_attempts=5
 node=$(bb-d8-node-name)
 
-until bb-kubectl --kubeconfig $kubeconfig annotate --overwrite=true node "$node" node.deckhouse.io/virtualization="$virtualization"; do
+until bb-curl-helper-patch-node-metadata "$node" "annotations" "node.deckhouse.io/virtualization=$virtualization"; do
   attempt=$(( attempt + 1 ))
   if [ "$attempt" -gt "$max_attempts" ]; then
     bb-log-error "failed to annotate node $node after $max_attempts attempts"
