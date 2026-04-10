@@ -31,7 +31,7 @@ import (
 
 var _ = Describe("Modules :: ingress-nginx :: hooks :: update_ingress_address ::", func() {
 	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.12", "internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
+	f.RegisterCRD("deckhouse.io", "v2", "IngressNginxController", false)
 
 	Context("Service with non LoadBalancer type", func() {
 		BeforeEach(func() {

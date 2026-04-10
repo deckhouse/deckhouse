@@ -54,7 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "controller",
-			ApiVersion:                   "deckhouse.io/v1",
+			ApiVersion:                   "deckhouse.io/v2",
 			Kind:                         "IngressNginxController",
 			WaitForSynchronization:       ptr.To(true),
 			ExecuteHookOnEvents:          ptr.To(true),
@@ -218,10 +218,10 @@ func handleFinalizers(_ context.Context, input *go_hook.HookInput) error {
 						"finalizers": finalizers,
 					},
 				}
-				input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1", "IngressNginxController", "", controllerName)
+				input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v2", "IngressNginxController", "", controllerName)
 			}
 		} else {
-			DeleteFinalizer(input, controllerName, "", "deckhouse.io/v1", "IngressNginxController", finalizer)
+			DeleteFinalizer(input, controllerName, "", "deckhouse.io/v2", "IngressNginxController", finalizer)
 		}
 	}
 

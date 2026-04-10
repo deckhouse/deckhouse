@@ -278,7 +278,7 @@ properties:
                 additionalLogFields:
                   type: object
                   additionalProperties: true
-                resourcesRequests:
+                resourcesManagement:
                   type: object
                   default: {}
                   properties:
@@ -295,29 +295,52 @@ properties:
                           type: object
                           default: {}
                           properties:
+                            min:
+                              type: string
+                              x-examples: ["100m"]
                             max:
                               type: string
                               x-examples: ["200m"]
-                            min:
-                              type: string
+                            limitRatio:
+                              type: number
+                              x-examples: [1.5]
                         memory:
                           type: object
                           default: {}
                           properties:
-                            max:
-                              type: string
                             min:
                               type: string
                               x-examples: ["100Mi"]
+                            max:
+                              type: string
+                              x-examples: ["200Mi"]
+                            limitRatio:
+                              type: number
+                              x-examples: [1.5]
                     static:
                       type: object
                       default: {}
                       properties:
-                        cpu:
-                          type: string
-                          x-examples: ["100m"]
-                        memory:
-                          type: string
+                        requests:
+                          type: object
+                          default: {}
+                          properties:
+                            cpu:
+                              type: string
+                              x-examples: ["100m"]
+                            memory:
+                              type: string
+                              x-examples: ["100Mi"]
+                        limits:
+                          type: object
+                          default: {}
+                          properties:
+                            cpu:
+                              type: string
+                              x-examples: ["200m"]
+                            memory:
+                              type: string
+                              x-examples: ["200Mi"]
                 customErrors:
                   type: object
                   properties:

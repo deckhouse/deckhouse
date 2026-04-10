@@ -1,4 +1,4 @@
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test
@@ -15,11 +15,15 @@ spec:
   hsts: true
   hstsOptions:
     maxAge: "123456789123456789"
-  resourcesRequests:
+  resourcesManagement:
     mode: Static
     static:
-      cpu: 100m
-      memory: 200Mi
+      requests:
+        cpu: 100m
+        memory: 200Mi
+      limits:
+        cpu: 100m
+        memory: 200Mi
   loadBalancer:
     annotations:
       my: annotation

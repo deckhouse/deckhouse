@@ -38,7 +38,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: bf2256aff20c9a5728a01e7e631ede90d1aa26a5a930837199651eb2afee2f09
+    ingress-nginx-controller.deckhouse.io/checksum: 76be19ae90c532dca73b3a0bf0f96ea0a0cd109872a536d715328883cddfe644
     ingress-nginx-controller.deckhouse.io/validator-version: "1.10"
   labels:
     app: validator
