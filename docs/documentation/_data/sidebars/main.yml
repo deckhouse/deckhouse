@@ -22,29 +22,33 @@ entries:
                 ru: Описание
               url: /admin/configuration/
             - title:
-                en: Registries and editions
-                ru: Registries и редакции
+                en: Registry
+                ru: Хранилище образов контейнеров
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
                   url: /admin/configuration/registry/
                 - title:
-                    en: Third-party registry
-                    ru: Сторонний registry
-                  url: /admin/configuration/registry/third-party.html
+                    en: DKP settings
+                    ru: Настройки DKP
+                  folders:
+                  - title:
+                      en: Settings in a DKP-managed cluster
+                      ru: Настройки в кластере, управляемом DKP
+                    url: /admin/configuration/registry/managing-interaction.html
+                  - title:
+                      en: Settings in a Managed Kubernetes cluster
+                      ru: Настройки в Managed Kubernetes кластере
+                    url: /admin/configuration/registry/third-party.html
                 - title:
-                    en: Internal registry
-                    ru: Внутренний registry
-                  url: /admin/configuration/registry/internal.html
-                - title:
-                    en: Restoring registry access
-                    ru: Восстановление подключения к registry
-                  url: /admin/configuration/registry/restore-token.html
-                - title:
-                    en: Switching editions
-                    ru: Переключение редакций
-                  url: /admin/configuration/registry/switching-editions.html
+                    en: Custom registry
+                    ru: Пользовательское хранилище
+                  folders:
+                  - title:
+                      en: Custom registry (payload-registry module)
+                      ru: Пользовательское хранилище (модуль payload-registry)
+                    url: /admin/configuration/registry/payload-registry.html
             - title:
                 en: IAM
                 ru: IAM
@@ -853,6 +857,10 @@ entries:
                 en: Assigning namespace labels
                 ru: Назначение лейблов пространствам имён
               url: /admin/configuration/label-assignment.html
+            - title:
+                en: Switching editions
+                ru: Переключение редакций
+              url: /admin/configuration/switching-editions.html
         - title:
             en: Platform update
             ru: Обновление платформы
@@ -1191,9 +1199,9 @@ entries:
                 ru: Обзор
               url: /architecture/deckhouse/
             - title:
-                en: Direct mode of registry module
-                ru: Режим Direct модуля registry
-              url: /architecture/deckhouse/registry-direct-mode.html
+                en: Architecture of registry interaction modes
+                ru: Архитектура режимов взаимодействия с хранилищем образов
+              url: /architecture/deckhouse/registry-modes.html
         - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling

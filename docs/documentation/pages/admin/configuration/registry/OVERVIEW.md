@@ -1,19 +1,14 @@
 ---
-title: Working with the image registry
+title: Configuring DKP interaction with the container image registry
 permalink: en/admin/configuration/registry/
-description: "Configure and manage container image registries in Deckhouse Kubernetes Platform. Internal registry setup, third-party registry integration, and edition switching."
+description: "Configuring Deckhouse Kubernetes Platform interaction with the container image registry."
+search: container registry, registry configuration, edition management, registry management, container images
 ---
 
-This section describes how to work with image registries and editions in Deckhouse Kubernetes Platform.
+This section describes the process of configuring Deckhouse Kubernetes Platform interaction with internal and external container image registries.
 
-## Working with image registries
+This section covers configuring DKP interaction with the registry in a running cluster. If you need information about working with the registry during cluster installation, go to the [Installing the platform](../../../installing/) section.
 
-This section describes working with image registries in a running cluster. If you are interested in information about working with the registry when installing the cluster, go to the [Installing the Platform](../../../installing/) section.
+The section [Managing registry interaction in a cluster fully managed by DKP](managing-interaction.html) describes configuring DKP with the registry in a Managed Kubernetes cluster: interaction modes and switching between them (a detailed description of the modes is in the section [Architecture of registry interaction modes](../../../architecture/deckhouse/registry-modes.html)).
 
-The section [Third-party registry](../registry/third-party.html) describes the process of switching a running DKP cluster to use a third-party registry.
-The section [Internal registry](../registry/internal.html) describes preparing to switch between cluster operating modes: with or without using the internal container image registry, as well as the switching processes.
-The section [Restoring registry access](../registry/restore-token.html) describes the process for resuming Deckhouse Kubernetes Platform image downloads after a license token has expired is described.
-
-## Working with editions
-
-The section [Switching editions](../registry/switching-editions.html) describes the possible options for switching editions in a running Deckhouse Kubernetes Platform cluster.
+The section [Switching a running Managed Kubernetes cluster to a third-party container image registry](third-party.html) covers switching a running Managed Kubernetes cluster (in such a cluster, registry interaction settings cannot be managed via the `registry` module) to use a third-party registry.
