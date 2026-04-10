@@ -273,13 +273,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -606,13 +599,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
 
       - name: Setup
         id: setup
@@ -941,13 +927,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -1274,13 +1253,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
 
       - name: Setup
         id: setup
@@ -1609,13 +1581,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -1942,13 +1907,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
 
       - name: Setup
         id: setup
@@ -2277,13 +2235,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -2610,13 +2561,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
 
       - name: Setup
         id: setup
@@ -2945,13 +2889,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -3278,13 +3215,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
 
       - name: Setup
         id: setup
@@ -3613,13 +3543,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -3946,13 +3869,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
 
       - name: Setup
         id: setup
