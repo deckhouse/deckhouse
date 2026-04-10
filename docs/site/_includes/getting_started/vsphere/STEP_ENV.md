@@ -132,7 +132,7 @@ govc role.create deckhouse \
   VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
 
-Assign the role to a user on the `vCenter` object:
+Assign the role to a user on the `vCenter` object.
 
 {% alert level="warning" %}
 Make sure to specify the username together with the domain, for example: `username@domain.local`.

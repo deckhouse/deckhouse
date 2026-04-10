@@ -190,7 +190,11 @@ In the "Inventory" tab, select the Datastore, open the "Summary" panel, then cho
 
 To continue configuring vSphere, install the [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) CLI utility.
 
-After installation, set the environment variables required to connect to `vCenter`:
+After installation, set the environment variables required to connect to `vCenter`.
+
+{% alert level="warning" %}
+Make sure to specify the username together with the domain, for example: `username@domain.local`.
+{% endalert %}
 
 ```shell
 export GOVC_URL=example.com
@@ -293,7 +297,11 @@ govc role.create deckhouse \
     VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
 
-Assign the role to a user on the vCenter object:
+Assign the role to a user on the vCenter object.
+
+{% alert level="warning" %}
+Make sure to specify the username together with the domain, for example: `username@domain.local`.
+{% endalert %}
 
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
