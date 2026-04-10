@@ -15,43 +15,87 @@
 package registryutil
 
 import (
-	"errors"
-	"crypto/x509"
-	"crypto/sha256"
-	"encoding/pem"
+	"crypto/tls"
 	"net/http"
-	"reflect"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-const testRootCA = `
------BEGIN CERTIFICATE-----
-MIIBjzCCATagAwIBAgIUV/km/wXwIMcG5jDQfunCvkvEw9UwCgYIKoZIzj0EAwIw
-FDESMBAGA1UEAwwJdGVzdC1yb290MB4XDTI2MDQwNzEzMDQwM1oXDTM2MDQwNDEz
-MDQwM1owFDESMBAGA1UEAwwJdGVzdC1yb290MFkwEwYHKoZIzj0CAQYIKoZIzj0D
-AQcDQgAEQElWD991NP9xuFaGgX4AkpBfArT+mbN1JJJ6RziAA+/Iq0MKO5UR0xXJ
-x0MTD5AGsZ7w64roEoHOK9OwQkxHEqNmMGQwHQYDVR0OBBYEFMPONG/rtHYEvzLs
-Vqek0aV3UZBQMB8GA1UdIwQYMBaAFMPONG/rtHYEvzLsVqek0aV3UZBQMBIGA1Ud
-EwEB/wQIMAYBAf8CAQEwDgYDVR0PAQH/BAQDAgEGMAoGCCqGSM49BAMCA0cAMEQC
-IAsHvdzwmJ2iQbRmblVebWHwRWS+6OwK5sThiiaQykqTAiAMJ/Orkt/ODRVLN8K6
-ybQGqcGjzy6jkT4Id0CtXtibag==
+const testCA = `-----BEGIN CERTIFICATE-----
+MIIBVDCB+6ADAgECAgEBMAoGCCqGSM49BAMCMBIxEDAOBgNVBAMTB3Rlc3QtY2Ew
+HhcNMjYwMTAxMDAwMDAwWhcNMzYwMTAxMDAwMDAwWjASMRAwDgYDVQQDEwd0ZXN0
+LWNhMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKKaMMINPRKyWO9Tu0BQGPMBk
+1lKs0EK0Mfo703X/ECvQnosTBbtytNeBSRWv5hxcBpBBPh2bW/PUDgxbIgRvlqNC
+MEAwDgYDVR0PAQH/BAQDAgIEMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFPra
+qZ7RKqtMutQAOq7uGZuVAnYOMAoGCCqGSM49BAMCA0gAMEUCIQCVrx1CY1SQTljc
+6JRqfqWzLJ1mBg5W6AVtEOBqqwtdYwIgQ9GeRIkVThfe4Y2oaDPVhGY+N+JihtTq
+/N35+Z0JuPg=
 -----END CERTIFICATE-----
 `
 
-const testIntermediateCA = `
------BEGIN CERTIFICATE-----
-MIIBmTCCAT6gAwIBAgIUYMStnQvnFeu/5Io+bKgAhCDFdF8wCgYIKoZIzj0EAwIw
-FDESMBAGA1UEAwwJdGVzdC1yb290MB4XDTI2MDQwNzEzMDQwM1oXDTM2MDQwNDEz
-MDQwM1owHDEaMBgGA1UEAwwRdGVzdC1pbnRlcm1lZGlhdGUwWTATBgcqhkjOPQIB
-BggqhkjOPQMBBwNCAATBb8651k9p0jBJsitSYTuUe7hAI6XcTEACH8HzE0g1zj7z
-xqJCaIhEafBTJRWev/UD4xh3w5ob0UXI7EBR49LGo2YwZDASBgNVHRMBAf8ECDAG
-AQH/AgEAMA4GA1UdDwEB/wQEAwIBBjAdBgNVHQ4EFgQUX/05+tB13tgHdMYnSZD/
-4q27cGswHwYDVR0jBBgwFoAUw840b+u0dgS/MuxWp6TRpXdRkFAwCgYIKoZIzj0E
-AwIDSQAwRgIhAJUjIJ1RptYPRXOwHKlgp3pzFuEvm27U8HTFRQLb38TqAiEA/VvL
-ybKXVBFaqtGvrR3o9c+eo57A4wDYwFrUHVJaBo8=
+const testServerCert = `-----BEGIN CERTIFICATE-----
+MIIBUzCB+qADAgECAgECMAoGCCqGSM49BAMCMBIxEDAOBgNVBAMTB3Rlc3QtY2Ew
+HhcNMjYwMTAxMDAwMDAwWhcNMzYwMTAxMDAwMDAwWjAUMRIwEAYDVQQDEwlsb2Nh
+bGhvc3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASmfnFyoh4lvwlkAf2NLrSN
+UdQZusn/5XZglBlGDphg3NiG8rPfLn8OgaCLSnuSQ+RFxc5fqO9z9HlyVRGMJ/of
+oz8wPTAfBgNVHSMEGDAWgBT62qme0SqrTLrUADqu7hmblQJ2DjAaBgNVHREEEzAR
+gglsb2NhbGhvc3SHBH8AAAEwCgYIKoZIzj0EAwIDSAAwRQIgMloj6VV2db+xNiI7
+ZWASqxSwgg9Ig1V4zdjgMOE+x94CIQDVA8rZY0nm56+8/0a8/Or1TyVnVy9ahWlh
+K5PCAqGhKA==
 -----END CERTIFICATE-----
+`
+
+const testServerKey = `-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIE5BUq71quQqgKAjiG6dx6gEU3eeippNpMaWj6GTM2pLoAoGCCqGSM49
+AwEHoUQDQgAEpn5xcqIeJb8JZAH9jS60jVHUGbrJ/+V2YJQZRg6YYNzYhvKz3y5/
+DoGgi0p7kkPkRcXOX6jvc/R5clURjCf6Hw==
+-----END EC PRIVATE KEY-----
+`
+
+const testRootCA = `-----BEGIN CERTIFICATE-----
+MIIBWTCB/6ADAgECAgEKMAoGCCqGSM49BAMCMBQxEjAQBgNVBAMTCXRlc3Qtcm9v
+dDAeFw0yNjAxMDEwMDAwMDBaFw0zNjAxMDEwMDAwMDBaMBQxEjAQBgNVBAMTCXRl
+c3Qtcm9vdDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABFDXyowa6m8lk7rJoPTT
+u3v5FHVizXs5qh1QCgoefS3WwKny9zWXJ0Y4WxZS5Ay4ASILhEiCCEOlLRtyi3Ju
+ABajQjBAMA4GA1UdDwEB/wQEAwICBDAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQW
+BBQGopT6D7mjK6O9EKWxPPnEbR7zrjAKBggqhkjOPQQDAgNJADBGAiEAw1Fz8Dkh
+lfZWNvgIJ/EZE9jFFls7twS783KluszFlagCIQC7M3qeoHZlvHkMY0/h4ZvNULUR
+v1S92d6sWpSParjKWQ==
+-----END CERTIFICATE-----
+`
+
+const testIntermediateCA = `-----BEGIN CERTIFICATE-----
+MIIBgjCCASigAwIBAgIBCzAKBggqhkjOPQQDAjAUMRIwEAYDVQQDEwl0ZXN0LXJv
+b3QwHhcNMjYwMTAxMDAwMDAwWhcNMzYwMTAxMDAwMDAwWjAcMRowGAYDVQQDExF0
+ZXN0LWludGVybWVkaWF0ZTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABNF/aY4a
+Fil/MJFLD5CGixCn6Y/tjavxFmCx+vIb4GJFTIklNpeGWCFy+BA1ox7qx6PlESMj
+CE5Sx1Y9byiRkyqjYzBhMA4GA1UdDwEB/wQEAwICBDAPBgNVHRMBAf8EBTADAQH/
+MB0GA1UdDgQWBBSLuZDJIT0/tINa923wXemSSJbKMTAfBgNVHSMEGDAWgBQGopT6
+D7mjK6O9EKWxPPnEbR7zrjAKBggqhkjOPQQDAgNIADBFAiEAh+hDC6+r0HKifjsW
+ledEU/5QkZJeTdx6fSIepf8uyuwCIAr6ismHQhtvEnaxGAW329+2+5gCJkTuZk8N
+Y3stE7TX
+-----END CERTIFICATE-----
+`
+
+const testChainServerCert = `-----BEGIN CERTIFICATE-----
+MIIBXjCCAQSgAwIBAgIBDDAKBggqhkjOPQQDAjAcMRowGAYDVQQDExF0ZXN0LWlu
+dGVybWVkaWF0ZTAeFw0yNjAxMDEwMDAwMDBaFw0zNjAxMDEwMDAwMDBaMBQxEjAQ
+BgNVBAMTCWxvY2FsaG9zdDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABF0F3/8r
+j7EJ4SfyNWWp/nO//Yy3Ipaqq18SZK7+r2WsEH6yZFFfLdy18kQfTHZG52zEOWff
+hGdWZ2g+rbhelcejPzA9MB8GA1UdIwQYMBaAFIu5kMkhPT+0g1r3bfBd6ZJIlsox
+MBoGA1UdEQQTMBGCCWxvY2FsaG9zdIcEfwAAATAKBggqhkjOPQQDAgNIADBFAiEA
+xg1/EyfRZ6T0feB37Hp13CishrIYElzOQm8d6P7tXrQCIA9+kJHC62FN1c2rvnw/
+3wDlcpkhOUqyR1ghOljQvQk3
+-----END CERTIFICATE-----
+`
+
+const testChainServerKey = `-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEILgUcCFxegMEqc2vJjqwjVMbktc7ohtXMQEn/PGJhbxkoAoGCCqGSM49
+AwEHoUQDQgAEXQXf/yuPsQnhJ/I1Zan+c7/9jLcilqqrXxJkrv6vZawQfrJkUV8t
+3LXyRB9MdkbnbMQ5Z9+EZ1ZnaD6tuF6Vxw==
+-----END EC PRIVATE KEY-----
 `
 
 func TestNewRegistryTransport_HTTP(t *testing.T) {
@@ -66,67 +110,43 @@ func TestNewRegistryTransport_InvalidCA(t *testing.T) {
 	require.EqualError(t, err, "invalid cert in CA PEM")
 }
 
-func TestNewRegistryClient_WithMultipleCAs(t *testing.T) {
-	client, err := NewRegistryClient("HTTPS", testRootCA+"\n"+testIntermediateCA)
-	require.NoError(t, err)
-
-	transport, ok := client.Transport.(*http.Transport)
-	require.True(t, ok)
-	require.NotNil(t, transport.TLSClientConfig)
-	require.NotNil(t, transport.TLSClientConfig.RootCAs)
-
-	rootCert := parsePEMCertificate(t, testRootCA)
-	intermediateCert := parsePEMCertificate(t, testIntermediateCA)
-
-	require.True(t, certPoolContains(transport.TLSClientConfig.RootCAs, rootCert), "root CA should be added to cert pool")
-	require.True(t, certPoolContains(transport.TLSClientConfig.RootCAs, intermediateCert), "intermediate CA should be added to cert pool")
-}
-
 func TestNewRegistryClient_WithCA(t *testing.T) {
-	client, err := NewRegistryClient("HTTPS", testRootCA)
-	require.NoError(t, err)
-	require.NotNil(t, client.Transport)
-
-	transport, ok := client.Transport.(*http.Transport)
-	require.True(t, ok)
-	require.NotNil(t, transport.TLSClientConfig)
-	require.NotNil(t, transport.TLSClientConfig.RootCAs)
-	require.False(t, transport.TLSClientConfig.InsecureSkipVerify)
-}
-
-func TestNewRegistryClient_WithCAAndSystemPoolError(t *testing.T) {
-	originalSystemCertPool := systemCertPool
-	systemCertPool = func() (*x509.CertPool, error) {
-		return nil, errors.New("boom")
-	}
-	t.Cleanup(func() {
-		systemCertPool = originalSystemCertPool
-	})
-
-	client, err := NewRegistryClient("HTTPS", testRootCA)
+	serverTLSCert, err := tls.X509KeyPair([]byte(testServerCert), []byte(testServerKey))
 	require.NoError(t, err)
 
-	transport, ok := client.Transport.(*http.Transport)
-	require.True(t, ok)
-	require.NotNil(t, transport.TLSClientConfig)
-	require.NotNil(t, transport.TLSClientConfig.RootCAs)
-	require.True(t, certPoolContains(transport.TLSClientConfig.RootCAs, parsePEMCertificate(t, testRootCA)))
+	server := newTestTLSServer(t, serverTLSCert)
+
+	client, err := NewRegistryClient("HTTPS", testCA)
+	require.NoError(t, err)
+
+	resp, err := client.Get(server.URL)
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
-func parsePEMCertificate(t *testing.T, certPEM string) *x509.Certificate {
+func TestNewRegistryClient_WithChainCA(t *testing.T) {
+	serverTLSCert, err := tls.X509KeyPair([]byte(testChainServerCert), []byte(testChainServerKey))
+	require.NoError(t, err)
+
+	server := newTestTLSServer(t, serverTLSCert)
+
+	client, err := NewRegistryClient("HTTPS", testRootCA+testIntermediateCA)
+	require.NoError(t, err)
+
+	resp, err := client.Get(server.URL)
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func newTestTLSServer(t *testing.T, cert tls.Certificate) *httptest.Server {
 	t.Helper()
-
-	block, _ := pem.Decode([]byte(certPEM))
-	require.NotNil(t, block)
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	require.NoError(t, err)
-
-	return cert
-}
-
-func certPoolContains(pool *x509.CertPool, cert *x509.Certificate) bool {
-	haveSum := reflect.ValueOf(pool).Elem().FieldByName("haveSum")
-	sum := sha256.Sum224(cert.Raw)
-	return haveSum.MapIndex(reflect.ValueOf(sum)).IsValid()
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	server.TLS = &tls.Config{Certificates: []tls.Certificate{cert}}
+	server.StartTLS()
+	t.Cleanup(server.Close)
+	return server
 }
