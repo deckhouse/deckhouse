@@ -498,6 +498,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			SSHProviderInitializer: b.SSHProviderInitializer,
 			MetaConfig:             metaConfig,
 		}, ctx)
+		if err != nil {
+			return err
+		}
 		preflightRunner = preflight.New(globalPreflightSuite, staticPreflightSuite)
 		preflightRunner.UseCache(bootstrapState)
 		preflightRunner.SetCacheSalt(configHash)

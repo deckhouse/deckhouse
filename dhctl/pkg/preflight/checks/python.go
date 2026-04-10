@@ -21,9 +21,9 @@ import (
 	"os/exec"
 	"strings"
 
-	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-
 	libcon "github.com/deckhouse/lib-connection/pkg"
+
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
 type PythonCheck struct {

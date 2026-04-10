@@ -214,6 +214,9 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		}
 
 		staticAbortSuite, err := suites.NewStaticAbortSuite(suites.StaticAbortDeps{SSHProviderInitializer: b.SSHProviderInitializer}, ctx)
+		if err != nil {
+			return err
+		}
 		preflightRunner := preflight.New(staticAbortSuite)
 		preflightRunner.UseCache(bootstrapState)
 		preflightRunner.SetCacheSalt(state.ConfigHash(app.ConfigPaths))

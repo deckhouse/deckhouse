@@ -23,10 +23,10 @@ import (
 	"net/url"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
 )
 
 var ErrBadProxyConfig = errors.New("bad proxy config")

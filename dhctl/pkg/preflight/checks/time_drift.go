@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-
 	libcon "github.com/deckhouse/lib-connection/pkg"
+
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
 const maxTimeDriftSeconds int64 = 600 // 10 minutes
