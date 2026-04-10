@@ -50,9 +50,5 @@ func CreateProviders(ctx context.Context, config string, logger log.Logger, isDe
 		return sshProviderInitializer.Cleanup(ctx)
 	})
 
-	cleanuper.Add(func() error {
-		return kubeProvider.Cleanup(ctx)
-	})
-
 	return sshProviderInitializer, kubeProvider, cleanuper.AsFunc(), nil
 }
