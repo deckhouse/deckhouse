@@ -18,12 +18,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
+
+	"rpp-get/kube"
 )
 
 type config struct {
@@ -48,17 +52,24 @@ type cliConfig struct {
 	kubeAPIServerEndpoints string
 }
 
-func loadConfig(args []string) (config, error) {
+func loadConfig(ctx context.Context, args []string) (config, error) {
 	cli, err := parseArgs(args)
 	if err != nil {
 		return config{}, err
 	}
 
-	if err := cli.resolve(); err != nil {
+	if err := cli.resolve(ctx); err != nil {
 		return config{}, err
 	}
-	if err := os.MkdirAll(cli.tempDir, 0o755); err != nil {
-		return config{}, fmt.Errorf("create temp dir: %w", err)
+
+	if cli.mode != modeUninstall {
+		if !filepath.IsAbs(cli.tempDir) {
+			return config{}, fmt.Errorf("temp-dir must be an absolute path, got %q", cli.tempDir)
+		}
+
+		if err := os.MkdirAll(cli.tempDir, 0o755); err != nil {
+			return config{}, fmt.Errorf("create temp dir: %w", err)
+		}
 	}
 
 	return cli.config, nil
@@ -106,7 +117,7 @@ func parseArgs(args []string) (cliConfig, error) {
 	return cli, nil
 }
 
-func (c *cliConfig) resolve() error {
+func (c *cliConfig) resolve(ctx context.Context) error {
 	if c.mode == modeUninstall {
 		return nil
 	}
@@ -129,7 +140,7 @@ func (c *cliConfig) resolve() error {
 		return nil
 	}
 
-	return c.resolveFromKube(context.Background())
+	return c.resolveFromKube(ctx)
 }
 
 func resolveEndpoints(value string) ([]string, bool) {
@@ -174,11 +185,30 @@ func resolveKubeAPIServerEndpoints(value string) (string, bool) {
 	return "", false
 }
 
-// resolveFromKube fetches RPP endpoints and token from the Kubernetes API with retries
 func (c *cliConfig) resolveFromKube(ctx context.Context) error {
-	apiServerEndpoints := parseEndpoints(c.kubeAPIServerEndpoints)
-	var lastErr error
+	kubeClient, err := kube.NewKubeletClient()
+	if err != nil && !errors.Is(err, kube.ErrNoConfig) {
+		return fmt.Errorf("init kube client from kubelet config: %w", err)
+	}
+	if err == nil {
+		return c.retryKubeFetch(ctx, func(_ int) (kube.Client, error) {
+			return kubeClient, nil
+		})
+	}
 
+	apiServerEndpoints := parseEndpoints(c.kubeAPIServerEndpoints)
+	if len(apiServerEndpoints) == 0 {
+		return errNoBootstrapAPIServerEndpoints
+	}
+
+	return c.retryKubeFetch(ctx, func(attempt int) (kube.Client, error) {
+		endpoint := apiServerEndpoints[(attempt-1)%len(apiServerEndpoints)]
+		return kube.NewBootstrapClient(endpoint)
+	})
+}
+
+func (c *cliConfig) retryKubeFetch(ctx context.Context, clientFn func(attempt int) (kube.Client, error)) error {
+	var lastErr error
 	for attempt := 1; attempt <= kubeRetries; attempt++ {
 		if attempt > 1 {
 			log.Printf("kube retry %d/%d (previous error: %v)", attempt, kubeRetries, lastErr)
@@ -186,39 +216,35 @@ func (c *cliConfig) resolveFromKube(ctx context.Context) error {
 				return err
 			}
 		}
-
-		kube, err := newKubeClient(apiServerEndpoints, attempt)
+		client, err := clientFn(attempt)
 		if err != nil {
-			lastErr = fmt.Errorf("init kube client: %w", err)
-			if !shouldRetryKube(lastErr) {
+			return fmt.Errorf("init kube client: %w", err)
+		}
+		if err := c.fetchFromKube(ctx, client); err != nil {
+			lastErr = err
+			if !kube.ShouldRetry(lastErr) {
 				return lastErr
 			}
 			continue
 		}
-
-		endpoints, err := kube.GetEndpoints(ctx)
-		if err != nil {
-			lastErr = fmt.Errorf("get endpoints from kube: %w", err)
-			if !shouldRetryKube(lastErr) {
-				return lastErr
-			}
-			continue
-		}
-
-		token, err := kube.GetToken(ctx)
-		if err != nil {
-			lastErr = fmt.Errorf("get token from kube: %w", err)
-			if !shouldRetryKube(lastErr) {
-				return lastErr
-			}
-			continue
-		}
-
-		c.endpoints = endpoints
-		c.token = token
-		log.Printf("rpp endpoints obtained from kube: %v", c.endpoints)
 		return nil
 	}
-
 	return lastErr
+}
+
+func (c *cliConfig) fetchFromKube(ctx context.Context, kubeClient kube.Client) error {
+	endpoints, err := kubeClient.GetRPPEndpoints(ctx)
+	if err != nil {
+		return fmt.Errorf("get endpoints from kube: %w", err)
+	}
+
+	token, err := kubeClient.GetRPPToken(ctx)
+	if err != nil {
+		return fmt.Errorf("get token from kube: %w", err)
+	}
+
+	c.endpoints = endpoints
+	c.token = token
+	log.Printf("rpp endpoints obtained from kube: %v", c.endpoints)
+	return nil
 }

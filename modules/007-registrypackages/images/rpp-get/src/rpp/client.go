@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package rpp
 
 import (
 	"context"
@@ -26,7 +26,20 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
+
+type Config struct {
+	Endpoints      []string
+	Token          string
+	Repository     string
+	Path           string
+	Retries        int
+	RetryDelay     time.Duration
+	Force          bool
+	TempDir        string
+	InstalledStore string
+}
 
 type packageRef struct {
 	raw          string
@@ -47,19 +60,19 @@ func (r packageRef) errorf(msg string, args ...any) error {
 	return fmt.Errorf("%s: "+msg, append([]any{r.name}, args...)...)
 }
 
-type RppClient struct {
-	cfg            config
-	httpClient     *rppHTTPClient
+type Client struct {
+	cfg            Config
+	httpClient     *httpClient
 	logger         *log.Logger
-	resultRecorder *resultRecorder
+	resultRecorder *ResultRecorder
 }
 
-func NewRppClient(cfg config, logger *log.Logger) *RppClient {
-	return &RppClient{
+func NewClient(cfg Config, logger *log.Logger, recorder *ResultRecorder) *Client {
+	return &Client{
 		cfg:            cfg,
-		httpClient:     newRPPHTTPClient(cfg),
+		httpClient:     newHTTPClient(cfg),
 		logger:         logger,
-		resultRecorder: newResultRecorder(cfg.resultPath),
+		resultRecorder: recorder,
 	}
 }
 
@@ -72,7 +85,7 @@ func installWorkerCount() int {
 	return workers
 }
 
-func (c *RppClient) FetchAll(ctx context.Context, args []string) error {
+func (c *Client) FetchAll(ctx context.Context, args []string) error {
 	refs, err := c.newPackageRefs(args)
 	if err != nil {
 		return err
@@ -81,7 +94,7 @@ func (c *RppClient) FetchAll(ctx context.Context, args []string) error {
 	return c.runAll(ctx, refs, c.fetchPackage)
 }
 
-func (c *RppClient) InstallAll(ctx context.Context, args []string) error {
+func (c *Client) InstallAll(ctx context.Context, args []string) error {
 	refs, err := c.newPackageRefs(args)
 	if err != nil {
 		return err
@@ -90,7 +103,7 @@ func (c *RppClient) InstallAll(ctx context.Context, args []string) error {
 	return c.runAll(ctx, refs, c.installPackage)
 }
 
-func (c *RppClient) runAll(ctx context.Context, refs []packageRef, action func(context.Context, packageRef) error) error {
+func (c *Client) runAll(ctx context.Context, refs []packageRef, action func(context.Context, packageRef) error) error {
 	if len(refs) == 0 {
 		return nil
 	}
@@ -104,7 +117,7 @@ func (c *RppClient) runAll(ctx context.Context, refs []packageRef, action func(c
 	return runParallel(ctx, refs, workerCount, action)
 }
 
-func (c *RppClient) newPackageRefs(args []string) ([]packageRef, error) {
+func (c *Client) newPackageRefs(args []string) ([]packageRef, error) {
 	refs := make([]packageRef, 0, len(args))
 	seen := make(map[string]struct{}, len(args))
 
@@ -128,7 +141,7 @@ func (c *RppClient) newPackageRefs(args []string) ([]packageRef, error) {
 	return refs, nil
 }
 
-func (c *RppClient) newPackageRef(packageWithDigest string) (packageRef, error) {
+func (c *Client) newPackageRef(packageWithDigest string) (packageRef, error) {
 	name, digest, err := parsePackageWithDigest(packageWithDigest)
 	if err != nil {
 		return packageRef{}, err
@@ -138,12 +151,12 @@ func (c *RppClient) newPackageRef(packageWithDigest string) (packageRef, error) 
 		raw:          packageWithDigest,
 		name:         name,
 		digest:       digest,
-		archivePath:  filepath.Join(defaultFetchedStore(c.cfg.tempDir), name, digest+".tar.gz"),
-		installedDir: filepath.Join(c.cfg.installedStore, name),
+		archivePath:  filepath.Join(defaultFetchedStore(c.cfg.TempDir), name, digest+".tar.gz"),
+		installedDir: filepath.Join(c.cfg.InstalledStore, name),
 	}, nil
 }
 
-func (c *RppClient) installPackage(ctx context.Context, ref packageRef) error {
+func (c *Client) installPackage(ctx context.Context, ref packageRef) error {
 	return c.retry(ctx, ref, packageInstallAttempts, shouldRetryInstall, func() error {
 		err := c.installPackageOnce(ctx, ref)
 		if err == nil {
@@ -156,7 +169,7 @@ func (c *RppClient) installPackage(ctx context.Context, ref packageRef) error {
 	})
 }
 
-func (c *RppClient) retry(ctx context.Context, ref packageRef, attempts int, shouldRetry func(error) bool, action func() error) error {
+func (c *Client) retry(ctx context.Context, ref packageRef, attempts int, shouldRetry func(error) bool, action func() error) error {
 	var lastErr error
 
 	for attempt := 1; attempt <= attempts; attempt++ {
@@ -173,7 +186,7 @@ func (c *RppClient) retry(ctx context.Context, ref packageRef, attempts int, sho
 			break
 		}
 
-		if err := waitRetry(ctx, c.cfg.retryDelay); err != nil {
+		if err := waitRetry(ctx, c.cfg.RetryDelay); err != nil {
 			return err
 		}
 	}
@@ -181,7 +194,7 @@ func (c *RppClient) retry(ctx context.Context, ref packageRef, attempts int, sho
 	return lastErr
 }
 
-func (c *RppClient) installPackageOnce(ctx context.Context, ref packageRef) error {
+func (c *Client) installPackageOnce(ctx context.Context, ref packageRef) error {
 	c.logf(ref, "starting install for %s", ref.raw)
 
 	skip, err := c.shouldSkipInstalled(ref)
@@ -222,14 +235,14 @@ func (c *RppClient) installPackageOnce(ctx context.Context, ref packageRef) erro
 	return c.writeResult(resultInstalled, ref.name)
 }
 
-func (c *RppClient) fetchArchive(ctx context.Context, ref packageRef) error {
+func (c *Client) fetchArchive(ctx context.Context, ref packageRef) error {
 	c.logf(ref, "fetching archive to %s", ref.archivePath)
 
 	if err := os.MkdirAll(filepath.Dir(ref.archivePath), 0o755); err != nil {
 		return ref.wrapErr("create fetched store", err)
 	}
 
-	if err := c.retry(ctx, ref, c.cfg.retries, shouldRetryFetch, func() error {
+	if err := c.retry(ctx, ref, c.cfg.Retries, shouldRetryFetch, func() error {
 		return c.downloadOnce(ctx, ref)
 	}); err != nil {
 		return ref.errorf("fetch %s: %w", ref.digest, err)
@@ -238,7 +251,7 @@ func (c *RppClient) fetchArchive(ctx context.Context, ref packageRef) error {
 	return nil
 }
 
-func (c *RppClient) downloadOnce(ctx context.Context, ref packageRef) error {
+func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
 	response, err := c.httpClient.Get(ctx, ref.digest)
 	if err != nil {
 		return err
@@ -253,7 +266,7 @@ func (c *RppClient) downloadOnce(ctx context.Context, ref packageRef) error {
 	return nil
 }
 
-func (c *RppClient) fetchPackage(ctx context.Context, ref packageRef) error {
+func (c *Client) fetchPackage(ctx context.Context, ref packageRef) error {
 	skip, err := c.shouldSkipInstalled(ref)
 	if err != nil {
 		return err
@@ -265,8 +278,8 @@ func (c *RppClient) fetchPackage(ctx context.Context, ref packageRef) error {
 	return c.ensureFetchedArchive(ctx, ref)
 }
 
-func (c *RppClient) shouldSkipInstalled(ref packageRef) (bool, error) {
-	if c.cfg.force {
+func (c *Client) shouldSkipInstalled(ref packageRef) (bool, error) {
+	if c.cfg.Force {
 		c.logf(ref, "force mode enabled, skipping installed-package check")
 		return false, nil
 	}
@@ -283,8 +296,8 @@ func (c *RppClient) shouldSkipInstalled(ref packageRef) (bool, error) {
 	return false, nil
 }
 
-func (c *RppClient) ensureFetchedArchive(ctx context.Context, ref packageRef) error {
-	if c.cfg.force {
+func (c *Client) ensureFetchedArchive(ctx context.Context, ref packageRef) error {
+	if c.cfg.Force {
 		c.logf(ref, "force mode enabled, downloading archive again")
 		return c.fetchArchive(ctx, ref)
 	}
@@ -302,20 +315,20 @@ func (c *RppClient) ensureFetchedArchive(ctx context.Context, ref packageRef) er
 	return c.fetchArchive(ctx, ref)
 }
 
-func (c *RppClient) UninstallAll(ctx context.Context, packages []string) error {
+func (c *Client) UninstallAll(ctx context.Context, packages []string) error {
 	refs := make([]packageRef, 0, len(packages))
 	for _, packageName := range packages {
 		refs = append(refs, packageRef{
 			raw:          packageName,
 			name:         packageName,
-			installedDir: filepath.Join(c.cfg.installedStore, packageName),
+			installedDir: filepath.Join(c.cfg.InstalledStore, packageName),
 		})
 	}
 
 	return runParallel(ctx, refs, 1, c.uninstallPackageRef)
 }
 
-func (c *RppClient) uninstallPackageRef(ctx context.Context, ref packageRef) error {
+func (c *Client) uninstallPackageRef(ctx context.Context, ref packageRef) error {
 	scriptPath := filepath.Join(ref.installedDir, "uninstall")
 	info, exists, err := statPath(scriptPath)
 	if err != nil {
@@ -342,7 +355,7 @@ func (c *RppClient) uninstallPackageRef(ctx context.Context, ref packageRef) err
 	return c.writeResult(resultRemoved, ref.name)
 }
 
-func (c *RppClient) isPackageInstalled(ref packageRef) (bool, error) {
+func (c *Client) isPackageInstalled(ref packageRef) (bool, error) {
 	digestPath := filepath.Join(ref.installedDir, "digest")
 	content, err := os.ReadFile(digestPath)
 	if errors.Is(err, os.ErrNotExist) {
@@ -355,7 +368,7 @@ func (c *RppClient) isPackageInstalled(ref packageRef) (bool, error) {
 	return strings.TrimSpace(string(content)) == ref.digest, nil
 }
 
-func (c *RppClient) isPackageFetched(ref packageRef) (bool, error) {
+func (c *Client) isPackageFetched(ref packageRef) (bool, error) {
 	info, exists, err := statPath(ref.archivePath)
 	if err != nil {
 		return false, ref.wrapErr("stat fetched archive", err)
@@ -367,10 +380,10 @@ func (c *RppClient) isPackageFetched(ref packageRef) (bool, error) {
 	return !info.IsDir(), nil
 }
 
-func (c *RppClient) createWorkDir(ref packageRef) (string, error) {
-	c.logf(ref, "creating temporary workdir in %s", c.cfg.tempDir)
+func (c *Client) createWorkDir(ref packageRef) (string, error) {
+	c.logf(ref, "creating temporary workdir in %s", c.cfg.TempDir)
 
-	workDir, err := os.MkdirTemp(c.cfg.tempDir, "rpp-get-")
+	workDir, err := os.MkdirTemp(c.cfg.TempDir, "rpp-get-")
 	if err != nil {
 		return "", ref.wrapErr("create temp workdir", err)
 	}
@@ -379,14 +392,14 @@ func (c *RppClient) createWorkDir(ref packageRef) (string, error) {
 	return workDir, nil
 }
 
-func (c *RppClient) cleanupWorkDir(ref packageRef, workDir string) {
+func (c *Client) cleanupWorkDir(ref packageRef, workDir string) {
 	c.logf(ref, "removing temporary workdir %s", workDir)
 	if err := os.RemoveAll(workDir); err != nil {
 		c.logf(ref, "failed to remove temporary workdir: %v", err)
 	}
 }
 
-func (c *RppClient) extractArchive(ctx context.Context, ref packageRef, workDir string) error {
+func (c *Client) extractArchive(ctx context.Context, ref packageRef, workDir string) error {
 	c.logf(ref, "extracting archive into %s", workDir)
 	if err := extractTarGz(ctx, ref.archivePath, workDir); err != nil {
 		return ref.errorf("extract %s: %w", ref.archivePath, err)
@@ -396,7 +409,7 @@ func (c *RppClient) extractArchive(ctx context.Context, ref packageRef, workDir 
 	return nil
 }
 
-func (c *RppClient) runInstallScript(ctx context.Context, ref packageRef, workDir string) error {
+func (c *Client) runInstallScript(ctx context.Context, ref packageRef, workDir string) error {
 	c.logf(ref, "running install script")
 	if err := c.runCommand(ctx, workDir, "./install"); err != nil {
 		return ref.wrapErr("run install script", err)
@@ -406,7 +419,7 @@ func (c *RppClient) runInstallScript(ctx context.Context, ref packageRef, workDi
 	return nil
 }
 
-func (c *RppClient) runCommand(ctx context.Context, dir, name string, args ...string) error {
+func (c *Client) runCommand(ctx context.Context, dir, name string, args ...string) error {
 	ctx, cancel := context.WithTimeout(ctx, scriptExecTimeout)
 	defer cancel()
 
@@ -418,7 +431,7 @@ func (c *RppClient) runCommand(ctx context.Context, dir, name string, args ...st
 	return cmd.Run()
 }
 
-func (c *RppClient) storeInstalledPackage(ref packageRef, workDir string) error {
+func (c *Client) storeInstalledPackage(ref packageRef, workDir string) error {
 	c.logf(ref, "storing installed package metadata in %s", ref.installedDir)
 
 	if err := os.MkdirAll(ref.installedDir, 0o755); err != nil {
@@ -459,8 +472,8 @@ func copyPackageScripts(ref packageRef, workDir string) error {
 	return nil
 }
 
-func (c *RppClient) cleanupFetchedPackage(ref packageRef) error {
-	cacheDir := filepath.Join(defaultFetchedStore(c.cfg.tempDir), ref.name)
+func (c *Client) cleanupFetchedPackage(ref packageRef) error {
+	cacheDir := filepath.Join(defaultFetchedStore(c.cfg.TempDir), ref.name)
 	c.logf(ref, "removing fetched cache %s", cacheDir)
 
 	if err := os.RemoveAll(cacheDir); err != nil {
@@ -470,7 +483,7 @@ func (c *RppClient) cleanupFetchedPackage(ref packageRef) error {
 	return nil
 }
 
-func (c *RppClient) cleanupFailedPackage(ref packageRef) {
+func (c *Client) cleanupFailedPackage(ref packageRef) {
 	if err := os.RemoveAll(ref.installedDir); err != nil {
 		c.logf(ref, "failed to remove installed package dir: %v", err)
 	}
@@ -480,13 +493,13 @@ func (c *RppClient) cleanupFailedPackage(ref packageRef) {
 	}
 }
 
-func (c *RppClient) logf(ref packageRef, format string, args ...any) {
+func (c *Client) logf(ref packageRef, format string, args ...any) {
 	if c.logger != nil {
 		c.logger.Printf("[%s] %s", ref.name, fmt.Sprintf(format, args...))
 	}
 }
 
-func (c *RppClient) writeResult(action, packageName string) error {
+func (c *Client) writeResult(action, packageName string) error {
 	if err := c.resultRecorder.record(action, packageName); err != nil {
 		return fmt.Errorf("%s: record %s result: %w", packageName, action, err)
 	}
@@ -495,5 +508,8 @@ func (c *RppClient) writeResult(action, packageName string) error {
 }
 
 func shouldRetryInstall(err error) bool {
+	if err == nil {
+		return false
+	}
 	return !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded)
 }

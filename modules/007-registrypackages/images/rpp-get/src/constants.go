@@ -27,29 +27,9 @@ const (
 )
 
 const (
-	defaultKubeconfigPath     = "/etc/kubernetes/kubelet.conf"
-	defaultBootstrapTokenPath = "/var/lib/bashible/bootstrap-token"
-	defaultBootstrapCAPath    = "/var/lib/bashible/ca.crt"
-)
-
-const (
 	modeFetch     = "fetch"
 	modeInstall   = "install"
 	modeUninstall = "uninstall"
-)
-
-const (
-	rppConnectTimeout        = 10 * time.Second
-	rppResponseHeaderTimeout = 60 * time.Second
-)
-
-const (
-	kubeRequestTimeout = 10 * time.Second
-
-	defaultRPPNamespace       = "d8-cloud-instance-manager"
-	defaultRPPTokenSecretName = "registry-packages-proxy-token"
-	defaultRPPLabelSelector   = "app=registry-packages-proxy"
-	defaultRPPPort            = 4219
 )
 
 const (
@@ -58,23 +38,8 @@ const (
 )
 
 const (
-	defaultRetries         = 30
-	defaultRetryDelay      = 5 * time.Second
-	defaultInstallWorkers  = 4
-	packageInstallAttempts = 5
+	defaultRetries    = 30
+	defaultRetryDelay = 5 * time.Second
 )
 
-const (
-	scriptExecTimeout     = 10 * time.Minute
-	archiveExtractTimeout = 5 * time.Minute
-)
-
-var (
-	packageScripts                   = []string{"install", "uninstall"}
-	errInvalidDigest                 = errors.New("digest must be <algorithm>:<value>, both parts must contain only lowercase letters and digits")
-	errNoEndpoints                   = errors.New("no RPP endpoints configured")
-	errNoToken                       = errors.New("no RPP token configured")
-	errNoKubeAPIConfig               = errors.New("can't configure kube-api client: no kubelet.conf or bootstrap-token found")
-	errNoBootstrapAPIServerEndpoints = errors.New("bootstrap-token mode requires kube-apiserver endpoints")
-	errEmptyBootstrapToken           = errors.New("bootstrap-token file is empty")
-)
+var errNoBootstrapAPIServerEndpoints = errors.New("bootstrap-token mode requires kube-apiserver endpoints")

@@ -14,13 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package rpp
 
 import (
 	"context"
 	"errors"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateDigest(t *testing.T) {
@@ -42,12 +45,11 @@ func TestValidateDigest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateDigest(tt.digest)
-			if tt.wantErr && err == nil {
-				t.Fatalf("validateDigest(%q) = nil, want error", tt.digest)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
 			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("validateDigest(%q) = %v, want nil", tt.digest, err)
-			}
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -64,6 +66,18 @@ func TestBuildPackageURL(t *testing.T) {
 		{
 			name:     "digest only",
 			endpoint: "1.2.3.4:4219",
+			digest:   "sha256:abc123",
+			wantURL:  "https://1.2.3.4:4219/package?digest=sha256%3Aabc123",
+		},
+		{
+			name:     "endpoint with https scheme",
+			endpoint: "https://1.2.3.4:4219",
+			digest:   "sha256:abc123",
+			wantURL:  "https://1.2.3.4:4219/package?digest=sha256%3Aabc123",
+		},
+		{
+			name:     "endpoint with http scheme",
+			endpoint: "http://1.2.3.4:4219",
 			digest:   "sha256:abc123",
 			wantURL:  "https://1.2.3.4:4219/package?digest=sha256%3Aabc123",
 		},
@@ -86,9 +100,7 @@ func TestBuildPackageURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := buildPackageURL(tt.endpoint, tt.digest, tt.repository, tt.path)
-			if got != tt.wantURL {
-				t.Errorf("buildPackageURL() = %q, want %q", got, tt.wantURL)
-			}
+			assert.Equal(t, tt.wantURL, got)
 		})
 	}
 }
@@ -105,9 +117,6 @@ func TestShouldRetryFetch(t *testing.T) {
 		{name: "invalid digest", err: errInvalidDigest, wantRetry: false},
 		{name: "no endpoints", err: errNoEndpoints, wantRetry: false},
 		{name: "no token", err: errNoToken, wantRetry: false},
-		{name: "no kube api config", err: errNoKubeAPIConfig, wantRetry: false},
-		{name: "no bootstrap apiserver endpoints", err: errNoBootstrapAPIServerEndpoints, wantRetry: false},
-		{name: "empty bootstrap token", err: errEmptyBootstrapToken, wantRetry: false},
 		{
 			name:      "http 408 request timeout",
 			err:       &httpStatusError{statusCode: http.StatusRequestTimeout},
@@ -148,9 +157,7 @@ func TestShouldRetryFetch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := shouldRetryFetch(tt.err)
-			if got != tt.wantRetry {
-				t.Errorf("shouldRetryFetch(%v) = %v, want %v", tt.err, got, tt.wantRetry)
-			}
+			assert.Equal(t, tt.wantRetry, got)
 		})
 	}
 }

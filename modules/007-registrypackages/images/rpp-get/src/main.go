@@ -22,6 +22,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"rpp-get/rpp"
 )
 
 var version = "dev"
@@ -41,13 +43,19 @@ func main() {
 		return
 	}
 
-	cfg, err := loadConfig(os.Args[1:])
-	if err != nil {
+	if err := run(context.Background(), logger); err != nil {
 		logger.Fatal(err)
+	}
+}
+
+func run(ctx context.Context, logger *log.Logger) error {
+	cfg, err := loadConfig(ctx, os.Args[1:])
+	if err != nil {
+		return err
 	}
 
 	if len(cfg.packages) == 0 {
-		logger.Fatalf(
+		return fmt.Errorf(
 			"usage: %s <%s|%s|%s> [flags] PACKAGE [PACKAGE...]",
 			filepath.Base(os.Args[0]),
 			modeFetch,
@@ -56,26 +64,38 @@ func main() {
 		)
 	}
 
-	client := NewRppClient(cfg, logger)
+	recorder, err := rpp.NewResultRecorder(cfg.resultPath)
+	if err != nil {
+		return err
+	}
 	defer func() {
-		if err := client.resultRecorder.close(); err != nil {
+		if err := recorder.Close(); err != nil {
 			logger.Printf("close result file: %v", err)
 		}
 	}()
 
-	var runErr error
-	switch cfg.mode {
-	case modeFetch:
-		runErr = client.FetchAll(context.Background(), cfg.packages)
-	case modeInstall:
-		runErr = client.InstallAll(context.Background(), cfg.packages)
-	case modeUninstall:
-		runErr = client.UninstallAll(context.Background(), cfg.packages)
-	default:
-		logger.Fatalf("unsupported mode %q", cfg.mode)
+	rppCfg := rpp.Config{
+		Endpoints:      cfg.endpoints,
+		Token:          cfg.token,
+		Repository:     cfg.rppRepository,
+		Path:           cfg.rppPath,
+		Retries:        cfg.retries,
+		RetryDelay:     cfg.retryDelay,
+		Force:          cfg.force,
+		TempDir:        cfg.tempDir,
+		InstalledStore: cfg.installedStore,
 	}
 
-	if runErr != nil {
-		logger.Fatal(runErr)
+	client := rpp.NewClient(rppCfg, logger, recorder)
+
+	switch cfg.mode {
+	case modeFetch:
+		return client.FetchAll(ctx, cfg.packages)
+	case modeInstall:
+		return client.InstallAll(ctx, cfg.packages)
+	case modeUninstall:
+		return client.UninstallAll(ctx, cfg.packages)
+	default:
+		panic(fmt.Sprintf("unsupported mode %q", cfg.mode))
 	}
 }

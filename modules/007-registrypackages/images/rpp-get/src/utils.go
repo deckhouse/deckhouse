@@ -18,23 +18,9 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"io"
-	"os"
-	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 )
-
-func defaultFetchedStore(tempDir string) string {
-	if !filepath.IsAbs(tempDir) {
-		tempDir = string(filepath.Separator) + tempDir
-	}
-
-	return filepath.Join(tempDir, "registrypackages")
-}
 
 func parseEndpoints(value string) []string {
 	parts := strings.Split(value, ",")
@@ -50,49 +36,6 @@ func parseEndpoints(value string) []string {
 	return endpoints
 }
 
-func writeResponseBody(outputPath string, body io.Reader) error {
-	tmpPath := outputPath + ".part"
-	defer os.Remove(tmpPath)
-
-	if err := writeFile(tmpPath, body); err != nil {
-		return err
-	}
-
-	return os.Rename(tmpPath, outputPath)
-}
-
-func writeFile(path string, body io.Reader) (err error) {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if closeErr := file.Close(); err == nil {
-			err = closeErr
-		}
-	}()
-
-	_, err = io.Copy(file, body)
-	return err
-}
-
-func parsePackageWithDigest(value string) (string, string, error) {
-	pkg, digest, ok := strings.Cut(value, ":")
-	if !ok || strings.TrimSpace(pkg) == "" || strings.TrimSpace(digest) == "" || !strings.Contains(digest, ":") {
-		return "", "", fmt.Errorf("invalid PACKAGE_WITH_DIGEST %q, expected package:sha256:<digest>", value)
-	}
-
-	return pkg, digest, nil
-}
-
-func formatSize(size int64) string {
-	if size < 0 {
-		return "unknown size"
-	}
-
-	return fmt.Sprintf("%d bytes", size)
-}
-
 func waitRetry(ctx context.Context, delay time.Duration) error {
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
@@ -103,74 +46,4 @@ func waitRetry(ctx context.Context, delay time.Duration) error {
 	case <-timer.C:
 		return nil
 	}
-}
-
-func runParallel[T any](ctx context.Context, items []T, workers int, action func(context.Context, T) error) error {
-	if len(items) == 0 {
-		return nil
-	}
-
-	workers = max(1, workers)
-	workers = min(workers, len(items))
-
-	var (
-		wg   sync.WaitGroup
-		mu   sync.Mutex
-		errs []error
-	)
-	jobs := make(chan T)
-
-	for worker := 0; worker < workers; worker++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			for item := range jobs {
-				if ctx.Err() != nil {
-					return
-				}
-
-				if err := action(ctx, item); err != nil {
-					mu.Lock()
-					errs = append(errs, err)
-					mu.Unlock()
-				}
-			}
-		}()
-	}
-
-	for _, item := range items {
-		select {
-		case jobs <- item:
-		case <-ctx.Done():
-			mu.Lock()
-			errs = append(errs, ctx.Err())
-			mu.Unlock()
-			close(jobs)
-			wg.Wait()
-			return errors.Join(errs...)
-		}
-	}
-
-	close(jobs)
-	wg.Wait()
-
-	return errors.Join(errs...)
-}
-
-func statPath(path string) (os.FileInfo, bool, error) {
-	info, err := os.Stat(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, err
-	}
-
-	return info, true, nil
-}
-
-func fileExists(path string) (bool, error) {
-	_, exists, err := statPath(path)
-	return exists, err
 }

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package rpp
 
 import (
 	"archive/tar"
@@ -33,6 +33,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 type packageArchiveFile struct {
@@ -190,10 +191,10 @@ func TestInstallPackageRetriesAndSucceeds(t *testing.T) {
 		"sha256:retrysuccess": archive,
 	})
 	client := newTestClient(t, []string{serverHost(t, server)})
-	client.cfg.token = token
-	client.cfg.retryDelay = 0
-	client.cfg.retries = 1
-	client.httpClient = newRPPHTTPClient(client.cfg)
+	client.cfg.Token = token
+	client.cfg.RetryDelay = 0
+	client.cfg.Retries = 1
+	client.httpClient = newHTTPClient(client.cfg)
 	ref := mustPackageRef(t, client, "zeta:sha256:retrysuccess")
 
 	if err := client.installPackage(context.Background(), ref); err != nil {
@@ -226,10 +227,10 @@ func TestInstallPackageFailsAfterRetriesAndCleansUp(t *testing.T) {
 		"sha256:retryfail": archive,
 	})
 	client := newTestClient(t, []string{serverHost(t, server)})
-	client.cfg.token = token
-	client.cfg.retryDelay = 0
-	client.cfg.retries = 1
-	client.httpClient = newRPPHTTPClient(client.cfg)
+	client.cfg.Token = token
+	client.cfg.RetryDelay = 0
+	client.cfg.Retries = 1
+	client.httpClient = newHTTPClient(client.cfg)
 	ref := mustPackageRef(t, client, "eta:sha256:retryfail")
 
 	err := client.installPackage(context.Background(), ref)
@@ -315,10 +316,10 @@ func TestInstallAllReturnsErrorWhenOnePackageFails(t *testing.T) {
 		"sha256:allgood3": goodArchive,
 	})
 	client := newTestClient(t, []string{serverHost(t, server)})
-	client.cfg.token = token
-	client.cfg.retryDelay = 0
-	client.cfg.retries = 1
-	client.httpClient = newRPPHTTPClient(client.cfg)
+	client.cfg.Token = token
+	client.cfg.RetryDelay = 0
+	client.cfg.Retries = 1
+	client.httpClient = newHTTPClient(client.cfg)
 
 	goodRef := mustPackageRef(t, client, "kappa:sha256:allgood3")
 	badRef := mustPackageRef(t, client, "lambda:sha256:allbad1")
@@ -334,8 +335,12 @@ func TestInstallAllReturnsErrorWhenOnePackageFails(t *testing.T) {
 
 func TestInstallAllWritesResultFile(t *testing.T) {
 	client := newTestClient(t, nil)
-	client.cfg.resultPath = filepath.Join(t.TempDir(), "result.log")
-	client.resultRecorder = newResultRecorder(client.cfg.resultPath)
+	resultPath := filepath.Join(t.TempDir(), "result.log")
+	recorder, err := NewResultRecorder(resultPath)
+	if err != nil {
+		t.Fatalf("NewResultRecorder() error = %v", err)
+	}
+	client.resultRecorder = recorder
 
 	installedRef := mustPackageRef(t, client, "mu:sha256:result001")
 	skippedRef := mustPackageRef(t, client, "nu:sha256:result002")
@@ -358,7 +363,7 @@ func TestInstallAllWritesResultFile(t *testing.T) {
 		t.Fatalf("InstallAll() error = %v", err)
 	}
 
-	assertResultLines(t, client.cfg.resultPath, []string{
+	assertResultLines(t, resultPath, []string{
 		resultInstalled + " " + installedRef.name,
 		resultSkipped + " " + skippedRef.name,
 	})
@@ -366,13 +371,17 @@ func TestInstallAllWritesResultFile(t *testing.T) {
 
 func TestUninstallAllWritesResultFile(t *testing.T) {
 	client := newTestClient(t, nil)
-	client.cfg.resultPath = filepath.Join(t.TempDir(), "result.log")
-	client.resultRecorder = newResultRecorder(client.cfg.resultPath)
+	resultPath := filepath.Join(t.TempDir(), "result.log")
+	recorder, err := NewResultRecorder(resultPath)
+	if err != nil {
+		t.Fatalf("NewResultRecorder() error = %v", err)
+	}
+	client.resultRecorder = recorder
 
 	removedRef := packageRef{
 		raw:          "xi",
 		name:         "xi",
-		installedDir: filepath.Join(client.cfg.installedStore, "xi"),
+		installedDir: filepath.Join(client.cfg.InstalledStore, "xi"),
 	}
 
 	assertNoError(t, os.MkdirAll(removedRef.installedDir, 0o755))
@@ -382,35 +391,40 @@ func TestUninstallAllWritesResultFile(t *testing.T) {
 		t.Fatalf("UninstallAll() error = %v", err)
 	}
 
-	assertResultLines(t, client.cfg.resultPath, []string{
+	assertResultLines(t, resultPath, []string{
 		resultRemoved + " " + removedRef.name,
 		resultSkipped + " omicron",
 	})
 }
 
-func newTestClient(t *testing.T, endpoints []string) *RppClient {
+func newTestClient(t *testing.T, endpoints []string) *Client {
 	t.Helper()
 
 	root := t.TempDir()
-	cfg := config{
-		tempDir:        root,
-		installedStore: filepath.Join(root, "installed"),
-		retries:        1,
-		retryDelay:     0,
-		endpoints:      endpoints,
-		token:          "test-token",
+	cfg := Config{
+		TempDir:        root,
+		InstalledStore: filepath.Join(root, "installed"),
+		Retries:        1,
+		RetryDelay:     0,
+		Endpoints:      endpoints,
+		Token:          "test-token",
 	}
 
-	for _, path := range []string{root, cfg.installedStore, defaultFetchedStore(root)} {
+	for _, path := range []string{root, cfg.InstalledStore, defaultFetchedStore(root)} {
 		if err := os.MkdirAll(path, 0o755); err != nil {
 			t.Fatalf("os.MkdirAll(%s) error = %v", path, err)
 		}
 	}
 
-	return NewRppClient(cfg, log.New(io.Discard, "", 0))
+	recorder, err := NewResultRecorder("")
+	if err != nil {
+		t.Fatalf("NewResultRecorder() error = %v", err)
+	}
+
+	return NewClient(cfg, log.New(io.Discard, "", 0), recorder)
 }
 
-func mustPackageRef(t *testing.T, client *RppClient, raw string) packageRef {
+func mustPackageRef(t *testing.T, client *Client, raw string) packageRef {
 	t.Helper()
 
 	ref, err := client.newPackageRef(raw)
@@ -567,3 +581,6 @@ func assertResultLines(t *testing.T, path string, want []string) {
 		t.Fatalf("result lines = %q, want %q", got, want)
 	}
 }
+
+// Ensure time.Duration zero value works for RetryDelay.
+var _ = time.Duration(0)
