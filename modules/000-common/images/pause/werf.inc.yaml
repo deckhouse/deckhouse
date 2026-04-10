@@ -31,16 +31,14 @@ import:
   add: /src
   to: /src
   before: install
+git:
+{{ include "gcc compiler wrapper git" . }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache build-base
   install:
   - cd /src
-  - ln -sf gcc /src/wrappers/g++
-  - chmod +x -R /src/wrappers/
-  - export PATH="/src/wrappers:$PATH"
-  - export CC="/src/wrappers/gcc"
-  - export CXX="/src/wrappers/g++"
+  {{- include "gcc compiler wrapper shell" . | nindent 2 }}
   - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 pause.c
   - strip /pause-linux-amd64
