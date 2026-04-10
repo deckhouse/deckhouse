@@ -1,0 +1,57 @@
+cloud-provider-aws:
+  fixes:
+    - summary: add information about AWS security group rules limits
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18819
+cni-cilium:
+  fixes:
+    - summary: Updated go-jose dependency to v4.1.4 to fix CVE-2026-34986.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18984
+      impact: Cilium agents will be restarted during the update.
+common:
+  fixes:
+    - summary: >-
+        Removed Python completely from the debug-container image as it is no longer needed,
+        resolving corresponding CVEs, and silenced false positives for etcd binaries via VEX.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18810
+deckhouse-controller:
+  fixes:
+    - summary: added extra validation for kubernets version multiple downgrades scenario
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18794
+dhctl:
+  fixes:
+    - summary: mitigate CVE-2026-33186
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18805
+docs:
+  features:
+    - summary: Add geoproxy and failover to ingress-nginx module architecture section
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18832
+    - summary: Add public cloud providers aws, azure, and gcp module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18696
+    - summary: Add cloud-provider-vsphere module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18694
+    - summary: Add cloud-provider-openstack module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18693
+  fixes:
+    - summary: Improved title generation for module documentation pages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18938
+ingress-nginx:
+  fixes:
+    - summary: Kruise go dependencies are updated to mitigate latest CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19066
+      impact: Kruise controller will be restarted.
+    - summary: Added fix for CVE-2026-4342.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18923
+      impact: All Ingress-NGINX controller pods will be restated.
+istio:
+  fixes:
+    - summary: fixed CVE-2026-34986
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18972
+      impact: istio module pods will be restarted
+    - summary: added iptables wrapper in cni-v1x21x6
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18925
+      impact: istio-cni-nodes will be restarted
+user-authn:
+  fixes:
+    - summary: Add "cache" get parameter to prevent stale caches from breaking login page
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18976
+
