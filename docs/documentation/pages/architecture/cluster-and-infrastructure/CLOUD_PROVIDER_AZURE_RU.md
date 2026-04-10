@@ -28,7 +28,7 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
 
 Модуль состоит из следующих компонентов:
 
-1. **Сloud-controller-manager** — реализация [сloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для Microsoft Azure. Компонент обеспечивает интеграцию с облаком Microsoft Azure и выполняет следующие функции:
+1. **Cloud-controller-manager** — реализация [cloud controller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для Microsoft Azure. Компонент обеспечивает интеграцию с облаком Microsoft Azure и выполняет следующие функции:
 
    * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
 
@@ -44,7 +44,7 @@ description: Архитектура модуля cloud-provider-azure в Deckhou
 
    * **azure-cloud-controller-manager**.
 
-1. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-azure`.
+1. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используются другими компонентами модуля `cloud-provider-azure`.
 
    Состоит из следующих контейнеров:
 

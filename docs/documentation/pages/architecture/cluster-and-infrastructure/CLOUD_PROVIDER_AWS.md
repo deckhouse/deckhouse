@@ -27,7 +27,7 @@ The Level 2 C4 architecture of the [`cloud-provider-aws`](/modules/cloud-provide
 
 The module consists of the following components:
 
-1. **Cloud-controller-manager**: It is an implementation of [cloud controller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) for AWS. It provides interaction with the AWS cloud and performs the following functions:
+1. **Cloud-controller-manager**: It is an implementation of [cloud controller manager](https://kubernetes.io/docs/concepts/architecture/cloud-controller/) for AWS. It provides interaction with the AWS cloud and performs the following functions:
 
    * Implements a 1:1 relationship between a Node resource in Kubernetes and a VM in a cloud provider. To do this:
 
@@ -55,11 +55,11 @@ The module consists of the following components:
 1. **Node-termination-handler**: [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler). It is responsible for gracefully handling the termination of EC2 instances in the Kubernetes control plane.
 
    Node-termination-handler processes the following AWS events:
-   * [EC2 maintenance events](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html).
-   * [EC2 Spot interruptions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html).
-   * [ASG Scale-In](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroupLifecycle.html#as-lifecycle-scale-in).
-   * [ASG AZ Rebalance](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html).
-   * [EC2 Instance Termination](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html).
+   * [EC2 maintenance events](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html)
+   * [EC2 Spot interruptions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html)
+   * [ASG Scale-In](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroupLifecycle.html#as-lifecycle-scale-in)
+   * [ASG AZ Rebalance](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html)
+   * [EC2 Instance Termination](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html)
 
    Node-termination-handler performs drain and/or cordon of the corresponding node after receiving of the specified events.
 

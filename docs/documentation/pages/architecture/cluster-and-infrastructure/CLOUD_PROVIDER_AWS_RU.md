@@ -28,7 +28,7 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 
 Модуль состоит из следующих компонентов:
 
-1. **Сloud-controller-manager** — реализация [cloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для AWS. Компонент обеспечивает интеграцию с облаком AWS и выполняет следующие функции:
+1. **Cloud-controller-manager** — реализация [cloud controller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для AWS. Компонент обеспечивает интеграцию с облаком AWS и выполняет следующие функции:
 
    * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
 
@@ -44,7 +44,7 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 
    * **aws-cloud-controller-manager**.
 
-1. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-aws`.
+1. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используются другими компонентами модуля `cloud-provider-aws`.
 
    Состоит из следующих контейнеров:
 
@@ -55,7 +55,7 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 
 1. **Node-termination-handler** — [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler), отвечает за обработку DKP событий от сервисов AWS о недоступности экземпляров EC2.
 
-   Node-termination-hadler обрабатывает следующие события AWS:
+   Node-termination-handler обрабатывает следующие события AWS:
    * [EC2 maintenance events](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html);
    * [EC2 Spot interruptions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html);
    * [ASG Scale-In](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroupLifecycle.html#as-lifecycle-scale-in);

@@ -6,7 +6,7 @@ search: cloud-provider-gcp, cloud provider gcp, google cloud platform
 description: Архитектура модуля cloud-provider-gcp в Deckhouse Kubernetes Platform.
 ---
 
-Модуль `cloud-provider-gcp`](/modules/cloud-provider-gcp/) обеспечивает интеграцию с облачными ресурсами [Google Cloud Platform](https://cloud.google.com/). Он используется модулем [`node-manager`](/modules/node-manager/) для заказа узлов в соответствии [с настройками группы узлов](/modules/node-manager/cr.html#nodegroup).
+Модуль [`cloud-provider-gcp`](/modules/cloud-provider-gcp/) обеспечивает интеграцию с облачными ресурсами [Google Cloud Platform](https://cloud.google.com/). Он используется модулем [`node-manager`](/modules/node-manager/) для заказа узлов в соответствии [с настройками группы узлов](/modules/node-manager/cr.html#nodegroup).
 
 Подробнее с описанием модуля можно ознакомиться [в соответствующем разделе документации](/modules/cloud-provider-gcp/).
 
@@ -28,7 +28,7 @@ description: Архитектура модуля cloud-provider-gcp в Deckhouse
 
 Модуль состоит из следующих компонентов:
 
-1. **Сloud-controller-manager** — реализация [cloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для GCP. Компонент обеспечивает интеграцию с облаком GCP и выполняет следующие функции:
+1. **Cloud-controller-manager** — реализация [cloud controller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для GCP. Компонент обеспечивает интеграцию с облаком GCP и выполняет следующие функции:
 
    * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
 
@@ -44,7 +44,7 @@ description: Архитектура модуля cloud-provider-gcp в Deckhouse
 
    * **gcp-cloud-controller-manager**.
 
-1. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется другими компонентами модуля `cloud-provider-gcp`.
+1. **Cloud-data-discoverer** — отвечает за сбор данных из API облачного провайдера и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используются другими компонентами модуля `cloud-provider-gcp`.
 
    Состоит из следующих контейнеров:
 
