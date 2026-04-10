@@ -68,7 +68,7 @@
 ---
 image: common-base-python-artifact
 final: false
-from: {{ index $.Images "base/python" }}
+from: {{ index $.Images "base/python-3.12" }}
 import:
 - image: common/wheel-artifact
   add: /wheels
