@@ -1,0 +1,21 @@
+{{- if .Values.userAuthn.internal.dexUsersCRDs }}
+---
+# user-api is an internal service for self-service password reset.
+# It is accessed by frontend components (Deckhouse UI) running inside the cluster.
+# External user access is handled through the UI, which proxies requests to this service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-api
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-api")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: user-api
+  ports:
+  - name: https
+    port: 443
+    targetPort: 8443
+    protocol: TCP
+{{- end }}
