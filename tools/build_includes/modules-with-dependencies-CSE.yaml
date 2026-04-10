@@ -1033,6 +1033,39 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/modules/150-user-authn/templates/basic-auth-proxy
+  to: /deckhouse/modules/150-user-authn/templates/basic-auth-proxy
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*.go'
+- add: /ee/cse/modules/150-user-authn/crds/dex-provider.yaml
+  to: /deckhouse/modules/150-user-authn/crds/dex-provider.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/150-user-authn/openapi/values.yaml
+  to: /deckhouse/modules/150-user-authn/openapi/values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/500-upmeter/templates/webui
   to: /deckhouse/modules/500-upmeter/templates/webui
   excludePaths:
