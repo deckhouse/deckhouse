@@ -12,6 +12,7 @@
 
 {{- $context := . }}
 {{- $_ := set $context "ModulePath" "../../" }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-nginx-lua.inc.yaml" $context.ModulePath)) $context }}
 
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
@@ -165,23 +166,20 @@ import:
 {{- end }}
 ---
 image: web-frontend
-{{- if or (eq $.Env "development") (eq $.Env "local") }}
-from: {{ index $.Images "builder/alpine" }}
-{{- else }}
-from: {{ index $.Images "base/nginx" }}
+fromImage: docs-nginx-lua-runtime-artifact
 imageSpec:
   config:
     workingDir: "/app"
-    entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
-{{- end }}
-shell:
-{{- if or (eq $.Env "development") (eq $.Env "local") }}
-  beforeInstall:
-  - apk add --no-cache nginx
+    entrypoint: [ "/usr/local/nginx/sbin/nginx", "-g", "daemon off;" ]
+    env:
+      PATH: "$PATH:/usr/local/nginx/sbin:/usr/local/nginx/bin:/usr/local/bin"
+      LUA_PATH: "/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
+      LUA_CPATH: "/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
 git:
 - add: /{{ .ModulePath }}docs/site/.werf/channels-convert.sh
   to: /scripts/channels-convert.sh
-{{- end }}
+- add: /{{ .ModulePath }}docs/documentation/.werf/lua
+  to: /etc/nginx/lua
 import:
 - image: web-frontend-artifact
   add: /app/_site

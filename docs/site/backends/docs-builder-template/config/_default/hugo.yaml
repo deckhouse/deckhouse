@@ -3,6 +3,14 @@ cleanDestinationDir: true
 
 sectionPagesMenu: main
 
+cascade:
+  - layout: reusable-partial
+    renderAsPartial: true
+    searchable: false
+    sitemap_include: false
+    target:
+      path: /modules/**/partials/**
+
 # Language settings
 defaultContentLanguage: 'en'
 defaultContentLanguageInSubdir: true

@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -28,6 +29,10 @@ var (
 	docFileRe      = regexp.MustCompile(`\.md$`)
 
 	excludeFileRe = regexp.MustCompile("crds/(gatekeeper|native|ratify|cert-manager|external)/.+.y[a]?ml$")
+
+	moduleIncludeScriptRe = regexp.MustCompile(`(?s)<script\s+type=["']application/x-module-include["']\s*>(.*?)</script>`)
+	moduleIncludeModuleRe = regexp.MustCompile(`^[a-z0-9-]+$`)
+	moduleIncludeArtifactRe = regexp.MustCompile(`^[a-z0-9-][a-z0-9-./]*\.md$`)
 )
 
 func RunDocChangesValidation(info *DiffInfo) (exitCode int) {
@@ -114,7 +119,12 @@ Only following file names are allowed in the module '/docs/' directory:
 	} else {
 		otherFileName = strings.TrimSuffix(fName, ".md") + "_RU.md"
 	}
-	return checkRelatedFileExists(fName, otherFileName, diffInfo)
+	msg = checkRelatedFileExists(fName, otherFileName, diffInfo)
+	if msg.IsError() {
+		return msg
+	}
+
+	return checkModuleIncludePlaceholders(fName)
 }
 
 var docRuResourceRe = regexp.MustCompile(`doc-ru-.+.y[a]?ml$`)
@@ -146,4 +156,94 @@ while related language file '%s' is absent.`, otherName))
 	}
 	return NewError(origName, "related not changed", fmt.Sprintf(`Documentation or resource file is changed
 while related language file '%s' is not changed`, otherName))
+}
+
+type moduleIncludePlaceholder struct {
+	Module   string `json:"module"`
+	Channel  string `json:"channel"`
+	Artifact string `json:"artifact"`
+	OnError  string `json:"onError"`
+	Fallback string `json:"fallback"`
+}
+
+var allowedModuleIncludeChannels = map[string]struct{}{
+	"alpha":        {},
+	"beta":         {},
+	"early-access": {},
+	"stable":       {},
+	"rock-solid":   {},
+	"latest":       {},
+}
+
+var allowedModuleIncludeOnError = map[string]struct{}{
+	"":         {},
+	"skip":     {},
+	"fallback": {},
+}
+
+func checkModuleIncludePlaceholders(fileName string) Message {
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return NewError(fileName, "cannot read file", err.Error())
+	}
+
+	errors := validateModuleIncludePlaceholders(string(content))
+	if len(errors) == 0 {
+		return NewOK(fileName)
+	}
+
+	return NewError(
+		fileName,
+		"invalid reusable content placeholder",
+		strings.Join(errors, "\n"),
+	)
+}
+
+func validateModuleIncludePlaceholders(content string) []string {
+	matches := moduleIncludeScriptRe.FindAllStringSubmatch(content, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	errors := make([]string, 0)
+	for idx, match := range matches {
+		if len(match) < 2 {
+			continue
+		}
+
+		placeholder := moduleIncludePlaceholder{}
+		raw := strings.TrimSpace(match[1])
+		if err := json.Unmarshal([]byte(raw), &placeholder); err != nil {
+			errors = append(errors, fmt.Sprintf("placeholder #%d: invalid JSON: %v", idx+1, err))
+			continue
+		}
+
+		if placeholder.Module == "" || !moduleIncludeModuleRe.MatchString(placeholder.Module) {
+			errors = append(errors, fmt.Sprintf("placeholder #%d: module must match ^[a-z0-9-]+$", idx+1))
+		}
+
+		if placeholder.Artifact == "" || !moduleIncludeArtifactRe.MatchString(placeholder.Artifact) {
+			errors = append(errors, fmt.Sprintf("placeholder #%d: artifact must match ^[a-z0-9-][a-z0-9-./]*\\.md$", idx+1))
+		} else if strings.HasSuffix(placeholder.Artifact, ".ru.md") {
+			errors = append(errors, fmt.Sprintf("placeholder #%d: artifact must not contain language suffix", idx+1))
+		}
+
+		channel := placeholder.Channel
+		if channel == "" {
+			channel = "stable"
+		}
+		if _, ok := allowedModuleIncludeChannels[channel]; !ok {
+			errors = append(errors, fmt.Sprintf("placeholder #%d: unsupported channel %q", idx+1, placeholder.Channel))
+		}
+
+		if _, ok := allowedModuleIncludeOnError[placeholder.OnError]; !ok {
+			errors = append(errors, fmt.Sprintf("placeholder #%d: unsupported onError %q", idx+1, placeholder.OnError))
+		}
+
+		if placeholder.OnError == "fallback" && strings.TrimSpace(placeholder.Fallback) == "" {
+			errors = append(errors, fmt.Sprintf("placeholder #%d: fallback content is required when onError=fallback", idx+1))
+		}
+	}
+
+	return errors
 }

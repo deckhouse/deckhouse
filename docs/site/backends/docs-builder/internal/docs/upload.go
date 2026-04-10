@@ -16,6 +16,7 @@ package docs
 
 import (
 	"archive/tar"
+	"bytes"
 	"fmt"
 	"io"
 	"log/slog"
@@ -23,6 +24,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/flant/docs-builder/internal/metrics"
 )
@@ -76,7 +79,10 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 				}
 			}
 		case tar.TypeReg:
-			files := make([]io.Writer, 0, len(channels))
+			payload, err := io.ReadAll(reader)
+			if err != nil {
+				return fmt.Errorf("read file payload: %w", err)
+			}
 
 			for _, channel := range channels {
 				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
@@ -95,15 +101,14 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 					return fmt.Errorf("create %q failed: %w", path, err)
 				}
 
-				files = append(files, outFile)
-			}
+				if _, err := io.Copy(outFile, bytes.NewReader(payload)); err != nil {
+					_ = outFile.Close()
+					return fmt.Errorf("copy failed: %w", err)
+				}
 
-			if _, err := io.Copy(io.MultiWriter(files...), reader); err != nil {
-				return fmt.Errorf("copy failed: %w", err)
-			}
-
-			for _, f := range files {
-				f.(*os.File).Close()
+				if err := outFile.Close(); err != nil {
+					return fmt.Errorf("close %q failed: %w", path, err)
+				}
 			}
 
 		default:
@@ -137,17 +142,27 @@ func (svc *Service) generateChannelMapping(moduleName, version string, channels 
 }
 
 func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, bool) {
-	fileName = filepath.Clean(fileName)
+	fileName = normalizeDocsPath(fileName)
 
 	if strings.HasSuffix(fileName, "_RU.md") {
 		fileName = strings.Replace(fileName, "_RU.md", ".ru.md", 1)
 	}
 
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
+		if err := validatePartialPath(fileName); err != nil {
+			svc.logger.Warn("skipping invalid partial path", slog.String("path", fileName), log.Err(err))
+			return "", false
+		}
+
+		if isPartialStaticPath(fileName) {
+			return filepath.Join(partialStaticOutputPath(svc.baseDir, moduleName, channel), strings.TrimPrefix(fileName, "/partials/static/")), true
+		}
+
 		// Skip internal documentation directories that should not be published
 		if hasBlockedPrefix(fileName) {
 			return "", false
 		}
+
 		return filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName), true
 	}
 
@@ -164,6 +179,10 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 	}
 
 	return "", false
+}
+
+func normalizeDocsPath(fileName string) string {
+	return filepath.Clean(fileName)
 }
 
 func hasBlockedPrefix(path string) bool {
@@ -202,6 +221,12 @@ func (svc *Service) cleanModulesFiles(moduleName string, channels []string) erro
 		err = os.RemoveAll(path)
 		if err != nil {
 			return fmt.Errorf("remove data %s: %w", path, err)
+		}
+
+		path = filepath.Join(svc.baseDir, partialsDir, moduleName, channel)
+		err = os.RemoveAll(path)
+		if err != nil {
+			return fmt.Errorf("remove partials %s: %w", path, err)
 		}
 	}
 

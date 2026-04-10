@@ -1,10 +1,15 @@
 giterminismConfigVersion: 1
 config:
   goTemplateRendering:
-    allowEnvVariables: [ /BASE_.+/, /CI_.+/, "WERF_ENV" , /DOC_API_.+/ ]
+    allowEnvVariables: [ /BASE_.+/, /CI_.+/, "WERF_ENV" , /DOC_API_.+/, "SOURCE_REPO" ]
   stapel:
+    mount:
+      allowBuildDir: true
+      allowFromPaths:
+      - ~/go-pkg-cache
     git:
       allowBranch: true
   secrets:
     allowValueIds:
     - GOPROXY
+    - SOURCE_REPO

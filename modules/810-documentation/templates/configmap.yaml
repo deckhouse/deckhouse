@@ -18,8 +18,10 @@ data:
     }
 
     http {
-      include       /opt/nginx-static/conf/mime.types;
+      include       /etc/nginx/mime.types;
       default_type  application/octet-stream;
+      lua_package_path "/etc/nginx/lua/?.lua;;";
+      lua_shared_dict reusable_content_metrics 1m;
 
       # Add MIME type for ES modules (.mjs files)
       types {
@@ -120,6 +122,10 @@ data:
             return 200;
         }
 
+        location = /reusable-content-metrics {
+            content_by_lua_file /etc/nginx/lua/metrics.lua;
+        }
+
         location /config {
             try_files $uri $uri/ =404;
         }
@@ -183,8 +189,16 @@ data:
         }
 
         location / {
+            set $reusable_content_raw_uri /__raw_docs$uri;
+            set $reusable_content_fetch_prefix /$uri_lang/modules;
+            set $reusable_content_public_prefix /$uri_lang/modules;
+            content_by_lua_file /etc/nginx/lua/render_page.lua;
+        }
+
+        location ~* ^/__raw_docs(?<doc_path>/.*)$ {
+            internal;
             alias /app/docs-dkp/;
-            try_files $uri $uri/ =404;
+            try_files $doc_path $doc_path/ =404;
         }
       }
     }
