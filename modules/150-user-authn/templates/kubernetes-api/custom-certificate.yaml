@@ -2,6 +2,11 @@
   {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" -}}
     {{- if eq (include "helm_lib_module_https_mode" .) "CustomCertificate" }}
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-user-authn" "kubernetes-tls") -}}
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if $moduleGateway }}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-user-authn" "kubernetes-httproute-tls") -}}
+{{- end }}
     {{- end -}}
   {{- end -}}
 {{- end -}}
