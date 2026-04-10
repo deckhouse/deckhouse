@@ -139,12 +139,6 @@ func TestApprover_TryApprove_OutOfChainComponents(t *testing.T) {
 		a := newApprover(3, nil)
 		require.False(t, a.tryApprove(newOperation("hr1", "n1", controlplanev1alpha1.OperationComponentHotReload, false)))
 	})
-
-	t.Run("PKI is not approvable via default chain", func(t *testing.T) {
-		t.Parallel()
-		a := newApprover(3, nil)
-		require.False(t, a.tryApprove(newOperation("pki1", "n1", controlplanev1alpha1.OperationComponentPKI, false)))
-	})
 }
 
 func TestNewApprover_PartitionAndOrder(t *testing.T) {

@@ -21,8 +21,6 @@ import (
 	"slices"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-
-	"k8s.io/apimachinery/pkg/api/meta"
 )
 
 const (
@@ -107,7 +105,7 @@ func partitionOperationsByApprovalState(operations []controlplanev1alpha1.Contro
 	pending = make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
 
 	for _, operation := range operations {
-		if operation.Spec.Approved && !meta.IsStatusConditionTrue(operation.Status.Conditions, "Ready") { // TODO: взять функцию из operations-controller
+		if operation.IsCompleted() {
 			seed = append(seed, operation)
 			continue
 		}
