@@ -411,7 +411,7 @@ It sets run_{CRI}_{VERSION} outputs to use as conditionals for later jobs.
 # <template: check_e2e_labels_job>
 check_e2e_labels:
   name: Check e2e labels
-  runs-on: "regular"
+  runs-on: "ubuntu-latest"
   permissions:
     contents: read
     issues: write
