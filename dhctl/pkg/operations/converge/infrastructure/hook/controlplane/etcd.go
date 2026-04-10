@@ -66,13 +66,18 @@ func waitEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, node
 }
 
 func waitEtcdHasNoMember(ctx context.Context, client *flantkubeclient.Client, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to leave etcd", nodeName), 45, 5*time.Second).RunContext(ctx, func() error {
-		// exclude the node we are checking
+	const maxAttempts = 45
+	attempt := 0
+
+	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to leave etcd", nodeName), maxAttempts, 5*time.Second).RunContext(ctx, func() error {
+		attempt++
 		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
 
 		ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
 		if err != nil {
-			log.DebugF("etcd check transient error while waiting for '%s' to leave: %v\n", nodeName, err)
+			if attempt == maxAttempts {
+				return fmt.Errorf("checking etcd membership for '%s': %w", nodeName, err)
+			}
 			return fmt.Errorf("node '%s' is still listed as etcd cluster member", nodeName)
 		}
 
@@ -112,25 +117,26 @@ func getEtcdMembers(ctx context.Context, client *flantkubeclient.Client, fieldSe
 		return nil, fmt.Errorf("etcd pods not found")
 	}
 
-	pod := pods.Items[0]
-	found := false
-	for _, cs := range pod.Status.ContainerStatuses {
-		if cs.Name != "etcd" {
-			continue
+	var pod *corev1.Pod
+	for i := range pods.Items {
+		for _, cs := range pods.Items[i].Status.ContainerStatuses {
+			if cs.Name == "etcd" && cs.State.Running != nil {
+				pod = &pods.Items[i]
+				break
+			}
 		}
-		found = true
-		if cs.State.Running == nil {
-			return nil, fmt.Errorf("etcd container is not running yet")
+		if pod != nil {
+			break
 		}
 	}
-	if !found {
-		return nil, fmt.Errorf("etcd container status not found in pod %s", pod.Name)
+	if pod == nil {
+		return nil, fmt.Errorf("no etcd pod with running container found")
 	}
 
 	req := client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace("kube-system").
-		Name(pods.Items[0].Name).
+		Name(pod.Name).
 		SubResource("exec")
 
 	command := []string{
