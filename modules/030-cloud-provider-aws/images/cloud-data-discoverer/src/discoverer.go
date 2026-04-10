@@ -95,7 +95,16 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 		if !errors.As(err, &awsErr) {
 			return nil, fmt.Errorf("DescribeInstanceTopology AWS IAM permission check error: %v", err)
 		}
-		if awsErr.Code() != "DryRunOperation" {
+
+		switch awsErr.Code() {
+		case "DryRunOperation":
+		case "UnsupportedOperation":
+			d.logger.Warn("DescribeInstanceTopology is not supported in this region, skipping permission check",
+				"region", d.region,
+				"aws_error_code", awsErr.Code(),
+				"aws_error_message", awsErr.Message(),
+			)
+		default:
 			res = append(res, v1alpha1.CloudCondition{
 				Name:    "INSUFFICIENT_AWS_SA_PERMISSIONS",
 				Message: "DescribeInstanceTopology is not allowed",
