@@ -1,0 +1,100 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix cve for ratify
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18927
+candi:
+  fixes:
+    - summary: Fix cve for admission-policy-engine, cert-manager, kube-rbac-proxy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18790
+    - summary: cve fix for user-authn module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18679
+ci:
+  fixes:
+    - summary: change users for Yandex and opestack e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18763
+cilium-hubble:
+  fixes:
+    - summary: Fixed CVE-2026-33186 in the hubble-ui image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18721
+cloud-provider-dvp:
+  fixes:
+    - summary: fixe cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18599
+common:
+  fixes:
+    - summary: >-
+        Removed Python completely from the debug-container image as it is no longer needed,
+        resolving corresponding CVEs, and silenced false positives for etcd binaries via VEX.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18845
+    - summary: Fixed CVE-2026-33186 in the CoreDNS image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18724
+      impact: CoreDNS pods will undergo a rolling restart.
+deckhouse:
+  fixes:
+    - summary: Fix CVEs in webhook-handler and cleanup VEX files.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19033
+dhctl:
+  fixes:
+    - summary: dhctl vex upd
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18894
+    - summary: mitigate CVE-2026-33186
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18610
+ingress-nginx:
+  fixes:
+    - summary: Fixes are backported to 1.73.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18960
+      impact: All Ingress-NGINX controller pods will be restarted.
+istio:
+  fixes:
+    - summary: fixed CVE-2026-34986
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18967
+      impact: istio module pods will be restarted
+    - summary: fixed CVE in istio module v1.19.7
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18811
+      impact: istio module pods will be restarted
+    - summary: fixed CVEs in module v1.25.2 images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18807
+      impact: istio module pods will be restarted
+    - summary: fixed CVE in istio module v1.21.6
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18688
+      impact: istio module pods will be restarted
+node-manager:
+  features:
+    - summary: >-
+        Backported per-GPU custom MIG configurations via `customConfigs` with `partedConfig: custom`
+        support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18999
+  fixes:
+    - summary: fixed cve in caps
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18892
+    - summary: Mitigate multiple CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18867
+    - summary: mitigate CVE-2026-33186
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18786
+registrypackages:
+  fixes:
+    - summary: Added vex with CVE-2026-33186 for kubeadm and kubelet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18783
+    - summary: Added vex with CVE-2026-33186.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18700
+terraform-manager:
+  fixes:
+    - summary: fixed cve in terraform manager
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18892
+    - summary: Implemented automatic VEX file merging from dhctl into terraform-manager images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18892
+    - summary: fixed cve in terraform manager and update version in terraform-manager
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18800
+    - summary: Fixed critical CVEs in dependencies across all cloud providers
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18599
+tools:
+  fixes:
+    - summary: Added HTTP client proxy support
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18583
+upmeter:
+  fixes:
+    - summary: >-
+        Add proper securityContext to the upmeter probe to meet the restricted security profile
+        constraints.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18492
+
