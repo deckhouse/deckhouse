@@ -110,15 +110,15 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	approver := newApprover(len(nodes.Items), operations.Items)
 
-	for _, pendingOperation := range approver.approveQueue {
-		canApprove := approver.tryApprove(pendingOperation)
+	for _, unapprovedOperation := range approver.approveQueue {
+		canApprove := approver.tryApprove(unapprovedOperation)
 
 		if canApprove {
-			original := pendingOperation.DeepCopy()
-			pendingOperation.Spec.Approved = true
+			original := unapprovedOperation.DeepCopy()
+			unapprovedOperation.Spec.Approved = true
 
-			if err := r.client.Patch(ctx, &pendingOperation, client.MergeFrom(original)); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to approve ControlPlaneOperation %q: %w", pendingOperation.Name, err)
+			if err := r.client.Patch(ctx, &unapprovedOperation, client.MergeFrom(original)); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to approve ControlPlaneOperation %q: %w", unapprovedOperation.Name, err)
 			}
 		}
 	}

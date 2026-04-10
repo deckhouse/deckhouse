@@ -153,7 +153,7 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 		require.Equal(t, "x", a.approveQueue[0].Name)
 	})
 
-	t.Run("approved without Ready is seed only empty queue", func(t *testing.T) {
+	t.Run("approved and incompleted is seed only empty queue", func(t *testing.T) {
 		t.Parallel()
 		op := newOperation("x", "n1", controlplanev1alpha1.OperationComponentEtcd, true)
 		a := newApprover(1, []controlplanev1alpha1.ControlPlaneOperation{op})
@@ -161,7 +161,7 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 		require.Equal(t, 1, a.approveChain.components[controlplanev1alpha1.OperationComponentEtcd].approvedOperationsTotal)
 	})
 
-	t.Run("approved with Ready=True is excluded from seed and queue", func(t *testing.T) {
+	t.Run("approved and completed is excluded from seed and queue", func(t *testing.T) {
 		t.Parallel()
 		op := newOperation("x", "n1", controlplanev1alpha1.OperationComponentEtcd, true)
 		meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{

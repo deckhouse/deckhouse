@@ -84,38 +84,38 @@ type component struct {
 }
 
 // newApprover builds an approver for one reconcile pass: partitions operations into
-// in-flight seeds (approved && !Ready) and pending (!approved), sorts both by pipeline stage,
-// seeds the chain, and exposes pending operations via approveQueue iteration order.
+// approved && !Completed and unapproved, sorts both by pipeline stage,
+// seeds the chain, and exposes unapproved operations via approveQueue iteration order.
 func newApprover(nodesCount int, operations []controlplanev1alpha1.ControlPlaneOperation) *approver {
-	approvedOperations, pendingOperations := partitionOperationsByApprovalState(operations)
+	approvedOperations, unapprovedOperations := partitionOperationsByApprovalState(operations)
 	sortOperationsByPipelineOrder(approvedOperations)
-	sortOperationsByPipelineOrder(pendingOperations)
+	sortOperationsByPipelineOrder(unapprovedOperations)
 
 	approveChain := buildApproveChain(nodesCount)
 	approveChain.seedApprovedOperations(approvedOperations)
 
 	return &approver{
 		approveChain: approveChain,
-		approveQueue: pendingOperations,
+		approveQueue: unapprovedOperations,
 	}
 }
 
-func partitionOperationsByApprovalState(operations []controlplanev1alpha1.ControlPlaneOperation) (seed, pending []controlplanev1alpha1.ControlPlaneOperation) {
-	seed = make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
-	pending = make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
+func partitionOperationsByApprovalState(operations []controlplanev1alpha1.ControlPlaneOperation) (approvedOperations, unapprovedOperations []controlplanev1alpha1.ControlPlaneOperation) {
+	approvedOperations = make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
+	unapprovedOperations = make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
 
 	for _, operation := range operations {
-		if operation.IsCompleted() {
-			seed = append(seed, operation)
+		if operation.Spec.Approved && !operation.IsCompleted() {
+			approvedOperations = append(approvedOperations, operation)
 			continue
 		}
 
 		if !operation.Spec.Approved {
-			pending = append(pending, operation)
+			unapprovedOperations = append(unapprovedOperations, operation)
 		}
 	}
 
-	return seed, pending
+	return approvedOperations, unapprovedOperations
 }
 
 // sortOperationsByPipelineOrder orders operations by pipelineStageIndex (see controlPlaneApprovePipeline).
