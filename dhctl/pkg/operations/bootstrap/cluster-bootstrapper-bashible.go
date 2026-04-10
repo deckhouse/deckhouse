@@ -21,8 +21,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
@@ -41,33 +39,19 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		return err
 	}
 
-	if err := terminal.AskBecomePassword(); err != nil {
-		return err
-	}
-	if err := terminal.AskBastionPassword(); err != nil {
+	sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+	if err != nil {
 		return err
 	}
 
-	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if err = wrapper.Client().Start(); err != nil {
-			return fmt.Errorf("unable to start ssh client: %w", err)
-		}
-		if err = WaitForSSHConnectionOnMaster(ctx, wrapper.Client()); err != nil {
+	sshClient, err := sshProvider.Client(ctx)
+	if err == nil {
+		if err = WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 		}
 	}
 
-	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
-		Node:           b.NodeInterface,
-		NodeIP:         app.InternalNodeIP,
-		DevicePath:     app.DevicePath,
-		MetaConfig:     metaConfig,
-		CommanderMode:  b.CommanderMode,
-		DirsConfig:     b.DirectoryConfig,
-		LoggerProvider: b.loggerProvider,
-	})
-
-	if err != nil {
+	if err := RunBashiblePipeline(ctx, b.SSHProviderInitializer, metaConfig, app.InternalNodeIP, app.DevicePath, b.CommanderMode, b.DirectoryConfig); err != nil {
 		return err
 	}
 

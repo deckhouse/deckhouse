@@ -22,11 +22,12 @@ import (
 	"strings"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
 )
 
 type PythonCheck struct {
-	Node node.Interface
+	NodeInterface libcon.Interface
 }
 
 const PythonCheckName preflight.CheckName = "python-modules"
@@ -43,7 +44,7 @@ func (PythonCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c PythonCheck) Run(ctx context.Context) error {
-	pythonBinary, err := detectPythonBinary(ctx, c.Node)
+	pythonBinary, err := detectPythonBinary(ctx, c.NodeInterface)
 	if err != nil {
 		return fmt.Errorf("Detect Python binary name: %w", err)
 	}
@@ -59,7 +60,7 @@ func (c PythonCheck) Run(ctx context.Context) error {
 	for _, moduleSet := range requiredPythonModules {
 		found := false
 		for _, moduleName := range moduleSet {
-			cmd := c.Node.Command(pythonBinary, "-c", "import "+moduleName)
+			cmd := c.NodeInterface.Command(pythonBinary, "-c", "import "+moduleName)
 			if err := cmd.Run(ctx); err != nil {
 				var ee *exec.ExitError
 				if errors.As(err, &ee) && ee.ExitCode() != 255 {
@@ -78,10 +79,11 @@ func (c PythonCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func detectPythonBinary(ctx context.Context, sshCl node.Interface) (string, error) {
+func detectPythonBinary(ctx context.Context, nodeInterface libcon.Interface) (string, error) {
 	possibleBinaries := []string{"python3", "python2", "python"}
+
 	for _, binary := range possibleBinaries {
-		err := sshCl.Command("command", "-v", binary).Run(ctx)
+		err := nodeInterface.Command("command", "-v", binary).Run(ctx)
 		if err == nil {
 			return binary, nil
 		}
@@ -98,8 +100,8 @@ func detectPythonBinary(ctx context.Context, sshCl node.Interface) (string, erro
 	)
 }
 
-func Python(nodeInterface node.Interface) preflight.Check {
-	check := PythonCheck{Node: nodeInterface}
+func Python(nodeInterface libcon.Interface) preflight.Check {
+	check := PythonCheck{NodeInterface: nodeInterface}
 	return preflight.Check{
 		Name:        PythonCheckName,
 		Description: check.Description(),

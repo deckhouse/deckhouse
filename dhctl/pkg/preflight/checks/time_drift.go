@@ -24,7 +24,8 @@ import (
 	"time"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
 )
 
 const maxTimeDriftSeconds int64 = 600 // 10 minutes
@@ -32,7 +33,7 @@ const maxTimeDriftSeconds int64 = 600 // 10 minutes
 var timestampRegexp = regexp.MustCompile(`^(\d+)$`)
 
 type TimeDriftCheck struct {
-	Node node.Interface
+	NodeInterface libcon.Interface
 }
 
 const TimeDriftCheckName preflight.CheckName = "time-drift"
@@ -50,7 +51,7 @@ func (TimeDriftCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c TimeDriftCheck) Run(ctx context.Context) error {
-	remote, err := getRemoteTimeStamp(ctx, c.Node)
+	remote, err := getRemoteTimeStamp(ctx, c.NodeInterface)
 	if err != nil {
 		return nil
 	}
@@ -69,8 +70,8 @@ func (c TimeDriftCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func getRemoteTimeStamp(ctx context.Context, sshCl node.Interface) (int64, error) {
-	cmd := sshCl.Command("date", "+%s")
+func getRemoteTimeStamp(ctx context.Context, nodeInterface libcon.Interface) (int64, error) {
+	cmd := nodeInterface.Command("date", "+%s")
 	dateOutput, _, err := cmd.Output(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to execute date command: %w", err)
@@ -87,8 +88,8 @@ func getRemoteTimeStamp(ctx context.Context, sshCl node.Interface) (int64, error
 	return timeStamp, nil
 }
 
-func TimeDrift(nodeInterface node.Interface) preflight.Check {
-	check := TimeDriftCheck{Node: nodeInterface}
+func TimeDrift(nodeInterface libcon.Interface) preflight.Check {
+	check := TimeDriftCheck{NodeInterface: nodeInterface}
 	return preflight.Check{
 		Name:        TimeDriftCheckName,
 		Description: check.Description(),

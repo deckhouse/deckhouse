@@ -22,12 +22,12 @@ import (
 	"strings"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 )
 
 type DeckhouseUserCheck struct {
-	Node node.Interface
+	NodeInterface libcon.Interface
 }
 
 const DeckhouseUserCheckName preflight.CheckName = "deckhouse-user"
@@ -50,7 +50,7 @@ func (c DeckhouseUserCheck) Run(ctx context.Context) error {
 		return err
 	}
 
-	cmd := c.Node.UploadScript(file)
+	cmd := c.NodeInterface.UploadScript(file)
 	out, err := cmd.Execute(ctx)
 	if err != nil {
 		var ee *exec.ExitError
@@ -64,8 +64,8 @@ func (c DeckhouseUserCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func DeckhouseUser(nodeInterface node.Interface) preflight.Check {
-	check := DeckhouseUserCheck{Node: nodeInterface}
+func DeckhouseUser(nodeInterface libcon.Interface) preflight.Check {
+	check := DeckhouseUserCheck{NodeInterface: nodeInterface}
 	return preflight.Check{
 		Name:        DeckhouseUserCheckName,
 		Description: check.Description(),

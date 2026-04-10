@@ -18,12 +18,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -46,14 +49,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -90,7 +87,6 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	NodeInterface              node.Interface
 	SSHProviderInitializer     *providerinitializer.SSHProviderInitializer
 	KubeProvider               libcon.KubeProvider
 	InitialState               phases.DhctlState
@@ -283,40 +279,40 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
-	if govalue.IsNil(b.Params.NodeInterface) {
-		log.DebugLn("NodeInterface is nil")
-		if len(app.SSHHosts) == 0 && metaConfig.IsStatic() {
-			log.DebugLn("Hosts empty and static cluster. Use local interface")
-			b.Params.NodeInterface = local.NewNodeInterface()
-		} else {
-			sshClient, err := sshclient.NewClientFromFlags(ctx)
-			if err != nil {
-				return err
-			}
+	// if govalue.IsNil(b.Params.LocalNodeInterface) {
+	// 	log.DebugLn("NodeInterface is nil")
+	// 	if len(app.SSHHosts) == 0 && metaConfig.IsStatic() {
+	// 		log.DebugLn("Hosts empty and static cluster. Use local interface")
+	// 		b.Params.LocalNodeInterface = local.NewNodeInterface(b.SSHProviderInitializer.GetSettings())
+	// 	} else {
+	// 		sshClient, err := sshclient.NewClientFromFlags(ctx)
+	// 		if err != nil {
+	// 			return err
+	// 		}
 
-			// do it for get ssh
-			if err := sshClient.OnlyPreparePrivateKeys(); err != nil {
-				return err
-			}
+	// 		// do it for get ssh
+	// 		if err := sshClient.OnlyPreparePrivateKeys(); err != nil {
+	// 			return err
+	// 		}
 
-			if metaConfig.IsStatic() {
-				// aks bastion pass for SSH Client Dial() with password auth
-				if err := terminal.AskBastionPassword(); err != nil {
-					return err
-				}
-				// ask become pass for SSH Client Dial() with password auth
-				if err := terminal.AskBecomePassword(); err != nil {
-					return err
-				}
-				if err := sshClient.Start(); err != nil {
-					return fmt.Errorf("unable to start ssh client: %w", err)
-				}
-			}
+	// 		if metaConfig.IsStatic() {
+	// 			// aks bastion pass for SSH Client Dial() with password auth
+	// 			if err := terminal.AskBastionPassword(); err != nil {
+	// 				return err
+	// 			}
+	// 			// ask become pass for SSH Client Dial() with password auth
+	// 			if err := terminal.AskBecomePassword(); err != nil {
+	// 				return err
+	// 			}
+	// 			if err := sshClient.Start(); err != nil {
+	// 				return fmt.Errorf("unable to start ssh client: %w", err)
+	// 			}
+	// 		}
 
-			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh\n", len(app.SSHHosts), metaConfig.IsStatic())
-			b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
-		}
-	}
+	// 		log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh\n", len(app.SSHHosts), metaConfig.IsStatic())
+	// 		b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
+	// 	}
+	// }
 
 	// next init cache
 	cachePath := metaConfig.CachePath()
@@ -396,14 +392,20 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	})
 
 	if metaConfig.ClusterType == config.CloudClusterType {
+		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
+		}
 
 		cloudPreflightSuite := suites.NewCloudSuite(suites.CloudDeps{
 			InstallConfig: deckhouseInstallConfig,
 			MetaConfig:    metaConfig,
 		})
 		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
-			MetaConfig: metaConfig,
-			Node:       b.NodeInterface,
+			MetaConfig:  metaConfig,
+			SSHProvider: sshProvider,
 		})
 
 		preflightRunner = preflight.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
@@ -460,25 +462,20 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
 			deckhouseInstallConfig.InfrastructureState = baseOutputs.InfrastructureState
 
-			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-				sshClient := wrapper.Client()
-				if baseOutputs.BastionHost != "" {
-					sshClient.Session().BastionHost = baseOutputs.BastionHost
-					SaveBastionHostToCache(ctx, baseOutputs.BastionHost)
-				}
-				sshClient.Session().SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
-				// aks bastion pass for SSH Client Dial() with password auth
-				if err := terminal.AskBastionPassword(); err != nil {
-					return err
-				}
-				// ask become pass for SSH Client Dial() with password auth
-				if err := terminal.AskBecomePassword(); err != nil {
-					return err
-				}
-				if err := sshClient.Start(); err != nil {
-					return fmt.Errorf("unable to start ssh client: %w", err)
-				}
+			// providers should be reinitialized here
+			baseSettings := b.SSHProviderInitializer.GetSettings()
+			connectionConfig := b.SSHProviderInitializer.GetConfig()
+
+			if baseOutputs.BastionHost != "" {
+				connectionConfig.Config.BastionHost = baseOutputs.BastionHost
+				SaveBastionHostToCache(baseOutputs.BastionHost)
 			}
+
+			connectionConfig.Hosts = append(connectionConfig.Hosts, sshconfig.Host{Host: masterOutputs.MasterIPForSSH})
+
+			sshProviderInitializer := providerinitializer.NewSSHProviderInitializer(baseSettings, connectionConfig)
+			b.SSHProviderInitializer = sshProviderInitializer
+			b.KubeProvider = sshProviderInitializer.GetKubeProvider(ctx)
 
 			nodeIP = masterOutputs.NodeInternalIP
 			devicePath = masterOutputs.KubeDataDevicePath
@@ -497,11 +494,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			return err
 		}
 	} else {
-
-		staticPreflightSuite := suites.NewStaticSuite(suites.StaticDeps{
-			Node:       b.NodeInterface,
-			MetaConfig: metaConfig,
-		})
+		staticPreflightSuite, err := suites.NewStaticSuite(suites.StaticDeps{
+			SSHProviderInitializer: b.SSHProviderInitializer,
+			MetaConfig:             metaConfig,
+		}, ctx)
 		preflightRunner = preflight.New(globalPreflightSuite, staticPreflightSuite)
 		preflightRunner.UseCache(bootstrapState)
 		preflightRunner.SetCacheSalt(configHash)
@@ -519,19 +515,15 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		_ = json.Unmarshal(metaConfig.ClusterConfig["static"], &static)
 		nodeIP = static.NodeIP
 
-		if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-			sshClient := wrapper.Client()
-			if sshClient.Session().BastionHost != "" {
-				SaveBastionHostToCache(ctx, sshClient.Session().BastionHost)
+		if b.SSHProviderInitializer.CheckHosts() {
+			connectionConfig := b.SSHProviderInitializer.GetConfig()
+			if connectionConfig.Config.BastionHost != "" {
+				SaveBastionHostToCache(connectionConfig.Config.BastionHost)
 			}
 
-			state.SaveMasterHostsToCache(
-				ctx,
-				stateCache,
-				map[string]string{
-					"first-master": sshClient.Session().Host(),
-				},
-			)
+			state.SaveMasterHostsToCache(stateCache, map[string]string{
+				"first-master": connectionConfig.Hosts[0].Host,
+			})
 		}
 	}
 
@@ -558,8 +550,18 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if err := WaitForSSHConnectionOnMaster(ctx, wrapper.Client()); err != nil {
+	if b.SSHProviderInitializer.CheckHosts() {
+		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return err
+		}
+
+		sshClient, err := sshProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+
+		if err := WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 		}
 	}
@@ -590,7 +592,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)
+	kubeCl, err := b.KubeProvider.Client(ctx)
 	if err != nil {
 		return err
 	}
@@ -599,19 +601,19 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	installParams := InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error {
-			return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, nil, true)
+			return createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateBeforeDeckhouseBootstrap, nil, true)
 		},
 		State: bootstrapState,
 	}
 
-	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig, installParams)
+	installDeckhouseResult, err := InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, deckhouseInstallConfig, installParams)
 	if err != nil {
 		return err
 	}
 
 	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseInstall)
 
-	err = WaitForFirstMasterNodeBecomeReady(ctx, kubeCl)
+	err = WaitForFirstMasterNodeBecomeReady(ctx, &client.KubernetesClient{KubeClient: kubeCl})
 	if err != nil {
 		return err
 	}
@@ -629,12 +631,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			if b.CommanderMode {
 				return action()
 			}
-			return lock.NewInLockLocalRunner(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-bootstraper").
+			return lock.NewInLockLocalRunner(kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl}), "local-bootstraper").
 				Run(ctx, action)
 		}
 
 		err := localBootstraper(func() error {
-			return bootstrapAdditionalNodesForCloudCluster(ctx, kubeCl, metaConfig, masterAddressesForSSH, b.InfrastructureContext)
+			return bootstrapAdditionalNodesForCloudCluster(ctx, &client.KubernetesClient{KubeClient: kubeCl}, metaConfig, masterAddressesForSSH, b.InfrastructureContext)
 		})
 		if err != nil {
 			return err
@@ -647,11 +649,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)).IsReadyAll(ctx); err != nil {
+	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl})).IsReadyAll(ctx); err != nil {
 		return err
 	}
 
-	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false)
+	err = createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false)
 	if err != nil {
 		return err
 	}
@@ -662,9 +664,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	sshNodeInterfaceWrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
-	if ok && app.PostBootstrapScriptPath != "" {
-		postScriptExecutor := NewPostBootstrapScriptExecutor(sshNodeInterfaceWrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
+	if b.SSHProviderInitializer.CheckHosts() && app.PostBootstrapScriptPath != "" {
+		postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, app.PostBootstrapScriptPath, bootstrapState).
 			WithTimeout(app.PostBootstrapScriptTimeout)
 
 		if err := postScriptExecutor.Execute(ctx); err != nil {
@@ -678,7 +679,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if err := RunPostInstallTasks(ctx, kubeCl, installDeckhouseResult); err != nil {
+	if err := RunPostInstallTasks(ctx, &client.KubernetesClient{KubeClient: kubeCl}, installDeckhouseResult); err != nil {
 		return err
 	}
 
@@ -699,10 +700,18 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	log.Success("Deckhouse cluster was created successfully!\n")
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		_ = log.ProcessCtx(ctx, "common", "Kubernetes Master Node addresses for SSH", func(ctx context.Context) error {
-			wrapper := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+		_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
+			sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+			if err != nil {
+				return err
+			}
+
+			sshClient, err := sshProvider.Client(ctx)
+			if err != nil {
+				return err
+			}
 			for nodeName, address := range masterAddressesForSSH {
-				fakeSession := wrapper.Client().Session().Copy()
+				fakeSession := sshClient.Session().Copy()
 				fakeSession.SetAvailableHosts([]session.Host{{Host: address, Name: nodeName}})
 				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
 			}
