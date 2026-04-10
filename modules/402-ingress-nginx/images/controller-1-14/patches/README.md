@@ -75,9 +75,9 @@ Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. A
 
 <https://github.com/kubernetes/ingress-nginx/pull/8213>
 
-### 011-restore-validation.patch (BWRAP!!!)
+### 011-restore-validation.patch (sandbox)
 
-Re-enables configuration validation with sandboxed (by bwrap) for the ingress-nginx controller, which was previously disabled as a mitigation for the security vulnerabilities described in CVE-2025-1097, CVE-2025-1098, CVE-2025-1974, CVE-2025-24513, and CVE-2025-24514.
+Re-enables configuration validation in a sandboxed (by sandbox) environment, which was previously disabled as a mitigation for the security vulnerabilities described in CVE-2025-1097, CVE-2025-1098, CVE-2025-1974, CVE-2025-24513, and CVE-2025-24514.
 
 ### 012-validation-mode.patch
 
@@ -151,3 +151,13 @@ This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issu
 
 There is a race condition on Ingress-NGINX controller start that may result in controller forming incomplete NGINX configuration (not processing some ingress objects).
 The fix is to use registration when checking if informer has been synced.
+
+### 025-add-isolated-nginx-config-validation.patch
+
+This patch switches `nginx -t` execution according to `spec.validationSandboxMode` for ingress-nginx `1.14`:
+
+- `Disabled`: uses the regular `nginx -t` path without sandbox isolation.
+- `Standard`: runs validation via `/usr/bin/unshare -S 64535 -R /chroot/validation-chroot ...`.
+- `Full`: runs validation via `/usr/bin/sandbox` using the ptrace-based sandbox runner.
+
+Both `Full` and `Standard` modes keep the full cluster-wide validation context enabled. The `Standard` mode uses a dedicated minimal validation root nested under `/chroot`, but it is weaker than the full sandbox because it does not use the ptrace-based runtime file checks or seccomp filtering from `/usr/bin/sandbox`.
