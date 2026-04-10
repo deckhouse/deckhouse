@@ -70,73 +70,9 @@ type BashiblePipelineParams struct {
 	LoggerProvider dhctllog.LoggerProvider
 }
 
-func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller, dc *directoryconfig.DirectoryConfig) error {
-	return log.Process("bootstrap", "Prepare Bashible", func() error {
-		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig, dc)
-	})
-}
-
-func ExecuteBashibleBundle(ctx context.Context, nodeInterface libcon.Interface, tmpDir string, commanderMode bool) error {
-	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
-	bundleCmd.WithCleanupAfterExec(false)
-	bundleCmd.Sudo()
-	parentDir := tmpDir + "/var/lib"
-	bundleDir := "bashible"
-
-	_, err := bundleCmd.ExecuteBundle(ctx, parentDir, bundleDir)
-	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
-			return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
-		}
-
-		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
-	}
-	return nil
-}
-
-func checkBashibleAlreadyRun(ctx context.Context, nodeInterface libcon.Interface) (bool, error) {
-	isReady := false
-	err := log.Process("bootstrap", "Checking bashible is ready", func() error {
-		cmd := nodeInterface.Command("cat", DHCTLEndBootstrapBashiblePipeline)
-		cmd.Sudo(ctx)
-		cmd.WithTimeout(10 * time.Second)
-		stdout, stderr, err := cmd.Output(ctx)
-		if err != nil {
-			isReady = false
-			return err
-		}
-
-		log.DebugF("cat %s stdout: '%s'; stderr: '%s'\n", DHCTLEndBootstrapBashiblePipeline, stdout, stderr)
-
-		isReady = strings.Contains(string(stdout), "OK")
-
-		return nil
-	})
-
-	return isReady, err
-}
-
-func getBashiblePIDs(ctx context.Context, nodeInterface libcon.Interface) ([]string, error) {
-	var psStrings []string
-	h := func(l string) {
-		psStrings = append(psStrings, l)
-	}
-	cmd := nodeInterface.Command("bash", "-c", `ps a --no-headers -o args:64 -o "|%p"`)
-	cmd.Sudo(ctx)
-	cmd.WithTimeout(10 * time.Second)
-	cmd.WithStdoutHandler(h)
-	if err := cmd.Run(ctx); err != nil {
-		var ee *exec.ExitError
-		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
-		if errors.As(err, &ee) {
-			log.DebugF("'ps a --no-headers -o args:64 -o \"|%%p\"' got exit code: %d and stderr %s", ee.ExitCode(), string(ee.Stderr))
-			if ee.ExitCode() == 255 {
-				return nil, err
-			}
-		}
-
-		return nil, err
+func (p *BashiblePipelineParams) Validate() error {
+	if govalue.IsNil(p.Node) {
+		return p.errIsNil("Node")
 	}
 
 	if govalue.IsNil(p.MetaConfig) {
@@ -147,31 +83,23 @@ func getBashiblePIDs(ctx context.Context, nodeInterface libcon.Interface) ([]str
 		return p.errIsNil("DirsConfig")
 	}
 
-func killBashible(ctx context.Context, nodeInterface libcon.Interface, pids []string) error {
-	cmd := nodeInterface.Command("kill", pids...)
-	cmd.Sudo(ctx)
-	cmd.WithTimeout(10 * time.Second)
-	if err := cmd.Run(ctx); err != nil {
-		var ee *exec.ExitError
-		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
-		if errors.As(err, &ee) {
-			log.DebugF("'kill %v' got exit code: %d and stderr %s", pids, ee.ExitCode(), string(ee.Stderr))
-			if ee.ExitCode() == 255 {
-				return err
-			}
-
-			return nil
-		}
+	if govalue.IsNil(p.LoggerProvider) {
+		return p.errIsNil("LoggerProvider")
 	}
 
 	return nil
 }
 
-func unlockBashible(ctx context.Context, nodeInterface libcon.Interface) error {
-	cmd := nodeInterface.Command("rm", "-f", "/var/lock/bashible")
-	cmd.Sudo(ctx)
-	cmd.WithTimeout(10 * time.Second)
-	if err := cmd.Run(ctx); err != nil {
+func (p *BashiblePipelineParams) err(msg string) error {
+	return fmt.Errorf("Internal error: BashiblePipelineParams %s", msg)
+}
+
+func (p *BashiblePipelineParams) errIsNil(c string) error {
+	return p.err(fmt.Sprintf("%s is nil", c))
+}
+
+func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) error {
+	if err := params.Validate(); err != nil {
 		return err
 	}
 
@@ -182,207 +110,8 @@ func unlockBashible(ctx context.Context, nodeInterface libcon.Interface) error {
 	loggerProvider := params.LoggerProvider
 	devicePath := params.DevicePath
 
-func cleanupPreviousBashibleRunIfNeed(ctx context.Context, nodeInterface libcon.Interface) error {
-	return log.Process("bootstrap", "Cleanup previous bashible run if need", func() error {
-		log.DebugF("Gettting bashible pids")
-		pids, err := getBashiblePIDs(ctx, nodeInterface)
-		if err != nil {
-			return err
-		}
-
-		log.DebugLn("Got bashible pids: %v", pids)
-		if len(pids) == 0 {
-			log.InfoLn("Bashible instance not found. Start it!")
-			return nil
-		}
-
-		if err := killBashible(ctx, nodeInterface, pids); err != nil {
-			return err
-		}
-
-		return unlockBashible(ctx, nodeInterface)
-	})
-}
-
-func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl libcon.SSHClient, dc *directoryconfig.DirectoryConfig) (libcon.ReverseTunnel, error) {
-	port := "5444"
-	listenAddress := "127.0.0.1"
-
-	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(
-		fmt.Sprintf("https://localhost:%s/healthz", port),
-		dc,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot render reverse tunnel checking script: %v", err)
-	}
-
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(
-		listenAddress,
-		port,
-		dc,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
-	}
-
-	checker := utils.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
-	killer := utils.NewRunScriptReverseTunnelKiller(sshCl, killScript)
-
-	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s:%s", listenAddress, port, listenAddress, port))
-	err = tun.Up()
-	if err != nil {
-		return nil, err
-	}
-
-	tun.StartHealthMonitor(ctx, checker, killer)
-
-	return tun, nil
-}
-
-type registryClientConfigGetter struct {
-	registry.ClientConfig
-}
-
-func newRegistryClientConfigGetter(config registry_config.Data) *registryClientConfigGetter {
-	return &registryClientConfigGetter{
-		ClientConfig: registry.ClientConfig{
-			Repository: config.ImagesRepo,
-			Scheme:     strings.ToLower(string(config.Scheme)),
-			CA:         config.CA,
-			Auth:       config.AuthBase64(),
-		},
-	}
-}
-
-func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, error) {
-	return &r.ClientConfig, nil
-}
-
-func StartRegistryPackagesProxy(ctx context.Context, registryRemote registry_config.Data, rppSignCheck string, clusterDomain string) error {
-	cert, err := generateTLSCertificate(clusterDomain)
-	if err != nil {
-		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
-	}
-
-	listener, err := tls.Listen("tcp", "127.0.0.1:5444", &tls.Config{
-		Certificates: []tls.Certificate{*cert},
-	})
-	if err != nil {
-		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
-	}
-
-	clientConfigGetter := newRegistryClientConfigGetter(registryRemote)
-	srv := &http.Server{}
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
-	proxyConfig := &proxy.Config{SignCheck: (rppSignCheck == "true")}
-	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
-
-	go proxy.Serve(proxyConfig)
-
-	go func() {
-		<-ctx.Done()
-		proxy.StopProxy()
-	}()
-
-	return nil
-}
-
-type registryPackagesProxyLogger struct{}
-
-func (r registryPackagesProxyLogger) Errorf(format string, args ...interface{}) {
-	log.ErrorF(format+"\n", args...)
-}
-
-func (r registryPackagesProxyLogger) Infof(format string, args ...interface{}) {
-	log.InfoF(format+"\n", args...)
-}
-
-func (r registryPackagesProxyLogger) Warnf(format string, args ...interface{}) {
-	log.WarnF(format+"\n", args...)
-}
-
-func (r registryPackagesProxyLogger) Debugf(format string, args ...interface{}) {
-	log.DebugF(format+"\n", args...)
-}
-
-func (r registryPackagesProxyLogger) Error(msg string, args ...interface{}) {
-	log.ErrorLn(msg, args)
-}
-
-func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
-	now := time.Now()
-
-	subjectKeyId := make([]byte, 10)
-
-	_, err := rand.Read(subjectKeyId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate subject key id: %v", err)
-	}
-
-	certTemplate := &x509.Certificate{
-		SerialNumber: big.NewInt(now.Unix()),
-		Subject: pkix.Name{
-			CommonName:         fmt.Sprintf("registry-packages-proxy.%s", clusterDomain),
-			Country:            []string{"Unknown"},
-			Organization:       []string{clusterDomain},
-			OrganizationalUnit: []string{"registry-packages-proxy"},
-		},
-		NotBefore:             now,
-		NotAfter:              now.AddDate(0, 0, 1), // Valid for one day
-		SubjectKeyId:          subjectKeyId,
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		KeyUsage: x509.KeyUsageKeyEncipherment |
-			x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
-	}
-
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate private key: %v", err)
-	}
-
-	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate,
-		priv.Public(), priv)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create certificate: %v", err)
-	}
-
-	tlsCert := &tls.Certificate{
-		Certificate: [][]byte{cert},
-		PrivateKey:  priv,
-	}
-
-	return tlsCert, nil
-}
-
-func RunBashiblePipeline(
-	ctx context.Context,
-	sshProviderinitializer *providerinitializer.SSHProviderInitializer,
-	cfg *config.MetaConfig,
-	nodeIP string,
-	devicePath string,
-	commanderMode bool,
-	dc *directoryconfig.DirectoryConfig,
-) error {
-	var clusterDomain string
-	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
-	if err != nil {
-		return err
-	}
-
-	log.DebugF("Got cluster domain: %s", clusterDomain)
-
-	nodeInterface, err := helper.GetNodeInterface(sshProviderinitializer, ctx, sshProviderinitializer.GetSettings())
-	if err != nil {
-		return err
-	}
-
-	if err := checkShell(ctx, nodeInterface); err != nil {
-		return err
-	}
-
-	if err := CheckDHCTLDependencies(ctx, nodeInterface); err != nil {
+	depsChecker := deps.NewDependenciesChecker(params.Node, loggerProvider)
+	if err := depsChecker.Check(ctx); err != nil {
 		return err
 	}
 
@@ -440,20 +169,10 @@ func RunBashiblePipeline(
 		return err
 	}
 
-	return retry.NewLoop("Execute bundle", 10, 10*time.Second).
-		RunContext(ctx, func() error {
-			// we do not need to restart tunnel because we have HealthMonitor
-
-			log.DebugLn("Stop bashible if need")
-
-			if err := cleanupPreviousBashibleRunIfNeed(ctx, nodeInterface); err != nil {
-				return err
-			}
-
-			log.DebugLn("Start execute bashible bundle routine")
-
-			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir, commanderMode)
-		})
+	return bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
+		BundleDir:     templateController.TmpDir,
+		CommanderMode: params.CommanderMode,
+	})
 }
 
 func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
@@ -713,39 +432,7 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 		return nil
 	}
 
-	return log.Process("bootstrap", "Run post bootstrap actions", func() error {
-		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
-	})
-}
-
-func checkShell(ctx context.Context, nodeInterface libcon.Interface) error {
-	return log.Process("bootstrap", "Check user's shell", func() error {
-		breakPredicate := func(err error) bool {
-			// Retry only for transient SSH connection issues
-			if err == nil {
-				return true
-			}
-			var ee *exec.ExitError
-			if errors.As(err, &ee) && ee.ExitCode() == 255 {
-				log.WarnLn("SSH connection failed (exit 255), retrying in 5 seconds...\n")
-				return false
-			}
-			return true
-		}
-		err := retry.NewSilentLoop("check shell", 10, 5*time.Second).BreakIf(breakPredicate).RunContext(ctx, func() error {
-			cmd := nodeInterface.Command("echo $SHELL")
-			out, stderr, err := cmd.Output(ctx)
-			if err != nil {
-				return fmt.Errorf("error checking shell: %s: %v", stderr, err)
-			}
-
-			if !strings.Contains(string(out), "bash") {
-				return fmt.Errorf("Error: Bashible requires /bin/bash as the user's login shell. Current shell: %s. Please change the user's shell.", strings.TrimSpace(string(out)))
-			}
-
-			return nil
-		})
-
-		return err
+	return log.ProcessCtx(ctx, "bootstrap", "Run post bootstrap actions", func(ctx context.Context) error {
+		return applyPostBootstrapModuleConfigs(ctx, kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }
