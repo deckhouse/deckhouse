@@ -16,10 +16,7 @@ package checks
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -31,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cfgregistry "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
 
 type DhctlEditionCheck struct {
@@ -99,7 +97,7 @@ func (c DhctlEditionCheck) deckhouseImageConfig(ctx context.Context) (*v1.Config
 		return nil, err
 	}
 
-	client, err := tlsClient(registry.CA, string(registry.Scheme))
+	client, err := registryutil.NewRegistryClient(string(registry.Scheme), registry.CA)
 	if err != nil {
 		return nil, err
 	}
@@ -132,25 +130,6 @@ func registryAuth(registry cfgregistry.Data) (authn.Authenticator, error) {
 		}), nil
 	}
 	return authn.Anonymous, nil
-}
-
-func tlsClient(ca, scheme string) (*http.Client, error) {
-	client := &http.Client{}
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-
-	if strings.ToLower(scheme) == "http" || len(ca) == 0 {
-		client.Transport = transport
-		return client, nil
-	}
-
-	certPool := x509.NewCertPool()
-	if ok := certPool.AppendCertsFromPEM([]byte(ca)); !ok {
-		return nil, fmt.Errorf("invalid cert in CA PEM")
-	}
-
-	transport.TLSClientConfig = &tls.Config{RootCAs: certPool}
-	client.Transport = transport
-	return client, nil
 }
 
 func (c DhctlEditionCheck) provider() imageDescriptorProvider {

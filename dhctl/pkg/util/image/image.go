@@ -20,14 +20,11 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -44,6 +41,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
 
 type dockerConfig struct {
@@ -362,12 +360,9 @@ func getOptsFromRegistryConfig(ref name.Reference, cfg *RegistryConfig) ([]remot
 	}
 	opts = append(opts, remote.WithAuth(auth))
 	if cfg.ca != "" {
-		tlsCfg, err := loadCustomCA([]byte(cfg.ca))
+		transport, err := registryutil.NewRegistryTransport(cfg.scheme, cfg.ca)
 		if err != nil {
 			return nil, err
-		}
-		transport := &http.Transport{
-			TLSClientConfig: tlsCfg,
 		}
 		opts = append(opts, remote.WithTransport(transport))
 	}
@@ -542,15 +537,4 @@ func restoreImageFromTarGz(path string, tag *name.Tag) (v1.Image, error) {
 	}
 
 	return img, nil
-}
-
-func loadCustomCA(ca []byte) (*tls.Config, error) {
-	certPool := x509.NewCertPool()
-	if ok := certPool.AppendCertsFromPEM(ca); !ok {
-		return nil, fmt.Errorf("failed to parse CA PEM")
-	}
-
-	return &tls.Config{
-		RootCAs: certPool,
-	}, nil
 }
