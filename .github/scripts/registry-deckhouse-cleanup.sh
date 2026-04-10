@@ -29,4 +29,4 @@ EOL
 export DOCKER_CONFIG="${PWD}/docker"
 export WERF_PARALLEL_TASKS_LIMIT=21
 export REGISTRY_URL="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-werf cleanup --config werf_cleanup.yaml --without-kube --disable-auto-host-cleanup=true --log-color-mode='off' --repo "${REGISTRY_URL}"
+d8 dk cleanup --config werf_cleanup.yaml --without-kube --disable-auto-host-cleanup=true --log-color-mode='off' --repo "${REGISTRY_URL}"

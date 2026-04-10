@@ -453,7 +453,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-
       - name: Setup
         id: setup
         env:
@@ -946,7 +945,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
 
       - name: Setup
         id: setup
@@ -1441,7 +1439,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-
       - name: Setup
         id: setup
         env:
@@ -1934,7 +1931,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
 
       - name: Setup
         id: setup
@@ -2429,7 +2425,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-
       - name: Setup
         id: setup
         env:
@@ -2922,7 +2917,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
 
       - name: Setup
         id: setup
@@ -3417,7 +3411,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-
       - name: Setup
         id: setup
         env:
@@ -3910,7 +3903,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
 
       - name: Setup
         id: setup
@@ -4405,7 +4397,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-
       - name: Setup
         id: setup
         env:
@@ -4898,7 +4889,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
 
       - name: Setup
         id: setup
@@ -5393,7 +5383,6 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-
       - name: Setup
         id: setup
         env:
@@ -5886,7 +5875,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
-
 
       - name: Setup
         id: setup
