@@ -350,3 +350,52 @@ func (m *MockState) StaticPreflightchecksWasRan() (bool, error) {
 	args := m.Called()
 	return args.Bool(0), args.Error(1)
 }
+
+// type MockSSHProviderInitializer struct {
+// 	mock.Mock
+// 	provider libcon.SSHProvider
+// }
+
+// func NewMockSSHProviderInitializer(p libcon.SSHProvider) *MockSSHProviderInitializer {
+// 	return &MockSSHProviderInitializer{provider: p}
+// }
+
+// func (i *MockSSHProviderInitializer) GetSSHProvider() libcon.SSHProvider {
+// 	return i.provider
+// }
+
+// type MockSSHProvider struct {
+// 	mock.Mock
+// 	client libcon.SSHClient
+// }
+
+// func NewMockSSHProvider(c libcon.SSHClient) *MockSSHProvider {
+// 	return &MockSSHProvider{client: c}
+// }
+
+// func (p *MockSSHProvider) Client(ctx context.Context) (libcon.SSHClient, error) {
+// 	return p.client, nil
+// }
+
+// func (p *MockSSHProvider) NewAdditionalClient(ctx context.Context) (libcon.SSHClient, error) {
+// 	mockClient := &MockSSHClient{}
+// 	return mockClient, nil
+// }
+
+// func (p *MockSSHProvider) NewStandaloneClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey, opts ...libcon.StandaloneClientOpt) (libcon.SSHClient, error) {
+// 	mockClient := &MockSSHClient{}
+// 	return mockClient, nil
+// }
+
+// func (p *MockSSHProvider) SwitchClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey) (libcon.SSHClient, error) {
+// 	mockClient := &MockSSHClient{}
+// 	return mockClient, nil
+// }
+
+// func (p *MockSSHProvider) SwitchToDefault(ctx context.Context) (libcon.SSHClient, error) {
+// 	return p.client, nil
+// }
+
+// func (p *MockSSHProvider) Cleanup(ctx context.Context) error {
+// 	return nil
+// }
