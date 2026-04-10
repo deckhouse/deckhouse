@@ -46,14 +46,12 @@ git:
   stageDependencies:
     install:
     - "**/*"
-  {{- if ne $imageName "dev" }}
-  {{- if ne $imageName "dev/install" }}
-- add: /dhctl/known_vulnerabilities.vex
+  {{- if contains $imageName "terraform-manager-dvp" }}
+- add: dhctl/known_vulnerabilities.vex
   to: /dhctl_vulnerabilities.vex
   stageDependencies:
     install:
     - "**/*"
-  {{- end }}
   {{- end }}
 dependencies:
 - image: {{ $imageName }}
@@ -73,6 +71,10 @@ shell:
   - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)"
   - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
   - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
+  - |
+    echo "DEBUG ls /:" && ls /
+    echo "DEBUG dhctl check:" && ls /dhctl_vulnerabilities.vex 2>&1 || echo "NOT FOUND"
+    echo "DEBUG known check:" && ls /known_vulnerabilities.vex 2>&1 || echo "NOT FOUND"
   - |
     # Merge VEX files from dhctl if it exists
     VEX_FILES="/known_vulnerabilities.vex"

@@ -1,5 +1,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "kubernetes") }}'
+fromCacheVersion: "2026-04-10.1"
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/dvp
   to: /deckhouse/candi/cloud-providers/dvp
@@ -13,7 +14,6 @@ import:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromCacheVersion: "2025-10-13.0"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
