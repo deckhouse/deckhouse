@@ -32,6 +32,7 @@ import (
 	controlplaneconfiguration "control-plane-manager/internal/controllers/control-plane-configuration"
 	controlplanenode "control-plane-manager/internal/controllers/control-plane-node"
 	controlplaneoperation "control-plane-manager/internal/controllers/control-plane-operation"
+	operationsapprover "control-plane-manager/internal/controllers/operations-approver"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/klog/v2/textlogger"
@@ -95,11 +96,11 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 					},
 				},
 				&corev1.Pod{}: {
-				Namespaces: map[string]cache.Config{
-					constants.KubeSystemNamespace: {},
+					Namespaces: map[string]cache.Config{
+						constants.KubeSystemNamespace: {},
+					},
 				},
-			},
-			&corev1.Node{}: {
+				&corev1.Node{}: {
 					Transform: func(in any) (any, error) {
 						node, ok := in.(*corev1.Node)
 						if !ok {
@@ -138,6 +139,10 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 
 	if err = controlplaneoperation.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register control-plane-operation controller: %w", err)
+	}
+
+	if err = operationsapprover.Register(runtimeManager); err != nil {
+		return nil, fmt.Errorf("register operations-approver controller: %w", err)
 	}
 
 	return &Manager{
