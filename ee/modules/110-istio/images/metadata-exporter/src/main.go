@@ -23,7 +23,6 @@ var logger = log.New(os.Stdout, "http: ", log.LstdFlags)
 
 func httpHandlerPublicJSON(exp *Exporter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		checkIfAccessedViaDepricatedSubdomain(r)
 		publicMetaData := exp.RenderPublicMetadataJSON()
 		fmt.Fprint(w, publicMetaData)
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, r.Host)
@@ -38,7 +37,7 @@ func httpHandlerFederationPrivateJSON(exp *Exporter) http.HandlerFunc {
 			logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, err)
 			return
 		}
-
+		checkIfAccessedViaDepricatedSubdomain(r)
 		privateMetadataJSON := exp.RenderFederationPrivateMetadataJSON()
 		fmt.Fprint(w, privateMetadataJSON)
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
@@ -53,6 +52,7 @@ func httpHandlerMulticlusterPrivateJSON(exp *Exporter) http.HandlerFunc {
 			logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, err)
 			return
 		}
+		checkIfAccessedViaDepricatedSubdomain(r)
 		privateMetadataJSON := exp.RenderMulticlusterPrivateMetadataJSON()
 		fmt.Fprint(w, privateMetadataJSON)
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
