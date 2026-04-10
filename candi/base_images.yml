@@ -4,9 +4,9 @@ REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:9b74f52a191b90ceeba64b8c11dfd1ae054a82dbd360d4df6530637f60707bf7" # from: builder/scratch
 base/nginx-release-1.28.0: "sha256:305a6086dbeba19f9a7d3bb65636680112bb3538dde961edc52c6af8ee8891cd" # from: tools/nginx-release-1.28.0
 base/nginx: "sha256:305a6086dbeba19f9a7d3bb65636680112bb3538dde961edc52c6af8ee8891cd" # from: tools/nginx-release-1.28.0
-base/python-3.12-3.12: "sha256:8d1b48e90565ac48bbc89d6b0dedeca50f1fd5f062d8f59479e5021164702e52" # from: builder/scratch
-base/python-3.12-3.14: "sha256:b15f9150f3b51f2e11cd73db39c89eef8a075953659caf802363d4f544335fb5" # from: builder/scratch
-base/python-3.12: "sha256:b15f9150f3b51f2e11cd73db39c89eef8a075953659caf802363d4f544335fb5" # from: builder/scratch
+base/python-3.12: "sha256:8d1b48e90565ac48bbc89d6b0dedeca50f1fd5f062d8f59479e5021164702e52" # from: builder/scratch
+base/python-3.14: "sha256:b15f9150f3b51f2e11cd73db39c89eef8a075953659caf802363d4f544335fb5" # from: builder/scratch
+base/python: "sha256:b15f9150f3b51f2e11cd73db39c89eef8a075953659caf802363d4f544335fb5" # from: builder/scratch
 base/redis-7.4.5: "sha256:8a9ed1dfaa235e34887388b8d28ec62c243bbf01eb83f5f84370fc98bcdc1911" # from: builder/scratch
 base/redis-7.4.7: "sha256:27a2b389e378c466012e9a75008e80fa9de125f092dbd7e48d8a962ed377834b" # from: builder/scratch
 base/redis: "sha256:27a2b389e378c466012e9a75008e80fa9de125f092dbd7e48d8a962ed377834b" # from: builder/scratch
