@@ -10,6 +10,10 @@ data:
   policy.yaml: |
     apiVersion: "descheduler/v1alpha2"
     kind: "DeschedulerPolicy"
+    {{- if default false $.Values.descheduler.internal.isMetricsServerEnabled }}
+    metricsProviders:
+    - source: KubernetesMetrics
+    {{- end }}
     profiles:
     {{- range $d := .Values.descheduler.internal.deschedulers }}
     - name: {{ $d.name }}
