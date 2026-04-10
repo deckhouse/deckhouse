@@ -26,6 +26,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
+	metadataExporter "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/metadata-exporter"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
@@ -138,7 +139,7 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			continue
 		}
 
-		alertIfHasDeprecatedMetadataSubdomain(input, "IstioFederation", federationInfo.Name, federationInfo.PublicMetadataEndpoint)
+		metadataExporter.AlertIfHasDeprecatedSubdomain(input, "IstioFederation", federationInfo.Name, federationInfo.PublicMetadataEndpoint)
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.FederationPrivateMetadata

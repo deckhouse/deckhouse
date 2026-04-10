@@ -24,6 +24,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
+	metadataExporter "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/metadata-exporter"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
@@ -128,7 +129,7 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		if err != nil {
 			return fmt.Errorf("failed to iterate over multiclusters: %v", err)
 		}
-		alertIfHasDeprecatedMetadataSubdomain(input, "IstioMulticluster", multiclusterInfo.Name, multiclusterInfo.PublicMetadataEndpoint)
+		metadataExporter.AlertIfHasDeprecatedSubdomain(input, "IstioMulticluster", multiclusterInfo.Name, multiclusterInfo.PublicMetadataEndpoint)
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.MulticlusterPrivateMetadata

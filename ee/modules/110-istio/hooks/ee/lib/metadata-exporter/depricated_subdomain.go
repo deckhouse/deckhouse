@@ -3,7 +3,7 @@ Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package ee
+package metadataExporter
 
 import (
 	"fmt"
@@ -14,15 +14,23 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 )
 
-// this file contains just common for both federation and multicluster helpers without implementation
-// tests have to be deleted if no functions below using anymore
 const (
-	metadataExporterDepricatedSubdomainMetricsGroup = "d8_istio_metadata_exporter_endpoint_issues"
-	metadataExporterDepricatedSubdomainMetricName   = "d8_istio_metadata_exporter_endpoint_uses_depricated_subdomain"
-	depricatedMetadataEndpointLeftmostSubdomain     = "istio"
+	DepricatedSubdomainMetricsGroup = "d8_istio_metadata_exporter_endpoint_issues"
+	DepricatedSubdomainMetricName   = "d8_istio_metadata_exporter_endpoint_uses_depricated_subdomain"
+	DepricatedLeftmostSubdomain     = "istio"
 )
 
-func alertIfHasDeprecatedMetadataSubdomain(input *go_hook.HookInput, allianceKind string, clusterName string, endpointURL string) {
+// this file contains just common for both federation and multicluster helpers without implementation
+// tests have to be deleted if no functions below using anymore
+// const (
+//
+//	DepricatedSubdomainMetricsGroup = "d8_istio_metadata_exporter_endpoint_issues"
+//	DepricatedSubdomainMetricName   = "d8_istio_metadata_exporter_endpoint_uses_depricated_subdomain"
+//	DepricatedLeftmostSubdomain     = "istio"
+//
+// )
+
+func AlertIfHasDeprecatedSubdomain(input *go_hook.HookInput, allianceKind string, clusterName string, endpointURL string) {
 	isDeprecated, err := hasDepricatedSubdomainInURL(endpointURL)
 	if err != nil {
 		input.Logger.Warn("failed to validate metadataEndpoint subdomain: %v", err)
@@ -31,18 +39,38 @@ func alertIfHasDeprecatedMetadataSubdomain(input *go_hook.HookInput, allianceKin
 	if !isDeprecated {
 		return
 	}
-	input.MetricsCollector.Set(metadataExporterDepricatedSubdomainMetricName, 1, map[string]string{
-		"alliance_kind": allianceKind,
-		"name":          clusterName,
-	}, metrics.WithGroup(metadataExporterDepricatedSubdomainMetricsGroup))
+	labels := map[string]string{
+		"alliance_kind":     allianceKind,
+		"multicluster_name": clusterName,
+		"endpoint":          endpointURL,
+	}
+	input.MetricsCollector.Set(DepricatedSubdomainMetricName, 1, labels, metrics.WithGroup(DepricatedSubdomainMetricsGroup))
 }
 
+/*
+	func (i IstioMulticlusterDiscoveryCrdInfo) AlertIfHasDeprecatedSubdomainNew(input *go_hook.HookInput, allianceKind string, clusterName string, endpointURL string) {
+		isDeprecated, err := hasDepricatedSubdomainInURL(endpointURL)
+		if err != nil {
+			input.Logger.Warn("failed to validate metadataEndpoint subdomain: %v", err)
+			return
+		}
+		if !isDeprecated {
+			return
+		}
+		labels := map[string]string{
+			"alliance_kind":     allianceKind,
+			"multicluster_name": clusterName,
+			"endpoint":          endpointURL,
+		}
+		input.MetricsCollector.Set(DepricatedSubdomainMetricName, 1, labels, metrics.WithGroup(DepricatedSubdomainMetricsGroup))
+	}
+*/
 func hasDepricatedSubdomainInURL(url string) (bool, error) {
 	usingSubdomain, err := retriveLeftmostSubdomain(url)
 	if err != nil {
 		return false, err
 	}
-	return usingSubdomain == depricatedMetadataEndpointLeftmostSubdomain, nil
+	return usingSubdomain == DepricatedLeftmostSubdomain, nil
 }
 
 func retriveLeftmostSubdomain(raw string) (string, error) {
