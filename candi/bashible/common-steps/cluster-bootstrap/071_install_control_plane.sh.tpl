@@ -63,8 +63,11 @@ check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
 kubeadm init phase mark-control-plane --config {{ $kubeadmDir}}/config.yaml
 
-# CIS becnhmark purposes
+# CIS benchmark purposes - restrict permissions on PKI files
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
+
+# Restrict permissions on admin kubeconfig files for security
+chmod 600 /etc/kubernetes/admin.conf /etc/kubernetes/super-admin.conf 2>/dev/null || true
 
 # This phase add 'node.kubernetes.io/exclude-from-external-load-balancers' label to node
 # with this label we cannot use target load balancers to control-plane nodes, so we manually remove them
@@ -85,7 +88,8 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system create secret 
   --from-file=etcd-ca.crt=/etc/kubernetes/pki/etcd/ca.crt \
   --from-file=etcd-ca.key=/etc/kubernetes/pki/etcd/ca.key
 
-# Setup kubectl for root user
+# Setup kubectl for root user during bootstrap.
+# The control-plane-manager manages this symlink; when the user-authz module is enabled, see controlPlaneManager.rootKubeconfigSymlink.
 if [ ! -f /root/.kube/config ]; then
   mkdir -p /root/.kube
   ln -s /etc/kubernetes/admin.conf /root/.kube/config

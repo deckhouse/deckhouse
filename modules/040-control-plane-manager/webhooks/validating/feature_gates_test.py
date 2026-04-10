@@ -94,7 +94,7 @@ def _prepare_validation_binding_context(k8s_version: str, enabled_feature_gates:
             "userInfo": {
                 "username": "kubernetes-admin",
                 "groups": [
-                    "system:masters",
+                    "kubeadm:cluster-admins",
                     "system:authenticated"
                 ]
             },

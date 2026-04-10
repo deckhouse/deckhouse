@@ -313,6 +313,10 @@ spec:
         - name: ETCD_ARBITER
           value: "true"
         {{- end }}
+        {{- if eq (include "cpm.disableRootKubeconfigSymlink" $ | trim) "true" }}
+        - name: NODE_ADMIN_KUBECONFIG
+          value: "false"
+        {{- end }}
         livenessProbe:
           httpGet:
             host: 127.0.0.1
