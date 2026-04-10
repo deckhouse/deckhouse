@@ -4,7 +4,7 @@ go 1.23.9
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
-	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/cloud-data c39144c36532
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250704135428-7600b0581807
 	github.com/ovirt/go-ovirt-client-log/v3 v3.0.0
 	github.com/ovirt/go-ovirt-client/v3 v3.2.0

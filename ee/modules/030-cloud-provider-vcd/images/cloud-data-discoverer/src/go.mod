@@ -6,7 +6,7 @@ toolchain go1.24.3
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
-	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-20250227202034-eda49647c2d9
+	github.com/deckhouse/deckhouse/go_lib/cloud-data c39144c36532
 	github.com/deckhouse/deckhouse/pkg/log v0.1.0
 	github.com/vmware/go-vcloud-director/v2 v2.26.1
 )

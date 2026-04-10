@@ -9,7 +9,7 @@ replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ../../../../../go_li
 require (
 	dvp-common v0.0.0-00010101000000-000000000000
 	github.com/alecthomas/kingpin v2.2.6+incompatible
-	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-20260410150440-c39144c36532
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250704135428-7600b0581807
 	k8s.io/api v0.33.3
 )
