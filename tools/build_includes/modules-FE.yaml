@@ -244,6 +244,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/metadata-exporter.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/metadata-exporter.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   stageDependencies:
