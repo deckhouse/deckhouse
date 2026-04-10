@@ -75,7 +75,18 @@ func getPredicates() predicate.Predicate {
 		CreateFunc: func(event.CreateEvent) bool {
 			return true
 		},
-		UpdateFunc: func(event.UpdateEvent) bool {
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldOperation, okOld := e.ObjectOld.(*controlplanev1alpha1.ControlPlaneOperation)
+			newOperation, okNew := e.ObjectNew.(*controlplanev1alpha1.ControlPlaneOperation)
+
+			if !okOld || !okNew {
+				return false
+			}
+
+			if !oldOperation.IsTerminal() && newOperation.IsTerminal() {
+				return true
+			}
+
 			return false
 		},
 		DeleteFunc: func(event.DeleteEvent) bool {
