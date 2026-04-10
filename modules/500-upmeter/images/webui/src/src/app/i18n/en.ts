@@ -252,6 +252,22 @@ const langPack: LangPack = {
           "at least one of probes of Prometheus Metrics Adapter or Controller Manager has unknown result but none of them failed",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
+      "alertmanager": {
+        title: "Observability Alertmanager",
+        description: "Alertmanager from the Observability module processes and routes alerts.",
+        reasonUp: "at least one Pod is in <code>Ready</code> state",
+        reasonDown: "no ready Pods present",
+        reasonUnknown: REASON_APISERVER_UNAVAILABLE,
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      "observability-recording": {
+        title: "Observability Recording",
+        description: "Mini e2e test: creates an ObservabilityMetricsRulesGroup with a recording rule, waits for the corresponding PrometheusRule and metric in Prometheus, then cleans up.",
+        reasonUp: "ObservabilityMetricsRulesGroup is reconciled into a PrometheusRule and the recording metric appears in Prometheus",
+        reasonDown: "PrometheusRule was not created, or recording metric did not appear, or PrometheusRule was not deleted after cleanup",
+        reasonUnknown: REASON_APISERVER_UNAVAILABLE,
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
     },
     synthetic: {
       access: {
@@ -299,7 +315,7 @@ const langPack: LangPack = {
           "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
-      grafana: {
+      "grafana-v10": {
         title: "Grafana",
         description: "Grafana shows metrics dashboards",
         reasonUp: "at least one Pod of Grafana is in <code>Ready</code> state",
@@ -322,6 +338,48 @@ const langPack: LangPack = {
         description: "Prometheus-longterm stores sparse longterm metrics for retrospective observations.",
         reasonUp: "at least one Pod is in <code>Ready</code> state, and the Prometheus API responds correctly",
         reasonDown: "either no ready Pods present, or Prometheus responds with invalid data",
+        reasonUnknown:
+          "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      "label-enforcer": {
+        title: "Observability Label Enforcer",
+        description: "Label Enforcer provides secured and filtered access to metrics backends.",
+        reasonUp: "at least one Pod is in <code>Ready</code> state",
+        reasonDown: "no ready Pods present",
+        reasonUnknown: REASON_APISERVER_UNAVAILABLE,
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      "observability-webhook": {
+        title: "Observability Webhook",
+        description: "Validating and mutating webhook for Observability CRDs.",
+        reasonUp: "at least one Pod is in <code>Ready</code> state",
+        reasonDown: "no ready Pods present",
+        reasonUnknown: REASON_APISERVER_UNAVAILABLE,
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      "alert-kube-api": {
+        title: "Observability Alert Kube API",
+        description: "Kubernetes API for alert objects backed by Alertmanager state.",
+        reasonUp: "at least one Pod is in <code>Ready</code> state",
+        reasonDown: "no ready Pods present",
+        reasonUnknown: REASON_APISERVER_UNAVAILABLE,
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      "grafana": {
+        title: "Observability Grafana",
+        description: "Grafana from the Observability module provides dashboards.",
+        reasonUp: "at least one Pod of Grafana is in <code>Ready</code> state",
+        reasonDown: "there are no Pods of Grafana in <code>Ready</code> state",
+        reasonUnknown:
+          "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      "observability-controller": {
+        title: "Observability Controller",
+        description: "Controller that reconciles Observability resources into runtime configuration.",
+        reasonUp: "at least one Pod of observability-controller is in <code>Ready</code> state",
+        reasonDown: "there are no Pods of observability-controller in <code>Ready</code> state",
         reasonUnknown:
           "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
         reasonNodata: REASON_AGENTS_STOPPED,
