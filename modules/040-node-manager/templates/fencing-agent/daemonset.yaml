@@ -48,6 +48,7 @@ spec:
       labels:
         app: fencing-agent
         node-group-name: {{ $ng.name }}
+        security.deckhouse.io/security-policy-exception: fencing-agent-{{ $ng.name }}
       annotations:
         container.apparmor.security.beta.kubernetes.io/fencing-agent: "unconfined"
     spec:

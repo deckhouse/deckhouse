@@ -1,0 +1,21 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: bashible-apiserver
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+spec:
+  network:
+    hostNetwork:
+      allowedValue: false
+      metadata:
+        description: |
+          Allow the Bashible API server to expose a node-local hostPort without joining the host network namespace.
+    hostPorts:
+      - port: 4221
+        protocol: TCP
+        metadata:
+          description: HTTPS listener for the Bashible API server
+{{- end }}
