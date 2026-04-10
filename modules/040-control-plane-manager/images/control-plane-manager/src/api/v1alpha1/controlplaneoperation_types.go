@@ -23,10 +23,11 @@ import (
 )
 
 // CommandName defines a single unit of work in the operation pipeline.
-// +kubebuilder:validation:Enum=SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;SyncHotReload;CertObserve
+// +kubebuilder:validation:Enum=Backup;SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;SyncHotReload;CertObserve
 type CommandName string
 
 const (
+	CommandBackup           CommandName = "Backup"
 	CommandSyncCA           CommandName = "SyncCA"
 	CommandRenewPKICerts    CommandName = "RenewPKICerts"
 	CommandRenewKubeconfigs CommandName = "RenewKubeconfigs"

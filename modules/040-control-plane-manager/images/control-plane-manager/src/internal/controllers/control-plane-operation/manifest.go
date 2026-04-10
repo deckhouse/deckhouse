@@ -145,34 +145,3 @@ func writeHotReloadFiles(secretData map[string][]byte, extraFilesDir string) err
 	return writeSecretExtraFiles(secretData, extraFilesDir, checksum.HotReloadChecksumDependsOn)
 }
 
-// writeFileAtomically writes data via tmp file + rename.
-func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
-	dir := filepath.Dir(dst)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("create dir %s: %w", dir, err)
-	}
-
-	tmp, err := os.CreateTemp(dir, "."+filepath.Base(dst)+".tmp-*")
-	if err != nil {
-		return fmt.Errorf("create temp file: %w", err)
-	}
-	tmpPath := tmp.Name()
-	defer func() { _ = os.Remove(tmpPath) }()
-
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		return fmt.Errorf("write temp file: %w", err)
-	}
-	if err := tmp.Sync(); err != nil {
-		_ = tmp.Close()
-		return fmt.Errorf("sync temp file: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("close temp file: %w", err)
-	}
-	if err := os.Chmod(tmpPath, perm); err != nil {
-		return fmt.Errorf("chmod temp file: %w", err)
-	}
-
-	return os.Rename(tmpPath, dst)
-}

@@ -34,21 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// observeCertFiles maps components to leaf cert file base names relative to pki dir.
-var observeCertFiles = map[controlplanev1alpha1.OperationComponent][]string{
-	controlplanev1alpha1.OperationComponentEtcd: {
-		"etcd/server",
-		"etcd/peer",
-		"etcd/healthcheck-client",
-		"apiserver-etcd-client",
-	},
-	controlplanev1alpha1.OperationComponentKubeAPIServer: {
-		"apiserver",
-		"apiserver-kubelet-client",
-		"front-proxy-client",
-	},
-}
-
 // readCertExpiration reads a PEM certificate file and returns its NotAfter time.
 func readCertExpiration(certPath string) (metav1.Time, error) {
 	data, err := os.ReadFile(certPath)
@@ -107,17 +92,15 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 
 	certExpiry := make(map[string]metav1.Time)
 
-	if files, hasPKI := observeCertFiles[component]; hasPKI {
-		for _, baseName := range files {
-			certPath := filepath.Join(constants.KubernetesPkiPath, baseName+".crt")
-			expiry, err := readCertExpiration(certPath)
-			if err != nil {
-				logger.Warn("cannot read cert expiration",
-					slog.String("cert", certPath), log.Err(err))
-				continue
-			}
-			certExpiry[baseName+".crt"] = expiry
+	for _, baseName := range componentLeafCertFiles[component] {
+		certPath := filepath.Join(constants.KubernetesPkiPath, baseName+".crt")
+		expiry, err := readCertExpiration(certPath)
+		if err != nil {
+			logger.Warn("cannot read cert expiration",
+				slog.String("cert", certPath), log.Err(err))
+			continue
 		}
+		certExpiry[baseName+".crt"] = expiry
 	}
 
 	for _, file := range kubeconfigFilesForComponent(component) {

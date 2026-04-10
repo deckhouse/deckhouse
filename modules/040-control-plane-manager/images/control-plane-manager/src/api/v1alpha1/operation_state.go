@@ -37,11 +37,6 @@ func (op *ControlPlaneOperation) IsFailed() bool {
 	return meta.IsStatusConditionTrue(op.Status.Conditions, CPOConditionFailed)
 }
 
-// IsTerminal reports whether the operation reached a not retryable state.
-func (op *ControlPlaneOperation) IsTerminal() bool {
-	return op.IsCompleted() || op.IsFailed()
-}
-
 func (op *ControlPlaneOperation) IsCancelled() bool {
 	for _, cond := range op.Status.Conditions {
 		if cond.Type == CPOConditionReady && cond.Reason == "Cancelled" {
@@ -49,6 +44,11 @@ func (op *ControlPlaneOperation) IsCancelled() bool {
 		}
 	}
 	return false
+}
+
+// IsTerminal reports whether the operation reached a not retryable state.
+func (op *ControlPlaneOperation) IsTerminal() bool {
+	return op.IsCompleted() || op.IsFailed() || op.IsCancelled()
 }
 
 func (op *ControlPlaneOperation) IsCommandCompleted(name CommandName) bool {

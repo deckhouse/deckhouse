@@ -30,6 +30,7 @@ import (
 
 // Compile-time checks.
 var (
+	_ Command = (*backupCommand)(nil)
 	_ Command = (*syncCACommand)(nil)
 	_ Command = (*renewPKICertsCommand)(nil)
 	_ Command = (*renewKubeconfigsCommand)(nil)
@@ -47,6 +48,7 @@ type Command interface {
 
 // commandReadyReasons maps command names to their ready reason strings for status reporting.
 var commandReadyReasons = map[controlplanev1alpha1.CommandName]string{
+	controlplanev1alpha1.CommandBackup:           constants.ReasonCreatingBackup,
 	controlplanev1alpha1.CommandSyncCA:           constants.ReasonSyncingCA,
 	controlplanev1alpha1.CommandRenewPKICerts:    constants.ReasonRenewingPKI,
 	controlplanev1alpha1.CommandRenewKubeconfigs: constants.ReasonRenewingKubeconfigs,
@@ -61,6 +63,7 @@ var commandReadyReasons = map[controlplanev1alpha1.CommandName]string{
 // Reconciler-level deps (podWaiter) must be injected after construction.
 func defaultCommands() map[controlplanev1alpha1.CommandName]Command {
 	return map[controlplanev1alpha1.CommandName]Command{
+		controlplanev1alpha1.CommandBackup:           &backupCommand{},
 		controlplanev1alpha1.CommandSyncCA:           &syncCACommand{},
 		controlplanev1alpha1.CommandRenewPKICerts:    &renewPKICertsCommand{},
 		controlplanev1alpha1.CommandRenewKubeconfigs: &renewKubeconfigsCommand{},

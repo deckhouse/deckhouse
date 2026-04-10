@@ -79,6 +79,7 @@ spec:
                   description: CommandName defines a single unit of work in the operation
                     pipeline.
                   enum:
+                  - Backup
                   - SyncCA
                   - RenewPKICerts
                   - RenewKubeconfigs
