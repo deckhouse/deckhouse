@@ -1,5 +1,6 @@
 image: dev/candi
 from: {{ index $.Images "builder/scratch" }}
+import:
 git:
 - add: /
   to: /deckhouse

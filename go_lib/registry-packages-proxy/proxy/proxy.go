@@ -15,14 +15,20 @@
 package proxy
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -39,11 +45,43 @@ type Proxy struct {
 	config         Config
 }
 
+type RPPClientBinaryServer struct {
+	server   *http.Server
+	listener net.Listener
+	logger   log.Logger
+}
+
+type RPPClientBinaryServerOptions struct {
+	Listener           net.Listener
+	Logger             log.Logger
+	ClientConfigGetter registry.ClientConfigGetter
+	RegistryClient     registry.Client
+	SignCheck          bool
+	ClusterUUID        string
+}
+
+type rppBinaryHandler struct {
+	logger         log.Logger
+	configGetter   registry.ClientConfigGetter
+	registryClient registry.Client
+	signCheck      bool
+	binaryName     string
+	expectedPath   string
+}
+
+const (
+	rppBinaryName    = "rpp-get"
+	statusNoResponse = 444
+)
+
+var errEmptyRegistryConfig = errors.New("empty registry config")
+
 func NewProxy(server *http.Server,
 	listener net.Listener,
 	clientConfigGetter registry.ClientConfigGetter,
 	logger log.Logger,
-	registryClient registry.Client, opts ...ProxyOption) *Proxy {
+	registryClient registry.Client, opts ...ProxyOption,
+) *Proxy {
 	p := &Proxy{
 		server:         server,
 		listener:       listener,
@@ -61,6 +99,30 @@ func NewProxy(server *http.Server,
 		opt(p)
 	}
 	return p
+}
+
+func NewRPPClientBinaryServerFromRegistry(opts RPPClientBinaryServerOptions) *RPPClientBinaryServer {
+	handler := &rppBinaryHandler{
+		logger:         opts.Logger,
+		configGetter:   opts.ClientConfigGetter,
+		registryClient: opts.RegistryClient,
+		signCheck:      opts.SignCheck,
+		binaryName:     rppBinaryName,
+		expectedPath:   path.Join("/", normalizeBootstrapClusterUUID(opts.ClusterUUID), rppBinaryName),
+	}
+
+	return &RPPClientBinaryServer{
+		server: &http.Server{
+			Handler:           handler,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      300 * time.Second,
+			IdleTimeout:       30 * time.Second,
+			MaxHeaderBytes:    4 << 10,
+		},
+		listener: opts.Listener,
+		logger:   opts.Logger,
+	}
 }
 
 type Config struct {
@@ -146,6 +208,14 @@ func (p *Proxy) Serve(cfg *Config) {
 	}
 }
 
+func (s *RPPClientBinaryServer) Serve() {
+	s.logger.Debugf("Starting rpp-get listener: %s", s.listener.Addr())
+
+	if err := s.server.Serve(s.listener); err != nil && err != http.ErrServerClosed {
+		s.logger.Error(err.Error())
+	}
+}
+
 // StopProxy stops proxy server but does not call os.Exit
 func (p *Proxy) StopProxy() {
 	p.logger.Infof("graceful shutdown packages proxy listener: %s", p.listener.Addr())
@@ -161,6 +231,15 @@ func (p *Proxy) Stop() {
 	if err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err.Error())
 		os.Exit(1)
+	}
+}
+
+func (s *RPPClientBinaryServer) Stop() {
+	s.logger.Infof("graceful shutdown rpp-get listener: %s", s.listener.Addr())
+
+	err := s.server.Shutdown(context.Background())
+	if err != nil && err != http.ErrServerClosed {
+		s.logger.Error(err.Error())
 	}
 }
 
@@ -250,4 +329,115 @@ func getRequestIP(r *http.Request) string {
 		IPAddress = r.RemoteAddr
 	}
 	return IPAddress
+}
+
+func (h *rppBinaryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != h.expectedPath {
+		w.WriteHeader(statusNoResponse)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	digest, ok := singleQueryValue(r.URL.Query(), "digest")
+	if !ok {
+		http.Error(w, "missing digest", http.StatusBadRequest)
+		return
+	}
+
+	binary, err := h.fetchBinary(r.Context(), digest)
+	if err != nil {
+		h.writeFetchError(w, digest, err)
+		return
+	}
+
+	h.writeBinaryResponse(w, binary)
+}
+
+func (h *rppBinaryHandler) fetchBinary(ctx context.Context, digest string) ([]byte, error) {
+	registryConfig, err := h.configGetter.Get(registry.DefaultRepository)
+	if err != nil {
+		return nil, fmt.Errorf("get registry config: %w", err)
+	}
+	if registryConfig == nil {
+		return nil, errEmptyRegistryConfig
+	}
+	registryConfig.SignCheck = h.signCheck
+
+	_, _, packageReader, err := h.registryClient.GetPackage(ctx, h.logger, registryConfig, digest, "")
+	if err != nil {
+		return nil, err
+	}
+	defer packageReader.Close()
+
+	binary, err := extractTarGzFile(packageReader, h.binaryName)
+	if err != nil {
+		return nil, fmt.Errorf("extract %s binary: %w", h.binaryName, err)
+	}
+
+	return binary, nil
+}
+
+func (h *rppBinaryHandler) writeFetchError(w http.ResponseWriter, digest string, err error) {
+	if errors.Is(err, registry.ErrPackageNotFound) {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	h.logger.Errorf("fetch %s package %q: %v", h.binaryName, digest, err)
+	http.Error(w, "internal server error", http.StatusInternalServerError)
+}
+
+func (h *rppBinaryHandler) writeBinaryResponse(w http.ResponseWriter, binary []byte) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, h.binaryName))
+	w.Header().Set("Content-Length", strconv.Itoa(len(binary)))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	if _, err := w.Write(binary); err != nil {
+		h.logger.Errorf("write %s response: %v", h.binaryName, err)
+	}
+}
+
+func singleQueryValue(query url.Values, name string) (string, bool) {
+	values, ok := query[name]
+	if !ok || len(query) != 1 || len(values) != 1 || values[0] == "" {
+		return "", false
+	}
+
+	return values[0], true
+}
+
+func normalizeBootstrapClusterUUID(clusterUUID string) string {
+	return strings.Trim(strings.TrimSpace(clusterUUID), "/")
+}
+
+func extractTarGzFile(reader io.Reader, fileName string) ([]byte, error) {
+	gzipReader, err := gzip.NewReader(reader)
+	if err != nil {
+		return nil, err
+	}
+	defer gzipReader.Close()
+
+	tarReader := tar.NewReader(gzipReader)
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, fmt.Errorf("file %q not found in archive", fileName)
+			}
+
+			return nil, err
+		}
+
+		if header.Typeflag != tar.TypeReg || path.Base(header.Name) != fileName {
+			continue
+		}
+
+		return io.ReadAll(tarReader)
+	}
 }

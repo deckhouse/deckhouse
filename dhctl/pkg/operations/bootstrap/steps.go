@@ -31,6 +31,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -70,11 +71,14 @@ import (
 const (
 	BastionHostCacheKey               = "bastion-hosts"
 	DHCTLEndBootstrapBashiblePipeline = app.NodeDeckhouseDirectoryPath + "/first-control-plane-bashible-ran"
+	registryPackagesProxyHost         = "127.0.0.1"
+	registryPackagesProxyPort         = 5444
+	rppGetBinaryPort                  = 4300
 )
 
 func BootstrapMaster(ctx context.Context, nodeInterface node.Interface, controller *template.Controller) error {
 	return log.Process("bootstrap", "Initial bootstrap", func() error {
-		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh"} {
+		for _, bootstrapScript := range []string{"01-bootstrap-prerequisites.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
 			err := retry.NewLoop(fmt.Sprintf("Execute %s", bootstrapScript), 30, 5*time.Second).
@@ -263,36 +267,62 @@ func cleanupPreviousBashibleRunIfNeed(ctx context.Context, nodeInterface node.In
 	})
 }
 
-func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient, dc *directoryconfig.DirectoryConfig) (node.ReverseTunnel, error) {
-	port := "5444"
-	listenAddress := "127.0.0.1"
+func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient, dc *directoryconfig.DirectoryConfig) ([]node.ReverseTunnel, error) {
+	tunnels := make([]node.ReverseTunnel, 0, 2)
 
-	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(
-		fmt.Sprintf("https://localhost:%s/healthz", port),
+	packagesProxyTunnel, err := setupRegistryPackagesProxyTunnel(
+		ctx,
+		sshCl,
+		fmt.Sprintf("%s:%d", registryPackagesProxyHost, registryPackagesProxyPort),
+		fmt.Sprintf("https://localhost:%d/healthz", registryPackagesProxyPort),
 		dc,
 	)
 	if err != nil {
+		return nil, err
+	}
+	tunnels = append(tunnels, packagesProxyTunnel)
+
+	rppGetTunnel, err := setupRegistryPackagesProxyTunnel(ctx, sshCl, fmt.Sprintf("%s:%d", registryPackagesProxyHost, rppGetBinaryPort), "", dc)
+	if err != nil {
+		for _, tunnel := range tunnels {
+			tunnel.Stop()
+		}
+		return nil, err
+	}
+	tunnels = append(tunnels, rppGetTunnel)
+
+	return tunnels, nil
+}
+
+func setupRegistryPackagesProxyTunnel(ctx context.Context, sshCl node.SSHClient, address, healthCheckURL string, dc *directoryconfig.DirectoryConfig) (node.ReverseTunnel, error) {
+	listenAddress, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+
+	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s:%s", listenAddress, port, listenAddress, port))
+	if err := tun.Up(); err != nil {
+		return nil, err
+	}
+
+	if healthCheckURL == "" {
+		return tun, nil
+	}
+
+	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthCheckURL, dc)
+	if err != nil {
+		tun.Stop()
 		return nil, fmt.Errorf("Cannot render reverse tunnel checking script: %v", err)
 	}
 
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(
-		listenAddress,
-		port,
-		dc,
-	)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(listenAddress, port, dc)
 	if err != nil {
+		tun.Stop()
 		return nil, fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
 	}
 
 	checker := ssh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
 	killer := ssh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
-
-	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s:%s", listenAddress, port, listenAddress, port))
-	err = tun.Up()
-	if err != nil {
-		return nil, err
-	}
-
 	tun.StartHealthMonitor(ctx, checker, killer)
 
 	return tun, nil
@@ -323,24 +353,40 @@ func StartRegistryPackagesProxy(ctx context.Context, registryRemote registry_con
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
 	}
 
-	listener, err := tls.Listen("tcp", "127.0.0.1:5444", &tls.Config{
+	listener, err := tls.Listen("tcp", fmt.Sprintf("%s:%d", registryPackagesProxyHost, registryPackagesProxyPort), &tls.Config{
 		Certificates: []tls.Certificate{*cert},
 	})
 	if err != nil {
 		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
 	}
 
+	clientListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", registryPackagesProxyHost, rppGetBinaryPort))
+	if err != nil {
+		_ = listener.Close()
+		return fmt.Errorf("Failed to listen rpp-get socket: %v", err)
+	}
+
 	clientConfigGetter := newRegistryClientConfigGetter(registryRemote)
 	srv := &http.Server{}
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 	proxyConfig := &proxy.Config{SignCheck: (rppSignCheck == "true")}
-	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
+	registryClient := &registry.DefaultClient{}
+	packagesProxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, registryClient)
+	rppGetServer := proxy.NewRPPClientBinaryServerFromRegistry(proxy.RPPClientBinaryServerOptions{
+		Listener:           clientListener,
+		Logger:             registryPackagesProxyLogger{},
+		ClientConfigGetter: clientConfigGetter,
+		RegistryClient:     registryClient,
+		SignCheck:          proxyConfig.SignCheck,
+	})
 
-	go proxy.Serve(proxyConfig)
+	go packagesProxy.Serve(proxyConfig)
+	go rppGetServer.Serve()
 
 	go func() {
 		<-ctx.Done()
-		proxy.StopProxy()
+		packagesProxy.StopProxy()
+		rppGetServer.Stop()
 	}()
 
 	return nil
@@ -557,21 +603,23 @@ func RunBashiblePipeline(
 }
 
 func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient, dc *directoryconfig.DirectoryConfig) (func(), error) {
-	var tun node.ReverseTunnel
+	var tunnels []node.ReverseTunnel
 	log.DebugLn("Starting reverse tunnel routine")
-	tun, err := SetupSSHTunnelToRegistryPackagesProxy(ctx, sshClient, dc)
+	tunnels, err := SetupSSHTunnelToRegistryPackagesProxy(ctx, sshClient, dc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
 	}
 
 	cleanUpTunnel := func() {
-		if tun == nil {
-			log.DebugLn("tun == nil. Skip cleanup tunnel")
+		if len(tunnels) == 0 {
+			log.DebugLn("tunnels == nil. Skip cleanup tunnel")
 			return
 		}
 
-		tun.Stop()
-		tun = nil
+		for _, tunnel := range tunnels {
+			tunnel.Stop()
+		}
+		tunnels = nil
 	}
 	return cleanUpTunnel, nil
 }

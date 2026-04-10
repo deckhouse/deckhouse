@@ -1,6 +1,19 @@
 defaults:
   internal: &internalDefault
     clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+    clusterMasterEndpoints:
+      - address: 10.0.0.1
+        kubeApiPort: 6443
+        rppServerPort: 4219
+        rppBootstrapServerPort: 4300
+      - address: 10.0.0.2
+        kubeApiPort: 6443
+        rppServerPort: 4219
+        rppBootstrapServerPort: 4300
+      - address: 10.0.0.3
+        kubeApiPort: 6443
+        rppServerPort: 4219
+        rppBootstrapServerPort: 4300
     kubernetesCA: myclusterca
     bashibleApiServerCA: myapiserverca
     bashibleApiServerCrt: myapiservercrt

@@ -20,5 +20,5 @@
   {{- $containerd = "containerd216" }}
 {{- end }}
 
-bb-package-fetch "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}" "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}" "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}" "d8:{{ .images.registrypackages.d8 }}" "pause:{{ .images.registrypackages.pause }}" "kubernetes-api-proxy:{{ .images.registrypackages.kubernetesApiProxy }}"
+rpp-get fetch "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}" "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}" "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}" "d8:{{ .images.registrypackages.d8 }}" "pause:{{ .images.registrypackages.pause }}" "kubernetes-api-proxy:{{ .images.registrypackages.kubernetesApiProxy }}"
 

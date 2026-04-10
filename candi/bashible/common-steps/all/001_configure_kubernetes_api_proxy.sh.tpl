@@ -18,11 +18,11 @@ mkdir -p /etc/kubernetes/kubernetes-api-proxy
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
 {{- $list := list }}
 {{- if eq .runType "Normal" }}
-  {{- range $key, $value := .normal.apiserverEndpoints }}
-    {{- $list = append $list $value }}
+  {{- range $endpoint := .normal.clusterMasterEndpoints | default (list) }}
+    {{- $list = append $list (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) }}
   {{- end }}
 {{- else if eq .runType "ClusterBootstrap" }}
-    {{- $list = append $list "$(bb-d8-node-ip):6443" }}
+  {{- $list = append $list "$(bb-d8-node-ip):6443" }}
 {{- end }}
 {{ toJson $list }}
 EOF

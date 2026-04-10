@@ -20,6 +20,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"text/template"
 
@@ -363,4 +365,58 @@ func TestEnrichProxyData(t *testing.T) {
 			"noProxy":    []string{"example.com", ".example.com", "127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
 	})
+}
+
+func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
+	cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+	mingetPath := filepath.Join(t.TempDir(), "minget")
+	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
+	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
+	cfg.ClusterMasterEndpoints = []ClusterMasterEndpoint{
+		{
+			Address:                "127.0.0.1",
+			RPPServerPort:          5444,
+			RPPBootstrapServerPort: 4300,
+		},
+	}
+
+	data, err := cfg.ConfigForBashibleBundleTemplate("10.0.0.2")
+	require.NoError(t, err)
+
+	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]interface{})
+	require.True(t, ok)
+	require.Len(t, endpoints, 1)
+	require.Equal(t, map[string]interface{}{
+		"address":                "127.0.0.1",
+		"rppServerPort":          5444,
+		"rppBootstrapServerPort": 4300,
+	}, endpoints[0])
+}
+
+func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing.T) {
+	cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+	mingetPath := filepath.Join(t.TempDir(), "minget")
+	expectedMingetBytes := []byte("test-minget")
+	require.NoError(t, os.WriteFile(mingetPath, expectedMingetBytes, 0o600))
+	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
+
+	data, err := cfg.ConfigForBashibleBundleTemplate("10.0.0.2")
+	require.NoError(t, err)
+
+	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]interface{})
+	require.True(t, ok)
+	require.Len(t, endpoints, 1)
+	require.Equal(t, map[string]interface{}{
+		"address":                "127.0.0.1",
+		"rppServerPort":          5444,
+		"rppBootstrapServerPort": 4300,
+	}, endpoints[0])
+
+	mingetB64, ok := data["mingetB64"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, mingetB64)
+
+	mingetBytes, err := base64.StdEncoding.DecodeString(mingetB64)
+	require.NoError(t, err)
+	require.Equal(t, expectedMingetBytes, mingetBytes)
 }

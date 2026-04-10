@@ -105,6 +105,10 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+- from: {{ index $.Images "minget" }}
+  add: /usr/bin/minget
+  to: /deckhouse/candi/bashible/bootstrap/minget
+  after: setup
 git:
 - add: /tools/mounts/mountdir
   to: /.kube
