@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 )
 
 // this file contains just common for both federation and multicluster helpers without implementation
