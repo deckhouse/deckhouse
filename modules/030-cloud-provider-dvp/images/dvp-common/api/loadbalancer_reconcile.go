@@ -26,12 +26,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 )
 
 func (lb *LoadBalancerService) CreateOrUpdateLoadBalancer(

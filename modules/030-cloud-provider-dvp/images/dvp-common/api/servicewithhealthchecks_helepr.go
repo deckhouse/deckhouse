@@ -49,7 +49,7 @@ func (lb *LoadBalancerService) shouldUseSWHC(ctx context.Context) bool {
 	}
 	lb.swhcCache.mu.Unlock()
 
-	ok, err := detectSWHCResource(ctx, lb.Service)
+	ok, err := detectSWHCResource(lb.Service)
 	if err != nil {
 		klog.V(4).InfoS("shouldUseSWHC: detection failed, assuming SWHC unavailable", "err", err)
 		return false
@@ -63,7 +63,7 @@ func (lb *LoadBalancerService) shouldUseSWHC(ctx context.Context) bool {
 	return ok
 }
 
-func detectSWHCResource(ctx context.Context, svc *Service) (bool, error) {
+func detectSWHCResource(svc *Service) (bool, error) {
 	res, err := svc.clientset.Discovery().ServerResourcesForGroupVersion("network.deckhouse.io/v1alpha1")
 	if err != nil {
 		if isSWHCUnsupportedErr(err) {
