@@ -23,6 +23,9 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/lib-connection/pkg/settings"
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
@@ -209,4 +212,8 @@ func processConnectionConfigFlags() error {
 		return fmt.Errorf("ssh private keys: %w", err)
 	}
 	return nil
+}
+
+func GetProviderParams(loggerProvider libdhctl_log.LoggerProvider) settings.ProviderParams {
+	return settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: IsDebug, NodeTmpPath: DeckhouseNodeTmpPath, NodeBinPath: DeckhouseNodeBinPath, TmpDir: GetDefaultTmpDir()}
 }

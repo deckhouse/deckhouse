@@ -17,8 +17,11 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
+
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -26,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -144,12 +148,33 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
+		teeLogger, ok := logger.(*log.TeeLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to TeeLogger")
+		}
+
+		externalLogger, ok := teeLogger.GetLogger().(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:          app.TmpDirName,
-			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
-			Logger:          logger,
-			IsDebug:         app.IsDebug,
-			DirectoryConfig: app.GetDirConfig(),
+			TmpDir:                 app.TmpDirName,
+			NodeInterface:          ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:                 logger,
+			IsDebug:                app.IsDebug,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
+			DirectoryConfig:        app.GetDirConfig(),
 		})
 
 		err = bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
