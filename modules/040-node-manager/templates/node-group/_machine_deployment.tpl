@@ -1,3 +1,17 @@
+{{- define "node_group_spot_creation_timeout" -}}
+{{- $context := index . 0 -}}
+{{- $ng := index . 1 -}}
+{{- if eq $context.Values.nodeManager.internal.cloudProvider.type "aws" -}}
+  {{- if hasKey $ng "instanceClass" -}}
+    {{- if hasKey $ng.instanceClass "spot" -}}
+      {{- if $ng.instanceClass.spot -}}
+5m
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "node_group_machine_deployment" }}
   {{- $context := index . 0 }}
   {{- $ng := index . 1 }}
@@ -72,6 +86,10 @@ spec:
   {{- else }}
       drainTimeout: 600s
       maxEvictRetries: 30
+  {{- end }}
+  {{- $creationTimeout := include "node_group_spot_creation_timeout" (list $context $ng) }}
+  {{- if $creationTimeout }}
+      creationTimeout: {{ $creationTimeout }}
   {{- end }}
       nodeTemplate:
         metadata:
