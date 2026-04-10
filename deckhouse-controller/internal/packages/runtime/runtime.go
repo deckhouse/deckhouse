@@ -19,9 +19,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
@@ -38,14 +40,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
-	erofsinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/erofs"
-	symlinkinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/symlink"
+	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deploy/erofs"
+	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deploy/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
-	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
+	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
@@ -83,7 +85,9 @@ type Runtime struct {
 	hookEventHandler *hookevent.Handler // Routes Kube/schedule events into hook tasks
 	queueService     *queue.Service     // Per-package task queues with retry
 	nelmService      *nelm.Service      // Helm release management and drift monitoring
-	installer        installerI         // Downloads and mounts package images
+
+	appsDeployer    deployerI // Downloads and mounts package images
+	modulesDeployer deployerI // Downloads and mounts package images
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
@@ -103,11 +107,10 @@ type Runtime struct {
 	logger *log.Logger
 }
 
-// installerI abstracts package image operations (download, mount, unmount).
-type installerI interface {
-	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
-	Install(ctx context.Context, downloaded, deployed, name, version string) error
-	Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error
+// deployerI abstracts package image operations (download, mount, unmount).
+type deployerI interface {
+	Deploy(ctx context.Context, remote registry.Remote, deployed, name, version string) error
+	Cleanup(ctx context.Context, deployed string) error
 }
 
 // moduleManagerI provides access to global values for version getters and bootstrap checks.
@@ -134,13 +137,19 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 
 	reg := registry.NewService(dc, logger)
 
+	downloadedDir := d8env.GetDownloadedModulesDir()
+	modulesDownloaded := filepath.Join(downloadedDir, "modules")
+	appsDownloaded := filepath.Join(downloadedDir, "apps")
+
 	// Default to symlink backend (works everywhere, including MacOS)
-	r.installer = symlinkinstaller.NewInstaller(reg, logger)
+	r.appsDeployer = symlinkdeploy.NewDeployer(reg, appsDownloaded, logger)
+	r.modulesDeployer = symlinkdeploy.NewDeployer(reg, modulesDownloaded, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		r.installer = erofsinstaller.NewInstaller(reg, logger)
+		r.appsDeployer = erofsdeploy.NewDeployer(reg, appsDownloaded, logger)
+		r.modulesDeployer = erofsdeploy.NewDeployer(reg, modulesDownloaded, logger)
 	}
 
 	// Initialize scheduler with enabling/disabling callbacks
@@ -521,13 +530,13 @@ func (r *Runtime) schedulePackage(name string) {
 	settings := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
 	}

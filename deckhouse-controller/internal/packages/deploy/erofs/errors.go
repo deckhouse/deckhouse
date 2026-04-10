@@ -40,7 +40,7 @@ func newCreatePackageDirErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonCreatePackageDir,
 				Message: err.Error(),
@@ -54,7 +54,7 @@ func newGetRootHashErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonGetRootHash,
 				Message: err.Error(),
@@ -68,7 +68,7 @@ func newGetImageReaderErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonGetImageReader,
 				Message: err.Error(),
@@ -82,7 +82,7 @@ func newImageByTarErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonImageByTar,
 				Message: err.Error(),

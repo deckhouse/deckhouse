@@ -26,8 +26,6 @@ import (
 const (
 	// ConditionRequirementsMet indicates package requirements validation passed
 	ConditionRequirementsMet ConditionType = "RequirementsMet"
-	// ConditionDownloaded indicates package image was successfully downloaded from registry
-	ConditionDownloaded ConditionType = "Downloaded"
 	// ConditionReadyOnFilesystem indicates package was successfully mounted and accessible
 	ConditionReadyOnFilesystem ConditionType = "ReadyOnFilesystem"
 	// ConditionReadyInRuntime indicates package is fully loaded and operational in runtime
@@ -102,7 +100,6 @@ func NewService() *Service {
 func newStatus() *Status {
 	return &Status{
 		Conditions: []Condition{
-			{Type: ConditionDownloaded, Status: metav1.ConditionUnknown},
 			{Type: ConditionReadyOnFilesystem, Status: metav1.ConditionUnknown},
 			{Type: ConditionRequirementsMet, Status: metav1.ConditionUnknown},
 			{Type: ConditionReadyInRuntime, Status: metav1.ConditionUnknown},
