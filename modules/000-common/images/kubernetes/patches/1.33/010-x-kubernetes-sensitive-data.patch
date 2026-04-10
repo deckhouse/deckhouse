@@ -57,10 +57,10 @@ index 1a0b8910c29..77439dc00e1 100644
 +	return nil
 +}
 diff --git a/pkg/generated/openapi/zz_generated.openapi.go b/pkg/generated/openapi/zz_generated.openapi.go
-index 5070323448c..c37ac98b875 100644
+index 169f8581eb8..f6149859608 100644
 --- a/pkg/generated/openapi/zz_generated.openapi.go
 +++ b/pkg/generated/openapi/zz_generated.openapi.go
-@@ -53660,6 +53660,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
+@@ -57538,6 +57538,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
  							},
  						},
  					},
@@ -74,7 +74,7 @@ index 5070323448c..c37ac98b875 100644
  				},
  			},
  		},
-@@ -55215,6 +55222,13 @@ func schema_pkg_apis_apiextensions_v1beta1_JSONSchemaProps(ref common.ReferenceC
+@@ -59093,6 +59100,13 @@ func schema_pkg_apis_apiextensions_v1beta1_JSONSchemaProps(ref common.ReferenceC
  							},
  						},
  					},
@@ -1619,10 +1619,10 @@ index 00000000000..52e3e6830f1
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go
-index fa3a1cbe917..40b263f2ba8 100644
+index 065041b54c9..274f4c5bf7f 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go
-@@ -36,6 +36,7 @@ import (
+@@ -37,6 +37,7 @@ import (
  	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
  	structuraldefaulting "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
  	apiservervalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
@@ -1630,7 +1630,7 @@ index fa3a1cbe917..40b263f2ba8 100644
  	apiequality "k8s.io/apimachinery/pkg/api/equality"
  	genericvalidation "k8s.io/apimachinery/pkg/api/validation"
  	"k8s.io/apimachinery/pkg/util/sets"
-@@ -44,6 +45,7 @@ import (
+@@ -45,6 +46,7 @@ import (
  	celconfig "k8s.io/apiserver/pkg/apis/cel"
  	apiservercel "k8s.io/apiserver/pkg/cel"
  	"k8s.io/apiserver/pkg/cel/environment"
@@ -1638,7 +1638,7 @@ index fa3a1cbe917..40b263f2ba8 100644
  	"k8s.io/apiserver/pkg/util/webhook"
  )
  
-@@ -1286,6 +1288,16 @@ func ValidateCustomResourceDefinitionOpenAPISchema(schema *apiextensions.JSONSch
+@@ -1287,6 +1289,16 @@ func ValidateCustomResourceDefinitionOpenAPISchema(schema *apiextensions.JSONSch
  		}
  	}
  
@@ -1655,7 +1655,7 @@ index fa3a1cbe917..40b263f2ba8 100644
  	return allErrs
  }
  
-@@ -1709,7 +1721,7 @@ func specHasKubernetesExtensions(spec *apiextensions.CustomResourceDefinitionSpe
+@@ -1710,7 +1722,7 @@ func specHasKubernetesExtensions(spec *apiextensions.CustomResourceDefinitionSpe
  
  func schemaHasKubernetesExtensions(s *apiextensions.JSONSchemaProps) bool {
  	return SchemaHas(s, func(s *apiextensions.JSONSchemaProps) bool {
@@ -1665,18 +1665,18 @@ index fa3a1cbe917..40b263f2ba8 100644
  }
  
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
-index d791dd228c9..7f32eb1bc27 100644
+index 1a730d3310c..9e3d1e3723b 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
-@@ -46,6 +46,7 @@ import (
+@@ -47,6 +47,7 @@ import (
  	"k8s.io/apiserver/pkg/registry/rest"
  	genericapiserver "k8s.io/apiserver/pkg/server"
  	serverstorage "k8s.io/apiserver/pkg/server/storage"
 +	storagevalue "k8s.io/apiserver/pkg/storage/value"
  	"k8s.io/apiserver/pkg/util/webhook"
+ 	"k8s.io/klog/v2"
  )
- 
-@@ -85,6 +86,11 @@ type ExtraConfig struct {
+@@ -87,6 +88,11 @@ type ExtraConfig struct {
  	ServiceResolver webhook.ServiceResolver
  	// AuthResolverWrapper is used in CR webhook converters
  	AuthResolverWrapper webhook.AuthenticationInfoResolverWrapper
@@ -1688,7 +1688,7 @@ index d791dd228c9..7f32eb1bc27 100644
  }
  
  type Config struct {
-@@ -197,6 +203,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
+@@ -199,6 +205,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
  		time.Duration(c.GenericConfig.MinRequestTimeout)*time.Second,
  		apiGroupInfo.StaticOpenAPISpec,
  		c.GenericConfig.MaxRequestBodyBytes,
@@ -2367,7 +2367,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 55d31fc8eda..731871f1449 100644
+index 9afeb2f80ce..66db4661008 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -17,6 +17,7 @@ limitations under the License.
@@ -2607,7 +2607,7 @@ index 55d31fc8eda..731871f1449 100644
  	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
  	if err != nil {
  		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
-@@ -1036,9 +1151,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1049,9 +1164,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		deprecated:          deprecated,
  		warnings:            warnings,
  		storageVersion:      storageVersion,
@@ -2629,10 +2629,10 @@ index 55d31fc8eda..731871f1449 100644
  	// as it is used without locking elsewhere.
  	storageMap2 := storageMap.clone()
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go
-index 63919e60e77..5b797aa50e2 100644
+index 3e77fe7197a..79c724f39cf 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go
-@@ -509,7 +509,9 @@ func testHandlerConversion(t *testing.T, enableWatchCache bool) {
+@@ -514,7 +514,9 @@ func testHandlerConversion(t *testing.T, enableWatchCache bool) {
  		func(r webhook.AuthenticationInfoResolver) webhook.AuthenticationInfoResolver { return r },
  		1,
  		dummyAuthorizerImpl{},
@@ -3694,10 +3694,10 @@ index a9caddb38d7..7978147fee2 100644
  		allErrs = append(allErrs, field.Forbidden(fldPath.Child("x-kubernetes-validations"), "must be empty to be structural"))
  	}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
-index 85f1ffca7fd..64c5af1cc9e 100644
+index e65f863503e..c3f6bceac9e 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
-@@ -393,6 +393,9 @@ func ConvertJSONSchemaPropsWithPostProcess(in *apiextensions.JSONSchemaProps, ou
+@@ -395,6 +395,9 @@ func ConvertJSONSchemaPropsWithPostProcess(in *apiextensions.JSONSchemaProps, ou
  	if in.XMapType != nil {
  		out.VendorExtensible.AddExtension("x-kubernetes-map-type", *in.XMapType)
  	}
@@ -3746,7 +3746,7 @@ index 37f0e31cea9..088cde620bc 100644
  	return config, nil
  }
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
-index c562263f32c..1272d2fd277 100644
+index 7dfcce46571..24506af01a9 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
 @@ -40,6 +40,11 @@ const (
@@ -3761,7 +3761,7 @@ index c562263f32c..1272d2fd277 100644
  )
  
  func init() {
-@@ -62,4 +67,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
+@@ -63,4 +68,7 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
  		{Version: version.MustParse("1.31"), Default: true, PreRelease: featuregate.Beta},
  		{Version: version.MustParse("1.32"), Default: true, LockToDefault: true, PreRelease: featuregate.GA},
  	},
@@ -3770,7 +3770,7 @@ index c562263f32c..1272d2fd277 100644
 +	},
  }
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
-index 0d7157096e8..88ee55338c4 100644
+index 1b9dc5905ad..6bd2e437d7e 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
 @@ -2313,6 +2313,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
