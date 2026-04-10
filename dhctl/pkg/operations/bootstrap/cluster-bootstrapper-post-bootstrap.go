@@ -18,12 +18,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-
-	"github.com/deckhouse/lib-connection/pkg/ssh"
 )
 
 func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {

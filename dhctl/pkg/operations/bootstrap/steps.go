@@ -41,12 +41,13 @@ import (
 	tplt "text/template"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"

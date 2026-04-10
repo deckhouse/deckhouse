@@ -24,13 +24,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh"
+	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-
-	"github.com/deckhouse/lib-connection/pkg/ssh"
-	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 )
 
 type SSHTunnelCheck struct {

@@ -18,11 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-
-	"github.com/deckhouse/lib-connection/pkg/ssh"
 )
 
 type SSHCredentialCheck struct {

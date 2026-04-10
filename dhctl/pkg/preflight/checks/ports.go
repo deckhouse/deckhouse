@@ -21,12 +21,12 @@ import (
 	"os/exec"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
 )
 
 type PortsCheck struct {

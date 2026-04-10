@@ -15,11 +15,11 @@
 package suites
 
 import (
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
 )
 
 type PostCloudDeps struct {

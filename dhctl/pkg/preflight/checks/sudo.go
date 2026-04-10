@@ -20,8 +20,9 @@ import (
 	"fmt"
 	"os/exec"
 
-	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	libcon "github.com/deckhouse/lib-connection/pkg"
+
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
 type SudoAllowedCheck struct {

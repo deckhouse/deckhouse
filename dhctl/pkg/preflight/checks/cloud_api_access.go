@@ -25,11 +25,12 @@ import (
 	"net/url"
 	"time"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/utils"
 	cca "github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/utils/check-cloud-api"
-	libcon "github.com/deckhouse/lib-connection/pkg"
 )
 
 var ErrCloudAPIUnreachable = errors.New("could not reach Cloud API from master node")

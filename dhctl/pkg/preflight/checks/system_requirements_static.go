@@ -23,11 +23,11 @@ import (
 	"strconv"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
 )
 
 type StaticSystemRequirementsCheck struct {
