@@ -9,8 +9,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on&nbsp;the ability to&nbsp;use signature verification policies for container images and the ability to&nbsp;prohibit the launch of&nbsp;containers with vulnerabilities",
-        "ru": "Ограничение на&nbsp;возможность использования политик проверки подписи образов контейнеров и&nbsp;возможность установки запрета на&nbsp;запуск контейнеров с&nbsp;уязвимостями"
+        "en": "Restriction on the ability to use signature verification policies for container images and the ability to prohibit the launch of containers with vulnerabilities",
+        "ru": "Ограничение на возможность использования политик проверки подписи образов контейнеров и возможность установки запрета на запуск контейнеров с уязвимостями"
       }
     }
   },
@@ -39,8 +39,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on&nbsp;the ability to&nbsp;configure fault tolerant Egress Gateways",
-        "ru": "Ограничение на&nbsp;возможность настройки отказоустойчивых выходных узлов (Egress Gateway)"
+        "en": "Restriction on the ability to configure fault tolerant Egress Gateways",
+        "ru": "Ограничение на возможность настройки отказоустойчивых выходных узлов (Egress Gateway)"
       }
     }
   },
@@ -57,7 +57,7 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "A&nbsp;separate license is&nbsp;required",
+        "en": "A separate license is required",
         "ru": "Требуется отдельная лицензия"
       }
     },
@@ -155,7 +155,7 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "A&nbsp;separate license is&nbsp;required",
+        "en": "A separate license is required",
         "ru": "Требуется отдельная лицензия"
       }
     },
@@ -214,8 +214,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -231,8 +231,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -248,8 +248,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -306,8 +306,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on&nbsp;the use of&nbsp;federation and multicluster features",
-        "ru": "Ограничение на&nbsp;использование федерации и&nbsp;мультикластерной конфигурации"
+        "en": "Restriction on the use of federation and multicluster features",
+        "ru": "Ограничение на использование федерации и мультикластерной конфигурации"
       }
     }
   },
@@ -320,8 +320,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on&nbsp;the use of&nbsp;the BGP load balancer for services",
-        "ru": "Ограничение на&nbsp;использование BGP-балансировщика для сервисов"
+        "en": "Restriction on the use of the BGP load balancer for services",
+        "ru": "Ограничение на использование BGP-балансировщика для сервисов"
       }
     },
     "path": "modules/metallb/"
@@ -336,8 +336,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -362,7 +362,7 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "A&nbsp;separate license is&nbsp;required",
+        "en": "A separate license is required",
         "ru": "Требуется отдельная лицензия"
       }
     },
@@ -380,8 +380,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -443,8 +443,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots and volume&nbsp;wiping",
-        "ru": "Ограничение на&nbsp;возможность создания снимков и затирание&nbsp;томов"
+        "en": "Restriction on the ability to create snapshots and volume wiping",
+        "ru": "Ограничение на возможность создания снимков и затирание томов"
       }
     },
     "external": "true",
@@ -474,8 +474,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots",
-        "ru": "Ограничение на&nbsp;возможность создания снимков"
+        "en": "Restriction on the ability to create snapshots",
+        "ru": "Ограничение на возможность создания снимков"
       }
     },
     "external": "true",
@@ -551,16 +551,16 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "A&nbsp;separate license is&nbsp;required",
+        "en": "A separate license is required",
         "ru": "Требуется отдельная лицензия"
       },
       "cse-lite": {
-        "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
-        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse Stronghold CSE. Есть ограничения функциональности"
+        "en": "A separate license is required for Deckhouse Stronghold CSE. There are functionality limitations",
+        "ru": "Требуется отдельная лицензия на Deckhouse Stronghold CSE. Есть ограничения функциональности"
       },
       "cse-pro": {
-        "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
-        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse Stronghold CSE. Есть ограничения функциональности"
+        "en": "A separate license is required for Deckhouse Stronghold CSE. There are functionality limitations",
+        "ru": "Требуется отдельная лицензия на Deckhouse Stronghold CSE. Есть ограничения функциональности"
       }
     },
     "external": "true",
@@ -584,8 +584,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on&nbsp;the use of&nbsp;namespace filtering in&nbsp;the role-based access model",
-        "ru": "Ограничение на&nbsp;использование фильтрации по&nbsp;пространствам имен в&nbsp;ролевой модели доступа"
+        "en": "Restriction on the use of namespace filtering in the role-based access model",
+        "ru": "Ограничение на использование фильтрации по пространствам имен в ролевой модели доступа"
       }
     },
     "path": "modules/user-authz/"
