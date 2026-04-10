@@ -30,25 +30,25 @@ entries:
                     ru: Обзор
                   url: /admin/configuration/registry/
                 - title:
-                    en: DKP settings
-                    ru: Настройки DKP
+                    en: DKP component registry configuration and maintenance
+                    ru: Настройка и обслуживание registry компонентов DKP
                   folders:
                   - title:
                       en: Settings in a DKP-managed cluster
                       ru: Настройки в кластере, управляемом DKP
-                    url: /admin/configuration/registry/managing-interaction.html
+                    url: /admin/configuration/registry/dkp-component/managing-interaction.html
                   - title:
                       en: Settings in a Managed Kubernetes cluster
                       ru: Настройки в Managed Kubernetes кластере
-                    url: /admin/configuration/registry/third-party.html
+                    url: /admin/configuration/registry/dkp-component/third-party.html
                 - title:
                     en: Custom registry
                     ru: Пользовательское хранилище
-                  folders:
-                  - title:
-                      en: Custom registry (payload-registry module)
-                      ru: Пользовательское хранилище (модуль payload-registry)
-                    url: /admin/configuration/registry/payload-registry.html
+                  url: /admin/configuration/registry/payload-registry.html
+                - title:
+                    en: Switching editions
+                    ru: Переключение редакций
+                  url: /admin/configuration/registry/switching-editions.html
             - title:
                 en: IAM
                 ru: IAM
