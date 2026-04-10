@@ -1,9 +1,0 @@
-[Unit]
-Description=Docker Registry Garbage Collection
-After=network.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/registry-gc.sh
-StandardOutput=journal
-StandardError=journal
