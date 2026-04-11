@@ -30,7 +30,7 @@ index c34db87997..42f074f3c1 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 8873f05e86..5b6a33b1c8 100644
+index 8873f05e86..95121735c8 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
 @@ -2677,6 +2677,73 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
@@ -107,17 +107,19 @@ index 8873f05e86..5b6a33b1c8 100644
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2714,7 +2781,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2714,12 +2781,39 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	lb4_fill_key(&key, &tuple);
  
  	svc = lb4_lookup_service(&key, false);
 +
  	if (svc) {
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
++printk("MEG: ==========ENTERING nodeport_lb4 for service %d ip %x dst %x\n", 0, ip4->saddr, ip4->daddr);
 +		/* If the packet is an ICMP echo request, we need to check if special
 +		port=0 service exists and if so, create a reply packet and send it back
 +		to the original source.	This is only supported for LoadBalancer services. */
 +		if (unlikely(ip4->protocol == IPPROTO_ICMP)) {
++			printk("MEG: Creating ICMP reply packet for service %d ip %x dst %x\n", svc->id, ip4->saddr, ip4->daddr);
 +			ret = make_icmp_response_lb4(ctx, ip4);
 +			if (ret != CTX_ACT_REDIRECT)
 +				goto skip_service_lookup;
@@ -127,6 +129,24 @@ index 8873f05e86..5b6a33b1c8 100644
  		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
  					has_l4_header, l4_off,
  					src_sec_identity, punt_to_stack, ext_err);
+ 	} else {
+ skip_service_lookup:
++#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
++printk("MEG: ==========ENTERING ICMP reply packet for service %d ip %x dst %x\n", 0, ip4->saddr, ip4->daddr);
++/* If the packet is an ICMP echo request, we need to check if special
++port=0 service exists and if so, create a reply packet and send it back
++to the original source.	This is only supported for LoadBalancer services. */
++if (unlikely(ip4->protocol == IPPROTO_ICMP)) {
++	printk("MEG: ==========Creating ICMP reply packet for service %d ip %x dst %x\n", 0, ip4->saddr, ip4->daddr);
++	ret = make_icmp_response_lb4(ctx, ip4);
++	if (ret == CTX_ACT_REDIRECT)
++		return ret;
++	
++}
++#endif /* ENABLE_LOADBALANCER_ICMP_REPLY */
+ #ifdef ENABLE_NAT_46X64_GATEWAY
+ 		if (ip4->daddr != IPV4_DIRECT_ROUTING)
+ 			return tail_call_internal(ctx, CILIUM_CALL_IPV46_RFC8215, ext_err);
 diff --git a/bpf/lib/ratelimit.h b/bpf/lib/ratelimit.h
 index fdef3ae9b2..2816a7d694 100644
 --- a/bpf/lib/ratelimit.h
